@@ -51,6 +51,14 @@ def _create_selection_rectangle(
     wait_for_app_run(app)
 
 
+def _expect_written_text(app: Page, expected_prefix: str, expected_selection: str):
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected_prefix
+    )
+    expected_selection = expected_prefix + " " + expected_selection
+    expect(selection_text).to_have_text(expected_selection)
+
+
 def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
@@ -96,11 +104,9 @@ def test_point_bar_chart_displays_dataframe(app: Page):
     # click on E-bar
     _click(app, chart, _MousePosition(150, 180))
 
-    expected = (
-        "Bar chart with selection_point: {'select': {'param_1': [{'a': 'E', 'b': 81}]}}"
-    )
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Bar chart with selection_point:"
+    expected_selection = "{'select': {'param_1': [{'a': 'E', 'b': 81}]}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_interval_bar_chart_displays_dataframe(app: Page):
@@ -112,9 +118,9 @@ def test_interval_bar_chart_displays_dataframe(app: Page):
         app, chart, _MousePosition(90, 150), _MousePosition(175, 155)
     )
 
-    expected = "Bar chart with selection_interval: {'select': {'param_1': {'a': ['B', 'C', 'D', 'E', 'F'], 'b': [44.28889142335767, 46.113708941605836]}}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Bar chart with selection_interval:"
+    expected_selection = "{'select': {'param_1': {'a': ['B', 'C', 'D', 'E', 'F'], 'b': [44.28889142335767, 46.113708941605836]}}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_point_area_chart_displays_dataframe(app: Page):
@@ -122,9 +128,9 @@ def test_point_area_chart_displays_dataframe(app: Page):
 
     _click(app, chart, _MousePosition(150, 150))
 
-    expected = "Area chart with selection_point: {'param_1': [{'year': 978307200000, 'net_generation': '35361', 'source': 'Fossil Fuels'}]}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Area chart with selection_point:"
+    expected_selection = "{'param_1': [{'year': 978307200000, 'net_generation': '35361', 'source': 'Fossil Fuels'}]}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_interval_area_chart_displays_dataframe(app: Page):
@@ -134,9 +140,9 @@ def test_interval_area_chart_displays_dataframe(app: Page):
         app, chart, _MousePosition(120, 110), _MousePosition(225, 195)
     )
 
-    expected = "Area chart with selection_interval: {'param_1': {'year': [1092053274725, 1383354197802], 'net_generation': [17319.534132841327, 36138.722324723254]}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Area chart with selection_interval:"
+    expected_selection = "{'param_1': {'year': [1092053274725, 1383354197802], 'net_generation': [17319.534132841327, 36138.722324723254]}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_point_histogram_chart_displays_dataframe(app: Page):
@@ -144,9 +150,9 @@ def test_point_histogram_chart_displays_dataframe(app: Page):
 
     _click(app, chart, _MousePosition(255, 238))
 
-    expected = "Histogram chart with selection_point: {'select': {'param_1': [{'IMDB_Rating': [8, 9]}]}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Histogram chart with selection_point:"
+    expected_selection = "{'select': {'param_1': [{'IMDB_Rating': [8, 9]}]}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_interval_histogram_chart_displays_dataframe(app: Page):
@@ -156,9 +162,9 @@ def test_interval_histogram_chart_displays_dataframe(app: Page):
         app, chart, _MousePosition(160, 210), _MousePosition(205, 200)
     )
 
-    expected = "Histogram chart with selection_interval: {'select': {'param_1': {'IMDB_Rating': [4.575342465753424, 6.424657534246575]}}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Histogram chart with selection_interval:"
+    expected_selection = "{'select': {'param_1': {'IMDB_Rating': [4.575342465753424, 6.424657534246575]}}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_double_click_interval_shows_no_dataframe(app: Page):
@@ -168,12 +174,15 @@ def test_double_click_interval_shows_no_dataframe(app: Page):
         app, chart, _MousePosition(130, 100), _MousePosition(215, 160)
     )
 
-    expected = "Scatter chart with selection_interval: {'select': {'param_1': {'Horsepower': [69.39759036144578, 151.32530120481925], 'Miles_per_Gallon': [20.936635147601475, 32.00674584870848]}}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Scatter chart with selection_interval:"
+    expected_selection = "{'select': {'param_1': {'Horsepower': [69.39759036144578, 151.32530120481925], 'Miles_per_Gallon': [20.936635147601475, 32.00674584870848]}}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
+
     chart.dblclick(position={"x": 130, "y": 100})
     wait_for_app_run(app)
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected_prefix + " " + expected_selection
+    )
     expect(selection_text).to_have_count(0)
 
 
@@ -184,11 +193,10 @@ def test_point_selection_scatter_chart_displays_dataframe(
 
     _click(themed_app, chart, _MousePosition(162, 181))
 
-    expected = "Scatter chart with selection_point: {'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}]}}"
-    selection_text = themed_app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected
-    )
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Scatter chart with selection_point:"
+    expected_selection = "{'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}]}}"
+    _expect_written_text(themed_app, expected_prefix, expected_selection)
+
     assert_snapshot(chart, name="st_altair_chart-scatter_single_selection_greyed")
 
 
@@ -201,11 +209,10 @@ def test_interval_selection_scatter_chart_displays_dataframe(
         themed_app, chart, _MousePosition(165, 88), _MousePosition(265, 188)
     )
 
-    expected = "Scatter chart with selection_interval: {'select': {'param_1': {'Horsepower': [103.13253012048193, 199.51807228915663], 'Miles_per_Gallon': [15.770583487084872, 34.22076798892989]}}}"
-    selection_text = themed_app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected
-    )
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Scatter chart with selection_interval:"
+    expected_selection = "{'select': {'param_1': {'Horsepower': [103.13253012048193, 199.51807228915663], 'Miles_per_Gallon': [15.770583487084872, 34.22076798892989]}}}"
+    _expect_written_text(themed_app, expected_prefix, expected_selection)
+
     assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection_greyed")
 
 
@@ -218,9 +225,8 @@ def test_shift_click_point_selection_scatter_chart_displays_dataframe(
     chart.click(position={"x": 157, "y": 146}, modifiers=["Shift"])
     wait_for_app_run(themed_app)
 
-    expected = "Scatter chart with selection_point: {'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}, {'Horsepower': 97, 'Miles_per_Gallon': 23.9, 'Origin': 'Japan'}]}}"
-    selection_text = themed_app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected
-    )
-    expect(selection_text).to_have_count(1)
+    expected_prefix = "Scatter chart with selection_point:"
+    expected_selection = "{'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}, {'Horsepower': 97, 'Miles_per_Gallon': 23.9, 'Origin': 'Japan'}]}}"
+    _expect_written_text(themed_app, expected_prefix, expected_selection)
+
     assert_snapshot(chart, name="st_altair_chart-scatter_double_selection_greyed")

@@ -19,12 +19,12 @@ import streamlit as st
 
 st.header("Altair Chart with point and interval selection")
 
-# REPEAT CHEAT
 iris = alt.UrlData("https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json")
-
-point = alt.selection_point()
+point = alt.selection_point(encodings=["x", "y"])
 interval = alt.selection_interval()
 
+# REPEAT CHART
+st.subheader("Repeat Chart")
 base = (
     alt.Chart()
     .mark_point()
@@ -34,7 +34,6 @@ base = (
     )
     .properties(width=200, height=200)
 )
-
 chart = alt.vconcat(data=iris)
 for y_encoding in ["petalLength:Q", "petalWidth:Q"]:
     row = alt.hconcat()
@@ -45,9 +44,10 @@ chart = chart.add_params(point)
 chart = chart.add_params(interval)
 st.altair_chart(chart, on_select="rerun", key="repeat_chart")
 if len(st.session_state.repeat_chart.select) > 0:
-    st.dataframe(st.session_state.repeat_chart)
+    st.write("Repeat Scatter Chart selection:", str(st.session_state.repeat_chart))
 
 # LAYERED CHART
+st.subheader("Layered Chart")
 stocks = alt.UrlData(
     "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/stocks.csv"
 )
@@ -67,9 +67,10 @@ chart = base.mark_line() + base.mark_point()
 chart = chart.add_params(point)
 st.altair_chart(chart, on_select="rerun", key="layered_chart")
 if len(st.session_state.layered_chart.select) > 0:
-    st.dataframe(st.session_state.layered_chart)
+    st.write("Layered Chart selection:", str(st.session_state.layered_chart))
 
 # FACET CHART
+st.subheader("Facet Chart")
 base = (
     alt.Chart(iris)
     .mark_point()
@@ -89,15 +90,15 @@ for species in ["setosa", "versicolor", "virginica"]:
 chart = chart.add_params(point)
 facet_selection = st.altair_chart(chart, on_select="rerun", key="facet_chart")
 if len(facet_selection.select) > 0:
-    st.dataframe(facet_selection)
+    st.write("Facet chart selection:", str(facet_selection))
 
 # VCONCAT CHART
+st.subheader("Vconcat Chart")
 source = alt.UrlData(
     "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/sp500.csv"
 )
 
 brush = alt.selection_interval(encodings=["x"])
-
 base = (
     alt.Chart(source)
     .mark_area()
@@ -108,19 +109,21 @@ base = (
     )
     .properties(width=600, height=200)
 )
-
 upper = base.encode(alt.X("date:T").scale(domain=brush))
-
 lower = base.properties(height=60).add_params(brush)
 
 chart = alt.vconcat(upper, lower)
 st.altair_chart(chart, on_select="rerun", key="vconcat_chart")
 if len(st.session_state.vconcat_chart.select) > 0:
-    st.dataframe(st.session_state.vconcat_chart)
+    st.write("Vconcat Chart selection:", str(st.session_state.vconcat_chart))
+
 
 # HCONCAT CHART
+st.subheader("Hconcat Chart")
+
+
 def callback():
-    st.write("Hello world")
+    st.write("Hconcat callback called!")
 
 
 chart1 = (
@@ -152,4 +155,4 @@ chart2 = (
 chart = chart1 | chart2
 st.altair_chart(chart, on_select=callback, key="hconcat_chart")
 if len(st.session_state.hconcat_chart.select) > 0:
-    st.dataframe(st.session_state.hconcat_chart)
+    st.write("Hconcat Chart selection:", str(st.session_state.hconcat_chart))
