@@ -12,166 +12,215 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+"""To determine the Canvas click points, you can run the Streamlit app, attach an event listener to the canvas and read the position from there."""
+
+from dataclasses import dataclass
+
+from playwright.sync_api import Locator, Page, expect
+
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+
+
+@dataclass
+class _MousePosition:
+    x: int
+    y: int
+
+
+def _create_selection_rectangle(
+    app: Page,
+    chart: Locator,
+    canvas_start_pos: _MousePosition,
+    canvas_end_pos: _MousePosition,
+) -> None:
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+    bounding_box = chart.bounding_box()
+    assert bounding_box is not None
+    canvas_start_x_px = bounding_box.get("x", 0)
+    canvas_start_y_px = bounding_box.get("y", 0)
+    app.mouse.move(
+        canvas_start_x_px + canvas_start_pos.x, canvas_start_y_px + canvas_start_pos.y
+    )
+    app.mouse.down()
+    app.mouse.move(
+        canvas_start_x_px + canvas_end_pos.x, canvas_start_y_px + canvas_end_pos.y
+    )
+    app.mouse.up()
+    wait_for_app_run(app)
+
+
+def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+    chart.click(position={"x": click_position.x, "y": click_position.y})
+    wait_for_app_run(app)
+
+
+def _get_selection_point_scatter_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(0)
+
+
+def _get_selection_interval_scatter_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(1)
+
+
+def _get_selection_point_bar_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(2)
+
+
+def _get_selection_interval_bar_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(3)
+
+
+def _get_selection_point_area_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(4)
+
+
+def _get_selection_interval_area_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(5)
+
+
+def _get_selection_point_histogram(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(6)
+
+
+def _get_selection_interval_histogram(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(7)
+
+
+def test_point_bar_chart_displays_dataframe(app: Page):
+    chart = _get_selection_point_bar_chart(app)
+
+    # click on E-bar
+    _click(app, chart, _MousePosition(150, 180))
+
+    expected = (
+        "Bar chart with selection_point: {'select': {'param_1': [{'a': 'E', 'b': 81}]}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_interval_bar_chart_displays_dataframe(app: Page):
+    chart = _get_selection_interval_bar_chart(app)
+    expect(chart).to_be_visible()
+
+    # change also height, because otherwise the selection is not triggered
+    _create_selection_rectangle(
+        app, chart, _MousePosition(90, 150), _MousePosition(175, 155)
+    )
+
+    expected = "Bar chart with selection_interval: {'select': {'param_1': {'a': ['B', 'C', 'D', 'E', 'F'], 'b': [44.28889142335767, 46.113708941605836]}}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_point_area_chart_displays_dataframe(app: Page):
+    chart = _get_selection_point_area_chart(app)
+
+    _click(app, chart, _MousePosition(150, 150))
+
+    expected = "Area chart with selection_point: {'param_1': [{'year': 978307200000, 'net_generation': '35361', 'source': 'Fossil Fuels'}]}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_interval_area_chart_displays_dataframe(app: Page):
+    chart = _get_selection_interval_area_chart(app)
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(120, 110), _MousePosition(225, 195)
+    )
+
+    expected = "Area chart with selection_interval: {'param_1': {'year': [1092053274725, 1383354197802], 'net_generation': [17319.534132841327, 36138.722324723254]}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_point_histogram_chart_displays_dataframe(app: Page):
+    chart = _get_selection_point_histogram(app)
+
+    _click(app, chart, _MousePosition(255, 238))
+
+    expected = "Histogram chart with selection_point: {'select': {'param_1': [{'IMDB_Rating': [8, 9]}]}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_interval_histogram_chart_displays_dataframe(app: Page):
+    chart = _get_selection_interval_histogram(app)
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(160, 210), _MousePosition(205, 200)
+    )
+
+    expected = "Histogram chart with selection_interval: {'select': {'param_1': {'IMDB_Rating': [4.575342465753424, 6.424657534246575]}}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_double_click_interval_shows_no_dataframe(app: Page):
+    chart = _get_selection_interval_scatter_chart(app)
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(130, 100), _MousePosition(215, 160)
+    )
+
+    expected = "Scatter chart with selection_interval: {'select': {'param_1': {'Horsepower': [69.39759036144578, 151.32530120481925], 'Miles_per_Gallon': [20.936635147601475, 32.00674584870848]}}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+    chart.dblclick(position={"x": 130, "y": 100})
+    wait_for_app_run(app)
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(0)
 
 
 def test_point_selection_scatter_chart_displays_dataframe(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = themed_app.get_by_test_id("stArrowVegaLiteChart").nth(0)
-    expect(chart).to_be_visible()
-    themed_app.mouse.move(450, 410)
-    themed_app.mouse.down()
-    themed_app.mouse.up()
-    wait_for_app_run(themed_app, wait_delay=3000)
+    chart = _get_selection_point_scatter_chart(themed_app)
 
-    expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
+    _click(themed_app, chart, _MousePosition(162, 181))
+
+    expected = "Scatter chart with selection_point: {'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}]}}"
+    selection_text = themed_app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected
+    )
+    expect(selection_text).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_single_selection_greyed")
 
 
 def test_interval_selection_scatter_chart_displays_dataframe(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = themed_app.get_by_test_id("stArrowVegaLiteChart").nth(1)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    chart.hover()
-    themed_app.mouse.move(450, 450)
-    themed_app.mouse.down()
-    themed_app.mouse.move(550, 550)
-    themed_app.mouse.up()
-    wait_for_app_run(themed_app, wait_delay=3000)
+    chart = _get_selection_interval_scatter_chart(themed_app)
 
-    expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
+    _create_selection_rectangle(
+        themed_app, chart, _MousePosition(165, 88), _MousePosition(265, 188)
+    )
+
+    expected = "Scatter chart with selection_interval: {'select': {'param_1': {'Horsepower': [103.13253012048193, 199.51807228915663], 'Miles_per_Gallon': [15.770583487084872, 34.22076798892989]}}}"
+    selection_text = themed_app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected
+    )
+    expect(selection_text).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection_greyed")
-
-
-def test_point_bar_chart_displays_dataframe(app: Page):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(2)
-    expect(chart).to_be_visible()
-    chart.scroll_into_view_if_needed()
-    chart.hover()
-    app.mouse.move(445, 375)
-    app.mouse.down()
-    app.mouse.up()
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-
-
-def test_interval_bar_chart_displays_dataframe(app: Page):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(3)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    chart.hover()
-    app.mouse.move(445, 375)
-    app.mouse.down()
-    app.mouse.move(500, 500)
-    app.mouse.up()
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-
-
-def test_point_area_chart_displays_dataframe(app: Page):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(4)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    app.mouse.move(435, 435)
-    app.mouse.down()
-    app.mouse.up()
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-
-
-def test_interval_area_chart_displays_dataframe(app: Page):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(5)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    chart.hover()
-    app.mouse.move(400, 400)
-    app.mouse.down()
-    app.mouse.move(425, 425)
-    app.mouse.up()
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-
-
-def test_point_histogram_chart_displays_dataframe(app: Page):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(6)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    app.mouse.move(450, 400)
-    app.mouse.down()
-    app.mouse.up()
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-
-
-def test_interval_histogram_chart_displays_dataframe(app: Page):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(7)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    chart.hover()
-    app.mouse.move(400, 400)
-    app.mouse.down()
-    app.mouse.move(425, 425)
-    app.mouse.up()
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
 def test_shift_click_point_selection_scatter_chart_displays_dataframe(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = themed_app.get_by_test_id("stArrowVegaLiteChart").nth(0)
+    chart = _get_selection_point_scatter_chart(themed_app)
     expect(chart).to_be_visible()
-    themed_app.mouse.move(450, 410)
-    themed_app.mouse.down()
-    themed_app.mouse.up()
+    chart.click(position={"x": 162, "y": 181})
+    chart.click(position={"x": 157, "y": 146}, modifiers=["Shift"])
+    wait_for_app_run(themed_app)
 
-    themed_app.keyboard.down("Shift")
-    themed_app.mouse.move(445, 375)
-    themed_app.mouse.down()
-    themed_app.mouse.up()
-    wait_for_app_run(themed_app, wait_delay=3000)
-
-    expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
+    expected = "Scatter chart with selection_point: {'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}, {'Horsepower': 97, 'Miles_per_Gallon': 23.9, 'Origin': 'Japan'}]}}"
+    selection_text = themed_app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected
+    )
+    expect(selection_text).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_double_selection_greyed")
-
-
-def test_double_click_interval_shows_no_dataframe(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(1)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    chart.hover()
-    app.mouse.move(450, 450)
-    app.mouse.down()
-    app.mouse.move(550, 550)
-    app.mouse.up()
-    wait_for_app_run(app, wait_delay=3000)
-
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-    chart.hover()
-    app.mouse.dblclick(500, 500)
-    wait_for_app_run(app, wait_delay=3000)
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
-
-
-def test_selection_state_remains_after_unmounting(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(8)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    chart.hover()
-    app.mouse.move(400, 400)
-    app.mouse.down()
-    app.mouse.move(425, 425)
-    app.mouse.up()
-
-    app.get_by_test_id("stButton").locator("button").click()
-    wait_for_app_run(app, wait_delay=4000)
-    assert_snapshot(chart, name="st_altair_chart-unmounted_still_has_selection")

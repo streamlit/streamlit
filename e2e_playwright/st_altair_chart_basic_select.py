@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 
 import altair as alt
 import pandas as pd
@@ -26,8 +25,9 @@ st.header("Altair Chart with point and interval selection")
 cars = alt.UrlData("https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/cars.json")
 interval = alt.selection_interval()
 
-point = alt.selection_point()
+point = alt.selection_point(encodings=["x", "y"], fields=["Origin", "source"])
 
+st.subheader("Scatter chart with selection_point")
 base = (
     alt.Chart(cars)
     .mark_point()
@@ -38,13 +38,12 @@ base = (
         tooltip=alt.value(None),
     )
 )
-
 chart_point = base.add_params(point)
-st.subheader("Scatter chart with selection_point")
 st.altair_chart(chart_point, on_select="rerun", key="scatter_point")
 if st.session_state.scatter_point and len(st.session_state.scatter_point.select) > 0:
-    st.dataframe(st.session_state.scatter_point)
+    st.write("Scatter chart with selection_point:", str(st.session_state.scatter_point))
 
+st.subheader("Scatter chart with selection_interval")
 base = (
     alt.Chart(cars)
     .mark_point()
@@ -56,16 +55,17 @@ base = (
     )
 )
 chart_interval = base.add_params(interval)
-
-st.subheader("Scatter chart with selection_interval")
 st.altair_chart(chart_interval, on_select="rerun", key="scatter_interval")
 if (
     st.session_state.scatter_interval
     and len(st.session_state.scatter_interval.select) > 0
 ):
-    st.dataframe(st.session_state.scatter_interval)
+    st.write(
+        "Scatter chart with selection_interval:", str(st.session_state.scatter_interval)
+    )
 
 # BAR CHART
+st.subheader("Bar chart with selection_point")
 source = pd.DataFrame(
     {
         "a": ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
@@ -83,17 +83,15 @@ bar_graph = (
     )
 )
 bar_graph_point = bar_graph.add_params(point)
-
-st.subheader("Bar chart with selection_point")
 st.altair_chart(bar_graph_point, on_select="rerun", key="bar_point")
 if st.session_state.bar_point and len(st.session_state.bar_point.select) > 0:
-    st.dataframe(st.session_state.bar_point)
+    st.write("Bar chart with selection_point:", str(st.session_state.bar_point))
 
 bar_graph_interval = bar_graph.add_params(interval)
 st.subheader("Bar chart with selection_interval")
 st.altair_chart(bar_graph_interval, on_select="rerun", key="bar_interval")
 if st.session_state.bar_interval and len(st.session_state.bar_interval.select) > 0:
-    st.dataframe(st.session_state.bar_interval)
+    st.write("Bar chart with selection_interval:", str(st.session_state.bar_interval))
 
 # STACKED AREA CHART
 source = alt.UrlData(
@@ -114,7 +112,8 @@ area_chart_point = base.add_params(point)
 st.subheader("Area chart with selection_point")
 selection = st.altair_chart(area_chart_point, on_select="rerun", key="area_point")
 if len(selection.select) > 0:
-    st.dataframe(selection)
+    st.write("Area chart with selection_point:", str(selection.select))
+
 
 base = (
     alt.Chart(source)
@@ -132,7 +131,7 @@ area_interval_selection = st.altair_chart(
     area_chart_interval, on_select="rerun", key="area_interval"
 )
 if len(area_interval_selection.select) > 0:
-    st.dataframe(area_interval_selection)
+    st.write("Area chart with selection_interval:", str(area_interval_selection.select))
 
 # HISTOGRAM CHART
 source = alt.UrlData(
@@ -156,7 +155,9 @@ if (
     st.session_state.histogram_point
     and len(st.session_state.histogram_point.select) > 0
 ):
-    st.dataframe(st.session_state.histogram_point)
+    st.write(
+        "Histogram chart with selection_point:", str(st.session_state.histogram_point)
+    )
 
 base = (
     alt.Chart(source)
@@ -175,13 +176,7 @@ if (
     st.session_state.histogram_interval
     and len(st.session_state.histogram_interval.select) > 0
 ):
-    st.dataframe(st.session_state.histogram_interval)
-
-if st.button("Create some elements to unmount component"):
-    for _ in range(3):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
-        time.sleep(1)
-        st.write("Another element")
-
-st.altair_chart(histogram_interval, on_select="rerun", key="histogram_interval_dup")
+    st.write(
+        "Histogram chart with selection_interval:",
+        str(st.session_state.histogram_interval),
+    )
