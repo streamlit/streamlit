@@ -29,4 +29,14 @@ random_df = pd.DataFrame(
 
 st.dataframe(random_df)
 
+import time
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+
 st.data_editor(random_df, num_rows="dynamic")
