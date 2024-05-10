@@ -275,6 +275,7 @@ def test_multi_row_and_multi_column_select_snapshot(
     _select_some_rows_and_columns(app, canvas)
     _expect_multi_row_multi_column_selection(app)
 
+    canvas.scroll_into_view_if_needed()
     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
 
 
@@ -291,5 +292,7 @@ def test_selection_state_remains_after_unmounting(
     wait_for_app_run(app, 4000)
 
     expect(canvas).to_be_visible()
+
+    canvas.scroll_into_view_if_needed()
     # Use the same snapshot name as the previous test to ensure visual consistency
     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")

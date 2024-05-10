@@ -215,7 +215,7 @@ function DataFrame({
 
   /**
    * On the first rendering, try to load the initial editing state
-   * from widget state if it exist. This is required in the case
+   * from widget state if it exists. This is required in the case
    * that other elements are inserted before this widget.
    */
   React.useEffect(
@@ -345,7 +345,7 @@ function DataFrame({
 
   /**
    * On the first rendering, try to load initial selection state
-   * from the widget state if it exist. This is required in the
+   * from the widget state if it exists. This is required in the
    * case that other elements are inserted before this widget.
    *
    * This effect needs to run after the fullscreen effect that
@@ -353,39 +353,42 @@ function DataFrame({
    */
   React.useEffect(
     () => {
-      if (isRowSelectionActivated || isColumnSelectionActivated) {
-        const initialWidgetValue = widgetMgr.getStringValue({
-          id: element.id,
-          formId: element.formId,
-        } as WidgetInfo)
+      if (!isRowSelectionActivated && !isColumnSelectionActivated) {
+        // Only run this if selections are activated.
+        return
+      }
 
-        if (initialWidgetValue) {
-          const columnNames: string[] = columns.map(column => {
-            return getColumnName(column)
-          })
+      const initialWidgetValue = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId,
+      } as WidgetInfo)
 
-          const selectionState: DataframeState = JSON.parse(initialWidgetValue)
+      if (initialWidgetValue) {
+        const columnNames: string[] = columns.map(column => {
+          return getColumnName(column)
+        })
 
-          let rowSelection = CompactSelection.empty()
-          let columnSelection = CompactSelection.empty()
+        const selectionState: DataframeState = JSON.parse(initialWidgetValue)
 
-          selectionState.select?.rows?.forEach(row => {
-            rowSelection = rowSelection.add(row)
-          })
+        let rowSelection = CompactSelection.empty()
+        let columnSelection = CompactSelection.empty()
 
-          selectionState.select?.columns?.forEach(column => {
-            columnSelection = columnSelection.add(columnNames.indexOf(column))
-          })
+        selectionState.select?.rows?.forEach(row => {
+          rowSelection = rowSelection.add(row)
+        })
 
-          if (rowSelection.length > 0 || columnSelection.length > 0) {
-            // Update the initial selection state if something was selected
-            const initialSelection: GridSelection = {
-              rows: rowSelection,
-              columns: columnSelection,
-              current: undefined,
-            }
-            processSelectionChange(initialSelection)
+        selectionState.select?.columns?.forEach(column => {
+          columnSelection = columnSelection.add(columnNames.indexOf(column))
+        })
+
+        if (rowSelection.length > 0 || columnSelection.length > 0) {
+          // Update the initial selection state if something was selected
+          const initialSelection: GridSelection = {
+            rows: rowSelection,
+            columns: columnSelection,
+            current: undefined,
           }
+          processSelectionChange(initialSelection)
         }
       }
     },
