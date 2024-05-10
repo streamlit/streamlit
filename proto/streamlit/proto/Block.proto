@@ -54,6 +54,7 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
+    string icon_custom = 4;
   }
 
   message Dialog {

@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement, useEffect, useRef, useState } from "react"
+import { useTheme } from "@emotion/react"
 import {
   ExpandMore,
   ExpandLess,
@@ -23,6 +24,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import {
+  DynamicIcon,
   StyledSpinnerIcon,
   StyledIcon,
 } from "@streamlit/lib/src/components/shared/Icon"
@@ -30,6 +32,7 @@ import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMar
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import {
   BORDER_SIZE,
@@ -111,6 +114,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   children,
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
+  const { colors }: EmotionTheme = useTheme()
   const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const summaryRef = useRef<HTMLElement>(null)
@@ -242,6 +246,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       <StyledDetails isStale={isStale} ref={detailsRef}>
         <StyledSummary onClick={toggle} empty={empty} ref={summaryRef}>
           <StyledSummaryHeading>
+            {element.iconCustom && (
+              <DynamicIcon
+                size="lg"
+                color={colors.bodyText}
+                iconValue={element.iconCustom}
+              />
+            )}
             {element.icon && <ExpanderIcon icon={element.icon} />}
             <StreamlitMarkdown source={label} allowHTML={false} isLabel />
           </StyledSummaryHeading>
