@@ -255,7 +255,7 @@ function DataFrame({
     // Use debounce to prevent rapid updates to the widget state.
     debounce(DEBOUNCE_TIME_MS, (newSelection: GridSelection) => {
       // If we want to support selections also with in the editable mode,
-      // we would need to integrate the `applyEdits` and `syncSelections` functions
+      // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
 
