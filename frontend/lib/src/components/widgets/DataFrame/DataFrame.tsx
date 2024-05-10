@@ -254,7 +254,7 @@ function DataFrame({
   const syncSelectionState = React.useCallback(
     // Use debounce to prevent rapid updates to the widget state.
     debounce(DEBOUNCE_TIME_MS, (newSelection: GridSelection) => {
-      // If we want to support selections also with in the editable mode,
+      // If we want to support selections also with the editable mode,
       // we would need to integrate the `syncEditState` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
