@@ -730,9 +730,13 @@ function DataFrame({
               // when column selection is activated.
               return undefined
             }
+
             if (isRowSelectionActivated && isRowSelected) {
-              // Row selections and column sorting is not compatible.
+              // Keeping row selections when sorting columns is not supported at the moment.
               // So we need to clear the selection before we do the sorting.
+              // The reason is that the user would expect the selection to be kept on
+              // the same row after sorting, hover that would require us to map the selection
+              // to the new index of the selected row which adds complexity.
               clearSelection()
             }
             sortColumn(colIndex)
