@@ -41,10 +41,15 @@ def allow_cross_origin_requests() -> bool:
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(self, path, default_filename, reserved_paths):
+    def initialize(
+        self,
+        path: str,
+        default_filename: Optional[str] = None,
+        reserved_paths: list[str] = [],
+    ):
         self._reserved_paths = reserved_paths
 
-        super().initialize(path=path, default_filename=default_filename)
+        super().initialize(path, default_filename)
 
     def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
@@ -63,8 +68,8 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         try:
             return super().validate_absolute_path(root, absolute_path)
         except tornado.web.HTTPError as e:
-            # If the file is not found, we try to serve the default file
-            # and allow the frontend to handle the issue.
+            # If the file is not found, and there are no reserved paths,
+            # we try to serve the default file and allow the frontend to handle the issue.
             if e.status_code == 404:
                 if any([self.path.endswith(x) for x in self._reserved_paths]):
                     raise e
@@ -72,6 +77,8 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
                 self.path = self.parse_url_path(self.default_filename or "index.html")
                 absolute_path = self.get_absolute_path(self.root, self.path)
                 return super().validate_absolute_path(root, absolute_path)
+
+            raise e
 
     def write_error(self, status_code: int, **kwargs) -> None:
         if status_code == 404:
