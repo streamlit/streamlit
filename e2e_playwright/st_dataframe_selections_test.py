@@ -296,6 +296,7 @@ def test_selection_state_remains_after_unmounting(
     wait_for_app_run(app, 4000)
 
     expect(canvas).to_be_visible()
+    # Check that the selection is still returned correctly
     _expect_multi_row_multi_column_selection(app)
 
     canvas.scroll_into_view_if_needed()
