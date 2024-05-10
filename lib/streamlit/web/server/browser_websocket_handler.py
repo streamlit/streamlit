@@ -101,6 +101,10 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
+            cookie_value = self.get_signed_cookie("uzer")
+            if cookie_value:
+                email = json.loads(cookie_value).get("email", email)
+
         user_info: dict[str, str | None] = dict()
 
         if is_public_cloud_app:
