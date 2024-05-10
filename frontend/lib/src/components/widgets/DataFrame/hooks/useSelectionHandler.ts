@@ -79,6 +79,10 @@ function useSelectionHandler(
   const isColumnSelected = gridSelection.columns.length > 0
   const isCellSelected = gridSelection.current !== undefined
 
+  /**
+   * This callback is used to process selection changes and - if activated -
+   * trigger a sync of the state with the widget state
+   */
   const processSelectionChange = React.useCallback(
     (newSelection: GridSelection) => {
       const rowSelectionChanged = !isEqual(
