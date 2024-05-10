@@ -380,9 +380,7 @@ function DataFrame({
       element.id,
       element.formId,
       widgetMgr,
-      element,
       fragmentId,
-      numRows,
       columns,
       editingState.current,
     ]
