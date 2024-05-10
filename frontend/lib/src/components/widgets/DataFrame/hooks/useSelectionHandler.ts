@@ -22,16 +22,25 @@ import isEqual from "lodash/isEqual"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 export type SelectionHandlerReturn = {
+  // The current selection state
   gridSelection: GridSelection
+  // True, if row selection is activated
   isRowSelectionActivated: boolean
+  // True, if multi row selection is activated
   isMultiRowSelectionActivated: boolean
+  // True, if column selection is activated
   isColumnSelectionActivated: boolean
+  // True, if multi column selections is activated
   isMultiColumnSelectionActivated: boolean
+  // True, if at least one row is selected
   isRowSelected: boolean
+  // True, if at least one column is selected
   isColumnSelected: boolean
+  // True, if at least one cell is selected
   isCellSelected: boolean
-  clearSelection: () => void
-  clearCellSelection: () => void
+  // Callback to clear selections
+  clearSelection: (keepRows?: boolean, keepColumns?: boolean) => void
+  // Callback to process selection changes from the grid
   processSelectionChange: (newSelection: GridSelection) => void
 }
 
@@ -159,27 +168,38 @@ function useSelectionHandler(
     ]
   )
 
-  // This callback is used to clear all selections (row/column/cell)
-  const clearSelection = React.useCallback(() => {
-    const emptySelection = {
-      columns: CompactSelection.empty(),
-      rows: CompactSelection.empty(),
-      current: undefined,
-    }
-    setGridSelection(emptySelection)
-    if (isRowSelectionActivated || isColumnSelectionActivated) {
-      syncSelectionState(emptySelection)
-    }
-  }, [isRowSelectionActivated, isColumnSelectionActivated, syncSelectionState])
-
-  // This callback is used to clear only cell selections
-  const clearCellSelection = React.useCallback(() => {
-    setGridSelection({
-      columns: gridSelection.columns,
-      rows: gridSelection.rows,
-      current: undefined,
-    })
-  }, [gridSelection])
+  /**
+   * This callback is used to selections (row/column/cell)
+   * and sync the state with the widget state if column or row selections
+   * are activated and the selection has changed.
+   *
+   * @param keepRows - Whether to keep the row selection (default: false)
+   * @param keepColumns - Whether to keep the column selection (default: false)
+   */
+  const clearSelection = React.useCallback(
+    (keepRows = false, keepColumns = false) => {
+      const emptySelection: GridSelection = {
+        columns: keepColumns
+          ? gridSelection.columns
+          : CompactSelection.empty(),
+        rows: keepRows ? gridSelection.rows : CompactSelection.empty(),
+        current: undefined,
+      }
+      setGridSelection(emptySelection)
+      if (
+        (!keepRows && isRowSelectionActivated) ||
+        (!keepColumns && isColumnSelectionActivated)
+      ) {
+        syncSelectionState(emptySelection)
+      }
+    },
+    [
+      gridSelection,
+      isRowSelectionActivated,
+      isColumnSelectionActivated,
+      syncSelectionState,
+    ]
+  )
 
   return {
     gridSelection,
@@ -191,7 +211,6 @@ function useSelectionHandler(
     isColumnSelected,
     isCellSelected,
     clearSelection,
-    clearCellSelection,
     processSelectionChange,
   }
 }

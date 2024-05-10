@@ -297,8 +297,9 @@ describe("useSelectionHandler hook", () => {
 
     // Check that the clear cell selections doesn't clear the row+column selection:
     act(() => {
-      const { clearCellSelection } = result.current
-      clearCellSelection?.()
+      const { clearSelection } = result.current
+      // Keep column & row selections:
+      clearSelection?.(true, true)
     })
     expect(result.current.isRowSelected).toEqual(true)
     expect(result.current.isColumnSelected).toEqual(true)
@@ -361,8 +362,8 @@ describe("useSelectionHandler hook", () => {
 
     // Check that the clear cell selections doesn't clear the row+column selection:
     act(() => {
-      const { clearCellSelection } = result.current
-      clearCellSelection?.()
+      const { clearSelection } = result.current
+      clearSelection?.(true, true)
     })
     expect(result.current.isRowSelected).toEqual(false)
     expect(result.current.isColumnSelected).toEqual(false)

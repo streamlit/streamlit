@@ -311,7 +311,6 @@ function DataFrame({
     isColumnSelected,
     isCellSelected,
     clearSelection,
-    clearCellSelection,
     processSelectionChange,
   } = useSelectionHandler(element, isEmptyTable, disabled, syncSelectionState)
 
@@ -506,10 +505,11 @@ function DataFrame({
 
   React.useEffect(() => {
     // Clear cell selections if fullscreen mode changes
+    // but keep row & column selections.
     // In the past we saw some weird side-effects, so we decided to clean
     // it when entering fullscreen-mode. If we decide to change this, we have
     // to play around and get to the bottom of it.
-    clearCellSelection()
+    clearSelection(true, true)
     // Only run this on changes to the fullscreen mode:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen])
@@ -559,7 +559,8 @@ function DataFrame({
             event.relatedTarget as HTMLElement | null
           )
         ) {
-          clearCellSelection()
+          // Clear cell selections, but keep row & column selections.
+          clearSelection(true, true)
         }
       }}
     >
