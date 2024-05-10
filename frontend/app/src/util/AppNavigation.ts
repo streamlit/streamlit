@@ -149,6 +149,10 @@ export class AppNavigation {
 
   sendMPAMetricsOnInitialization(): void {
     const { appPages, currentPageScriptHash } = this
+    if (appPages.length === 0) {
+      return
+    }
+
     this.metricsMgr.enqueue("updateReport", {
       numPages: appPages.length,
       isMainPage: appPages[0].pageScriptHash === currentPageScriptHash,
