@@ -44,22 +44,24 @@ import {
 } from "./styled-components"
 
 export interface ExpanderIconProps {
-  icon: string
+  icon?: string
+  iconCustom?: string
 }
 
 /**
- * Renders an icon for the expander.
+ * Renders an icon for the expander and optionally a user-defined icon.
  *
  * If the icon is "spinner", it will render a spinner icon.
  * If the icon is "check", it will render a check icon.
  * If the icon is "error", it will render an error icon.
+ * If the icon is a valid, user-defined icon, it will render the user-defined icon.
  * Otherwise, it will render nothing.
  *
  * @param {string} icon - The icon to render.
  * @returns {ReactElement}
  */
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
-  const { icon } = props
+  const { icon, iconCustom } = props
   const { activeTheme } = React.useContext(LibContext)
 
   const iconProps = {
@@ -95,6 +97,12 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
         data-testid="stExpanderIconError"
         {...iconProps}
       />
+    )
+  }
+
+  if (iconCustom) {
+    return (
+      <DynamicIcon color={"inherit"} iconValue={iconCustom} {...iconProps} />
     )
   }
 
@@ -246,14 +254,10 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       <StyledDetails isStale={isStale} ref={detailsRef}>
         <StyledSummary onClick={toggle} empty={empty} ref={summaryRef}>
           <StyledSummaryHeading>
-            {element.iconCustom && (
-              <DynamicIcon
-                size="lg"
-                color={colors.bodyText}
-                iconValue={element.iconCustom}
-              />
-            )}
             {element.icon && <ExpanderIcon icon={element.icon} />}
+            {element.iconCustom && (
+              <ExpanderIcon iconCustom={element.iconCustom} />
+            )}
             <StreamlitMarkdown source={label} allowHTML={false} isLabel />
           </StyledSummaryHeading>
           {!empty ? (
