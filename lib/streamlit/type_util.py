@@ -741,7 +741,7 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # This is an imperfect check because there is no guarantee that an `index`
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
-    if callable(index_fn):
+    if callable(index_fn) and type(it) != EnumMeta:
         # We return a shallow copy of the Sequence here because the return value of
         # this function is saved in a widget serde class instance to be used in later
         # script runs, and we don't want mutations to the options object passed to a

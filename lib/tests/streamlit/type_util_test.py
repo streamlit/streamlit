@@ -721,6 +721,23 @@ class TypeUtilTest(unittest.TestCase):
         self.assertIn("b", l)
         self.assertIn("c", l)
 
+    def test_ensure_indexable_enum_is_indexable(self):
+        """Test Enums are indexable"""
+
+        class Opt(enum.Enum):
+            OPT1 = 1
+            OPT2 = 2
+
+        class StrOpt(str, enum.Enum):
+            OPT1 = "a"
+            OPT2 = "b"
+
+        l = type_util.ensure_indexable(Opt)
+        self.assertEqual(list(Opt), l)
+
+        l = type_util.ensure_indexable(StrOpt)
+        self.assertEqual(list(StrOpt), l)
+
 
 class TestArrowTruncation(DeltaGeneratorTestCase):
     """Test class for the automatic arrow truncation feature."""
