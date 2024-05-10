@@ -18,9 +18,8 @@ import React from "react"
 
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { logError } from "@streamlit/lib/src/util/log"
-
 import { getCellFromArrow } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 import {
@@ -65,15 +64,22 @@ function useDataLoader(
 
       const originalCol = column.indexNumber
       const originalRow = editingState.current.getOriginalRowIndex(row)
-
+      const isAddedRow = editingState.current.isAddedRow(originalRow)
       // Use editing state if editable or if it is an appended row
-      if (column.isEditable || editingState.current.isAddedRow(originalRow)) {
+      if (column.isEditable || isAddedRow) {
         const editedCell = editingState.current.getCell(
           originalCol,
           originalRow
         )
-        if (editedCell !== undefined) {
+        if (notNullOrUndefined(editedCell)) {
           return editedCell
+        } else if (isAddedRow) {
+          // If its an added row, its fine to return the cell with null value.
+          // since there will not be a corresponding cell in the Arrow data.
+          // Returning an empty cell here is especially important
+          // for the case that the data editor gets reconstructs from widget state
+          // where we strip out all None values from added rows.
+          return column.getCell(null, false)
         }
       }
 
@@ -82,7 +88,6 @@ function useDataLoader(
         const arrowCell = data.getCell(originalRow + 1, originalCol)
         return getCellFromArrow(column, arrowCell, data.cssStyles)
       } catch (error) {
-        logError(error)
         return getErrorCell(
           "Error during cell creation.",
           `This should never happen. Please report this bug. \nError: ${error}`
