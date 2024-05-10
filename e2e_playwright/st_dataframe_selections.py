@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit.elements.lib.column_config_utils import ColumnConfig
 
 np.random.seed(0)
 random.seed(0)
@@ -92,7 +91,7 @@ st.write("Dataframe multi-row-multi-column selection:", str(selection))
 
 st.header("Selections in form:")
 
-with st.form(key="my_form"):
+with st.form(key="my_form", clear_on_submit=True):
     selection = st.dataframe(
         df,
         hide_index=True,
