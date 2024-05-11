@@ -47,7 +47,6 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   collapseSidebar: jest.fn(),
   currentPageScriptHash: "",
   hasSidebarElements: false,
-  hideParentScrollbar: jest.fn(),
   onPageChange: jest.fn(),
   endpoints: mockEndpoints(),
   ...props,
@@ -142,61 +141,45 @@ describe("SidebarNav", () => {
     const separator = screen.getByTestId("stSidebarNavSeparator")
     expect(separator).toBeInTheDocument()
 
-    const expandIcon = screen.queryByTestId("stSidebarNavExpandIcon")
-    const collapseIcon = screen.queryByTestId("stSidebarNavCollapseIcon")
+    const viewButton = screen.queryByTestId("stSidebarNavViewButton")
 
-    expect(expandIcon).not.toBeInTheDocument()
-    expect(collapseIcon).not.toBeInTheDocument()
+    expect(viewButton).not.toBeInTheDocument()
   })
 
-  it("renders ExpandMore icon when not expanded and overflowing", () => {
+  it("renders View more button when not expanded and overflowing", () => {
     mockUseIsOverflowing.mockReturnValueOnce(true)
     render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
 
-    const separator = screen.getByTestId("stSidebarNavSeparator")
-    expect(separator).toBeInTheDocument()
-
-    const expandIcon = screen.getByTestId("stSidebarNavExpandIcon")
-    expect(expandIcon).toBeInTheDocument()
+    expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
+    expect(screen.queryByTestId("stSidebarNavViewButton")).toHaveTextContent(
+      "View more"
+    )
   })
 
-  it("renders ExpandLess icon when expanded and not overflowing", async () => {
-    // We need to have useIsOverflowing return true once so that we can click
-    // on the separator to expand the nav component. After this click, it
-    // returns false.
+  it("renders View less button when expanded and not overflowing", async () => {
+    // We need to have useIsOverflowing return true once so the view more button renders.
+    // After this click, it returns false.
     mockUseIsOverflowing.mockReturnValueOnce(true)
     render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
 
     // Click on the separator to expand the nav component.
-    const separator = screen.getByTestId("stSidebarNavSeparator")
-    expect(separator).toBeInTheDocument()
-    fireEvent.click(separator)
+    fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
 
-    const collapseIcon = await screen.findByTestId("stSidebarNavCollapseIcon")
-    expect(collapseIcon).toBeInTheDocument()
+    const viewLessButton = await screen.findByText("View less")
+    expect(viewLessButton).toBeInTheDocument()
   })
 
-  it("renders ExpandLess icon when expanded and overflowing", async () => {
+  it("renders View less button when expanded and overflowing", async () => {
     // Have useIsOverflowing return true both before and after the nav is
     // expanded.
     mockUseIsOverflowing.mockReturnValueOnce(true).mockReturnValueOnce(true)
     render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
 
-    // Click on the separator to expand the nav component.
-    const separator = screen.getByTestId("stSidebarNavSeparator")
-    expect(separator).toBeInTheDocument()
-    fireEvent.click(separator)
+    // Click on the View more button to expand the nav component.
+    fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
 
-    const collapseIcon = await screen.findByTestId("stSidebarNavCollapseIcon")
-    expect(collapseIcon).toBeInTheDocument()
-  })
-
-  it("changes cursor to pointer above separator when overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
-    render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
-    const separator = screen.getByTestId("stSidebarNavSeparator")
-    expect(separator).toBeInTheDocument()
-    expect(separator).toHaveStyle("cursor: pointer")
+    const viewLessButton = await screen.findByText("View less")
+    expect(viewLessButton).toBeInTheDocument()
   })
 
   it("is unexpanded by default", () => {
@@ -204,7 +187,7 @@ describe("SidebarNav", () => {
 
     const sidebarNavItems = screen.getByTestId("stSidebarNavItems")
     expect(sidebarNavItems).toBeInTheDocument()
-    expect(sidebarNavItems).toHaveStyle("max-height: 33vh")
+    expect(sidebarNavItems).toHaveStyle("max-height: 30vh")
   })
 
   it("does not expand when you click on the separator if there is no overflow", async () => {
@@ -215,28 +198,28 @@ describe("SidebarNav", () => {
 
     const sidebarNavItems = await screen.findByTestId("stSidebarNavItems")
     expect(sidebarNavItems).toBeInTheDocument()
-    expect(sidebarNavItems).toHaveStyle("max-height: 33vh")
+    expect(sidebarNavItems).toHaveStyle("max-height: 30vh")
   })
 
-  it("toggles to expanded and back when the separator is clicked", async () => {
+  it("toggles to expanded and back when the View more/less buttons are clicked", async () => {
     mockUseIsOverflowing.mockReturnValueOnce(true)
 
     render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
 
-    const separator = screen.getByTestId("stSidebarNavSeparator")
-    expect(separator).toBeInTheDocument()
-    fireEvent.click(separator)
+    expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
+    // Expand the pages menu
+    fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
 
     const sidebarNavItems = await screen.findByTestId("stSidebarNavItems")
     expect(sidebarNavItems).toBeInTheDocument()
-    expect(sidebarNavItems).toHaveStyle("max-height: 75vh")
+    expect(sidebarNavItems).toHaveStyle("max-height: none")
 
-    fireEvent.click(separator)
+    fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
 
     const sidebarNavItemsUpdate = await screen.findByTestId(
       "stSidebarNavItems"
     )
-    expect(sidebarNavItemsUpdate).toHaveStyle("max-height: 33vh")
+    expect(sidebarNavItemsUpdate).toHaveStyle("max-height: 30vh")
   })
 
   it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
@@ -262,37 +245,6 @@ describe("SidebarNav", () => {
 
     expect(props.onPageChange).toHaveBeenCalledWith("other_page_hash")
     expect(props.collapseSidebar).toHaveBeenCalled()
-  })
-
-  it("calls hideParentScrollbar onMouseOut", () => {
-    const props = getProps()
-    render(<SidebarNav {...props} />)
-
-    const sidebarNavItems = screen.getByTestId("stSidebarNavItems")
-    fireEvent.mouseOut(sidebarNavItems)
-
-    expect(props.hideParentScrollbar).toHaveBeenCalledWith(false)
-  })
-
-  it("does not call hideParentScrollbar on mouseOver if not overflowing", () => {
-    const props = getProps()
-    render(<SidebarNav {...props} />)
-
-    const sidebarNavItems = screen.getByTestId("stSidebarNavItems")
-    fireEvent.mouseOver(sidebarNavItems)
-
-    expect(props.hideParentScrollbar).not.toHaveBeenCalled()
-  })
-
-  it("does call hideParentScrollbar on mouseOver if overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
-    const props = getProps()
-    render(<SidebarNav {...props} />)
-
-    const sidebarNavItems = screen.getByTestId("stSidebarNavItems")
-    fireEvent.mouseOver(sidebarNavItems)
-
-    expect(props.hideParentScrollbar).toHaveBeenCalledWith(true)
   })
 
   it("handles default and custom page icons", () => {
@@ -326,6 +278,6 @@ describe("SidebarNav", () => {
     const props = getProps({ currentPageScriptHash: "other_page_hash" })
     render(<SidebarNav {...props} />)
 
-    expect(screen.getByText("my other page")).toHaveStyle("color: #31333F")
+    expect(screen.getByText("my other page")).toHaveStyle("color: #262730")
   })
 })

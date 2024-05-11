@@ -58,7 +58,9 @@ const SidebarNav = ({
   const isOverflowing = useIsOverflowing(navItemsRef, expanded)
 
   const version1Pages = appPages.length
-  const version2Pages = Array.from(navPageSections.values()).flat().length
+  const version2Pages = navPageSections
+    ? Array.from(navPageSections.values()).flat().length
+    : 0
 
   // Escape if MPA only has 1 page
   if (version1Pages < 2 && version2Pages < 2) {
@@ -119,6 +121,8 @@ const SidebarNav = ({
     )
   }
 
+  const showViewButton = (isOverflowing && !expanded) || expanded
+
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems
@@ -132,20 +136,12 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <>
-          {isOverflowing && !expanded && (
+          {showViewButton && (
             <StyledViewButton
               onClick={toggleExpanded}
-              data-testid="stSidebarNavViewMore"
+              data-testid="stSidebarNavViewButton"
             >
-              View more
-            </StyledViewButton>
-          )}
-          {expanded && (
-            <StyledViewButton
-              onClick={toggleExpanded}
-              data-testid="stSidebarNavViewLess"
-            >
-              View less
+              {expanded ? "View less" : "View more"}
             </StyledViewButton>
           )}
           <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />

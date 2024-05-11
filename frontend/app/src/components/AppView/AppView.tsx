@@ -150,9 +150,15 @@ function AppView(props: AppViewProps): ReactElement {
   const hasBottomElements = !elements.bottom.isEmpty
 
   const [showSidebarOverride, setShowSidebarOverride] = React.useState(false)
+  const version1Pages = appPages.length
+  const version2Pages = navPageSections
+    ? Array.from(navPageSections.values()).flat().length
+    : 0
+  const multiplePages = version1Pages > 1 || version2Pages > 1
+
   const showSidebar =
     hasSidebarElements ||
-    (!hideSidebarNav && appPages.length > 1) ||
+    (!hideSidebarNav && multiplePages) ||
     showSidebarOverride
 
   React.useEffect(() => {

@@ -269,7 +269,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     // Handle MPAv1 & v2 scenarios:
     const version1Pages = appPages.length
-    const version2Pages = Array.from(navPageSections.values()).flat().length
+    const version2Pages = navPageSections
+      ? Array.from(navPageSections.values()).flat().length
+      : 0
     const hasPageNavAbove =
       (version1Pages > 1 && !hideSidebarNav) ||
       (version2Pages > 1 && !hideSidebarNav)
