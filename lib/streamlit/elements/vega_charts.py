@@ -280,13 +280,14 @@ def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
 
     More information about view compositions: https://vega.github.io/vega-lite/docs/composition.html
     """
+
     if (
         any(key in spec for key in ["layer", "hconcat", "vconcat", "concat", "spec"])
-        and "encoding" in spec
+        or "encoding" not in spec
     ):
         raise StreamlitAPIException(
-            "Selections are not yet supported for multi-view charts (chart compositions)."
-            "If you would like to add selections to multi-view charts, please upvote "
+            "Selections are not yet supported for multi-view charts (chart compositions). "
+            "If you would like to use selections on multi-view charts, please upvote "
             "this [Github issue](https://github.com/streamlit/streamlit/issues/8643)."
         )
 
@@ -1446,8 +1447,8 @@ class VegaChartsMixin:
             _disallow_multi_view_charts(final_spec)
 
             # Parse and check the specified selection modes
-            vega_lite_proto.selection_mode = _parse_selection_mode(
-                final_spec, selection_mode
+            vega_lite_proto.selection_mode.extend(
+                _parse_selection_mode(final_spec, selection_mode)
             )
 
             vega_lite_proto.form_id = current_form_id(self.dg)
