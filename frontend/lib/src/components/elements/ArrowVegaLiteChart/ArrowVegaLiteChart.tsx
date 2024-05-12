@@ -27,7 +27,11 @@ import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { debounce, notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import {
+  debounce,
+  notNullOrUndefined,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { logWarning, logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
@@ -46,7 +50,6 @@ import {
   getDataArrays,
   getInlineData,
 } from "./arrowUtils"
-import { prepareSpecForSelections } from "./selectionUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
@@ -87,6 +90,55 @@ export interface PropsWithFullScreen extends Props {
 interface State {
   error?: Error
   selections: Record<string, any>
+}
+
+/**
+ * Prepares the vega-lite spec for selections by transforming the select parameters
+ * to a full object specification and by automatically adding encodings (if missing)
+ * to point selections.
+ *
+ * The changes are applied in-place to the spec object.
+ *
+ * @param spec The Vega-Lite specification of the chart.
+ */
+export function prepareSpecForSelections(spec: any): void {
+  if ("params" in spec && "encoding" in spec) {
+    spec.params.forEach((param: any) => {
+      if (!("select" in param)) {
+        // We are only interested in transforming select parameters.
+        // Other parameters are skipped.
+        return
+      }
+
+      if (["interval", "point"].includes(param.select)) {
+        // The select object can be either a single string (short-hand) specifying
+        // "interval" or "point" or an object that can contain additional
+        // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
+        // To make our life easier, we convert the short-hand notation to the full object specification.
+        param.select = {
+          type: param.select,
+        }
+      }
+
+      if (!("type" in param.select)) {
+        // The type property is required in the spec.
+        // But we check anyways and skip all parameters that don't have it.
+        return
+      }
+
+      if (
+        param.select.type === "point" &&
+        !("encodings" in param.select) &&
+        isNullOrUndefined(param.select.encodings)
+      ) {
+        // If encodings are not specified by the user, we add all the encodings from
+        // the chart to the selection parameter. This is required so that points
+        // selections are correctly resolved to a PointSelection and not an IndexSelection:
+        // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
+        param.select.encodings = Object.keys(spec.encoding)
+      }
+    })
+  }
 }
 
 export class ArrowVegaLiteChart extends PureComponent<
@@ -337,10 +389,8 @@ export class ArrowVegaLiteChart extends PureComponent<
 
   /**
    * Configure the selections for this chart if the chart has selections enabled.
-   *
-   * @param spec The Vega-Lite specification for the chart.
    */
-  private maybeConfigureSelections = (spec: any): void => {
+  private maybeConfigureSelections = (): void => {
     if (this.vegaView === undefined) {
       // This check is mainly to make the type checker happy.
       // this.vegaView is guaranteed to be defined here.
@@ -522,7 +572,7 @@ export class ArrowVegaLiteChart extends PureComponent<
 
     this.vegaView = view
 
-    this.maybeConfigureSelections(spec)
+    this.maybeConfigureSelections()
 
     this.vegaFinalizer = finalize
 
