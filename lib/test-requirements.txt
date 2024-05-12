@@ -12,7 +12,8 @@ seaborn>=0.11.2
 setuptools>=65.5.1
 watchdog>=2.1.5
 urllib3>=1.9
-
+# Use by vega-lite / altair e2e tests:
+vega_datasets
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
