@@ -198,7 +198,7 @@ export class ElementNode implements AppNode {
       useContainerWidth: proto.useContainerWidth,
       vegaLiteTheme: proto.theme,
       id: proto.id,
-      isSelectEnabled: proto.isSelectEnabled,
+      selectionMode: proto.selectionMode,
       formId: proto.formId,
     }
 

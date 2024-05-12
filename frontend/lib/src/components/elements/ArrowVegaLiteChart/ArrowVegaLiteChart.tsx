@@ -21,6 +21,7 @@ import embed from "vega-embed"
 import * as vega from "vega"
 import { SignalValue } from "vega"
 import { expressionInterpreter } from "vega-interpreter"
+import isEqual from "lodash/isEqual"
 
 import {
   WidgetInfo,
@@ -171,7 +172,10 @@ export class ArrowVegaLiteChart extends PureComponent<
       prevProps.width !== this.props.width ||
       prevProps.height !== this.props.height ||
       prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
-      prevProps.element.isSelectEnabled !== this.props.element.isSelectEnabled
+      !isEqual(
+        prevProps.element.selectionMode,
+        this.props.element.selectionMode
+      )
     ) {
       logMessage("Vega spec changed.")
       try {
@@ -258,7 +262,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw new Error("Datasets should not be passed as part of the spec")
     }
 
-    if (el.isSelectEnabled) {
+    if (el.selectionMode.length > 0) {
       prepareSpecForSelections(spec)
     }
     console.log("Generated spec", spec)
@@ -348,7 +352,7 @@ export class ArrowVegaLiteChart extends PureComponent<
 
     const { widgetMgr, element } = this.props
 
-    if (!element?.id || !element.isSelectEnabled) {
+    if (!element?.id || element.selectionMode.length === 0) {
       // To configure selections, it needs to be activated and
       // the element ID must be set.
       return

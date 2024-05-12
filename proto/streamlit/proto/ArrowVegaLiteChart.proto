@@ -43,8 +43,8 @@ message ArrowVegaLiteChart {
   // ID, required for selection events.
   string id = 7;
 
-  // If True, selections are enabled on the chart.
-  bool is_select_enabled = 8;
+  // Named selection parameters that are activated to trigger reruns.
+  repeated string selection_mode = 8;
 
   // The form ID of the widget, this is required if selections are activated on the chart.
   string form_id = 9;

@@ -25,6 +25,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Iterable,
     Literal,
     Sequence,
     TypedDict,
@@ -290,24 +291,74 @@ def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
         )
 
 
-def _check_spec_for_selections(spec: VegaLiteSpec) -> None:
-    """Check if the spec has any selections defined. If not, raise an exception."""
+def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
+    """Extract the names of all valid selection parameters from the spec."""
+    if not spec or "params" not in spec:
+        return set()
 
-    if spec and "params" in spec:
-        for param in spec["params"]:
-            # Check if it looks like a valid selection parameter:
-            # https://vega.github.io/vega-lite/docs/selection.html
-            if "name" in param and "select" in param and param["select"]:
-                # Selection found, just return here to not show the exception.
-                return
+    param_names = set()
 
-    raise StreamlitAPIException(
-        "Selections are activated, but the provided chart spec does not "
-        "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
-        "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
-        "For adding selections to `st.vega_lite_chart`, take a look "
-        "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
-    )
+    for param in spec["params"]:
+        # Check if it looks like a valid selection parameter:
+        # https://vega.github.io/vega-lite/docs/selection.html
+        if param.get("name") and param.get("select"):
+            # Selection found, just return here to not show the exception.
+            param_names.add(param["name"])
+
+    return param_names
+
+
+def _parse_selection_mode(
+    spec: VegaLiteSpec,
+    selection_mode: str | Iterable[str] | None,
+) -> list[str]:
+    """Parse and check the user provided selection modes.
+
+    This will raise an exception if no valid selection parameters are found in the spec
+    or if the user provided selection modes are not defined in the spec.
+
+    Parameters
+    ----------
+    spec : VegaLiteSpec
+        The Vega-Lite chart specification.
+
+    selection_mode : str, Iterable[str], or None
+        The user provided selection mode(s).
+
+    Returns
+    -------
+    list[str]
+        The parsed selection mode(s) that should be activated.
+    """
+
+    # Extract all selection parameters from the spec:
+    all_selection_params = _extract_selection_parameters(spec)
+
+    if not all_selection_params:
+        raise StreamlitAPIException(
+            "Selections are activated, but the provided chart spec does not "
+            "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
+            "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions). "
+            "For adding selections to `st.vega_lite_chart`, take a look "
+            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
+        )
+
+    if selection_mode is None:
+        # Activate all selection parameters:
+        return list(all_selection_params)
+
+    if isinstance(selection_mode, str):
+        # Convert single string to list:
+        selection_mode = [selection_mode]
+
+    # Check that all provided selection parameters are defined in the spec:
+    for selection_name in selection_mode:
+        if selection_name not in all_selection_params:
+            raise StreamlitAPIException(
+                f"Selection parameter '{selection_name}' is not defined in the chart spec. "
+                f"Available selection parameters are: {all_selection_params}."
+            )
+    return list(selection_mode)
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
@@ -1076,6 +1127,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        selection_mode: str | Iterable[str] | None = None,
     ) -> DeltaGenerator:
         ...
 
@@ -1088,6 +1140,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        selection_mode: str | Iterable[str] | None = None,
     ) -> VegaLiteState:
         ...
 
@@ -1100,6 +1153,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        selection_mode: str | Iterable[str] | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Altair library.
 
@@ -1162,6 +1216,7 @@ class VegaChartsMixin:
             theme=theme,
             key=key,
             on_select=on_select,
+            selection_mode=selection_mode,
         )
 
     @overload
@@ -1174,6 +1229,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
         ...
@@ -1188,6 +1244,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> VegaLiteState:
         ...
@@ -1202,6 +1259,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
@@ -1279,6 +1337,7 @@ class VegaChartsMixin:
             theme=theme,
             key=key,
             on_select=on_select,
+            selection_mode=selection_mode,
             **kwargs,
         )
 
@@ -1289,6 +1348,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        selection_mode: str | Iterable[str] | None = None,
         add_rows_metadata: AddRowsMetadata | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart.
@@ -1311,6 +1371,7 @@ class VegaChartsMixin:
             theme=theme,
             key=key,
             on_select=on_select,
+            selection_mode=selection_mode,
             add_rows_metadata=add_rows_metadata,
         )
 
@@ -1322,6 +1383,7 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        selection_mode: str | Iterable[str] | None = None,
         add_rows_metadata: AddRowsMetadata | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
@@ -1378,12 +1440,16 @@ class VegaChartsMixin:
             # Import here to avoid circular imports
             from streamlit.elements.form import current_form_id
 
-            # Check if the processed spec has selections defined:
-            _check_spec_for_selections(spec)
+            # Load the stabilized spec again as a dict:
+            final_spec = json.loads(vega_lite_proto.spec)
             # Temporary limitation to disallow multi-view charts (compositions) with selections.
-            _disallow_multi_view_charts(spec)
+            _disallow_multi_view_charts(final_spec)
 
-            vega_lite_proto.is_select_enabled = True
+            # Parse and check the specified selection modes
+            vega_lite_proto.selection_mode = _parse_selection_mode(
+                final_spec, selection_mode
+            )
+
             vega_lite_proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
@@ -1400,7 +1466,7 @@ class VegaChartsMixin:
                 named_datasets=[dataset.name for dataset in vega_lite_proto.datasets],
                 theme=theme,
                 use_container_width=use_container_width,
-                is_selection_activated=is_selection_activated,
+                selection_mode=vega_lite_proto.selection_mode,
                 form_id=vega_lite_proto.form_id,
                 page=ctx.page_script_hash if ctx else None,
             )

@@ -59,8 +59,8 @@ export interface VegaLiteChartElement {
   /** The widget ID. Only set if selections are activated. */
   id: string
 
-  /** If True, activates selections on the chart. */
-  isSelectEnabled: boolean
+  /** Named selection parameters that are activated to trigger reruns. */
+  selectionMode: string[]
 
   /** The form ID if the chart has activated selections and is used within a form. */
   formId: string
