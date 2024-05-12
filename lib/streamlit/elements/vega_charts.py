@@ -270,6 +270,26 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
     return chart_dict
 
 
+def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
+    """Raise an exception if the spec contains a multi-view chart (view composition).
+
+    This is intended to be used as a temporary solution to prevent selections on
+    multi-view charts. There are too many edge cases to handle selections on these
+    charts correctly, so we're disallowing them for now.
+
+    More information about view compositions: https://vega.github.io/vega-lite/docs/composition.html
+    """
+    if (
+        any(key in spec for key in ["layer", "hconcat", "vconcat", "concat", "spec"])
+        and "encoding" in spec
+    ):
+        raise StreamlitAPIException(
+            "Selections are not yet supported for multi-view charts (chart compositions)."
+            "If you would like to add selections to multi-view charts, please upvote "
+            "this [Github issue](https://github.com/streamlit/streamlit/issues/8643)."
+        )
+
+
 def _check_spec_for_selections(spec: VegaLiteSpec) -> None:
     """Check if the spec has any selections defined. If not, raise an exception."""
 
@@ -1351,7 +1371,6 @@ class VegaChartsMixin:
 
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
-        print(vega_lite_proto.spec)
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
@@ -1361,6 +1380,8 @@ class VegaChartsMixin:
 
             # Check if the processed spec has selections defined:
             _check_spec_for_selections(spec)
+            # Temporary limitation to disallow multi-view charts (compositions) with selections.
+            _disallow_multi_view_charts(spec)
 
             vega_lite_proto.is_select_enabled = True
             vega_lite_proto.form_id = current_form_id(self.dg)

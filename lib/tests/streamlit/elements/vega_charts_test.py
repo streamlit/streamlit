@@ -395,6 +395,14 @@ class AltairChartTest(DeltaGeneratorTestCase):
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
 
+    def test_that_selections_on_composite_charts_are_disallowed(self):
+        """Test that an exception is thrown if a multi-view / composite chart
+        is passed with selections."""
+        chart = create_advanced_altair_chart()
+
+        with self.assertRaises(StreamlitAPIException):
+            st.altair_chart(chart)
+
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
     """Test the `st.vega_lite_chart` command."""
