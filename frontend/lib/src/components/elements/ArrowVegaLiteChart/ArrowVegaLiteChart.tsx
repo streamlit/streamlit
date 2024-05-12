@@ -67,9 +67,10 @@ const BOTTOM_PADDING = 20
  */
 const DEBOUNCE_TIME_MS = 150
 
-// This is the state that is sent to the backend
-// This needs to be the same structure that is also defined
-// in the Python code.
+/** This is the state that is sent to the backend
+ * This needs to be the same structure that is also defined
+ * in the Python code.
+ */
 export interface VegaLiteState {
   select: Record<string, any>
 }
@@ -89,7 +90,6 @@ export interface PropsWithFullScreen extends Props {
 
 interface State {
   error?: Error
-  selections: Record<string, any>
 }
 
 /**
@@ -442,7 +442,6 @@ export class ArrowVegaLiteChart extends PureComponent<
               const stateNames = element.selectionMode.map(
                 (param, _idx) => `${param}_store`
               )
-
               return _name ? stateNames.includes(_name) : false
             },
             // Don't include subcontext data since it will lead to exceptions
@@ -464,31 +463,25 @@ export class ArrowVegaLiteChart extends PureComponent<
             processedSelection = value.vlPoint.or
           }
 
+          // Get the current widget state
+          const currentWidgetState = JSON.parse(
+            widgetMgr.getStringValue(element as WidgetInfo) || "{}"
+          )
+
           // Update the component-internal selection state
           const updatedSelections = {
             select: {
-              ...(this.state.selections?.select || {}),
+              ...(currentWidgetState?.select || {}),
               [name]: processedSelection || {},
             } as VegaLiteState,
           }
-          this.setState({
-            selections: updatedSelections,
-          })
 
           // Update the widget state if the selection state has changed
           // compared to the last update.
-          const newWidgetState = JSON.stringify(updatedSelections)
-          const currentWidgetState = widgetMgr.getStringValue(
-            element as WidgetInfo
-          )
-
-          if (
-            currentWidgetState === undefined ||
-            currentWidgetState !== newWidgetState
-          ) {
+          if (!isEqual(currentWidgetState, updatedSelections)) {
             widgetMgr.setStringValue(
               element as WidgetInfo,
-              newWidgetState,
+              JSON.stringify(updatedSelections),
               {
                 fromUi: true,
               },
@@ -510,24 +503,28 @@ export class ArrowVegaLiteChart extends PureComponent<
         return
       }
 
-      this.setState({
-        selections: {},
-      })
-
       const emptySelectionState: VegaLiteState = {
-        // TODO(lukasmasuch): We might actually want to have
-        //  this initialized with empty selections for all selectors.
         select: {},
       }
+      // Initialize all parameters defined in the selectionMode with an empty object.
+      this.props.element.selectionMode.forEach(param => {
+        emptySelectionState.select[param] = {}
+      })
 
-      this.props.widgetMgr?.setStringValue(
-        this.props.element as WidgetInfo,
-        JSON.stringify(emptySelectionState),
-        {
-          fromUi: true,
-        },
-        this.props.fragmentId
+      const currentWidgetState = JSON.parse(
+        widgetMgr.getStringValue(element as WidgetInfo) || "{}"
       )
+
+      if (!isEqual(currentWidgetState, emptySelectionState)) {
+        this.props.widgetMgr?.setStringValue(
+          this.props.element as WidgetInfo,
+          JSON.stringify(emptySelectionState),
+          {
+            fromUi: true,
+          },
+          this.props.fragmentId
+        )
+      }
     }
 
     // Add the form clear listener if we are in a form (formId defined)
