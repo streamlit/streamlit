@@ -27,7 +27,7 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import { debounce, notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import { logMessage } from "@streamlit/lib/src/util/log"
+import { logWarning, logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
@@ -45,6 +45,10 @@ import {
   getDataArrays,
   getInlineData,
 } from "./arrowUtils"
+import {
+  prepareSpecForSelections,
+  getSelectorsFromSpec,
+} from "./selectionUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
@@ -136,29 +140,6 @@ export class ArrowVegaLiteChart extends PureComponent<
 
   public componentWillUnmount(): void {
     console.log("unmounting")
-    // TODO(lukasmasuch): This is probably not needed anymore, or?
-    // If the element ID is provide (e.g. with selections activated)
-    // store the current chart state in the widget manager so that it
-    // can be used for restoring the state when the component is re-mounted.
-    // if (this.props.element?.id) {
-    //   const viewState = this.vegaView?.getState({
-    //     // There are also `signals` data, but I believe its
-    //     // not relevant for restoring the selection state.
-    //     data: (_name?: string, _operator?: any) => {
-    //       return true
-    //     },
-    //   })
-
-    //   if (notNullOrUndefined(viewState)) {
-    //     console.log("Store state", viewState)
-    //     this.props.widgetMgr?.setElementState(
-    //       this.props.element.id,
-    //       "viewState",
-    //       viewState
-    //     )
-    //   }
-    // }
-
     this.finalizeView()
   }
 
@@ -172,50 +153,6 @@ export class ArrowVegaLiteChart extends PureComponent<
     }
     this.vegaFinalizer = undefined
     this.vegaView = undefined
-  }
-
-  /**
-   * Extracts and returns the names of selection parameters from a given Vega-Lite chart specification.
-   * This method is specifically designed for use with Vega-Lite version 5 specifications.
-   *
-   * It parses the 'params' property of the specification, if present, to retrieve the names
-   * of all selection parameters (parameters with a 'select' property).
-   *
-   * For more details on selection in Vega-Lite, visit:
-   * https://vega.github.io/vega-lite/docs/selection.html
-   *
-   * @param spec {any} - The Vega-Lite chart specification object, expected to conform to the
-   * structure utilized by Vega-Lite 5.
-   * @returns {string[]} An array of strings, where each string is the name of a selector from
-   * the chart's specification. Returns an empty array if no selectors are found.
-   *
-   * Example:
-   * ```
-   * const vegaLiteSpec = {
-   *   params: [
-   *     { name: 'brush', select: 'interval' },
-   *     { name: 'click', select: 'point', toggle: 'event.shiftKey' }
-   *   ]
-   * };
-   * const selectors = getSelectorsFromSpec(vegaLiteSpec);
-   * console.log(selectors); // Output: ['brush', 'click']
-   * ```
-   */
-  public getSelectorsFromSpec(spec: any): string[] {
-    if ("params" in spec) {
-      const select: any[] = []
-      spec.params.forEach((item: any) => {
-        // Only parameters with a select property are relevant
-        // selection parameters for us. Also, its required
-        // that the parameter have a name. This is required in the vega
-        // lite spec, but we check anyways to be extra safe.
-        if ("select" in item && "name" in item && item.name) {
-          select.push(item.name)
-        }
-      })
-      return select
-    }
-    return []
   }
 
   public async componentDidUpdate(
@@ -291,43 +228,6 @@ export class ArrowVegaLiteChart extends PureComponent<
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
-    // const selectionParams = this.getSelectorsFromSpec(spec)
-
-    // const storedValue = this.props.widgetMgr.getStringValue(el)
-    // console.log("storedValue", storedValue)
-    // if (storedValue !== undefined) {
-    //   const parsedStoredValue = JSON.parse(storedValue)
-    //   if (parsedStoredValue.select) {
-    //     console.log("parsedStoredValue", parsedStoredValue)
-    //     selectionParams.forEach(selector => {
-    //       spec.params.forEach((param: any) => {
-    //         if (param.name && param.name === selector) {
-    //           // initialize interval and point values if they exist to maintain state
-    //           // https://vega.github.io/vega-lite/docs/param-value.html
-    //           if (param.select.type && param.select.type === "point") {
-    //             try {
-    //               const values = parsedStoredValue.select[selector]
-    //               param.select.fields = Object.keys(values[0])
-    //               param.value = values
-    //               console.log("set initial value", param)
-    //             } catch (e) {
-    //               logMessage(e)
-    //             }
-    //           } else if (param.select.type === "interval") {
-    //             try {
-    //               const values = parsedStoredValue.select[selector]
-    //               param.value = values
-    //               console.log("set initial value", param)
-    //             } catch (e) {
-    //               logMessage(e)
-    //             }
-    //           }
-    //         }
-    //       })
-    //     })
-    //   }
-    // }
-
     if (isFullScreen) {
       spec.width = width
       spec.height = height
@@ -359,66 +259,8 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw new Error("Datasets should not be passed as part of the spec")
     }
 
-    // TODO(lukasmasuch): how can we correctly handle encodings for various chart types?
-    // attempt to add encodings from chart to selection parameter in order to get point interval
-    // This is to ensure that we can consistently recreate state in fullscreen / non fullscreen mode
-    // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
-    if (el.isSelectEnabled && "params" in spec) {
-      if ("encoding" in spec) {
-        spec.params.forEach((param: any) => {
-          if (!("select" in param)) {
-            // We are only interested in transforming select parameters.
-            return
-          }
-
-          console.log("ITEM", param.select)
-          if (["interval", "point"].includes(param.select)) {
-            console.log("Transform", param.select)
-            // The select object can be either a single string specifying
-            // "interval" or "point" or an object that can contain additional
-            // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
-            // To make our life easier, we convert the string to the full object specification.
-            param.select = {
-              type: param.select,
-            }
-          }
-          console.log(param.select.type)
-          if (!("type" in param.select)) {
-            // The type property is required in the spec.
-            // But we check anyways and skip all parameters that don't have it.
-            return
-          }
-
-          if (
-            param.select.type === "point" &&
-            param.select.encodings === undefined
-          ) {
-            // TODO(lukasmasuch): Does this work always?
-            param.select.encodings = Object.keys(spec.encoding)
-          }
-        })
-      }
-      // TODO(lukasmasuch): There are other types of concationations:
-      // const concatenationKeys = ["hconcat", "vconcat", "layer"]
-
-      // concatenationKeys.forEach(key => {
-      //   if (key in spec) {
-      //     try {
-      //       spec.params.forEach((param: any) => {
-      //         if (
-      //           "select" in param &&
-      //           "type" in param.select &&
-      //           param.select.type === "point" &&
-      //           param.select.encodings === undefined
-      //         ) {
-      //           param.select.encodings = Object.keys(spec[key][0].encoding)
-      //         }
-      //       })
-      //     } catch (e) {
-      //       logMessage(e)
-      //     }
-      //   }
-      // })
+    if (el.isSelectEnabled) {
+      prepareSpecForSelections(spec)
     }
     console.log("Generated spec", spec)
     return spec
@@ -444,12 +286,16 @@ export class ArrowVegaLiteChart extends PureComponent<
     console.log("Update data", name)
 
     if (!data || data.data.numRows === 0) {
-      // The new data is empty, so we remove the dataset from the chart view.
-      const view = this.vegaView as any
-      // TODO(lukasmasuch): Can we replace this with this.vegaView.data(name)
-      // eslint-disable-next-line no-underscore-dangle
-      const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
-      if (viewHasDataWithName) {
+      // The new data is empty, so we remove the dataset from the
+      // chart view if the named dataset exists.
+      let namedDatasetExists = true
+      try {
+        this.vegaView.data(name)
+      } catch (e) {
+        namedDatasetExists = false
+      }
+
+      if (namedDatasetExists) {
         this.vegaView.remove(name, vega.truthy)
       }
       return
@@ -512,60 +358,58 @@ export class ArrowVegaLiteChart extends PureComponent<
     // Try to load the previous state of the chart from the element state.
     // This is useful to restore the selection state when the component is re-mounted
     // or when its put into fullscreen mode.
-    const viewState = this.props.widgetMgr?.getElementState(
+    const viewState = widgetMgr.getElementState(
       this.props.element.id,
       "viewState"
     )
     if (notNullOrUndefined(viewState)) {
-      console.log("Load state", viewState)
       try {
         this.vegaView = this.vegaView.setState(viewState)
       } catch (e) {
-        console.log("ERRRRRRROR")
+        logWarning("Failed to restore view state", e)
       }
     }
 
     // Extract all relevant named selection parameters from the vega-lite spec.
-    const selectionParams = this.getSelectorsFromSpec(spec)
-    const selectionParamsStateNames = selectionParams.map(
-      (item, _index) => `${item}_store`
-    )
+    const selectionParams = getSelectorsFromSpec(spec)
 
-    // Add listeners for all selection events:
-    // Find out more here: https://vega.github.io/vega/docs/api/view/#view_addSignalListener
-    selectionParams.forEach((item, _index) => {
+    // Add listeners for all selection events. Find out more here:
+    // https://vega.github.io/vega/docs/api/view/#view_addSignalListener
+    selectionParams.forEach((param, _index) => {
       this.vegaView?.addSignalListener(
-        item,
+        param,
         debounce(DEBOUNCE_TIME_MS, (name: string, value: SignalValue) => {
           console.log("signal", name, value)
 
-          // Store the current chart state in the widget manager so that it
+          // Store the current chart selection state with the widget manager so that it
           // can be used for restoring the state when the component unmounted and
           // created again. This can happen when elements are added before it within
           // the delta path.
-          console.log("STATE", this.vegaView?.getState())
           const viewState = this.vegaView?.getState({
             // There are also `signals` data, but I believe its
             // not relevant for restoring the selection state.
             data: (_name?: string, _operator?: any) => {
-              return _name ? selectionParamsStateNames.includes(_name) : false
+              // Vega lite stores the selection state in a <param name>_store parameter
+              // under `data` that can be retrieved via the getState method.
+              // https://vega.github.io/vega/docs/api/view/#view_getState
+              const stateNames = selectionParams.map(
+                (param, _idx) => `${param}_store`
+              )
+
+              return _name ? stateNames.includes(_name) : false
             },
             recurse: false,
           })
 
           if (notNullOrUndefined(viewState)) {
-            console.log("Store state", viewState)
-            this.props.widgetMgr?.setElementState(
-              this.props.element.id,
-              "viewState",
-              viewState
-            )
+            widgetMgr.setElementState(element.id, "viewState", viewState)
           }
 
           // If selection encodings are correctly specified, vega-lite will return
           // a list of selected points within the vlPoint.or property:
           // https://github.com/vega/altair/blob/f1b4e2c84da2fba220022c8a285cc8280f824ed8/altair/utils/selection.py#L50
-          // We want to just return this list of points instead of the entire object.
+          // We want to just return this list of points instead of the entire object
+          // since the other parts of the selection object are not useful.
           let processedSelection = value
           if ("vlPoint" in value && "or" in value.vlPoint) {
             processedSelection = value.vlPoint.or
@@ -586,15 +430,15 @@ export class ArrowVegaLiteChart extends PureComponent<
           // compared to the last update.
           const newWidgetState = JSON.stringify(updatedSelections)
           const currentWidgetState = widgetMgr.getStringValue(
-            this.props.element as WidgetInfo
+            element as WidgetInfo
           )
 
           if (
             currentWidgetState === undefined ||
             currentWidgetState !== newWidgetState
           ) {
-            this.props.widgetMgr?.setStringValue(
-              this.props.element as WidgetInfo,
+            widgetMgr.setStringValue(
+              element as WidgetInfo,
               newWidgetState,
               {
                 fromUi: true,
