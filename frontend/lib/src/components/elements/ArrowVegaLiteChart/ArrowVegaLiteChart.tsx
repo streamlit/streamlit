@@ -177,7 +177,6 @@ export class ArrowVegaLiteChart extends PureComponent<
       try {
         await this.createView()
       } catch (e) {
-        console.log("Error in componentDidUpdate", e)
         const error = ensureError(e)
 
         this.setState({ error })
@@ -496,7 +495,7 @@ export class ArrowVegaLiteChart extends PureComponent<
    */
   private async createView(): Promise<void> {
     logMessage("Creating a new Vega view.")
-    console.log("Create view")
+
     if (!this.element) {
       throw Error("Element missing.")
     }
