@@ -128,6 +128,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       console.log("mounting")
       await this.createView()
     } catch (e) {
+      console.log("componentDidMount error", e)
       const error = ensureError(e)
       this.setState({ error })
     }
@@ -239,6 +240,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       try {
         await this.createView()
       } catch (e) {
+        console.log("Error in componentDidUpdate", e)
         const error = ensureError(e)
 
         this.setState({ error })
@@ -289,6 +291,43 @@ export class ArrowVegaLiteChart extends PureComponent<
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
+    // const selectionParams = this.getSelectorsFromSpec(spec)
+
+    // const storedValue = this.props.widgetMgr.getStringValue(el)
+    // console.log("storedValue", storedValue)
+    // if (storedValue !== undefined) {
+    //   const parsedStoredValue = JSON.parse(storedValue)
+    //   if (parsedStoredValue.select) {
+    //     console.log("parsedStoredValue", parsedStoredValue)
+    //     selectionParams.forEach(selector => {
+    //       spec.params.forEach((param: any) => {
+    //         if (param.name && param.name === selector) {
+    //           // initialize interval and point values if they exist to maintain state
+    //           // https://vega.github.io/vega-lite/docs/param-value.html
+    //           if (param.select.type && param.select.type === "point") {
+    //             try {
+    //               const values = parsedStoredValue.select[selector]
+    //               param.select.fields = Object.keys(values[0])
+    //               param.value = values
+    //               console.log("set initial value", param)
+    //             } catch (e) {
+    //               logMessage(e)
+    //             }
+    //           } else if (param.select.type === "interval") {
+    //             try {
+    //               const values = parsedStoredValue.select[selector]
+    //               param.value = values
+    //               console.log("set initial value", param)
+    //             } catch (e) {
+    //               logMessage(e)
+    //             }
+    //           }
+    //         }
+    //       })
+    //     })
+    //   }
+    // }
+
     if (isFullScreen) {
       spec.width = width
       spec.height = height
@@ -324,63 +363,63 @@ export class ArrowVegaLiteChart extends PureComponent<
     // attempt to add encodings from chart to selection parameter in order to get point interval
     // This is to ensure that we can consistently recreate state in fullscreen / non fullscreen mode
     // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
-    // if (el.isSelectEnabled && "params" in spec) {
-    //   if ("encoding" in spec) {
-    //     spec.params.forEach((param: any) => {
-    //       if (!("select" in param)) {
-    //         // We are only interested in transforming select parameters.
-    //         return
-    //       }
+    if (el.isSelectEnabled && "params" in spec) {
+      if ("encoding" in spec) {
+        spec.params.forEach((param: any) => {
+          if (!("select" in param)) {
+            // We are only interested in transforming select parameters.
+            return
+          }
 
-    //       console.log("ITEM", param.select)
-    //       if (["interval", "point"].includes(param.select)) {
-    //         console.log("Transform", param.select)
-    //         // The select object can be either a single string specifying
-    //         // "interval" or "point" or an object that can contain additional
-    //         // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
-    //         // To make our life easier, we convert the string to the full object specification.
-    //         param.select = {
-    //           type: param.select,
-    //         }
-    //       }
-    //       console.log(param.select.type)
-    //       if (!("type" in param.select)) {
-    //         // The type property is required in the spec.
-    //         // But we check anyways and skip all parameters that don't have it.
-    //         return
-    //       }
+          console.log("ITEM", param.select)
+          if (["interval", "point"].includes(param.select)) {
+            console.log("Transform", param.select)
+            // The select object can be either a single string specifying
+            // "interval" or "point" or an object that can contain additional
+            // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
+            // To make our life easier, we convert the string to the full object specification.
+            param.select = {
+              type: param.select,
+            }
+          }
+          console.log(param.select.type)
+          if (!("type" in param.select)) {
+            // The type property is required in the spec.
+            // But we check anyways and skip all parameters that don't have it.
+            return
+          }
 
-    //       if (
-    //         param.select.type === "point" &&
-    //         param.select.encodings === undefined
-    //       ) {
-    //         // TODO(lukasmasuch): Does this work always?
-    //         param.select.encodings = Object.keys(spec.encoding)
-    //       }
-    //     })
-    //   }
-    //   // TODO(lukasmasuch): There are other types of concationations:
-    //   const concatenationKeys = ["hconcat", "vconcat", "layer"]
+          if (
+            param.select.type === "point" &&
+            param.select.encodings === undefined
+          ) {
+            // TODO(lukasmasuch): Does this work always?
+            param.select.encodings = Object.keys(spec.encoding)
+          }
+        })
+      }
+      // TODO(lukasmasuch): There are other types of concationations:
+      // const concatenationKeys = ["hconcat", "vconcat", "layer"]
 
-    //   concatenationKeys.forEach(key => {
-    //     if (key in spec) {
-    //       try {
-    //         spec.params.forEach((param: any) => {
-    //           if (
-    //             "select" in param &&
-    //             "type" in param.select &&
-    //             param.select.type === "point" &&
-    //             param.select.encodings === undefined
-    //           ) {
-    //             param.select.encodings = Object.keys(spec[key][0].encoding)
-    //           }
-    //         })
-    //       } catch (e) {
-    //         logMessage(e)
-    //       }
-    //     }
-    //   })
-    // }
+      // concatenationKeys.forEach(key => {
+      //   if (key in spec) {
+      //     try {
+      //       spec.params.forEach((param: any) => {
+      //         if (
+      //           "select" in param &&
+      //           "type" in param.select &&
+      //           param.select.type === "point" &&
+      //           param.select.encodings === undefined
+      //         ) {
+      //           param.select.encodings = Object.keys(spec[key][0].encoding)
+      //         }
+      //       })
+      //     } catch (e) {
+      //       logMessage(e)
+      //     }
+      //   }
+      // })
+    }
     console.log("Generated spec", spec)
     return spec
   }
@@ -391,7 +430,7 @@ export class ArrowVegaLiteChart extends PureComponent<
    *
    * @param name The name of the dataset.
    * @param prevData The dataset before the update.
-   * @param data The dataset at the current state.
+   * @param data The dataset to use for the update.
    */
   private updateData(
     name: string,
@@ -402,8 +441,12 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw new Error("Chart has not been drawn yet")
     }
 
+    console.log("Update data", name)
+
     if (!data || data.data.numRows === 0) {
+      // The new data is empty, so we remove the dataset from the chart view.
       const view = this.vegaView as any
+      // TODO(lukasmasuch): Can we replace this with this.vegaView.data(name)
       // eslint-disable-next-line no-underscore-dangle
       const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
       if (viewHasDataWithName) {
@@ -413,6 +456,7 @@ export class ArrowVegaLiteChart extends PureComponent<
     }
 
     if (!prevData || prevData.data.numRows === 0) {
+      // The previous data was empty, so we just insert the new data.
       this.vegaView.insert(name, getDataArray(data))
       return
     }
@@ -433,15 +477,12 @@ export class ArrowVegaLiteChart extends PureComponent<
       )
     ) {
       if (prevNumRows < numRows) {
+        // Insert the new rows.
         this.vegaView.insert(name, getDataArray(data, prevNumRows))
       }
     } else {
       // Clean the dataset and insert from scratch.
-      const cs = vega
-        .changeset()
-        .remove(vega.truthy)
-        .insert(getDataArray(data))
-      this.vegaView.change(name, cs)
+      this.vegaView.data(name, getDataArray(data))
       logMessage(
         `Had to clear the ${name} dataset before inserting data through Vega view.`
       )
@@ -477,11 +518,18 @@ export class ArrowVegaLiteChart extends PureComponent<
     )
     if (notNullOrUndefined(viewState)) {
       console.log("Load state", viewState)
-      this.vegaView = this.vegaView.setState(viewState)
+      try {
+        this.vegaView = this.vegaView.setState(viewState)
+      } catch (e) {
+        console.log("ERRRRRRROR")
+      }
     }
 
     // Extract all relevant named selection parameters from the vega-lite spec.
     const selectionParams = this.getSelectorsFromSpec(spec)
+    const selectionParamsStateNames = selectionParams.map(
+      (item, _index) => `${item}_store`
+    )
 
     // Add listeners for all selection events:
     // Find out more here: https://vega.github.io/vega/docs/api/view/#view_addSignalListener
@@ -495,12 +543,14 @@ export class ArrowVegaLiteChart extends PureComponent<
           // can be used for restoring the state when the component unmounted and
           // created again. This can happen when elements are added before it within
           // the delta path.
+          console.log("STATE", this.vegaView?.getState())
           const viewState = this.vegaView?.getState({
             // There are also `signals` data, but I believe its
             // not relevant for restoring the selection state.
             data: (_name?: string, _operator?: any) => {
-              return true
+              return _name ? selectionParamsStateNames.includes(_name) : false
             },
+            recurse: false,
           })
 
           if (notNullOrUndefined(viewState)) {
