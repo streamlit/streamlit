@@ -46,10 +46,7 @@ import {
   getDataArrays,
   getInlineData,
 } from "./arrowUtils"
-import {
-  prepareSpecForSelections,
-  getSelectorsFromSpec,
-} from "./selectionUtils"
+import { prepareSpecForSelections } from "./selectionUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
@@ -373,12 +370,9 @@ export class ArrowVegaLiteChart extends PureComponent<
       }
     }
 
-    // Extract all relevant named selection parameters from the vega-lite spec.
-    const selectionParams = getSelectorsFromSpec(spec)
-
     // Add listeners for all selection events. Find out more here:
     // https://vega.github.io/vega/docs/api/view/#view_addSignalListener
-    selectionParams.forEach((param, _index) => {
+    element.selectionMode.forEach((param, _index) => {
       this.vegaView?.addSignalListener(
         param,
         debounce(DEBOUNCE_TIME_MS, (name: string, value: SignalValue) => {
@@ -395,12 +389,14 @@ export class ArrowVegaLiteChart extends PureComponent<
               // Vega lite stores the selection state in a <param name>_store parameter
               // under `data` that can be retrieved via the getState method.
               // https://vega.github.io/vega/docs/api/view/#view_getState
-              const stateNames = selectionParams.map(
+              const stateNames = element.selectionMode.map(
                 (param, _idx) => `${param}_store`
               )
 
               return _name ? stateNames.includes(_name) : false
             },
+            // Don't include subcontext data since it will lead to exceptions
+            // when loading the state.
             recurse: false,
           })
 
