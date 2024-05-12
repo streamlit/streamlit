@@ -56,10 +56,13 @@ export interface VegaLiteChartElement {
   /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
   vegaLiteTheme: string
 
+  /** The widget ID. Only set if selections are activated. */
   id: string
 
+  /** If True, activates selections on the chart. */
   isSelectEnabled: boolean
 
+  /** The form ID if the chart has activated selections and is used within a form. */
   formId: string
 }
 
@@ -124,6 +127,14 @@ export function getDataSets(
   return datasets
 }
 
+/**
+ * Retrieves an array of data from Quiver starting from a specified index.
+ * Converts data values to a format compatible with VegaLite visualization.
+ *
+ * @param {Quiver} dataProto - The Quiver data object to extract data from.
+ * @param {number} [startIndex=0] - The starting index for data extraction.
+ * @returns {Array.<{ [field: string]: any }>} An array of data objects for visualization.
+ */
 export function getDataArray(
   dataProto: Quiver,
   startIndex = 0
