@@ -40,10 +40,6 @@ def mock_data_frame():
     )
 
 
-def mock_callback():
-    pass
-
-
 class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow protos."""
 
@@ -283,7 +279,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         [
             ("rerun", [1]),
             ("ignore", []),
-            (mock_callback, [1]),
+            (lambda: None, [1]),
         ]
     )
     def test_dataframe_valid_on_select(self, on_select, proto_value):
