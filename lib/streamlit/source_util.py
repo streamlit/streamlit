@@ -16,10 +16,19 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypedDict, cast
+
+from typing_extensions import NotRequired
 
 from streamlit.string_util import extract_leading_emoji
 from streamlit.util import calc_md5
+
+
+class PageInfo(TypedDict):
+    script_path: str
+    page_script_hash: str
+    icon: NotRequired[str]
+    page_name: NotRequired[str]
 
 
 def open_python_file(filename: str):
@@ -84,7 +93,7 @@ def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     return extract_leading_emoji(icon_and_name)
 
 
-def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
+def get_pages(main_script_path_str: str) -> dict[str, PageInfo]:
     main_script_path = Path(main_script_path_str)
     main_page_icon, main_page_name = page_icon_and_name(main_script_path)
     main_script_hash = calc_md5(main_script_path_str)
@@ -92,7 +101,7 @@ def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
     # NOTE: We include the script_hash in the dict even though it is
     #       already used as the key because that occasionally makes things
     #       easier for us when we need to iterate over pages.
-    pages = {
+    pages: dict[str, PageInfo] = {
         main_script_hash: {
             "page_script_hash": main_script_hash,
             "page_name": main_page_name,

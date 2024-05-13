@@ -20,68 +20,69 @@ from typing import Callable, Final
 
 from blinker import Signal
 
-import streamlit.source_util as source_util
 from streamlit.logger import get_logger
+from streamlit.source_util import PageInfo, get_pages
 from streamlit.util import calc_md5
 from streamlit.watcher import watch_dir
 
 _LOGGER: Final = get_logger(__name__)
 
 
-class V1PagesManager:
+class PagesManagerV1:
     is_watching_pages_dir: bool = False
 
     # This is a static method because we only want to watch the pages directory
     # once on initial load.
     @staticmethod
-    def watch_pages_dir(pages_manager):
-        if V1PagesManager.is_watching_pages_dir:
-            return
+    def watch_pages_dir(pages_manager: PagesManager):
+        lock = threading.Lock()
+        with lock:
+            if PagesManagerV1.is_watching_pages_dir:
+                return
 
-        def _on_pages_changed(_path: str) -> None:
-            pages_manager.invalidate_pages_cache()
+            def _on_pages_changed(_path: str) -> None:
+                pages_manager.invalidate_pages_cache()
 
-        main_script_path = Path(pages_manager.main_script_path)
-        pages_dir = main_script_path.parent / "pages"
-        watch_dir(
-            str(pages_dir),
-            _on_pages_changed,
-            glob_pattern="*.py",
-            allow_nonexistent=True,
-        )
-        V1PagesManager.is_watching_pages_dir = True
+            main_script_path = Path(pages_manager.main_script_path)
+            pages_dir = main_script_path.parent / "pages"
+            watch_dir(
+                str(pages_dir),
+                _on_pages_changed,
+                glob_pattern="*.py",
+                allow_nonexistent=True,
+            )
+            PagesManagerV1.is_watching_pages_dir = True
 
 
 class PagesManager:
-    _cached_pages: dict[str, dict[str, str]] | None = None
-    _pages_cache_lock = threading.RLock()
-    _on_pages_changed = Signal(doc="Emitted when the set of pages has changed")
-
     def __init__(self, main_script_path, **kwargs):
-        self._main_script_path = main_script_path
-        self._main_script_hash = calc_md5(main_script_path)
-        self._current_page_hash = self._main_script_hash
+        self._cached_pages: dict[str, PageInfo] | None = None
+        self._pages_cache_lock = threading.RLock()
+        self._on_pages_changed = Signal(doc="Emitted when the set of pages has changed")
+        self._main_script_path: str = main_script_path
+        self._main_script_hash: str = calc_md5(main_script_path)
+        self._current_page_hash: str = self._main_script_hash
 
         if kwargs.get("setup_watcher", True):
-            V1PagesManager.watch_pages_dir(self)
+            PagesManagerV1.watch_pages_dir(self)
 
     @property
-    def main_script_path(self):
+    def main_script_path(self) -> str:
         return self._main_script_path
 
-    def get_main_page(self):
+    def get_main_page(self) -> PageInfo:
         return {
             "script_path": self._main_script_path,
             "page_script_hash": self._main_script_hash,
         }
 
-    def get_current_page_script_hash(self):
+    def get_current_page_script_hash(self) -> str:
         return self._current_page_hash
 
-    def set_current_page_script_hash(self, page_hash):
+    def set_current_page_script_hash(self, page_hash: str) -> None:
         self._current_page_hash = page_hash
 
-    def get_active_script(self, page_script_hash, page_name):
+    def get_active_script(self, page_script_hash: str, page_name: str):
         pages = self.get_pages()
 
         if page_script_hash:
@@ -109,7 +110,7 @@ class PagesManager:
         main_page_info = list(pages.values())[0]
         return main_page_info
 
-    def get_pages(self) -> dict[str, dict[str, str]]:
+    def get_pages(self) -> dict[str, PageInfo]:
         # Avoid taking the lock if the pages cache hasn't been invalidated.
         pages = self._cached_pages
         if pages is not None:
@@ -121,7 +122,7 @@ class PagesManager:
             if self._cached_pages is not None:
                 return self._cached_pages
 
-            pages = source_util.get_pages(self.main_script_path)
+            pages = get_pages(self.main_script_path)
             self._cached_pages = pages
 
             return pages

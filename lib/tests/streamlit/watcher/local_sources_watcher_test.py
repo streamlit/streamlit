@@ -70,8 +70,8 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_just_script(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
         args, _ = fob.call_args
@@ -80,23 +80,23 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(type(args[1]), method_type)
 
         fob.reset_mock()
-        lso.update_watched_modules()
-        lso.update_watched_modules()
-        lso.update_watched_modules()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
+        lsw.update_watched_modules()
+        lsw.update_watched_modules()
+        lsw.update_watched_modules()
 
         self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_permission_error(self, fob):
         fob.side_effect = PermissionError("This error should be caught!")
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_script_and_2_modules_at_once(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
 
@@ -104,7 +104,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
 
         fob.reset_mock()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
 
         self.assertEqual(fob.call_count, 3)  # dummy modules and __init__.py
 
@@ -122,21 +122,21 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         self.assertEqual(type(args[1]), method_type)
 
         fob.reset_mock()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
 
         self.assertEqual(fob.call_count, 0)
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_script_and_2_modules_in_series(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
 
         sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
         fob.reset_mock()
 
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
 
         self.assertEqual(fob.call_count, 2)  # dummy module and __init__.py
 
@@ -153,7 +153,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
         fob.reset_mock()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
 
         args, _ = fob.call_args
         self.assertEqual(args[0], DUMMY_MODULE_2_FILE)
@@ -164,14 +164,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.local_sources_watcher._LOGGER")
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_misbehaved_module(self, fob, patched_logger):
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
 
         sys.modules["MISBEHAVED_MODULE"] = MISBEHAVED_MODULE.MisbehavedModule
         fob.reset_mock()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
 
         fob.assert_called_once()  # Just __init__.py
 
@@ -181,8 +181,8 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_nested_module_parent_unloaded(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
 
@@ -194,10 +194,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
                 "NESTED_MODULE_CHILD": NESTED_MODULE_CHILD,
             },
         ):
-            lso.update_watched_modules()
+            lsw.update_watched_modules()
 
             # Simulate a change to the child module
-            lso.on_file_changed(NESTED_MODULE_CHILD_FILE)
+            lsw.on_file_changed(NESTED_MODULE_CHILD_FILE)
 
             # Assert that both the parent and child are unloaded, ready for reload
             self.assertNotIn("NESTED_MODULE_CHILD", sys.modules)
@@ -212,15 +212,15 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             "server.folderWatchBlacklist", [os.path.dirname(DUMMY_MODULE_1.__file__)]
         )
 
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
 
         sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
         fob.reset_mock()
 
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
 
         fob.assert_not_called()
 
@@ -293,30 +293,30 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_module_caching(self, _fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
 
         register = MagicMock()
-        lso._register_necessary_watchers = register
+        lsw._register_necessary_watchers = register
 
         # Updates modules on first run
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
         register.assert_called_once()
 
         # Skips update when module list hasn't changed
         register.reset_mock()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
         register.assert_not_called()
 
         # Invalidates cache when a new module is imported
         register.reset_mock()
         sys.modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
         register.assert_called_once()
 
         # Skips update when new module is part of cache
         register.reset_mock()
-        lso.update_watched_modules()
+        lsw.update_watched_modules()
         register.assert_not_called()
 
     @patch(
@@ -431,11 +431,11 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
             saved_filepath = filepath
 
-        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
-        lso.register_file_change_callback(callback)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(callback)
 
         # Simulate a change to the report script
-        lso.on_file_changed(SCRIPT_PATH)
+        lsw.on_file_changed(SCRIPT_PATH)
 
         self.assertEqual(saved_filepath, SCRIPT_PATH)
 
