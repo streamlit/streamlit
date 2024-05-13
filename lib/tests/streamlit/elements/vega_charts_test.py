@@ -118,6 +118,9 @@ class AltairChartTest(DeltaGeneratorTestCase):
         self.assertEqual(spec_dict["data"], {"name": proto.datasets[0].name})
         self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
         self.assertIn("encoding", spec_dict)
+        self.assertEqual(proto.selection_mode, [])
+        self.assertEqual(proto.id, "")
+        self.assertEqual(proto.form_id, "")
 
     def test_altair_chart_uses_convert_anything_to_df(self):
         """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
@@ -251,6 +254,9 @@ class AltairChartTest(DeltaGeneratorTestCase):
             proto.spec,
         )
         self.assertNotIn("param1", proto.spec)
+        self.assertEqual(proto.selection_mode, ["param_1"])
+        self.assertNotEqual(proto.id, "")
+        self.assertEqual(proto.form_id, "")
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -284,6 +290,9 @@ class AltairChartTest(DeltaGeneratorTestCase):
             "point" in proto.spec,
         )
         self.assertFalse("param_1" in proto.spec)
+        self.assertEqual(proto.selection_mode, ["point"])
+        self.assertNotEqual(proto.id, "")
+        self.assertEqual(proto.form_id, "")
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -300,6 +309,9 @@ class AltairChartTest(DeltaGeneratorTestCase):
             "interval",
             proto.spec,
         )
+        self.assertEqual(proto.selection_mode, ["interval"])
+        self.assertNotEqual(proto.id, "")
+        self.assertEqual(proto.form_id, "")
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -346,8 +358,40 @@ class AltairChartTest(DeltaGeneratorTestCase):
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
         self.get_delta_from_queue(0).add_block
-        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
-        self.assertEqual(plotly_proto.form_id, "")
+        vega_lite_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
+        self.assertEqual(vega_lite_proto.form_id, "")
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_throws_exception_if_provided_selection_mode_not_found(self):
+        """Test that an exception is thrown if the provided selection mode is not found in the spec."""
+        interval = alt.selection_interval(name="my_interval_selection")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
+
+        with self.assertRaises(StreamlitAPIException):
+            st.altair_chart(
+                chart, on_select="rerun", selection_mode=["not_existing_param"]
+            )
+
+    def test_respects_selection_mode_parameter(self):
+        """Test that the selection_mode parameter is respected."""
+        interval = alt.selection_interval(name="my_interval_selection")
+        point = alt.selection_point(name="my_point_selection")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(x="a", y="b")
+            .add_params(interval)
+            .add_params(point)
+        )
+
+        st.altair_chart(chart, on_select="rerun", selection_mode=["my_point_selection"])
+        vega_lite_proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(vega_lite_proto.selection_mode, ["my_point_selection"])
 
     def test_throws_exception_if_no_selections_defined_in_spec(self):
         """Test that an exception is thrown if no selections are defined in the spec
