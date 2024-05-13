@@ -397,6 +397,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_that_selections_on_composite_charts_are_disallowed(self):
         """Test that an exception is thrown if a multi-view / composite chart
         is passed with selections."""
