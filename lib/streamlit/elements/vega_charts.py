@@ -92,7 +92,7 @@ _CHANNELS: Final = {
     "column",
 }
 
-VegaLiteSpec: TypeAlias = dict[str, Any]
+VegaLiteSpec: TypeAlias = "dict[str, Any]"
 
 
 class VegaLiteState(TypedDict, total=False):
