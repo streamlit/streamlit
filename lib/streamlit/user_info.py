@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Mapping, NoReturn, Union
+from typing import Any, Iterator, Mapping, NoReturn, Union
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
@@ -27,6 +27,13 @@ def _get_user_info() -> UserInfo:
         # TODO: Add appropriate warnings when ctx is missing
         return {}
     return ctx.user_info
+
+
+class AuthMixin:
+    def login(
+        self,
+    ) -> Any:
+        self.dg._enqueue("login", login_proto)
 
 
 # Class attributes are listed as "Parameters" in the docstring as a workaround
@@ -59,6 +66,11 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
         analytics.
 
     """
+
+    def __init__(self, auth_mixin) -> None:
+        object.__setattr__(self, "login", auth_mixin.login)
+        # self.login = auth_mixin.login
+        # self.logout = auth_mixin.logout
 
     def __getitem__(self, key: str) -> str | None:
         return _get_user_info()[key]

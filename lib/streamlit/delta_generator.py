@@ -48,6 +48,7 @@ from streamlit import (
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
+from streamlit.elements.auth_redirect import AuthRedirectMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
@@ -146,6 +147,7 @@ def _maybe_print_use_warning() -> None:
 
 class DeltaGenerator(
     AlertMixin,
+    AuthRedirectMixin,
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,

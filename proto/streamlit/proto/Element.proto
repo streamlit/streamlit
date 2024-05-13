@@ -20,6 +20,7 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ElementProto";
 
 import "streamlit/proto/Alert.proto";
+import "streamlit/proto/AuthRedirect.proto";
 import "streamlit/proto/Arrow.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
@@ -79,6 +80,7 @@ message Element {
     Arrow arrow_table = 39;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;
+    AuthRedirect auth_redirect = 55;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
@@ -128,7 +130,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 55
+    // Next ID: 56
   }
 
   reserved 9;
