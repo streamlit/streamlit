@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 @dataclass

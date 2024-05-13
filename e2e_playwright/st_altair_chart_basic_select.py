@@ -15,6 +15,7 @@
 
 import altair as alt
 import pandas as pd
+from vega_datasets import data
 
 import streamlit as st
 
@@ -22,10 +23,10 @@ import streamlit as st
 st.header("Altair Chart with point and interval selection")
 
 # taken from vega_datasets cars example
-cars = alt.UrlData("https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/cars.json")
+cars = data.cars()
 interval = alt.selection_interval()
 
-point = alt.selection_point(encodings=["x", "y"], fields=["Origin", "source"])
+point = alt.selection_point()
 
 st.subheader("Scatter chart with selection_point")
 base = (
@@ -39,7 +40,9 @@ base = (
     )
 )
 chart_point = base.add_params(point)
-st.altair_chart(chart_point, on_select="rerun", key="scatter_point")
+st.altair_chart(
+    chart_point, on_select="rerun", key="scatter_point", use_container_width=True
+)
 if st.session_state.scatter_point and len(st.session_state.scatter_point.select) > 0:
     st.write("Scatter chart with selection_point:", str(st.session_state.scatter_point))
 
@@ -55,7 +58,9 @@ base = (
     )
 )
 chart_interval = base.add_params(interval)
-st.altair_chart(chart_interval, on_select="rerun", key="scatter_interval")
+st.altair_chart(
+    chart_interval, on_select="rerun", key="scatter_interval", use_container_width=True
+)
 if (
     st.session_state.scatter_interval
     and len(st.session_state.scatter_interval.select) > 0
@@ -73,23 +78,40 @@ source = pd.DataFrame(
     }
 )
 
-bar_graph = (
+bar_graph_point = (
     alt.Chart(source)
     .mark_bar()
     .encode(
         x="a",
         y="b",
+        fillOpacity=alt.condition(point, alt.value(1), alt.value(0.3)),
         tooltip=alt.value(None),
     )
+    .add_params(point)
 )
-bar_graph_point = bar_graph.add_params(point)
-st.altair_chart(bar_graph_point, on_select="rerun", key="bar_point")
+st.altair_chart(
+    bar_graph_point, on_select="rerun", key="bar_point", use_container_width=True
+)
 if st.session_state.bar_point and len(st.session_state.bar_point.select) > 0:
     st.write("Bar chart with selection_point:", str(st.session_state.bar_point))
 
-bar_graph_interval = bar_graph.add_params(interval)
+
+bar_graph_interval = (
+    alt.Chart(source)
+    .mark_bar()
+    .encode(
+        x="a",
+        y="b",
+        fillOpacity=alt.condition(interval, alt.value(1), alt.value(0.3)),
+        tooltip=alt.value(None),
+    )
+    .add_params(interval)
+)
+
 st.subheader("Bar chart with selection_interval")
-st.altair_chart(bar_graph_interval, on_select="rerun", key="bar_interval")
+st.altair_chart(
+    bar_graph_interval, on_select="rerun", key="bar_interval", use_container_width=True
+)
 if st.session_state.bar_interval and len(st.session_state.bar_interval.select) > 0:
     st.write("Bar chart with selection_interval:", str(st.session_state.bar_interval))
 
@@ -110,7 +132,9 @@ base = (
 )
 area_chart_point = base.add_params(point)
 st.subheader("Area chart with selection_point")
-selection = st.altair_chart(area_chart_point, on_select="rerun", key="area_point")
+selection = st.altair_chart(
+    area_chart_point, on_select="rerun", key="area_point", use_container_width=True
+)
 if len(selection.select) > 0:
     st.write("Area chart with selection_point:", str(selection.select))
 
@@ -128,15 +152,17 @@ base = (
 area_chart_interval = base.add_params(interval)
 st.subheader("Area chart with selection_interval")
 area_interval_selection = st.altair_chart(
-    area_chart_interval, on_select="rerun", key="area_interval"
+    area_chart_interval,
+    on_select="rerun",
+    key="area_interval",
+    use_container_width=True,
 )
 if len(area_interval_selection.select) > 0:
     st.write("Area chart with selection_interval:", str(area_interval_selection.select))
 
 # HISTOGRAM CHART
-source = alt.UrlData(
-    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/movies.json"
-)
+source = data.movies()
+
 
 base = (
     alt.Chart(source)
@@ -150,7 +176,9 @@ base = (
 )
 histogram_point = base.add_params(point)
 st.subheader("Histogram chart with selection_point")
-st.altair_chart(histogram_point, on_select="rerun", key="histogram_point")
+st.altair_chart(
+    histogram_point, on_select="rerun", key="histogram_point", use_container_width=True
+)
 if (
     st.session_state.histogram_point
     and len(st.session_state.histogram_point.select) > 0
@@ -171,7 +199,12 @@ base = (
 )
 histogram_interval = base.add_params(interval)
 st.subheader("Histogram chart with selection_interval")
-st.altair_chart(histogram_interval, on_select="rerun", key="histogram_interval")
+st.altair_chart(
+    histogram_interval,
+    on_select="rerun",
+    key="histogram_interval",
+    use_container_width=True,
+)
 if (
     st.session_state.histogram_interval
     and len(st.session_state.histogram_interval.select) > 0
