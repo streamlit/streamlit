@@ -18,7 +18,6 @@ import os
 from typing import Final, NoReturn
 
 import streamlit as st
-from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
@@ -143,7 +142,7 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
 
     main_script_directory = get_main_script_directory(ctx.main_script_path)
     requested_page = os.path.realpath(normalize_path_join(main_script_directory, page))
-    all_app_pages = source_util.get_pages(ctx.main_script_path).values()
+    all_app_pages = ctx.pages_manager.get_pages().values()
 
     matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
 
