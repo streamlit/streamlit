@@ -28,7 +28,7 @@ import { INDEX_IDENTIFIER } from "./hooks/useColumnLoader"
  * Get the column name for a given column to use in the widget state.
  * This is either the column name or the index identifier for index columns.
  */
-function getColumnName(column: BaseColumn): string {
+export function getColumnName(column: BaseColumn): string {
   // TODO(lukasmasuch): We need to adapt this once we want to support multi-index columns.
   return column.isIndex
     ? INDEX_IDENTIFIER
