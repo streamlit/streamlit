@@ -1439,7 +1439,6 @@ class VegaChartsMixin:
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
-        print(vega_lite_proto.spec)
         if is_selection_activated:
             # Import here to avoid circular imports
             from streamlit.elements.form import current_form_id
