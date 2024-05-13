@@ -18,17 +18,22 @@ import re
 from pathlib import Path
 from typing import Any, TypedDict, cast
 
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.string_util import extract_leading_emoji
 from streamlit.util import calc_md5
 
+PageHash: TypeAlias = str
+PageName: TypeAlias = str
+ScriptPath: TypeAlias = str
+Icon: TypeAlias = str
+
 
 class PageInfo(TypedDict):
-    script_path: str
-    page_script_hash: str
-    icon: NotRequired[str]
-    page_name: NotRequired[str]
+    script_path: ScriptPath
+    page_script_hash: PageHash
+    icon: NotRequired[Icon]
+    page_name: NotRequired[PageName]
 
 
 def open_python_file(filename: str):

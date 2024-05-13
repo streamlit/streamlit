@@ -21,7 +21,7 @@ from typing import Callable, Final
 from blinker import Signal
 
 from streamlit.logger import get_logger
-from streamlit.source_util import PageInfo, get_pages
+from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath, get_pages
 from streamlit.util import calc_md5
 from streamlit.watcher import watch_dir
 
@@ -30,13 +30,13 @@ _LOGGER: Final = get_logger(__name__)
 
 class PagesManagerV1:
     is_watching_pages_dir: bool = False
+    pages_watcher_lock = threading.Lock()
 
     # This is a static method because we only want to watch the pages directory
     # once on initial load.
     @staticmethod
     def watch_pages_dir(pages_manager: PagesManager):
-        lock = threading.Lock()
-        with lock:
+        with PagesManagerV1.pages_watcher_lock:
             if PagesManagerV1.is_watching_pages_dir:
                 return
 
@@ -56,18 +56,18 @@ class PagesManagerV1:
 
 class PagesManager:
     def __init__(self, main_script_path, **kwargs):
-        self._cached_pages: dict[str, PageInfo] | None = None
+        self._cached_pages: dict[PageHash, PageInfo] | None = None
         self._pages_cache_lock = threading.RLock()
         self._on_pages_changed = Signal(doc="Emitted when the set of pages has changed")
-        self._main_script_path: str = main_script_path
-        self._main_script_hash: str = calc_md5(main_script_path)
-        self._current_page_hash: str = self._main_script_hash
+        self._main_script_path: ScriptPath = main_script_path
+        self._main_script_hash: PageHash = calc_md5(main_script_path)
+        self._current_page_hash: PageHash = self._main_script_hash
 
         if kwargs.get("setup_watcher", True):
             PagesManagerV1.watch_pages_dir(self)
 
     @property
-    def main_script_path(self) -> str:
+    def main_script_path(self) -> ScriptPath:
         return self._main_script_path
 
     def get_main_page(self) -> PageInfo:
@@ -76,13 +76,13 @@ class PagesManager:
             "page_script_hash": self._main_script_hash,
         }
 
-    def get_current_page_script_hash(self) -> str:
+    def get_current_page_script_hash(self) -> PageHash:
         return self._current_page_hash
 
-    def set_current_page_script_hash(self, page_hash: str) -> None:
+    def set_current_page_script_hash(self, page_hash: PageHash) -> None:
         self._current_page_hash = page_hash
 
-    def get_active_script(self, page_script_hash: str, page_name: str):
+    def get_active_script(self, page_script_hash: PageHash, page_name: PageName):
         pages = self.get_pages()
 
         if page_script_hash:
@@ -110,7 +110,7 @@ class PagesManager:
         main_page_info = list(pages.values())[0]
         return main_page_info
 
-    def get_pages(self) -> dict[str, PageInfo]:
+    def get_pages(self) -> dict[PageHash, PageInfo]:
         # Avoid taking the lock if the pages cache hasn't been invalidated.
         pages = self._cached_pages
         if pages is not None:
@@ -138,6 +138,11 @@ class PagesManager:
         self,
         callback: Callable[[str], None],
     ) -> Callable[[], None]:
+        """Register a callback to be called when the set of pages changes.
+
+        The callback will be called with the path changed.
+        """
+
         def disconnect():
             self._on_pages_changed.disconnect(callback)
 
