@@ -309,7 +309,6 @@ export class ArrowVegaLiteChart extends PureComponent<
     if (el.selectionMode.length > 0) {
       prepareSpecForSelections(spec)
     }
-    console.log("Generated spec", spec)
     return spec
   }
 
@@ -495,10 +494,14 @@ export class ArrowVegaLiteChart extends PureComponent<
       this.props.element.selectionMode.forEach(param => {
         emptySelectionState.select[param] = {}
       })
-
-      const currentWidgetState = JSON.parse(
-        widgetMgr.getStringValue(element as WidgetInfo) || "{}"
+      const currentWidgetStateStr = widgetMgr.getStringValue(
+        element as WidgetInfo
       )
+      const currentWidgetState = currentWidgetStateStr
+        ? JSON.parse(currentWidgetStateStr)
+        : // If there wasn't any selection yet, the selection state
+          // is assumed to be empty.
+          emptySelectionState
 
       if (!isEqual(currentWidgetState, emptySelectionState)) {
         this.props.widgetMgr?.setStringValue(
