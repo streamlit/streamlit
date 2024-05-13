@@ -50,6 +50,7 @@ export type SelectionHandlerReturn = {
  * @param element - The Arrow proto message
  * @param isEmptyTable - Whether the table is empty
  * @param isDisabled - Whether the table is disabled
+ * @param numIndexColumns - The number of index columns
  * @param syncSelectionState - The callback to sync the selection state
  *
  * @returns the selection handler return object
@@ -58,6 +59,7 @@ function useSelectionHandler(
   element: ArrowProto,
   isEmptyTable: boolean,
   isDisabled: boolean,
+  numIndexColumns: number,
   syncSelectionState: (newSelection: GridSelection) => void
 ): SelectionHandlerReturn {
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
@@ -157,7 +159,20 @@ function useSelectionHandler(
           ...updatedSelection,
           rows: gridSelection.rows,
         }
+
         syncSelection = true
+      }
+
+      if (
+        columnSelectionChanged &&
+        updatedSelection.columns.length >= 0 &&
+        numIndexColumns > 0
+      ) {
+        // Remove all index columns from the column selection
+        updatedSelection = {
+          ...updatedSelection,
+          columns: updatedSelection.columns.remove([0, numIndexColumns]),
+        }
       }
 
       setGridSelection(updatedSelection)

@@ -259,6 +259,10 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
+  const numIndexColumns = isEmptyTable
+    ? 0
+    : columns.filter((col: BaseColumn) => col.isIndex).length
+
   /**
    * This callback is used to synchronize the selection state with the state
    * of the widget state of the component. This might also send a rerun message
@@ -290,7 +294,7 @@ function DataFrame({
       selectionState.select.columns = newSelection.columns
         .toArray()
         .map(columnIdx => {
-          return getColumnName(originalColumns[columnIdx])
+          return getColumnName(columns[columnIdx])
         })
       const newWidgetState = JSON.stringify(selectionState)
       const currentWidgetState = widgetMgr.getStringValue({
@@ -330,7 +334,13 @@ function DataFrame({
     isCellSelected,
     clearSelection,
     processSelectionChange,
-  } = useSelectionHandler(element, isEmptyTable, disabled, syncSelectionState)
+  } = useSelectionHandler(
+    element,
+    isEmptyTable,
+    disabled,
+    numIndexColumns,
+    syncSelectionState
+  )
 
   React.useEffect(() => {
     // Clear cell selections if fullscreen mode changes
@@ -552,10 +562,6 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
-  const freezeColumns = isEmptyTable
-    ? 0
-    : columns.filter((col: BaseColumn) => col.isIndex).length
-
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
     // The setTimeout is a workaround to get the scroll area bounding box
@@ -768,7 +774,7 @@ function DataFrame({
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
           // Freeze all index columns:
-          freezeColumns={freezeColumns}
+          freezeColumns={numIndexColumns}
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
@@ -804,7 +810,7 @@ function DataFrame({
             if (isEmptyTable || isLargeTable || isColumnSelectionActivated) {
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
-              return undefined
+              return
             }
 
             if (isRowSelectionActivated && isRowSelected) {
@@ -827,7 +833,7 @@ function DataFrame({
             // are outside of the bounds of the table (e.g. select dropdown or date picker).
             // This results in the first cell being selected for a short period of time
             // But for touch devices, preventing this can cause issues to select cells.
-            // So we allow selection changes for touch devices even when it is not focused.
+            // So we allow selection changes for touch devices even when it is not focused. d
             if (isFocused || isTouchDevice) {
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {
