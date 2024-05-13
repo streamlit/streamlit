@@ -43,7 +43,6 @@ st.header("Row & column selections:")
 st.subheader("single-row select")
 selection = st.dataframe(
     df,
-    hide_index=True,
     on_select="rerun",
     selection_mode="single-row",
     column_config=column_config,

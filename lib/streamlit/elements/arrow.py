@@ -394,6 +394,11 @@ class ArrowMixin:
                 check_callback_rules(self.dg, on_select)
             check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
+            if hide_index is None and "column" in str(selection_mode):
+                # If column selection is activated and hide_index is not set,
+                # we auto hide the index column
+                hide_index = True
+
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
