@@ -70,7 +70,6 @@ import {
   StreamlitEndpoints,
   ensureError,
   LibContext,
-  AppPage,
   AutoRerun,
   BackMsg,
   Config,
@@ -124,6 +123,7 @@ import withScreencast, {
 import "@streamlit/app/src/assets/css/theme.scss"
 import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 import { ThemeManager } from "./util/useThemeManager"
+import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -232,6 +232,8 @@ export class App extends PureComponent<Props, State> {
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
+
+  private readonly appNavigation: AppNavigation
 
   public constructor(props: Props) {
     super(props)
@@ -360,6 +362,12 @@ export class App extends PureComponent<Props, State> {
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
+    this.appNavigation = new AppNavigation(
+      this.hostCommunicationMgr,
+      this.metricsMgr,
+      this.maybeUpdatePageUrl,
+      this.onPageNotFound
+    )
 
     window.streamlitDebug = {
       clearForwardMsgCache: this.debugClearForwardMsgCache,
@@ -714,28 +722,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
-    const { pageName } = pageNotFound
-
-    this.onPageNotFound(pageName)
-
-    const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
-    this.setState({ currentPageScriptHash }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_CURRENT_PAGE_NAME",
-        currentPageName: "",
-        currentPageScriptHash,
-      })
-    })
+    this.maybeSetState(this.appNavigation.handlePageNotFound(pageNotFound))
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
-    const { appPages } = pagesChangedMsg
-    this.setState({ appPages }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_APP_PAGES",
-        appPages,
-      })
-    })
+    this.maybeSetState(this.appNavigation.handlePagesChanged(pagesChangedMsg))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -891,6 +882,14 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  maybeSetState(stateUpdate: MaybeStateUpdate): void {
+    if (stateUpdate) {
+      const [newState, callback] = stateUpdate
+
+      this.setState(newState as State, callback)
+    }
+  }
+
   /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
@@ -920,18 +919,6 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash: newPageScriptHash,
     } = newSessionProto
 
-    // mainPage must be a string as we're guaranteed at this point that
-    // newSessionProto.appPages is nonempty and has a truthy pageName.
-    // Otherwise, we'd either have no main script or a nameless main script,
-    // neither of which can happen.
-    const mainPage = newSessionProto.appPages[0] as AppPage
-    // We're similarly guaranteed that newPageName will be found / truthy
-    // here.
-    const newPageName = newSessionProto.appPages.find(
-      p => p.pageScriptHash === newPageScriptHash
-    )?.pageName as string
-    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
-
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
       this.state.autoReruns.forEach((value: NodeJS.Timer) => {
@@ -942,7 +929,6 @@ export class App extends PureComponent<Props, State> {
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
-      this.maybeUpdatePageUrl(mainPage.pageName, newPageName, viewingMainPage)
       this.processThemeInput(themeInput)
       this.setState({
         allowRunOnSave: config.allowRunOnSave,
@@ -953,33 +939,9 @@ export class App extends PureComponent<Props, State> {
         // empty array.
         fragmentIdsThisRun,
       })
+      this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
-      // We separate the state of the navigation as we intend to perform
-      // this work through an abstraction of multipage apps in advance
-      // of supporting v2.
-      this.setState(
-        {
-          hideSidebarNav: config.hideSidebarNav,
-          appPages: newSessionProto.appPages,
-          currentPageScriptHash: newPageScriptHash,
-        },
-        () => {
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_APP_PAGES",
-            appPages: newSessionProto.appPages,
-          })
-
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_CURRENT_PAGE_NAME",
-            currentPageName: viewingMainPage ? "" : newPageName,
-            currentPageScriptHash: newPageScriptHash,
-          })
-        }
-      )
-
-      // Set the title and favicon to their default values if we are not running
-      // a fragment.
-      document.title = `${newPageName} · Streamlit`
+      // Set the favicon to its default values
       handleFavicon(
         `${process.env.PUBLIC_URL}/favicon.png`,
         this.hostCommunicationMgr.sendMessageToHost,
@@ -999,10 +961,7 @@ export class App extends PureComponent<Props, State> {
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
-    this.metricsMgr.enqueue("updateReport", {
-      numPages: newSessionProto.appPages.length,
-      isMainPage: viewingMainPage,
-    })
+    this.appNavigation.sendMPAMetricsOnInitialization()
 
     if (
       appHash === newSessionHash &&
@@ -1038,12 +997,9 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    const targetAppPage =
-      this.state.appPages.find(appPage =>
-        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
-        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
-        document.location.pathname.endsWith("/" + appPage.pageName)
-      ) ?? this.state.appPages[0]
+    const targetAppPage = this.appNavigation.findPageByUrlPath(
+      document.location.pathname
+    )
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
