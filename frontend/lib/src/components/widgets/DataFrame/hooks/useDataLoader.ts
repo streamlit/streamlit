@@ -19,8 +19,6 @@ import React from "react"
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { logError } from "@streamlit/lib/src/util/log"
-
 import { getCellFromArrow } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 import {
@@ -82,7 +80,6 @@ function useDataLoader(
         const arrowCell = data.getCell(originalRow + 1, originalCol)
         return getCellFromArrow(column, arrowCell, data.cssStyles)
       } catch (error) {
-        logError(error)
         return getErrorCell(
           "Error during cell creation.",
           `This should never happen. Please report this bug. \nError: ${error}`
