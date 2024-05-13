@@ -214,22 +214,34 @@ function DataFrame({
   const { columns: originalColumns } = useColumnLoader(element, data, disabled)
 
   /**
-   * On the first rendering, try to load the initial editing state
-   * from widget state if it exists. This is required in the case
-   * that other elements are inserted before this widget.
+   * On the first rendering, try to load initial widget state if
+   * it exist. This is required in the case that other elements
+   * are inserted before this widget. In this case, it can happen
+   * that the dataframe component gets unmounded and thereby loses
+   * its state. Once the same element is rendered again, we try to
+   * reconstruct the state from the widget manager values.
    */
   React.useEffect(
     () => {
-      if (element.editingMode !== READ_ONLY) {
-        const initialWidgetValue = widgetMgr.getStringValue({
-          id: element.id,
-          formId: element.formId,
-        } as WidgetInfo)
-        if (initialWidgetValue) {
-          editingState.current.fromJson(initialWidgetValue, originalColumns)
-          setNumRows(editingState.current.getNumRows())
-        }
+      if (element.editingMode === READ_ONLY) {
+        // We don't need to load the initial widget state
+        // for read-only dataframes.
+        return
       }
+
+      const initialWidgetValue = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId,
+      } as WidgetInfo)
+
+      if (!initialWidgetValue) {
+        // No initial widget value was saved in the widget manager.
+        // No need to reconstruct something.
+        return
+      }
+
+      editingState.current.fromJson(initialWidgetValue, originalColumns)
+      setNumRows(editingState.current.getNumRows())
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
