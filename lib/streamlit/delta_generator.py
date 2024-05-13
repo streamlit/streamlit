@@ -587,7 +587,7 @@ class DeltaGenerator(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> my_table._arrow_add_rows(df2)
+        >>> my_table.add_rows(df2)
         >>> # Now the table shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
 
@@ -596,14 +596,14 @@ class DeltaGenerator(
 
         >>> # Assuming df1 and df2 from the example above still exist...
         >>> my_chart = st.line_chart(df1)
-        >>> my_chart._arrow_add_rows(df2)
+        >>> my_chart.add_rows(df2)
         >>> # Now the chart shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
 
         And for plots whose datasets are named, you can pass the data with a
         keyword argument where the key is the name:
 
-        >>> my_chart = st._arrow_vega_lite_chart({
+        >>> my_chart = st.vega_lite_chart({
         ...     'mark': 'line',
         ...     'encoding': {'x': 'a', 'y': 'b'},
         ...     'datasets': {
@@ -611,7 +611,7 @@ class DeltaGenerator(
         ...      },
         ...     'data': {'name': 'some_fancy_name'},
         ... }),
-        >>> my_chart._arrow_add_rows(some_fancy_name=df2)  # <-- name used as keyword
+        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
         if self._root_container is None or self._cursor is None:

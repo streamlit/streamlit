@@ -1479,7 +1479,7 @@ class VegaChartsMixin:
             serde = VegaLiteStateSerde(parsed_selection_modes)
 
             widget_state = register_widget(
-                "arrow_vega_lite_chart",
+                "vega_lite_chart",
                 vega_lite_proto,
                 user_key=key,
                 on_change_handler=on_select if callable(on_select) else None,

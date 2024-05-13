@@ -52,7 +52,6 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
     Mapping[ElementType, ValueFieldName]
 ] = MappingProxyType(
     {
-        "arrow_vega_lite_chart": "string_value",
         "button": "trigger_value",
         "camera_input": "file_uploader_state_value",
         "checkbox": "bool_value",
@@ -73,6 +72,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "text_area": "string_value",
         "text_input": "string_value",
         "time_input": "string_value",
+        "vega_lite_chart": "string_value",
     }
 )
 
