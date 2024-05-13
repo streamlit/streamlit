@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import {
   HostCommunicationManager,
@@ -150,7 +151,6 @@ describe("AppNavigation", () => {
       const maybeState = appNavigation.handleNewSession(generateNewSession())
       expect(maybeState).not.toBeUndefined()
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const [newState] = maybeState!
       expect(newState.appPages).toEqual([
         { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
@@ -161,7 +161,6 @@ describe("AppNavigation", () => {
       const maybeState = appNavigation.handleNewSession(generateNewSession())
       expect(maybeState).not.toBeUndefined()
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const [newState] = maybeState!
       expect(newState.currentPageScriptHash).toEqual("page_script_hash")
     })
@@ -170,7 +169,6 @@ describe("AppNavigation", () => {
       const maybeState = appNavigation.handleNewSession(generateNewSession({}))
       expect(maybeState).not.toBeUndefined()
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const callback = maybeState![1]
 
       callback()
@@ -208,7 +206,6 @@ describe("AppNavigation", () => {
     )
     expect(maybeState).not.toBeUndefined()
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const [newState] = maybeState!
     expect(newState.appPages).toEqual([
       { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
@@ -225,7 +222,6 @@ describe("AppNavigation", () => {
     )
     expect(maybeState).not.toBeUndefined()
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const callback = maybeState![1]
 
     callback()
@@ -245,7 +241,6 @@ describe("AppNavigation", () => {
     )
     expect(maybeState).not.toBeUndefined()
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const [newState] = maybeState!
     expect(newState.currentPageScriptHash).toEqual("page_script_hash")
   })
@@ -258,7 +253,6 @@ describe("AppNavigation", () => {
     )
     expect(maybeState).not.toBeUndefined()
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const callback = maybeState![1]
 
     callback()
