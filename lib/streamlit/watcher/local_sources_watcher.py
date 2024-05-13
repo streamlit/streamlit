@@ -19,16 +19,18 @@ import os
 import sys
 import types
 from pathlib import Path
-from typing import Callable, Final
+from typing import TYPE_CHECKING, Callable, Final
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-from streamlit.source_util import get_pages
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
     get_default_path_watcher_class,
 )
+
+if TYPE_CHECKING:
+    from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -40,8 +42,9 @@ PathWatcher = None
 
 
 class LocalSourcesWatcher:
-    def __init__(self, main_script_path: str):
-        self._main_script_path = os.path.abspath(main_script_path)
+    def __init__(self, pages_manager: "PagesManager"):
+        self._pages_manager = pages_manager
+        self._main_script_path = os.path.abspath(self._pages_manager.main_script_path)
         self._script_folder = os.path.dirname(self._main_script_path)
         self._on_file_changed: list[Callable[[str], None]] = []
         self._is_closed = False
@@ -61,7 +64,7 @@ class LocalSourcesWatcher:
         old_watched_pages = self._watched_pages
         new_pages_paths: set[str] = set()
 
-        for page_info in get_pages(self._main_script_path).values():
+        for page_info in self._pages_manager.get_pages().values():
             new_pages_paths.add(page_info["script_path"])
             if page_info["script_path"] not in old_watched_pages:
                 self._register_watcher(

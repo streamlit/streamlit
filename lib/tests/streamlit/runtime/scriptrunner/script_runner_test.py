@@ -38,6 +38,7 @@ from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -79,7 +80,6 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class ScriptRunnerTest(AsyncTestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -685,7 +685,7 @@ class ScriptRunnerTest(AsyncTestCase):
             self._assert_no_exceptions(scriptrunner)
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.runtime.pages_manager.get_pages",
         MagicMock(
             return_value={
                 "hash1": {
@@ -842,7 +842,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # Set _cached_pages to None manually (instead of using
         # source_util.invalidate_pages_cache) to avoid firing on_pages_changed
         # events.
-        source_util._cached_pages = None
+        runner._pages_manager._cached_pages = None
 
         # Run a slightly different script on a second runner.
         runner = TestScriptRunner("st_cache_script_changed.py")
@@ -860,7 +860,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.source_util.get_pages",
+        "streamlit.runtime.pages_manager.get_pages",
         MagicMock(
             return_value={
                 "hash2": {
@@ -1059,6 +1059,7 @@ class TestScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(main_script_path),
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.

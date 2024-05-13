@@ -29,6 +29,7 @@ from streamlit.web.server.server import (
     HEALTH_ENDPOINT,
     HOST_CONFIG_ENDPOINT,
     MESSAGE_ENDPOINT,
+    NEW_HEALTH_ENDPOINT,
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
@@ -135,9 +136,6 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmpfile.close()
         self._tmpdir.cleanup()
 
-    def get_pages(self):
-        return {"page1": "page_info1", "page2": "page_info2"}
-
     def get_app(self):
         return tornado.web.Application(
             [
@@ -147,7 +145,10 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     {
                         "path": self._tmpdir.name,
                         "default_filename": self._filename,
-                        "get_pages": self.get_pages,
+                        "reserved_paths": [
+                            NEW_HEALTH_ENDPOINT,
+                            HOST_CONFIG_ENDPOINT,
+                        ],
                     },
                 )
             ]
@@ -166,11 +167,20 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         for r in responses:
             assert r.code == 200
 
-    def test_parse_url_path_404(self):
+    def test_most_404_return_default(self):
         responses = [
             self.fetch("/nonexistent"),
             self.fetch("/page2/nonexistent"),
             self.fetch(f"/page3/{self._filename}"),
+        ]
+
+        for r in responses:
+            assert r.code == 200
+
+    def test_reserved_paths_serve_404(self):
+        responses = [
+            self.fetch("/nonexistent/_stcore/health"),
+            self.fetch("/page2/_stcore/host-config"),
         ]
 
         for r in responses:

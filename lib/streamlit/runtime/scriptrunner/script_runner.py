@@ -52,6 +52,7 @@ from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -115,6 +116,7 @@ class ScriptRunner:
         initial_rerun_data: RerunData,
         user_info: dict[str, str | None],
         fragment_storage: "FragmentStorage",
+        pages_manager: "PagesManager",
     ):
         """Initialize the ScriptRunner.
 
@@ -164,6 +166,7 @@ class ScriptRunner:
         self._user_info = user_info
         self._fragment_storage = fragment_storage
 
+        self._pages_manager = pages_manager
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -291,10 +294,10 @@ class ScriptRunner:
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             main_script_path=self._main_script_path,
-            page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
             fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -426,39 +429,16 @@ class ScriptRunner:
             # Reset DeltaGenerators, widgets, media files.
             runtime.get_instance().media_file_mgr.clear_session_refs()
 
-            main_script_path = self._main_script_path
-            pages = source_util.get_pages(main_script_path)
-            # Safe because pages will at least contain the app's main page.
-            main_page_info = list(pages.values())[0]
-            current_page_info = None
+            active_script = self._pages_manager.get_active_script(
+                rerun_data.page_script_hash, rerun_data.page_name
+            )
+            main_page_info = self._pages_manager.get_main_page()
             uncaught_exception = None
-
-            if rerun_data.page_script_hash:
-                current_page_info = pages.get(rerun_data.page_script_hash, None)
-            elif not rerun_data.page_script_hash and rerun_data.page_name:
-                # If a user navigates directly to a non-main page of an app, we get
-                # the first script run request before the list of pages has been
-                # sent to the frontend. In this case, we choose the first script
-                # with a name matching the requested page name.
-                current_page_info = next(
-                    filter(
-                        # There seems to be this weird bug with mypy where it
-                        # thinks that p can be None (which is impossible given the
-                        # types of pages), so we add `p and` at the beginning of
-                        # the predicate to circumvent this.
-                        lambda p: p and (p["page_name"] == rerun_data.page_name),
-                        pages.values(),
-                    ),
-                    None,
-                )
-            else:
-                # If no information about what page to run is given, default to
-                # running the main page.
-                current_page_info = main_page_info
+            page_found = active_script is not None
 
             page_script_hash = (
-                current_page_info["page_script_hash"]
-                if current_page_info is not None
+                active_script["page_script_hash"]
+                if page_found
                 else main_page_info["page_script_hash"]
             )
 
@@ -494,10 +474,10 @@ class ScriptRunner:
             # to the user via a modal dialog in the frontend, and won't result
             # in their previous script elements disappearing.
             try:
-                if current_page_info:
-                    script_path = current_page_info["script_path"]
+                if page_found:
+                    script_path = active_script["script_path"]
                 else:
-                    script_path = main_script_path
+                    script_path = main_page_info["script_path"]
 
                     # At this point, we know that either
                     #   * the script corresponding to the hash requested no longer
@@ -646,9 +626,11 @@ class ScriptRunner:
                                 ctx.tracked_commands,
                                 exec_time=to_microseconds(timer() - start_time),
                                 prep_time=to_microseconds(prep_time),
-                                uncaught_exception=type(uncaught_exception).__name__
-                                if uncaught_exception
-                                else None,
+                                uncaught_exception=(
+                                    type(uncaught_exception).__name__
+                                    if uncaught_exception
+                                    else None
+                                ),
                             )
                         )
                     except Exception as ex:

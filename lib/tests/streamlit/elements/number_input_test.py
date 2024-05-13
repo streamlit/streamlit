@@ -323,7 +323,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         # Generate widget id and reset context
         st.number_input("a number", min_value=1, max_value=100, key="number")
         widget_id = self.script_run_ctx.session_state.get_widget_states()[0].id
-        self.script_run_ctx.reset()
+        self.script_run_ctx.reset(page_script_hash=self.script_run_ctx.page_script_hash)
 
         # Set the state of the widgets to the test state
         widget_state = WidgetState()

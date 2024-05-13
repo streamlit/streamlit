@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit import runtime, source_util
+from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
@@ -694,17 +694,18 @@ class ButtonMixin:
 
         ctx = get_script_run_ctx()
         ctx_main_script = ""
+        all_app_pages = {}
         if ctx:
             ctx_main_script = ctx.main_script_path
+            all_app_pages = ctx.pages_manager.get_pages()
 
         main_script_directory = get_main_script_directory(ctx_main_script)
         requested_page = os.path.realpath(
             normalize_path_join(main_script_directory, page)
         )
-        all_app_pages = source_util.get_pages(ctx_main_script).values()
 
         # Handle retrieving the page_script_hash & page
-        for page_data in all_app_pages:
+        for page_data in all_app_pages.values():
             full_path = page_data["script_path"]
             page_name = page_data["page_name"]
             if requested_page == full_path:
