@@ -235,7 +235,10 @@ function DataFrame({
 
   // On the first rendering, try to load initial widget state if
   // it exist. This is required in the case that other elements
-  // are inserted before this widget.
+  // are inserted before this widget. In this case, it can happen
+  // that the dataframe component gets unmounded and thereby loses
+  // its state. Once the same element is rendered again, we try to
+  // reconstruct the state from the widget manager values.
   React.useEffect(
     () => {
       if (element.editingMode !== READ_ONLY) {
