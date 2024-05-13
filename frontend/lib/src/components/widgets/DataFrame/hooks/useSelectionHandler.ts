@@ -114,8 +114,6 @@ function useSelectionHandler(
         (isRowSelectionActivated && rowSelectionChanged) ||
         (isColumnSelectionActivated && columnSelectionChanged)
 
-      console.log(rowSelectionChanged, columnSelectionChanged, syncSelection)
-
       let updatedSelection = newSelection
       if (
         (isRowSelectionActivated || isColumnSelectionActivated) &&
