@@ -132,3 +132,26 @@ st.dataframe(
     key="df_selection",
     column_config=column_config,
 )
+
+st.header("Selections in fragment:")
+
+
+@st.experimental_fragment()
+def test_fragment():
+    selection = st.dataframe(
+        df,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode=["multi-row", "multi-column"],
+        key="inside_fragment",
+        column_config=column_config,
+    )
+    st.write("Dataframe-in-fragment selection:", str(selection))
+
+
+test_fragment()
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)

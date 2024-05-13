@@ -91,6 +91,10 @@ def _get_callback_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(6)
 
 
+def _get_fragment_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(7)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
 
@@ -342,3 +346,17 @@ def test_selection_state_remains_after_unmounting(
     canvas.scroll_into_view_if_needed()
     # Use the same snapshot name as the previous test to ensure visual consistency
     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
+
+
+def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
+    canvas = _get_fragment_df(app)
+    _select_some_rows_and_columns(app, canvas)
+
+    _expect_written_text(
+        app,
+        "Dataframe-in-form selection:",
+        "{'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+    )
+
+    # Check that the main script:
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
