@@ -241,13 +241,22 @@ function DataFrame({
   // reconstruct the state from the widget manager values.
   React.useEffect(
     () => {
-      if (element.editingMode !== READ_ONLY) {
-        const initialWidgetValue = widgetMgr.getStringValue(element)
-        if (initialWidgetValue) {
-          editingState.current.fromJson(initialWidgetValue, originalColumns)
-          setNumRows(editingState.current.getNumRows())
-        }
+      if (element.editingMode === READ_ONLY) {
+        // We don't need to load the initial widget state
+        // for read-only dataframes.
+        return
       }
+
+      const initialWidgetValue = widgetMgr.getStringValue(element)
+
+      if (!initialWidgetValue) {
+        // No initial widget value was saved in the widget manager.
+        // No need to reconstruct something.
+        return
+      }
+
+      editingState.current.fromJson(initialWidgetValue, originalColumns)
+      setNumRows(editingState.current.getNumRows())
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
