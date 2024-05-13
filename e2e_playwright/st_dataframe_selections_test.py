@@ -354,7 +354,7 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
 
     _expect_written_text(
         app,
-        "Dataframe-in-form selection:",
+        "Dataframe-in-fragment selection:",
         "{'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
     )
 
