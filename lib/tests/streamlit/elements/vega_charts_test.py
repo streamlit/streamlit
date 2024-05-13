@@ -161,25 +161,25 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("rerun", True),
-            ("ignore", False),
-            (lambda: None, True),
+            ("rerun", ["my_param"]),
+            ("ignore", []),
+            (lambda: None, ["my_param"]),
         ]
     )
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
-    def test_altair_on_select(self, on_select: Any, expected_is_select_enabled: bool):
-        point = alt.selection_point(name="name")
+    def test_altair_on_select(self, on_select: Any, expected_selection_mode: list[str]):
+        point = alt.selection_point(name="my_param")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
         st.altair_chart(chart, on_select=on_select)
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(
-            proto.is_select_enabled,
-            expected_is_select_enabled,
+            proto.selection_mode,
+            expected_selection_mode,
         )
 
     def test_dataset_names_stay_stable(self):
@@ -401,7 +401,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         chart = create_advanced_altair_chart()
 
         with self.assertRaises(StreamlitAPIException):
-            st.altair_chart(chart)
+            st.altair_chart(chart, on_select="rerun")
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -612,27 +612,28 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("rerun", True),
-            ("ignore", False),
-            (lambda: None, True),
+            ("rerun", ["my_param"]),
+            ("ignore", []),
+            (lambda: None, ["my_param"]),
         ]
     )
     def test_vega_lite_on_select(
-        self, on_select: Any, expected_is_select_enabled: bool
+        self, on_select: Any, expected_selection_mode: list[str]
     ):
         st.vega_lite_chart(
             df1,
             {
                 "mark": "rect",
                 "width": 200,
-                "params": [{"name": "name", "select": {"type": "point"}}],
+                "encoding": {"x": {"field": "a", "type": "nominal"}},
+                "params": [{"name": "my_param", "select": {"type": "point"}}],
             },
             on_select=on_select,
         )
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(
-            proto.is_select_enabled,
-            expected_is_select_enabled,
+            proto.selection_mode,
+            expected_selection_mode,
         )
 
     @parameterized.expand(
@@ -660,12 +661,13 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             {
                 "mark": "rect",
                 "width": 200,
-                "params": [{"name": "name", "select": {"type": "interval"}}],
+                "encoding": {"x": {"field": "a", "type": "nominal"}},
+                "params": [{"name": "my_param", "select": {"type": "interval"}}],
             },
             on_select="rerun",
         )
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertTrue(proto.is_select_enabled)
+        self.assertEqual(proto.selection_mode, ["my_param"])
 
     def test_vega_lite_no_selection_throws_streamlit_exception(self):
         with self.assertRaises(StreamlitAPIException):
@@ -688,6 +690,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
                 {
                     "mark": "rect",
                     "width": 200,
+                    "encoding": {"x": {"field": "a", "type": "nominal"}},
                     "params": [{"name": "name", "select": {"type": "interval"}}],
                 },
                 on_select="rerun",
