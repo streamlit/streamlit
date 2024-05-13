@@ -893,7 +893,12 @@ function DataFrame({
               ? "multi"
               : "single",
             rowSelectionBlending: "mixed",
-            rangeSelectionBlending: "mixed",
+            // Deactivate the combination of row selections
+            // and cell selections. This will automatically clear
+            // selected cells when a row is selected.
+            // We are doing this to prevent some issues with drag
+            // and drop selection.
+            rangeSelectionBlending: "exclusive",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
@@ -903,7 +908,12 @@ function DataFrame({
               ? "multi"
               : "single",
             columnSelectionBlending: "mixed",
-            rangeSelectionBlending: "mixed",
+            // Deactivate the combination of column selections
+            // and cell selections. This will automatically clear
+            // selected cells when a column is selected.
+            // We are doing this to prevent some issues with drag
+            // and drop selection.
+            rangeSelectionBlending: "exclusive",
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
