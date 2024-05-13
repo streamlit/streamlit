@@ -345,7 +345,7 @@ def _parse_selection_mode(
 
     if selection_mode is None:
         # Activate all selection parameters:
-        return list(all_selection_params)
+        return sorted(list(all_selection_params))
 
     if isinstance(selection_mode, str):
         # Convert single string to list:
@@ -358,7 +358,7 @@ def _parse_selection_mode(
                 f"Selection parameter '{selection_name}' is not defined in the chart spec. "
                 f"Available selection parameters are: {all_selection_params}."
             )
-    return list(selection_mode)
+    return sorted(list(selection_mode))
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
@@ -1439,6 +1439,7 @@ class VegaChartsMixin:
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
+        print(vega_lite_proto.spec)
         if is_selection_activated:
             # Import here to avoid circular imports
             from streamlit.elements.form import current_form_id

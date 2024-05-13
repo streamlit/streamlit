@@ -29,6 +29,8 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.vega_charts import (
+    _extract_selection_parameters,
+    _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
 )
@@ -1291,6 +1293,75 @@ class VegaUtilitiesTest(unittest.TestCase):
         """Test that _reset_counter_pattern correctly replaces IDs."""
         result = _reset_counter_pattern(prefix, vega_spec)
         self.assertEqual(result, expected)
+
+    @parameterized.expand(
+        [
+            (
+                '{"data": {"name": "e49f4eae50f240b9cf1895776f847b5d"}, "mark": {"type": "point"}, "encoding": {"color": {"condition": {"param": "param_1", "field": "Origin", "type": "nominal"}, "value": "lightgray"}, "tooltip": {"value": null}, "x": {"field": "Horsepower", "type": "quantitative"}, "y": {"field": "Miles_per_Gallon", "type": "quantitative"}}, "params": [{"name": "param_1", "select": {"type": "point"}}]}',
+                {"param_1"},
+            ),
+            (
+                '{"data": {"name": "438d17320890cc476723f9301ba57f91"}, "mark": {"type": "bar"}, "encoding": {"fillOpacity": {"condition": {"param": "my_param", "value": 1}, "value": 0.3}, "tooltip": {"value": null}, "x": {"field": "a", "type": "nominal"}, "y": {"field": "b", "type": "quantitative"}}, "params": [{"name": "my_param", "select": {"type": "point"}}, {"name": "not_valid_param"}]}',
+                {"my_param"},  # Extracts only one since the other is not a valid param
+            ),
+            (
+                '{"data": {"name": "438d17320890cc476723f9301ba57f91"}, "mark": {"type": "bar"}, "encoding": {"fillOpacity": {"condition": {"param": "my_param", "value": 1}, "value": 0.3}, "tooltip": {"value": null}, "x": {"field": "a", "type": "nominal"}, "y": {"field": "b", "type": "quantitative"}}, "params": [{"name": "my_param_1", "select": {"type": "point"}}, {"name": "my_param_2", "select": {"type": "interval"}}]}',
+                {"my_param_1", "my_param_2"},
+            ),
+        ]
+    )
+    def test_extract_selection_parameters(
+        self, vega_spec: str, expected_params: set[str]
+    ):
+        """Test that _extract_selection_parameters correctly extracts parameters."""
+        result = _extract_selection_parameters(json.loads(vega_spec))
+        self.assertEqual(result, expected_params)
+
+    @parameterized.expand(
+        [
+            (
+                '{"params": [{"name": "my_param_1", "select": {"type": "point"}}, {"name": "my_param_2", "select": {"type": "interval"}}]}',
+                None,
+                ["my_param_1", "my_param_2"],
+            ),
+            (
+                '{"params": [{"name": "my_param_1", "select": {"type": "point"}}, {"name": "my_param_2", "select": {"type": "interval"}}]}',
+                "my_param_1",
+                ["my_param_1"],
+            ),
+            (
+                '{"params": [{"name": "my_param_1", "select": {"type": "point"}}, {"name": "my_param_2", "select": {"type": "interval"}}]}',
+                ("my_param_1", "my_param_2"),
+                ["my_param_1", "my_param_2"],
+            ),
+        ]
+    )
+    def test_parse_selection_mode(
+        self,
+        vega_spec: str,
+        input_selection_modes: Any,
+        expected_selection_modes: set[str] | Exception,
+    ):
+        """Test that _parse_selection_mode correctly extracts parameters."""
+        result = _parse_selection_mode(json.loads(vega_spec), input_selection_modes)
+        self.assertEqual(result, expected_selection_modes)
+
+    def test_parse_selection_mode_raises_exception(self):
+        """Test that _parse_selection_mode correctly extracts parameters."""
+        vega_spec = json.loads(
+            '{"params": [{"name": "my_param_1", "select": {"type": "point"}}, {"name": "my_param_2", "select": {"type": "interval"}}]}'
+        )
+        with self.assertRaises(StreamlitAPIException):
+            # The provided parameter is not defined in spec:
+            _parse_selection_mode(vega_spec, "not_exiting_param")
+
+        with self.assertRaises(StreamlitAPIException):
+            # One of the parameters is not defined in spec:
+            _parse_selection_mode(vega_spec, ("my_param_1", "not_exiting_param"))
+
+        with self.assertRaises(StreamlitAPIException):
+            # No parameters defined in spec
+            _parse_selection_mode({}, ())
 
     @parameterized.expand(
         [
