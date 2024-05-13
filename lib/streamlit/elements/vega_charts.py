@@ -137,16 +137,10 @@ class VegaLiteStateSerde:
 
 
 def _prepare_vega_lite_spec(
-    spec: VegaLiteSpec | None = None,
+    spec: VegaLiteSpec,
     use_container_width: bool = False,
     **kwargs,
 ) -> VegaLiteSpec:
-    # Support passing no spec arg, but filling it with kwargs.
-    # Example:
-    #   marshall(proto, baz='boz')
-    if spec is None:
-        spec: VegaLiteSpec = {}
-
     if len(kwargs):
         # Support passing in kwargs. Example:
         #   marshall(proto, {foo: 'bar'}, baz='boz')
@@ -1431,6 +1425,9 @@ class VegaChartsMixin:
         if isinstance(data, dict) and spec is None:
             spec = data
             data = None
+
+        if spec is None:
+            spec = {}
 
         vega_lite_proto = ArrowVegaLiteChartProto()
 
