@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import time
+
 import altair as alt
 import pandas as pd
 from vega_datasets import data
@@ -29,6 +31,14 @@ interval = alt.selection_interval()
 point = alt.selection_point()
 
 st.subheader("Scatter chart with selection_point")
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
 base = (
     alt.Chart(cars)
     .mark_point()
@@ -58,6 +68,7 @@ base = (
     )
 )
 chart_interval = base.add_params(interval)
+# Set use_container_width=True for all charts so that the width is not dependent on Vega-lib updates.
 st.altair_chart(
     chart_interval, on_select="rerun", key="scatter_interval", use_container_width=True
 )
@@ -116,9 +127,7 @@ if st.session_state.bar_interval and len(st.session_state.bar_interval.select) >
     st.write("Bar chart with selection_interval:", str(st.session_state.bar_interval))
 
 # STACKED AREA CHART
-source = alt.UrlData(
-    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iowa-electricity.csv"
-)
+source = data.iowa_electricity()
 
 base = (
     alt.Chart(source)
@@ -162,7 +171,6 @@ if len(area_interval_selection.select) > 0:
 
 # HISTOGRAM CHART
 source = data.movies()
-
 
 base = (
     alt.Chart(source)

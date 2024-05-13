@@ -105,7 +105,7 @@ def test_point_bar_chart_displays_dataframe(app: Page):
     _click(app, chart, _MousePosition(150, 180))
 
     expected_prefix = "Bar chart with selection_point:"
-    expected_selection = "{'select': {'param_1': [{'a': 'E', 'b': 81}]}}"
+    expected_selection = "{'select': {'param_1': [{'a': 'B', 'b': 55}]}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -119,7 +119,7 @@ def test_interval_bar_chart_displays_dataframe(app: Page):
     )
 
     expected_prefix = "Bar chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'a': ['B', 'C', 'D', 'E', 'F'], 'b': [44.28889142335767, 46.113708941605836]}}}"
+    expected_selection = "{'select': {'param_1': {'a': ['A', 'B'], 'b': [44.200501824817515, 46.025319343065696]}}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -129,7 +129,7 @@ def test_point_area_chart_displays_dataframe(app: Page):
     _click(app, chart, _MousePosition(150, 150))
 
     expected_prefix = "Area chart with selection_point:"
-    expected_selection = "{'param_1': [{'year': 978307200000, 'net_generation': '35361', 'source': 'Fossil Fuels'}]}"
+    expected_selection = "{'param_1': [{'source': 'Fossil Fuels', 'year': 978303600000, 'net_generation': 35361}]}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -141,7 +141,7 @@ def test_interval_area_chart_displays_dataframe(app: Page):
     )
 
     expected_prefix = "Area chart with selection_interval:"
-    expected_selection = "{'param_1': {'year': [1092053274725, 1383354197802], 'net_generation': [17319.534132841327, 36138.722324723254]}}"
+    expected_selection = "{'param_1': {'year': [1020899866666, 1129987866666], 'net_generation': [17418.127306273065, 36237.31549815498]}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -151,7 +151,7 @@ def test_point_histogram_chart_displays_dataframe(app: Page):
     _click(app, chart, _MousePosition(255, 238))
 
     expected_prefix = "Histogram chart with selection_point:"
-    expected_selection = "{'select': {'param_1': [{'IMDB_Rating': [8, 9]}]}}"
+    expected_selection = "{'select': {'param_1': [{'IMDB_Rating': 4.6}]}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -163,7 +163,7 @@ def test_interval_histogram_chart_displays_dataframe(app: Page):
     )
 
     expected_prefix = "Histogram chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'IMDB_Rating': [4.575342465753424, 6.424657534246575]}}}"
+    expected_selection = "{'select': {'param_1': {'IMDB_Rating': [2.497131931166348, 3.27151051625239]}}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -175,7 +175,7 @@ def test_double_click_interval_shows_no_dataframe(app: Page):
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'Horsepower': [69.39759036144578, 151.32530120481925], 'Miles_per_Gallon': [20.936635147601475, 32.00674584870848]}}}"
+    expected_selection = "{'select': {'param_1': {'Horsepower': [31.247739602169982, 68.1374321880651], 'Miles_per_Gallon': [20.949607933579333, 32.01971863468634]}}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
     chart.dblclick(position={"x": 130, "y": 100})
@@ -186,47 +186,66 @@ def test_double_click_interval_shows_no_dataframe(app: Page):
     expect(selection_text).to_have_count(0)
 
 
-def test_point_selection_scatter_chart_displays_dataframe(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    chart = _get_selection_point_scatter_chart(themed_app)
+def test_point_selection_scatter_chart_displays_dataframe(app: Page):
+    chart = _get_selection_point_scatter_chart(app)
 
-    _click(themed_app, chart, _MousePosition(162, 181))
+    _click(app, chart, _MousePosition(264, 162))
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "{'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}]}}"
-    _expect_written_text(themed_app, expected_prefix, expected_selection)
-
-    assert_snapshot(chart, name="st_altair_chart-scatter_single_selection_greyed")
+    expected_selection = "{'select': {'param_1': [{'Origin': 'USA', 'Horsepower': 90, 'Miles_per_Gallon': 20.2}]}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
 
 def test_interval_selection_scatter_chart_displays_dataframe(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = _get_selection_interval_scatter_chart(themed_app)
+    chart = _get_selection_interval_scatter_chart(app)
 
     _create_selection_rectangle(
-        themed_app, chart, _MousePosition(165, 88), _MousePosition(265, 188)
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'Horsepower': [103.13253012048193, 199.51807228915663], 'Miles_per_Gallon': [15.770583487084872, 34.22076798892989]}}}"
-    _expect_written_text(themed_app, expected_prefix, expected_selection)
+    expected_selection = "{'select': {'param_1': {'Horsepower': [87.66726943942135, 162.748643761302], 'Miles_per_Gallon': [9.879497232472323, 30.174700184501845]}}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
 
-    assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection_greyed")
+    assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection")
+
+
+def _test_shift_click_point_selection_scatter_chart_displays_selection(
+    app: Page,
+) -> Locator:
+    chart = _get_selection_point_scatter_chart(app)
+    expect(chart).to_be_visible()
+    chart.click(position={"x": 264, "y": 162})
+    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
+    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
+    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
+    wait_for_app_run(app)
+
+    expected_prefix = "Scatter chart with selection_point:"
+    expected_selection = "{'select': {'param_1': [{'Origin': 'USA', 'Horsepower': 90, 'Miles_per_Gallon': 20.2}, {'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18.6}, {'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 15}, {'Origin': 'Japan', 'Horsepower': 53, 'Miles_per_Gallon': 33}]}}"
+    _expect_written_text(app, expected_prefix, expected_selection)
+    return chart
 
 
 def test_shift_click_point_selection_scatter_chart_displays_dataframe(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = _get_selection_point_scatter_chart(themed_app)
-    expect(chart).to_be_visible()
-    chart.click(position={"x": 162, "y": 181})
-    chart.click(position={"x": 157, "y": 146}, modifiers=["Shift"])
-    wait_for_app_run(themed_app)
+    chart = _test_shift_click_point_selection_scatter_chart_displays_selection(app)
+    assert_snapshot(chart, name="st_altair_chart-scatter_shift_selection")
 
-    expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "{'select': {'param_1': [{'Horsepower': 100, 'Miles_per_Gallon': 17, 'Origin': 'USA'}, {'Horsepower': 97, 'Miles_per_Gallon': 23.9, 'Origin': 'Japan'}]}}"
-    _expect_written_text(themed_app, expected_prefix, expected_selection)
 
-    assert_snapshot(chart, name="st_altair_chart-scatter_double_selection_greyed")
+def test_selection_state_remains_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = _test_shift_click_point_selection_scatter_chart_displays_selection(app)
+
+    # click on button to trigger unmounting / mounting
+    app.get_by_test_id("stButton").filter(
+        has_text="Create some elements to unmount component"
+    ).locator("button").click()
+    wait_for_app_run(app, wait_delay=4000)
+
+    # Use the same snapshot name as the previous test to ensure visual consistency
+    assert_snapshot(chart, name="st_altair_chart-scatter_shift_selection")
