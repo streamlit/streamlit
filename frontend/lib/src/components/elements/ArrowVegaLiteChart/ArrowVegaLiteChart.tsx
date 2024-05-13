@@ -174,22 +174,18 @@ export class ArrowVegaLiteChart extends PureComponent<
 
   readonly state = {
     error: undefined,
-    selections: {} as Record<string, any>,
   }
 
   public async componentDidMount(): Promise<void> {
     try {
-      console.log("mounting")
       await this.createView()
     } catch (e) {
-      console.log("componentDidMount error", e)
       const error = ensureError(e)
       this.setState({ error })
     }
   }
 
   public componentWillUnmount(): void {
-    console.log("unmounting")
     this.finalizeView()
   }
 
@@ -267,7 +263,6 @@ export class ArrowVegaLiteChart extends PureComponent<
   public generateSpec = (): any => {
     const { element: el, theme, isFullScreen, width, height } = this.props
     const spec = JSON.parse(el.spec)
-    console.log("generateSpec", JSON.parse(el.spec))
     const { useContainerWidth } = el
     if (el.vegaLiteTheme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
@@ -334,8 +329,6 @@ export class ArrowVegaLiteChart extends PureComponent<
     if (!this.vegaView) {
       throw new Error("Chart has not been drawn yet")
     }
-
-    console.log("Update data", name)
 
     if (!data || data.data.numRows === 0) {
       // The new data is empty, so we remove the dataset from the
@@ -426,8 +419,6 @@ export class ArrowVegaLiteChart extends PureComponent<
       this.vegaView?.addSignalListener(
         param,
         debounce(DEBOUNCE_TIME_MS, (name: string, value: SignalValue) => {
-          console.log("signal", name, value)
-
           // Store the current chart selection state with the widget manager so that it
           // can be used for restoring the state when the component unmounted and
           // created again. This can happen when elements are added before it within
@@ -497,12 +488,6 @@ export class ArrowVegaLiteChart extends PureComponent<
      * This might also send the empty selection state to the backend.
      */
     const reset = (): void => {
-      console.log("reset")
-      if (Object.keys(this.state.selections).length === 0) {
-        // Nothing is selected, so we don't need to do anything.
-        return
-      }
-
       const emptySelectionState: VegaLiteState = {
         select: {},
       }
@@ -606,7 +591,6 @@ export class ArrowVegaLiteChart extends PureComponent<
       // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw this.state.error
     }
-    console.log("render")
 
     return (
       // Create the container Vega draws inside.
