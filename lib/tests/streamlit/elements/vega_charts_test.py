@@ -376,6 +376,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
                 chart, on_select="rerun", selection_mode=["not_existing_param"]
             )
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_respects_selection_mode_parameter(self):
         """Test that the selection_mode parameter is respected."""
         interval = alt.selection_interval(name="my_interval_selection")
