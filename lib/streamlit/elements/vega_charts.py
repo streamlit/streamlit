@@ -111,9 +111,14 @@ class VegaLiteState(TypedDict, total=False):
 class VegaLiteStateSerde:
     """VegaLiteStateSerde is used to serialize and deserialize the VegaLite Chart state."""
 
+    selection_parameters: Sequence[str]
+
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> VegaLiteState:
         empty_selection_state: VegaLiteState = {
-            "select": AttributeDictionary(),
+            "select": AttributeDictionary(
+                # Initialize the select state with empty dictionaries for each selection parameter.
+                {param: {} for param in self.selection_parameters}
+            ),
         }
 
         selection_state = (
@@ -1447,9 +1452,8 @@ class VegaChartsMixin:
             _disallow_multi_view_charts(final_spec)
 
             # Parse and check the specified selection modes
-            vega_lite_proto.selection_mode.extend(
-                _parse_selection_mode(final_spec, selection_mode)
-            )
+            parsed_selection_modes = _parse_selection_mode(final_spec, selection_mode)
+            vega_lite_proto.selection_mode.extend(parsed_selection_modes)
 
             vega_lite_proto.form_id = current_form_id(self.dg)
 
@@ -1467,12 +1471,12 @@ class VegaChartsMixin:
                 named_datasets=[dataset.name for dataset in vega_lite_proto.datasets],
                 theme=theme,
                 use_container_width=use_container_width,
-                selection_mode=vega_lite_proto.selection_mode,
+                selection_mode=parsed_selection_modes,
                 form_id=vega_lite_proto.form_id,
                 page=ctx.page_script_hash if ctx else None,
             )
 
-            serde = VegaLiteStateSerde()
+            serde = VegaLiteStateSerde(parsed_selection_modes)
 
             widget_state = register_widget(
                 "arrow_vega_lite_chart",
