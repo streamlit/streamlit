@@ -151,6 +151,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
+        self.assertIn("Local URL: http://localhost", out)
         self.assertIn("Network URL: http://internal-ip", out)
         self.assertIn("External URL: http://external-ip", out)
 
@@ -175,6 +176,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
+        self.assertIn("Local URL: http://localhost", out)
         self.assertIn("Network URL: http://internal-ip", out)
         self.assertNotIn("External URL: http://external-ip", out)
 
@@ -199,6 +201,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
+        self.assertIn("Local URL: http://localhost", out)
         self.assertNotIn("Network URL: http://internal-ip", out)
         self.assertIn("External URL: http://external-ip", out)
 
