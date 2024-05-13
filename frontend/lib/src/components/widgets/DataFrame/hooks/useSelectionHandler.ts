@@ -104,15 +104,23 @@ function useSelectionHandler(
         gridSelection.columns.toArray()
       )
 
+      const cellSelectionChanged = !isEqual(
+        newSelection.current,
+        gridSelection.current
+      )
+
       // A flag to determine if the selection should be synced with the widget state
       let syncSelection =
         (isRowSelectionActivated && rowSelectionChanged) ||
         (isColumnSelectionActivated && columnSelectionChanged)
 
+      console.log(rowSelectionChanged, columnSelectionChanged, syncSelection)
+
       let updatedSelection = newSelection
       if (
         (isRowSelectionActivated || isColumnSelectionActivated) &&
-        newSelection.current !== undefined
+        newSelection.current !== undefined &&
+        cellSelectionChanged
       ) {
         // The default behavior is that row selections are cleared when a cell is selected.
         // This is not desired when row selection is activated. Instead, we want to keep the
