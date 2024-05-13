@@ -453,14 +453,17 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         patched_register_callback.assert_called_once_with(session._on_pages_changed)
 
-    @patch.object(PagesManager, "_on_pages_changed")
-    def test_deregisters_pages_watcher_on_shutdown(self, patched_on_pages_changed):
-        session = _create_test_session()
-        session.shutdown()
+    def test_deregisters_pages_watcher_on_shutdown(self):
+        disconnect_mock = MagicMock()
+        with patch.object(
+            PagesManager,
+            "register_pages_changed_callback",
+            return_value=disconnect_mock,
+        ):
+            session = _create_test_session()
+            session.shutdown()
 
-        patched_on_pages_changed.disconnect.assert_called_once_with(
-            session._on_pages_changed
-        )
+            disconnect_mock.assert_called_once()
 
     def test_tags_fwd_msgs_with_last_backmsg_id_if_set(self):
         session = _create_test_session()

@@ -23,42 +23,42 @@ from streamlit.util import calc_md5
 
 
 class PagesManagerTest(unittest.TestCase):
-    @patch.object(PagesManager, "_on_pages_changed", MagicMock())
     def test_pages_cache(self):
         """Test that the pages cache is correctly set and invalidated"""
         pages_manager = PagesManager("main_script_path")
-        assert pages_manager._cached_pages is None
+        with patch.object(pages_manager, "_on_pages_changed", MagicMock()):
+            assert pages_manager._cached_pages is None
 
-        pages = pages_manager.get_pages()
+            pages = pages_manager.get_pages()
 
-        assert pages_manager._cached_pages is not None
+            assert pages_manager._cached_pages is not None
 
-        new_pages = pages_manager.get_pages()
-        # Assert address-equality to verify the cache is used the second time
-        # get_pages is called.
-        assert new_pages is pages
+            new_pages = pages_manager.get_pages()
+            # Assert address-equality to verify the cache is used the second time
+            # get_pages is called.
+            assert new_pages is pages
 
-        pages_manager.invalidate_pages_cache()
-        assert pages_manager._cached_pages is None
+            pages_manager.invalidate_pages_cache()
+            assert pages_manager._cached_pages is None
 
-        pages_manager._on_pages_changed.send.assert_called_once()
-        another_new_set_of_pages = pages_manager.get_pages()
-        assert another_new_set_of_pages is not pages
+            pages_manager._on_pages_changed.send.assert_called_once()
+            another_new_set_of_pages = pages_manager.get_pages()
+            assert another_new_set_of_pages is not pages
 
-    @patch.object(PagesManager, "_on_pages_changed", MagicMock())
     def test_register_pages_changed_callback(self):
         """Test that the pages changed callback is correctly registered and unregistered"""
         pages_manager = PagesManager("main_script_path")
-        callback = lambda: None
+        with patch.object(pages_manager, "_on_pages_changed", MagicMock()):
+            callback = lambda: None
 
-        disconnect = pages_manager.register_pages_changed_callback(callback)
+            disconnect = pages_manager.register_pages_changed_callback(callback)
 
-        pages_manager._on_pages_changed.connect.assert_called_once_with(
-            callback, weak=False
-        )
+            pages_manager._on_pages_changed.connect.assert_called_once_with(
+                callback, weak=False
+            )
 
-        disconnect()
-        pages_manager._on_pages_changed.disconnect.assert_called_once_with(callback)
+            disconnect()
+            pages_manager._on_pages_changed.disconnect.assert_called_once_with(callback)
 
     @patch("streamlit.runtime.pages_manager.watch_dir")
     @patch.object(PagesManager, "invalidate_pages_cache", MagicMock())
