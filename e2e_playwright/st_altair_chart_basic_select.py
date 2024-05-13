@@ -53,7 +53,10 @@ chart_point = base.add_params(point)
 st.altair_chart(
     chart_point, on_select="rerun", key="scatter_point", use_container_width=True
 )
-if st.session_state.scatter_point and len(st.session_state.scatter_point.select) > 0:
+if (
+    "scatter_point" in st.session_state
+    and len(st.session_state.scatter_point.select) > 0
+):
     st.write("Scatter chart with selection_point:", str(st.session_state.scatter_point))
 
 st.subheader("Scatter chart with selection_interval")
@@ -73,7 +76,7 @@ st.altair_chart(
     chart_interval, on_select="rerun", key="scatter_interval", use_container_width=True
 )
 if (
-    st.session_state.scatter_interval
+    "scatter_interval" in st.session_state
     and len(st.session_state.scatter_interval.select) > 0
 ):
     st.write(
@@ -103,7 +106,7 @@ bar_graph_point = (
 st.altair_chart(
     bar_graph_point, on_select="rerun", key="bar_point", use_container_width=True
 )
-if st.session_state.bar_point and len(st.session_state.bar_point.select) > 0:
+if "bar_point" in st.session_state and len(st.session_state.bar_point.select) > 0:
     st.write("Bar chart with selection_point:", str(st.session_state.bar_point))
 
 
@@ -123,7 +126,7 @@ st.subheader("Bar chart with selection_interval")
 st.altair_chart(
     bar_graph_interval, on_select="rerun", key="bar_interval", use_container_width=True
 )
-if st.session_state.bar_interval and len(st.session_state.bar_interval.select) > 0:
+if "bar_interval" in st.session_state and len(st.session_state.bar_interval.select) > 0:
     st.write("Bar chart with selection_interval:", str(st.session_state.bar_interval))
 
 # STACKED AREA CHART
@@ -188,7 +191,7 @@ st.altair_chart(
     histogram_point, on_select="rerun", key="histogram_point", use_container_width=True
 )
 if (
-    st.session_state.histogram_point
+    "histogram_point" in st.session_state
     and len(st.session_state.histogram_point.select) > 0
 ):
     st.write(
@@ -214,7 +217,7 @@ st.altair_chart(
     use_container_width=True,
 )
 if (
-    st.session_state.histogram_interval
+    "histogram_interval" in st.session_state
     and len(st.session_state.histogram_interval.select) > 0
 ):
     st.write(
