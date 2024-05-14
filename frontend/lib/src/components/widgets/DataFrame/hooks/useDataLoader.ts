@@ -74,11 +74,10 @@ function useDataLoader(
         if (notNullOrUndefined(editedCell)) {
           return editedCell
         } else if (isAddedRow) {
-          // If its an added row, its fine to return the cell with null value.
-          // since there will not be a corresponding cell in the Arrow data.
-          // Returning an empty cell here is especially important
-          // for the case that the data editor gets reconstructs from widget state
-          // where we strip out all None values from added rows.
+          // If its an added row, we just return an empty cell here since
+          // since its guaranteed that there will not be a corresponding
+          // cell in the Arrow data. This is mostly a fallback, and its
+          // not expected to be called.
           return column.getCell(null, false)
         }
       }
