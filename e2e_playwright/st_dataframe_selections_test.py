@@ -374,6 +374,6 @@ def test_that_index_cannot_be_selected(app: Page):
     # Nothing should be selected:
     _expect_written_text(
         app,
-        "Dataframe-in-fragment selection:",
+        "No selection on index column:",
         "{'select': {'rows': [], 'columns': []}}",
     )
