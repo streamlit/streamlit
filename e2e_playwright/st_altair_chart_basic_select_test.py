@@ -74,35 +74,35 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_selection_point_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(0)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(0)
 
 
 def _get_selection_interval_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(1)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(1)
 
 
 def _get_selection_point_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(2)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(2)
 
 
 def _get_selection_interval_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(3)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(3)
 
 
 def _get_selection_point_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(4)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(4)
 
 
 def _get_selection_interval_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(5)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(5)
 
 
 def _get_selection_point_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(6)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(6)
 
 
 def _get_selection_interval_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").nth(7)
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(7)
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
