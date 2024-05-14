@@ -250,6 +250,13 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
+    def test_streamlit_secrets(self):
+        """Test st.write with st.secrets."""
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
+            st.write(st.secrets)
+
+            p.assert_called_once()
+
     @parameterized.expand(
         [
             (pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"]),),

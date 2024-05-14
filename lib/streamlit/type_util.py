@@ -59,6 +59,8 @@ if TYPE_CHECKING:
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
+    from streamlit.runtime.secrets import Secrets
+
 
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
@@ -533,6 +535,11 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     except TypeError:
         return False
     return True
+
+
+def is_streamlit_secret_class(obj: object) -> TypeGuard[Secrets]:
+    """True if obj is a Streamlit Secret object."""
+    return is_type(obj, "streamlit.runtime.secrets.Secrets")
 
 
 def is_sequence(seq: Any) -> bool:

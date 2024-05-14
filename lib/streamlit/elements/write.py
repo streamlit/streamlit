@@ -483,6 +483,9 @@ class WriteMixin:
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
+            elif type_util.is_streamlit_secret_class(arg):
+                flush_buffer()
+                self.dg.json(arg.__repr__())
             else:
                 stringified_arg = str(arg)
 
