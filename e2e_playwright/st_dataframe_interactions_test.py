@@ -247,6 +247,8 @@ def test_data_editor_keeps_state_after_unmounting(
 
     # The height should reflect that one row is added (247px+35px=282px):
     expect(data_editor_element).to_have_css("height", "282px")
+    # The added row will trigger a rerun after a bounce, so we need to wait
+    # for the app to finish running before we unmount the component.
     wait_for_app_run(app, 500)
 
     # Click button to unmount the component:
