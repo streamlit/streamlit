@@ -821,6 +821,17 @@ describe("AppRoot.empty", () => {
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
+  it("sets the main script hash and active script hash", () => {
+    const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
+
+    expect(empty.mainScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(empty.main.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(empty.sidebar.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(empty.event.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(empty.bottom.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(empty.root.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+  })
+
   it("creates empty tree with no loading screen if query param is set", async () => {
     windowSpy.mockImplementation(() => ({
       location: {

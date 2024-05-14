@@ -506,10 +506,10 @@ export class BlockNode implements AppNode {
  * The root of our data tree. It contains the app's top-level BlockNodes.
  */
 export class AppRoot {
-  private readonly root: BlockNode
+  readonly root: BlockNode
 
   /* The hash of the main script that creates this AppRoot. */
-  private readonly mainScriptHash: string
+  readonly mainScriptHash: string
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
