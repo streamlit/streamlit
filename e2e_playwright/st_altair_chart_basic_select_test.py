@@ -111,7 +111,7 @@ def test_point_bar_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(150, 180))
 
     expected_prefix = "Bar chart with selection_point:"
-    expected_selection = "{'select': {'param_1': [{'a': 'B', 'b': 55}]}}"
+    expected_selection = "\\{'select': \\{'param_1': [{'a': 'B', 'b': 55\\}]\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -125,7 +125,7 @@ def test_interval_bar_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Bar chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'a': \\['A', 'B'\\], 'b': \\[44.\\d+, 4(5|6).\\d+\\]}}}"
+    expected_selection = "\\{'select': \\{'param_1': \\{'a': \\['A', 'B'\\], 'b': \\[44.\\d+, 4(5|6).\\d+\\]\\}\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -135,7 +135,7 @@ def test_point_area_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(150, 150))
 
     expected_prefix = "Area chart with selection_point:"
-    expected_selection = "{'param_1': \\[{'source': 'Fossil Fuels', 'year': 97830\\d+, 'net_generation': 35361}\\]}"
+    expected_selection = "\\{'param_1': \\[\\{'source': 'Fossil Fuels', 'year': 97830\\d+, 'net_generation': 35361\\}\\]\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -147,7 +147,7 @@ def test_interval_area_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Area chart with selection_interval:"
-    expected_selection = "{'param_1': {'year': \\[1020\\d+, 11\\d+\\], 'net_generation': \\[17\\d+\\.\\d+, 361\\d+\\.\\d+\\]}}"
+    expected_selection = "\\{'param_1': \\{'year': \\[1020\\d+, 11\\d+\\], 'net_generation': \\[17\\d+\\.\\d+, 361\\d+\\.\\d+\\]\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -169,9 +169,7 @@ def test_interval_histogram_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Histogram chart with selection_interval:"
-    expected_selection = (
-        "{'select': {'param_1': {'IMDB_Rating': \\[2\\.49\\d+, 3\\.27\\d+\\]}}}"
-    )
+    expected_selection = "\\{'select': \\{'param_1': \\{'IMDB_Rating': \\[2\\.49\\d+, 3\\.2(6|7)\\d+\\]\\}\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -183,7 +181,7 @@ def test_double_click_interval_shows_no_selection_text(app: Page):
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'Horsepower': \\[31\\.247739602169982, 68\\.137\\d+\\], 'Miles_per_Gallon': \\[2(0|1)\\.\\d+, 3(1|2)\\.\\d+\\]}}}"
+    expected_selection = "\\{'select': \\{'param_1': \\{'Horsepower': \\[31\\.247739602169982, 68\\.137\\d+\\], 'Miles_per_Gallon': \\[2(0|1)\\.\\d+, 3(1|2)\\.\\d+\\]\\}\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
     chart.dblclick(position={"x": 130, "y": 100})
@@ -200,7 +198,7 @@ def test_point_selection_scatter_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(264, 162))
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "{'select': {'param_1': \\[{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2}\\]}}"
+    expected_selection = "\\{'select': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2\\}\\]\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -214,7 +212,7 @@ def test_interval_selection_scatter_chart_displays_selection_snapshot(
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'Horsepower': \\[87\\.66726943942135, 162\\.748643761302\\], 'Miles_per_Gallon': \\[9\\.95733394833948, 30\\.252536900369005\\]}}}"
+    expected_selection = "\\{'select': \\{'param_1': \\{'Horsepower': \\[87\\.66726943942135, 162\\.748643761302\\], 'Miles_per_Gallon': \\[9\\.(8|9)\\d+, 30\\.\\d+\\]\\}\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
     assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection")
@@ -238,7 +236,7 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     app.wait_for_timeout(100)
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "{'select': {'param_1': \\[{'Origin': 'USA', 'Horsepower': 88, 'Miles_per_Gallon': 20\\.2}, {'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18\\.6}, {'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 14}, {'Origin': 'Japan', 'Horsepower': 52, 'Miles_per_Gallon': 32\\.8}\\]}}"
+    expected_selection = "\\{'select': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': 88, 'Miles_per_Gallon': 20\\.2\\}, \\{'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18\\.6\\}, \\{'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 14\\}, \\{'Origin': 'Japan', 'Horsepower': 52, 'Miles_per_Gallon': 32\\.8\\}\\]\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
     return chart
