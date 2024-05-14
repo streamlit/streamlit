@@ -51,8 +51,8 @@ export const StyledHeaderDecoration = styled.div(({ theme }) => ({
 
 export const StyledHeaderToolbar = styled.div(({ theme }) => ({
   position: "absolute",
-  top: theme.spacing.sm,
-  right: theme.spacing.twoXS,
+  top: theme.spacing.xl,
+  right: theme.spacing.xl,
   display: "flex",
   flexDirection: "row",
   alignItems: "center",

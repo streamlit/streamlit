@@ -52,6 +52,7 @@ jobs:
     permissions:
       # Additional permission needed to generate release
       contents: write
+      id-token: write
 
     env:
       # Name of the tag
@@ -66,6 +67,8 @@ jobs:
       CONSTRAINTS_TAG: constraints/${{ github.ref_name }}
       # We don't want to use constraints files because they might not exist yet.
       USE_CONSTRAINTS_FILE: "false"
+
+    environment: release
 
     steps:
       - name: Checkout Streamlit code
@@ -117,11 +120,9 @@ jobs:
           name: Release
           path: lib/dist
       - name: Upload to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}
-        run: |
-          make distribute
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: lib/dist/
       - name: Create GitHub Release
         env:
           GIT_TAG: ${{ env.GIT_TAG }}

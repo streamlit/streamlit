@@ -188,8 +188,20 @@ def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Slow page")
 
 
-def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
-    app.get_by_test_id("stButton").nth(1).locator("button").first.click()
+def test_widget_state_reset_on_page_switch(app: Page):
+    # Regression test for GH issue 7338
+
+    # Page 3
+    app.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+
+    slider = app.locator('.stSlider [role="slider"]')
+    slider.click()
+    slider.press("ArrowRight")
+    wait_for_app_run(app, wait_delay=500)
+    expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 1")
+
+    # Switch to the slow page
+    app.get_by_test_id("stSidebarNav").locator("a").nth(7).click()
 
     # Wait for the view container and main menu to appear (like in wait_for_app_loaded),
     # but don't wait for the script to finish running.
@@ -198,10 +210,12 @@ def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
     )
     app.wait_for_selector("[data-testid='stMainMenu']", timeout=20000, state="attached")
 
-    # We expect to see the page transition to the slow page by the time this call times
-    # out in 5s. Otherwise, the page contents aren't being rendered until the script has
-    # fully completed, and we've run into https://github.com/streamlit/streamlit/issues/7954
-    expect(app.get_by_test_id("stHeading")).to_contain_text("Slow page")
+    # Back to page 3
+    app.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(app, wait_delay=500)
+
+    # Slider reset
+    expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
 
 
 def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
@@ -229,3 +243,27 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     expect(page).to_have_url(
         f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
     )
+
+
+def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that logos display properly in sidebar and main sections"""
+
+    # Go to logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(8).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")

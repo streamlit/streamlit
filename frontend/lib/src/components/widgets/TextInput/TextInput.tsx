@@ -42,6 +42,7 @@ export interface Props {
   element: TextInputProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -119,11 +120,8 @@ class TextInput extends React.PureComponent<Props, State> {
    *                      By default, this is true, meaning the state WILL be updated.
    */
   private commitWidgetValue = (source: Source, updateState = true): void => {
-    this.props.widgetMgr.setStringValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setStringValue(element, this.state.value, source, fragmentId)
     if (updateState) {
       this.setState({ dirty: false })
     }

@@ -29,23 +29,22 @@ jobs:
           fetch-depth: 2
       - name: Set build config env vars
         uses: ./.github/actions/build_info
-      # We need to install Python 3.9 here because it's the latest version
-      # supported by the miniconda installer as of 2022/10/11.
-      - name: Set up Python 3.9
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.12"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Install conda and conda-build
         env:
-          MINICONDA_RELEASE: "Miniconda3-py39_4.12.0-Linux-x86_64"
+          MINICONDA_RELEASE: "Miniconda3-py312_24.1.2-0-Linux-x86_64"
         run: |
           curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
           bash "${MINICONDA_RELEASE}.sh" -b
-          conda install conda-build=3.28.4
+          conda install conda-build
       - name: Build Snowpark Conda Package - Fast
         timeout-minutes: 120
         run: |
           sudo apt install rsync
+          conda config --set conda_build.pkg_format 2
           SNOWPARK_CONDA_BUILD=1 BUILD_AS_FAST_AS_POSSIBLE=1 make conda-package

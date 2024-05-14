@@ -17,6 +17,7 @@ import threading
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -105,6 +106,7 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     main_script_path="",
                     page_script_hash="",
                     user_info={"email": "something@else.com"},
+                    fragment_storage=MemoryFragmentStorage(),
                 ),
             )
 

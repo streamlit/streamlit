@@ -84,7 +84,24 @@ describe("Button widget", () => {
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
-        { fromUi: true }
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("passes fragmentId to onClick prop", () => {
+      const props = getProps(undefined, {
+        fragmentId: "myFragmentId",
+      })
+      render(<Button {...props} />)
+
+      const buttonWidget = screen.getByRole("button")
+      fireEvent.click(buttonWidget)
+
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        { fromUi: true },
+        "myFragmentId"
       )
     })
 

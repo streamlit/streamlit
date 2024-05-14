@@ -130,6 +130,28 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert "foo=bar" in message.page_info_changed.query_string
 
+    def test_update_adds_list_values(self):
+        self.query_params.update({"foo": ["bar", "baz"]})
+        assert self.query_params.get_all("foo") == ["bar", "baz"]
+        message = self.get_message_from_queue(0)
+        assert "foo=bar&foo=baz" in message.page_info_changed.query_string
+
+    def test_update_with_iterable(self):
+        self.query_params.update([("foo", "bar"), ("stream", ["lit", "rocks"])])
+        assert self.query_params.get("foo") == "bar"
+        assert self.query_params.get("stream") == "rocks"
+        message = self.get_message_from_queue(0)
+        assert "foo=bar" in message.page_info_changed.query_string
+        assert "stream=lit&stream=rocks" in message.page_info_changed.query_string
+
+    def test_update_with_keywords(self):
+        self.query_params.update(foo="bar", stream=["lit", "rocks"])
+        assert self.query_params.get("foo") == "bar"
+        assert self.query_params.get("stream") == "rocks"
+        message = self.get_message_from_queue(0)
+        assert "foo=bar" in message.page_info_changed.query_string
+        assert "stream=lit&stream=rocks" in message.page_info_changed.query_string
+
     def test_update_raises_error_with_embed_key(self):
         with pytest.raises(StreamlitAPIException):
             self.query_params.update({"foo": "bar", "embed": "true"})
@@ -233,6 +255,79 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         result_dict = {"foo": "bar"}
         assert self.query_params.to_dict() == result_dict
 
+    def test_from_dict(self):
+        result_dict = {"hello": "world"}
+        self.query_params.from_dict(result_dict)
+        assert self.query_params.to_dict() == result_dict
+
+    def test_from_dict_iterable(self):
+        self.query_params.from_dict((("key1", 5), ("key2", 6)))
+        assert self.query_params._query_params == {"key1": "5", "key2": "6"}
+
+    def test_from_dict_mixed_values(self):
+        result_dict = {"hello": ["world", "janice", "amy"], "snow": "flake"}
+        self.query_params.from_dict(result_dict)
+
+        # self.query_params.to_dict() has behavior consistent with fetching values using
+        # self.query_params["some_key"]. That is, if the value is an array, the last
+        # element of the array is returned rather than the array in its entirety.
+        assert self.query_params.to_dict() == {"hello": "amy", "snow": "flake"}
+
+        result_as_list = {"hello": ["world", "janice", "amy"], "snow": ["flake"]}
+        qp_as_list = {key: self.query_params.get_all(key) for key in self.query_params}
+        assert result_as_list == qp_as_list
+
+    def test_from_dict_preserves_embed_keys(self):
+        self.query_params._query_params.update(
+            {"embed_options": ["disable_scrolling", "show_colored_line"]}
+        )
+        self.query_params.from_dict({"a": "b", "c": "d"})
+        assert self.query_params._query_params == {
+            "a": "b",
+            "c": "d",
+            "embed_options": ["disable_scrolling", "show_colored_line"],
+        }
+
+    def test_from_dict_preserves_last_value_on_error(self):
+        old_value = self.query_params._query_params
+        with pytest.raises(StreamlitAPIException):
+            self.query_params.from_dict({"a": "b", "embed": False})
+        assert self.query_params._query_params == old_value
+
+    def test_from_dict_changes_values_in_single_message(self):
+        self.query_params.set_with_no_forward_msg("hello", "world")
+        self.query_params.from_dict({"foo": "bar", "baz": "test"})
+        assert self.query_params.get("foo") == "bar"
+        assert self.query_params.get("baz") == "test"
+        assert len(self.forward_msg_queue) == 1
+        message = self.get_message_from_queue(0)
+        assert message.page_info_changed.query_string == "foo=bar&baz=test"
+
+    def test_from_dict_raises_error_with_embed_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params.from_dict({"foo": "bar", "embed": "true"})
+
+    def test_from_dict_raises_error_with_embed_options_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params.from_dict({"foo": "bar", "embed_options": "show_toolbar"})
+
+    def test_from_dict_raises_exception_with_dictionary_value(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params.from_dict({"a_dict": {"test": "test"}})
+
+    def test_from_dict_inverse(self):
+        self.query_params.from_dict({"a": "b", "c": "d"})
+        assert self.query_params._query_params == {"a": "b", "c": "d"}
+        message = self.get_message_from_queue(0)
+        assert message.page_info_changed.query_string == "a=b&c=d"
+        from_dict_inverse = {
+            key: self.query_params.get_all(key) for key in self.query_params
+        }
+        self.query_params.from_dict(from_dict_inverse)
+        assert self.query_params._query_params == {"a": ["b"], "c": ["d"]}
+        message = self.get_message_from_queue(0)
+        assert message.page_info_changed.query_string == "a=b&c=d"
+
     def test_set_with_no_forward_msg_sends_no_msg_and_sets_query_params(self):
         self.query_params.set_with_no_forward_msg("test", "test")
         assert self.query_params["test"] == "test"
@@ -267,8 +362,23 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
             self.get_message_from_queue(0)
 
     def test_clear_with_no_forward_msg_sends_no_msg_and_clears_query_params(self):
+        self.query_params._query_params.update(
+            {"embed_options": ["disable_scrolling", "show_colored_line"]}
+        )
         self.query_params.clear_with_no_forward_msg()
         assert len(self.query_params) == 0
+        assert len(self.query_params._query_params) == 0
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)
+
+    def test_clear_with_no_forward_msg_preserve_embed_keys(self):
+        self.query_params._query_params.update(
+            {"embed_options": ["disable_scrolling", "show_colored_line"]}
+        )
+        self.query_params.clear_with_no_forward_msg(preserve_embed=True)
+        assert len(self.query_params) == 0
+        assert len(self.query_params._query_params) == 1
+        assert self.query_params._query_params["embed_options"] == (
+            ["disable_scrolling", "show_colored_line"]
+        )

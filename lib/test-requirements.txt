@@ -6,7 +6,6 @@ graphviz>=0.17
 matplotlib>=3.3.4
 opencv-python>=4.5.3
 plotly>=5.3.1
-pyspark>=3.1.1
 pydot>=1.4.2
 scipy>=1.7.3
 seaborn>=0.11.2
@@ -17,7 +16,9 @@ urllib3>=1.9
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
-pytest
+# Pinned for now because AsyncTest doesn't work with pytest 8.2.0
+# https://github.com/pytest-dev/pytest/issues/12263
+pytest<8.2.0
 pytest-cov
 requests-mock
 testfixtures
@@ -33,18 +34,11 @@ pytest-github-actions-annotate-failures
 
 mypy-protobuf>=3.2, <3.4
 
-# These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
-# we're not going to update its associated tests anymore. Please don't modify
-# these pinned versions!
-
-
-mysqlclient>=2.0.3
-psycopg2-binary>=2.9.1
-pyodbc>=4.0.32
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
 
+# Dependencies used in cache hashing tests:
 python-dateutil>=2.7.3
 tzlocal>=1.1
 cffi>=1.14
@@ -55,8 +49,4 @@ pydantic>=1.0, <2.0
 
 # semver 3 renames VersionInfo so temporarily pin until we deal with it
 semver<3
-
-# Langchain and cx-Oracle are not supported on Python 3.12 yet.
-langchain>=0.0.216; python_version < '3.12'
-# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
-cx-Oracle<8.0.0; python_version < '3.12'
+langchain>=0.0.216

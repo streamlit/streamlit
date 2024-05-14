@@ -72,6 +72,10 @@ from streamlit.delta_generator import (
     event_dg as _event_dg,
     bottom_dg as _bottom_dg,
 )
+from streamlit.elements.dialog_decorator import (
+    # rename so that it is available as st.dialog
+    dialog_decorator as experimental_dialog,
+)
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -81,6 +85,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
+from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import (
@@ -99,6 +104,7 @@ from streamlit.commands.experimental_query_params import (
 import streamlit.column_config as _column_config
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as _cache
+from streamlit.commands.logo import logo as logo
 from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -128,7 +134,6 @@ _config.on_config_parsed(_update_logger, True)
 secrets = _secrets_singleton
 
 # DeltaGenerator methods:
-
 _main = _main_dg
 sidebar = _sidebar_dg
 _event = _event_dg
@@ -166,6 +171,7 @@ form_submit_button = _main.form_submit_button
 graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
+html = _main.html
 image = _main.image
 info = _main.info
 json = _main.json
@@ -209,9 +215,9 @@ status = _main.status
 toast = _event.toast
 
 # Config
-get_option = _config.get_option
 # We add the metrics tracking here, since importing
 # gather_metrics in config causes a circular dependency
+get_option = _gather_metrics("get_option", _config.get_option)
 set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
@@ -230,9 +236,10 @@ column_config = _column_config
 connection = _connection
 
 # Experimental APIs
-experimental_user = _UserInfoProxy()
-experimental_singleton = _experimental_singleton
+experimental_fragment = _fragment
 experimental_memo = _experimental_memo
+experimental_singleton = _experimental_singleton
+experimental_user = _UserInfoProxy()
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
 

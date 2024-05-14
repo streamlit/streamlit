@@ -24,6 +24,7 @@ import BaseButton, {
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -31,11 +32,32 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
+}
+
+export function createDownloadLink(
+  endpoints: StreamlitEndpoints,
+  url: string,
+  enforceDownloadInNewTab: boolean
+): HTMLAnchorElement {
+  const link = document.createElement("a")
+  const uri = endpoints.buildMediaURL(url)
+  link.setAttribute("href", uri)
+  if (enforceDownloadInNewTab) {
+    link.setAttribute("target", "_blank")
+  } else {
+    link.setAttribute("target", "_self")
+  }
+  link.setAttribute("download", "")
+  return link
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width, endpoints } = props
+  const { disabled, element, widgetMgr, width, endpoints, fragmentId } = props
   const style = { width }
+  const {
+    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
+  } = React.useContext(LibContext)
 
   const kind =
     element.type === "primary"
@@ -45,12 +67,12 @@ function DownloadButton(props: Props): ReactElement {
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
-    widgetMgr.setTriggerValue(element, { fromUi: true })
-    const link = document.createElement("a")
-    const uri = endpoints.buildMediaURL(element.url)
-    link.setAttribute("href", uri)
-    link.setAttribute("target", "_self")
-    link.setAttribute("download", "")
+    widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+    const link = createDownloadLink(
+      endpoints,
+      element.url,
+      enforceDownloadInNewTab
+    )
     link.click()
   }
 

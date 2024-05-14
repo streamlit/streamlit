@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
@@ -29,6 +30,9 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state.common import compute_widget_id
+from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from typing import Any
@@ -45,6 +49,16 @@ SubtitleData: TypeAlias = Union[
     str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
 ]
 
+MediaTime: TypeAlias = Union[int, float, timedelta, str]
+
+TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
+    "Failed to convert '{param_name}' to a timedelta. "
+    "Please use a string in a format supported by "
+    "[Pandas Timedelta constructor]"
+    "(https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html), "
+    'e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`. Got: {param_value}'
+)
+
 
 class MediaMixin:
     @gather_metrics("audio")
@@ -52,11 +66,12 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "audio/wav",
-        start_time: int = 0,
+        start_time: MediaTime = 0,
         *,
         sample_rate: int | None = None,
-        end_time: int | None = None,
+        end_time: MediaTime | None = None,
         loop: bool = False,
+        autoplay: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -72,29 +87,67 @@ class MediaMixin:
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
 
         format : str
-            The mime type for the audio file. Defaults to 'audio/wav'.
+            The mime type for the audio file. Defaults to ``"audio/wav"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
-        start_time: int
-            The time from which this element should start playing.
+        start_time: int, float, timedelta, str, or None
+            The time from which the element should start playing. This can be
+            one of the following:
 
+            * ``None`` (default): The element plays from the beginning.
+            * An``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
-        end_time: int
-            The time at which this element should stop playing.
+        end_time: int, float, timedelta, str, or None
+            The time at which the element should stop playing. This can be
+            one of the following:
+
+            * ``None`` (default): The element plays through to the end.
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the audio should loop playback.
+        autoplay: bool
+            Whether the audio file should start playing automatically. This is
+            ``False`` by default. Browsers will not autoplay audio files if the
+            user has not interacted with the page by clicking somewhere.
 
-        Example
-        -------
+        Examples
+        --------
+        To display an audio player for a local file, specify the file's string
+        path and format.
+
+        >>> import streamlit as st
+        >>>
+        >>> st.audio("cat-purr.mp3", format="audio/mpeg", loop=True)
+
+        .. output::
+           https://doc-audio-purr.streamlit.app/
+           height: 250px
+
+        You can also pass ``bytes`` or ``numpy.ndarray`` objects to ``st.audio``.
+
         >>> import streamlit as st
         >>> import numpy as np
         >>>
-        >>> audio_file = open('myaudio.ogg', 'rb')
+        >>> audio_file = open("myaudio.ogg", "rb")
         >>> audio_bytes = audio_file.read()
         >>>
-        >>> st.audio(audio_bytes, format='audio/ogg')
+        >>> st.audio(audio_bytes, format="audio/ogg")
         >>>
         >>> sample_rate = 44100  # 44100 samples per second
         >>> seconds = 2  # Note duration of 2 seconds
@@ -111,6 +164,8 @@ class MediaMixin:
            height: 865px
 
         """
+        start_time, end_time = _parse_start_time_end_time(start_time, end_time)
+
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
 
@@ -135,6 +190,7 @@ class MediaMixin:
             sample_rate,
             end_time,
             loop,
+            autoplay,
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -143,11 +199,13 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "video/mp4",
-        start_time: int = 0,
+        start_time: MediaTime = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
-        end_time: int | None = None,
+        end_time: MediaTime | None = None,
         loop: bool = False,
+        autoplay: bool = False,
+        muted: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -163,9 +221,19 @@ class MediaMixin:
             The mime type for the video file. Defaults to ``"video/mp4"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
-        start_time: int
-            The time from which this element should start playing.
+        start_time: int, float, timedelta, str, or None
+            The time from which the element should start playing. This can be
+            one of the following:
 
+            * ``None`` (default): The element plays from the beginning.
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
 
@@ -190,11 +258,31 @@ class MediaMixin:
             in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
+        end_time: int, float, timedelta, str, or None
+            The time at which the element should stop playing. This can be
+            one of the following:
 
-        end_time: int or None
-            The time at which this element should stop playing
+            * ``None`` (default): The element plays through to the end.
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the video should loop playback.
+        autoplay: bool
+            Whether the video should start playing automatically. This is
+            ``False`` by default. Browsers will not autoplay unmuted videos
+            if the user has not interacted with the page by clicking somewhere.
+            To enable autoplay without user interaction, you must also set
+            ``muted=True``.
+        muted: bool
+            Whether the video should play with the audio silenced. This is
+            ``False`` by default. Use this in conjunction with ``autoplay=True``
+            to enable autoplay without user interaction.
 
         Example
         -------
@@ -246,6 +334,8 @@ class MediaMixin:
            for more information.
 
         """
+        start_time, end_time = _parse_start_time_end_time(start_time, end_time)
+
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_video(
@@ -257,6 +347,8 @@ class MediaMixin:
             subtitles,
             end_time,
             loop,
+            autoplay,
+            muted,
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -363,6 +455,8 @@ def marshall_video(
     subtitles: SubtitleData = None,
     end_time: int | None = None,
     loop: bool = False,
+    autoplay: bool = False,
+    muted: bool = False,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -396,12 +490,22 @@ def marshall_video(
             The time at which this element should stop playing
     loop: bool
         Whether the video should loop playback.
+    autoplay: bool
+        Whether the video should start playing automatically.
+        Browsers will not autoplay video files if the user has not interacted with
+        the page yet, for example by clicking on the page while it loads.
+        To enable autoplay without user interaction, you can set muted=True.
+        Defaults to False.
+    muted: bool
+        Whether the video should play with the audio silenced. This can be used to
+        enable autoplay without user interaction. Defaults to False.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
         raise StreamlitAPIException("Invalid start_time and end_time combination.")
 
     proto.start_time = start_time
+    proto.muted = muted
 
     if end_time is not None:
         proto.end_time = end_time
@@ -459,6 +563,52 @@ def marshall_video(
                 raise StreamlitAPIException(
                     f"Failed to process the provided subtitle: {label}"
                 ) from original_err
+
+    if autoplay:
+        ctx = get_script_run_ctx()
+        proto.autoplay = autoplay
+        id = compute_widget_id(
+            "video",
+            url=proto.url,
+            mimetype=mimetype,
+            start_time=start_time,
+            end_time=end_time,
+            loop=loop,
+            autoplay=autoplay,
+            muted=muted,
+            page=ctx.page_script_hash if ctx else None,
+        )
+
+        proto.id = id
+
+
+def _parse_start_time_end_time(
+    start_time: MediaTime, end_time: MediaTime | None
+) -> tuple[int, int | None]:
+    """Parse start_time and end_time and return them as int."""
+
+    try:
+        maybe_start_time = time_to_seconds(start_time, coerce_none_to_inf=False)
+        if maybe_start_time is None:
+            raise ValueError
+        start_time = int(maybe_start_time)
+    except (StreamlitAPIException, ValueError):
+        error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+            param_name="start_time", param_value=start_time
+        )
+        raise StreamlitAPIException(error_msg) from None
+
+    try:
+        end_time = time_to_seconds(end_time, coerce_none_to_inf=False)
+        if end_time is not None:
+            end_time = int(end_time)
+    except StreamlitAPIException:
+        error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+            param_name="end_time", param_value=end_time
+        )
+        raise StreamlitAPIException(error_msg) from None
+
+    return start_time, end_time
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
@@ -547,6 +697,7 @@ def marshall_audio(
     sample_rate: int | None = None,
     end_time: int | None = None,
     loop: bool = False,
+    autoplay: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -570,6 +721,9 @@ def marshall_audio(
         The time at which this element should stop playing
     loop: bool
         Whether the audio should loop playback.
+    autoplay : bool
+        Whether the audio should start playing automatically.
+        Browsers will not autoplay audio files if the user has not interacted with the page yet.
     """
 
     proto.start_time = start_time
@@ -585,3 +739,19 @@ def marshall_audio(
     else:
         data = _maybe_convert_to_wav_bytes(data, sample_rate)
         _marshall_av_media(coordinates, proto, data, mimetype)
+
+    if autoplay:
+        ctx = get_script_run_ctx()
+        proto.autoplay = autoplay
+        id = compute_widget_id(
+            "audio",
+            url=proto.url,
+            mimetype=mimetype,
+            start_time=start_time,
+            sample_rate=sample_rate,
+            end_time=end_time,
+            loop=loop,
+            autoplay=autoplay,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id

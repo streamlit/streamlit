@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledAppViewContainer = styled.div(({ theme }) => ({
+export const StyledAppViewContainer = styled.div(() => ({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
@@ -28,11 +28,9 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
   right: 0,
   bottom: 0,
   overflow: "hidden",
+
   "@media print": {
-    display: "block",
-    float: "none",
-    height: theme.sizes.full,
-    position: "static",
+    // print multiple pages if app is scrollable in Safari
     overflow: "visible",
   },
 }))
@@ -55,18 +53,20 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     },
 
     // Added so sidebar overlays main app content on
-    // smaller screen sizes
-    [`@media (max-width: ${theme.breakpoints.md})`]: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
+    // smaller screen sizes, except when printing
+    "@media not print": {
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      },
     },
 
     "@media print": {
-      position: "relative",
-      display: "block",
+      // print multiple pages if app is scrollable in Safari
+      overflow: "visible",
     },
   })
 )
@@ -112,7 +112,8 @@ export const StyledAppViewBlockContainer =
       disableFullscreenMode,
       theme,
     }) => {
-      let topEmbedPadding: string = showPadding ? "6rem" : "2.1rem"
+      const littlePadding = "2.1rem"
+      let topEmbedPadding: string = showPadding ? "6rem" : littlePadding
       if (
         (addPaddingForHeader && !showPadding) ||
         (isEmbedded && hasSidebar)
@@ -157,8 +158,7 @@ export const StyledAppViewBlockContainer =
         ...fullScreenButtonStyles,
 
         [`@media print`]: {
-          minWidth: "100%",
-          paddingTop: 0,
+          paddingTop: littlePadding,
         },
       }
     }
@@ -200,7 +200,6 @@ export const StyledBottomBlockContainer =
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
 
         [`@media print`]: {
-          minWidth: "100%",
           paddingTop: 0,
         },
       }

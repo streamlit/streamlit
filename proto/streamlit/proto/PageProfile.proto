@@ -30,6 +30,7 @@ message PageProfile {
   string os = 8;
   string timezone = 9;
   bool headless = 10;
+  bool is_fragment_run = 11;
 }
 
 // The field names are used as part of the event json sent

@@ -53,23 +53,25 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
 ] = MappingProxyType(
     {
         "button": "trigger_value",
-        "download_button": "trigger_value",
+        "camera_input": "file_uploader_state_value",
         "checkbox": "bool_value",
         "chat_input": "string_trigger_value",
-        "camera_input": "file_uploader_state_value",
         "color_picker": "string_value",
+        "component_instance": "json_value",
+        "data_editor": "string_value",
+        "dataframe": "string_value",
         "date_input": "string_array_value",
+        "download_button": "trigger_value",
         "file_uploader": "file_uploader_state_value",
         "multiselect": "int_array_value",
         "number_input": "double_value",
+        "plotly_chart": "string_value",
         "radio": "int_value",
         "selectbox": "int_value",
         "slider": "double_array_value",
         "text_area": "string_value",
         "text_input": "string_value",
         "time_input": "string_value",
-        "component_instance": "json_value",
-        "data_editor": "string_value",
     }
 )
 
@@ -159,6 +161,7 @@ def register_widget(
         callback=on_change_handler,
         callback_args=args,
         callback_kwargs=kwargs,
+        fragment_id=ctx.current_fragment_id if ctx else None,
     )
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
@@ -217,8 +220,8 @@ def register_widget_from_metadata(
 
 
 def coalesce_widget_states(
-    old_states: WidgetStates, new_states: WidgetStates
-) -> WidgetStates:
+    old_states: WidgetStates | None, new_states: WidgetStates | None
+) -> WidgetStates | None:
     """Coalesce an older WidgetStates into a newer one, and return a new
     WidgetStates containing the result.
 
@@ -228,6 +231,13 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
+    if not old_states and not new_states:
+        return None
+    elif not old_states:
+        return new_states
+    elif not new_states:
+        return old_states
+
     states_by_id: dict[str, WidgetState] = {
         wstate.id: wstate for wstate in new_states.widgets
     }

@@ -75,7 +75,6 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertIsInstance(config.session_storage, MemorySessionStorage)
 
 
-@patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
 class RuntimeSingletonTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None

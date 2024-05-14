@@ -37,9 +37,8 @@ runs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        # protobuf, pyodbc, dot, & graphviz dependencies
+        # protobuf, dot, & graphviz dependencies
         sudo apt install -y gnupg \
-            unixodbc-dev=2.3.9-5 \
             graphviz \
             libgvc6 \
             protobuf-compiler
@@ -71,6 +70,7 @@ runs:
         md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
       shell: bash --login -eo pipefail {0}
     - if: inputs.use_cached_venv == 'true'
@@ -86,6 +86,7 @@ runs:
         python -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
+        pip install uv
         make python-init
         deactivate
       shell: bash --login -eo pipefail {0}

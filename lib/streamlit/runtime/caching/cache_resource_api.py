@@ -35,7 +35,6 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFuncInfo,
     make_cached_func_wrapper,
-    ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
@@ -48,6 +47,7 @@ from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.time_util import time_to_seconds
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -89,7 +89,7 @@ class ResourceCaches(CacheStatsProvider):
         if max_entries is None:
             max_entries = math.inf
 
-        ttl_seconds = ttl_to_seconds(ttl)
+        ttl_seconds = time_to_seconds(ttl)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -384,6 +384,9 @@ class CacheResourceAPI:
         ...     # Create a database connection object that points to the URL.
         ...     return connection
         ...
+        >>> fetch_and_clean_data.clear(_sessionmaker, "https://streamlit.io/")
+        >>> # Clear the cached entry for the arguments provided.
+        >>>
         >>> get_database_session.clear()
         >>> # Clear all cached entries for this function.
 
@@ -549,9 +552,12 @@ class ResourceCache(Cache):
             multi_results.results[widget_key] = result
             self._mem_cache[key] = multi_results
 
-    def _clear(self) -> None:
+    def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
-            self._mem_cache.clear()
+            if key is None:
+                self._mem_cache.clear()
+            elif key in self._mem_cache:
+                del self._mem_cache[key]
 
     def get_stats(self) -> list[CacheStat]:
         # Shallow clone our cache. Computing item sizes is potentially

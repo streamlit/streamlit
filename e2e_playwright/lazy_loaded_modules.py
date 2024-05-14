@@ -43,6 +43,7 @@ lazy_loaded_modules = [
     # Internal modules:
     "streamlit.emojis",
     "streamlit.external",
+    "streamlit.material_icon_names",
     "streamlit.proto.openmetrics_data_model_pb2",
     "streamlit.vendor.pympler",
     # Requires `server.fileWatcherType` to be configured with `none` or `poll`:

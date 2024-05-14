@@ -53,7 +53,10 @@ const buildFileUploaderStateProto = (
     ),
   })
 
-const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
+const getProps = (
+  elementProps: Partial<FileUploaderProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => {
   return {
     element: FileUploaderProto.create({
       id: "id",
@@ -85,6 +88,7 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
       }),
       deleteFile: jest.fn(),
     },
+    ...widgetProps,
   }
 }
 
@@ -182,9 +186,40 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
+
+  it("can pass fragmentId to setFileUploaderStateValue", async () => {
+    const user = userEvent.setup()
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stFileUploaderDropzoneInput"
+    ) as HTMLInputElement
+
+    const fileToUpload = createFile()
+    await user.upload(fileDropZoneInput, fileToUpload)
+
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      },
+      "myFragmentId"
+    )
+  })
+
   it("uploads a single file even if too many files are selected", async () => {
     const props = getProps({ multipleFiles: false })
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
@@ -243,7 +278,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
   it("replaces file on single file uploader", async () => {
@@ -265,6 +301,9 @@ describe("FileUploader widget tests", () => {
     expect(fileDropZoneInput.files?.[0]).toEqual(firstFile)
 
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
+    // setFileUploaderStateValue should have been called once on init and once
+    // when the file was uploaded.
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(2)
 
     const secondFile = new File(["Another text in a file"], "filename2.txt", {
       type: "text/plain",
@@ -279,6 +318,9 @@ describe("FileUploader widget tests", () => {
     expect(currentFiles[0].textContent).toContain("filename2.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    // setFileUploaderStateValue should have been called once on init and
+    // once each for the first and second file uploads.
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
   })
 
   it("uploads multiple files, even if some have errors", async () => {
@@ -345,7 +387,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -387,7 +430,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     const firstDeleteBtn = screen.getAllByTestId("stFileUploaderDeleteBtn")[0]
@@ -414,7 +458,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -454,7 +499,8 @@ describe("FileUploader widget tests", () => {
       buildFileUploaderStateProto([]),
       {
         fromUi: false,
-      }
+      },
+      undefined
     )
   })
 
@@ -616,7 +662,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     // "Submit" the form
@@ -633,7 +680,8 @@ describe("FileUploader widget tests", () => {
       buildFileUploaderStateProto([]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })

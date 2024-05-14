@@ -104,8 +104,6 @@ class Context:
         # True if we're automatically updating snapshots.
         self.update_snapshots = False
         # Parent folder of the specs and scripts.
-        # 'e2e' for tests we expect to pass or 'e2e_flaky' for tests with
-        # known issues.
         self.tests_dir_name = "e2e"
         # Set to True if any test fails.
         self.any_failed = False
@@ -365,12 +363,6 @@ def run_app_server():
     help="Automatically update snapshots for failing tests.",
 )
 @click.option(
-    "-f",
-    "--flaky-tests",
-    is_flag=True,
-    help="Run tests in 'e2e_flaky' instead of 'e2e'.",
-)
-@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -381,7 +373,6 @@ def run_e2e_tests(
     always_continue: bool,
     record_results: bool,
     update_snapshots: bool,
-    flaky_tests: bool,
     tests: List[str],
     verbose: bool,
 ):
@@ -397,7 +388,7 @@ def run_e2e_tests(
     ctx.always_continue = always_continue
     ctx.record_results = record_results
     ctx.update_snapshots = update_snapshots
-    ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
+    ctx.tests_dir_name = "e2e"
 
     try:
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
@@ -407,9 +398,6 @@ def run_e2e_tests(
             paths = sorted(p.glob("*.spec.js"))
         for spec_path in paths:
             if basename(spec_path) == "st_hello.spec.js":
-                if flaky_tests:
-                    continue
-
                 # Test "streamlit hello" in both headless and non-headless mode.
                 run_test(
                     ctx,

@@ -24,7 +24,10 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import ColorPicker, { Props } from "./ColorPicker"
 
-const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<ColorPickerProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: ColorPickerProto.create({
     id: "1",
     label: "Label",
@@ -37,6 +40,7 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("ColorPicker widget", () => {
@@ -56,7 +60,22 @@ describe("ColorPicker widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setStringValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<ColorPicker {...props} />)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -92,7 +111,8 @@ describe("ColorPicker widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       newColor,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
   })
 
@@ -120,7 +140,8 @@ describe("ColorPicker widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       newColor,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     // "Submit" the form
@@ -133,7 +154,8 @@ describe("ColorPicker widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })

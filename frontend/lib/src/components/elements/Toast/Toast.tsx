@@ -28,11 +28,17 @@ import {
   hasLightBackgroundColor,
   EmotionTheme,
 } from "@streamlit/lib/src/theme"
+
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
-import { StyledViewButton, StyledToastMessage } from "./styled-components"
+import {
+  StyledViewButton,
+  StyledToastWrapper,
+  StyledMessageWrapper,
+} from "./styled-components"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
   theme: EmotionTheme
@@ -41,10 +47,7 @@ export interface ToastProps {
   width: number
 }
 
-function generateToastOverrides(
-  expanded: boolean,
-  theme: EmotionTheme
-): ToastOverrides {
+function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
   const lightBackground = hasLightBackgroundColor(theme)
   return {
     Body: {
@@ -52,13 +55,20 @@ function generateToastOverrides(
         "data-testid": "stToast",
       },
       style: {
-        width: "288px",
+        display: "flex",
+        flexDirection: "row",
+        gap: theme.spacing.md,
+        width: theme.sizes.sidebar,
         marginTop: "8px",
         // Warnings logged if you use shorthand property here:
         borderTopLeftRadius: theme.radii.lg,
         borderTopRightRadius: theme.radii.lg,
         borderBottomLeftRadius: theme.radii.lg,
         borderBottomRightRadius: theme.radii.lg,
+        paddingTop: theme.spacing.lg,
+        paddingBottom: theme.spacing.lg,
+        paddingLeft: theme.spacing.twoXL,
+        paddingRight: theme.spacing.twoXL,
         backgroundColor: lightBackground
           ? theme.colors.gray10
           : theme.colors.gray90,
@@ -69,46 +79,44 @@ function generateToastOverrides(
           : "0px 4px 16px rgba(0, 0, 0, 0.7)",
       },
     },
-    InnerContainer: {
-      style: {
-        maxHeight: expanded ? "none" : "88px",
-        overflow: "hidden",
-        fontSize: theme.fontSizes.sm,
-        lineHeight: "1.4rem",
-      },
-    },
     CloseIcon: {
       style: {
-        color: theme.colors.bodyText,
-        marginRight: "-5px",
-        width: "1.2rem",
-        height: "1.2rem",
+        color: theme.colors.fadedText40,
+        width: theme.fontSizes.lg,
+        height: theme.fontSizes.lg,
+        marginRight: `calc(-1 * ${theme.spacing.lg} / 2)`,
+        ":hover": {
+          color: theme.colors.bodyText,
+        },
       },
     },
   }
 }
 
 // Function used to truncate toast messages that are longer than three lines.
-function shortenMessage(fullMessage: string): string {
-  const characterLimit = 114
+export function shortenMessage(fullMessage: string): string {
+  const characterLimit = 104
 
   if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
+    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
-      message = message.split(" ").slice(0, -1).join(" ")
+      message = message
+        .substring(0, characterLimit)
+        .split(" ")
+        .slice(0, -1)
+        .join(" ")
     }
 
-    return message
+    return message.trim()
   }
 
   return fullMessage
 }
 
 export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
-  const fullMessage = icon ? `${icon}&ensp;${body}` : body
-  const displayMessage = shortenMessage(fullMessage)
-  const shortened = fullMessage !== displayMessage
+  const displayMessage = shortenMessage(body)
+  const shortened = body !== displayMessage
 
   const [expanded, setExpanded] = useState(!shortened)
   const [toastKey, setToastKey] = useState<React.Key>(0)
@@ -117,33 +125,39 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     setExpanded(!expanded)
   }, [expanded])
 
-  const styleOverrides = useMemo(
-    () => generateToastOverrides(expanded, theme),
-    [expanded, theme]
-  )
+  const styleOverrides = useMemo(() => generateToastOverrides(theme), [theme])
 
   const toastContent = useMemo(
     () => (
       <>
-        <StyledToastMessage expanded={expanded}>
-          <StreamlitMarkdown
-            source={expanded ? fullMessage : displayMessage}
-            allowHTML={false}
-            isToast
-          />
-        </StyledToastMessage>
-        {shortened && (
-          <StyledViewButton
-            data-testid="toastViewButton"
-            className="toastViewButton"
-            onClick={handleClick}
-          >
-            {expanded ? "view less" : "view more"}
-          </StyledViewButton>
-        )}
+        <StyledToastWrapper expanded={expanded}>
+          {icon && (
+            <DynamicIcon
+              iconValue={icon}
+              size="xl"
+              testid="stToastDynamicIcon"
+            />
+          )}
+          <StyledMessageWrapper>
+            <StreamlitMarkdown
+              source={expanded ? body : displayMessage}
+              allowHTML={false}
+              isToast
+            />
+            {shortened && (
+              <StyledViewButton
+                data-testid="toastViewButton"
+                className="toastViewButton"
+                onClick={handleClick}
+              >
+                {expanded ? "view less" : "view more"}
+              </StyledViewButton>
+            )}
+          </StyledMessageWrapper>
+        </StyledToastWrapper>
       </>
     ),
-    [shortened, expanded, fullMessage, displayMessage, handleClick]
+    [shortened, expanded, body, icon, displayMessage, handleClick]
   )
 
   useEffect(() => {

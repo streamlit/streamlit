@@ -44,7 +44,13 @@ st.plotly_chart(fig_bubble, theme=None)
 # Tests Discrete coloring with streamlit theme
 # uses container width when use_container_width flag is True
 fig_bubble.update_layout(height=300, width=300)
-st.plotly_chart(fig_bubble, use_container_width=True, theme="streamlit")
+st.plotly_chart(
+    fig_bubble,
+    use_container_width=True,
+    theme="streamlit",
+    # Also test custom toolbar modification:
+    config={"modeBarButtonsToRemove": ["zoom"]},
+)
 
 # Candlestick Chart
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
@@ -259,9 +265,7 @@ fig.update_layout(annotations=[], overwrite=True)
 fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
 
 # uses figure height and width when use_container_width is False
-st.plotly_chart(
-    fig, config=dict(displayModeBar=False), use_container_width=False, theme=None
-)
+st.plotly_chart(fig, use_container_width=False, theme=None)
 
 # uses container width when use_container_width flag is True
 st.plotly_chart(fig, use_container_width=True, theme=None)

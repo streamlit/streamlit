@@ -62,6 +62,10 @@ message NewSession {
 
   // A hash of the script corresponding to the page currently being viewed.
   string page_script_hash = 9;
+
+  // The fragment IDs being run in this session if it corresponds to a fragment
+  // script run.
+  repeated string fragment_ids_this_run = 10;
 }
 
 // Contains the session status that existed at the time the user connected.

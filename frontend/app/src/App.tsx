@@ -71,6 +71,7 @@ import {
   ensureError,
   LibContext,
   AppPage,
+  AutoRerun,
   BackMsg,
   Config,
   CustomThemeConfig,
@@ -82,6 +83,7 @@ import {
   IAppPage,
   IGitInfo,
   Initialize,
+  Logo,
   NewSession,
   PageConfig,
   PageInfo,
@@ -149,9 +151,11 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  fragmentIdsThisRun: Array<string>
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -163,6 +167,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
+  autoReruns: NodeJS.Timer[]
   inputsDisabled: boolean
 }
 
@@ -254,6 +259,7 @@ export class App extends PureComponent<Props, State> {
       themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
+      appLogo: null,
       appPages: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
@@ -266,6 +272,7 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
+      fragmentIdsThisRun: [],
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -277,6 +284,7 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
+      autoReruns: [],
       inputsDisabled: false,
     }
 
@@ -401,6 +409,7 @@ export class App extends PureComponent<Props, State> {
           disableFullscreenMode,
           enableCustomParentMessages,
           mapboxToken,
+          enforceDownloadInNewTab,
         } = response
 
         const appConfig: AppConfig = {
@@ -408,7 +417,11 @@ export class App extends PureComponent<Props, State> {
           useExternalAuthToken,
           enableCustomParentMessages,
         }
-        const libConfig: LibConfig = { mapboxToken, disableFullscreenMode }
+        const libConfig: LibConfig = {
+          mapboxToken,
+          disableFullscreenMode,
+          enforceDownloadInNewTab,
+        }
 
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
@@ -626,10 +639,12 @@ export class App extends PureComponent<Props, State> {
           this.handleScriptFinished(status),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
+        autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
+        logo: (logo: Logo) => this.setState({ appLogo: logo }),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -691,12 +706,17 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
-  handlePageNotFound = (pageNotFound: PageNotFound): void => {
-    const { pageName } = pageNotFound
+  onPageNotFound = (pageName?: string): void => {
     const errMsg = pageName
       ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
       : "The page that you have requested does not seem to exist"
     this.showError("Page not found", `${errMsg}. Running the app's main page.`)
+  }
+
+  handlePageNotFound = (pageNotFound: PageNotFound): void => {
+    const { pageName } = pageNotFound
+
+    this.onPageNotFound(pageName)
 
     const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
     this.setState({ currentPageScriptHash }, () => {
@@ -730,6 +750,18 @@ export class App extends PureComponent<Props, State> {
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
+    })
+  }
+
+  handleAutoRerun = (autoRerun: AutoRerun): void => {
+    const intervalId = setInterval(() => {
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+    }, autoRerun.interval * 1000)
+
+    this.setState((prevState: State) => {
+      return {
+        autoReruns: [...prevState.autoReruns, intervalId],
+      }
     })
   }
 
@@ -819,6 +851,45 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Updates the page url if the page has changed
+   * @param mainPageName the name of the main page
+   * @param newPageName the name of the new page
+   * @param isViewingMainPage whether the user is viewing the main page
+   */
+  maybeUpdatePageUrl = (
+    mainPageName: string,
+    newPageName: string,
+    isViewingMainPage: boolean
+  ): void => {
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+
+      const prevPageNameInPath = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
+      )
+      const prevPageName =
+        prevPageNameInPath === "" ? mainPageName : prevPageNameInPath
+      // It is important to compare `newPageName` with the previous one encoded in the URL
+      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // e.g. the case where the user clicks the back button.
+      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+      if (prevPageName !== newPageName) {
+        const pagePath = isViewingMainPage ? "" : newPageName
+        const queryString = preserveEmbedQueryParams()
+        const qs = queryString ? `?${queryString}` : ""
+
+        const basePathPrefix = basePath ? `/${basePath}` : ""
+
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+        window.history.pushState({}, "", pageUrl)
+      }
+    }
+  }
+
+  /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
    */
@@ -838,10 +909,14 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    const config = newSessionProto.config as Config
-    const themeInput = newSessionProto.customTheme as CustomThemeConfig
-    const { currentPageScriptHash: prevPageScriptHash } = this.state
-    const newPageScriptHash = newSessionProto.pageScriptHash
+    const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
+    const {
+      scriptRunId,
+      name: scriptName,
+      mainScriptPath,
+      fragmentIdsThisRun,
+      pageScriptHash: newPageScriptHash,
+    } = newSessionProto
 
     // mainPage must be a string as we're guaranteed at this point that
     // newSessionProto.appPages is nonempty and has a truthy pageName.
@@ -855,72 +930,68 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
+    if (!fragmentIdsThisRun.length) {
+      // This is a normal rerun, remove all the auto reruns intervals
+      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+        clearInterval(value)
+      })
+      this.setState({ autoReruns: [] })
 
-      const prevPageNameInPath = extractPageNameFromPathName(
-        document.location.pathname,
-        basePath
-      )
-      const prevPageName =
-        prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
-      // It is important to compare `newPageName` with the previous one encoded in the URL
-      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
-      // e.g. the case where the user clicks the back button.
-      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
-      if (prevPageName !== newPageName) {
-        // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
-        const queryString = preserveEmbedQueryParams()
-        const qs = queryString ? `?${queryString}` : ""
+      const config = newSessionProto.config as Config
+      const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
-        const basePathPrefix = basePath ? `/${basePath}` : ""
-
-        const pagePath = viewingMainPage ? "" : newPageName
-        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
-
-        window.history.pushState({}, "", pageUrl)
-      }
-    }
-
-    this.processThemeInput(themeInput)
-    this.setState(
-      {
+      this.maybeUpdatePageUrl(mainPage.pageName, newPageName, viewingMainPage)
+      this.processThemeInput(themeInput)
+      this.setState({
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
-        hideSidebarNav: config.hideSidebarNav,
         toolbarMode: config.toolbarMode,
-        appPages: newSessionProto.appPages,
-        currentPageScriptHash: newPageScriptHash,
         latestRunTime: performance.now(),
-      },
-      () => {
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_APP_PAGES",
+        // If we're here, the fragmentIdsThisRun variable is always the
+        // empty array.
+        fragmentIdsThisRun,
+      })
+
+      // We separate the state of the navigation as we intend to perform
+      // this work through an abstraction of multipage apps in advance
+      // of supporting v2.
+      this.setState(
+        {
+          hideSidebarNav: config.hideSidebarNav,
           appPages: newSessionProto.appPages,
-        })
-
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_CURRENT_PAGE_NAME",
-          currentPageName: viewingMainPage ? "" : newPageName,
           currentPageScriptHash: newPageScriptHash,
-        })
-      }
-    )
+        },
+        () => {
+          this.hostCommunicationMgr.sendMessageToHost({
+            type: "SET_APP_PAGES",
+            appPages: newSessionProto.appPages,
+          })
 
-    const { appHash } = this.state
-    const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
+          this.hostCommunicationMgr.sendMessageToHost({
+            type: "SET_CURRENT_PAGE_NAME",
+            currentPageName: viewingMainPage ? "" : newPageName,
+            currentPageScriptHash: newPageScriptHash,
+          })
+        }
+      )
+
+      // Set the title and favicon to their default values if we are not running
+      // a fragment.
+      document.title = `${newPageName} · Streamlit`
+      handleFavicon(
+        `${process.env.PUBLIC_URL}/favicon.png`,
+        this.hostCommunicationMgr.sendMessageToHost,
+        this.endpoints
+      )
+    } else {
+      this.setState({
+        fragmentIdsThisRun,
+        latestRunTime: performance.now(),
+      })
+    }
 
     const newSessionHash = hashString(
       this.sessionInfo.current.installationId + mainScriptPath
-    )
-
-    // Set the title and favicon to their default values
-    document.title = `${newPageName} · Streamlit`
-    handleFavicon(
-      `${process.env.PUBLIC_URL}/favicon.png`,
-      this.hostCommunicationMgr.sendMessageToHost,
-      this.endpoints
     )
 
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
@@ -1050,31 +1121,38 @@ export class App extends PureComponent<Props, State> {
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-      status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN ||
+      status ===
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      const successful =
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
       window.setTimeout(() => {
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      if (successful) {
-        // Clear any stale elements left over from the previous run.
-        // (We don't do this if our script had a compilation error and didn't
-        // finish successfully.)
-        this.setState(
-          ({ scriptRunId }) => ({
-            // Apply any pending elements that haven't been applied.
-            elements: this.pendingElementsBuffer.clearStaleNodes(scriptRunId),
-          }),
-          () => {
-            // We now have no pending elements.
-            this.pendingElementsBuffer = this.state.elements
-          }
-        )
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
+      this.setState(
+        ({ scriptRunId, fragmentIdsThisRun }) => ({
+          // Apply any pending elements that haven't been applied.
+          elements: this.pendingElementsBuffer.clearStaleNodes(
+            scriptRunId,
+            fragmentIdsThisRun
+          ),
+        }),
+        () => {
+          // We now have no pending elements.
+          this.pendingElementsBuffer = this.state.elements
+        }
+      )
 
+      if (
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+        status ===
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      ) {
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
@@ -1277,7 +1355,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    this.sendRerunBackMsg(undefined, pageScriptHash)
+    this.setState({ appLogo: null })
+    this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
   }
 
   isAppInReadyState = (prevState: Readonly<State>): boolean => {
@@ -1291,6 +1370,7 @@ export class App extends PureComponent<Props, State> {
 
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
+    fragmentId?: string,
     pageScriptHash?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
@@ -1339,7 +1419,13 @@ export class App extends PureComponent<Props, State> {
 
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
+        rerunScript: {
+          queryString,
+          widgetStates,
+          pageScriptHash,
+          pageName,
+          fragmentId,
+        },
       })
     )
 
@@ -1688,7 +1774,6 @@ export class App extends PureComponent<Props, State> {
           // host communication manager elements
           pageLinkBaseUrl,
           sidebarChevronDownshift,
-          toastAdjustment: hostToolbarItems.length > 0,
           gitInfo: this.state.gitInfo,
           appConfig,
         }}
@@ -1706,6 +1791,7 @@ export class App extends PureComponent<Props, State> {
             onPageChange: this.onPageChange,
             currentPageScriptHash,
             libConfig,
+            fragmentIdsThisRun: this.state.fragmentIdsThisRun,
           }}
         >
           <HotKeys
@@ -1740,6 +1826,7 @@ export class App extends PureComponent<Props, State> {
                       sendMessageToHost={
                         this.hostCommunicationMgr.sendMessageToHost
                       }
+                      metricsMgr={this.metricsMgr}
                     />
                   </>
                 )}
@@ -1780,6 +1867,7 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
+                appLogo={this.state.appLogo}
                 appPages={this.state.appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}

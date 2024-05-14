@@ -16,18 +16,21 @@
 
 import React, { ReactElement, ReactNode, useEffect } from "react"
 import { ToasterContainer, toaster, PLACEMENT } from "baseui/toast"
+import { useTheme } from "@emotion/react"
+
+import { EmotionTheme } from "@streamlit/lib"
 
 export interface EventContainerProps {
-  toastAdjustment: boolean
   scriptRunId: string
   children?: ReactNode
 }
 
 function EventContainer({
-  toastAdjustment,
   scriptRunId,
   children,
 }: EventContainerProps): ReactElement {
+  const { sizes }: EmotionTheme = useTheme()
+
   useEffect(() => {
     // Ensure all toasts cleared on script re-run
     toaster.getRef()?.clearAll()
@@ -36,13 +39,13 @@ function EventContainer({
   return (
     <>
       <ToasterContainer
-        placement={PLACEMENT.bottomRight}
+        placement={PLACEMENT.topRight}
         autoHideDuration={4 * 1000} // in milliseconds
         overrides={{
           Root: {
             style: {
-              // Avoids blocking host elements at bottom of page
-              bottom: toastAdjustment ? "45px" : "0px",
+              // Avoids blocking the header
+              top: sizes.headerHeight,
               // Toasts overlap chatInput container
               zIndex: 100,
             },

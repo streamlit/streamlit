@@ -19,7 +19,12 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
-import { DeckGlJsonChart } from "@streamlit/lib/src/proto"
+
+import {
+  DeckGlJsonChart,
+  Skeleton as SkeletonProto,
+} from "@streamlit/lib/src/proto"
+
 import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
@@ -153,7 +158,13 @@ const withMapboxToken =
         // If our mapboxToken hasn't been retrieved yet, show a loading
         // skeleton.
         if (isFetching) {
-          return <Skeleton />
+          return (
+            <Skeleton
+              element={SkeletonProto.create({
+                style: SkeletonProto.SkeletonStyle.ELEMENT,
+              })}
+            />
+          )
         }
 
         // We have the mapbox token. Pass it through to our component.

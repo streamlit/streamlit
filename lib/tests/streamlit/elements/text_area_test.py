@@ -175,6 +175,15 @@ This is a test
 """,
         )
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.text_area("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 class SomeObj(object):
     pass
@@ -201,3 +210,18 @@ def test_text_input_interaction():
     at = text_area.set_value(None).run()
     text_area = at.text_area[0]
     assert text_area.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "text_area" not in st.session_state:
+            st.session_state["text_area"] = None
+
+        st.text_area("text_area", key="text_area")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.text_area[0].value is None

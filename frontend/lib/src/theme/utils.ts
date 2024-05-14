@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance } from "color2k"
+import { getLuminance, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
@@ -476,6 +476,42 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
   }
 }
 
+export function getMarkdownBgColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    redbg: transparentize(
+      theme.colors[lightTheme ? "red80" : "red60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
+    yellowbg: transparentize(
+      theme.colors[lightTheme ? "yellow70" : "yellow50"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    greenbg: transparentize(
+      theme.colors[lightTheme ? "green70" : "green60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    bluebg: transparentize(
+      theme.colors[lightTheme ? "blue70" : "blue60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    violetbg: transparentize(
+      theme.colors[lightTheme ? "purple70" : "purple60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    purplebg: transparentize(
+      theme.colors[lightTheme ? "purple90" : "purple80"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    graybg: transparentize(
+      theme.colors[lightTheme ? "gray70" : "gray50"],
+      lightTheme ? 0.9 : 0.7
+    ),
+  }
+}
+
 export function getGray70(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray70
@@ -587,6 +623,46 @@ export function getIncreasingGreen(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blueGreen80
     : theme.colors.green40
+}
+
+/**
+ * Return a @emotion/styled-like css dictionary to update the styles of headers, such as h1, h2, ...
+ * Used for st.title, st.header, ... that are wrapped in the Sidebar or Dialogs.
+ */
+export function getWrappedHeadersStyle(theme: EmotionTheme): {
+  [cssSelector: string]: { fontSize: string; fontWeight: number }
+} {
+  return {
+    "& h1": {
+      fontSize: theme.fontSizes.xl,
+      fontWeight: 600,
+    },
+
+    "& h2": {
+      fontSize: theme.fontSizes.lg,
+      fontWeight: 600,
+    },
+
+    "& h3": {
+      fontSize: theme.fontSizes.mdLg,
+      fontWeight: 600,
+    },
+
+    "& h4": {
+      fontSize: theme.fontSizes.md,
+      fontWeight: 600,
+    },
+
+    "& h5": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: 600,
+    },
+
+    "& h6": {
+      fontSize: theme.fontSizes.twoSm,
+      fontWeight: 600,
+    },
+  }
 }
 
 function addPxUnit(n: number): string {

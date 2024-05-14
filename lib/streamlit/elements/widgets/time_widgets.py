@@ -21,6 +21,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    List,
     Literal,
     Sequence,
     Tuple,
@@ -33,6 +34,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -50,6 +52,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
+from streamlit.time_util import adjust_years
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -67,23 +70,6 @@ ALLOWED_DATE_FORMATS: Final = re.compile(
 )
 
 
-def _adjust_years(input_date: date, years: int) -> date:
-    """Add or subtract years from a date."""
-    try:
-        # Attempt to directly add/subtract years
-        return input_date.replace(year=input_date.year + years)
-    except ValueError as err:
-        # Handle case for leap year date (February 29) that doesn't exist in the target year
-        # by moving the date to February 28
-        if input_date.month == 2 and input_date.day == 29:
-            return input_date.replace(year=input_date.year + years, month=2, day=28)
-
-        raise StreamlitAPIException(
-            f"Date {input_date} does not exist in the target year {input_date.year + years}. "
-            "This should never happen. Please report this bug."
-        ) from err
-
-
 def _parse_date_value(
     value: DateValue | Literal["today"] | Literal["default_value_today"],
 ) -> tuple[list[date] | None, bool]:
@@ -94,7 +80,6 @@ def _parse_date_value(
     if value == "today":
         parsed_dates = [datetime.now().date()]
     elif value == "default_value_today":
-        # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
         parsed_dates = [value.date()]
@@ -128,9 +113,9 @@ def _parse_min_date(
         parsed_min_date = min_value
     elif min_value is None:
         if parsed_dates:
-            parsed_min_date = _adjust_years(parsed_dates[0], years=-10)
+            parsed_min_date = adjust_years(parsed_dates[0], years=-10)
         else:
-            parsed_min_date = _adjust_years(date.today(), years=-10)
+            parsed_min_date = adjust_years(date.today(), years=-10)
     else:
         raise StreamlitAPIException(
             "DateInput min should either be a date/datetime or None"
@@ -149,9 +134,9 @@ def _parse_max_date(
         parsed_max_date = max_value
     elif max_value is None:
         if parsed_dates:
-            parsed_max_date = _adjust_years(parsed_dates[-1], years=10)
+            parsed_max_date = adjust_years(parsed_dates[-1], years=10)
         else:
-            parsed_max_date = _adjust_years(date.today(), years=10)
+            parsed_max_date = adjust_years(date.today(), years=10)
     else:
         raise StreamlitAPIException(
             "DateInput max should either be a date/datetime or None"
@@ -174,17 +159,27 @@ class _DateInputValues:
         max_value: SingleDateValue,
     ) -> _DateInputValues:
         parsed_value, is_range = _parse_date_value(value=value)
+        parsed_min = _parse_min_date(
+            min_value=min_value,
+            parsed_dates=parsed_value,
+        )
+        parsed_max = _parse_max_date(
+            max_value=max_value,
+            parsed_dates=parsed_value,
+        )
+
+        if value == "default_value_today":
+            v = cast(List[date], parsed_value)[0]
+            if v < parsed_min:
+                parsed_value = [parsed_min]
+            if v > parsed_max:
+                parsed_value = [parsed_max]
+
         return cls(
             value=parsed_value,
             is_range=is_range,
-            min=_parse_min_date(
-                min_value=min_value,
-                parsed_dates=parsed_value,
-            ),
-            max=_parse_max_date(
-                max_value=max_value,
-                parsed_dates=parsed_value,
-            ),
+            min=parsed_min,
+            max=parsed_max,
         )
 
     def __post_init__(self) -> None:
@@ -326,9 +321,12 @@ class TimeWidgetsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -378,8 +376,8 @@ class TimeWidgetsMixin:
         >>> import datetime
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
-        >>> st.write('Alarm is set for', t)
+        >>> t = st.time_input("Set an alarm for", datetime.time(8, 45))
+        >>> st.write("Alarm is set for", t)
 
         .. output::
            https://doc-time-input.streamlit.app/
@@ -390,8 +388,8 @@ class TimeWidgetsMixin:
         >>> import datetime
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input('Set an alarm for', value=None)
-        >>> st.write('Alarm is set for', t)
+        >>> t = st.time_input("Set an alarm for", value=None)
+        >>> st.write("Alarm is set for", t)
 
         .. output::
            https://doc-time-input-empty.streamlit.app/
@@ -429,6 +427,7 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=value if value != "now" else None, key=key
@@ -462,6 +461,10 @@ class TimeWidgetsMixin:
             page=ctx.page_script_hash if ctx else None,
         )
         del value
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            parsed_time = None
 
         time_input_proto = TimeInputProto()
         time_input_proto.id = id
@@ -545,9 +548,12 @@ class TimeWidgetsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -583,7 +589,7 @@ class TimeWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
         format : str
             A format string controlling how the interface should display dates.
-            Supports “YYYY/MM/DD” (default), “DD/MM/YYYY”, or “MM/DD/YYYY”.
+            Supports "YYYY/MM/DD" (default), "DD/MM/YYYY", or "MM/DD/YYYY".
             You may also use a period (.) or hyphen (-) as separators.
         disabled : bool
             An optional boolean, which disables the date input if set to True.
@@ -607,7 +613,7 @@ class TimeWidgetsMixin:
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", datetime.date(2019, 7, 6))
-        >>> st.write('Your birthday is:', d)
+        >>> st.write("Your birthday is:", d)
 
         .. output::
            https://doc-date-input.streamlit.app/
@@ -640,7 +646,7 @@ class TimeWidgetsMixin:
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", value=None)
-        >>> st.write('Your birthday is:', d)
+        >>> st.write("Your birthday is:", d)
 
         .. output::
            https://doc-date-input-empty.streamlit.app/
@@ -684,11 +690,12 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=value if value != "default_value_today" else None, key=key
         )
-
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(

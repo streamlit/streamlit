@@ -34,6 +34,7 @@ import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import Popover from "@streamlit/lib/src/components/elements/Popover"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
+import Dialog from "@streamlit/lib/src/components/elements/Dialog"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 
@@ -66,6 +67,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 // Render BlockNodes (i.e. container nodes).
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
+  const { fragmentIdsThisRun } = useContext(LibContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
@@ -76,13 +78,16 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     enable,
     node,
     props.scriptRunState,
-    props.scriptRunId
+    props.scriptRunId,
+    fragmentIdsThisRun
   )
 
   const childProps = { ...props, ...{ node } }
 
   const disableFullscreenMode =
-    props.disableFullscreenMode || notNullOrUndefined(node.deltaBlock.popover)
+    props.disableFullscreenMode ||
+    notNullOrUndefined(node.deltaBlock.dialog) ||
+    notNullOrUndefined(node.deltaBlock.popover)
 
   const child: ReactElement = (
     <LayoutBlock
@@ -90,6 +95,14 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       disableFullscreenMode={disableFullscreenMode}
     />
   )
+
+  if (node.deltaBlock.dialog) {
+    return (
+      <Dialog element={node.deltaBlock.dialog as BlockProto.Dialog}>
+        {child}
+      </Dialog>
+    )
+  }
 
   if (node.deltaBlock.expandable) {
     return (
@@ -303,7 +316,10 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ? ScrollToBottomVerticalBlockWrapper
     : StyledVerticalBlockBorderWrapper
 
-  const propsWithNewWidth = { ...props, ...{ width } }
+  const propsWithNewWidth = {
+    ...props,
+    ...{ width },
+  }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.

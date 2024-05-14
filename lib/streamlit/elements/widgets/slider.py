@@ -24,6 +24,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -190,11 +191,11 @@ class SliderMixin:
         This supports int, float, date, time, and datetime types.
 
         This also allows you to render a range slider by passing a two-element
-        tuple or list as the `value`.
+        tuple or list as the ``value``.
 
-        The difference between `st.slider` and `st.select_slider` is that
-        `slider` only accepts numerical or date/time data and takes a range as
-        input, while `select_slider` accepts any datatype and takes an iterable
+        The difference between ``st.slider`` and ``st.select_slider`` is that
+        ``slider`` only accepts numerical or date/time data and takes a range as
+        input, while ``select_slider`` accepts any datatype and takes an iterable
         set of options.
 
         .. note::
@@ -220,9 +221,12 @@ class SliderMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -289,17 +293,17 @@ class SliderMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> age = st.slider('How old are you?', 0, 130, 25)
-        >>> st.write("I'm ", age, 'years old')
+        >>> age = st.slider("How old are you?", 0, 130, 25)
+        >>> st.write("I'm ", age, "years old")
 
         And here's an example of a range slider:
 
         >>> import streamlit as st
         >>>
         >>> values = st.slider(
-        ...     'Select a range of values',
+        ...     "Select a range of values",
         ...     0.0, 100.0, (25.0, 75.0))
-        >>> st.write('Values:', values)
+        >>> st.write("Values:", values)
 
         This is a range time slider:
 
@@ -364,9 +368,10 @@ class SliderMixin:
         ctx: ScriptRunContext | None = None,
     ) -> SliderReturn:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
-
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(
@@ -603,6 +608,14 @@ class SliderMixin:
             value = list(map(_date_to_datetime, value))
             min_value = _date_to_datetime(min_value)
             max_value = _date_to_datetime(max_value)
+
+        # The frontend will error if the values are equal, so checking here
+        # lets us produce a nicer python error message and stack trace.
+        if min_value == max_value:
+            raise StreamlitAPIException(
+                "Slider `min_value` must be less than the `max_value`."
+                f"\nThe values were {min_value} and {max_value}."
+            )
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:

@@ -16,8 +16,10 @@
 
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
-import { transparentize } from "color2k"
-
+import {
+  getWrappedHeadersStyle,
+  hasLightBackgroundColor,
+} from "@streamlit/lib/src/theme/utils"
 export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
@@ -52,13 +54,13 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media print`]: {
-        backgroundColor: "transparent",
-        margin: "auto",
+        display: isCollapsed ? "none" : "initial",
+        // set to auto, otherwise the sidebar does not take up the whole page
+        height: "auto !important",
+        // set maxHeight to little bit less than 100%, otherwise the sidebar might start a mostly blank page
+        maxHeight: "99%",
+        // on Chrome, sth. adds a box-shadow in printing mode which looks weird
         boxShadow: "none",
-        maxWidth: "none",
-        minWidth: "100%",
-        width: "100% !important",
-        paddingTop: "1rem",
       },
     }
   }
@@ -84,11 +86,11 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
       listStyle: "none",
       overflow: ["auto", "overlay"],
       margin: 0,
-      paddingTop: theme.sizes.sidebarTopSpace,
+      paddingTop: theme.spacing.lg,
       paddingBottom: theme.spacing.lg,
 
       "@media print": {
-        paddingTop: theme.spacing.sm,
+        paddingTop: theme.spacing.threeXL,
       },
 
       "&::before": isOverflowing
@@ -234,53 +236,14 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   })
 )
 
-export interface StyledSidebarUserContentProps {
-  hasPageNavAbove: boolean
-}
+export const StyledSidebarUserContent = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.lg,
+  paddingBottom: theme.sizes.sidebarTopSpace,
+  paddingLeft: theme.spacing.twoXL,
+  paddingRight: theme.spacing.twoXL,
 
-export const StyledSidebarUserContent =
-  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
-    paddingTop: hasPageNavAbove
-      ? theme.spacing.lg
-      : theme.sizes.sidebarTopSpace,
-    paddingBottom: theme.sizes.sidebarTopSpace,
-    paddingLeft: theme.spacing.twoXL,
-    paddingRight: theme.spacing.twoXL,
-
-    "@media print": {
-      paddingTop: `1rem`,
-    },
-
-    "& h1": {
-      fontSize: theme.fontSizes.xl,
-      fontWeight: 600,
-    },
-
-    "& h2": {
-      fontSize: theme.fontSizes.lg,
-      fontWeight: 600,
-    },
-
-    "& h3": {
-      fontSize: theme.fontSizes.mdLg,
-      fontWeight: 600,
-    },
-
-    "& h4": {
-      fontSize: theme.fontSizes.md,
-      fontWeight: 600,
-    },
-
-    "& h5": {
-      fontSize: theme.fontSizes.sm,
-      fontWeight: 600,
-    },
-
-    "& h6": {
-      fontSize: theme.fontSizes.twoSm,
-      fontWeight: 600,
-    },
-  }))
+  ...getWrappedHeadersStyle(theme),
+}))
 
 export interface StyledSidebarContentProps {
   hideScrollbar: boolean
@@ -295,49 +258,6 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
   })
 )
 
-export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
-  position: "absolute",
-  top: theme.spacing.xs,
-  right: theme.spacing.twoXS,
-  zIndex: 1,
-
-  "&:hover button": {
-    backgroundColor: transparentize(theme.colors.fadedText60, 0.5),
-  },
-
-  [`@media print`]: {
-    display: "none",
-  },
-}))
-
-export interface StyledSidebarCollapsedControlProps {
-  chevronDownshift: number
-  isCollapsed: boolean
-}
-
-export const StyledSidebarCollapsedControl =
-  styled.div<StyledSidebarCollapsedControlProps>(
-    ({ chevronDownshift, isCollapsed, theme }) => ({
-      position: "fixed",
-      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
-      left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
-      zIndex: theme.zIndices.header,
-
-      transition: "left 300ms",
-      transitionDelay: "left 300ms",
-
-      color: theme.colors.bodyText,
-
-      [`@media (max-width: ${theme.breakpoints.md})`]: {
-        color: theme.colors.bodyText,
-      },
-
-      [`@media print`]: {
-        display: "none",
-      },
-    })
-  )
-
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
   width: "8px",
@@ -349,3 +269,94 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
     backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
   },
 }))
+
+export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "start",
+  padding: `${theme.spacing.xl} ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
+}))
+
+export const StyledLogoLink = styled.a(({}) => ({
+  "&:hover": {
+    opacity: "0.7",
+  },
+}))
+
+export const StyledLogo = styled.img(({ theme }) => ({
+  height: "1.5rem",
+  maxWidth: "15rem",
+  margin: "0.25rem 0.5rem 0.25rem 0",
+  zIndex: theme.zIndices.header,
+}))
+
+export const StyledNoLogoSpacer = styled.div(({}) => ({
+  height: "2.0rem",
+}))
+
+export interface StyledSidebarOpenContainerProps {
+  chevronDownshift: number
+  isCollapsed: boolean
+}
+
+export const StyledSidebarOpenContainer =
+  styled.div<StyledSidebarOpenContainerProps>(
+    ({ theme, chevronDownshift, isCollapsed }) => ({
+      position: "fixed",
+      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
+      left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+      zIndex: theme.zIndices.header,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "start",
+
+      transition: "left 300ms",
+      transitionDelay: "left 300ms",
+
+      [`@media print`]: {
+        position: "static",
+      },
+    })
+  )
+
+export const StyledOpenSidebarButton = styled.div(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    zIndex: theme.zIndices.header,
+    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+
+    button: {
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix25,
+      },
+    },
+
+    [`@media print`]: {
+      display: "none",
+    },
+  }
+})
+
+export const StyledCollapseSidebarButton = styled.div(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    display: "auto",
+    transition: "left 300ms",
+    transitionDelay: "left 300ms",
+    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+    lineHeight: "0",
+
+    button: {
+      padding: "0.25rem",
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix25,
+      },
+    },
+
+    [`@media print`]: {
+      display: "none",
+    },
+  }
+})

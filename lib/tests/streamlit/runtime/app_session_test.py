@@ -27,6 +27,7 @@ import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
@@ -35,6 +36,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.script_data import ScriptData
@@ -71,22 +73,20 @@ def _create_test_session(
     with patch(
         "streamlit.runtime.app_session.asyncio.get_running_loop",
         return_value=event_loop,
+    ), patch(
+        "streamlit.runtime.app_session.LocalSourcesWatcher",
+        MagicMock(spec=LocalSourcesWatcher),
     ):
         return AppSession(
             script_data=ScriptData("/fake/script_path.py", is_hello=False),
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
-            local_sources_watcher=MagicMock(),
             user_info={"email": "test@test.com"},
             session_id_override=session_id_override,
         )
 
 
-@patch(
-    "streamlit.runtime.app_session.LocalSourcesWatcher",
-    MagicMock(spec=LocalSourcesWatcher),
-)
 class AppSessionTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -177,7 +177,15 @@ class AppSessionTest(unittest.TestCase):
 
     def test_creates_session_state_on_init(self):
         session = _create_test_session()
-        self.assertTrue(isinstance(session.session_state, SessionState))
+        self.assertIsInstance(session.session_state, SessionState)
+
+    def test_creates_fragment_storage_on_init(self):
+        session = _create_test_session()
+        # NOTE: We only call assertIsNotNone here because protocols can't be used with
+        # isinstance (there's no need to as the static type checker already ensures
+        # the field has the correct type), and we don't want to mark
+        # MemoryFragmentStorage as @runtime_checkable.
+        self.assertIsNotNone(session._fragment_storage)
 
     def test_clear_cache_resets_session_state(self):
         session = _create_test_session()
@@ -271,6 +279,25 @@ class AppSessionTest(unittest.TestCase):
         # And a new ScriptRunner should be created.
         mock_create_scriptrunner.assert_called_once()
 
+    @patch_config_options({"runner.fastReruns": True})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_fragment_requests_existing_scriptrunner(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        session = _create_test_session()
+
+        mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_active_scriptrunner
+
+        session.request_rerun(ClientState(fragment_id="my_fragment_id"))
+
+        # The active ScriptRunner should *not* be shut down or stopped.
+        mock_active_scriptrunner.request_rerun.assert_called_once()
+        mock_active_scriptrunner.request_stop.assert_not_called()
+
+        # And a new ScriptRunner should *not* be created.
+        mock_create_scriptrunner.assert_not_called()
+
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
         """Test that _create_scriptrunner does what it should."""
@@ -288,6 +315,7 @@ class AppSessionTest(unittest.TestCase):
             script_cache=session._script_cache,
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
+            fragment_storage=session._fragment_storage,
         )
 
         self.assertIsNotNone(session._scriptrunner)
@@ -513,8 +541,15 @@ class AppSessionTest(unittest.TestCase):
         self.assertGreater(len(gc.get_referrers(session)), 0)
 
         session.disconnect_file_watchers()
-        # Ensure that we don't count refs to session from an object that would have been
-        # garbage collected along with it.
+
+        # Run the gc to ensure that we don't count refs to session from an object that
+        # would have been garbage collected along with the session. We run the gc a few
+        # times for good measure as otherwise we've previously seen weirdness in CI
+        # where this test would fail for certain Python versions (exact reasons
+        # unknown), so it seems like the first gc sweep may not always pick up the
+        # session.
+        gc.collect(2)
+        gc.collect(2)
         gc.collect(2)
 
         self.assertEqual(len(gc.get_referrers(session)), 0)
@@ -629,11 +664,13 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
         )
         add_script_run_ctx(ctx=ctx)
 
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
 
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
@@ -647,6 +684,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+        session._clear_queue.assert_called_once()
 
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
@@ -673,6 +711,51 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                 AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
             ],
         )
+
+        add_script_run_ctx(ctx=orig_ctx)
+
+    @patch(
+        "streamlit.runtime.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
+    async def test_new_session_message_includes_fragment_ids(self):
+        session = _create_test_session(asyncio.get_running_loop())
+
+        orig_ctx = get_script_run_ctx()
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=session._enqueue_forward_msg,
+            query_string="",
+            session_state=MagicMock(),
+            uploaded_file_mgr=MagicMock(),
+            main_script_path="",
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+        )
+        add_script_run_ctx(ctx=ctx)
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run={"my_fragment_id"},
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        sent_messages = session._browser_queue._queue
+        self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+        session._clear_queue.assert_not_called()
+
+        new_session_msg = sent_messages[0].new_session
+        self.assertEqual(new_session_msg.fragment_ids_this_run, ["my_fragment_id"])
 
         add_script_run_ctx(ctx=orig_ctx)
 
@@ -746,7 +829,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
+            side_effect=lambda retain_lifecycle_msgs: forward_msg_queue_events.append(
+                CLEAR_QUEUE
+            )
         )
 
         session._browser_queue = mock_queue

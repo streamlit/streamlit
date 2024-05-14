@@ -104,7 +104,23 @@ describe("FormSubmitButton", () => {
     fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
-      props.element
+      props.element,
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to submitForm", async () => {
+    const props = getProps({ fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "submitForm")
+    render(<FormSubmitButton {...props} />)
+
+    const formSubmitButton = screen.getByRole("button")
+
+    fireEvent.click(formSubmitButton)
+    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+      props.element.formId,
+      props.element,
+      "myFragmentId"
     )
   })
 

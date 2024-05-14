@@ -65,7 +65,21 @@ describe("TextArea widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setStringValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextArea {...props} />)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -146,7 +160,8 @@ describe("TextArea widget", () => {
       "testing",
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -165,7 +180,8 @@ describe("TextArea widget", () => {
       "testing",
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -199,7 +215,8 @@ describe("TextArea widget", () => {
       props.element.default,
       {
         fromUi: false,
-      }
+      },
+      undefined
     )
   })
 
@@ -239,7 +256,8 @@ describe("TextArea widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -273,7 +291,8 @@ describe("TextArea widget", () => {
         "testing",
         {
           fromUi: true,
-        }
+        },
+        undefined
       )
     })
   })

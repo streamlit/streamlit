@@ -34,6 +34,8 @@ export type LibConfig = {
    * Whether to disable the full screen mode all elements / widgets.
    */
   disableFullscreenMode?: boolean
+
+  enforceDownloadInNewTab?: boolean
 }
 
 export interface LibContextProps {
@@ -82,10 +84,17 @@ export interface LibContextProps {
    */
   currentPageScriptHash: string
 
-  /** The lib-specific configuration from the apps host which is requested via the
+  /**
+   * The lib-specific configuration from the apps host which is requested via the
    * _stcore/host-config endpoint.
    */
   libConfig: LibConfig
+
+  /**
+   * The IDs of the fragments that the current script run corresponds to. If the
+   * current script run isn't due to a fragment, this field is falsy.
+   */
+  fragmentIdsThisRun: Array<string>
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -100,4 +109,5 @@ export const LibContext = React.createContext<LibContextProps>({
   onPageChange: () => {},
   currentPageScriptHash: "",
   libConfig: {},
+  fragmentIdsThisRun: [],
 })

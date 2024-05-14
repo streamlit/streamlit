@@ -25,12 +25,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.runtime import Runtime
-from streamlit.runtime.caching import (
-    CACHE_DATA_MESSAGE_REPLAY_CTX,
-    CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
-    cache_data,
-    cache_resource,
-)
+from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import CachedResult
@@ -42,6 +37,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
@@ -52,7 +48,7 @@ from streamlit.runtime.scriptrunner import (
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
+from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx
 
@@ -239,11 +235,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("cache_data", cache_data, CACHE_DATA_MESSAGE_REPLAY_CTX),
-            ("cache_resource", cache_resource, CACHE_RESOURCE_MESSAGE_REPLAY_CTX),
+            ("cache_data", cache_data),
+            ("cache_resource", cache_resource),
         ]
     )
-    def test_cached_st_function_warning(self, _, cache_decorator, call_stack):
+    def test_cached_st_function_warning(self, _, cache_decorator):
         """Ensure we properly warn when interactive st.foo functions are called
         inside a cached function.
         """
@@ -260,9 +256,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 main_script_path="",
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
+                fragment_storage=MemoryFragmentStorage(),
             ),
         )
-        with patch.object(call_stack, "_show_cached_st_function_warning") as warning:
+
+        with patch.object(st, "exception") as warning:
             st.text("foo")
             warning.assert_not_called()
 
@@ -835,10 +833,6 @@ class CommonCacheThreadingTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
-        CACHE_DATA_MESSAGE_REPLAY_CTX._cached_func_stack = []
-        CACHE_DATA_MESSAGE_REPLAY_CTX._suppress_st_function_warning = 0
-        CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
-        CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = 0
 
         # Clear caches
         st.cache_data.clear()
@@ -951,42 +945,6 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         # Sanity check: ensure we can still call our cached function.
         self.assertEqual(42, foo())
-
-    @parameterized.expand(
-        [
-            ("cache_data", CACHE_DATA_MESSAGE_REPLAY_CTX),
-            ("cache_resource", CACHE_RESOURCE_MESSAGE_REPLAY_CTX),
-        ]
-    )
-    def test_multithreaded_call_stack(self, _, call_stack):
-        """CachedFunctionCallStack works across multiple threads."""
-
-        def get_counter():
-            return len(call_stack._cached_func_stack)
-
-        def set_counter(val):
-            call_stack._cached_func_stack = ["foo"] * val
-
-        self.assertEqual(0, get_counter())
-        set_counter(1)
-        self.assertEqual(1, get_counter())
-
-        values_in_thread = []
-
-        def thread_test():
-            values_in_thread.append(get_counter())
-            set_counter(55)
-            values_in_thread.append(get_counter())
-
-        thread = ExceptionCapturingThread(target=thread_test)
-        thread.start()
-        thread.join()
-        thread.assert_no_unhandled_exception()
-
-        self.assertEqual([0, 55], values_in_thread)
-
-        # The other thread should not have modified the main thread
-        self.assertEqual(1, get_counter())
 
 
 def test_dynamic_widget_replay():
