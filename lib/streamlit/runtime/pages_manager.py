@@ -82,6 +82,14 @@ class PagesManager:
     def set_current_page_script_hash(self, page_hash: PageHash) -> None:
         self._current_page_hash = page_hash
 
+    def get_active_script_hash(self) -> PageHash:
+        # TODO(mpav2): Temporary - for MPA v2, this will be a new variable
+        return self._current_page_hash
+
+    def set_active_script_hash(self, page_hash: PageHash):
+        # TODO(mpav2): Temporary - for MPA v2, this will set a new variable
+        pass
+
     def get_active_script(self, page_script_hash: PageHash, page_name: PageName):
         pages = self.get_pages()
 

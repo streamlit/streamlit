@@ -595,7 +595,7 @@ class ButtonMixin:
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -760,7 +760,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except

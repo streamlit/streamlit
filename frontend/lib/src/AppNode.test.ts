@@ -29,7 +29,7 @@ import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
-
+const FAKE_SCRIPT_HASH = "fake_script_hash"
 // prettier-ignore
 const BLOCK = block([
   text("1"),
@@ -40,7 +40,12 @@ const BLOCK = block([
 
 // Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
 const ROOT = new AppRoot(
-  new BlockNode([BLOCK, new BlockNode(), new BlockNode(), new BlockNode()])
+  new BlockNode(FAKE_SCRIPT_HASH, [
+    BLOCK,
+    new BlockNode(FAKE_SCRIPT_HASH),
+    new BlockNode(FAKE_SCRIPT_HASH),
+    new BlockNode(FAKE_SCRIPT_HASH),
+  ])
 )
 
 describe("AppNode.getIn", () => {
@@ -899,6 +904,7 @@ describe("AppRoot.applyDelta", () => {
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
+    expect(newNode.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
   })
 
@@ -920,7 +926,44 @@ describe("AppRoot.applyDelta", () => {
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
+    expect(newNode.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+  })
+
+  it("specifies active script hash on 'newElement' deltas", () => {
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "newElement!" } },
+    })
+    const NEW_FAKE_SCRIPT_HASH = "new_fake_script_hash"
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1], NEW_FAKE_SCRIPT_HASH)
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as ElementNode
+    expect(newNode).toBeDefined()
+
+    // Check that our new other nodes are not affected by the new script hash
+    expect(newRoot.main.getIn([1, 0])?.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(newNode.activeScriptHash).toBe(NEW_FAKE_SCRIPT_HASH)
+  })
+
+  it("specifies active script hash on 'addBlock' deltas", () => {
+    const delta = makeProto(DeltaProto, { addBlock: {} })
+    const NEW_FAKE_SCRIPT_HASH = "new_fake_script_hash"
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1], NEW_FAKE_SCRIPT_HASH)
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode).toBeDefined()
+
+    // Check that our new scriptRunId has been set only on the touched nodes
+    expect(newRoot.main.getIn([1, 0])?.activeScriptHash).toBe(FAKE_SCRIPT_HASH)
+    expect(newNode.activeScriptHash).toBe(NEW_FAKE_SCRIPT_HASH)
   })
 
   it("can set fragmentId in 'newElement' deltas", () => {
@@ -1062,7 +1105,12 @@ describe("AppRoot.getElements", () => {
 /** Create a `Text` element node with the given properties. */
 function text(text: string, scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { text: { body: text } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
+  )
 }
 
 /** Create a BlockNode with the given properties. */
@@ -1070,19 +1118,34 @@ function block(
   children: AppNode[] = [],
   scriptRunId = NO_SCRIPT_RUN_ID
 ): BlockNode {
-  return new BlockNode(children, makeProto(BlockProto, {}), scriptRunId)
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, {}),
+    scriptRunId
+  )
 }
 
 /** Create an arrowTable element node with the given properties. */
 function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { arrowTable: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
+  )
 }
 
 /** Create an arrowDataFrame element node with the given properties. */
 function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
+  )
 }
 
 /** Create an arrowVegaLiteChart element node with the given properties. */
@@ -1091,13 +1154,21 @@ function arrowVegaLiteChart(
   scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
   const element = makeProto(Element, { arrowVegaLiteChart: data })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
+  )
 }
 
 /** Create a ForwardMsgMetadata with the given container and path */
-function forwardMsgMetadata(deltaPath: number[]): ForwardMsgMetadata {
+function forwardMsgMetadata(
+  deltaPath: number[],
+  activeScriptHash = FAKE_SCRIPT_HASH
+): ForwardMsgMetadata {
   expect(deltaPath.length).toBeGreaterThanOrEqual(2)
-  return makeProto(ForwardMsgMetadata, { deltaPath })
+  return makeProto(ForwardMsgMetadata, { deltaPath, activeScriptHash })
 }
 
 /**
