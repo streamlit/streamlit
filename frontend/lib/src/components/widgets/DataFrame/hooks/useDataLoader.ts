@@ -18,6 +18,7 @@ import React from "react"
 
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { getCellFromArrow } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
@@ -63,15 +64,23 @@ function useDataLoader(
 
       const originalCol = column.indexNumber
       const originalRow = editingState.current.getOriginalRowIndex(row)
-
+      const isAddedRow = editingState.current.isAddedRow(originalRow)
       // Use editing state if editable or if it is an appended row
-      if (column.isEditable || editingState.current.isAddedRow(originalRow)) {
+      if (column.isEditable || isAddedRow) {
         const editedCell = editingState.current.getCell(
           originalCol,
           originalRow
         )
-        if (editedCell !== undefined) {
+        if (notNullOrUndefined(editedCell)) {
           return editedCell
+        } else if (isAddedRow) {
+          // This is not expected to happen. All cells to added rows should
+          // be defined. If not, we return a specific error cell.
+          return getErrorCell(
+            "Error during cell creation.",
+            "This should never happen. Please report this bug. " +
+              `No cell found for an added row: col=${originalCol}; row=${originalRow}`
+          )
         }
       }
 
