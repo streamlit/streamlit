@@ -131,10 +131,9 @@ class BaseColorPicker extends React.PureComponent<
           )}
         </WidgetLabel>
         <UIPopover
-          data-testid="stColorPickerPopover"
           onClose={this.onColorClose}
           content={() => (
-            <StyledChromePicker>
+            <StyledChromePicker data-testid="stColorPickerPopover">
               <ChromePicker
                 color={value}
                 onChange={this.onColorChange}

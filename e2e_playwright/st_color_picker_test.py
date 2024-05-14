@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_color_picker_widget_display(
@@ -27,3 +27,82 @@ def test_color_picker_widget_display(
 
     for i, element in enumerate(color_pickers.all()):
         assert_snapshot(element, name=f"st_color_picker-{i}")
+
+
+def test_clicking_color_on_color_picker_works(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    color_pickers = app.get_by_test_id("stColorPicker")
+    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+
+    app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
+
+    # click outside of color picker
+    app.get_by_text("Default Color").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("#ffffff")).to_be_visible()
+    assert_snapshot(color_pickers.nth(0), name="st_color_picker-clicked_new_color")
+
+
+def test_typing_new_hex_color_on_color_picker_works(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    color_pickers = app.get_by_test_id("stColorPicker")
+    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+
+    text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#ffffff")
+
+    # click outside of color picker
+    app.get_by_text("Default Color").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("#ffffff")).to_be_visible()
+    assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hex_color")
+
+
+def test_typing_new_RGB_color_on_color_picker_works(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    color_pickers = app.get_by_test_id("stColorPicker")
+    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+
+    color_picker_popover = app.get_by_test_id("stColorPickerPopover")
+
+    # click button to swap color picker mode to RGB
+    color_picker_popover.locator("svg").click()
+
+    rgb_text_inputs = app.get_by_test_id("stColorPickerPopover").locator("input")
+    rgb_text_inputs.nth(0).type("255")
+    rgb_text_inputs.nth(1).type("255")
+    rgb_text_inputs.nth(2).type("255")
+
+    # click outside of color picker
+    app.get_by_text("Default Color").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("#ffffff")).to_be_visible()
+    assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_rgb_color")
+
+
+def test_typing_new_HSL_color_on_color_picker_works(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    color_pickers = app.get_by_test_id("stColorPicker")
+    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+
+    color_picker_popover = app.get_by_test_id("stColorPickerPopover")
+
+    # click button to swap color picker mode to HSL
+    color_picker_input_button = color_picker_popover.locator("svg")
+    color_picker_input_button.click()
+    color_picker_input_button.click()
+
+    hsl_text_inputs = app.get_by_test_id("stColorPickerPopover").locator("input")
+    hsl_text_inputs.nth(0).fill("0%")
+    hsl_text_inputs.nth(1).fill("0%")
+    hsl_text_inputs.nth(2).fill("100%")
+
+    # click outside of color picker
+    app.get_by_text("Default Color").click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("#ffffff")).to_be_visible()
+    assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hsl_color")
