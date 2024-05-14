@@ -317,6 +317,23 @@ class AltairChartTest(DeltaGeneratorTestCase):
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
+    def test_altair_on_select_initial_returns(self):
+        """Test st.altair returns an empty selection as initial result."""
+        interval = alt.selection_interval(name="my_param")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
+
+        event = st.altair_chart(chart, on_select="rerun", key="chart_selection")
+
+        self.assertEqual(event.selection.my_param, {})
+
+        # Check that the selection state is added to the session state:
+        self.assertEqual(st.session_state.chart_selection.selection.my_param, {})
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form_on_select_rerun(self):
         """Test that form id is marshalled correctly inside of a form."""
@@ -691,6 +708,25 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             proto.selection_mode,
             expected_selection_mode,
         )
+
+    def test_vega_lite_on_select_initial_returns(self):
+        """Test st.vega_lite_chart returns an empty selection as initial result."""
+        event = st.vega_lite_chart(
+            df1,
+            {
+                "mark": "rect",
+                "width": 200,
+                "encoding": {"x": {"field": "a", "type": "nominal"}},
+                "params": [{"name": "my_param", "select": {"type": "point"}}],
+            },
+            on_select="rerun",
+            key="chart_selection",
+        )
+
+        self.assertEqual(event.selection.my_param, {})
+
+        # Check that the selection state is added to the session state:
+        self.assertEqual(st.session_state.chart_selection.selection.my_param, {})
 
     @parameterized.expand(
         [

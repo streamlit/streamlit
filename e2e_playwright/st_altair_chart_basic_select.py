@@ -55,7 +55,7 @@ st.altair_chart(
 )
 if (
     "scatter_point" in st.session_state
-    and len(st.session_state.scatter_point.select) > 0
+    and len(st.session_state.scatter_point.selection) > 0
 ):
     st.write("Scatter chart with selection_point:", str(st.session_state.scatter_point))
 
@@ -77,7 +77,7 @@ st.altair_chart(
 )
 if (
     "scatter_interval" in st.session_state
-    and len(st.session_state.scatter_interval.select) > 0
+    and len(st.session_state.scatter_interval.selection) > 0
 ):
     st.write(
         "Scatter chart with selection_interval:", str(st.session_state.scatter_interval)
@@ -106,7 +106,7 @@ bar_graph_point = (
 st.altair_chart(
     bar_graph_point, on_select="rerun", key="bar_point", use_container_width=True
 )
-if "bar_point" in st.session_state and len(st.session_state.bar_point.select) > 0:
+if "bar_point" in st.session_state and len(st.session_state.bar_point.selection) > 0:
     st.write("Bar chart with selection_point:", str(st.session_state.bar_point))
 
 
@@ -126,7 +126,10 @@ st.subheader("Bar chart with selection_interval")
 st.altair_chart(
     bar_graph_interval, on_select="rerun", key="bar_interval", use_container_width=True
 )
-if "bar_interval" in st.session_state and len(st.session_state.bar_interval.select) > 0:
+if (
+    "bar_interval" in st.session_state
+    and len(st.session_state.bar_interval.selection) > 0
+):
     st.write("Bar chart with selection_interval:", str(st.session_state.bar_interval))
 
 # STACKED AREA CHART
@@ -147,8 +150,8 @@ st.subheader("Area chart with selection_point")
 selection = st.altair_chart(
     area_chart_point, on_select="rerun", key="area_point", use_container_width=True
 )
-if len(selection.select) > 0:
-    st.write("Area chart with selection_point:", str(selection.select))
+if len(selection.selection) > 0:
+    st.write("Area chart with selection_point:", str(selection.selection))
 
 
 base = (
@@ -169,8 +172,10 @@ area_interval_selection = st.altair_chart(
     key="area_interval",
     use_container_width=True,
 )
-if len(area_interval_selection.select) > 0:
-    st.write("Area chart with selection_interval:", str(area_interval_selection.select))
+if len(area_interval_selection.selection) > 0:
+    st.write(
+        "Area chart with selection_interval:", str(area_interval_selection.selection)
+    )
 
 # HISTOGRAM CHART
 source = data.movies()
@@ -192,7 +197,7 @@ st.altair_chart(
 )
 if (
     "histogram_point" in st.session_state
-    and len(st.session_state.histogram_point.select) > 0
+    and len(st.session_state.histogram_point.selection) > 0
 ):
     st.write(
         "Histogram chart with selection_point:", str(st.session_state.histogram_point)
@@ -218,7 +223,7 @@ st.altair_chart(
 )
 if (
     "histogram_interval" in st.session_state
-    and len(st.session_state.histogram_interval.select) > 0
+    and len(st.session_state.histogram_interval.selection) > 0
 ):
     st.write(
         "Histogram chart with selection_interval:",

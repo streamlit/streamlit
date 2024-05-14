@@ -72,7 +72,7 @@ const DEBOUNCE_TIME_MS = 150
  * in the Python code.
  */
 export interface VegaLiteState {
-  select: Record<string, any>
+  selection: Record<string, any>
 }
 
 interface Props {
@@ -455,8 +455,8 @@ export class ArrowVegaLiteChart extends PureComponent<
 
           // Update the component-internal selection state
           const updatedSelections = {
-            select: {
-              ...(currentWidgetState?.select || {}),
+            selection: {
+              ...(currentWidgetState?.selection || {}),
               [name]: processedSelection || {},
             } as VegaLiteState,
           }
@@ -484,11 +484,11 @@ export class ArrowVegaLiteChart extends PureComponent<
      */
     const reset = (): void => {
       const emptySelectionState: VegaLiteState = {
-        select: {},
+        selection: {},
       }
       // Initialize all parameters defined in the selectionMode with an empty object.
       this.props.element.selectionMode.forEach(param => {
-        emptySelectionState.select[param] = {}
+        emptySelectionState.selection[param] = {}
       })
       const currentWidgetStateStr = widgetMgr.getStringValue(
         element as WidgetInfo
