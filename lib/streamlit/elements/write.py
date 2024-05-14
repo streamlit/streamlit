@@ -485,7 +485,7 @@ class WriteMixin:
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
             elif type_util.is_streamlit_secrets_class(arg):
                 flush_buffer()
-                self.dg.json(arg.__repr__())
+                self.dg.json(arg.to_dict())
             else:
                 stringified_arg = str(arg)
 
