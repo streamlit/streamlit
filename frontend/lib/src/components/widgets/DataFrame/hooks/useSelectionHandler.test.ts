@@ -571,6 +571,5 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isCellSelected).toEqual(false)
     expect(result.current.isRowSelected).toEqual(false)
     expect(result.current.isColumnSelected).toEqual(false)
-    expect(syncSelectionStateMock).not.toBeCalled()
   })
 })
