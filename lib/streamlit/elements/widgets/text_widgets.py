@@ -279,7 +279,7 @@ class TextWidgetsMixin:
             autocomplete=autocomplete,
             placeholder=str(placeholder),
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         session_state = get_session_state().filtered_state
@@ -546,7 +546,7 @@ class TextWidgetsMixin:
             help=help,
             placeholder=str(placeholder),
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         session_state = get_session_state().filtered_state
