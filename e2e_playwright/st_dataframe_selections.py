@@ -140,11 +140,11 @@ st.header("Selections in fragment:")
 def test_fragment():
     selection = st.dataframe(
         df,
+        hide_index=True,
         on_select="rerun",
         selection_mode=["multi-row", "multi-column"],
         key="inside_fragment",
         column_config=column_config,
-        column_order=["col_1", "col_3"],
     )
     st.write("Dataframe-in-fragment selection:", str(selection))
 
@@ -157,6 +157,12 @@ st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
 st.header("No selection on index column:")
+# "_index": column_with_fixed_width,
+column_config_with_index = {
+    "_index": column_with_fixed_width,
+}
+
+column_config_with_index.update(column_config)
 
 selection = st.dataframe(
     df,
@@ -164,7 +170,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-row", "multi-column"],
     key="with_index",
-    column_config=column_config,
+    column_config=column_config_with_index,
     column_order=["col_1", "col_3"],
 )
 st.write("No selection on index column:", str(selection))

@@ -95,6 +95,10 @@ def _get_fragment_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(7)
 
 
+def _get_df_with_index(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(8)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
 
@@ -360,3 +364,16 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
 
     # Check that the main script:
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_that_index_cannot_be_selected(app: Page):
+    canvas = _get_df_with_index(app)
+    _click_on_column_selector(canvas, 0)
+    wait_for_app_run(app)
+
+    # Nothing should be selected:
+    _expect_written_text(
+        app,
+        "Dataframe-in-fragment selection:",
+        "{'select': {'rows': [], 'columns': []}}",
+    )
