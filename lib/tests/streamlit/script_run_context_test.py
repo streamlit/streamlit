@@ -23,6 +23,7 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.util import calc_md5
 
 
 class ScriptRunContextTest(unittest.TestCase):
@@ -133,6 +134,43 @@ class ScriptRunContextTest(unittest.TestCase):
             ctx.enqueue(msg)
         except StreamlitAPIException:
             self.fail("set_page_config should have succeeded after reset!")
+
+    def test_active_script_hash(self):
+        """st.set_page_config should be allowed after a rerun"""
+
+        fake_path = "my/custom/script/path"
+        pg_mgr = PagesManager(fake_path)
+
+        fake_enqueue = lambda msg: None
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+            pages_manager=pg_mgr,
+        )
+
+        ctx.on_script_start()
+
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+
+        ctx.enqueue(msg)
+        self.assertEqual(
+            msg.metadata.active_script_hash, pg_mgr.get_active_script_hash()
+        )
+
+        pg_mgr.set_current_page_script_hash("new_hash")
+
+        new_msg = ForwardMsg()
+        new_msg.delta.new_element.markdown.body = "bar"
+
+        ctx.enqueue(new_msg)
+        self.assertEqual(new_msg.metadata.active_script_hash, "new_hash")
 
     @parameterized.expand(
         [

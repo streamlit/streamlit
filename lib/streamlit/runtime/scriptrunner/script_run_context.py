@@ -92,6 +92,10 @@ class ScriptRunContext:
     def page_script_hash(self):
         return self.pages_manager.get_current_page_script_hash()
 
+    @property
+    def active_script_hash(self):
+        return self.pages_manager.get_active_script_hash()
+
     def reset(
         self,
         query_string: str = "",
@@ -146,6 +150,8 @@ class ScriptRunContext:
             msg.HasField("delta") and self._has_script_started
         ):
             self._set_page_config_allowed = False
+
+        msg.metadata.active_script_hash = self.pages_manager.get_active_script_hash()
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
