@@ -48,6 +48,18 @@ def use_components_html():
     components.html("<div>Hello World!</div>")
 
 
+def use_components_iframe():
+    import streamlit.components.v1 as components
+
+    st.write(str(components.iframe))
+
+
+def use_components_declare_component():
+    import streamlit.components.v1 as components
+
+    st.write(str(components.declare_component))
+
+
 # Different custom components:
 def use_streamlit_ace():
     from streamlit_ace import st_ace
@@ -179,6 +191,8 @@ def use_url_fragment():
 
 options: dict[str, Callable] = {
     "componentsHtml": use_components_html,
+    "componentsIframe": use_components_iframe,
+    "componentsDeclareComponent": use_components_declare_component,
     "ace": use_streamlit_ace,
     "aggrid": use_aggrid,
     "antd": use_antd,
