@@ -156,7 +156,7 @@ if "runs" not in st.session_state:
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
-st.header("Selections with index col:")
+st.header("No selection on index column:")
 
 selection = st.dataframe(
     df,
@@ -167,4 +167,4 @@ selection = st.dataframe(
     column_config=column_config,
     column_order=["col_1", "col_3"],
 )
-st.write("Dataframe with index:", str(selection))
+st.write("No selection on index column:", str(selection))

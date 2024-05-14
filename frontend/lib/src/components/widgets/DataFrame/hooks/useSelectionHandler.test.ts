@@ -36,6 +36,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -55,6 +56,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -74,6 +76,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -92,6 +95,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -113,6 +117,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -134,6 +139,7 @@ describe("useSelectionHandler hook", () => {
         }),
         true,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -155,6 +161,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -210,6 +217,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -264,6 +272,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -332,6 +341,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -382,6 +392,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -437,6 +448,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )
@@ -488,6 +500,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        1,
         syncSelectionStateMock
       )
     )

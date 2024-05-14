@@ -833,7 +833,7 @@ function DataFrame({
             // are outside of the bounds of the table (e.g. select dropdown or date picker).
             // This results in the first cell being selected for a short period of time
             // But for touch devices, preventing this can cause issues to select cells.
-            // So we allow selection changes for touch devices even when it is not focused. d
+            // So we allow selection changes for touch devices even when it is not focused.
             if (isFocused || isTouchDevice) {
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {

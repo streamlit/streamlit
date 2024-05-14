@@ -169,6 +169,7 @@ function useSelectionHandler(
         numIndexColumns > 0
       ) {
         // Remove all index columns from the column selection
+        // We don't want to allow selection of index columns.
         updatedSelection = {
           ...updatedSelection,
           columns: updatedSelection.columns.remove([0, numIndexColumns]),
@@ -186,6 +187,7 @@ function useSelectionHandler(
       isRowSelectionActivated,
       isColumnSelectionActivated,
       syncSelectionState,
+      numIndexColumns,
     ]
   )
 
