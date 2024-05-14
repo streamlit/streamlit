@@ -29,6 +29,8 @@ def test_color_picker_widget_display(
         assert_snapshot(element, name=f"st_color_picker-{i}")
 
 
+# The coordinates (0, 0) for the click action behaves differently across firefox.
+@pytest.mark.skip_browser("firefox")
 def test_clicking_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
