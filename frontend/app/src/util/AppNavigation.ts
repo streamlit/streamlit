@@ -38,28 +38,17 @@ export type PageUrlUpdateCallback = (
 ) => void
 export type PageNotFoundCallback = (pageName?: string) => void
 
-export class AppNavigation {
-  readonly hostCommunicationMgr: HostCommunicationManager
-
-  readonly onUpdatePageUrl: PageUrlUpdateCallback
-
-  readonly onPageNotFound: PageNotFoundCallback
-
+export class V1Strategy {
   private appPages: IAppPage[]
 
   private currentPageScriptHash: string | null
 
   private hideSidebarNav: boolean | null
 
-  constructor(
-    hostCommunicationMgr: HostCommunicationManager,
-    onUpdatePageUrl: PageUrlUpdateCallback,
-    onPageNotFound: PageNotFoundCallback
-  ) {
-    this.hostCommunicationMgr = hostCommunicationMgr
-    this.onUpdatePageUrl = onUpdatePageUrl
-    this.onPageNotFound = onPageNotFound
+  private readonly appNav: AppNavigation
 
+  constructor(appNav: AppNavigation) {
+    this.appNav = appNav
     this.appPages = []
     this.currentPageScriptHash = null
     this.hideSidebarNav = null
@@ -85,7 +74,7 @@ export class AppNavigation {
 
     const isViewingMainPage =
       mainPage.pageScriptHash === this.currentPageScriptHash
-    this.onUpdatePageUrl(mainPageName, newPageName, isViewingMainPage)
+    this.appNav.onUpdatePageUrl(mainPageName, newPageName, isViewingMainPage)
 
     // Set the title to its default value
     document.title = `${newPageName ?? ""} · Streamlit`
@@ -97,12 +86,12 @@ export class AppNavigation {
         currentPageScriptHash: this.currentPageScriptHash,
       },
       () => {
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_APP_PAGES",
           appPages: this.appPages,
         })
 
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
           currentPageName: isViewingMainPage ? "" : newPageName,
           currentPageScriptHash: this.currentPageScriptHash as string,
@@ -116,7 +105,7 @@ export class AppNavigation {
     return [
       { appPages },
       () => {
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_APP_PAGES",
           appPages,
         })
@@ -126,14 +115,14 @@ export class AppNavigation {
 
   handlePageNotFound(pageNotFound: PageNotFound): MaybeStateUpdate {
     const { pageName } = pageNotFound
-    this.onPageNotFound(pageName)
+    this.appNav.onPageNotFound(pageName)
     const currentPageScriptHash = this.appPages[0]?.pageScriptHash ?? ""
     this.currentPageScriptHash = currentPageScriptHash
 
     return [
       { currentPageScriptHash },
       () => {
-        this.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
           currentPageName: "",
           currentPageScriptHash,
@@ -150,5 +139,43 @@ export class AppNavigation {
         pathname.endsWith("/" + appPage.pageName)
       ) ?? this.appPages[0]
     )
+  }
+}
+
+export class AppNavigation {
+  readonly hostCommunicationMgr: HostCommunicationManager
+
+  readonly onUpdatePageUrl: PageUrlUpdateCallback
+
+  readonly onPageNotFound: PageNotFoundCallback
+
+  readonly strategy: V1Strategy
+
+  constructor(
+    hostCommunicationMgr: HostCommunicationManager,
+    onUpdatePageUrl: PageUrlUpdateCallback,
+    onPageNotFound: PageNotFoundCallback
+  ) {
+    this.hostCommunicationMgr = hostCommunicationMgr
+    this.onUpdatePageUrl = onUpdatePageUrl
+    this.onPageNotFound = onPageNotFound
+
+    this.strategy = new V1Strategy(this)
+  }
+
+  handleNewSession(newSession: NewSession): MaybeStateUpdate {
+    return this.strategy.handleNewSession(newSession)
+  }
+
+  handlePagesChanged(pagesChangedMsg: PagesChanged): MaybeStateUpdate {
+    return this.strategy.handlePagesChanged(pagesChangedMsg)
+  }
+
+  handlePageNotFound(pageNotFound: PageNotFound): MaybeStateUpdate {
+    return this.strategy.handlePageNotFound(pageNotFound)
+  }
+
+  findPageByUrlPath(pathname: string): IAppPage {
+    return this.strategy.findPageByUrlPath(pathname)
   }
 }
