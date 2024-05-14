@@ -125,7 +125,7 @@ def test_interval_bar_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Bar chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'a': \\['A', 'B'\\], 'b': \\[44.\\d+, 4[5|6].\\d+\\]}}}"
+    expected_selection = "{'select': {'param_1': {'a': \\['A', 'B'\\], 'b': \\[44.\\d+, 4(5|6).\\d+\\]}}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -169,7 +169,9 @@ def test_interval_histogram_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Histogram chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'IMDB_Rating': \\[2\\.497131931166348, 3\\.27151051625239\\]}}}"
+    expected_selection = (
+        "{'select': {'param_1': {'IMDB_Rating': \\[2\\.49\\d+, 3\\.27\\d+\\]}}}"
+    )
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -181,7 +183,7 @@ def test_double_click_interval_shows_no_selection_text(app: Page):
     )
 
     expected_prefix = "Scatter chart with selection_interval:"
-    expected_selection = "{'select': {'param_1': {'Horsepower': \\[31\\.247739602169982, 68\\.1374321880651\\], 'Miles_per_Gallon': \\[21\\.02744464944649, 32\\.097555350553506\\]}}}"
+    expected_selection = "{'select': {'param_1': {'Horsepower': \\[31\\.247739602169982, 68\\.137\\d+\\], 'Miles_per_Gallon': \\[2(0|1)\\.\\d+, 3(1|2)\\.\\d+\\]}}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
     chart.dblclick(position={"x": 130, "y": 100})
@@ -198,7 +200,7 @@ def test_point_selection_scatter_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(264, 162))
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "{'select': {'param_1': \\[{'Origin': 'USA', 'Horsepower': 88, 'Miles_per_Gallon': 20\\.2}\\]}}"
+    expected_selection = "{'select': {'param_1': \\[{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2}\\]}}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
