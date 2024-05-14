@@ -154,6 +154,7 @@ interface State {
   appLogo: Logo | null
   appPages: IAppPage[]
   currentPageScriptHash: string
+  mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
   // host communication info
@@ -264,6 +265,7 @@ export class App extends PureComponent<Props, State> {
       appLogo: null,
       appPages: [],
       currentPageScriptHash: "",
+      mainScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
       // the user would see top bar elements for a few ms if this defaulted to
@@ -929,6 +931,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         latestRunTime: performance.now(),
+        mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
         // empty array.
         fragmentIdsThisRun,
