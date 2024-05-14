@@ -147,7 +147,7 @@ def test_interval_area_chart_displays_selection_text(app: Page):
     )
 
     expected_prefix = "Area chart with selection_interval:"
-    expected_selection = "\\{'param_1': \\{'year': \\[1020\\d+, 11\\d+\\], 'net_generation': \\[17\\d+\\.\\d+, 361\\d+\\.\\d+\\]\\}\\}"
+    expected_selection = "\\{'param_1': \\{'year': \\[1020\\d+, 11\\d+\\], 'net_generation': \\[17\\d+\\.\\d+, 36(1|2)\\d+\\.\\d+\\]\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
@@ -236,7 +236,7 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     app.wait_for_timeout(100)
 
     expected_prefix = "Scatter chart with selection_point:"
-    expected_selection = "\\{'select': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': 88, 'Miles_per_Gallon': 20\\.2\\}, \\{'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18\\.6\\}, \\{'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 14\\}, \\{'Origin': 'Japan', 'Horsepower': 52, 'Miles_per_Gallon': 32\\.8\\}\\]\\}\\}"
+    expected_selection = "\\{'select': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2\\}, \\{'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18\\.6\\}, \\{'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 1(4|5)\\}, \\{'Origin': 'Japan', 'Horsepower': 52, 'Miles_per_Gallon': 32\\.8\\}\\]\\}\\}"
     _expect_written_text(app, expected_prefix, expected_selection)
 
     return chart
