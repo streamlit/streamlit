@@ -45,6 +45,7 @@ import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import EditingState, { getColumnName } from "./EditingState"
 import {
@@ -144,6 +145,10 @@ function DataFrame({
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
   const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
+
+  const {
+    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
+  } = React.useContext(LibContext)
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
@@ -469,7 +474,12 @@ function DataFrame({
     ]
   )
 
-  const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
+  const { exportToCsv } = useDataExporter(
+    getCellContent,
+    columns,
+    numRows,
+    enforceDownloadInNewTab
+  )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor(

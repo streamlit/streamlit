@@ -127,7 +127,8 @@ async function writeCsv(
 function useDataExporter(
   getCellContent: DataEditorProps["getCellContent"],
   columns: BaseColumn[],
-  numRows: number
+  numRows: number,
+  enforceDownloadInNewTab: boolean
 ): DataExporterReturn {
   const exportToCsv = React.useCallback(async () => {
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
@@ -148,6 +149,7 @@ function useDataExporter(
       })
 
       const writer = await fileHandle.createWritable()
+
       await writeCsv(writer, getCellContent, columns, numRows)
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -183,6 +185,12 @@ function useDataExporter(
         })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
+        if (enforceDownloadInNewTab) {
+          link.setAttribute("target", "_blank")
+        } else {
+          link.setAttribute("target", "_self")
+        }
+
         link.style.display = "none"
         link.href = url
         link.download = suggestedName
