@@ -49,7 +49,7 @@ def _convert_to_dict(obj: Union[Mapping[str, Any], AttrDict]) -> dict[str, Any]:
     """Recursively convert Mapping or AttrDict objects to dictionaries."""
     if isinstance(obj, AttrDict):
         return obj.to_dict()
-    elif isinstance(obj, Mapping):
+    if isinstance(obj, Mapping):
         return {k: _convert_to_dict(v) for k, v in obj.items()}
     return obj
 
