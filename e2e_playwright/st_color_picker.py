@@ -14,10 +14,15 @@
 
 import streamlit as st
 
-c1 = st.color_picker("Default Color")
+
+def callback():
+    st.write("Hello world")
+
+
+c1 = st.color_picker("Default Color", on_change=callback)
 st.write("Color 1", c1)
 
-c2 = st.color_picker("New Color", "#EB144C")
+c2 = st.color_picker("New Color", "#EB144C", help="help string")
 st.write("Color 2", c2)
 
 c3 = st.color_picker("Disabled", disabled=True)
@@ -28,3 +33,28 @@ st.write("Color 4", c4)
 
 c5 = st.color_picker("Collapsed Label", label_visibility="collapsed")
 st.write("Color 5", c5)
+
+with st.form(key="my_form", clear_on_submit=True):
+    selection = st.color_picker("Form Color Picker", key="color_picker_form")
+    st.form_submit_button("Submit")
+
+st.write("color_picker-in-form selection:", str(selection))
+if "color_picker_form" in st.session_state:
+    st.write(
+        "color_picker-in-form selection in session state:",
+        str(st.session_state.color_picker_form),
+    )
+
+
+@st.experimental_fragment()
+def test_fragment():
+    selection = st.color_picker("Fragment Color Picker")
+    st.write("color_picker-in-fragment selection:", str(selection))
+
+
+test_fragment()
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
