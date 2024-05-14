@@ -23,10 +23,10 @@ def test_color_picker_widget_display(
 ):
     """Test that st.color_picker renders correctly."""
     color_pickers = themed_app.get_by_test_id("stColorPicker")
-    expect(color_pickers).to_have_count(5)
+    expect(color_pickers).to_have_count(7)
 
-    for i, element in enumerate(color_pickers.all()):
-        assert_snapshot(element, name=f"st_color_picker-{i}")
+    for i in range(5):
+        assert_snapshot(color_pickers.nth(i), name=f"st_color_picker-{i}")
 
 
 # The coordinates (0, 0) for the click action behaves differently across firefox.
@@ -46,9 +46,10 @@ def test_clicking_color_on_color_picker_works(
     assert_snapshot(color_pickers.nth(0), name="st_color_picker-clicked_new_color")
 
 
-def test_typing_new_hex_color_on_color_picker_works(
+def test_typing_new_hex_color_on_color_picker_works_with_callback(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
+    expect(app.get_by_text("Hello world")).to_have_count(0)
     color_pickers = app.get_by_test_id("stColorPicker")
     color_pickers.nth(0).get_by_test_id("stColorBlock").click()
 
@@ -58,6 +59,9 @@ def test_typing_new_hex_color_on_color_picker_works(
     # click outside of color picker
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
+
+    # callback writes "Hello world"
+    expect(app.get_by_text("Hello world")).to_be_visible()
     expect(app.get_by_text("#ffffff")).to_be_visible()
     assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hex_color")
 
@@ -108,3 +112,47 @@ def test_typing_new_HSL_color_on_color_picker_works(
     wait_for_app_run(app)
     expect(app.get_by_text("#ffffff")).to_be_visible()
     assert_snapshot(color_pickers.nth(0), name="st_color_picker-typed_new_hsl_color")
+
+
+def test_in_form_selection_and_session_state(app: Page):
+    expect(app.get_by_text("color_picker-in-form selection: #000000")).to_be_visible()
+    expect(
+        app.get_by_text("color_picker-in-form selection in session state: #000000")
+    ).to_be_visible()
+
+    app.get_by_test_id("stColorPicker").nth(5).get_by_test_id("stColorBlock").click()
+
+    text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#ffffff")
+
+    # click outside of color picker
+    app.get_by_text("Default Color").click()
+    wait_for_app_run(app)
+
+    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("color_picker-in-form selection: #ffffff")).to_be_visible()
+    expect(
+        app.get_by_text("color_picker-in-form selection in session state: #ffffff")
+    ).to_be_visible()
+
+
+def test_color_picker_in_fragment(app: Page):
+    expect(
+        app.get_by_text("color_picker-in-fragment selection: #000000")
+    ).to_be_visible()
+
+    app.get_by_test_id("stColorPicker").nth(6).get_by_test_id("stColorBlock").click()
+    text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#ffffff")
+
+    # click outside of color picker
+    app.get_by_text("Default Color").click()
+
+    wait_for_app_run(app)
+
+    expect(
+        app.get_by_text("color_picker-in-fragment selection: #ffffff")
+    ).to_be_visible()
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
