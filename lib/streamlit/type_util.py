@@ -537,8 +537,8 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     return True
 
 
-def is_streamlit_secret_class(obj: object) -> TypeGuard[Secrets]:
-    """True if obj is a Streamlit Secret object."""
+def is_streamlit_secrets_class(obj: object) -> TypeGuard[Secrets]:
+    """True if obj is a Streamlit Secrets object."""
     return is_type(obj, "streamlit.runtime.secrets.Secrets")
 
 
