@@ -185,7 +185,8 @@ function useDataExporter(
         })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
-        // Open link in new tab if enforceDownloadInNewTab host config is true
+        // Open the download link in a new tab to ensure that this is working in embedded
+        // setups that limit the URL that an iframe can navigate to (e.g. via CSP)
         if (enforceDownloadInNewTab) {
           link.setAttribute("target", "_blank")
         } else {
