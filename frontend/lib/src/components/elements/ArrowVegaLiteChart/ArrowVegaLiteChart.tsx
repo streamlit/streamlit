@@ -114,7 +114,8 @@ export function prepareSpecForSelections(spec: any): void {
         // The select object can be either a single string (short-hand) specifying
         // "interval" or "point" or an object that can contain additional
         // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
-        // To make our life easier, we convert the short-hand notation to the full object specification.
+        // We convert the short-hand notation to the full object specification,
+        // so that we can attach additional properties to this below.
         param.select = {
           type: param.select,
         }
