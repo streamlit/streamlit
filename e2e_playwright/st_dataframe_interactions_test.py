@@ -248,12 +248,11 @@ def test_data_editor_keeps_state_after_unmounting(
     # The height should reflect that one row is added (247px+35px=282px):
     expect(data_editor_element).to_have_css("height", "282px")
 
-    # Unmount the component:
-    # Click button to unmount the component
+    # Click button to unmount the component:
     app.get_by_test_id("stButton").locator("button").click()
     wait_for_app_run(app, 4000)
 
-    # Check the height again:
+    # Check the height again, the row should be still attached:
     expect(data_editor_element).to_have_css("height", "282px")
 
     # Take a screenshot after unmounting:
