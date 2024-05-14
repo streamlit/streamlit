@@ -36,7 +36,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -56,7 +56,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -76,7 +76,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -95,7 +95,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -117,7 +117,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -139,7 +139,7 @@ describe("useSelectionHandler hook", () => {
         }),
         true,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -161,7 +161,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -217,7 +217,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -272,7 +272,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -341,7 +341,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -392,7 +392,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -448,7 +448,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -500,7 +500,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1,
+        0,
         syncSelectionStateMock
       )
     )
@@ -538,5 +538,39 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(true)
     expect(result.current.isCellSelected).toEqual(false)
     expect(syncSelectionStateMock).toBeCalledTimes(2)
+  })
+
+  it("ignores index column selection", () => {
+    const { result } = renderHook(() =>
+      useSelectionHandler(
+        ArrowProto.create({
+          selectionMode: [
+            ArrowProto.SelectionMode.MULTI_ROW,
+            ArrowProto.SelectionMode.MULTI_COLUMN,
+          ],
+        }),
+        false,
+        false,
+        1, // Configure 1 index column
+        syncSelectionStateMock
+      )
+    )
+
+    // Select the index column:
+    const firstGridSelection = {
+      columns: CompactSelection.fromSingleSelection(0),
+      rows: CompactSelection.empty(),
+      cell: undefined,
+    }
+    act(() => {
+      const { processSelectionChange } = result.current
+      processSelectionChange?.(firstGridSelection)
+    })
+
+    // Nothing should have been selected since the index column is ignored:
+    expect(result.current.isCellSelected).toEqual(false)
+    expect(result.current.isRowSelected).toEqual(false)
+    expect(result.current.isColumnSelected).toEqual(false)
+    expect(syncSelectionStateMock).not.toBeCalled()
   })
 })
