@@ -482,9 +482,9 @@ const RawElementNodeRenderer = (
         <ArrowVegaLiteChart
           element={vegaLiteElement}
           // Vega-lite chart can be used as a widget (when selections are activated) or
-          // an element. We only want to set the key in case of it being used as a widget.
-          // For the non-widget usage, the id will
-          // be undefined.
+          // an element. We only want to set the key in case of it being used as a widget
+          // since otherwise it might break some apps that show the same charts multiple times.
+          // So we only compute an element ID if it's a widget, otherwise its an empty string.
           key={vegaLiteElement.id || undefined}
           {...widgetProps}
         />
