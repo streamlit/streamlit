@@ -243,7 +243,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty(true),
+      elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
       isFullScreen: false,
       scriptName: "",
       scriptRunId: INITIAL_SCRIPT_RUN_ID,
@@ -910,6 +910,7 @@ export class App extends PureComponent<Props, State> {
       mainScriptPath,
       fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
+      mainScriptHash,
     } = newSessionProto
 
     if (!fragmentIdsThisRun.length) {
@@ -964,7 +965,12 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
       })
     } else {
-      this.clearAppState(newSessionHash, scriptRunId, scriptName)
+      this.clearAppState(
+        newSessionHash,
+        scriptRunId,
+        scriptName,
+        mainScriptHash
+      )
     }
   }
 
@@ -1131,7 +1137,8 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     appHash: string,
     scriptRunId: string,
-    scriptName: string
+    scriptName: string,
+    mainScriptHash: string
   ): void {
     const { hideSidebarNav, elements } = this.state
     // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
@@ -1142,7 +1149,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false, sidebarElements),
+        elements: AppRoot.empty(mainScriptHash, false, sidebarElements),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements

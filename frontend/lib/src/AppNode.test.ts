@@ -40,6 +40,7 @@ const BLOCK = block([
 
 // Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
 const ROOT = new AppRoot(
+  FAKE_SCRIPT_HASH,
   new BlockNode(FAKE_SCRIPT_HASH, [
     BLOCK,
     new BlockNode(FAKE_SCRIPT_HASH),
@@ -809,7 +810,7 @@ describe("AppRoot.empty", () => {
   })
 
   it("creates empty tree except for a skeleton", async () => {
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
     // The linter is misfiring here. We're not accessing a DOM node.
     // eslint-disable-next-line testing-library/no-node-access
@@ -827,7 +828,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
@@ -840,7 +841,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
     // The linter is misfiring here. We're not accessing a DOM node.
     // eslint-disable-next-line testing-library/no-node-access
@@ -858,7 +859,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty(FAKE_SCRIPT_HASH)
 
     // The linter is misfiring here. We're not accessing a DOM node.
     // eslint-disable-next-line testing-library/no-node-access
@@ -876,7 +877,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty(false)
+    const empty = AppRoot.empty(FAKE_SCRIPT_HASH, false)
 
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
@@ -1015,7 +1016,7 @@ describe("AppRoot.clearStaleNodes", () => {
   })
 
   it("handles currentFragmentId correctly", () => {
-    const root = AppRoot.empty()
+    const root = AppRoot.empty(FAKE_SCRIPT_HASH)
       // Block not corresponding to my_fragment_id. Should be preserved.
       .applyDelta(
         "old_session_id",
