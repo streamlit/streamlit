@@ -185,6 +185,7 @@ function useDataExporter(
         })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
+        // Open link in new tab if enforceDownloadInNewTab host config is true
         if (enforceDownloadInNewTab) {
           link.setAttribute("target", "_blank")
         } else {
