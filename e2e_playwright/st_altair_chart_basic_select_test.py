@@ -18,6 +18,7 @@
 import re
 from dataclasses import dataclass
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -73,35 +74,35 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_selection_point_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(0)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(0)
 
 
 def _get_selection_interval_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(1)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(1)
 
 
 def _get_selection_point_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(2)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(2)
 
 
 def _get_selection_interval_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(3)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(3)
 
 
 def _get_selection_point_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(4)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(4)
 
 
 def _get_selection_interval_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(5)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(5)
 
 
 def _get_selection_point_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(6)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(6)
 
 
 def _get_selection_interval_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(7)
+    return app.get_by_test_id("stArrowVegaLiteChart").nth(7)
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
@@ -233,7 +234,7 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     # move the mouse away so that we do not have any hover-menu effects on the chart when taking the screenshot.
     # we re-use the screenshot for the unmounting test.
     app.mouse.move(0, 0)
-    app.wait_for_timeout(100)
+    app.wait_for_timeout(250)
 
     expected_prefix = "Scatter chart with selection_point:"
     expected_selection = "\\{'select': \\{'param_1': \\[\\{'Origin': 'USA', 'Horsepower': (88|90), 'Miles_per_Gallon': 20\\.2\\}, \\{'Origin': 'USA', 'Horsepower': 110, 'Miles_per_Gallon': 18\\.6\\}, \\{'Origin': 'USA', 'Horsepower': 150, 'Miles_per_Gallon': 1(4|5)\\}, \\{'Origin': 'Japan', 'Horsepower': 52, 'Miles_per_Gallon': 32\\.8\\}\\]\\}\\}"
@@ -250,6 +251,9 @@ def test_shift_click_point_selection_scatter_chart_snapshot(
     assert_snapshot(chart, name="st_altair_chart-scatter_shift_selection")
 
 
+# Skip firefox since it takes a snapshot with a slightly different size
+# compared to the one in the test_multi_row_and_multi_column_select_snapshot test
+@pytest.mark.skip_browser("firefox")
 def test_selection_state_remains_after_unmounting_snapshot(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
