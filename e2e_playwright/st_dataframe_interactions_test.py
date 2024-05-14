@@ -15,7 +15,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -225,6 +225,41 @@ def test_clicking_on_fullscreen_toolbar_button(
     assert_snapshot(
         fullscreen_wrapper,
         name="st_dataframe-fullscreen_collapsed",
+    )
+
+
+def test_data_editor_keeps_state_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the data editor keeps state correctly after unmounting."""
+    data_editor_element = app.get_by_test_id("stDataFrame").nth(1)
+    data_editor_toolbar = data_editor_element.get_by_test_id("stElementToolbar")
+    expect(data_editor_element).to_have_css("height", "247px")
+
+    # Activate toolbar:
+    data_editor_element.hover()
+    # Check that it is visible
+    expect(data_editor_toolbar).to_have_css("opacity", "1")
+
+    # Click add row button:
+    add_row_button = data_editor_toolbar.get_by_test_id("stElementToolbarButton").nth(0)
+    add_row_button.click()
+
+    # The height should reflect that one row is added (247px+35px=282px):
+    expect(data_editor_element).to_have_css("height", "282px")
+
+    # Unmount the component:
+    # Click button to unmount the component
+    app.get_by_test_id("stButton").locator("button").click()
+    wait_for_app_run(app, 4000)
+
+    # Check the height again:
+    expect(data_editor_element).to_have_css("height", "282px")
+
+    # Take a screenshot after unmounting:
+    assert_snapshot(
+        data_editor_element,
+        name="st_data_editor-after_unmounting",
     )
 
 
