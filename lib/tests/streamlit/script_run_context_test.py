@@ -23,7 +23,6 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
-from streamlit.util import calc_md5
 
 
 class ScriptRunContextTest(unittest.TestCase):

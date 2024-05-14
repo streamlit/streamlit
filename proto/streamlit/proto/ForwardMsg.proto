@@ -118,7 +118,7 @@ message ForwardMsgMetadata {
   ElementDimensionSpec element_dimension_spec = 3;
 
   // active_script_hash the forward message is associated from.
-  // For multipage apps v1, this will always be the script running
+  // For multipage apps v1, this will always be the page file running
   // For multipage apps v2, this can be the main script or the page script
   string active_script_hash = 4;
 }

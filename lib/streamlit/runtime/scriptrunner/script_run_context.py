@@ -151,7 +151,7 @@ class ScriptRunContext:
         ):
             self._set_page_config_allowed = False
 
-        msg.metadata.active_script_hash = self.pages_manager.get_active_script_hash()
+        msg.metadata.active_script_hash = self.active_script_hash
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
