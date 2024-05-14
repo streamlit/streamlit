@@ -43,6 +43,10 @@ export const StyledToastWrapper = styled.div<StyledToastMessageProps>(
     display: "flex",
     flexDirection: "row",
     gap: theme.spacing.lg,
+
+    "> span": {
+      marginTop: "0.25rem",
+    },
   })
 )
 

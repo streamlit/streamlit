@@ -98,7 +98,8 @@ class QueryParams(MutableMapping[str, str]):
 
     def update(
         self,
-        other: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str] = (),
+        other: Iterable[tuple[str, str | Iterable[str]]]
+        | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
         /,
         **kwds: str,
     ):
@@ -164,7 +165,8 @@ class QueryParams(MutableMapping[str, str]):
 
     def from_dict(
         self,
-        _dict: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str],
+        _dict: Iterable[tuple[str, str | Iterable[str]]]
+        | SupportsKeysAndGetItem[str, str | Iterable[str]],
     ):
         self._ensure_single_query_api_used()
         old_value = self._query_params.copy()

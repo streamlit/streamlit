@@ -243,7 +243,7 @@ class FileUploaderMixin:
     ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
-        this using the `server.maxUploadSize` config option. For more info
+        this using the ``server.maxUploadSize`` config option. For more info
         on how to set config options, see
         https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
 
@@ -264,9 +264,12 @@ class FileUploaderMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by

@@ -176,3 +176,18 @@ def test_time_input_interaction():
     at = time_input.set_value(None).run()
     time_input = at.time_input[0]
     assert time_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "time_input" not in st.session_state:
+            st.session_state["time_input"] = None
+
+        st.time_input("time_input", key="time_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.time_input[0].value is None

@@ -40,6 +40,7 @@ _ALL_CONNECTION_PARAMS = {
     "host",
     "port",
     "database",
+    "query",
 }
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
@@ -107,6 +108,7 @@ class SQLConnection(BaseConnection["Engine"]):
                 host=conn_params["host"],
                 port=int(conn_params["port"]) if "port" in conn_params else None,
                 database=conn_params.get("database"),
+                query=conn_params["query"] if "query" in conn_params else None,
             )
 
         create_engine_kwargs = ChainMap(

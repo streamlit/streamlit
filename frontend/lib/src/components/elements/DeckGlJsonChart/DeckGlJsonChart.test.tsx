@@ -146,6 +146,28 @@ describe("DeckGlJsonChart element", () => {
       expect(result.html).toBe("<b>Elevation Value:</b> 10")
     })
 
+    it("should interpolate the html from object with a properties field", () => {
+      deckGlInstance.props.element.tooltip = JSON.stringify({
+        html: "<b>Elevation Value:</b> {elevationValue}",
+      })
+      const result = deckGlInstance.createTooltip({
+        object: { properties: { elevationValue: 10 } },
+      })
+
+      expect(result.html).toBe("<b>Elevation Value:</b> 10")
+    })
+
+    it("should return the tooltip unchanged when object does have an expected schema", () => {
+      deckGlInstance.props.element.tooltip = JSON.stringify({
+        html: "<b>Elevation Value:</b> {elevationValue}",
+      })
+      const result = deckGlInstance.createTooltip({
+        object: { unexpectedSchema: { elevationValue: 10 } },
+      })
+
+      expect(result.html).toBe("<b>Elevation Value:</b> {elevationValue}")
+    })
+
     it("should interpolate the html with the an empty string", () => {
       deckGlInstance.props = getProps({
         tooltip: "",

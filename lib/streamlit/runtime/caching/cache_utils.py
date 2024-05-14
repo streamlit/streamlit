@@ -46,6 +46,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
+from streamlit.type_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.util import HASHLIB_KWARGS
 
 _LOGGER: Final = get_logger(__name__)
@@ -53,15 +54,6 @@ _LOGGER: Final = get_logger(__name__)
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-
-# We show a special "UnevaluatedDataFrame" warning for cached funcs
-# that attempt to return one of these unserializable types:
-UNEVALUATED_DATAFRAME_TYPES = (
-    "snowflake.snowpark.table.Table",
-    "snowflake.snowpark.dataframe.DataFrame",
-    "pyspark.sql.dataframe.DataFrame",
-)
 
 
 class Cache:
@@ -298,6 +290,9 @@ class CachedFunc:
                     type_util.is_type(computed_value, type_name)
                     for type_name in UNEVALUATED_DATAFRAME_TYPES
                 ]:
+                    # If the returned value is an unevaluated dataframe, raise an error.
+                    # Unevaluated dataframes are not yet in the local memory, which also
+                    # means they cannot be properly cached (serialized).
                     raise UnevaluatedDataFrameError(
                         f"""
                         The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
@@ -309,9 +304,40 @@ class CachedFunc:
                 )
 
     def clear(self, *args, **kwargs):
-        """Clear the wrapped function's associated cache.
-        If no arguments are passed, clear the cache of all values.
-        If args/kwargs are provided, clear the cached value for these arguments only."""
+        """Clear the cached function's associated cache.
+
+        If no arguments are passed, Streamlit will clear all values cached for
+        the function. If arguments are passed, Streamlit will clear the cached
+        value for these arguments only.
+
+        Parameters
+        ----------
+        *args: Any
+            Arguments of the cached functions.
+        **kwargs: Any
+            Keyword arguments of the cached function.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> @st.cache_data
+        >>> def foo(bar):
+        >>>     time.sleep(2)
+        >>>     st.write(f"Executed foo({bar}).")
+        >>>     return bar
+        >>>
+        >>> if st.button("Clear all cached values for `foo`", on_click=foo.clear):
+        >>>     foo.clear()
+        >>>
+        >>> if st.button("Clear the cached value of `foo(1)`"):
+        >>>     foo.clear(1)
+        >>>
+        >>> foo(1)
+        >>> foo(2)
+
+        """
         cache = self._info.get_function_cache(self._function_key)
         if args or kwargs:
             key = _make_value_key(

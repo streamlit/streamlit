@@ -112,8 +112,13 @@ python-init:
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/test-requirements.txt"); \
 	fi;\
-	echo "Running command: pip install $${pip_args[@]}";\
-	pip install $${pip_args[@]};
+	if command -v "uv" > /dev/null; then \
+		echo "Running command: uv pip install $${pip_args[@]}"; \
+		uv pip install $${pip_args[@]}; \
+	else \
+		echo "Running command: pip install $${pip_args[@]}"; \
+		pip install $${pip_args[@]}; \
+	fi;\
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		python -m playwright install --with-deps; \
 	fi;\
@@ -161,10 +166,10 @@ pytest-snowflake:
 mypy:
 	./scripts/mypy
 
-.PHONY: integration-tests
+.PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
-integration-tests:
-	python3 scripts/run_bare_integration_tests.py
+bare-execution-tests:
+	python3 scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
@@ -348,7 +353,14 @@ playwright:
 playwright-custom-components:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pip install extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment; \
+	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment"; \
+	if command -v "uv" > /dev/null; then \
+		echo "Running command: uv pip install $${pip_args}"; \
+		uv pip install $${pip_args}; \
+	else \
+		echo "Running command: pip install $${pip_args}"; \
+		pip install $${pip_args}; \
+	fi; \
 	pytest ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc

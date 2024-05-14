@@ -34,6 +34,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -149,9 +150,12 @@ class TextWidgetsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -210,8 +214,8 @@ class TextWidgetsMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> title = st.text_input('Movie title', 'Life of Brian')
-        >>> st.write('The current movie title is', title)
+        >>> title = st.text_input("Movie title", "Life of Brian")
+        >>> st.write("The current movie title is", title)
 
         .. output::
            https://doc-text-input.streamlit.app/
@@ -277,6 +281,10 @@ class TextWidgetsMixin:
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         text_input_proto = TextInputProto()
         text_input_proto.id = id
@@ -410,9 +418,12 @@ class TextWidgetsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -474,7 +485,7 @@ class TextWidgetsMixin:
         ...     "despair, (...)",
         ...     )
         >>>
-        >>> st.write(f'You wrote {len(txt)} characters.')
+        >>> st.write(f"You wrote {len(txt)} characters.")
 
         .. output::
            https://doc-text-area.streamlit.app/
@@ -537,6 +548,10 @@ class TextWidgetsMixin:
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         text_area_proto = TextAreaProto()
         text_area_proto.id = id

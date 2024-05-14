@@ -35,7 +35,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
-from streamlit.string_util import is_emoji
+from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -75,12 +75,17 @@ def _process_avatar_input(
         # On the frontend, we only support "assistant" and "user" for the avatar.
         return (
             AvatarType.ICON,
-            "assistant"
-            if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
-            else "user",
+            (
+                "assistant"
+                if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
+                else "user"
+            ),
         )
     elif isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
+
+    elif isinstance(avatar, str) and avatar.startswith(":material"):
+        return AvatarType.ICON, validate_material_icon(avatar)
     else:
         try:
             return AvatarType.IMAGE, image_to_url(
@@ -135,18 +140,35 @@ class ChatMixin:
             accessibility label. For accessibility reasons, you should not use
             an empty string.
 
-        avatar : str, numpy.ndarray, or BytesIO
-            The avatar shown next to the message. Can be one of:
+        avatar : Anything supported by st.image, str, or None
+            The avatar shown next to the message.
 
-            * A single emoji, e.g. "🧑‍💻", "🤖", "🦖". Shortcodes are not supported.
+            If ``avatar`` is ``None`` (default), the icon will be determined
+            from ``name`` as follows:
 
-            * An image using one of the formats allowed for ``st.image``: path of a local
-                image file; URL to fetch the image from; an SVG image; array of shape
-                (w,h) or (w,h,1) for a monochrome image, (w,h,3) for a color image,
-                or (w,h,4) for an RGBA image.
+            * If ``name`` is ``"user"`` or ``"human"``, the message will have a
+              default user icon.
 
-            If None (default), uses default icons if ``name`` is "user",
-            "assistant", "ai", "human" or the first letter of the ``name`` value.
+            * If ``name`` is ``"ai"`` or ``"assistant"``, the message will have
+              a default bot icon.
+
+            * For all other values of ``name``, the message will show the first
+              letter of the name.
+
+            In addition to the types supported by ``st.image`` (like URLs or numpy
+            arrays), the following strings are valid:
+
+            * A single-character emoji. For example, you can set ``avatar="🧑‍💻"``
+              or ``avatar="🦖"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Returns
         -------

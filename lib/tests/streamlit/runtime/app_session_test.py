@@ -73,22 +73,20 @@ def _create_test_session(
     with patch(
         "streamlit.runtime.app_session.asyncio.get_running_loop",
         return_value=event_loop,
+    ), patch(
+        "streamlit.runtime.app_session.LocalSourcesWatcher",
+        MagicMock(spec=LocalSourcesWatcher),
     ):
         return AppSession(
             script_data=ScriptData("/fake/script_path.py", is_hello=False),
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
-            local_sources_watcher=MagicMock(),
             user_info={"email": "test@test.com"},
             session_id_override=session_id_override,
         )
 
 
-@patch(
-    "streamlit.runtime.app_session.LocalSourcesWatcher",
-    MagicMock(spec=LocalSourcesWatcher),
-)
 class AppSessionTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -831,7 +829,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
+            side_effect=lambda retain_lifecycle_msgs: forward_msg_queue_events.append(
+                CLEAR_QUEUE
+            )
         )
 
         session._browser_queue = mock_queue
