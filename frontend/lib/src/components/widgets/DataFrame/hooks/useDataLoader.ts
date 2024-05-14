@@ -74,11 +74,13 @@ function useDataLoader(
         if (notNullOrUndefined(editedCell)) {
           return editedCell
         } else if (isAddedRow) {
-          // If its an added row, we just return an empty cell here since
-          // since its guaranteed that there will not be a corresponding
-          // cell in the Arrow data. This is mostly a fallback, and its
-          // not expected to be called.
-          return column.getCell(null, false)
+          // This is not expected to happen. All cells to added rows should
+          // be defined. If not, we return a specific error cell.
+          return getErrorCell(
+            "Error during cell creation.",
+            "This should never happen. Please report this bug. " +
+              `No cell found for an added row: col=${originalCol}; row=${originalRow}`
+          )
         }
       }
 
