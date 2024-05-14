@@ -72,6 +72,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "text_area": "string_value",
         "text_input": "string_value",
         "time_input": "string_value",
+        "vega_lite_chart": "string_value",
     }
 )
 
