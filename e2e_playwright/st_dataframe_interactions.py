@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import random
+import time
 
 import numpy as np
 import pandas as pd
@@ -29,7 +30,6 @@ random_df = pd.DataFrame(
 
 st.dataframe(random_df)
 
-import time
 
 if st.button("Create some elements to unmount component"):
     for _ in range(3):
