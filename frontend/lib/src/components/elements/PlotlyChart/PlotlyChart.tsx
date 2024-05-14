@@ -57,7 +57,7 @@ export interface PlotlySelection extends SelectionRange {
 // in the Python code. Uses snake case to be compatible with the
 // Python naming conventions.
 export interface PlotlyWidgetState {
-  select: {
+  selection: {
     points: Array<any>
     point_indices: number[]
     box: PlotlySelection[]
@@ -280,16 +280,16 @@ export function handleSelection(
     })
   }
 
-  selectionState.select.point_indices = Array.from(selectedPointIndices)
-  selectionState.select.points = selectedPoints.map((point: any) =>
+  selectionState.selection.point_indices = Array.from(selectedPointIndices)
+  selectionState.selection.points = selectedPoints.map((point: any) =>
     keysToSnakeCase(point)
   )
 
-  selectionState.select.box = selectedBoxes
-  selectionState.select.lasso = selectedLassos
+  selectionState.selection.box = selectedBoxes
+  selectionState.selection.lasso = selectedLassos
 
   if (
-    selectionState.select.box.length > 0 &&
+    selectionState.selection.box.length > 0 &&
     !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
   ) {
     // If box selection is not activated, we don't want
@@ -298,7 +298,7 @@ export function handleSelection(
   }
 
   if (
-    selectionState.select.lasso.length > 0 &&
+    selectionState.selection.lasso.length > 0 &&
     !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
   ) {
     // If lasso selection is not activated, we don't want
