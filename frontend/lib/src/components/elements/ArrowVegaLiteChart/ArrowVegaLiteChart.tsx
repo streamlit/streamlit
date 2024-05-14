@@ -421,18 +421,18 @@ export class ArrowVegaLiteChart extends PureComponent<
           // Store the current chart selection state with the widget manager so that it
           // can be used for restoring the state when the component unmounted and
           // created again. This can happen when elements are added before it within
-          // the delta path.
+          // the delta path. The viewState is only stored in the frontend, and not
+          // synced to the backend.
           const viewState = this.vegaView?.getState({
             // There are also `signals` data, but I believe its
             // not relevant for restoring the selection state.
-            data: (_name?: string, _operator?: any) => {
+            data: (name?: string, _operator?: any) => {
               // Vega lite stores the selection state in a <param name>_store parameter
               // under `data` that can be retrieved via the getState method.
               // https://vega.github.io/vega/docs/api/view/#view_getState
-              const stateNames = element.selectionMode.map(
-                (param, _idx) => `${param}_store`
+              return element.selectionMode.some(
+                mode => `${mode}_store` === name
               )
-              return _name ? stateNames.includes(_name) : false
             },
             // Don't include subcontext data since it will lead to exceptions
             // when loading the state.
@@ -467,7 +467,8 @@ export class ArrowVegaLiteChart extends PureComponent<
           }
 
           // Update the widget state if the selection state has changed
-          // compared to the last update.
+          // compared to the last update. This selection state will be synced
+          // with the backend.
           if (!isEqual(currentWidgetState, updatedSelections)) {
             widgetMgr.setStringValue(
               element as WidgetInfo,

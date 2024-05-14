@@ -485,9 +485,7 @@ const RawElementNodeRenderer = (
           // an element. We only want to set the key in case of it being used as a widget.
           // For the non-widget usage, the id will
           // be undefined.
-          {...(vegaLiteElement.id && {
-            key: vegaLiteElement.id,
-          })}
+          key={vegaLiteElement.id || undefined}
           {...widgetProps}
         />
       )
