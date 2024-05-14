@@ -202,7 +202,7 @@ function useDataExporter(
         logError("Failed to export data as CSV", error)
       }
     }
-  }, [columns, numRows, getCellContent])
+  }, [columns, numRows, getCellContent, enforceDownloadInNewTab])
 
   return {
     exportToCsv,
