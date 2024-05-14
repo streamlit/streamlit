@@ -26,7 +26,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.101.0
+hypothesis==6.102.1
 identify==2.5.36
 idna==3.7
 importlib_metadata==7.1.0
@@ -40,7 +40,7 @@ jsonpatch==1.33
 jsonpointer==2.4
 jsonschema==4.22.0
 jsonschema-specifications==2023.12.1
-keyring==25.2.0
+keyring==25.2.1
 kiwisolver==1.4.5
 langchain==0.1.20
 langchain-community==0.0.38
@@ -131,8 +131,8 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==2.2.1
-uv==0.1.42
-virtualenv==20.26.1
+uv==0.1.43
+virtualenv==20.26.2
 watchdog==4.0.0
 wheel==0.43.0
 yarl==1.9.4
