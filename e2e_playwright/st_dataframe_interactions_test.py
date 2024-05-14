@@ -247,6 +247,7 @@ def test_data_editor_keeps_state_after_unmounting(
 
     # The height should reflect that one row is added (247px+35px=282px):
     expect(data_editor_element).to_have_css("height", "282px")
+    wait_for_app_run(app, 500)
 
     # Click button to unmount the component:
     app.get_by_test_id("stButton").locator("button").click()
