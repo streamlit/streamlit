@@ -210,7 +210,7 @@ export function handleSelection(
   }
 
   const selectionState: PlotlyWidgetState = {
-    select: {
+    selection: {
       points: [],
       point_indices: [],
       box: [],
@@ -336,7 +336,7 @@ export function sendEmptySelection(
     // We use snake case here since this is the widget state
     // that is sent and used in the backend. Therefore, it should
     // conform with the Python naming conventions.
-    select: {
+    selection: {
       points: [],
       point_indices: [],
       box: [],
