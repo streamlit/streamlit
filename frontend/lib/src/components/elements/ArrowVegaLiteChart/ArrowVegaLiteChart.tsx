@@ -333,17 +333,11 @@ export class ArrowVegaLiteChart extends PureComponent<
     if (!data || data.data.numRows === 0) {
       // The new data is empty, so we remove the dataset from the
       // chart view if the named dataset exists.
-      let namedDatasetExists = true
       try {
-        this.vegaView.data(name)
-      } catch (e) {
-        namedDatasetExists = false
-      }
-
-      if (namedDatasetExists) {
         this.vegaView.remove(name, vega.truthy)
+      } finally {
+        return
       }
-      return
     }
 
     if (!prevData || prevData.data.numRows === 0) {
