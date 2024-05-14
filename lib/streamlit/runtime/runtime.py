@@ -22,6 +22,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -59,7 +61,6 @@ from streamlit.runtime.state import (
 from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
-from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
     from streamlit.runtime.caching.storage import CacheStorageManager
@@ -94,6 +95,11 @@ class RuntimeConfig:
     # The cache storage backend for Streamlit's st.cache_data.
     cache_storage_manager: CacheStorageManager = field(
         default_factory=LocalDiskCacheStorageManager
+    )
+
+    # The ComponentRegistry instance to use.
+    component_registry: BaseComponentRegistry = field(
+        default_factory=LocalComponentRegistry
     )
 
     # The SessionManager class to be used.
@@ -195,6 +201,7 @@ class Runtime:
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
+        self._component_registry = config.component_registry
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
@@ -219,6 +226,10 @@ class Runtime:
     @property
     def state(self) -> RuntimeState:
         return self._state
+
+    @property
+    def component_registry(self) -> BaseComponentRegistry:
+        return self._component_registry
 
     @property
     def message_cache(self) -> ForwardMsgCache:
@@ -551,7 +562,6 @@ class Runtime:
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},
         )
 

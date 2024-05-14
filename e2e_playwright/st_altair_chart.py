@@ -23,7 +23,6 @@ np.random.seed(0)
 data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
-st.altair_chart(chart, theme=None)
 
 st.write("Show default vega lite theme:")
 st.altair_chart(chart, theme=None)
@@ -105,3 +104,32 @@ base = (
 
 new_base_chart = base.mark_line() + base.mark_point()
 st.altair_chart(new_base_chart)
+
+x = np.linspace(10, 100, 10)
+y1 = 5 * x
+y2 = 1 / x
+
+df1 = pd.DataFrame.from_dict({"x": x, "y1": y1, "y2": y2})
+
+c1 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y1"))
+
+c2 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y2"))
+
+st.altair_chart(c1 & c2, use_container_width=True)
+
+from altair.expr import datum
+
+results = [
+    [2016, 11525, 3],
+    [2017, 11517, 2],
+    [2018, 11521, 2],
+    [2019, 11519, 4],
+]
+
+dataframe = pd.DataFrame(results, columns=["Job Number", "Test Count", "Test Failures"])
+
+base = alt.Chart(dataframe).encode(alt.X("Job Number:O"))
+chart_test_count = base.mark_line().encode(alt.Y("Test Count:N"))
+chart_test_failures = base.mark_line().encode(alt.Y("Test Failures:N"))
+
+st.altair_chart((chart_test_count + chart_test_failures).resolve_scale(y="independent"))

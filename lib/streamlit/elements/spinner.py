@@ -42,20 +42,10 @@ def spinner(text: str = "In progress...", *, _cache: bool = False) -> Iterator[N
     >>> st.success('Done!')
 
     """
-    import streamlit.runtime.caching as caching
-    import streamlit.runtime.legacy_caching.caching as legacy_caching
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
     from streamlit.string_util import clean_text
 
-    # @st.cache optionally uses spinner for long-running computations.
-    # Normally, streamlit warns the user when they call st functions
-    # from within an @st.cache'd function. But we do *not* want to show
-    # these warnings for spinner's message, so we create and mutate this
-    # message delta within the "suppress_cached_st_function_warning"
-    # context.
-    with legacy_caching.suppress_cached_st_function_warning():
-        with caching.suppress_cached_st_function_warning():
-            message = st.empty()
+    message = st.empty()
 
     # Set the message 0.5 seconds in the future to avoid annoying
     # flickering if this spinner runs too quickly.
@@ -68,12 +58,10 @@ def spinner(text: str = "In progress...", *, _cache: bool = False) -> Iterator[N
         def set_message():
             with display_message_lock:
                 if display_message:
-                    with legacy_caching.suppress_cached_st_function_warning():
-                        with caching.suppress_cached_st_function_warning():
-                            spinner_proto = SpinnerProto()
-                            spinner_proto.text = clean_text(text)
-                            spinner_proto.cache = _cache
-                            message._enqueue("spinner", spinner_proto)
+                    spinner_proto = SpinnerProto()
+                    spinner_proto.text = clean_text(text)
+                    spinner_proto.cache = _cache
+                    message._enqueue("spinner", spinner_proto)
 
         add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
 
@@ -83,16 +71,14 @@ def spinner(text: str = "In progress...", *, _cache: bool = False) -> Iterator[N
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-        with legacy_caching.suppress_cached_st_function_warning():
-            with caching.suppress_cached_st_function_warning():
-                if "chat_message" in set(message._active_dg._ancestor_block_types):
-                    # Temporary stale element fix:
-                    # For chat messages, we are resetting the spinner placeholder to an
-                    # empty container instead of an empty placeholder (st.empty) to have
-                    # it removed from the delta path. Empty containers are ignored in the
-                    # frontend since they are configured with allow_empty=False. This
-                    # prevents issues with stale elements caused by the spinner being
-                    # rendered only in some situations (e.g. for caching).
-                    message.container()
-                else:
-                    message.empty()
+            if "chat_message" in set(message._active_dg._ancestor_block_types):
+                # Temporary stale element fix:
+                # For chat messages, we are resetting the spinner placeholder to an
+                # empty container instead of an empty placeholder (st.empty) to have
+                # it removed from the delta path. Empty containers are ignored in the
+                # frontend since they are configured with allow_empty=False. This
+                # prevents issues with stale elements caused by the spinner being
+                # rendered only in some situations (e.g. for caching).
+                message.container()
+            else:
+                message.empty()

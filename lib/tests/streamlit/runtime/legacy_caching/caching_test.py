@@ -39,7 +39,6 @@ class CacheTest(DeltaGeneratorTestCase):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         caching._cache_info.cached_func_stack = []
-        caching._cache_info.suppress_st_function_warning = 0
         super().tearDown()
 
     def test_simple(self):
@@ -112,79 +111,6 @@ class CacheTest(DeltaGeneratorTestCase):
         self.assertNotEqual(foo(d), foo(d))
 
         exception.assert_not_called()
-
-    @patch("streamlit.runtime.legacy_caching.caching.show_deprecation_warning", Mock())
-    @patch("streamlit.runtime.legacy_caching.caching._show_cached_st_function_warning")
-    def test_cached_st_function_warning(self, warning):
-        st.text("foo")
-        warning.assert_not_called()
-
-        @st.cache
-        def cached_func():
-            st.text("Inside cached func")
-
-        cached_func()
-        warning.assert_called_once()
-
-        warning.reset_mock()
-
-        # Make sure everything got reset properly
-        st.text("foo")
-        warning.assert_not_called()
-
-        # Test warning suppression
-        @st.cache(suppress_st_warning=True)
-        def suppressed_cached_func():
-            st.text("No warnings here!")
-
-        suppressed_cached_func()
-
-        warning.assert_not_called()
-
-        # Test nested st.cache functions
-        @st.cache
-        def outer():
-            @st.cache
-            def inner():
-                st.text("Inside nested cached func")
-
-            return inner()
-
-        outer()
-        warning.assert_called_once()
-
-        warning.reset_mock()
-
-        # Test st.cache functions that raise errors
-        with self.assertRaises(RuntimeError):
-
-            @st.cache
-            def cached_raise_error():
-                st.text("About to throw")
-                raise RuntimeError("avast!")
-
-            cached_raise_error()
-
-        warning.assert_called_once()
-        warning.reset_mock()
-
-        # Make sure everything got reset properly
-        st.text("foo")
-        warning.assert_not_called()
-
-        # Test st.cache functions with widgets
-        @st.cache
-        def cached_widget():
-            st.button("Press me!")
-
-        cached_widget()
-
-        warning.assert_called_once()
-        warning.reset_mock()
-
-        # Make sure everything got reset properly
-        st.text("foo")
-        warning.assert_not_called()
 
     def test_multithread_stack(self):
         """Test that cached_func_stack behaves properly in multiple threads."""
@@ -423,38 +349,6 @@ class CacheErrorsTest(DeltaGeneratorTestCase):
     *feels* like an antipattern, it isn't: we're making sure the codepaths
     that pull useful debug info from the code are working.
     """
-
-    @patch("streamlit.runtime.legacy_caching.caching.show_deprecation_warning", Mock())
-    def test_st_warning_text(self):
-        @st.cache
-        def st_warning_text_func():
-            st.markdown("hi")
-
-        st_warning_text_func()
-
-        el = self.get_delta_from_queue(-2).new_element
-        self.assertEqual(el.exception.type, "CachedStFunctionWarning")
-        self.assertEqual(
-            normalize_md(el.exception.message),
-            normalize_md(
-                """
-Your script uses `st.markdown()` or `st.write()` to write to your Streamlit app
-from within some cached code at `st_warning_text_func()`. This code will only be
-called when we detect a cache "miss", which can lead to unexpected results.
-
-How to fix this:
-* Move the `st.markdown()` or `st.write()` call outside `st_warning_text_func()`.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-        """
-            ),
-        )
-        self.assertNotEqual(len(el.exception.stack_trace), 0)
-        self.assertEqual(el.exception.message_is_markdown, True)
-        self.assertEqual(el.exception.is_warning, True)
-
-        el = self.get_delta_from_queue(-1).new_element
-        self.assertEqual(el.markdown.body, "hi")
 
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.legacy_caching.caching.show_deprecation_warning", Mock())

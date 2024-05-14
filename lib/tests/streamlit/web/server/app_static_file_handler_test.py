@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import os
+import sys
 import tempfile
+import unittest
 from unittest.mock import MagicMock, patch
 
 import tornado.httpserver
@@ -27,6 +29,10 @@ from streamlit.web.server.app_static_file_handler import (
 )
 
 
+@unittest.skipIf(
+    "win32" in sys.platform,
+    "Most windows installs do not support symlinks except as admin",
+)
 class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self) -> None:
         self._tmpdir = tempfile.TemporaryDirectory(dir=os.getcwd())

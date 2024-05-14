@@ -6,7 +6,6 @@ graphviz>=0.17
 matplotlib>=3.3.4
 opencv-python>=4.5.3
 plotly>=5.3.1
-pyspark>=3.1.1
 pydot>=1.4.2
 scipy>=1.7.3
 seaborn>=0.11.2
@@ -17,7 +16,9 @@ urllib3>=1.9
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
-pytest
+# Pinned for now because AsyncTest doesn't work with pytest 8.2.0
+# https://github.com/pytest-dev/pytest/issues/12263
+pytest<8.2.0
 pytest-cov
 requests-mock
 testfixtures
@@ -48,5 +49,4 @@ pydantic>=1.0, <2.0
 
 # semver 3 renames VersionInfo so temporarily pin until we deal with it
 semver<3
-
 langchain>=0.0.216

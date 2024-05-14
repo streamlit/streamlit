@@ -79,6 +79,12 @@ export const StyledStreamlitMarkdown =
           border: `1px solid ${theme.colors.fadedText10}`,
         },
 
+        "span.has-background-color": {
+          padding: "0.125em 0.25em",
+          margin: "0",
+          borderRadius: theme.radii.md,
+        },
+
         ...(isToast
           ? {
               div: {
@@ -128,45 +134,17 @@ export const StyledStreamlitMarkdown =
     }
   )
 
-export const StyledLinkIconContainer = styled.div(() => ({
-  position: "relative",
-  left: "calc(-2.5rem - 0.5rem)",
-  width: "calc(100% + 2.5rem + 0.5rem)",
-  display: "flex",
-  alignItems: "center",
-  overflow: "visible",
-  ":hover": {
-    a: {
-      opacity: 1,
-      transform: "scale(1)",
-      transition: "none",
-    },
-  },
-}))
-
 export const StyledLinkIcon = styled.a(({ theme }) => ({
-  position: "absolute",
-  marginRight: "0.5rem",
-
   // center icon
   lineHeight: 0,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
 
-  // copied from full screen button
-  transform: "scale(0)",
-  transition: "opacity 300ms 150ms, transform 300ms 150ms",
-  opacity: 0,
-  height: "2.5rem",
-  width: "2.5rem",
-  zIndex: theme.zIndices.sidebar + 1,
-  border: "none",
-  backgroundColor: theme.colors.lightenedBg05,
-  borderRadius: "50%",
-
   svg: {
+    // same color as the tooltip-icon
     stroke: theme.colors.fadedText60,
+    strokeWidth: 2.25,
   },
 
   "&:hover svg": {
@@ -174,17 +152,41 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   },
 }))
 
-export const StyledHeaderContainer = styled.div(({ theme }) => ({
+export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
-    scrollMarginTop: theme.spacing.threeXL,
+    scrollMarginTop: theme.sizes.headerHeight,
   },
   ...sharedMarkdownStyle(theme),
+
+  // break-word & pretty makes most headings break in a nicer way than break-all while still
+  // preventing overflowing of the container to the side. Long headings without whitespaces or hyphens might still look weird
+  wordBreak: "break-word",
+  textWrap: "pretty",
+
+  // show link-icon when hovering somewhere over the heading
+  [StyledLinkIcon as any]: {
+    visibility: "hidden",
+  },
+
+  // we have to set the hover here so that the link icon becomes visible when hovering anywhere over the heading
+  "&:hover": {
+    [StyledLinkIcon as any]: {
+      visibility: "visible",
+    },
+  },
 }))
 
-export const StyledHeaderContent = styled.span(() => ({
-  position: "relative",
-  flex: "1",
-  marginLeft: "calc(2.5rem + 0.5rem)",
+export const StyledHeadingActionElements = styled.span(() => ({
+  marginLeft: "0.5rem",
+  display: "inline-flex",
+  gap: "0.5rem",
+
+  verticalAlign: "middle",
+
+  "& > *": {
+    // remove margins of inner elements as they are wrapped in a container that applies the margin
+    marginLeft: "0 !important",
+  },
 }))
 
 export interface StyledDividerProps {

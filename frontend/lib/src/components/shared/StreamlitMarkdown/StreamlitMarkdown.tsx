@@ -36,21 +36,25 @@ import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
-import { Link as LinkIcon } from "react-feather"
+import { Link2 as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
+import { InlineTooltipIcon } from "@streamlit/lib/src/components/shared/TooltipIcon"
+import {
+  getMarkdownTextColors,
+  getMarkdownBgColors,
+} from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
-  StyledHeaderContainer,
-  StyledHeaderContent,
   StyledLinkIcon,
-  StyledLinkIconContainer,
+  StyledHeadingActionElements,
   StyledStreamlitMarkdown,
+  StyledHeadingWithActionElements,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -137,18 +141,47 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
 
-interface HeadingWithAnchorProps {
+interface HeadingActionElements {
+  elementId?: string
+  help?: string
+  hideAnchor?: boolean
+}
+
+const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
+  elementId,
+  help,
+  hideAnchor,
+}) => {
+  if (!help && hideAnchor) {
+    return <></>
+  }
+
+  return (
+    <StyledHeadingActionElements data-testid="stHeaderActionElements">
+      {help && <InlineTooltipIcon content={help} />}
+      {elementId && !hideAnchor && (
+        <StyledLinkIcon href={`#${elementId}`}>
+          <LinkIcon size="18" />
+        </StyledLinkIcon>
+      )}
+    </StyledHeadingActionElements>
+  )
+}
+
+interface HeadingWithActionElementsProps {
   tag: string
   anchor?: string
   hideAnchor?: boolean
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
+  help?: string
 }
 
-export const HeadingWithAnchor: FunctionComponent<
-  React.PropsWithChildren<HeadingWithAnchorProps>
-> = ({ tag, anchor: propsAnchor, hideAnchor, children, tagProps }) => {
+export const HeadingWithActionElements: FunctionComponent<
+  React.PropsWithChildren<HeadingWithActionElementsProps>
+> = ({ tag, anchor: propsAnchor, help, hideAnchor, children, tagProps }) => {
   const isInSidebar = React.useContext(IsSidebarContext)
+  const isInDialog = React.useContext(IsDialogContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -184,21 +217,41 @@ export const HeadingWithAnchor: FunctionComponent<
     },
     [propsAnchor]
   )
-  if (isInSidebar) {
-    return React.createElement(tag, tagProps, children)
+
+  const isInSidebarOrDialog = isInSidebar || isInDialog
+  const actionElements = (
+    <HeaderActionElements
+      elementId={elementId}
+      help={help}
+      hideAnchor={hideAnchor || isInSidebarOrDialog}
+    />
+  )
+
+  const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
+  // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
+  // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
+  // then we would need to add padding to the outer container and fiddle with the vertical alignment.
+  const headerElementWithActions = React.createElement(
+    tag,
+    {
+      ...tagProps,
+      ...attributes,
+    },
+    <>
+      {children}
+      {actionElements}
+    </>
+  )
+
+  // we don't want to apply styling, so return the "raw" header
+  if (isInSidebarOrDialog) {
+    return headerElementWithActions
   }
 
-  return React.createElement(
-    tag,
-    { ...tagProps, ref, id: elementId },
-    <StyledLinkIconContainer data-testid="StyledLinkIconContainer">
-      {elementId && !hideAnchor && (
-        <StyledLinkIcon href={`#${elementId}`}>
-          <LinkIcon size="18" />
-        </StyledLinkIcon>
-      )}
-      <StyledHeaderContent>{children}</StyledHeaderContent>
-    </StyledLinkIconContainer>
+  return (
+    <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
+      {headerElementWithActions}
+    </StyledHeadingWithActionElements>
   )
 }
 
@@ -210,11 +263,13 @@ export const CustomHeading: FunctionComponent<
 > = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
-    <StyledHeaderContainer>
-      <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
-        {children}
-      </HeadingWithAnchor>
-    </StyledHeaderContainer>
+    <HeadingWithActionElements
+      tag={node.tagName}
+      anchor={anchor}
+      tagProps={rest}
+    >
+      {children}
+    </HeadingWithActionElements>
   )
 }
 export interface RenderedMarkdownProps {
@@ -288,6 +343,16 @@ export function RenderedMarkdown({
   const theme = useTheme()
   const { red, orange, yellow, green, blue, violet, purple, gray } =
     getMarkdownTextColors(theme)
+  const {
+    redbg,
+    orangebg,
+    yellowbg,
+    greenbg,
+    bluebg,
+    violetbg,
+    purplebg,
+    graybg,
+  } = getMarkdownBgColors(theme)
   const colorMapping = new Map(
     Object.entries({
       red: `color: ${red}`,
@@ -300,6 +365,16 @@ export function RenderedMarkdown({
       // Gradient from red, orange, yellow, green, blue, violet, purple
       rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
         ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,
+      "red-background": `background-color: ${redbg}`,
+      "blue-background": `background-color: ${bluebg}`,
+      "green-background": `background-color: ${greenbg}`,
+      "violet-background": `background-color: ${violetbg}`,
+      "orange-background": `background-color: ${orangebg}`,
+      "gray-background": `background-color: ${graybg}`,
+      "grey-background": `background-color: ${graybg}`,
+      // Gradient from red, orange, yellow, green, blue, violet, purple
+      "rainbow-background": `background: linear-gradient(to right,
+        ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
     })
   )
   function remarkColoring() {
@@ -309,9 +384,17 @@ export function RenderedMarkdown({
           const nodeName = String(node.name)
           if (colorMapping.has(nodeName)) {
             const data = node.data || (node.data = {})
+            const style = colorMapping.get(nodeName)
             data.hName = "span"
-            data.hProperties = {
-              style: colorMapping.get(nodeName),
+            data.hProperties = data.hProperties || {}
+            data.hProperties.style = style
+            // Add class for background color for custom styling
+            if (
+              style &&
+              (/background-color:/.test(style) || /background:/.test(style))
+            ) {
+              data.hProperties.className =
+                (data.hProperties.className || "") + " has-background-color"
             }
           }
         }

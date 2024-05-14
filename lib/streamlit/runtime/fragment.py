@@ -140,7 +140,7 @@ def fragment(
     with each fragment rerun, until the next full-script rerun.
 
     Calling `st.sidebar` in a fragment is not supported. To write elements to
-    the sidebar with a fragment, call your fragment funciton inside a
+    the sidebar with a fragment, call your fragment function inside a
     `with st.sidebar` context manager.
 
     Fragment code can interact with Session State, imported modules, and

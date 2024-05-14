@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 
 from playwright.sync_api import Page, expect
 
@@ -23,7 +24,12 @@ def test_displays_a_pyplot_figures(
 ):
     """Test that all pyplot figures are displayed correctly via screenshot matching."""
     pyplot_elements = themed_app.get_by_test_id("stImage")
-    expect(pyplot_elements).to_have_count(7)
+    expect(pyplot_elements).to_have_count(8)
+
+    # pyplot graph assertion
+    expect(themed_app.get_by_test_id("stImage").last.locator("img")).to_have_attribute(
+        "src", re.compile("localhost*")
+    )
 
     assert_snapshot(pyplot_elements.nth(0), name="st_pyplot-normal_figure")
     assert_snapshot(pyplot_elements.nth(1), name="st_pyplot-resized_figure")

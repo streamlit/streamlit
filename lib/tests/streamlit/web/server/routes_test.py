@@ -132,6 +132,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def tearDown(self) -> None:
         super().tearDown()
 
+        self._tmpfile.close()
         self._tmpdir.cleanup()
 
     def get_pages(self):
@@ -201,6 +202,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "useExternalAuthToken": False,
                 # Default host configuration settings:
                 "enableCustomParentMessages": False,
+                "enforceDownloadInNewTab": False,
             },
             response_body,
         )

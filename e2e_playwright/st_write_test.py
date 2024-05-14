@@ -52,7 +52,7 @@ def test_displays_markdown(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def test_display_dataframe(app: Page):
-    """Test that st.write displays pyspark.sql.DataFrame and pd.Dataframe via st.dataframe."""
+    """Test that st.write displays dataframe compatible objects via st.dataframe."""
 
     dataframe_element = app.get_by_test_id("stDataFrame")
     expect(dataframe_element).to_have_count(4)

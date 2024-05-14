@@ -147,6 +147,8 @@ jobs:
       - run-py-prod-deps-smoke-test
       - run-cypress-tests
       - run-playwright-tests
+    permissions:
+      id-token: write
 
     defaults:
       run:
@@ -155,6 +157,8 @@ jobs:
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
       s3-url: ${{ steps.exports.outputs.s3-url }}
+
+    environment: nightly
 
     steps:
       - name: Checkout Streamlit code
@@ -213,11 +217,9 @@ jobs:
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - name: Upload to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.NIGHTLY_PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.NIGHTLY_PYPI_API_TOKEN }}
-        run: |
-          make distribute
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: lib/dist/
       - if: ${{ failure() }}
         name: Nightly Build Failure Slack Message
         env:

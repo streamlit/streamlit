@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, cast
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_emoji
+from streamlit.string_util import clean_text, validate_icon_or_emoji
 from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
@@ -67,14 +67,29 @@ class ToastMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-        icon : str or None
-            An optional argument that specifies an emoji to use as
-            the icon for the toast. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
+
+        icon : str, None
+            An optional emoji or icon to display next to the alert. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Example
         -------
@@ -84,7 +99,7 @@ class ToastMixin:
         """
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
-        toast_proto.icon = validate_emoji(icon)
+        toast_proto.icon = validate_icon_or_emoji(icon)
         return self.dg._enqueue("toast", toast_proto)
 
     @property

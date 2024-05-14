@@ -79,6 +79,17 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   private localFileIdCounter = 1
 
+  /**
+   * A flag to handle the case where a file uploader that only accepts one file
+   * at a time has its file replaced, which we want to treat as a single change
+   * rather than the deletion of a file followed by the upload of another.
+   * Doing this ensures that the script (and thus callbacks, etc) is only run a
+   * single time when replacing a file.  Note that deleting a file and uploading
+   * a new one with two interactions (clicking the 'X', then dragging a file
+   * into the file uploader) will still cause the script to execute twice.
+   */
+  private forceUpdatingStatus = false
+
   public constructor(props: Props) {
     super(props)
     this.state = this.initialValue
@@ -137,7 +148,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     // If any of our files is Uploading or Deleting, then we're currently
     // updating.
-    if (this.state.files.some(isFileUpdating)) {
+    if (this.state.files.some(isFileUpdating) || this.forceUpdatingStatus) {
       return "updating"
     }
 
@@ -255,7 +266,9 @@ class FileUploader extends React.PureComponent<Props, State> {
             f => f.status.type !== "error"
           )
           if (existingFile) {
+            this.forceUpdatingStatus = true
             this.deleteFile(existingFile.id)
+            this.forceUpdatingStatus = false
           }
         }
 

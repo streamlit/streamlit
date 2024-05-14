@@ -148,7 +148,7 @@ Cypress.Commands.overwrite(
   (originalFn, subject, name, options) => {
     cy.wrap(subject).trigger("blur", _.pick(options, ["force"]))
 
-    const headerHeight = 2.875 // In rem
+    const headerHeight = 3.75 // In rem
     const fontSizeMedium = 16 // In px
     cy.get(subject).scrollIntoView({
       offset: {

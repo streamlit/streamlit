@@ -26,12 +26,14 @@ from typing import (
     Final,
     Hashable,
     Iterable,
+    List,
     Literal,
     NoReturn,
     TypeVar,
     cast,
-    overload,
 )
+
+from typing_extensions import TypeAlias
 
 from streamlit import (
     cli_util,
@@ -45,10 +47,7 @@ from streamlit import (
 )
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
-from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import ArrowMixin
-from streamlit.elements.arrow_altair import ArrowAltairMixin, prep_data
-from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
@@ -74,6 +73,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
+from streamlit.elements.vega_charts import VegaChartsMixin
 from streamlit.elements.widgets.button import ButtonMixin
 from streamlit.elements.widgets.camera_input import CameraInputMixin
 from streamlit.elements.widgets.chat import ChatMixin
@@ -93,35 +93,26 @@ from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
     from numpy import typing as npt
-    from pandas import DataFrame, Series
+    from pandas import DataFrame
 
     from streamlit.elements.arrow import Data
+    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
-
-# List of Streamlit commands that perform a Pandas "melt" operation on
-# input dataframes:
-ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
-    "arrow_line_chart",
-    "arrow_area_chart",
-    "arrow_bar_chart",
-    "arrow_scatter_chart",
-)
 
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
 
 # Type aliases for Ancestor Block Types
-BlockType = str
-AncestorBlockTypes = Iterable[BlockType]
+BlockType: TypeAlias = str
+AncestorBlockTypes: TypeAlias = Iterable[BlockType]
 
 
 _use_warning_has_been_displayed: bool = False
@@ -196,8 +187,7 @@ class DeltaGenerator(
     ToastMixin,
     WriteMixin,
     ArrowMixin,
-    ArrowAltairMixin,
-    ArrowVegaLiteMixin,
+    VegaChartsMixin,
     DataEditorMixin,
 ):
     """Creator of Delta protobuf messages.
@@ -314,9 +304,9 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            current_stack = dg_stack.get()
-            if len(current_stack) > 1:
-                return current_stack[-1]
+            last_context_stack_dg = get_last_dg_added_to_context_stack()
+            if last_context_stack_dg is not None:
+                return last_context_stack_dg
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.
@@ -423,75 +413,12 @@ class DeltaGenerator(
         dg = self._active_dg
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
-    @overload
     def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: None,
         add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
     ) -> DeltaGenerator:
-        ...
-
-    @overload
-    def _enqueue(  # type: ignore[misc]
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: type[NoValue],
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> None:
-        ...
-
-    @overload
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: Value,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> Value:
-        ...
-
-    @overload
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> DeltaGenerator:
-        ...
-
-    @overload
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: type[NoValue] | Value | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> DeltaGenerator | Value | None:
-        ...
-
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: type[NoValue] | Value | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> DeltaGenerator | Value | None:
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -500,21 +427,12 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        return_value : any or None
-            The value to return to the calling script (for widgets)
-        element_width : int or None
-            Desired width for the element
-        element_height : int or None
-            Desired height for the element
 
         Returns
         -------
-        DeltaGenerator or any
-            If this element is NOT an interactive widget, return a
-            DeltaGenerator that can be used to modify the newly-created
-            element. Otherwise, if the element IS a widget, return the
-            `return_value` parameter.
-
+        DeltaGenerator
+            Return a DeltaGenerator that can be used to modify the newly-created
+            element.
         """
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
@@ -527,37 +445,18 @@ class DeltaGenerator(
                 "call your fragment function inside a `with st.sidebar` context manager."
             )
 
-        # Warn if we're called from within a legacy @st.cache function
-        legacy_caching.maybe_show_cached_st_function_warning(dg, delta_type)
-        # Warn if we're called from within @st.memo or @st.singleton
-        caching.maybe_show_cached_st_function_warning(dg, delta_type)
-
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
 
-        # Some elements have a method.__name__ != delta_type in proto.
-        # This really matters for line_chart, bar_chart & area_chart,
-        # since add_rows() relies on method.__name__ == delta_type
-        # TODO: Fix for all elements (or the cache warning above will be wrong)
-        proto_type = delta_type
-
-        if proto_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
-            proto_type = "arrow_vega_lite_chart"
-
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg_el_proto = getattr(msg.delta.new_element, proto_type)
+        msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
             msg.metadata.delta_path[:] = dg._cursor.delta_path
-
-            if element_width is not None:
-                msg.metadata.element_dimension_spec.width = element_width
-            if element_height is not None:
-                msg.metadata.element_dimension_spec.height = element_height
 
             _enqueue_message(msg)
             msg_was_enqueued = True
@@ -583,7 +482,7 @@ class DeltaGenerator(
             # no-op from the point of view of the app.
             output_dg = dg
 
-        # Save message for replay if we're called from within @st.memo or @st.singleton
+        # Save message for replay if we're called from within @st.cache_data or @st.cache_resource
         caching.save_element_message(
             delta_type,
             element_proto,
@@ -592,7 +491,7 @@ class DeltaGenerator(
             returned_dg_id=output_dg.id,
         )
 
-        return _value_or_dg(return_value, output_dg)
+        return output_dg
 
     def _block(
         self,
@@ -606,34 +505,7 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
         ancestor_block_types = list(dg._ancestor_block_types)
-
-        if block_type == "column":
-            num_of_parent_columns = self._count_num_of_parent_columns(
-                ancestor_block_types
-            )
-            if (
-                self._root_container == RootContainer.SIDEBAR
-                and num_of_parent_columns > 0
-            ):
-                raise StreamlitAPIException(
-                    "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
-                )
-            if num_of_parent_columns > 1:
-                raise StreamlitAPIException(
-                    "Columns can only be placed inside other columns up to one level of nesting."
-                )
-        if block_type == "chat_message" and block_type in ancestor_block_types:
-            raise StreamlitAPIException(
-                "Chat messages cannot nested inside other chat messages."
-            )
-        if block_type == "expandable" and block_type in ancestor_block_types:
-            raise StreamlitAPIException(
-                "Expanders may not be nested inside other expanders."
-            )
-        if block_type == "popover" and block_type in ancestor_block_types:
-            raise StreamlitAPIException(
-                "Popovers may not be nested inside other popovers."
-            )
+        _check_nested_element_violation(self, block_type, ancestor_block_types)
 
         if dg._root_container is None or dg._cursor is None:
             return dg
@@ -684,11 +556,9 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
+        **kwargs: (
+            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+        ),
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
@@ -765,22 +635,20 @@ class DeltaGenerator(
 
         # When doing _arrow_add_rows on an element that does not already have data
         # (for example, st.line_chart() without any args), call the original
-        # st._arrow_foo() element with new data instead of doing a _arrow_add_rows().
+        # st.foo() element with new data instead of doing a _arrow_add_rows().
         if (
-            self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
+            "add_rows_metadata" in self._cursor.props
+            and self._cursor.props["add_rows_metadata"]
             and self._cursor.props["add_rows_metadata"].last_index is None
         ):
-            # IMPORTANT: This assumes delta types and st method names always
-            # match!
-            # delta_type starts with "arrow_", but st_method_name doesn't use this prefix.
-            st_method_name = self._cursor.props["delta_type"].replace("arrow_", "")
-            st_method = getattr(self, st_method_name)
+            st_method = getattr(
+                self, self._cursor.props["add_rows_metadata"].chart_command
+            )
             st_method(data, **kwargs)
             return None
 
         new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
             data,
-            self._cursor.props["delta_type"],
             self._cursor.props["add_rows_metadata"],
         )
 
@@ -814,100 +682,37 @@ dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
 )
 
 
+def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
+    """Get the last added DeltaGenerator of the stack in the current context.
+
+    Returns None if the stack has only one element or is empty for whatever reason.
+    """
+    current_stack = dg_stack.get()
+    # If set to "> 0" and thus return the only delta generator in the stack - which logically makes more sense -, some unit tests
+    # fail. It looks like the reason is that they create their own main delta generator but do not populate the dg_stack correctly. However, to be on the safe-side,
+    # we keep the logic but leave the comment as shared knowledge for whoever will look into this in the future.
+    if len(current_stack) > 1:
+        return current_stack[-1]
+    return None
+
+
 def _prep_data_for_add_rows(
     data: Data,
-    delta_type: str,
-    add_rows_metadata: AddRowsMetadata,
-) -> tuple[Data, AddRowsMetadata]:
-    out_data: Data
+    add_rows_metadata: AddRowsMetadata | None,
+) -> tuple[Data, AddRowsMetadata | None]:
+    if not add_rows_metadata:
+        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+        return type_util.convert_anything_to_df(data, allow_styler=True), None
 
-    # For some delta types we have to reshape the data structure
+    # If add_rows_metadata is set, it indicates that the add_rows used called
+    # on a chart based on our built-in chart commands.
+
+    # For built-in chart commands we have to reshape the data structure
     # otherwise the input data and the actual data used
     # by vega_lite will be different, and it will throw an error.
-    if delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
-        import pandas as pd
+    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
 
-        df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
-
-        # Make range indices start at last_index.
-        if isinstance(df.index, pd.RangeIndex):
-            old_step = _get_pandas_index_attr(df, "step")
-
-            # We have to drop the predefined index
-            df = df.reset_index(drop=True)
-
-            old_stop = _get_pandas_index_attr(df, "stop")
-
-            if old_step is None or old_stop is None:
-                raise StreamlitAPIException(
-                    "'RangeIndex' object has no attribute 'step'"
-                )
-
-            start = add_rows_metadata.last_index + old_step
-            stop = add_rows_metadata.last_index + old_step + old_stop
-
-            df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            add_rows_metadata.last_index = stop - 1
-
-        out_data, *_ = prep_data(df, **add_rows_metadata.columns)
-
-    else:
-        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-        out_data = type_util.convert_anything_to_df(data, allow_styler=True)
-
-    return out_data, add_rows_metadata
-
-
-def _get_pandas_index_attr(
-    data: DataFrame | Series,
-    attr: str,
-) -> Any | None:
-    return getattr(data.index, attr, None)
-
-
-@overload
-def _value_or_dg(value: None, dg: DG) -> DG:
-    ...
-
-
-@overload
-def _value_or_dg(value: type[NoValue], dg: DG) -> None:  # type: ignore[misc]
-    ...
-
-
-@overload
-def _value_or_dg(value: Value, dg: DG) -> Value:
-    # This overload definition technically overlaps with the one above (Value
-    # contains Type[NoValue]), and since the return types are conflicting,
-    # mypy complains. Hence, the ignore-comment above. But, in practice, since
-    # the overload above is more specific, and is matched first, there is no
-    # actual overlap. The `Value` type here is thus narrowed to the cases
-    # where value is neither None nor NoValue.
-
-    # The ignore-comment should thus be fine.
-    ...
-
-
-def _value_or_dg(
-    value: type[NoValue] | Value | None,
-    dg: DG,
-) -> DG | Value | None:
-    """Return either value, or None, or dg.
-
-    This is needed because Widgets have meaningful return values. This is
-    unlike other elements, which always return None. Then we internally replace
-    that None with a DeltaGenerator instance.
-
-    However, sometimes a widget may want to return None, and in this case it
-    should not be replaced by a DeltaGenerator. So we have a special NoValue
-    object that gets replaced by None.
-
-    """
-    if value is NoValue:
-        return None
-    if value is None:
-        return dg
-    return cast(Value, value)
+    return prep_chart_data_for_add_rows(data, add_rows_metadata)
 
 
 def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
@@ -927,3 +732,35 @@ def _writes_directly_to_sidebar(dg: DG) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(len(list(dg._ancestor_block_types)))
     return in_sidebar and not has_container
+
+
+def _check_nested_element_violation(
+    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: List[BlockType]
+) -> None:
+    """Check if elements are nested in a forbidden way.
+
+    Raises
+    ------
+      StreamlitAPIException: throw if an invalid element nesting is detected.
+    """
+
+    if block_type == "column":
+        num_of_parent_columns = dg._count_num_of_parent_columns(ancestor_block_types)
+        if dg._root_container == RootContainer.SIDEBAR and num_of_parent_columns > 0:
+            raise StreamlitAPIException(
+                "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+            )
+        if num_of_parent_columns > 1:
+            raise StreamlitAPIException(
+                "Columns can only be placed inside other columns up to one level of nesting."
+            )
+    if block_type == "chat_message" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Chat messages cannot nested inside other chat messages."
+        )
+    if block_type == "expandable" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Expanders may not be nested inside other expanders."
+        )
+    if block_type == "popover" and block_type in ancestor_block_types:
+        raise StreamlitAPIException("Popovers may not be nested inside other popovers.")

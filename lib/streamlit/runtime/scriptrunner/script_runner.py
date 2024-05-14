@@ -46,6 +46,7 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.runtime.state.session_state import SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
@@ -463,6 +464,18 @@ class ScriptRunner:
 
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
+            # Clear widget state on page change. This normally happens implicitly
+            # in the script run cleanup steps, but doing it explicitly ensures
+            # it happens even if a script run was interrupted.
+            try:
+                old_hash = self._session_state[SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY]
+            except KeyError:
+                old_hash = None
+
+            if old_hash != page_script_hash:
+                # Page changed, reset widget state
+                self._session_state.on_script_finished(set())
+
             ctx = self._get_script_run_ctx()
             ctx.reset(
                 query_string=rerun_data.query_string,
@@ -563,6 +576,9 @@ class ScriptRunner:
                             rerun_data.widget_states
                         )
 
+                    self._session_state[
+                        SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
+                    ] = page_script_hash
                     ctx.on_script_start()
                     prep_time = timer() - start_time
 

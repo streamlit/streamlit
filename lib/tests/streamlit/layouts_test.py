@@ -335,3 +335,149 @@ class TabsTest(DeltaGeneratorTestCase):
         self.assertEqual(len(tabs_block), 5)
         for index, tabs_block in enumerate(tabs_block):
             self.assertEqual(tabs_block.add_block.tab.label, f"tab {index}")
+
+
+class DialogTest(DeltaGeneratorTestCase):
+    """Run unit tests for the non-public delta-generator dialog and also the dialog decorator."""
+
+    title = "Test Dialog"
+
+    def test_dialog_deltagenerator_usage_with_context_manager(self):
+        """Test that the delta-generator dialog works as a context manager"""
+
+        dialog = st._main._dialog(DialogTest.title)
+
+        with dialog:
+            """No content so that 'get_delta_from_queue' returns the dialog."""
+            pass
+
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
+        self.assertTrue(dialog_block.add_block.dialog.dismissible)
+
+    def test_dialog_deltagenerator_opens_and_closes(self):
+        """Test that dialog opens and closes"""
+        dialog = st._main._dialog(DialogTest.title)
+
+        self.assertIsNotNone(dialog)
+        dialog_block = self.get_delta_from_queue()
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
+
+        dialog.open()
+        dialog_block = self.get_delta_from_queue()
+        self.assertTrue(dialog_block.add_block.dialog.is_open)
+
+        dialog.close()
+        dialog_block = self.get_delta_from_queue()
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
+
+    def test_dialog_deltagenerator_only_call_open_once(self):
+        """Test that only a single dialog can be opened"""
+        dialog = st._main._dialog(DialogTest.title)
+
+        self.assertIsNotNone(dialog)
+
+        # Open first time
+        dialog.open()
+        with self.assertRaises(StreamlitAPIException):
+            # Cannot call open while the dialog is already open
+            dialog.open()
+        dialog.close()
+        with self.assertRaises(StreamlitAPIException):
+            # Close does not reset the dialog-flag as this is handled per script-run context
+            dialog.open()
+
+    def test_dialog_decorator_with_title_opens(self):
+        """Test that the dialog decorator having a title does not throw an error"""
+
+        @st.experimental_dialog("example title")
+        def dialog():
+            return None
+
+        dialog()
+
+    def test_dialog_decorator_title_required(self):
+        """Test that the title is required in decorator"""
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_dialog()
+            def dialog():
+                return None
+
+            dialog()
+
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_dialog()
+            def dialog_with_arguments(a, b):
+                return None
+
+            dialog_with_arguments("", "")
+
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+
+    def test_dialog_decorator_must_be_called_like_a_function_with_a_title(self):
+        """Test that the decorator must be called like a function."""
+        with self.assertRaises(StreamlitAPIException):
+
+            @st.experimental_dialog
+            def dialog():
+                return None
+
+            dialog()
+
+        with self.assertRaises(StreamlitAPIException):
+
+            @st.experimental_dialog
+            def dialog_with_arg(a):
+                return None
+
+            dialog_with_arg("a")
+
+        with self.assertRaises(StreamlitAPIException):
+
+            @st.experimental_dialog
+            def dialog_with_args(a, b):
+                return None
+
+            dialog_with_args("a", "b")
+
+    def test_nested_dialog_raises_error(self):
+        """Test that dialogs cannot be called nested."""
+
+        @st.experimental_dialog("Level2 dialog")
+        def level2_dialog():
+            st.empty()
+
+        @st.experimental_dialog("Level1 dialog")
+        def level1_dialog():
+            level2_dialog()
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            level1_dialog()
+
+        self.assertEqual(
+            e.exception.args[0], "Dialogs may not be nested inside other dialogs."
+        )
+
+    def test_only_one_dialog_can_be_opened_at_same_time(self):
+        @st.experimental_dialog("Dialog1")
+        def dialog1():
+            st.empty()
+
+        @st.experimental_dialog("Dialog2")
+        def dialog2():
+            st.empty()
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            dialog1()
+            dialog2()
+
+        self.assertTrue(
+            e.exception.args[0].startswith(
+                "Only one dialog is allowed to be opened at the same time."
+            )
+        )

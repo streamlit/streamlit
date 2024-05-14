@@ -29,7 +29,7 @@ import {
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+} from "./components/elements/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 import {
@@ -37,7 +37,7 @@ import {
   LoadingScreenType,
   makeElementWithErrorText,
   makeElementWithInfoText,
-  makeSkeletonElement,
+  makeAppSkeletonElement,
   notUndefined,
 } from "./util/utils"
 
@@ -515,7 +515,7 @@ export class AppRoot {
         break
 
       default:
-        waitElement = makeSkeletonElement()
+        waitElement = makeAppSkeletonElement()
     }
 
     if (waitElement) {

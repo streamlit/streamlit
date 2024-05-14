@@ -32,7 +32,7 @@ import streamlit as st
 import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
-from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator import DeltaGenerator, get_last_dg_added_to_context_stack
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
@@ -288,6 +288,17 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
                 ),
                 str(ctx.exception),
             )
+
+    def test_get_last_dg_added_to_context_stack(self):
+        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
+        self.assertIsNone(last_dg_added_to_context_stack)
+
+        sidebar = st.sidebar
+        with sidebar:
+            last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
+            self.assertEqual(sidebar, last_dg_added_to_context_stack)
+        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
+        self.assertNotEqual(sidebar, last_dg_added_to_context_stack)
 
 
 class DeltaGeneratorClassTest(DeltaGeneratorTestCase):

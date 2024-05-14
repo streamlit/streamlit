@@ -22,6 +22,7 @@ import { screen, cleanup } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
+import { transparentize } from "color2k"
 
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
@@ -29,6 +30,7 @@ import StreamlitMarkdown, {
   CustomCodeTag,
   CustomCodeTagProps,
 } from "./StreamlitMarkdown"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -113,7 +115,21 @@ describe("StreamlitMarkdown", () => {
         <StreamlitMarkdown source={source} allowHTML={false} />
       </IsSidebarContext.Provider>
     )
-    expect(screen.getByTestId("StyledLinkIconContainer")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stHeadingWithActionElements")
+    ).toBeInTheDocument()
+  })
+
+  it("renders header anchors when isInDialog is false", () => {
+    const source = "# header"
+    render(
+      <IsDialogContext.Provider value={false}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsDialogContext.Provider>
+    )
+    expect(
+      screen.getByTestId("stHeadingWithActionElements")
+    ).toBeInTheDocument()
   })
 
   it("passes props properly", () => {
@@ -135,7 +151,19 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(
-      screen.queryByTestId("StyledLinkIconContainer")
+      screen.queryByTestId("stHeadingWithActionElements")
+    ).not.toBeInTheDocument()
+  })
+
+  it("doesn't render header anchors when isInDialog is true", () => {
+    const source = "# header"
+    render(
+      <IsDialogContext.Provider value={true}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsDialogContext.Provider>
+    )
+    expect(
+      screen.queryByTestId("stHeadingWithActionElements")
     ).not.toBeInTheDocument()
   })
 
@@ -316,6 +344,43 @@ describe("StreamlitMarkdown", () => {
       const tagName = markdown.nodeName.toLowerCase()
       expect(tagName).toBe("span")
       expect(markdown).toHaveStyle(`color: ${style}`)
+
+      // Removes rendered StreamlitMarkdown component before next case run
+      cleanup()
+    })
+  })
+
+  it("properly adds background colors", () => {
+    const redbg = transparentize(colors.red80, 0.9)
+    const orangebg = transparentize(colors.yellow70, 0.9)
+    const yellowbg = transparentize(colors.yellow70, 0.9)
+    const greenbg = transparentize(colors.green70, 0.9)
+    const bluebg = transparentize(colors.blue70, 0.9)
+    const violetbg = transparentize(colors.purple70, 0.9)
+    const purplebg = transparentize(colors.purple90, 0.9)
+    const graybg = transparentize(colors.gray70, 0.9)
+
+    const colorMapping = new Map([
+      ["red", redbg],
+      ["blue", bluebg],
+      ["green", greenbg],
+      ["violet", violetbg],
+      ["orange", orangebg],
+      ["gray", graybg],
+      ["grey", graybg],
+      [
+        "rainbow",
+        `linear-gradient(to right, ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg})`,
+      ],
+    ])
+
+    colorMapping.forEach(function (style, color) {
+      const source = `:${color}-background[text]`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      const tagName = markdown.nodeName.toLowerCase()
+      expect(tagName).toBe("span")
+      expect(markdown).toHaveStyle(`background-color: ${style}`)
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()

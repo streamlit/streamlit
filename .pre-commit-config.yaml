@@ -53,6 +53,8 @@ repos:
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier
         name: Prettier
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn prettier --write
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
@@ -60,6 +62,8 @@ repos:
         pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend yarn prettier ../.github --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
@@ -90,6 +94,8 @@ repos:
       - id: eslint
         name: Eslint
         always_run: true
+        # TODO: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint --fix
         files: ^frontend/src/.*\.(js|jsx|ts|tsx)$
         language: node

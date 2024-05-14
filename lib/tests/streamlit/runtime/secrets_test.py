@@ -15,6 +15,7 @@
 """st.secrets unit tests."""
 
 import os
+import sys
 import tempfile
 import unittest
 from collections.abc import Mapping as MappingABC
@@ -93,10 +94,17 @@ class SecretsTest(unittest.TestCase):
 
     def test_secrets_file_location(self):
         """Verify that we're looking for secrets.toml in the right place."""
+        if "win32" not in sys.platform:
+            # conftest.py sets the HOME envvar to "/mock/home/folder".
+            expected_global_path = "/mock/home/folder/.streamlit/secrets.toml"
+        else:
+            # On windows systems, HOME does not work so we look in the user's directory instead.
+            expected_global_path = os.path.join(
+                os.path.expanduser("~"), ".streamlit", "secrets.toml"
+            )
         self.assertEqual(
             [
-                # conftest.py sets the HOME envvar to "/mock/home/folder".
-                "/mock/home/folder/.streamlit/secrets.toml",
+                expected_global_path,
                 os.path.abspath("./.streamlit/secrets.toml"),
             ],
             SECRETS_FILE_LOCS,
@@ -233,6 +241,13 @@ class MultipleSecretsFilesTest(unittest.TestCase):
     def tearDown(self) -> None:
         os.environ.clear()
         os.environ.update(self._prev_environ)
+
+        # close the file descriptors (which is required on windows before removing the file)
+        for fd in (self._fd1, self._fd2):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
 
         os.remove(self._path1)
         os.remove(self._path2)

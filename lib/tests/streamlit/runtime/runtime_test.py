@@ -22,6 +22,7 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import (
     Runtime,
@@ -74,7 +75,6 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertIsInstance(config.session_storage, MemorySessionStorage)
 
 
-@patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
 class RuntimeSingletonTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None
@@ -639,6 +639,7 @@ class ScriptCheckTest(RuntimeTestCase):
         config = RuntimeConfig(
             script_path=self._path,
             command_line=None,
+            component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MagicMock,

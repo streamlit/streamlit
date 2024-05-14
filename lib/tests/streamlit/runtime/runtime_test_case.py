@@ -16,6 +16,7 @@ import asyncio
 from typing import Callable, Dict, List, Optional
 from unittest import IsolatedAsyncioTestCase, mock
 
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
@@ -72,7 +73,6 @@ class MockSessionManager(SessionManager):
                 uploaded_file_manager=self._uploaded_file_mgr,
                 script_cache=self._script_cache,
                 message_enqueued_callback=self._message_enqueued_callback,
-                local_sources_watcher=mock.MagicMock(),
                 user_info=user_info,
                 session_id_override=session_id_override,
             )
@@ -106,6 +106,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
         config = RuntimeConfig(
             script_path="mock/script/path.py",
             command_line=None,
+            component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MockSessionManager,

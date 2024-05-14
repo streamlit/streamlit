@@ -18,9 +18,11 @@ import {
   Alert as AlertProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Element,
+  Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
+import decamelize from "decamelize"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -236,9 +238,9 @@ export function makeElementWithErrorText(text: string): Element {
 }
 
 /** Return a special internal-only Element showing an app "skeleton". */
-export function makeSkeletonElement(): Element {
+export function makeAppSkeletonElement(): Element {
   return new Element({
-    skeleton: {},
+    skeleton: { style: SkeletonProto.SkeletonStyle.APP },
   })
 }
 
@@ -499,4 +501,48 @@ export function extractPageNameFromPathName(
       .replace(new RegExp("^/?"), "")
       .replace(new RegExp("/$"), "")
   )
+}
+
+/**
+ * Converts object keys from camelCase to snake_case, applied recursively to nested objects and arrays.
+ * Keys containing dots are replaced with underscores. The conversion preserves consecutive uppercase letters.
+ *
+ * @param obj - The input object with keys to be converted. Can include nested objects and arrays.
+ * @returns A new object with all keys in snake_case, maintaining the original structure and values.
+ *
+ * @example
+ * keysToSnakeCase({
+ *   userId: 1,
+ *   user.Info: { firstName: "John", lastName: "Doe" },
+ *   userActivities: [{ loginTime: "10AM", logoutTime: "5PM" }]
+ * });
+ * // Returns:
+ * // {
+ * //   user_id: 1,
+ * //   user_info: { first_name: "John", last_name: "Doe" },
+ * //   user_activities: [{ login_time: "10AM", logout_time: "5PM" }]
+ * // }
+ */
+export function keysToSnakeCase(
+  obj: Record<string, any>
+): Record<string, any> {
+  return Object.keys(obj).reduce((acc, key) => {
+    const newKey = decamelize(key, {
+      preserveConsecutiveUppercase: true,
+    }).replace(".", "_")
+    let value = obj[key]
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      value = keysToSnakeCase(value)
+    }
+
+    if (Array.isArray(value)) {
+      value = value.map(item =>
+        typeof item === "object" ? keysToSnakeCase(item) : item
+      )
+    }
+
+    acc[newKey] = value
+    return acc
+  }, {} as Record<string, any>)
 }

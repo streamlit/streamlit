@@ -18,7 +18,7 @@ import React, { ReactElement } from "react"
 
 import { Alert as AlertProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
@@ -65,10 +65,13 @@ export default function AlertElement({
       <AlertContainer width={width} kind={kind}>
         <StyledAlertContent>
           {icon && (
-            <EmojiIcon testid="stAlertEmojiIcon" size="lg">
-              {icon}
-            </EmojiIcon>
+            <DynamicIcon
+              iconValue={icon}
+              size="lg"
+              testid="stAlertDynamicIcon"
+            />
           )}
+
           <StreamlitMarkdown
             source={body}
             allowHTML={false}

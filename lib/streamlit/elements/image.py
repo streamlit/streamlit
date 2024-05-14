@@ -296,9 +296,11 @@ def _ensure_image_size_and_format(
     if width > 0 and actual_width > width:
         # We need to resize the image.
         new_height = int(1.0 * actual_height * width / actual_width)
-        pil_image = pil_image.resize(
-            (width, new_height), resample=Image.Resampling.BILINEAR
-        )
+        # pillow reexports Image.Resampling.BILINEAR as Image.BILINEAR for backwards
+        # compatibility reasons, so we use the reexport to support older pillow
+        # versions. The types don't seem to reflect this, though, hence the type: ignore
+        # below.
+        pil_image = pil_image.resize((width, new_height), resample=Image.BILINEAR)  # type: ignore[attr-defined]
         return _PIL_to_bytes(pil_image, format=image_format, quality=90)
 
     if pil_image.format != image_format:

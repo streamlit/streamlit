@@ -121,6 +121,7 @@ class StreamlitTest(unittest.TestCase):
                 "latex",
                 "line_chart",
                 "link_button",
+                "logo",
                 "map",
                 "markdown",
                 "metric",
@@ -169,6 +170,7 @@ class StreamlitTest(unittest.TestCase):
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:
+                "experimental_dialog",
                 "experimental_user",
                 "experimental_singleton",
                 "experimental_memo",

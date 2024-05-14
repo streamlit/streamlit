@@ -33,6 +33,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
+  Skeleton as SkeletonProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
@@ -72,13 +73,10 @@ import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionEl
 import Json from "@streamlit/lib/src/components/elements/Json"
 import Markdown from "@streamlit/lib/src/components/elements/Markdown"
 import Metric from "@streamlit/lib/src/components/elements/Metric"
-import {
-  Skeleton,
-  AppSkeleton,
-} from "@streamlit/lib/src/components/elements/Skeleton"
+import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
 import Maybe from "@streamlit/lib/src/components/core/Maybe"
@@ -285,6 +283,7 @@ const RawElementNodeRenderer = (
           element={node.element.audio as AudioProto}
           endpoints={props.endpoints}
           {...elementProps}
+          elementMgr={props.widgetMgr}
         />
       )
 
@@ -331,7 +330,7 @@ const RawElementNodeRenderer = (
       )
 
     case "empty":
-      return <div className="stHidden" />
+      return <div className="stHidden" data-testid="stEmpty" />
 
     case "exception":
       return (
@@ -407,15 +406,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "plotlyChart":
-      return (
-        <PlotlyChart
-          element={node.element.plotlyChart as PlotlyChartProto}
-          height={undefined}
-          {...elementProps}
-        />
-      )
-
     case "progress":
       return (
         <Progress
@@ -425,7 +415,7 @@ const RawElementNodeRenderer = (
       )
 
     case "skeleton": {
-      return <AppSkeleton />
+      return <Skeleton element={node.element.skeleton as SkeletonProto} />
     }
 
     case "snow":
@@ -456,6 +446,7 @@ const RawElementNodeRenderer = (
           element={node.element.video as VideoProto}
           endpoints={props.endpoints}
           {...elementProps}
+          elementMgr={props.widgetMgr}
         />
       )
 
@@ -639,6 +630,17 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "plotlyChart": {
+      const plotlyProto = node.element.plotlyChart as PlotlyChartProto
+      return (
+        <PlotlyChart
+          key={plotlyProto.id}
+          element={plotlyProto}
+          {...widgetProps}
+        />
+      )
+    }
+
     case "radio": {
       const radioProto = node.element.radio as RadioProto
       widgetProps.disabled = widgetProps.disabled || radioProto.disabled
@@ -743,7 +745,15 @@ const ElementNodeRenderer = (
         elementType={elementType}
       >
         <ErrorBoundary width={width}>
-          <Suspense fallback={<Skeleton />}>
+          <Suspense
+            fallback={
+              <Skeleton
+                element={SkeletonProto.create({
+                  style: SkeletonProto.SkeletonStyle.ELEMENT,
+                })}
+              />
+            }
+          >
             <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>
