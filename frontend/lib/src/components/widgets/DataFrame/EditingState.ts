@@ -191,6 +191,14 @@ class EditingState {
     // List of column index -> edited value
     editingState.added_rows.forEach((row: Record<string, any>) => {
       const addedRow: Map<number, GridCell> = new Map()
+      // Initialize all columns with null (empty) values first
+      // This is necessary to ensure that all columns are present in the added row.
+      // We will overwrite the empty values with the actual values below
+      // if the actual value exists. We need to do this since we are only
+      // putting none-empty values in the widget state for optimization reasons.
+      columns.forEach(column => {
+        addedRow.set(column.indexNumber, column.getCell(null))
+      })
 
       // Set the cells that were actually edited in the row
       Object.keys(row).forEach(colName => {
