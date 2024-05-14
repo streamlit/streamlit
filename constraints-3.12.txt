@@ -75,7 +75,7 @@ plotly==5.22.0
 pluggy==1.5.0
 pre-commit==3.7.1
 protobuf==3.20.3
-pyarrow==16.0.0
+pyarrow==16.1.0
 pycparser==2.22
 pydantic==1.10.15
 pydeck==0.9.1
@@ -131,7 +131,8 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==2.2.1
-uv==0.1.43
+uv==0.1.44
+vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.0
 wheel==0.43.0
