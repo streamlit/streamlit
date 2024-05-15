@@ -114,6 +114,12 @@ export interface AppNode {
   setIn(path: number[], node: AppNode, scriptRunId: string): AppNode
 
   /**
+   * Recursively remove children nodes whose activeScriptHash is no longer
+   * associated with the mainScriptHash.
+   */
+  clearPageNodes(mainScriptHash: string): AppNode | undefined
+
+  /**
    * Recursively remove children nodes whose scriptRunId is no longer current.
    * If this node should no longer exist, return undefined.
    */
@@ -221,6 +227,20 @@ export class ElementNode implements AppNode {
   // eslint-disable-next-line class-methods-use-this
   public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
+  }
+
+  public clearPageNodes(mainScriptHash: string): AppNode | undefined {
+    if (this.activeScriptHash !== mainScriptHash) {
+      return undefined
+    }
+
+    return new ElementNode(
+      this.element,
+      this.metadata,
+      this.scriptRunId,
+      this.activeScriptHash,
+      this.fragmentId
+    )
   }
 
   public clearStaleNodes(
@@ -433,6 +453,25 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       scriptRunId,
+      this.fragmentId
+    )
+  }
+
+  clearPageNodes(mainScriptHash: string): AppNode | undefined {
+    if (this.activeScriptHash !== mainScriptHash) {
+      return undefined
+    }
+
+    // Recursively clear our children.
+    const newChildren = this.children
+      .map(child => child.clearPageNodes(mainScriptHash))
+      .filter(notUndefined)
+
+    return new BlockNode(
+      this.activeScriptHash,
+      newChildren,
+      this.deltaBlock,
+      this.scriptRunId,
       this.fragmentId
     )
   }
@@ -681,6 +720,33 @@ export class AppRoot {
         throw new Error(`Unrecognized deltaType: '${delta.type}'`)
       }
     }
+  }
+
+  clearPageNodes(mainScriptHash: string): AppRoot {
+    // clears all nodes that are not associated with the mainScriptHash
+    // Get the current script run id from one of the children
+    const currentScriptRunId = this.main.scriptRunId
+    const main =
+      this.main.clearPageNodes(mainScriptHash) || new BlockNode(mainScriptHash)
+    const sidebar =
+      this.sidebar.clearPageNodes(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+    const event =
+      this.event.clearPageNodes(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+    const bottom =
+      this.bottom.clearPageNodes(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+
+    return new AppRoot(
+      mainScriptHash,
+      new BlockNode(
+        mainScriptHash,
+        [main, sidebar, event, bottom],
+        new BlockProto({ allowEmpty: true }),
+        currentScriptRunId
+      )
+    )
   }
 
   public clearStaleNodes(

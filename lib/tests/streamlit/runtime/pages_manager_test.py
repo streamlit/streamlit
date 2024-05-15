@@ -92,7 +92,7 @@ class PagesManagerTest(unittest.TestCase):
 # using unittest.TestCase like in the rest of the codebase) because the tmpdir
 # pytest fixture is so useful for writing this test it's worth having the
 # slight inconsistency.
-def test_get_active_script(tmpdir):
+def test_get_initial_active_script(tmpdir):
     # Write an empty string to create a file.
     tmpdir.join("streamlit_app.py").write("")
 
@@ -111,26 +111,26 @@ def test_get_active_script(tmpdir):
     example_page_script_hash = calc_md5(str(pages_dir / "01-page.py"))
 
     # positive case - get by hash
-    page = pages_manager.get_active_script(example_page_script_hash, None)
+    page = pages_manager.get_initial_active_script(example_page_script_hash, None)
     assert page["page_script_hash"] == example_page_script_hash
 
     # bad hash should not return a page
-    page = pages_manager.get_active_script("random_hash", None)
+    page = pages_manager.get_initial_active_script("random_hash", None)
     assert page is None
 
     # Even if the page name is specified, we detect via the hash only
-    page = pages_manager.get_active_script("random_hash", "page")
+    page = pages_manager.get_initial_active_script("random_hash", "page")
     assert page is None
 
     # Find by page name works
-    page = pages_manager.get_active_script("", "page")
+    page = pages_manager.get_initial_active_script("", "page")
     assert page["page_script_hash"] == example_page_script_hash
 
     # Try different page name
     alternate_page_script_hash = calc_md5(str(pages_dir / "03_other_page.py"))
-    page = pages_manager.get_active_script("", "other_page")
+    page = pages_manager.get_initial_active_script("", "other_page")
     assert page["page_script_hash"] == alternate_page_script_hash
 
     # Even if the valid page name is specified, we detect via the hash only
-    page = pages_manager.get_active_script(alternate_page_script_hash, "page")
+    page = pages_manager.get_initial_active_script(alternate_page_script_hash, "page")
     assert page["page_script_hash"] == alternate_page_script_hash

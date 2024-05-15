@@ -83,6 +83,7 @@ import {
   IGitInfo,
   Initialize,
   Logo,
+  Navigation,
   NewSession,
   PageConfig,
   PageInfo,
@@ -130,6 +131,11 @@ export interface Props {
   theme: ThemeManager
 }
 
+interface AppLogo {
+  logo: Logo
+  // Associated scriptHash that created the logo
+  activeScriptHash: string
+}
 interface State {
   connectionState: ConnectionState
   elements: AppRoot
@@ -151,8 +157,9 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
-  appLogo: Logo | null
+  appLogo: AppLogo | null
   appPages: IAppPage[]
+  navSections: string[]
   currentPageScriptHash: string
   mainScriptHash: string
   latestRunTime: number
@@ -264,6 +271,7 @@ export class App extends PureComponent<Props, State> {
       formsData: createFormsData(),
       appLogo: null,
       appPages: [],
+      navSections: [],
       currentPageScriptHash: "",
       mainScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
@@ -648,13 +656,25 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
-        logo: (logo: Logo) => this.setState({ appLogo: logo }),
+        logo: (logo: Logo) =>
+          this.handleLogo(logo, msgProto.metadata as ForwardMsgMetadata),
+        navigation: (navigation: Navigation) =>
+          this.handleNavigation(navigation),
       })
     } catch (e) {
       const err = ensureError(e)
       logError(err)
       this.showError("Bad message format", err.message)
     }
+  }
+
+  handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    this.setState({
+      appLogo: {
+        logo,
+        activeScriptHash: metadata.activeScriptHash ?? "",
+      },
+    })
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
@@ -723,6 +743,10 @@ export class App extends PureComponent<Props, State> {
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     this.maybeSetState(this.appNavigation.handlePagesChanged(pagesChangedMsg))
+  }
+
+  handleNavigation = (navigationMsg: Navigation): void => {
+    this.maybeSetState(this.appNavigation.handleNavigation(navigationMsg))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -998,14 +1022,14 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
+    const { currentPageScriptHash } = this.state
     const targetAppPage = this.appNavigation.findPageByUrlPath(
       document.location.pathname
     )
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
-    const isSamePage =
-      targetAppPage?.pageScriptHash === this.state.currentPageScriptHash
+    const isSamePage = targetAppPage.pageScriptHash === currentPageScriptHash
 
     if (targetAppPage == null || (hasAnchor && isSamePage)) {
       return
@@ -1151,11 +1175,20 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(mainScriptHash, false, sidebarElements),
+        elements: this.appNavigation.clearPageElements(
+          elements,
+          mainScriptHash,
+          sidebarElements
+        ),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.removeInactive(new Set([]))
+        const activeWidgetIds = new Set(
+          Array.from(this.state.elements.getElements())
+            .map(element => getElementWidgetID(element))
+            .filter(notUndefined)
+        )
+        this.widgetMgr.removeInactive(activeWidgetIds)
       }
     )
   }
@@ -1315,8 +1348,30 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    this.setState({ appLogo: null })
-    this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
+    const { appLogo, elements, mainScriptHash } = this.state
+    // If the app logo is not associated with the main script, clear it.
+    if (appLogo && appLogo.activeScriptHash !== mainScriptHash) {
+      this.setState({ appLogo: null })
+    }
+
+    // We want to keep widget states for widgets that are still active
+    // from the common script
+    const nextPageElements = this.appNavigation.clearPageElements(
+      elements,
+      mainScriptHash,
+      undefined
+    )
+    const activeWidgetIds = new Set(
+      Array.from(nextPageElements.getElements())
+        .map(element => getElementWidgetID(element))
+        .filter(notUndefined)
+    )
+
+    this.sendRerunBackMsg(
+      this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
+      undefined,
+      pageScriptHash
+    )
   }
 
   isAppInReadyState = (prevState: Readonly<State>): boolean => {
@@ -1692,6 +1747,8 @@ export class App extends PureComponent<Props, State> {
       libConfig,
       appConfig,
       inputsDisabled,
+      appLogo,
+      appPages,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1827,8 +1884,8 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
-                appLogo={this.state.appLogo}
-                appPages={this.state.appPages}
+                appLogo={appLogo?.logo ?? null}
+                appPages={appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}

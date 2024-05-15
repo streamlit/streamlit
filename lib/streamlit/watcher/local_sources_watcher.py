@@ -61,22 +61,30 @@ class LocalSourcesWatcher:
         self.update_watched_pages()
 
     def update_watched_pages(self) -> None:
-        old_watched_pages = self._watched_pages
+        old_page_paths = self._watched_pages.copy()
         new_pages_paths: set[str] = set()
 
         for page_info in self._pages_manager.get_pages().values():
+            if not page_info["script_path"]:
+                continue
+
             new_pages_paths.add(page_info["script_path"])
-            if page_info["script_path"] not in old_watched_pages:
+            if page_info["script_path"] not in self._watched_pages:
                 self._register_watcher(
                     page_info["script_path"],
                     module_name=None,
                 )
 
-        for old_page_path in old_watched_pages:
-            if old_page_path not in new_pages_paths:
+        for old_page_path in old_page_paths:
+            # Only remove pages that are no longer valid files
+            if old_page_path not in new_pages_paths and not os.path.isfile(
+                old_page_path
+            ):
                 self._deregister_watcher(old_page_path)
+                self._watched_pages.remove(old_page_path)
 
-        self._watched_pages = new_pages_paths
+        for new_path in new_pages_paths:
+            self._watched_pages.add(new_path)
 
     def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)

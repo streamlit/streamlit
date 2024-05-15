@@ -17,21 +17,15 @@
 syntax = "proto3";
 
 option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "AppPageProto";
 
-// A page in the app. Includes both the name of the page as well as the full
-// path to the corresponding script file.
-//
-// NOTE: This proto type is used by some external services so needs to remain
-// relatively stable. While it isn't entirely set in stone, changing it
-// may require a good amount of effort so should be avoided if possible.
-message AppPage {
-  string page_script_hash = 1;
-  string page_name = 2;
-  string icon = 3;
 
-  // A feature for MPA v2 and inform the frontend what's the default page
-  bool is_default = 4;
-  string section_header = 5;
-  string url_pathname = 6;
+import "streamlit/proto/AppPage.proto";
+
+message Navigation {
+  repeated string sections = 1;
+  repeated AppPage app_pages = 2;
+  string position = 3;
+
+  // The script hash for the page identified by st.navigation
+  string page_script_hash = 4;
 }
