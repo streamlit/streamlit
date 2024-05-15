@@ -105,11 +105,11 @@ class DataframeState(TypedDict, total=False):
 
     Attributes
     ----------
-    select : DataframeSelectionState
+    selection : DataframeSelectionState
         The state of the `on_select` event.
     """
 
-    select: DataframeSelectionState
+    selection: DataframeSelectionState
 
 
 @dataclass
@@ -118,7 +118,7 @@ class DataframeSelectionSerde:
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> DataframeState:
         empty_selection_state: DataframeState = {
-            "select": {
+            "selection": {
                 "rows": [],
                 "columns": [],
             },
@@ -127,7 +127,7 @@ class DataframeSelectionSerde:
             empty_selection_state if ui_value is None else json.loads(ui_value)
         )
 
-        if "select" not in selection_state:
+        if "selection" not in selection_state:
             selection_state = empty_selection_state
 
         return cast(DataframeState, AttributeDictionary(selection_state))
