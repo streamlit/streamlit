@@ -664,7 +664,7 @@ export class App extends PureComponent<Props, State> {
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
     this.setState(
       {
-        elements: this.state.elements.setLogo(logo, metadata),
+        elements: this.pendingElementsBuffer.setLogo(logo, metadata),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1170,7 +1170,7 @@ export class App extends PureComponent<Props, State> {
         scriptName,
         appHash,
         elements: this.appNavigation.clearPageElements(
-          elements,
+          this.pendingElementsBuffer,
           mainScriptHash,
           sidebarElements
         ),
