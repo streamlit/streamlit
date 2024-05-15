@@ -155,6 +155,7 @@ describe("AppView element", () => {
 
     const props = getProps({
       elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
         new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
       ),
     })
@@ -222,6 +223,7 @@ describe("AppView element", () => {
     ]
     const props = getProps({
       elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
         new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
       ),
       appPages,
@@ -280,6 +282,7 @@ describe("AppView element", () => {
 
     const props = getProps({
       elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
         new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
       ),
     })
@@ -433,6 +436,7 @@ describe("AppView element", () => {
 
     const props = getProps({
       elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
         new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
       ),
     })

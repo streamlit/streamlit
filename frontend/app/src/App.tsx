@@ -154,6 +154,7 @@ interface State {
   appLogo: Logo | null
   appPages: IAppPage[]
   currentPageScriptHash: string
+  mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
   // host communication info
@@ -243,7 +244,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty(true),
+      elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
       isFullScreen: false,
       scriptName: "",
       scriptRunId: INITIAL_SCRIPT_RUN_ID,
@@ -264,6 +265,7 @@ export class App extends PureComponent<Props, State> {
       appLogo: null,
       appPages: [],
       currentPageScriptHash: "",
+      mainScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
       // the user would see top bar elements for a few ms if this defaulted to
@@ -917,6 +919,7 @@ export class App extends PureComponent<Props, State> {
       mainScriptPath,
       fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
+      mainScriptHash,
     } = newSessionProto
 
     if (!fragmentIdsThisRun.length) {
@@ -935,6 +938,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         latestRunTime: performance.now(),
+        mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
         // empty array.
         fragmentIdsThisRun,
@@ -971,7 +975,12 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
       })
     } else {
-      this.clearAppState(newSessionHash, scriptRunId, scriptName)
+      this.clearAppState(
+        newSessionHash,
+        scriptRunId,
+        scriptName,
+        mainScriptHash
+      )
     }
   }
 
@@ -1138,7 +1147,8 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     appHash: string,
     scriptRunId: string,
-    scriptName: string
+    scriptName: string,
+    mainScriptHash: string
   ): void {
     const { hideSidebarNav, elements } = this.state
     // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
@@ -1149,7 +1159,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false, sidebarElements),
+        elements: AppRoot.empty(mainScriptHash, false, sidebarElements),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
