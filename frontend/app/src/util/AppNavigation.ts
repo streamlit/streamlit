@@ -160,7 +160,7 @@ export class V1Strategy {
 }
 
 export class V2Strategy {
-  readonly parent: AppNavigation
+  readonly appNav: AppNavigation
 
   mainScriptHash: string | null
 
@@ -170,8 +170,8 @@ export class V2Strategy {
 
   hideSidebarNav: boolean | null
 
-  constructor(parent: AppNavigation) {
-    this.parent = parent
+  constructor(appNav: AppNavigation) {
+    this.appNav = appNav
     this.mainScriptHash = null
     this.appPages = []
     this.mainPage = null
@@ -195,12 +195,12 @@ export class V2Strategy {
 
   handlePageNotFound(pageNotFound: PageNotFound): MaybeStateUpdate {
     const { pageName } = pageNotFound
-    this.parent.onPageNotFound(pageName)
+    this.appNav.onPageNotFound(pageName)
 
     return [
       { currentPageScriptHash: this.mainScriptHash ?? "" },
       () => {
-        this.parent.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
           currentPageName: "",
           currentPageScriptHash: this.mainScriptHash ?? "",
@@ -223,10 +223,10 @@ export class V2Strategy {
     const currentPageScriptHash = currentPage.pageScriptHash as string
     const currentPageName = currentPage.isDefault
       ? ""
-      : (currentPage.pageName as string).replaceAll(" ", "_")
+      : (currentPage.urlPathname as string)
 
     document.title = `${currentPage.pageName as string} · Streamlit`
-    this.parent.onUpdatePageUrl(
+    this.appNav.onUpdatePageUrl(
       mainPage.pageName as string,
       currentPageName,
       currentPage.isDefault ?? false
@@ -240,12 +240,12 @@ export class V2Strategy {
         currentPageScriptHash,
       },
       () => {
-        this.parent.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_APP_PAGES",
           appPages,
         })
 
-        this.parent.hostCommunicationMgr.sendMessageToHost({
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
           currentPageName: currentPageName,
           currentPageScriptHash,
