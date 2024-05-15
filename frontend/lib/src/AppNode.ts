@@ -558,7 +558,7 @@ export class AppRoot {
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
   public static empty(
-    mainScriptHash: string,
+    mainScriptHash = "",
     isInitialRender = true,
     sidebarElements?: BlockNode | undefined
   ): AppRoot {
