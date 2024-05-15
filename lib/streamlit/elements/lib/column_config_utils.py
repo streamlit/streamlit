@@ -420,10 +420,10 @@ def process_config_mapping(
     """
     if column_config is None:
         return {}
-    else:
-        # Ensure that the column config is cloned
-        # since we will apply in-place changes to it.
-        column_config = copy.deepcopy(column_config)
+
+    # Ensure that the column config is cloned
+    # since we will apply in-place changes to it.
+    column_config = copy.deepcopy(column_config)
 
     transformed_column_config: ColumnConfigMapping = {}
     for column, config in column_config.items():
