@@ -502,21 +502,20 @@ export class BlockNode implements AppNode {
   }
 }
 
-// TODO(mpav2): The active script hash for the root nodes will
-// be the main script hash. This is a temporary solution until we
-// provide the main script hash.
-const DEFAULT_ACTIVE_SCRIPT_HASH = ""
-
 /**
  * The root of our data tree. It contains the app's top-level BlockNodes.
  */
 export class AppRoot {
-  private readonly root: BlockNode
+  readonly root: BlockNode
+
+  /* The hash of the main script that creates this AppRoot. */
+  readonly mainScriptHash: string
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
   public static empty(
+    mainScriptHash: string,
     isInitialRender = true,
     sidebarElements?: BlockNode | undefined
   ): AppRoot {
@@ -547,13 +546,13 @@ export class AppRoot {
           waitElement,
           ForwardMsgMetadata.create({}),
           NO_SCRIPT_RUN_ID,
-          DEFAULT_ACTIVE_SCRIPT_HASH
+          mainScriptHash
         )
       )
     }
 
     const main = new BlockNode(
-      DEFAULT_ACTIVE_SCRIPT_HASH,
+      mainScriptHash,
       mainNodes,
       new BlockProto({ allowEmpty: true }),
       NO_SCRIPT_RUN_ID
@@ -562,32 +561,34 @@ export class AppRoot {
     const sidebar =
       sidebarElements ||
       new BlockNode(
-        DEFAULT_ACTIVE_SCRIPT_HASH,
+        mainScriptHash,
         [],
         new BlockProto({ allowEmpty: true }),
         NO_SCRIPT_RUN_ID
       )
 
     const event = new BlockNode(
-      DEFAULT_ACTIVE_SCRIPT_HASH,
+      mainScriptHash,
       [],
       new BlockProto({ allowEmpty: true }),
       NO_SCRIPT_RUN_ID
     )
 
     const bottom = new BlockNode(
-      DEFAULT_ACTIVE_SCRIPT_HASH,
+      mainScriptHash,
       [],
       new BlockProto({ allowEmpty: true }),
       NO_SCRIPT_RUN_ID
     )
 
     return new AppRoot(
-      new BlockNode(DEFAULT_ACTIVE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      mainScriptHash,
+      new BlockNode(mainScriptHash, [main, sidebar, event, bottom])
     )
   }
 
-  public constructor(root: BlockNode) {
+  public constructor(mainScriptHash: string, root: BlockNode) {
+    this.mainScriptHash = mainScriptHash
     this.root = root
 
     // Verify that our root node has exactly 4 children: a 'main' block,
@@ -688,20 +689,21 @@ export class AppRoot {
   ): AppRoot {
     const main =
       this.main.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(DEFAULT_ACTIVE_SCRIPT_HASH)
+      new BlockNode(this.mainScriptHash)
     const sidebar =
       this.sidebar.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(DEFAULT_ACTIVE_SCRIPT_HASH)
+      new BlockNode(this.mainScriptHash)
     const event =
       this.event.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(DEFAULT_ACTIVE_SCRIPT_HASH)
+      new BlockNode(this.mainScriptHash)
     const bottom =
       this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(DEFAULT_ACTIVE_SCRIPT_HASH)
+      new BlockNode(this.mainScriptHash)
 
     return new AppRoot(
+      this.mainScriptHash,
       new BlockNode(
-        DEFAULT_ACTIVE_SCRIPT_HASH,
+        this.mainScriptHash,
         [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
@@ -734,7 +736,10 @@ export class AppRoot {
       activeScriptHash,
       fragmentId
     )
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.mainScriptHash,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
+    )
   }
 
   private addBlock(
@@ -759,7 +764,10 @@ export class AppRoot {
       scriptRunId,
       fragmentId
     )
-    return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
+    return new AppRoot(
+      this.mainScriptHash,
+      this.root.setIn(deltaPath, blockNode, scriptRunId)
+    )
   }
 
   private arrowAddRows(
@@ -773,7 +781,10 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.mainScriptHash,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
+    )
   }
 }
 

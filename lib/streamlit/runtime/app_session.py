@@ -672,7 +672,8 @@ class AppSession:
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._script_data.name
-        msg.new_session.main_script_path = self._script_data.main_script_path
+        msg.new_session.main_script_path = self._pages_manager.main_script_path
+        msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
 
         if fragment_ids_this_run:

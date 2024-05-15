@@ -70,6 +70,10 @@ class PagesManager:
     def main_script_path(self) -> ScriptPath:
         return self._main_script_path
 
+    @property
+    def main_script_hash(self) -> PageHash:
+        return self._main_script_hash
+
     def get_main_page(self) -> PageInfo:
         return {
             "script_path": self._main_script_path,
