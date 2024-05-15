@@ -16,6 +16,7 @@ import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -99,7 +100,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert c.app_pages[0].is_default
         assert not c.app_pages[1].is_default
         assert not c.app_pages[2].is_default
-        assert c.position == "sidebar"
+        assert c.position == NavigationProto.Position.SIDEBAR
         assert c.sections == ["Section 1", "Section 2"]
 
     def test_navigation_message_with_position(self):
@@ -116,5 +117,5 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert c.app_pages[0].is_default
         assert not c.app_pages[1].is_default
         assert not c.app_pages[2].is_default
-        assert c.position == "hidden"
+        assert c.position == NavigationProto.Position.HIDDEN
         assert c.sections == [""]

@@ -22,6 +22,7 @@ from typing_extensions import TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
@@ -144,7 +145,10 @@ def navigation(
         default_page.default = True
 
     msg = ForwardMsg()
-    msg.navigation.position = position
+    if position == "hidden":
+        msg.navigation.position = NavigationProto.Position.HIDDEN
+    else:
+        msg.navigation.position = NavigationProto.Position.SIDEBAR
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
