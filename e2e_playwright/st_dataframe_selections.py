@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import random
 import time
 
@@ -157,6 +158,9 @@ st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
 st.header("Dataframe with Index:")
+
+column_config = copy.deepcopy(column_config)
+column_config["_index"] = st.column_config.Column(width="small")
 
 selection = st.dataframe(
     df,
