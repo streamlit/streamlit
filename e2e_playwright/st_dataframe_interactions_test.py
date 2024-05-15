@@ -266,7 +266,11 @@ def test_data_editor_keeps_state_after_unmounting(
     )
 
 
-def _test_csv_download(page: Page, locator: FrameLocator | Locator):
+def _test_csv_download(
+    page: Page,
+    locator: FrameLocator | Locator,
+    click_enter_on_file_picker: bool = False,
+):
     dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
 
@@ -279,9 +283,14 @@ def _test_csv_download(page: Page, locator: FrameLocator | Locator):
     # Check that it is visible
     expect(dataframe_toolbar).to_have_css("opacity", "1")
 
-    # Click on download csv button:
-    with page.expect_download(timeout=5000) as download_info:
+    with page.expect_download(timeout=10000) as download_info:
         download_csv_toolbar_button.click()
+
+        # playwright does not support all fileaccess APIs yet (see this issue: https://github.com/microsoft/playwright/issues/8850)
+        # this means we don't know if the system dialog opened to pick a location (expect_file_chooser does not work). So as a workaround, we wait for now and then press enter.
+        if click_enter_on_file_picker:
+            page.wait_for_timeout(1000)
+            page.keyboard.press("Enter")
 
     download = download_info.value
     download_path = download.path()
@@ -293,7 +302,12 @@ def _test_csv_download(page: Page, locator: FrameLocator | Locator):
 
 
 def test_csv_download_button(app: Page):
-    _test_csv_download(app, app.locator("body"))
+    click_enter_on_file_picker = False
+    # right now the filechooser will only be opened on Chrome. Maybe this will change in the future and the
+    # check has to be updated; or maybe playwright will support the file-access APIs better.
+    if app.context.browser and app.context.browser.browser_type.name == "chromium":
+        click_enter_on_file_picker = True
+    _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
 
 
 def test_csv_download_button_in_iframe(iframed_app: IframedPage):
