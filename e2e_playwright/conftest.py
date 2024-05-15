@@ -27,18 +27,26 @@ import socket
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Dict, Generator, List, Literal, Protocol, Tuple
+from typing import Any, Callable, Dict, Generator, List, Literal, Protocol, Tuple
 from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import ElementHandle, Locator, Page
+from playwright.sync_api import (
+    ElementHandle,
+    FrameLocator,
+    Locator,
+    Page,
+    Response,
+    Route,
+)
 from pytest import FixtureRequest
 
 
@@ -122,6 +130,11 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     """Resolve the test module to the corresponding test script filename."""
     assert test_module.__file__ is not None
     return test_module.__file__.replace("_test.py", ".py")
+
+
+def get_iframe_html_path() -> str:
+    """Get the absolute path of the given path."""
+    return f"file://{os.getcwd()}/test_assets/iframed_app.html"
 
 
 def hash_to_range(
@@ -256,6 +269,96 @@ def app_with_query_params(
     wait_for_app_loaded(page)
 
     return page, query_params
+
+
+@dataclass
+class IframedPage:
+    # the page to configure
+    page: Page
+    # opens the configured page via the iframe URL and returns the frame_locator pointing to the iframe
+    open_app: Callable[[], FrameLocator]
+
+
+@pytest.fixture(scope="function")
+def iframed_app(page: Page, app_port: int) -> IframedPage:
+    """Fixture that returns an IframedPage.
+
+    The page object can be used to configure additional routes, for example to override the host-config.
+    The open_app function triggers the opening of the app in an iframe.
+    """
+    # we are going to intercept the request, so the address is arbitrarily chose and does not have to exist
+    fake_iframe_server_origin = "http://localhost:1345"
+    fake_iframe_server_route = f"{fake_iframe_server_origin}/iframed_app.html"
+    # the url where the Streamlit server is reachable
+    app_url = f"http://localhost:{app_port}"
+    # the CSP header returned for the Streamlit index.html loaded in the iframe. This is similar to a common CSP we have seen in the wild.
+    app_csp_header = f"default-src 'none'; worker-src blob:; form-action 'none'; connect-src ws://localhost:{app_port}/_stcore/stream http://localhost:{app_port}/_stcore/allowed-message-origins http://localhost:{app_port}/_stcore/host-config http://localhost:{app_port}/_stcore/health; script-src 'unsafe-inline' 'unsafe-eval' {app_url}/static/js/; style-src 'unsafe-inline' {app_url}/static/css/; img-src data: {app_url}/favicon.png {app_url}/favicon.ico; font-src {app_url}/static/fonts/ {app_url}/static/media/; frame-ancestors {fake_iframe_server_origin};"
+
+    def fulfill_iframe_request(route: Route) -> None:
+        """Return as response an iframe that loads the actual Streamlit app."""
+
+        browser = page.context.browser
+        # webkit requires the iframe's parent to have "blob:" set, for example if we want to download a CSV via the blob: url
+        # chrome seems to be more lax
+        frame_src_blob = ""
+        if browser is not None and (
+            browser.browser_type.name == "webkit"
+            or browser.browser_type.name == "firefox"
+        ):
+            frame_src_blob = "blob:"
+
+        route.fulfill(
+            status=200,
+            body=f"""
+            <iframe
+                src="{app_url}"
+                title="Iframed Streamlit App"
+                sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
+                width="100%"
+                height="100%">
+            </iframe>
+            """,
+            headers={
+                "Content-Type": "text/html",
+                "Content-Security-Policy": f"frame-src {frame_src_blob} {app_url};",
+            },
+        )
+
+    # intercept all requests to the fake iframe server and fullfil the request in playwright
+    page.route(fake_iframe_server_route, fulfill_iframe_request)
+
+    def fullfill_streamlit_app_request(route: Route) -> None:
+        response = route.fetch()
+        route.fulfill(
+            body=response.body(),
+            headers={**response.headers, "Content-Security-Policy": app_csp_header},
+        )
+
+    page.route(f"{app_url}/", fullfill_streamlit_app_request)
+
+    def _open_app() -> FrameLocator:
+        def _expect_streamlit_app_loaded_in_iframe_with_added_header(
+            response: Response,
+        ) -> bool:
+            """Ensure that the routing-interception worked and that Streamlit app is indeed loaded with the CSP header we expect"""
+
+            return (
+                response.url == f"{app_url}/"
+                and response.headers["content-security-policy"] == app_csp_header
+            )
+
+        with page.expect_event(
+            "response",
+            predicate=_expect_streamlit_app_loaded_in_iframe_with_added_header,
+        ):
+            page.goto(fake_iframe_server_route, wait_until="domcontentloaded")
+            frame_locator = page.frame_locator("iframe")
+            frame_locator.nth(0).locator("[data-testid='stAppViewContainer']").wait_for(
+                timeout=30000, state="attached"
+            )
+        return frame_locator
+
+    return IframedPage(page, _open_app)
 
 
 @pytest.fixture(scope="session")

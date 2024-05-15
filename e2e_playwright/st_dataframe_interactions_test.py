@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+import pytest
+from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
+
+from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -265,11 +266,70 @@ def test_data_editor_keeps_state_after_unmounting(
     )
 
 
+def _test_csv_download(page: Page, locator: FrameLocator | Locator):
+    dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
+    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+
+    download_csv_toolbar_button = dataframe_toolbar.get_by_test_id(
+        "stElementToolbarButton"
+    ).first
+
+    # Activate toolbar:
+    dataframe_element.hover()
+    # Check that it is visible
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    # Click on download csv button:
+    with page.expect_download(timeout=5000) as download_info:
+        download_csv_toolbar_button.click()
+
+    download = download_info.value
+    download_path = download.path()
+    with open(download_path, "r", encoding="UTF-8") as f:
+        content = f.read()
+        # the app uses a fixed seed, so the data is always the same. This is the reason why we can check it here.
+        some_row = "1,-0.977277879876411,0.9500884175255894,-0.1513572082976979,-0.10321885179355784,0.41059850193837233"
+        assert some_row in content
+
+
+def test_csv_download_button(app: Page):
+    _test_csv_download(app, app.locator("body"))
+
+
+def test_csv_download_button_in_iframe(iframed_app: IframedPage):
+    page: Page = iframed_app.page
+    frame_locator: FrameLocator = iframed_app.open_app()
+
+    _test_csv_download(page, frame_locator)
+
+
+def test_csv_download_button_in_iframe_with_new_tab_host_config(
+    iframed_app: IframedPage,
+):
+    page: Page = iframed_app.page
+
+    def fulfill_host_config_request(route: Route):
+        response = route.fetch()
+        result = response.json()
+        result["enforceDownloadInNewTab"] = True
+        route.fulfill(json=result)
+
+    page.route("**/_stcore/host-config", fulfill_host_config_request)
+
+    # ensure that the route interception works and we get the correct enforceDownloadInNewTab config
+    with page.expect_event(
+        "response",
+        lambda response: response.url.endswith("_stcore/host-config")
+        and response.json()["enforceDownloadInNewTab"] == True,
+        timeout=10000,
+    ):
+        frame_locator: FrameLocator = iframed_app.open_app()
+        _test_csv_download(page, frame_locator)
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
 # - Selecting a cell
 # - Opening a cell
 # - Applying a cell edit
 # - Copy data to clipboard
 # - Paste in data
-# - Download data via toolbar: I wasn't able to find out how to detect the
-#   showSaveFilePicker the filechooser doesn't work.
