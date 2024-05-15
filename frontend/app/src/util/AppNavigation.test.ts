@@ -18,11 +18,9 @@
 import {
   HostCommunicationManager,
   NewSession,
-  SessionInfo,
   PagesChanged,
   PageNotFound,
 } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import {
   AppNavigation,
   PageUrlUpdateCallback,
@@ -44,24 +42,6 @@ jest.mock("@streamlit/lib/src/hostComm/HostCommunicationManager", () => {
     __esModule: true,
     ...actualModule,
     default: MockedClass,
-  }
-})
-
-jest.mock("@streamlit/app/src/SegmentMetricsManager", () => {
-  const actualModule = jest.requireActual(
-    "@streamlit/app/src/SegmentMetricsManager"
-  )
-
-  const MockedClass = jest.fn().mockImplementation((...props) => {
-    const metricsMgr = new actualModule.SegmentMetricsManager(...props)
-    jest.spyOn(metricsMgr, "enqueue")
-
-    return metricsMgr
-  })
-
-  return {
-    ...actualModule,
-    SegmentMetricsManager: MockedClass,
   }
 })
 
@@ -109,7 +89,6 @@ function generateNewSession(changes = {}): NewSession {
 
 describe("AppNavigation", () => {
   let hostCommunicationMgr: HostCommunicationManager
-  let metricsMgr: SegmentMetricsManager
   let onUpdatePageUrl: PageUrlUpdateCallback
   let onPageNotFound: PageNotFoundCallback
   let appNavigation: AppNavigation
@@ -135,12 +114,10 @@ describe("AppNavigation", () => {
       queryParamsChanged: () => {},
       deployedAppMetadataChanged: () => {},
     })
-    metricsMgr = new SegmentMetricsManager(new SessionInfo())
     onUpdatePageUrl = jest.fn()
     onPageNotFound = jest.fn()
     appNavigation = new AppNavigation(
       hostCommunicationMgr,
-      metricsMgr,
       onUpdatePageUrl,
       onPageNotFound
     )
@@ -268,17 +245,6 @@ describe("AppNavigation", () => {
     appNavigation.handleNewSession(generateNewSession())
     appNavigation.handlePageNotFound(new PageNotFound({ pageName: "foo" }))
     expect(onPageNotFound).toHaveBeenCalledWith("foo")
-  })
-
-  it("sends metrics when initialized", () => {
-    // Initialize navigation from the new session proto
-    appNavigation.handleNewSession(generateNewSession())
-    appNavigation.sendMPAMetricsOnInitialization()
-
-    expect(metricsMgr.enqueue).toHaveBeenCalledWith("updateReport", {
-      numPages: 1,
-      isMainPage: true,
-    })
   })
 
   it("finds url by path when path is valid", () => {
