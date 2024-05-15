@@ -224,7 +224,14 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         )
 
 
+def get_server_instance():
+    return Server._instance
+
+
 class Server:
+
+    _instance = None
+
     def __init__(self, main_script_path: str, is_hello: bool):
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
@@ -249,6 +256,7 @@ class Server:
         )
 
         self._runtime.stats_mgr.register_provider(media_file_storage)
+        Server._instance = self
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -265,8 +273,8 @@ class Server:
 
         _LOGGER.debug("Starting server...")
 
-        app = self._create_app()
-        start_listening(app)
+        self._app = self._create_app()
+        start_listening(self._app)
 
         port = config.get_option("server.port")
         _LOGGER.debug("Server started on port %s", port)
@@ -277,6 +285,10 @@ class Server:
     def stopped(self) -> Awaitable[None]:
         """A Future that completes when the Server's run loop has exited."""
         return self._runtime.stopped
+
+    @property
+    def app(self) -> tornado.web.Application:
+        return self._app
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""

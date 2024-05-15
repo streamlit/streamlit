@@ -98,6 +98,8 @@ from streamlit.commands.experimental_query_params import (
     set_query_params as _set_query_params,
 )
 
+from streamlit.web.server.server import get_server_instance as _get_server_instance
+
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
@@ -262,3 +264,4 @@ experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
     connection, "experimental_connection", "2024-04-01", name_override="connection"
 )
+experimental_get_server_instance = _get_server_instance
