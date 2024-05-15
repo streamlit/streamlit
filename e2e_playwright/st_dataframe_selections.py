@@ -158,19 +158,13 @@ st.write("Runs:", st.session_state.runs)
 
 st.header("Dataframe with Index:")
 
-column_config_with_index = {
-    "_index": column_with_fixed_width,
-}
-
-column_config_with_index.update(column_config)
-
 selection = st.dataframe(
     df,
     hide_index=False,
     on_select="rerun",
     selection_mode=["multi-row", "multi-column"],
     key="with_index",
-    column_config=column_config_with_index,
+    column_config=column_config,
     column_order=["col_1", "col_3"],
 )
 st.write("No selection on index column:", str(selection))
