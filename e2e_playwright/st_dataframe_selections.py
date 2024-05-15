@@ -162,7 +162,7 @@ selection = st.dataframe(
     df,
     hide_index=False,
     on_select="rerun",
-    selection_mode=["multi-row", "multi-column"],
+    selection_mode=["multi-column"],
     key="with_index",
     column_config=column_config,
     column_order=["col_1", "col_3"],
