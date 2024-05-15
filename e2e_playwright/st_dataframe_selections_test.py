@@ -95,6 +95,10 @@ def _get_fragment_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(7)
 
 
+def _get_df_with_index(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(8)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
 
@@ -360,3 +364,40 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
 
     # Check that the main script:
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_that_index_cannot_be_selected(app: Page):
+    canvas = _get_df_with_index(app)
+    canvas.scroll_into_view_if_needed()
+    # Try select a selectable columnÖ
+    _click_on_column_selector(canvas, 2)
+    wait_for_app_run(app)
+
+    # Check selection:
+    _expect_written_text(
+        app,
+        "No selection on index column:",
+        "{'selection': {'rows': [], 'columns': ['col_3']}}",
+    )
+
+    # Select index column:
+    _click_on_column_selector(canvas, 0)
+    wait_for_app_run(app)
+
+    # Nothing should be selected:
+    _expect_written_text(
+        app,
+        "No selection on index column:",
+        "{'selection': {'rows': [], 'columns': []}}",
+    )
+
+    # Try to click on another column and check that in can be selected:
+    _click_on_column_selector(canvas, 1)
+    wait_for_app_run(app)
+
+    # Check selection:
+    _expect_written_text(
+        app,
+        "No selection on index column:",
+        "{'selection': {'rows': [], 'columns': ['col_1']}}",
+    )
