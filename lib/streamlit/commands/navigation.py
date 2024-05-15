@@ -102,17 +102,12 @@ def navigation(
             "`st.navigation` must be called with at least one `st.Page`."
         )
 
-    msg = ForwardMsg()
-    msg.navigation.position = position
-    msg.navigation.sections[:] = nav_sections.keys()
-
     defaults = []
     pagehash_to_pageinfo: dict[PageHash, PageInfo] = {}
 
     # This nested loop keeps track of three things:
     # 1. the default pages
     # 2. the pagehash to pageinfo mapping
-    # 3. the pages to be added to the navigation proto
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
             if page.default:
@@ -139,14 +134,6 @@ def navigation(
                 "url_pathname": page.title.replace(" ", "_"),
             }
 
-            p = msg.navigation.app_pages.add()
-            p.page_script_hash = page._script_hash
-            p.page_name = page.title
-            p.icon = page.icon
-            p.is_default = page.default
-            p.section_header = section_header
-            p.url_pathname = page.title.replace(" ", "_")
-
     # First assume the first page is the default. We will update this if
     # we detect that a different page is the default.
     default_page = page_list[0]
@@ -158,6 +145,19 @@ def navigation(
         default_page.default = True
     else:
         default_page = defaults[0]
+
+    msg = ForwardMsg()
+    msg.navigation.position = position
+    msg.navigation.sections[:] = nav_sections.keys()
+    for section_header in nav_sections:
+        for page in nav_sections[section_header]:
+            p = msg.navigation.app_pages.add()
+            p.page_script_hash = page._script_hash
+            p.page_name = page.title
+            p.icon = page.icon
+            p.is_default = page.default
+            p.section_header = section_header
+            p.url_pathname = page.title.replace(" ", "_")
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)
