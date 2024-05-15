@@ -51,7 +51,7 @@ def send_page_not_found(ctx: ScriptRunContext):
 
 @gather_metrics("navigation")
 def navigation(
-    pages: list[StreamlitPage] | dict[str, list[StreamlitPage]],
+    pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
     position: Literal["sidebar"] | Literal["hidden"] = "sidebar",
 ) -> StreamlitPage | None:
