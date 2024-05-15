@@ -13,12 +13,15 @@
 # limitations under the License.
 
 
+import re
+
 from playwright.sync_api import Page, expect
 
 
 def test_st_set_page_config_sets_page_icon(app: Page):
     favicon_element = app.locator("link[rel='shortcut icon']")
     expect(favicon_element).to_have_count(1)
-
-    favicon_element.get_attribute("href")
-    expect(favicon_element).to_have_attribute("href", "./favicon.png")
+    expect(favicon_element).to_have_attribute(
+        "href",
+        re.compile(r"d1e92a291d26c1e0cb9b316a93c929b3be15899677ef3bc6e3bf3573\.png"),
+    )
