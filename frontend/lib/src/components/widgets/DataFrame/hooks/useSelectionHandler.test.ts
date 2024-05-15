@@ -18,6 +18,7 @@ import { renderHook, act } from "@testing-library/react-hooks"
 import { CompactSelection } from "@glideapps/glide-data-grid"
 
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import { TextColumn } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useSelectionHandler from "./useSelectionHandler"
 
@@ -36,7 +37,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -56,7 +57,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -76,7 +77,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -95,7 +96,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -117,7 +118,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -139,7 +140,7 @@ describe("useSelectionHandler hook", () => {
         }),
         true,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -161,7 +162,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -217,7 +218,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -272,7 +273,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -341,7 +342,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -392,7 +393,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -448,7 +449,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -500,7 +501,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        0,
+        [],
         syncSelectionStateMock
       )
     )
@@ -551,7 +552,24 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
-        1, // Configure 1 index column
+        [
+          // Configure 1 index column
+          TextColumn({
+            arrowType: {
+              meta: null,
+              numpy_type: "object",
+              pandas_type: "unicode",
+            },
+            id: "index-0",
+            name: "",
+            indexNumber: 0,
+            isEditable: true,
+            isHidden: false,
+            isIndex: true,
+            isStretched: false,
+            title: "",
+          }),
+        ],
         syncSelectionStateMock
       )
     )

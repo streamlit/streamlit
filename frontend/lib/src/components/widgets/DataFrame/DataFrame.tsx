@@ -259,10 +259,6 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  const numIndexColumns = isEmptyTable
-    ? 0
-    : columns.filter((col: BaseColumn) => col.isIndex).length
-
   /**
    * This callback is used to synchronize the selection state with the state
    * of the widget state of the component. This might also send a rerun message
@@ -338,7 +334,7 @@ function DataFrame({
     element,
     isEmptyTable,
     disabled,
-    numIndexColumns,
+    columns,
     syncSelectionState
   )
 
@@ -559,6 +555,13 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, clearSelection, widgetMgr])
 
+  // The index columns are always at the beginning of the table,
+  // so we can just count them to determine the number of columns
+  // that should be frozen.
+  const freezeColumns = isEmptyTable
+    ? 0
+    : columns.filter((col: BaseColumn) => col.isIndex).length
+
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
@@ -774,7 +777,7 @@ function DataFrame({
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
           // Freeze all index columns:
-          freezeColumns={numIndexColumns}
+          freezeColumns={freezeColumns}
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:

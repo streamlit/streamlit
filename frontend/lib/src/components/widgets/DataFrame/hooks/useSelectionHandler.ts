@@ -19,6 +19,7 @@ import React from "react"
 import { GridSelection, CompactSelection } from "@glideapps/glide-data-grid"
 import isEqual from "lodash/isEqual"
 
+import { BaseColumn } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 export type SelectionHandlerReturn = {
@@ -50,7 +51,7 @@ export type SelectionHandlerReturn = {
  * @param element - The Arrow proto message
  * @param isEmptyTable - Whether the table is empty
  * @param isDisabled - Whether the table is disabled
- * @param numIndexColumns - The number of index columns
+ * @param columns - The columns of the table.
  * @param syncSelectionState - The callback to sync the selection state
  *
  * @returns the selection handler return object
@@ -59,7 +60,7 @@ function useSelectionHandler(
   element: ArrowProto,
   isEmptyTable: boolean,
   isDisabled: boolean,
-  numIndexColumns: number,
+  columns: BaseColumn[],
   syncSelectionState: (newSelection: GridSelection) => void
 ): SelectionHandlerReturn {
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
@@ -163,17 +164,17 @@ function useSelectionHandler(
         syncSelection = true
       }
 
-      if (
-        columnSelectionChanged &&
-        updatedSelection.columns.length >= 0 &&
-        numIndexColumns > 0
-      ) {
-        // Remove all index columns from the column selection
-        // We don't want to allow selection of index columns.
-        updatedSelection = {
-          ...updatedSelection,
-          columns: updatedSelection.columns.remove([0, numIndexColumns]),
-        }
+      if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
+        columns.forEach((column, idx) => {
+          if (column.isIndex) {
+            // Remove all index columns from the column selection
+            // We don't want to allow selection of index columns.
+            updatedSelection = {
+              ...updatedSelection,
+              columns: updatedSelection.columns.remove(idx),
+            }
+          }
+        })
       }
 
       setGridSelection(updatedSelection)
