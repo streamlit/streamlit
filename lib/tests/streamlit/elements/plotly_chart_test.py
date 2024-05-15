@@ -94,14 +94,11 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertNotEqual(el.plotly_chart.config, "")
         self.assertEqual(el.plotly_chart.use_container_width, True)
 
-    def callback():
-        pass
-
     @parameterized.expand(
         [
             ("rerun", [0, 1, 2]),
             ("ignore", []),
-            (callback, [0, 1, 2]),
+            (lambda: None, [0, 1, 2]),
         ]
     )
     def test_st_plotly_chart_valid_on_select(self, on_select, proto_value):
@@ -127,16 +124,16 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         selection = st.plotly_chart(data, on_select="rerun", key="plotly_chart")
 
-        self.assertEqual(selection.select.points, [])
-        self.assertEqual(selection.select.box, [])
-        self.assertEqual(selection.select.lasso, [])
-        self.assertEqual(selection.select.point_indices, [])
+        self.assertEqual(selection.selection.points, [])
+        self.assertEqual(selection.selection.box, [])
+        self.assertEqual(selection.selection.lasso, [])
+        self.assertEqual(selection.selection.point_indices, [])
 
         # Check that the selection state is added to the session state:
-        self.assertEqual(st.session_state.plotly_chart.select.points, [])
-        self.assertEqual(st.session_state.plotly_chart.select.box, [])
-        self.assertEqual(st.session_state.plotly_chart.select.lasso, [])
-        self.assertEqual(st.session_state.plotly_chart.select.point_indices, [])
+        self.assertEqual(st.session_state.plotly_chart.selection.points, [])
+        self.assertEqual(st.session_state.plotly_chart.selection.box, [])
+        self.assertEqual(st.session_state.plotly_chart.selection.lasso, [])
+        self.assertEqual(st.session_state.plotly_chart.selection.point_indices, [])
 
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
@@ -222,11 +219,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.selection_mode, [])
 
-        def callback():
-            pass
-
         st.plotly_chart(
-            data, on_select=callback, selection_mode=["points", "box", "lasso"]
+            data, on_select=lambda: None, selection_mode=["points", "box", "lasso"]
         )
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.selection_mode, [0, 1, 2])

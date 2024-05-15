@@ -31,7 +31,7 @@ message ArrowVegaLiteChart {
   Arrow data = 2;
 
   // Dataframes associated with this chart using Vega-Lite's datasets API, if
-  // any.
+  // any. The data is either in `data` field or in the `datasets` field.
   repeated ArrowNamedDataSet datasets = 4;
 
   // If True, will overwrite the chart width spec to fit to container.
@@ -39,6 +39,15 @@ message ArrowVegaLiteChart {
 
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
+
+  // ID, required for selection events.
+  string id = 7;
+
+  // Named selection parameters that are activated to trigger reruns.
+  repeated string selection_mode = 8;
+
+  // The form ID of the widget, this is required if selections are activated on the chart.
+  string form_id = 9;
 
   reserved 3;
 }

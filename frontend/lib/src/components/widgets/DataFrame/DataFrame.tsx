@@ -93,7 +93,7 @@ const WEBKIT_SCROLLBAR_SIZE = 6
 // This needs to be the same structure that is also defined
 // in the Python code.
 export interface DataframeState {
-  select: {
+  selection: {
     rows: number[]
     // We use column names instead of indices to make
     // it easier to use and unify with how data editor edits
@@ -283,16 +283,16 @@ function DataFrame({
       // state and the selection state.
 
       const selectionState: DataframeState = {
-        select: {
+        selection: {
           rows: [] as number[],
           columns: [] as string[],
         },
       }
 
-      selectionState.select.rows = newSelection.rows.toArray().map(row => {
+      selectionState.selection.rows = newSelection.rows.toArray().map(row => {
         return getOriginalIndex(row)
       })
-      selectionState.select.columns = newSelection.columns
+      selectionState.selection.columns = newSelection.columns
         .toArray()
         .map(columnIdx => {
           return getColumnName(originalColumns[columnIdx])
@@ -390,11 +390,11 @@ function DataFrame({
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
 
-        selectionState.select?.rows?.forEach(row => {
+        selectionState.selection?.rows?.forEach(row => {
           rowSelection = rowSelection.add(row)
         })
 
-        selectionState.select?.columns?.forEach(column => {
+        selectionState.selection?.columns?.forEach(column => {
           columnSelection = columnSelection.add(columnNames.indexOf(column))
         })
 
