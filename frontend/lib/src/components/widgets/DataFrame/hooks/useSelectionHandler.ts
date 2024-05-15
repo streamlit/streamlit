@@ -165,16 +165,20 @@ function useSelectionHandler(
       }
 
       if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
+        // Remove all index columns from the column selection
+        // We don't want to allow selection of index columns.
+        let cleanedColumns = updatedSelection.columns
         columns.forEach((column, idx) => {
           if (column.isIndex) {
-            // Remove all index columns from the column selection
-            // We don't want to allow selection of index columns.
-            updatedSelection = {
-              ...updatedSelection,
-              columns: updatedSelection.columns.remove(idx),
-            }
+            cleanedColumns = cleanedColumns.remove(idx)
           }
         })
+        if (cleanedColumns.length < updatedSelection.columns.length) {
+          updatedSelection = {
+            ...updatedSelection,
+            columns: cleanedColumns,
+          }
+        }
       }
 
       setGridSelection(updatedSelection)
