@@ -188,7 +188,7 @@ function useSelectionHandler(
       isRowSelectionActivated,
       isColumnSelectionActivated,
       syncSelectionState,
-      numIndexColumns,
+      columns,
     ]
   )
 
