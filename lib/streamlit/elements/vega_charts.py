@@ -100,11 +100,11 @@ class VegaLiteState(TypedDict, total=False):
     A dictionary representing the current selection state of the VegaLite chart.
     Attributes
     ----------
-    select : AttributeDictionary
+    selection : AttributeDictionary
         The state of the `on_select` event.
     """
 
-    select: AttributeDictionary
+    selection: AttributeDictionary
 
 
 @dataclass
@@ -115,7 +115,7 @@ class VegaLiteStateSerde:
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> VegaLiteState:
         empty_selection_state: VegaLiteState = {
-            "select": AttributeDictionary(
+            "selection": AttributeDictionary(
                 # Initialize the select state with empty dictionaries for each selection parameter.
                 {param: {} for param in self.selection_parameters}
             ),
@@ -127,7 +127,7 @@ class VegaLiteStateSerde:
             else cast(VegaLiteState, AttributeDictionary(json.loads(ui_value)))
         )
 
-        if "select" not in selection_state:
+        if "selection" not in selection_state:
             selection_state = empty_selection_state
 
         return cast(VegaLiteState, AttributeDictionary(selection_state))
