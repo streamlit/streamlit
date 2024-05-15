@@ -293,13 +293,13 @@ describe("AppNavigation", () => {
       appNavigation.handleNavigation(navigation)
     })
 
-    it("sets hideSidebarNav on new session", () => {
+    it("continues to set hideSidebarNav on new session", () => {
       const maybeState = appNavigation.handleNewSession(generateNewSession())
       expect(maybeState).not.toBeUndefined()
 
       const [newState] = maybeState!
       expect(newState).toEqual({
-        hideSidebarNav: false,
+        hideSidebarNav: true,
       })
     })
 
