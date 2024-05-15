@@ -25,6 +25,7 @@ import {
   ForwardMsgMetadata,
   IArrow,
   IArrowNamedDataSet,
+  Logo,
 } from "./proto"
 import {
   VegaLiteChartElement,
@@ -42,6 +43,11 @@ import {
 } from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
+interface AppLogo {
+  logo: Logo
+  // Associated scriptHash that created the logo
+  activeScriptHash: string
+}
 
 /**
  * An immutable node of the "App Data Tree".
@@ -546,6 +552,8 @@ export class AppRoot {
   /* The hash of the main script that creates this AppRoot. */
   readonly mainScriptHash: string
 
+  readonly appLogo: AppLogo | null
+
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
@@ -618,13 +626,19 @@ export class AppRoot {
 
     return new AppRoot(
       mainScriptHash,
-      new BlockNode(mainScriptHash, [main, sidebar, event, bottom])
+      new BlockNode(mainScriptHash, [main, sidebar, event, bottom]),
+      null
     )
   }
 
-  public constructor(mainScriptHash: string, root: BlockNode) {
+  public constructor(
+    mainScriptHash: string,
+    root: BlockNode,
+    appLogo: AppLogo | null = null
+  ) {
     this.mainScriptHash = mainScriptHash
     this.root = root
+    this.appLogo = appLogo
 
     // Verify that our root node has exactly 4 children: a 'main' block,
     // a 'sidebar' block, a `bottom` block and an 'event' block.
@@ -657,6 +671,18 @@ export class AppRoot {
   public get bottom(): BlockNode {
     const [, , , bottom] = this.root.children
     return bottom as BlockNode
+  }
+
+  public get logo(): Logo | null {
+    return this.appLogo?.logo ?? null
+  }
+
+  public setLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
+    const { activeScriptHash } = metadata
+    return new AppRoot(this.mainScriptHash, this.root, {
+      logo,
+      activeScriptHash,
+    })
   }
 
   public applyDelta(
@@ -734,6 +760,8 @@ export class AppRoot {
     const bottom =
       this.bottom.filterMainScriptElements(mainScriptHash) ||
       new BlockNode(mainScriptHash)
+    const appLogo =
+      this.appLogo?.activeScriptHash === mainScriptHash ? this.appLogo : null
 
     return new AppRoot(
       mainScriptHash,
@@ -742,7 +770,8 @@ export class AppRoot {
         [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
-      )
+      ),
+      appLogo
     )
   }
 
@@ -763,6 +792,12 @@ export class AppRoot {
       this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode(this.mainScriptHash)
 
+    // Maintain the logo if it was created by the main script
+    const appLogo =
+      this.appLogo?.activeScriptHash === this.mainScriptHash
+        ? this.appLogo
+        : null
+
     return new AppRoot(
       this.mainScriptHash,
       new BlockNode(
@@ -770,7 +805,8 @@ export class AppRoot {
         [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
-      )
+      ),
+      appLogo
     )
   }
 
@@ -801,7 +837,8 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
+      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.appLogo
     )
   }
 
@@ -829,7 +866,8 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, blockNode, scriptRunId)
+      this.root.setIn(deltaPath, blockNode, scriptRunId),
+      this.appLogo
     )
   }
 
@@ -846,7 +884,8 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
+      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.appLogo
     )
   }
 }

@@ -131,11 +131,6 @@ export interface Props {
   theme: ThemeManager
 }
 
-interface AppLogo {
-  logo: Logo
-  // Associated scriptHash that created the logo
-  activeScriptHash: string
-}
 interface State {
   connectionState: ConnectionState
   elements: AppRoot
@@ -157,7 +152,6 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
-  appLogo: AppLogo | null
   appPages: IAppPage[]
   navSections: string[]
   currentPageScriptHash: string
@@ -269,7 +263,6 @@ export class App extends PureComponent<Props, State> {
       themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
-      appLogo: null,
       appPages: [],
       navSections: [],
       currentPageScriptHash: "",
@@ -669,12 +662,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
-    this.setState({
-      appLogo: {
-        logo,
-        activeScriptHash: metadata.activeScriptHash ?? "",
+    this.setState(
+      {
+        elements: this.state.elements.setLogo(logo, metadata),
       },
-    })
+      () => {
+        this.pendingElementsBuffer = this.state.elements
+      }
+    )
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
@@ -1126,7 +1121,6 @@ export class App extends PureComponent<Props, State> {
           ),
         }),
         () => {
-          // We now have no pending elements.
           this.pendingElementsBuffer = this.state.elements
         }
       )
@@ -1348,11 +1342,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    const { appLogo, elements, mainScriptHash } = this.state
-    // If the app logo is not associated with the main script, clear it.
-    if (appLogo && appLogo.activeScriptHash !== mainScriptHash) {
-      this.setState({ appLogo: null })
-    }
+    const { elements, mainScriptHash } = this.state
 
     // We want to keep widget states for widgets that are still active
     // from the common script
@@ -1747,7 +1737,6 @@ export class App extends PureComponent<Props, State> {
       libConfig,
       appConfig,
       inputsDisabled,
-      appLogo,
       appPages,
     } = this.state
     const developmentMode = showDevelopmentOptions(
@@ -1884,7 +1873,7 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
-                appLogo={appLogo?.logo ?? null}
+                appLogo={elements.logo}
                 appPages={appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
