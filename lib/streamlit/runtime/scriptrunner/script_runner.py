@@ -434,11 +434,10 @@ class ScriptRunner:
             )
             main_page_info = self._pages_manager.get_main_page()
             uncaught_exception = None
-            page_found = active_script is not None
 
             page_script_hash = (
                 active_script["page_script_hash"]
-                if page_found
+                if active_script is not None
                 else main_page_info["page_script_hash"]
             )
 
@@ -474,9 +473,10 @@ class ScriptRunner:
             # to the user via a modal dialog in the frontend, and won't result
             # in their previous script elements disappearing.
             try:
-                if page_found:
+                if active_script is not None:
                     script_path = active_script["script_path"]
                 else:
+                    # page must not be found
                     script_path = main_page_info["script_path"]
 
                     # At this point, we know that either

@@ -685,7 +685,7 @@ class ScriptRunnerTest(AsyncTestCase):
             self._assert_no_exceptions(scriptrunner)
 
     @patch(
-        "streamlit.runtime.pages_manager.get_pages",
+        "streamlit.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash1": {
@@ -860,7 +860,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.runtime.pages_manager.get_pages",
+        "streamlit.source_util.get_pages",
         MagicMock(
             return_value={
                 "hash2": {
