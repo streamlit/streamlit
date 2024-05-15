@@ -16,6 +16,7 @@
 
 import {
   Alert as AlertProto,
+  Block as BlockProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Element,
   Skeleton as SkeletonProto,
@@ -342,9 +343,18 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
-export function getElementWidgetID(element: Element): string | undefined {
-  return get(element as any, [requireNonNull(element.type), "id"])
+/** Return an Element's widget ID if it's a widget and undefined otherwise.
+ *
+ * Note that this function is named getElementWidgetID (with no mention of
+ * Blocks) for backwards compatibility reasons.
+ */
+export function getElementWidgetID(
+  elementOrBlock: BlockProto | Element
+): string | undefined {
+  return get(elementOrBlock as any, [
+    requireNonNull(elementOrBlock.type),
+    "id",
+  ])
 }
 
 /** True if the given form ID is non-null and non-empty. */

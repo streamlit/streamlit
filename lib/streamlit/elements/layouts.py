@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import traceback
 from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
@@ -21,6 +22,7 @@ from typing_extensions import TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -28,6 +30,11 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
+
+
+def _block_id(block_type: str, **kwargs) -> str:
+    stacktrace = "".join(traceback.format_stack(limit=10))
+    return compute_widget_id(block_type, stacktrace=stacktrace, **kwargs)
 
 
 class LayoutsMixin:
@@ -380,8 +387,9 @@ class LayoutsMixin:
             return tab_proto
 
         block_proto = BlockProto()
-        block_proto.tab_container.SetInParent()
+        block_proto.tab_container.id = _block_id("tab_container", tabs=tabs)
         tab_container = self.dg._block(block_proto)
+
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
@@ -475,6 +483,7 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
+        expandable_proto.id = _block_id("expandable", label=label, expanded=expanded)
 
         block_proto = BlockProto()
         block_proto.allow_empty = False

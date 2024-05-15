@@ -226,7 +226,8 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
                 node: node as BlockNode,
               }
 
-              return <BlockNodeRenderer key={index} {...childProps} />
+              const key = getElementWidgetID(node.deltaBlock) || index
+              return <BlockNodeRenderer key={key} {...childProps} />
             }
 
             // We don't have any other node types!
