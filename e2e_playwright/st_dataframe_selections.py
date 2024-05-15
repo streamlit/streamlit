@@ -156,8 +156,8 @@ if "runs" not in st.session_state:
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
-st.header("No selection on index column:")
-# "_index": column_with_fixed_width,
+st.header("Dataframe with Index:")
+
 column_config_with_index = {
     "_index": column_with_fixed_width,
 }

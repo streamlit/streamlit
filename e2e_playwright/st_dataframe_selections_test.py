@@ -375,5 +375,5 @@ def test_that_index_cannot_be_selected(app: Page):
     _expect_written_text(
         app,
         "No selection on index column:",
-        "{'select': {'rows': [], 'columns': []}}",
+        "{'selection': {'rows': [], 'columns': []}}",
     )
