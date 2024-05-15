@@ -49,9 +49,8 @@ def _convert_to_dict(obj: Union[Mapping[str, Any], AttrDict]) -> dict[str, Any]:
     """Recursively convert Mapping or AttrDict objects to dictionaries."""
     if isinstance(obj, AttrDict):
         return obj.to_dict()
-    if isinstance(obj, Mapping):
+    elif isinstance(obj, Mapping):
         return {k: _convert_to_dict(v) for k, v in obj.items()}
-    return obj
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
