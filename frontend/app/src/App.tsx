@@ -739,8 +739,10 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
+    const pageProfileObj = PageProfile.toObject(pageProfile)
     this.metricsMgr.enqueue("pageProfile", {
-      ...PageProfile.toObject(pageProfile),
+      ...pageProfileObj,
+      isFragmentRun: Boolean(pageProfileObj.isFragmentRun),
       appId: this.sessionInfo.current.appId,
       numPages: this.state.appPages?.length,
       sessionId: this.sessionInfo.current.sessionId,
