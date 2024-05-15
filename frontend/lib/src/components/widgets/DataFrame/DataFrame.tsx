@@ -555,15 +555,15 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, clearSelection, widgetMgr])
 
+  const isDynamicAndEditable =
+    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
+
   // The index columns are always at the beginning of the table,
   // so we can just count them to determine the number of columns
   // that should be frozen.
   const freezeColumns = isEmptyTable
     ? 0
     : columns.filter((col: BaseColumn) => col.isIndex).length
-
-  const isDynamicAndEditable =
-    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
