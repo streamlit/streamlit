@@ -114,11 +114,11 @@ class PlotlyState(TypedDict, total=False):
 
     Attributes
     ----------
-    select : PlotlySelectionState
+    selection : PlotlySelectionState
         The state of the `on_select` event.
     """
 
-    select: PlotlySelectionState
+    selection: PlotlySelectionState
 
 
 @dataclass
@@ -127,7 +127,7 @@ class PlotlyChartSelectionSerde:
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
         empty_selection_state: PlotlyState = {
-            "select": {
+            "selection": {
                 "points": [],
                 "point_indices": [],
                 "box": [],
@@ -141,7 +141,7 @@ class PlotlyChartSelectionSerde:
             else cast(PlotlyState, AttributeDictionary(json.loads(ui_value)))
         )
 
-        if "select" not in selection_state:
+        if "selection" not in selection_state:
             selection_state = empty_selection_state
 
         return cast(PlotlyState, AttributeDictionary(selection_state))
