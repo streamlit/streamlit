@@ -18,7 +18,6 @@
 import {
   HostCommunicationManager,
   NewSession,
-  SessionInfo,
   PagesChanged,
   PageNotFound,
 } from "@streamlit/lib"

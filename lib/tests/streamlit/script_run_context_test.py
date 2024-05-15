@@ -135,7 +135,7 @@ class ScriptRunContextTest(unittest.TestCase):
             self.fail("set_page_config should have succeeded after reset!")
 
     def test_active_script_hash(self):
-        """st.set_page_config should be allowed after a rerun"""
+        """ensures active script hash is set correctly when enqueueing messages"""
 
         fake_path = "my/custom/script/path"
         pg_mgr = PagesManager(fake_path)
