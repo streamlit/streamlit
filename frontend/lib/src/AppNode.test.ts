@@ -895,7 +895,7 @@ describe("AppRoot.empty", () => {
   })
 })
 
-describe("AppRoot.clearPageNodes", () => {
+describe("AppRoot.filterMainScriptElements", () => {
   it("does not clear nodes associated with main script hash", () => {
     // Add a new element and clear stale nodes
     const delta = makeProto(DeltaProto, {
@@ -905,7 +905,7 @@ describe("AppRoot.clearPageNodes", () => {
       "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
-    ).clearPageNodes(FAKE_SCRIPT_HASH)
+    ).filterMainScriptElements(FAKE_SCRIPT_HASH)
 
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([1, 1])).toBeTextNode("newElement!")
@@ -921,7 +921,7 @@ describe("AppRoot.clearPageNodes", () => {
       "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1], "DIFFERENT_HASH")
-    ).clearPageNodes(FAKE_SCRIPT_HASH)
+    ).filterMainScriptElements(FAKE_SCRIPT_HASH)
 
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([1, 1])).toBeUndefined()

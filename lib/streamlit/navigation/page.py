@@ -48,14 +48,28 @@ def Page(
 
     page: str or Path or callable
         The path to the script file or a callable that defines the page.
+        The path can be relative to the main script.
 
     title: str or None
         The title of the page. If None, the title will be inferred from the
         page path or callable name.
 
     icon: str or None
-        The icon of the page. If None, the icon will be inferred from the
-        page path.
+        An optional emoji or icon to display next to the alert. If ``icon``
+        is ``None`` (default), no icon is displayed. If ``icon`` is a
+        string, the following options are valid:
+
+        * A single-character emoji. For example, you can set ``icon="🚨"``
+            or ``icon="🔥"``. Emoji short codes are not supported.
+
+        * An icon from the Material Symbols library (outlined style) in the
+            format ``":material/icon_name:"`` where "icon_name" is the name
+            of the icon in snake case.
+
+            For example, ``icon=":material/thumb_up:"`` will display the
+            Thumb Up icon. Find additional icons in the `Material Symbols \
+            <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+            font library.
 
     default: bool
         Whether this page is the default page to be shown when the app is
@@ -140,7 +154,10 @@ class StreamlitPage:
                 else:
                     code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
 
+                    # We create a module named __page__ for this specific
+                    # script. This is differentiate from the `__main__` module
                     module = types.ModuleType("__page__")
+                    # We want __file__ to be the path to the script
                     module.__dict__["__file__"] = self._page
                     exec(code, module.__dict__)
             except Exception as e:

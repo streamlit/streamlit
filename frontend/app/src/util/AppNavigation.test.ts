@@ -378,14 +378,16 @@ describe("AppNavigation", () => {
         sections: ["section1", "section2"],
         appPages: [
           new AppPage({
-            pageName: "streamlit_app",
+            pageName: "streamlit app",
             pageScriptHash: "page_script_hash",
             isDefault: true,
+            urlPathname: "streamlit_app",
           }),
           new AppPage({
-            pageName: "streamlit_app2",
+            pageName: "streamlit app2",
             pageScriptHash: "page_script_hash2",
             isDefault: false,
+            urlPathname: "streamlit_app2",
           }),
         ],
         position: "hidden",
@@ -395,7 +397,7 @@ describe("AppNavigation", () => {
       const page = appNavigation.findPageByUrlPath("/streamlit_app2")
 
       expect(page.pageScriptHash).toEqual("page_script_hash2")
-      expect(page.pageName).toEqual("streamlit_app2")
+      expect(page.pageName).toEqual("streamlit app2")
     })
 
     it("returns default url by path when path is invalid", () => {
@@ -403,16 +405,18 @@ describe("AppNavigation", () => {
         sections: ["section1", "section2"],
         appPages: [
           new AppPage({
-            pageName: "streamlit_app",
+            pageName: "streamlit app",
             pageScriptHash: "page_script_hash",
             isDefault: true,
             sectionHeader: "section1",
+            urlPathname: "streamlit_app",
           }),
           new AppPage({
-            pageName: "streamlit_app2",
+            pageName: "streamlit app2",
             pageScriptHash: "page_script_hash2",
             isDefault: false,
             sectionHeader: "section2",
+            urlPathname: "streamlit_app2",
           }),
         ],
         position: "hidden",
@@ -422,7 +426,7 @@ describe("AppNavigation", () => {
       const page = appNavigation.findPageByUrlPath("foo")
 
       expect(page.pageScriptHash).toEqual("page_script_hash")
-      expect(page.pageName).toEqual("streamlit_app")
+      expect(page.pageName).toEqual("streamlit app")
     })
 
     it("sets navigation state to hidden on navigation", () => {

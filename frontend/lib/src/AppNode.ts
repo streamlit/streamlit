@@ -117,7 +117,7 @@ export interface AppNode {
    * Recursively remove children nodes whose activeScriptHash is no longer
    * associated with the mainScriptHash.
    */
-  clearPageNodes(mainScriptHash: string): AppNode | undefined
+  filterMainScriptElements(mainScriptHash: string): AppNode | undefined
 
   /**
    * Recursively remove children nodes whose scriptRunId is no longer current.
@@ -229,18 +229,14 @@ export class ElementNode implements AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearPageNodes(mainScriptHash: string): AppNode | undefined {
+  public filterMainScriptElements(
+    mainScriptHash: string
+  ): AppNode | undefined {
     if (this.activeScriptHash !== mainScriptHash) {
       return undefined
     }
 
-    return new ElementNode(
-      this.element,
-      this.metadata,
-      this.scriptRunId,
-      this.activeScriptHash,
-      this.fragmentId
-    )
+    return this
   }
 
   public clearStaleNodes(
@@ -457,14 +453,14 @@ export class BlockNode implements AppNode {
     )
   }
 
-  clearPageNodes(mainScriptHash: string): AppNode | undefined {
+  filterMainScriptElements(mainScriptHash: string): AppNode | undefined {
     if (this.activeScriptHash !== mainScriptHash) {
       return undefined
     }
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child => child.clearPageNodes(mainScriptHash))
+      .map(child => child.filterMainScriptElements(mainScriptHash))
       .filter(notUndefined)
 
     return new BlockNode(
@@ -722,20 +718,21 @@ export class AppRoot {
     }
   }
 
-  clearPageNodes(mainScriptHash: string): AppRoot {
+  filterMainScriptElements(mainScriptHash: string): AppRoot {
     // clears all nodes that are not associated with the mainScriptHash
     // Get the current script run id from one of the children
     const currentScriptRunId = this.main.scriptRunId
     const main =
-      this.main.clearPageNodes(mainScriptHash) || new BlockNode(mainScriptHash)
+      this.main.filterMainScriptElements(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
     const sidebar =
-      this.sidebar.clearPageNodes(mainScriptHash) ||
+      this.sidebar.filterMainScriptElements(mainScriptHash) ||
       new BlockNode(mainScriptHash)
     const event =
-      this.event.clearPageNodes(mainScriptHash) ||
+      this.event.filterMainScriptElements(mainScriptHash) ||
       new BlockNode(mainScriptHash)
     const bottom =
-      this.bottom.clearPageNodes(mainScriptHash) ||
+      this.bottom.filterMainScriptElements(mainScriptHash) ||
       new BlockNode(mainScriptHash)
 
     return new AppRoot(

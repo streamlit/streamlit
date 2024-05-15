@@ -42,7 +42,10 @@ export type PageUrlUpdateCallback = (
 ) => void
 export type PageNotFoundCallback = (pageName?: string) => void
 
-export class V1Strategy {
+function getTitle(pageName: string): string {
+  return `${pageName} · Streamlit`
+}
+export class StrategyV1 {
   private appPages: IAppPage[]
 
   private currentPageScriptHash: string | null
@@ -81,7 +84,7 @@ export class V1Strategy {
     this.appNav.onUpdatePageUrl(mainPageName, newPageName, isViewingMainPage)
 
     // Set the title to its default value
-    document.title = `${newPageName ?? ""} · Streamlit`
+    document.title = getTitle(newPageName ?? "")
 
     return [
       {
@@ -159,7 +162,7 @@ export class V1Strategy {
   }
 }
 
-export class V2Strategy {
+export class StrategyV2 {
   readonly appNav: AppNavigation
 
   mainScriptHash: string | null
@@ -183,7 +186,7 @@ export class V2Strategy {
     this.hideSidebarNav = newSession.config?.hideSidebarNav ?? false
 
     // We do not know the page name, so use an empty string version
-    document.title = " · Streamlit"
+    document.title = getTitle("")
 
     return [{ hideSidebarNav: this.hideSidebarNav }, () => {}]
   }
@@ -225,7 +228,7 @@ export class V2Strategy {
       ? ""
       : (currentPage.urlPathname as string)
 
-    document.title = `${currentPage.pageName as string} · Streamlit`
+    document.title = getTitle(currentPage.pageName as string)
     this.appNav.onUpdatePageUrl(
       mainPage.pageName as string,
       currentPageName,
@@ -269,7 +272,7 @@ export class V2Strategy {
     mainScriptHash: string,
     _sidebarElements: BlockNode | undefined
   ): AppRoot {
-    return elements.clearPageNodes(mainScriptHash)
+    return elements.filterMainScriptElements(mainScriptHash)
   }
 }
 
@@ -280,7 +283,7 @@ export class AppNavigation {
 
   readonly onPageNotFound: PageNotFoundCallback
 
-  strategy: V1Strategy | V2Strategy
+  strategy: StrategyV1 | StrategyV2
 
   constructor(
     hostCommunicationMgr: HostCommunicationManager,
@@ -292,7 +295,7 @@ export class AppNavigation {
     this.onPageNotFound = onPageNotFound
 
     // Start with the V1 strategy as it will apply to V0 as well
-    this.strategy = new V1Strategy(this)
+    this.strategy = new StrategyV1(this)
   }
 
   handleNewSession(newSession: NewSession): MaybeStateUpdate {
@@ -302,8 +305,8 @@ export class AppNavigation {
   handleNavigation(navigationMsg: Navigation): MaybeStateUpdate {
     // Navigation call (through st.navigation) indicates we are using
     // MPA v2. We can change strategy here. It will set the state properly
-    if (this.strategy instanceof V1Strategy) {
-      this.strategy = new V2Strategy(this)
+    if (this.strategy instanceof StrategyV1) {
+      this.strategy = new StrategyV2(this)
     }
 
     return this.strategy.handleNavigation(navigationMsg)

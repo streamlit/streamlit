@@ -36,31 +36,11 @@ def pages_from_nav_sections(
     nav_sections: dict[SectionHeader, list[StreamlitPage]]
 ) -> list[StreamlitPage]:
     page_list = []
-    for pgs in nav_sections.values():
-        for page in pgs:
+    for pages in nav_sections.values():
+        for page in pages:
             page_list.append(page)
 
     return page_list
-
-
-def nav_sections_to_page_dict(
-    nav_sections: dict[SectionHeader, list[StreamlitPage]]
-) -> dict[PageHash, PageInfo]:
-    d: dict[PageHash, PageInfo] = {}
-    for section_header in nav_sections:
-        for page in nav_sections[section_header]:
-            if isinstance(page._page, Path):
-                script_path = str(page._page)
-            else:
-                script_path = ""
-            d[page._script_hash] = {
-                "page_script_hash": page._script_hash,
-                "page_name": page.title,
-                "icon": page.icon,
-                "script_path": script_path,
-                "url_pathname": page.title.replace(" ", "_"),
-            }
-    return d
 
 
 def send_page_not_found(ctx: ScriptRunContext):
@@ -122,7 +102,41 @@ def navigation(
             "`st.navigation` must be called with at least one `st.Page`."
         )
 
-    defaults = [page for page in page_list if page.default]
+    msg = ForwardMsg()
+    msg.navigation.position = position
+    msg.navigation.sections[:] = nav_sections.keys()
+
+    defaults = []
+    pagehash_to_pageinfo: dict[PageHash, PageInfo] = {}
+
+    # This nested loop keeps track of three things:
+    # 1. the default pages
+    # 2. the pagehash to pageinfo mapping
+    # 3. the pages to be added to the navigation proto
+    for section_header in nav_sections:
+        for page in nav_sections[section_header]:
+            if page.default:
+                defaults.append(page)
+
+            if isinstance(page._page, Path):
+                script_path = str(page._page)
+            else:
+                script_path = ""
+            pagehash_to_pageinfo[page._script_hash] = {
+                "page_script_hash": page._script_hash,
+                "page_name": page.title,
+                "icon": page.icon,
+                "script_path": script_path,
+                "url_pathname": page.title.replace(" ", "_"),
+            }
+
+            p = msg.navigation.app_pages.add()
+            p.page_script_hash = page._script_hash
+            p.page_name = page.title
+            p.icon = page.icon
+            p.is_default = page.default
+            p.section_header = section_header
+            p.url_pathname = page.title.replace(" ", "_")
 
     # First assume the first page is the default. We will update this if
     # we detect that a different page is the default.
@@ -136,37 +150,24 @@ def navigation(
     else:
         default_page = defaults[0]
 
-    msg = ForwardMsg()
-    msg.navigation.position = position
-    msg.navigation.sections[:] = nav_sections.keys()
-    for section in nav_sections:
-        for page in nav_sections[section]:
-            p = msg.navigation.app_pages.add()
-            p.page_script_hash = page._script_hash
-            p.page_name = page.title
-            p.icon = page.icon
-            p.is_default = page.default
-            p.section_header = section
-            p.url_pathname = page.title.replace(" ", "_")
-
     # Inform our page manager about the set of pages we have
-    page_by_hash = nav_sections_to_page_dict(nav_sections)
-    ctx.pages_manager.set_pages(page_by_hash)
-    managed_page = ctx.pages_manager.get_page_script(default_page._script_hash)
+    ctx.pages_manager.set_pages(pagehash_to_pageinfo)
+    managed_page = ctx.pages_manager.get_page_script(
+        fallback_page_hash=default_page._script_hash
+    )
 
-    found_page = None
+    found_page = default_page
     if managed_page is None:
         send_page_not_found(ctx)
-        found_page = default_page
     else:
         managed_page_script_hash = managed_page["page_script_hash"]
         matching_pages = [
             p for p in page_list if p._script_hash == managed_page_script_hash
         ]
-        found_page = matching_pages[0]
-        if len(matching_pages) == 0:
+        if len(matching_pages) > 0:
+            found_page = matching_pages[0]
+        else:
             send_page_not_found(ctx)
-            found_page = default_page
 
     # Ordain the page that can be called
     found_page._can_be_called = True

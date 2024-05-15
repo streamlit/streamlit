@@ -104,10 +104,10 @@ class PagesStrategyV1:
     def get_pages(self) -> dict[PageHash, PageInfo]:
         return source_util.get_pages(self.pages_manager.main_script_path)
 
-    def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
+    def set_pages(self, _pages: dict[PageHash, PageInfo]) -> None:
         raise NotImplementedError("Unable to set pages in this V1 strategy")
 
-    def get_page_script(self, _default_page_hash: PageHash) -> Optional[PageInfo]:
+    def get_page_script(self, _fallback_page_hash: PageHash) -> Optional[PageInfo]:
         raise NotImplementedError("Unable to get page script in this V1 strategy")
 
 
@@ -144,7 +144,7 @@ class PagesStrategyV2:
             or self.pages_manager.main_script_hash,  # Default Hash
         }
 
-    def get_page_script(self, default_page_hash: PageHash) -> Optional[PageInfo]:
+    def get_page_script(self, fallback_page_hash: PageHash) -> Optional[PageInfo]:
         if self._pages is None:
             return None
 
@@ -153,7 +153,8 @@ class PagesStrategyV2:
             # exist, so we check out the page script hash or the default page hash
             # as a backup
             return self._pages.get(
-                self._initial_page_script_hash, self._pages.get(default_page_hash, None)
+                self._initial_page_script_hash,
+                self._pages.get(fallback_page_hash, None),
             )
         elif self._initial_page_name:
             # If a user navigates directly to a non-main page of an app, the
@@ -170,7 +171,7 @@ class PagesStrategyV2:
                 None,
             )
 
-        return self._pages.get(default_page_hash, None)
+        return self._pages.get(fallback_page_hash, None)
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
         # If pages are not set, provide the common page info
@@ -275,11 +276,11 @@ class PagesManager:
         self._cached_pages = pages
         self._on_pages_changed.send()
 
-    def get_page_script(self, default_page_hash: PageHash) -> Optional[PageInfo]:
+    def get_page_script(self, fallback_page_hash: PageHash = "") -> Optional[PageInfo]:
         # We assume the pages strategy is V2 cause this is used
         # in the st.navigation call, but we just swallow the error
         try:
-            return self.pages_strategy.get_page_script(default_page_hash)
+            return self.pages_strategy.get_page_script(fallback_page_hash)
         except NotImplementedError:
             return None
 
