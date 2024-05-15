@@ -421,10 +421,6 @@ def process_config_mapping(
     if column_config is None:
         return {}
 
-    # Ensure that the column config is cloned
-    # since we will apply in-place changes to it.
-    column_config = copy.deepcopy(column_config)
-
     transformed_column_config: ColumnConfigMapping = {}
     for column, config in column_config.items():
         if config is None:
@@ -432,7 +428,9 @@ def process_config_mapping(
         elif isinstance(config, str):
             transformed_column_config[column] = ColumnConfig(label=config)
         elif isinstance(config, dict):
-            transformed_column_config[column] = config
+            # Ensure that the column config objects are cloned
+            # since we will apply in-place changes to it.
+            transformed_column_config[column] = copy.deepcopy(config)
         else:
             raise StreamlitAPIException(
                 f"Invalid column config for column `{column}`. "
