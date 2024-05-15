@@ -35,7 +35,7 @@ from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
-from tests.streamlit.runtime.secrets_test import MOCK_SECRETS_FILE_LOC, MOCK_TOML
+from tests.streamlit.runtime.secrets_test import MOCK_TOML
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
