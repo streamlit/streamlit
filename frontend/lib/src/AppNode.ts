@@ -792,12 +792,6 @@ export class AppRoot {
       this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode(this.mainScriptHash)
 
-    // Maintain the logo if it was created by the main script
-    const appLogo =
-      this.appLogo?.activeScriptHash === this.mainScriptHash
-        ? this.appLogo
-        : null
-
     return new AppRoot(
       this.mainScriptHash,
       new BlockNode(
@@ -806,7 +800,7 @@ export class AppRoot {
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),
-      appLogo
+      this.appLogo
     )
   }
 
