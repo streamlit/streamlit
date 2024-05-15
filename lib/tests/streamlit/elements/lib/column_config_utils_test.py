@@ -375,7 +375,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         }
 
         processed_config = process_config_mapping(config_1)
-        processed_config["col1"] = {"label": "Changed label"}
+        processed_config["col1"]["label"] = "Changed label"
 
         self.assertNotEqual(
             processed_config["col1"]["label"],
