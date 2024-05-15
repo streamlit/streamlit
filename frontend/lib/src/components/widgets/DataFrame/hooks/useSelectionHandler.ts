@@ -19,6 +19,7 @@ import React from "react"
 import { GridSelection, CompactSelection } from "@glideapps/glide-data-grid"
 import isEqual from "lodash/isEqual"
 
+import { BaseColumn } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 export type SelectionHandlerReturn = {
@@ -50,6 +51,7 @@ export type SelectionHandlerReturn = {
  * @param element - The Arrow proto message
  * @param isEmptyTable - Whether the table is empty
  * @param isDisabled - Whether the table is disabled
+ * @param columns - The columns of the table.
  * @param syncSelectionState - The callback to sync the selection state
  *
  * @returns the selection handler return object
@@ -58,6 +60,7 @@ function useSelectionHandler(
   element: ArrowProto,
   isEmptyTable: boolean,
   isDisabled: boolean,
+  columns: BaseColumn[],
   syncSelectionState: (newSelection: GridSelection) => void
 ): SelectionHandlerReturn {
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
@@ -157,7 +160,25 @@ function useSelectionHandler(
           ...updatedSelection,
           rows: gridSelection.rows,
         }
+
         syncSelection = true
+      }
+
+      if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
+        // Remove all index columns from the column selection
+        // We don't want to allow selection of index columns.
+        let cleanedColumns = updatedSelection.columns
+        columns.forEach((column, idx) => {
+          if (column.isIndex) {
+            cleanedColumns = cleanedColumns.remove(idx)
+          }
+        })
+        if (cleanedColumns.length < updatedSelection.columns.length) {
+          updatedSelection = {
+            ...updatedSelection,
+            columns: cleanedColumns,
+          }
+        }
       }
 
       setGridSelection(updatedSelection)
@@ -171,6 +192,7 @@ function useSelectionHandler(
       isRowSelectionActivated,
       isColumnSelectionActivated,
       syncSelectionState,
+      columns,
     ]
   )
 

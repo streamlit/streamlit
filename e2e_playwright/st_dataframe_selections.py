@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import random
 import time
 
@@ -155,3 +156,20 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+st.header("Dataframe with Index:")
+
+column_config_with_index = copy.deepcopy(column_config)
+column_config_with_index["_index"] = st.column_config.Column(width="small")
+
+
+selection = st.dataframe(
+    df,
+    hide_index=False,
+    on_select="rerun",
+    selection_mode=["multi-column"],
+    key="with_index",
+    column_config=column_config_with_index,
+    column_order=["col_1", "col_3"],
+)
+st.write("No selection on index column:", str(selection))
