@@ -159,8 +159,9 @@ st.write("Runs:", st.session_state.runs)
 
 st.header("Dataframe with Index:")
 
-column_config = copy.deepcopy(column_config)
-column_config["_index"] = st.column_config.Column(width="small")
+column_config_with_index = copy.deepcopy(column_config)
+column_config_with_index["_index"] = st.column_config.Column(width="small")
+
 
 selection = st.dataframe(
     df,
@@ -168,7 +169,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-column"],
     key="with_index",
-    column_config=column_config,
+    column_config=column_config_with_index,
     column_order=["col_1", "col_3"],
 )
 st.write("No selection on index column:", str(selection))
