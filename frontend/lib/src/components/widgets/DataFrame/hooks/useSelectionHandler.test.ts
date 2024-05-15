@@ -18,6 +18,7 @@ import { renderHook, act } from "@testing-library/react-hooks"
 import { CompactSelection } from "@glideapps/glide-data-grid"
 
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import { TextColumn } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useSelectionHandler from "./useSelectionHandler"
 
@@ -36,6 +37,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -55,6 +57,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -74,6 +77,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -92,6 +96,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -113,6 +118,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -134,6 +140,7 @@ describe("useSelectionHandler hook", () => {
         }),
         true,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -155,6 +162,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -210,6 +218,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -264,6 +273,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -332,6 +342,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -382,6 +393,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -437,6 +449,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -488,6 +501,7 @@ describe("useSelectionHandler hook", () => {
         }),
         false,
         false,
+        [],
         syncSelectionStateMock
       )
     )
@@ -525,5 +539,55 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isColumnSelected).toEqual(true)
     expect(result.current.isCellSelected).toEqual(false)
     expect(syncSelectionStateMock).toBeCalledTimes(2)
+  })
+
+  it("ignores index column selection", () => {
+    const { result } = renderHook(() =>
+      useSelectionHandler(
+        ArrowProto.create({
+          selectionMode: [
+            ArrowProto.SelectionMode.MULTI_ROW,
+            ArrowProto.SelectionMode.MULTI_COLUMN,
+          ],
+        }),
+        false,
+        false,
+        [
+          // Configure 1 index column
+          TextColumn({
+            arrowType: {
+              meta: null,
+              numpy_type: "object",
+              pandas_type: "unicode",
+            },
+            id: "index-0",
+            name: "",
+            indexNumber: 0,
+            isEditable: true,
+            isHidden: false,
+            isIndex: true,
+            isStretched: false,
+            title: "",
+          }),
+        ],
+        syncSelectionStateMock
+      )
+    )
+
+    // Select the index column:
+    const firstGridSelection = {
+      columns: CompactSelection.fromSingleSelection(0),
+      rows: CompactSelection.empty(),
+      cell: undefined,
+    }
+    act(() => {
+      const { processSelectionChange } = result.current
+      processSelectionChange?.(firstGridSelection)
+    })
+
+    // Nothing should have been selected since the index column is ignored:
+    expect(result.current.isCellSelected).toEqual(false)
+    expect(result.current.isRowSelected).toEqual(false)
+    expect(result.current.isColumnSelected).toEqual(false)
   })
 })
