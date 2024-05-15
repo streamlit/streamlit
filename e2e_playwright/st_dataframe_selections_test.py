@@ -368,6 +368,7 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
 
 def test_that_index_cannot_be_selected(app: Page):
     canvas = _get_df_with_index(app)
+    canvas.scroll_into_view_if_needed()
     _click_on_column_selector(canvas, 0)
     wait_for_app_run(app)
 
