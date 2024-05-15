@@ -301,12 +301,21 @@ def _test_csv_download(
         assert some_row in content
 
 
-def test_csv_download_button(app: Page):
+def test_csv_download_button(
+    app: Page, browser_name: str, browser_type_launch_args: dict
+):
     click_enter_on_file_picker = False
+
     # right now the filechooser will only be opened on Chrome. Maybe this will change in the future and the
     # check has to be updated; or maybe playwright will support the file-access APIs better.
-    if app.context.browser and app.context.browser.browser_type.name == "chromium":
-        click_enter_on_file_picker = True
+    # In headless mode, the file-access API our csv-download button uses under-the-hood does not work. So we monkey-patch it to throw an error and trigger our alternative download logic.
+    if browser_name == "chromium":
+        if browser_type_launch_args.get("headless", False):
+            click_enter_on_file_picker = True
+        else:
+            app.evaluate(
+                "() => window.showSaveFilePicker = () => {throw new Error('Monkey-patched showOpenFilePicker')}",
+            )
     _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
 
 
