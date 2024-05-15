@@ -362,6 +362,27 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 f"Expected list to be compatible with {data_kind}",
             )
 
+    def test_process_config_mapping_is_clone(self):
+        """Test that the process_config_mapping function clones the config object."""
+        config_1: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {
+                "label": "Column 1",
+                "width": "small",
+                "required": True,
+                "type_config": {"type": "link"},
+            },
+        }
+
+        processed_config = process_config_mapping(config_1)
+        processed_config["col1"]["label"] = "Changed label"
+
+        self.assertNotEqual(
+            processed_config["col1"]["label"],
+            config_1["col1"]["label"],
+            "The labels should be different.",
+        )
+
     def test_process_config_mapping(self):
         """Test that the process_config_mapping function correctly processes a config mapping."""
         config_1: ColumnConfigMappingInput = {

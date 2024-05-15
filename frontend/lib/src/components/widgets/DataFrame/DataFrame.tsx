@@ -295,7 +295,7 @@ function DataFrame({
       selectionState.selection.columns = newSelection.columns
         .toArray()
         .map(columnIdx => {
-          return getColumnName(originalColumns[columnIdx])
+          return getColumnName(columns[columnIdx])
         })
       const newWidgetState = JSON.stringify(selectionState)
       const currentWidgetState = widgetMgr.getStringValue({
@@ -335,7 +335,13 @@ function DataFrame({
     isCellSelected,
     clearSelection,
     processSelectionChange,
-  } = useSelectionHandler(element, isEmptyTable, disabled, syncSelectionState)
+  } = useSelectionHandler(
+    element,
+    isEmptyTable,
+    disabled,
+    columns,
+    syncSelectionState
+  )
 
   React.useEffect(() => {
     // Clear cell selections if fullscreen mode changes
@@ -562,6 +568,9 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
+  // The index columns are always at the beginning of the table,
+  // so we can just count them to determine the number of columns
+  // that should be frozen.
   const freezeColumns = isEmptyTable
     ? 0
     : columns.filter((col: BaseColumn) => col.isIndex).length
@@ -814,7 +823,7 @@ function DataFrame({
             if (isEmptyTable || isLargeTable || isColumnSelectionActivated) {
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
-              return undefined
+              return
             }
 
             if (isRowSelectionActivated && isRowSelected) {
