@@ -576,7 +576,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         proto.id = id
@@ -752,6 +752,6 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
         proto.id = id
