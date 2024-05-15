@@ -29,7 +29,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.102.1
+hypothesis==6.102.4
 identify==2.5.36
 idna==3.7
 importlib_metadata==7.1.0
@@ -72,7 +72,7 @@ pathspec==0.12.1
 pillow==10.3.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
-platformdirs==4.2.1
+platformdirs==4.2.2
 playwright==1.42.0
 plotly==5.22.0
 pluggy==1.5.0
