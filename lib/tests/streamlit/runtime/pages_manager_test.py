@@ -101,12 +101,12 @@ class PagesManagerV2Test(unittest.TestCase):
         """Ensure the active script is set correctly"""
         current_hash = self.pages_manager.main_script_hash
         print(current_hash)
-        self.assertEquals(self.pages_manager.get_active_script_hash(), current_hash)
+        self.assertEqual(self.pages_manager.get_active_script_hash(), current_hash)
 
         with self.pages_manager.run_with_active_hash("new_hash"):
-            self.assertEquals(self.pages_manager.get_active_script_hash(), "new_hash")
+            self.assertEqual(self.pages_manager.get_active_script_hash(), "new_hash")
 
-        self.assertEquals(self.pages_manager.get_active_script_hash(), current_hash)
+        self.assertEqual(self.pages_manager.get_active_script_hash(), current_hash)
 
     def test_get_page_script_valid_hash(self):
         """Ensure the page script is provided with valid page hash specified"""
@@ -117,7 +117,7 @@ class PagesManagerV2Test(unittest.TestCase):
         page_script = self.pages_manager.get_page_script(
             self.pages_manager.main_script_hash
         )
-        self.assertEquals(page_script["page_script_hash"], "page_hash")
+        self.assertEqual(page_script["page_script_hash"], "page_hash")
 
     def test_get_page_script_invalid_hash(self):
         """Ensure the page script is provided with invalid page hash specified"""
@@ -146,7 +146,7 @@ class PagesManagerV2Test(unittest.TestCase):
         page_script = self.pages_manager.get_page_script(
             self.pages_manager.main_script_hash
         )
-        self.assertEquals(page_script["page_script_hash"], "page_hash")
+        self.assertEqual(page_script["page_script_hash"], "page_hash")
 
     def test_get_page_script_invalid_name(self):
         """Ensure the page script is not provided with invalid page name specified"""

@@ -183,12 +183,15 @@ export class StrategyV2 {
 
   handleNewSession(newSession: NewSession): MaybeStateUpdate {
     this.mainScriptHash = newSession.mainScriptHash
-    this.hideSidebarNav = newSession.config?.hideSidebarNav ?? false
+    // Initialize to the config value if provided
+    if (this.hideSidebarNav === null) {
+      this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
+    }
 
     // We do not know the page name, so use an empty string version
     document.title = getTitle("")
 
-    return [{ hideSidebarNav: this.hideSidebarNav }, () => {}]
+    return [{ hideSidebarNav: this.hideSidebarNav ?? false }, () => {}]
   }
 
   handlePagesChanged(_pagesChangedMsg: PagesChanged): MaybeStateUpdate {
@@ -216,7 +219,7 @@ export class StrategyV2 {
     const { sections, position, appPages } = navigationMsg
 
     this.appPages = appPages
-    this.hideSidebarNav = this.hideSidebarNav || position === "hidden"
+    this.hideSidebarNav = position === "hidden"
 
     const currentPage = appPages.find(
       p => p.pageScriptHash === navigationMsg.pageScriptHash
