@@ -122,8 +122,17 @@ def navigation(
                 script_path = str(page._page)
             else:
                 script_path = ""
-            pagehash_to_pageinfo[page._script_hash] = {
-                "page_script_hash": page._script_hash,
+
+            script_hash = page._script_hash
+            if script_hash in pagehash_to_pageinfo:
+                raise StreamlitAPIException(
+                    f"Multiple Pages specified with title {page.title}. "
+                    "Page titles should be unique. If not specified, "
+                    "title is inferred from the file path or callable name."
+                )
+
+            pagehash_to_pageinfo[script_hash] = {
+                "page_script_hash": script_hash,
                 "page_name": page.title,
                 "icon": page.icon,
                 "script_path": script_path,
