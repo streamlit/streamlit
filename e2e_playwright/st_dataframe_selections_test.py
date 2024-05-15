@@ -369,17 +369,18 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
 def test_that_index_cannot_be_selected(app: Page):
     canvas = _get_df_with_index(app)
     canvas.scroll_into_view_if_needed()
-    # Try to click on another column and check that in can be selected:
+    # Try select a selectable columnÖ
     _click_on_column_selector(canvas, 2)
     wait_for_app_run(app)
 
-    # Nothing should be selected:
+    # Check selection:
     _expect_written_text(
         app,
         "No selection on index column:",
         "{'selection': {'rows': [], 'columns': ['col_3']}}",
     )
 
+    # Select index column:
     _click_on_column_selector(canvas, 0)
     wait_for_app_run(app)
 
@@ -394,7 +395,7 @@ def test_that_index_cannot_be_selected(app: Page):
     _click_on_column_selector(canvas, 1)
     wait_for_app_run(app)
 
-    # Nothing should be selected:
+    # Check selection:
     _expect_written_text(
         app,
         "No selection on index column:",
