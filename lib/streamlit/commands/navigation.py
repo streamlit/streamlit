@@ -58,6 +58,7 @@ def nav_sections_to_page_dict(
                 "page_name": page.title,
                 "icon": page.icon,
                 "script_path": script_path,
+                "url_pathname": page.title.replace(" ", "_"),
             }
     return d
 

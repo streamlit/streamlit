@@ -164,7 +164,7 @@ class PagesStrategyV2:
                     # thinks that p can be None (which is impossible given the
                     # types of pages), so we add `p and` at the beginning of
                     # the predicate to circumvent this.
-                    lambda p: p and (p["page_name"] == self._initial_page_name),
+                    lambda p: p and (p["url_pathname"] == self._initial_page_name),
                     self._pages.values(),
                 ),
                 None,
