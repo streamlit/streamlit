@@ -366,7 +366,6 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsBuffer = this.state.elements
     this.appNavigation = new AppNavigation(
       this.hostCommunicationMgr,
-      this.metricsMgr,
       this.maybeUpdatePageUrl,
       this.onPageNotFound
     )
@@ -958,7 +957,7 @@ export class App extends PureComponent<Props, State> {
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
-    this.appNavigation.sendMPAMetricsOnInitialization()
+    this.metricsMgr.enqueue("updateReport")
 
     if (
       appHash === newSessionHash &&

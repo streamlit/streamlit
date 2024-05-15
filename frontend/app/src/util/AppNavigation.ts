@@ -21,7 +21,6 @@ import {
   PagesChanged,
   PageNotFound,
 } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 interface AppNavigationState {
   hideSidebarNav: boolean
@@ -42,8 +41,6 @@ export type PageNotFoundCallback = (pageName?: string) => void
 export class AppNavigation {
   readonly hostCommunicationMgr: HostCommunicationManager
 
-  readonly metricsMgr: SegmentMetricsManager
-
   readonly onUpdatePageUrl: PageUrlUpdateCallback
 
   readonly onPageNotFound: PageNotFoundCallback
@@ -56,12 +53,10 @@ export class AppNavigation {
 
   constructor(
     hostCommunicationMgr: HostCommunicationManager,
-    metricsMgr: SegmentMetricsManager,
     onUpdatePageUrl: PageUrlUpdateCallback,
     onPageNotFound: PageNotFoundCallback
   ) {
     this.hostCommunicationMgr = hostCommunicationMgr
-    this.metricsMgr = metricsMgr
     this.onUpdatePageUrl = onUpdatePageUrl
     this.onPageNotFound = onPageNotFound
 
@@ -145,18 +140,6 @@ export class AppNavigation {
         })
       },
     ]
-  }
-
-  sendMPAMetricsOnInitialization(): void {
-    const { appPages, currentPageScriptHash } = this
-    if (appPages.length === 0) {
-      return
-    }
-
-    this.metricsMgr.enqueue("updateReport", {
-      numPages: appPages.length,
-      isMainPage: appPages[0].pageScriptHash === currentPageScriptHash,
-    })
   }
 
   findPageByUrlPath(pathname: string): IAppPage {
