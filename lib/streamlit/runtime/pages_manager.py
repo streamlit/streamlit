@@ -20,8 +20,9 @@ from typing import Callable, Final, Optional
 
 from blinker import Signal
 
+import streamlit.source_util as source_util
 from streamlit.logger import get_logger
-from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath, get_pages
+from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
 from streamlit.util import calc_md5
 from streamlit.watcher import watch_dir
 
@@ -53,10 +54,10 @@ class PagesStrategyV1:
             )
             PagesStrategyV1.is_watching_pages_dir = True
 
-    def __init__(self, pages_manager: PagesManager, **kwargs):
+    def __init__(self, pages_manager: PagesManager, setup_watcher: bool = True):
         self.pages_manager = pages_manager
 
-        if kwargs.get("setup_watcher", True):
+        if setup_watcher:
             PagesStrategyV1.watch_pages_dir(pages_manager)
 
     # In MPA v1, there's no difference between the active hash
@@ -100,18 +101,18 @@ class PagesStrategyV1:
         return main_page_info
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
-        return get_pages(self.pages_manager.main_script_path)
+        return source_util.get_pages(self.pages_manager.main_script_path)
 
 
 class PagesManager:
-    def __init__(self, main_script_path, **kwargs):
+    def __init__(self, main_script_path, setup_watcher=True):
         self._cached_pages: dict[PageHash, PageInfo] | None = None
         self._pages_cache_lock = threading.RLock()
         self._on_pages_changed = Signal(doc="Emitted when the set of pages has changed")
         self._main_script_path: ScriptPath = main_script_path
         self._main_script_hash: PageHash = calc_md5(main_script_path)
         self._current_page_hash: PageHash = self._main_script_hash
-        self.pages_strategy = PagesStrategyV1(self, **kwargs)
+        self.pages_strategy = PagesStrategyV1(self, setup_watcher)
 
     @property
     def current_page_hash(self) -> PageHash:
