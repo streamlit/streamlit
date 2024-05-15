@@ -895,6 +895,40 @@ describe("AppRoot.empty", () => {
   })
 })
 
+describe("AppRoot.clearPageNodes", () => {
+  it("does not clear nodes associated with main script hash", () => {
+    // Add a new element and clear stale nodes
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "newElement!" } },
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1])
+    ).clearPageNodes(FAKE_SCRIPT_HASH)
+
+    // We should now only have a single element, inside a single block
+    expect(newRoot.main.getIn([1, 1])).toBeTextNode("newElement!")
+    expect(newRoot.getElements().size).toBe(3)
+  })
+
+  it("clears nodes not associated with main script hash", () => {
+    // Add a new element and clear stale nodes
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "newElement!" } },
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1], "DIFFERENT_HASH")
+    ).clearPageNodes(FAKE_SCRIPT_HASH)
+
+    // We should now only have a single element, inside a single block
+    expect(newRoot.main.getIn([1, 1])).toBeUndefined()
+    expect(newRoot.getElements().size).toBe(2)
+  })
+})
+
 describe("AppRoot.applyDelta", () => {
   it("handles 'newElement' deltas", () => {
     const delta = makeProto(DeltaProto, {

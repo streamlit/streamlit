@@ -20,6 +20,8 @@ import {
   NewSession,
   PagesChanged,
   PageNotFound,
+  Navigation,
+  AppPage,
 } from "@streamlit/lib"
 import {
   AppNavigation,
@@ -80,6 +82,7 @@ function generateNewSession(changes = {}): NewSession {
       { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
     ],
     pageScriptHash: "page_script_hash",
+    mainScriptHash: "main_script_hash",
     mainScriptPath: "path/to/file.py",
     scriptRunId: "script_run_id",
     fragmentIdsThisRun: [],
@@ -162,106 +165,336 @@ describe("AppNavigation", () => {
         currentPageScriptHash: "page_script_hash",
       })
     })
-  })
 
-  it("calls onUpdatePageUrl with the right information", () => {
-    appNavigation.handleNewSession(generateNewSession())
-    expect(onUpdatePageUrl).toHaveBeenCalledWith(
-      "streamlit_app",
-      "streamlit_app",
-      true
-    )
-  })
+    it("calls onUpdatePageUrl with the right information", () => {
+      appNavigation.handleNewSession(generateNewSession())
+      expect(onUpdatePageUrl).toHaveBeenCalledWith(
+        "streamlit_app",
+        "streamlit_app",
+        true
+      )
+    })
 
-  it("sets appPages on pages changed", () => {
-    const maybeState = appNavigation.handlePagesChanged(
-      new PagesChanged({
-        appPages: [
-          { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
-        ],
-      })
-    )
-    expect(maybeState).not.toBeUndefined()
+    it("sets appPages on pages changed", () => {
+      const maybeState = appNavigation.handlePagesChanged(
+        new PagesChanged({
+          appPages: [
+            { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+          ],
+        })
+      )
+      expect(maybeState).not.toBeUndefined()
 
-    const [newState] = maybeState!
-    expect(newState.appPages).toEqual([
-      { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
-    ])
-  })
-
-  it("calls host communication on pages changed", () => {
-    const maybeState = appNavigation.handlePagesChanged(
-      new PagesChanged({
-        appPages: [
-          { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
-        ],
-      })
-    )
-    expect(maybeState).not.toBeUndefined()
-
-    const callback = maybeState![1]
-
-    callback()
-    expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-      type: "SET_APP_PAGES",
-      appPages: [
+      const [newState] = maybeState!
+      expect(newState.appPages).toEqual([
         { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
-      ],
+      ])
+    })
+
+    it("calls host communication on pages changed", () => {
+      const maybeState = appNavigation.handlePagesChanged(
+        new PagesChanged({
+          appPages: [
+            { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+          ],
+        })
+      )
+      expect(maybeState).not.toBeUndefined()
+
+      const callback = maybeState![1]
+
+      callback()
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_APP_PAGES",
+        appPages: [
+          { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+        ],
+      })
+    })
+
+    it("sets currentPageScriptHash on page not found", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      const maybeState = appNavigation.handlePageNotFound(
+        new PageNotFound({ pageName: "foo" })
+      )
+      expect(maybeState).not.toBeUndefined()
+
+      const [newState] = maybeState!
+      expect(newState.currentPageScriptHash).toEqual("page_script_hash")
+    })
+
+    it("calls host communication on page not found", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      const maybeState = appNavigation.handlePageNotFound(
+        new PageNotFound({ pageName: "foo" })
+      )
+      expect(maybeState).not.toBeUndefined()
+
+      const callback = maybeState![1]
+
+      callback()
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName: "",
+        currentPageScriptHash: "page_script_hash",
+      })
+    })
+
+    it("calls onPageNotFound when page not found", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      appNavigation.handlePageNotFound(new PageNotFound({ pageName: "foo" }))
+      expect(onPageNotFound).toHaveBeenCalledWith("foo")
+    })
+
+    it("finds url by path when path is valid", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      const page = appNavigation.findPageByUrlPath("/streamlit_app")
+
+      expect(page.pageScriptHash).toEqual("page_script_hash")
+      expect(page.pageName).toEqual("streamlit_app")
+    })
+
+    it("returns default url by path when path is invalid", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      const page = appNavigation.findPageByUrlPath("foo")
+
+      expect(page.pageScriptHash).toEqual("page_script_hash")
+      expect(page.pageName).toEqual("streamlit_app")
     })
   })
 
-  it("sets currentPageScriptHash on page not found", () => {
-    // Initialize navigation from the new session proto
-    appNavigation.handleNewSession(generateNewSession())
-    const maybeState = appNavigation.handlePageNotFound(
-      new PageNotFound({ pageName: "foo" })
-    )
-    expect(maybeState).not.toBeUndefined()
-
-    const [newState] = maybeState!
-    expect(newState.currentPageScriptHash).toEqual("page_script_hash")
-  })
-
-  it("calls host communication on page not found", () => {
-    // Initialize navigation from the new session proto
-    appNavigation.handleNewSession(generateNewSession())
-    const maybeState = appNavigation.handlePageNotFound(
-      new PageNotFound({ pageName: "foo" })
-    )
-    expect(maybeState).not.toBeUndefined()
-
-    const callback = maybeState![1]
-
-    callback()
-    expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-      type: "SET_CURRENT_PAGE_NAME",
-      currentPageName: "",
-      currentPageScriptHash: "page_script_hash",
+  describe("MPA v2", () => {
+    beforeEach(() => {
+      // Switch to V2
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages: [
+          new AppPage({
+            pageName: "streamlit_app",
+            pageScriptHash: "page_script_hash",
+            isDefault: true,
+            sectionHeader: "section1",
+          }),
+          new AppPage({
+            pageName: "streamlit_app2",
+            pageScriptHash: "page_script_hash2",
+            isDefault: false,
+            sectionHeader: "section2",
+          }),
+        ],
+        position: "hidden",
+        pageScriptHash: "page_script_hash",
+      })
+      appNavigation.handleNavigation(navigation)
     })
-  })
 
-  it("calls onPageNotFound when page not found", () => {
-    // Initialize navigation from the new session proto
-    appNavigation.handleNewSession(generateNewSession())
-    appNavigation.handlePageNotFound(new PageNotFound({ pageName: "foo" }))
-    expect(onPageNotFound).toHaveBeenCalledWith("foo")
-  })
+    it("sets hideSidebarNav on new session", () => {
+      const maybeState = appNavigation.handleNewSession(generateNewSession())
+      expect(maybeState).not.toBeUndefined()
 
-  it("finds url by path when path is valid", () => {
-    // Initialize navigation from the new session proto
-    appNavigation.handleNewSession(generateNewSession())
-    const page = appNavigation.findPageByUrlPath("streamlit_app")
+      const [newState] = maybeState!
+      expect(newState).toEqual({
+        hideSidebarNav: false,
+      })
+    })
 
-    expect(page.pageScriptHash).toEqual("page_script_hash")
-    expect(page.pageName).toEqual("streamlit_app")
-  })
+    it("does not set anything on on pages changed", () => {
+      const maybeState = appNavigation.handlePagesChanged(
+        new PagesChanged({
+          appPages: [
+            { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+          ],
+        })
+      )
+      expect(maybeState).toBeUndefined()
+    })
 
-  it("returns default url by path when path is invalid", () => {
-    // Initialize navigation from the new session proto
-    appNavigation.handleNewSession(generateNewSession())
-    const page = appNavigation.findPageByUrlPath("foo")
+    it("sets currentPageScriptHash on page not found", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      const maybeState = appNavigation.handlePageNotFound(
+        new PageNotFound({ pageName: "" })
+      )
+      expect(maybeState).not.toBeUndefined()
 
-    expect(page.pageScriptHash).toEqual("page_script_hash")
-    expect(page.pageName).toEqual("streamlit_app")
+      const [newState] = maybeState!
+      expect(newState.currentPageScriptHash).toEqual("main_script_hash")
+    })
+
+    it("calls host communication on page not found", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      const maybeState = appNavigation.handlePageNotFound(
+        new PageNotFound({ pageName: "" })
+      )
+      expect(maybeState).not.toBeUndefined()
+
+      const callback = maybeState![1]
+
+      callback()
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName: "",
+        currentPageScriptHash: "main_script_hash",
+      })
+    })
+
+    it("calls onPageNotFound when page not found", () => {
+      // Initialize navigation from the new session proto
+      appNavigation.handleNewSession(generateNewSession())
+      appNavigation.handlePageNotFound(new PageNotFound({ pageName: "" }))
+      expect(onPageNotFound).toHaveBeenCalledWith("")
+    })
+
+    it("calls onUpdatePageUrl with the right information", () => {
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages: [
+          new AppPage({
+            pageName: "streamlit_app",
+            pageScriptHash: "page_script_hash",
+            isDefault: true,
+          }),
+          new AppPage({
+            pageName: "streamlit_app2",
+            pageScriptHash: "page_script_hash2",
+            isDefault: false,
+          }),
+        ],
+        position: "hidden",
+        pageScriptHash: "page_script_hash2",
+      })
+      appNavigation.handleNavigation(navigation)
+      expect(onUpdatePageUrl).toHaveBeenCalledWith("streamlit_app", "", true)
+    })
+
+    it("finds url by path when path is valid", () => {
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages: [
+          new AppPage({
+            pageName: "streamlit_app",
+            pageScriptHash: "page_script_hash",
+            isDefault: true,
+          }),
+          new AppPage({
+            pageName: "streamlit_app2",
+            pageScriptHash: "page_script_hash2",
+            isDefault: false,
+          }),
+        ],
+        position: "hidden",
+        pageScriptHash: "page_script_hash",
+      })
+      appNavigation.handleNavigation(navigation)
+      const page = appNavigation.findPageByUrlPath("/streamlit_app2")
+
+      expect(page.pageScriptHash).toEqual("page_script_hash2")
+      expect(page.pageName).toEqual("streamlit_app2")
+    })
+
+    it("returns default url by path when path is invalid", () => {
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages: [
+          new AppPage({
+            pageName: "streamlit_app",
+            pageScriptHash: "page_script_hash",
+            isDefault: true,
+            sectionHeader: "section1",
+          }),
+          new AppPage({
+            pageName: "streamlit_app2",
+            pageScriptHash: "page_script_hash2",
+            isDefault: false,
+            sectionHeader: "section2",
+          }),
+        ],
+        position: "hidden",
+        pageScriptHash: "page_script_hash",
+      })
+      appNavigation.handleNavigation(navigation)
+      const page = appNavigation.findPageByUrlPath("foo")
+
+      expect(page.pageScriptHash).toEqual("page_script_hash")
+      expect(page.pageName).toEqual("streamlit_app")
+    })
+
+    it("sets navigation state to hidden on navigation", () => {
+      const appPages = [
+        new AppPage({
+          pageName: "streamlit_app",
+          pageScriptHash: "page_script_hash",
+          isDefault: true,
+          sectionHeader: "section1",
+        }),
+        new AppPage({
+          pageName: "streamlit_app2",
+          pageScriptHash: "page_script_hash2",
+          isDefault: false,
+          sectionHeader: "section2",
+        }),
+      ]
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages,
+        position: "hidden",
+        pageScriptHash: "page_script_hash",
+      })
+      const maybeState = appNavigation.handleNavigation(navigation)
+      expect(maybeState).not.toBeUndefined()
+
+      const [newState] = maybeState!
+      expect(newState).toEqual({
+        appPages,
+        hideSidebarNav: true,
+        currentPageScriptHash: "page_script_hash",
+        navSections: ["section1", "section2"],
+      })
+    })
+
+    it("calls host communication on navigation", () => {
+      const appPages = [
+        new AppPage({
+          pageName: "streamlit_app",
+          pageScriptHash: "page_script_hash",
+          isDefault: true,
+          sectionHeader: "section1",
+        }),
+        new AppPage({
+          pageName: "streamlit_app2",
+          pageScriptHash: "page_script_hash2",
+          isDefault: false,
+          sectionHeader: "section2",
+        }),
+      ]
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages,
+        position: "hidden",
+        pageScriptHash: "page_script_hash",
+      })
+      const maybeState = appNavigation.handleNavigation(navigation)
+      expect(maybeState).not.toBeUndefined()
+
+      const callback = maybeState![1]
+      callback()
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_CURRENT_PAGE_NAME",
+        currentPageName: "",
+        currentPageScriptHash: "page_script_hash",
+      })
+    })
   })
 })
