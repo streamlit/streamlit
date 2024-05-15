@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import random
 import time
 
@@ -33,6 +32,7 @@ df = pd.DataFrame(
 # set fixed column with so our pixel-clicks in the test are stable
 column_with_fixed_width = st.column_config.Column(width="small")
 column_config = {
+    "_index": column_with_fixed_width,
     "col_0": column_with_fixed_width,
     "col_1": column_with_fixed_width,
     "col_2": column_with_fixed_width,
@@ -159,9 +159,6 @@ st.write("Runs:", st.session_state.runs)
 
 st.header("Dataframe with Index:")
 
-column_config_with_index = copy.deepcopy(column_config)
-column_config_with_index["_index"] = st.column_config.Column(width="small")
-
 
 selection = st.dataframe(
     df,
@@ -169,7 +166,7 @@ selection = st.dataframe(
     on_select="rerun",
     selection_mode=["multi-column"],
     key="with_index",
-    column_config=column_config_with_index,
+    column_config=column_config,
     column_order=["col_1", "col_3"],
 )
 st.write("No selection on index column:", str(selection))
