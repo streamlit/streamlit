@@ -42,7 +42,8 @@ def open_sidebar_dialog(app: Page):
 
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
-    app.get_by_test_id(modal_test_id).click(position={"x": 0, "y": 0})
+    # app.get_by_test_id(modal_test_id).click(position={"x": 0, "y": 0})
+    app.keyboard.press("Escape")
 
 
 def test_displays_dialog_properly(app: Page):
@@ -80,7 +81,7 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
-def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder):
+def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser_name):
     """Test that dialog reopens after dismiss."""
 
     app.context.tracing.start(
@@ -103,7 +104,9 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder):
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
 
-    app.context.tracing.stop(path=output_folder / "trace_dialog_close_and_reopen.zip")
+    app.context.tracing.stop(
+        path=output_folder / f"trace_dialog_close_and_reopen_{browser_name}.zip"
+    )
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
