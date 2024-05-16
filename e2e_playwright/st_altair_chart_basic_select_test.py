@@ -105,6 +105,18 @@ def _get_selection_interval_histogram(app: Page) -> Locator:
     return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(7)
 
 
+def _get_in_form_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(8)
+
+
+def _get_callback_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(9)
+
+
+def _get_in_fragment_chart(app: Page) -> Locator:
+    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(10)
+
+
 def test_point_bar_chart_displays_selection_text(app: Page):
     chart = _get_selection_point_bar_chart(app)
 
@@ -243,6 +255,65 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     _expect_written_text(app, expected_prefix, expected_selection)
 
     return chart
+
+
+def test_in_form_selection_and_session_state(app: Page):
+    chart = _get_in_form_chart(app)
+    expect(chart).to_be_visible()
+
+    _click(app, chart, _MousePosition(255, 238))
+
+    markdown_prefix = "Histogram-in-form selection:"
+    markdown_prefix_session_state = "Histogram-in-form selection in session state:"
+    empty_selection = "\\{'selection': \\{'param_1': \\{\\}\\}\\}"
+    # nothing should be shown yet because we did not submit the form
+    _expect_written_text(
+        app,
+        markdown_prefix,
+        empty_selection,
+    )
+    _expect_written_text(
+        app,
+        markdown_prefix_session_state,
+        empty_selection,
+    )
+
+    # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
+    # app.wait_for_timeout(210)
+    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
+    wait_for_app_run(app)
+
+    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    _expect_written_text(app, markdown_prefix, expected_selection)
+    _expect_written_text(app, markdown_prefix_session_state, expected_selection)
+
+
+def test_selection_with_callback(app: Page):
+    chart = _get_callback_chart(app)
+    expect(chart).to_be_visible()
+
+    _click(app, chart, _MousePosition(255, 238))
+
+    markdown_prefix = "Histogram selection callback:"
+    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    _expect_written_text(app, markdown_prefix, expected_selection)
+
+
+def test_selection_in_fragment(app: Page):
+    chart = _get_in_fragment_chart(app)
+    expect(chart).to_be_visible()
+
+    markdown_prefix = "Histogram-in-fragment selection:"
+    empty_selection = "\\{'selection': \\{'param_1': \\{\\}\\}\\}"
+    _expect_written_text(app, markdown_prefix, empty_selection)
+
+    _click(app, chart, _MousePosition(255, 238))
+
+    expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
+    _expect_written_text(app, markdown_prefix, expected_selection)
+
+    # Check that the main script has run once (the initial run), but not after the selection:
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
 def test_shift_click_point_selection_scatter_chart_snapshot(
