@@ -354,6 +354,8 @@ def test_selection_state_remains_after_unmounting(
 
 def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
     canvas = _get_fragment_df(app)
+    canvas.scroll_into_view_if_needed()
+    expect(canvas).to_be_visible()
     _select_some_rows_and_columns(app, canvas)
 
     _expect_written_text(
