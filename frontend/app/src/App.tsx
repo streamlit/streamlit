@@ -368,7 +368,8 @@ export class App extends PureComponent<Props, State> {
     this.appNavigation = new AppNavigation(
       this.hostCommunicationMgr,
       this.maybeUpdatePageUrl,
-      this.onPageNotFound
+      this.onPageNotFound,
+      this.onPageIconChanged
     )
 
     window.streamlitDebug = {
@@ -681,6 +682,8 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
+    this.appNavigation.handlePageConfigChanged(pageConfig)
+
     if (title) {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_PAGE_TITLE",
@@ -691,11 +694,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      handleFavicon(
-        favicon,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      this.onPageIconChanged(favicon)
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -739,6 +738,14 @@ export class App extends PureComponent<Props, State> {
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
     this.maybeSetState(this.appNavigation.handlePageNotFound(pageNotFound))
+  }
+
+  onPageIconChanged = (iconUrl: string): void => {
+    handleFavicon(
+      iconUrl,
+      this.hostCommunicationMgr.sendMessageToHost,
+      this.endpoints
+    )
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
@@ -964,11 +971,7 @@ export class App extends PureComponent<Props, State> {
       this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
 
       // Set the favicon to its default values
-      handleFavicon(
-        `${process.env.PUBLIC_URL}/favicon.png`,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      this.onPageIconChanged(`${process.env.PUBLIC_URL}/favicon.png`)
     } else {
       this.setState({
         fragmentIdsThisRun,

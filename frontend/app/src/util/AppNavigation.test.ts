@@ -22,11 +22,13 @@ import {
   PageNotFound,
   Navigation,
   AppPage,
+  PageConfig,
 } from "@streamlit/lib"
 import {
   AppNavigation,
   PageUrlUpdateCallback,
   PageNotFoundCallback,
+  SetIconCallback,
 } from "./AppNavigation"
 
 jest.mock("@streamlit/lib/src/hostComm/HostCommunicationManager", () => {
@@ -94,6 +96,7 @@ describe("AppNavigation", () => {
   let hostCommunicationMgr: HostCommunicationManager
   let onUpdatePageUrl: PageUrlUpdateCallback
   let onPageNotFound: PageNotFoundCallback
+  let onPageIconChange: SetIconCallback
   let appNavigation: AppNavigation
 
   beforeEach(() => {
@@ -119,10 +122,12 @@ describe("AppNavigation", () => {
     })
     onUpdatePageUrl = jest.fn()
     onPageNotFound = jest.fn()
+    onPageIconChange = jest.fn()
     appNavigation = new AppNavigation(
       hostCommunicationMgr,
       onUpdatePageUrl,
-      onPageNotFound
+      onPageNotFound,
+      onPageIconChange
     )
   })
 
@@ -469,12 +474,14 @@ describe("AppNavigation", () => {
           pageScriptHash: "page_script_hash",
           isDefault: true,
           sectionHeader: "section1",
+          icon: "icon1",
         }),
         new AppPage({
           pageName: "streamlit_app2",
           pageScriptHash: "page_script_hash2",
           isDefault: false,
           sectionHeader: "section2",
+          icon: "icon2",
         }),
       ]
       const navigation = new Navigation({
@@ -490,6 +497,13 @@ describe("AppNavigation", () => {
       callback()
 
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_PAGE_TITLE",
+        title: "streamlit_app · Streamlit",
+      })
+
+      expect(onPageIconChange).toBeCalled()
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages,
       })
@@ -499,6 +513,48 @@ describe("AppNavigation", () => {
         currentPageName: "",
         currentPageScriptHash: "page_script_hash",
       })
+    })
+
+    it("does not set the icon if set page config sets title or icon", () => {
+      // Clear the mock calls to avoid any confusion from setup
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+      appNavigation.handlePageConfigChanged(
+        new PageConfig({
+          title: "foo",
+          favicon: "bar",
+        })
+      )
+
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages: [
+          new AppPage({
+            pageName: "streamlit app",
+            pageScriptHash: "page_script_hash",
+            isDefault: true,
+            sectionHeader: "section1",
+            urlPathname: "streamlit_app",
+            icon: "icon1",
+          }),
+          new AppPage({
+            pageName: "streamlit app2",
+            pageScriptHash: "page_script_hash2",
+            isDefault: false,
+            sectionHeader: "section2",
+            urlPathname: "streamlit_app2",
+            icon: "icon2",
+          }),
+        ],
+        position: "hidden",
+        pageScriptHash: "page_script_hash",
+      })
+      appNavigation.handleNavigation(navigation)
+      const hostCommCalls = hostCommunicationMgr.sendMessageToHost.mock.calls
+
+      expect(
+        hostCommCalls.some(call => call[0].type === "SET_PAGE_TITLE")
+      ).toBe(false)
+      expect(onPageIconChange).not.toBeCalled()
     })
   })
 })
