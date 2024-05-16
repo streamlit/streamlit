@@ -327,6 +327,12 @@ def test_csv_download_button(
 
 
 def test_csv_download_button_in_iframe(iframed_app: IframedPage):
+    """Test that the csv download button works in an iframe.
+
+    Based on the test behavior and the fact that we don't have to patch the 'window.showSaveFilePicker' as in the test above,
+    it seems that the fallback download method is used.
+    """
+
     page: Page = iframed_app.page
     frame_locator: FrameLocator = iframed_app.open_app()
 
@@ -336,6 +342,12 @@ def test_csv_download_button_in_iframe(iframed_app: IframedPage):
 def test_csv_download_button_in_iframe_with_new_tab_host_config(
     iframed_app: IframedPage,
 ):
+    """Test that the csv download button works in an iframe and the host-config enforced download in new tab.
+
+    Based on the test behavior and the fact that we don't have to patch the 'window.showSaveFilePicker' as in the test above,
+    it seems that the fallback download method is used.
+    If this ever changes, the host-config[enforceDownloadInNewTab] might not take any effect as it is only used in the fallback mechanism.
+    """
     page: Page = iframed_app.page
 
     def fulfill_host_config_request(route: Route):
