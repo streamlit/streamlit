@@ -308,6 +308,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
             <iframe
                 src="{app_url}"
                 title="Iframed Streamlit App"
+                allow="clipboard-write;"
                 sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
                 width="100%"
                 height="100%">
