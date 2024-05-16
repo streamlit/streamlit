@@ -97,21 +97,26 @@ def navigation(
     nav_sections = {"": pages} if isinstance(pages, list) else pages
     page_list = pages_from_nav_sections(nav_sections)
 
-    if len(page_list) == 0:
+    if not page_list:
         raise StreamlitAPIException(
             "`st.navigation` must be called with at least one `st.Page`."
         )
 
-    defaults = []
+    default_page = None
     pagehash_to_pageinfo: dict[PageHash, PageInfo] = {}
 
     # This nested loop keeps track of three things:
-    # 1. the default pages
+    # 1. the default page
     # 2. the pagehash to pageinfo mapping
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
             if page.default:
-                defaults.append(page)
+                if default_page is not None:
+                    raise StreamlitAPIException(
+                        "Multiple Pages specified with `default=True`. "
+                        "At most one Page can be set to default."
+                    )
+                default_page = page
 
             if isinstance(page._page, Path):
                 script_path = str(page._page)
@@ -134,17 +139,9 @@ def navigation(
                 "url_pathname": page.title.replace(" ", "_"),
             }
 
-    # First assume the first page is the default. We will update this if
-    # we detect that a different page is the default.
-    default_page = page_list[0]
-    if len(defaults) > 1:
-        raise StreamlitAPIException(
-            "Multiple Pages specified with `default=True`. At most one Page can be set to default."
-        )
-    if len(defaults) == 0:
+    if default_page is None:
+        default_page = page_list[0]
         default_page.default = True
-    else:
-        default_page = defaults[0]
 
     msg = ForwardMsg()
     msg.navigation.position = position
@@ -161,28 +158,28 @@ def navigation(
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)
-    managed_page = ctx.pages_manager.get_page_script(
+    found_page = ctx.pages_manager.get_page_script(
         fallback_page_hash=default_page._script_hash
     )
 
-    found_page = default_page
-    if managed_page is None:
-        send_page_not_found(ctx)
-    else:
-        managed_page_script_hash = managed_page["page_script_hash"]
+    page_to_return = None
+    if found_page:
+        found_page_script_hash = found_page["page_script_hash"]
         matching_pages = [
-            p for p in page_list if p._script_hash == managed_page_script_hash
+            p for p in page_list if p._script_hash == found_page_script_hash
         ]
         if len(matching_pages) > 0:
-            found_page = matching_pages[0]
-        else:
-            send_page_not_found(ctx)
+            page_to_return = matching_pages[0]
+
+    if not page_to_return:
+        send_page_not_found(ctx)
+        page_to_return = default_page
 
     # Ordain the page that can be called
-    found_page._can_be_called = True
-    msg.navigation.page_script_hash = found_page._script_hash
+    page_to_return._can_be_called = True
+    msg.navigation.page_script_hash = page_to_return._script_hash
 
     # This will either navigation or yield if the page is not found
     ctx.enqueue(msg)
 
-    return found_page
+    return page_to_return

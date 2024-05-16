@@ -101,6 +101,12 @@ class PagesStrategyV1:
         main_page_info = list(pages.values())[0]
         return main_page_info
 
+    def set_initial_script(
+        self, _page_script_hash: PageHash, _page_name: PageName
+    ) -> None:
+        # Intentionally does nothing
+        pass
+
     def get_pages(self) -> dict[PageHash, PageInfo]:
         return source_util.get_pages(self.pages_manager.main_script_path)
 
@@ -131,9 +137,6 @@ class PagesStrategyV2:
         # At this point, we cannot determine the active script at start
         # as we don't have the list of pages yet. So we will pass
         # the common code script path and the hash
-        #
-        # We will, however, save the page_script_hash or page name
-        # to be used when the list of pages is received.
         self._initial_page_script_hash = page_script_hash
         self._initial_page_name = page_name
 
@@ -144,6 +147,12 @@ class PagesStrategyV2:
             or self.pages_manager.main_script_hash,  # Default Hash
         }
 
+    def set_initial_script(
+        self, page_script_hash: PageHash, page_name: PageName
+    ) -> None:
+        self._initial_page_script_hash = page_script_hash
+        self._initial_page_name = page_name
+
     def get_page_script(self, fallback_page_hash: PageHash) -> Optional[PageInfo]:
         if self._pages is None:
             return None
@@ -152,10 +161,7 @@ class PagesStrategyV2:
             # We assume that if initial page hash is specified, that a page should
             # exist, so we check out the page script hash or the default page hash
             # as a backup
-            return self._pages.get(
-                self._initial_page_script_hash,
-                self._pages.get(fallback_page_hash, None),
-            )
+            return self._pages.get(self._initial_page_script_hash, None)
         elif self._initial_page_name:
             # If a user navigates directly to a non-main page of an app, the
             # the page name can identify the page script to run
@@ -231,6 +237,11 @@ class PagesManager:
     def set_active_script_hash(self, page_hash: PageHash):
         return self.pages_strategy.set_active_script_hash(page_hash)
 
+    def set_initial_script(
+        self, page_script_hash: PageHash, page_name: PageName
+    ) -> None:
+        return self.pages_strategy.set_initial_script(page_script_hash, page_name)
+
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> Optional[PageInfo]:
@@ -242,8 +253,13 @@ class PagesManager:
     def run_with_active_hash(self, page_hash):
         original_page_hash = self.get_active_script_hash()
         self.set_active_script_hash(page_hash)
-        yield
-        self.set_active_script_hash(original_page_hash)
+        try:
+            yield
+        except Exception:
+            self.set_active_script_hash(original_page_hash)
+            raise
+        else:
+            self.set_active_script_hash(original_page_hash)
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
         # Avoid taking the lock if the pages cache hasn't been invalidated.

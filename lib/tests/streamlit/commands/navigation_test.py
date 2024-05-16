@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -22,38 +24,32 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.navigation([])
 
     def test_single_page(self):
         """Test that a single page is returned"""
         single_page = st.Page("page1.py")
         page = st.navigation([single_page])
-        self.assertEqual(page, single_page)
-
-    def test_single_page(self):
-        """Test that a single page is returned"""
-        single_page = st.Page("page1.py")
-        page = st.navigation([single_page])
-        self.assertEqual(page, single_page)
+        assert page == single_page
 
     def test_first_page_is_default(self):
         """Test that the first page is returned if there are multiple pages and no default"""
         single_page = st.Page("page1.py")
         page = st.navigation([single_page, st.Page("page2.py"), st.Page("page3.py")])
-        self.assertEqual(page, single_page)
-        self.assertTrue(page.default)
+        assert page == single_page
+        assert page.default
 
     def test_default_page_returned_if_specified(self):
         """Test that the first page is returned if there are multiple pages and no default"""
         default_page = st.Page("page3.py", default=True)
         page = st.navigation([st.Page("page1.py"), st.Page("page2.py"), default_page])
-        self.assertEqual(page, default_page)
-        self.assertTrue(page.default)
+        assert page == default_page
+        assert page.default
 
     def test_multiple_defaults_raises_APIException(self):
         """Test that an error is thrown if multiple defaults are specified"""
-        with self.assertRaises(StreamlitAPIException):
+        with pytest.raises(StreamlitAPIException):
             st.navigation(
                 [st.Page("page1.py", default=True), st.Page("page2.py", default=True)]
             )
@@ -64,13 +60,13 @@ class NavigationTest(DeltaGeneratorTestCase):
             found_page._script_hash, ""
         )
         page = st.navigation([st.Page("page1.py"), found_page, st.Page("page3.py")])
-        self.assertEqual(page, found_page)
+        assert page == found_page
 
     def test_page_found_by_name(self):
         found_page = st.Page("page2.py")
         self.script_run_ctx.pages_manager.get_initial_active_script("", "page2")
         page = st.navigation([st.Page("page1.py"), found_page, st.Page("page3.py")])
-        self.assertEqual(page, found_page)
+        assert page == found_page
 
     def test_page_not_found_by_name(self):
         default_page = st.Page("page1.py")
@@ -78,14 +74,14 @@ class NavigationTest(DeltaGeneratorTestCase):
         page = st.navigation([default_page, st.Page("page2.py"), st.Page("page3.py")])
 
         c = self.get_message_from_queue(-2)
-        self.assertTrue(c.HasField("page_not_found"))
-        self.assertEqual(page, default_page)
+        assert c.HasField("page_not_found")
+        assert page == default_page
 
     def test_page_not_found_by_hash_returns_default(self):
         default_page = st.Page("page1.py")
         self.script_run_ctx.pages_manager.get_initial_active_script("bad_hash", "")
         page = st.navigation([default_page, st.Page("page2.py"), st.Page("page3.py")])
-        self.assertEqual(page, default_page)
+        assert page == default_page
 
     def test_navigation_message(self):
         st.navigation(
@@ -96,15 +92,15 @@ class NavigationTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_message_from_queue().navigation
-        self.assertEqual(len(c.app_pages), 3)
-        self.assertEqual(c.app_pages[0].section_header, "Section 1")
-        self.assertEqual(c.app_pages[1].section_header, "Section 2")
-        self.assertEqual(c.app_pages[2].section_header, "Section 2")
-        self.assertTrue(c.app_pages[0].is_default)
-        self.assertFalse(c.app_pages[1].is_default)
-        self.assertFalse(c.app_pages[2].is_default)
-        self.assertEqual(c.position, "sidebar")
-        self.assertEqual(c.sections, ["Section 1", "Section 2"])
+        assert len(c.app_pages) == 3
+        assert c.app_pages[0].section_header == "Section 1"
+        assert c.app_pages[1].section_header == "Section 2"
+        assert c.app_pages[2].section_header == "Section 2"
+        assert c.app_pages[0].is_default
+        assert not c.app_pages[1].is_default
+        assert not c.app_pages[2].is_default
+        assert c.position == "sidebar"
+        assert c.sections == ["Section 1", "Section 2"]
 
     def test_navigation_message_with_position(self):
         st.navigation(
@@ -113,12 +109,12 @@ class NavigationTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_message_from_queue().navigation
-        self.assertEqual(len(c.app_pages), 3)
-        self.assertEqual(c.app_pages[0].section_header, "")
-        self.assertEqual(c.app_pages[1].section_header, "")
-        self.assertEqual(c.app_pages[2].section_header, "")
-        self.assertTrue(c.app_pages[0].is_default)
-        self.assertFalse(c.app_pages[1].is_default)
-        self.assertFalse(c.app_pages[2].is_default)
-        self.assertEqual(c.position, "hidden")
-        self.assertEqual(c.sections, [""])
+        assert len(c.app_pages) == 3
+        assert c.app_pages[0].section_header == ""
+        assert c.app_pages[1].section_header == ""
+        assert c.app_pages[2].section_header == ""
+        assert c.app_pages[0].is_default
+        assert not c.app_pages[1].is_default
+        assert not c.app_pages[2].is_default
+        assert c.position == "hidden"
+        assert c.sections == [""]

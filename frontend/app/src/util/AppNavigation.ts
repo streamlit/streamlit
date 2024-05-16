@@ -43,8 +43,13 @@ export type PageUrlUpdateCallback = (
 export type PageNotFoundCallback = (pageName?: string) => void
 
 function getTitle(pageName: string): string {
+  if (!pageName) {
+    return "Streamlit"
+  }
+
   return `${pageName} · Streamlit`
 }
+
 export class StrategyV1 {
   private appPages: IAppPage[]
 
@@ -221,12 +226,12 @@ export class StrategyV2 {
     this.appPages = appPages
     this.hideSidebarNav = position === "hidden"
 
+    const currentPageScriptHash = navigationMsg.pageScriptHash
     const currentPage = appPages.find(
-      p => p.pageScriptHash === navigationMsg.pageScriptHash
+      p => p.pageScriptHash === currentPageScriptHash
     ) as IAppPage
     const mainPage = appPages.find(p => p.isDefault) as IAppPage
     this.mainPage = mainPage
-    const currentPageScriptHash = currentPage.pageScriptHash as string
     const currentPageName = currentPage.isDefault
       ? ""
       : (currentPage.urlPathname as string)

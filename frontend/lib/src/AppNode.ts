@@ -677,7 +677,7 @@ export class AppRoot {
     return this.appLogo?.logo ?? null
   }
 
-  public setLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
+  public appRootWithLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
     const { activeScriptHash } = metadata
     return new AppRoot(this.mainScriptHash, this.root, {
       logo,

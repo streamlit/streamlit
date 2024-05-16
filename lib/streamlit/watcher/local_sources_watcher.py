@@ -83,8 +83,7 @@ class LocalSourcesWatcher:
                 self._deregister_watcher(old_page_path)
                 self._watched_pages.remove(old_page_path)
 
-        for new_path in new_pages_paths:
-            self._watched_pages.add(new_path)
+        self._watched_pages = self._watched_pages.union(new_pages_paths)
 
     def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)

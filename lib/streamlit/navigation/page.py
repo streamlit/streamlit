@@ -48,7 +48,7 @@ def Page(
 
     page: str or Path or callable
         The path to the script file or a callable that defines the page.
-        The path can be relative to the main script.
+        The path must be relative to the main script.
 
     title: str or None
         The title of the page. If None, the title will be inferred from the
@@ -145,27 +145,19 @@ class StreamlitPage:
         if not ctx:
             return
 
-        ex = None
         with ctx.pages_manager.run_with_active_hash(self._script_hash):
-            try:
-                if callable(self._page):
-                    self._page()
-                    return
-                else:
-                    code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
+            if callable(self._page):
+                self._page()
+                return
+            else:
+                code = ctx.pages_manager.get_page_script_byte_code(str(self._page))
 
-                    # We create a module named __page__ for this specific
-                    # script. This is differentiate from the `__main__` module
-                    module = types.ModuleType("__page__")
-                    # We want __file__ to be the path to the script
-                    module.__dict__["__file__"] = self._page
-                    exec(code, module.__dict__)
-            except Exception as e:
-                # Catch the exception so we can raise it after we've reset the active page
-                ex = e
-
-        if ex:
-            raise ex
+                # We create a module named __page__ for this specific
+                # script. This is differentiate it from the `__main__` module
+                module = types.ModuleType("__page__")
+                # We want __file__ to be the path to the script
+                module.__dict__["__file__"] = self._page
+                exec(code, module.__dict__)
 
     @property
     def _script_hash(self) -> str:
