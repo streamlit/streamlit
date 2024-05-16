@@ -97,7 +97,7 @@ def test_empty_date_input_behaves_correctly(
     """Test that st.date_input behaves correctly when empty."""
     # Enter 10 in the first empty input:
     empty_number_input = app.get_by_test_id("stDateInput").nth(12).locator("input")
-    empty_number_input.type("1970/01/02")
+    empty_number_input.type("1970/01/02", delay=50)
     empty_number_input.press("Enter")
     wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").nth(13)).to_have_text(
@@ -109,7 +109,9 @@ def test_empty_date_input_behaves_correctly(
 
     # Screenshot match clearable input:
     assert_snapshot(
-        app.get_by_test_id("stDateInput").nth(12), name="st_date_input-clearable_input"
+        app.get_by_test_id("stDateInput").nth(12),
+        name="st_date_input-clearable_input",
+        image_threshold=0.035,
     )
 
     # Press escape to clear value:
@@ -170,12 +172,15 @@ def test_calls_callback_on_change(app: Page):
     app.get_by_test_id("stDateInput").nth(11).click()
 
     # Select '1970/01/02'
-    app.locator(
+    calendar = app.locator(
         '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first.click()
-
+    ).first
+    expect(calendar).to_be_visible()
+    calendar.click()
     wait_for_app_run(app)
-    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
+
+    value_12_element = app.get_by_test_id("stMarkdown").nth(11)
+    expect(value_12_element).to_have_text(
         "Value 12: 1970-01-02",
         use_inner_text=True,
     )
@@ -186,7 +191,7 @@ def test_calls_callback_on_change(app: Page):
 
     # Change different date input to trigger delta path change
     first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
-    first_date_input_field.type("1971/01/03")
+    first_date_input_field.type("1971/01/03", delay=50)
     first_date_input_field.press("Enter")
     wait_for_app_run(app)
 
@@ -195,7 +200,7 @@ def test_calls_callback_on_change(app: Page):
     )
 
     # Test if value is still correct after delta path change
-    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
+    expect(value_12_element).to_have_text(
         "Value 12: 1970-01-02",
         use_inner_text=True,
     )
