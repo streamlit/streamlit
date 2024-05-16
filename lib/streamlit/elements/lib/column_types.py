@@ -132,6 +132,12 @@ class ProgressColumnConfig(TypedDict):
     max_value: NotRequired[int | float | None]
 
 
+class MarkdownColumnConfig(TypedDict):
+    type: Literal["markdown"]
+    max_chars: NotRequired[int | None]
+    markdown: NotRequired[str | None]
+
+
 class ColumnConfig(TypedDict, total=False):
     """Configuration options for columns in ``st.dataframe`` and ``st.data_editor``.
 
@@ -1593,5 +1599,97 @@ def ProgressColumn(
             format=format,
             min_value=min_value,
             max_value=max_value,
+        ),
+    )
+
+
+@gather_metrics("column_config.MarkdownColumn")
+def MarkdownColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: str | None = None,
+    max_chars: int | None = None,
+) -> ColumnConfig:
+    """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
+
+    The cell values need to be string and will be shown as clickable links.
+    This command needs to be used in the column_config parameter of ``st.dataframe``
+    or ``st.data_editor``. When used with ``st.data_editor``, editing will be enabled
+    with a text input widget.
+
+    Parameters
+    ----------
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of "small", "medium", or "large".
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    max_chars: int or None
+        The maximum number of characters that can be entered. If None (default),
+        there will be no maximum.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "markdown": [
+    >>>             "**bold**",
+    >>>             "*italic*",
+    >>>             "_underline_",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "markdown": st.column_config.MarkdownColumn(
+    >>>             "Markdown",
+    >>>             max_chars=100,
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
+    .. output::
+        https://doc-markdown-column.streamlit.app/
+        height: 300px
+    """
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=default,
+        type_config=MarkdownColumnConfig(
+            type="markdown",
+            max_chars=max_chars,
         ),
     )

@@ -29,6 +29,7 @@ import {
   BarChartColumn,
   AreaChartColumn,
 } from "./ChartColumn"
+import MarkdownColumn from "./MarkdownColumn"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 
@@ -58,6 +59,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     area_chart: AreaChartColumn,
     image: ImageColumn,
     progress: ProgressColumn,
+    markdown: MarkdownColumn,
   })
 )
 
@@ -79,4 +81,5 @@ export {
   AreaChartColumn,
   ImageColumn,
   ProgressColumn,
+  MarkdownColumn,
 }
