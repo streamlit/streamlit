@@ -64,7 +64,6 @@ const SidebarNav = ({
   const isOverflowing = useIsOverflowing(navItemsRef, expanded)
   const { pageLinkBaseUrl } = useContext(AppContext)
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const toggleExpanded = useCallback(() => {
     if (!expanded && isOverflowing) {
       setExpanded(true)
@@ -75,7 +74,6 @@ const SidebarNav = ({
     }
   }, [expanded, isOverflowing])
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     // Keep user preference on page change, otherwise default behavior
     if (userExpanded) {

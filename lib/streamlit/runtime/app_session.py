@@ -833,12 +833,17 @@ class AppSession:
         self._enqueue_forward_msg(msg)
 
     def _populate_app_pages(self, msg: NewSession | PagesChanged) -> None:
+        set_default = True
         for page_script_hash, page_info in self._pages_manager.get_pages().items():
             page_proto = msg.app_pages.add()
 
             page_proto.page_script_hash = page_script_hash
             page_proto.page_name = page_info["page_name"]
             page_proto.icon = page_info["icon"]
+            # We set the default on the first page for new session
+            # This is tied to MPA v1
+            page_proto.is_default = set_default
+            set_default = False
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so
