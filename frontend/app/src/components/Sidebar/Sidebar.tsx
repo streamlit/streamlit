@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, Close } from "@emotion-icons/material-outlined"
+import { ChevronRight, ChevronLeft } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
@@ -58,6 +58,7 @@ export interface SidebarProps {
   hasElements: boolean
   appLogo: Logo | null
   appPages: IAppPage[]
+  navSections: string[]
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
@@ -68,8 +69,8 @@ interface State {
   sidebarWidth: string
   lastInnerWidth: number
 
-  // When hovering the nav
-  hideScrollbar: boolean
+  // When hovering sidebar header
+  showSidebarCollapse: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -98,7 +99,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
-      hideScrollbar: false,
+      showSidebarCollapse: false,
     }
   }
 
@@ -206,8 +207,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
-  hideScrollbar = (newValue: boolean): void => {
-    this.setState({ hideScrollbar: newValue })
+  onMouseOver = (): void => {
+    this.setState({ showSidebarCollapse: true })
+  }
+
+  onMouseOut = (): void => {
+    this.setState({ showSidebarCollapse: false })
   }
 
   // Additional safeguard for sidebar height sizing
@@ -250,7 +255,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   public render(): ReactNode {
-    const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
+    const { collapsedSidebar, sidebarWidth, showSidebarCollapse } = this.state
     const {
       appPages,
       chevronDownshift,
@@ -259,7 +264,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       onPageChange,
       currentPageScriptHash,
       hideSidebarNav,
+      navSections,
     } = this.props
+
+    const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
 
     // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
@@ -302,7 +310,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           size={{
             width: sidebarWidth,
             // Addresses height glitch when anchor used - issue #6264
-            height: sidebarAdjust ? window.innerHeight - 2 : "100%",
+            height: sidebarAdjust ? "calc(100vh - 2px)" : "100%",
           }}
           as={StyledSidebar}
           onResizeStop={(e, direction, ref, d) => {
@@ -317,32 +325,41 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         >
           <StyledSidebarContent
             data-testid="stSidebarContent"
-            hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
+            <StyledSidebarHeaderContainer
+              onMouseOver={this.onMouseOver}
+              onMouseOut={this.onMouseOut}
+              data-testid="stSidebarHeader"
+            >
               {this.renderLogo(false)}
-              <StyledCollapseSidebarButton data-testid="stSidebarCollapseButton">
+              <StyledCollapseSidebarButton
+                showSidebarCollapse={showSidebarCollapse}
+                data-testid="stSidebarCollapseButton"
+              >
                 <BaseButton
                   kind={BaseButtonKind.HEADER_BUTTON}
                   onClick={this.toggleCollapse}
                 >
-                  <Icon content={Close} size="lg" />
+                  <Icon content={ChevronLeft} size="xl" />
                 </BaseButton>
               </StyledCollapseSidebarButton>
             </StyledSidebarHeaderContainer>
-            {!hideSidebarNav && (
+            {hasPageNavAbove && (
               <SidebarNav
                 endpoints={this.props.endpoints}
                 appPages={appPages}
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}
+                navSections={navSections}
                 hasSidebarElements={hasElements}
-                hideParentScrollbar={this.hideScrollbar}
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent data-testid="stSidebarUserContent">
+            <StyledSidebarUserContent
+              hasPageNavAbove={hasPageNavAbove}
+              data-testid="stSidebarUserContent"
+            >
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>

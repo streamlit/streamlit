@@ -14,37 +14,36 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useRef, useState } from "react"
-import { AppContext } from "@streamlit/app/src/components/AppContext"
+import React, {
+  ReactElement,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react"
+import groupBy from "lodash/groupBy"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import { AppContext } from "@streamlit/app/src/components/AppContext"
+import { useIsOverflowing, StreamlitEndpoints, IAppPage } from "@streamlit/lib"
 
-import {
-  Icon,
-  useIsOverflowing,
-  StreamlitEndpoints,
-  IAppPage,
-} from "@streamlit/lib"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-
+import NavSection from "./NavSection"
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
-  StyledSidebarNavLink,
-  StyledSidebarLinkText,
-  StyledSidebarNavLinkContainer,
-  StyledSidebarNavSeparatorContainer,
+  StyledViewButton,
+  StyledSidebarNavSeparator,
 } from "./styled-components"
 
 export interface Props {
   endpoints: StreamlitEndpoints
   appPages: IAppPage[]
+  navSections: string[]
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
-  hideParentScrollbar: (newValue: boolean) => void
   onPageChange: (pageName: string) => void
 }
 
@@ -55,109 +54,98 @@ const SidebarNav = ({
   collapseSidebar,
   currentPageScriptHash,
   hasSidebarElements,
-  hideParentScrollbar,
+  navSections,
   onPageChange,
 }: Props): ReactElement | null => {
-  const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef, expanded)
+  const { pageLinkBaseUrl } = useContext(AppContext)
 
-  const onMouseOver = useCallback(() => {
-    if (isOverflowing) {
-      hideParentScrollbar(true)
-    }
-  }, [isOverflowing, hideParentScrollbar])
+  const handleViewButtonClick = useCallback(() => {
+    setExpanded(!expanded)
+  }, [expanded])
 
-  const onMouseOut = useCallback(
-    () => hideParentScrollbar(false),
-    [hideParentScrollbar]
+  const generateNavLinks = useCallback(
+    (page: IAppPage) => {
+      const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
+      const pageName = page.pageName as string
+      const tooltipContent = pageName.replace(/_/g, " ")
+      const isActive = page.pageScriptHash === currentPageScriptHash
+
+      return (
+        <li key={pageName}>
+          <SidebarNavLink
+            isActive={isActive}
+            pageUrl={pageUrl}
+            icon={page.icon}
+            onClick={e => {
+              e.preventDefault()
+              onPageChange(page.pageScriptHash as string)
+              if (reactDeviceDetect.isMobile) {
+                collapseSidebar()
+              }
+            }}
+          >
+            {tooltipContent}
+          </SidebarNavLink>
+        </li>
+      )
+    },
+    [
+      collapseSidebar,
+      currentPageScriptHash,
+      endpoints,
+      onPageChange,
+      pageLinkBaseUrl,
+    ]
   )
 
-  const toggleExpanded = useCallback(() => {
-    if (!expanded && isOverflowing) {
-      setExpanded(true)
-    } else if (expanded) {
-      setExpanded(false)
-    }
-  }, [expanded, isOverflowing])
-
-  if (appPages.length < 2) {
-    return null
+  let contents = null
+  if (navSections.length > 0) {
+    const pagesBySectionHeader = groupBy(
+      appPages,
+      page => page.sectionHeader || ""
+    )
+    // For MPAv2: renders each NavSection with its respective header
+    contents = navSections.map(header => {
+      return (
+        <NavSection key={header} header={header}>
+          {(pagesBySectionHeader[header] ?? []).map(generateNavLinks)}
+        </NavSection>
+      )
+    })
+  } else {
+    // For MPAv1: single NavSection with all pages displayed
+    contents = appPages.map(generateNavLinks)
   }
+
+  const shouldShowViewButton =
+    (hasSidebarElements && isOverflowing) || expanded
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems
         ref={navItemsRef}
         isExpanded={expanded}
-        isOverflowing={isOverflowing}
         hasSidebarElements={hasSidebarElements}
-        onMouseOver={onMouseOver}
-        onMouseOut={onMouseOut}
         data-testid="stSidebarNavItems"
       >
-        {appPages.map((page: IAppPage, pageIndex: number) => {
-          const pageUrl = endpoints.buildAppPageURL(
-            pageLinkBaseUrl,
-            page,
-            pageIndex
-          )
-
-          const pageName = page.pageName as string
-          const tooltipContent = pageName.replace(/_/g, " ")
-          const isActive = page.pageScriptHash === currentPageScriptHash
-
-          return (
-            <li key={pageName}>
-              <StyledSidebarNavLinkContainer>
-                <StyledSidebarNavLink
-                  data-testid="stSidebarNavLink"
-                  isActive={isActive}
-                  href={pageUrl}
-                  onClick={e => {
-                    e.preventDefault()
-                    onPageChange(page.pageScriptHash as string)
-                    if (reactDeviceDetect.isMobile) {
-                      collapseSidebar()
-                    }
-                  }}
-                >
-                  {page.icon && page.icon.length && (
-                    <DynamicIcon size="md" iconValue={page.icon} />
-                  )}
-                  <StyledSidebarLinkText isActive={isActive}>
-                    {tooltipContent}
-                  </StyledSidebarLinkText>
-                </StyledSidebarNavLink>
-              </StyledSidebarNavLinkContainer>
-            </li>
-          )
-        })}
+        {contents}
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer
-          data-testid="stSidebarNavSeparator"
-          isExpanded={expanded}
-          isOverflowing={isOverflowing}
-          onClick={toggleExpanded}
-        >
-          {isOverflowing && !expanded && (
-            <Icon
-              content={ExpandMore}
-              size="md"
-              testid="stSidebarNavExpandIcon"
-            />
+        <>
+          {shouldShowViewButton && (
+            <StyledViewButton
+              onClick={handleViewButtonClick}
+              data-testid="stSidebarNavViewButton"
+            >
+              {expanded ? "View less" : "View more"}
+            </StyledViewButton>
           )}
-          {expanded && (
-            <Icon
-              content={ExpandLess}
-              size="md"
-              testid="stSidebarNavCollapseIcon"
-            />
-          )}
-        </StyledSidebarNavSeparatorContainer>
+          <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
+        </>
       )}
     </StyledSidebarNavContainer>
   )
