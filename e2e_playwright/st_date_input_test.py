@@ -174,6 +174,7 @@ def test_calls_callback_on_change(app: Page):
         '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
     ).first.click()
 
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "Value 12: 1970-01-02",
         use_inner_text=True,
