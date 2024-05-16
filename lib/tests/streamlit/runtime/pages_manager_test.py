@@ -64,6 +64,8 @@ class PagesManagerTest(unittest.TestCase):
     @patch.object(PagesManager, "invalidate_pages_cache", MagicMock())
     def test_install_pages_watcher(self, patched_watch_dir):
         """Test that the pages watcher is correctly installed and uninstalled"""
+        # Ensure Default Strategy is V1 to start
+        PagesManager.DefaultStrategy = PagesStrategyV1
         # Ensure PagesStrategyV1.is_watching_pages_dir is False to start
         PagesStrategyV1.is_watching_pages_dir = False
         pages_manager = PagesManager(os.path.normpath("/foo/bar/streamlit_app.py"))
@@ -88,11 +90,98 @@ class PagesManagerTest(unittest.TestCase):
         pages_manager.invalidate_pages_cache.assert_called_once()
 
 
+class PagesManagerV2Test(unittest.TestCase):
+    def setUp(self):
+        self.pages_manager = PagesManager("main_script_path")
+
+        # This signifies the change to V2
+        self.pages_manager.set_pages({})
+
+    def test_run_with_active_hash(self):
+        """Ensure the active script is set correctly"""
+        main_script_hash = self.pages_manager.main_script_hash
+        assert self.pages_manager.get_active_script_hash() == main_script_hash
+
+        with self.pages_manager.run_with_active_hash("new_hash"):
+            assert self.pages_manager.get_active_script_hash() == "new_hash"
+
+        assert self.pages_manager.get_active_script_hash() == main_script_hash
+
+    def test_get_page_script_valid_hash(self):
+        """Ensure the page script is provided with valid page hash specified"""
+
+        self.pages_manager.get_initial_active_script("page_hash", "")
+        self.pages_manager.set_pages({"page_hash": {"page_script_hash": "page_hash"}})
+
+        page_script = self.pages_manager.get_page_script(
+            self.pages_manager.main_script_hash
+        )
+        assert page_script["page_script_hash"] == "page_hash"
+
+    def test_get_page_script_invalid_hash(self):
+        """Ensure the page script is provided with invalid page hash specified"""
+
+        self.pages_manager.get_initial_active_script("bad_hash", "")
+        self.pages_manager.set_pages({"page_hash": {"page_script_hash": "page_hash"}})
+
+        page_script = self.pages_manager.get_page_script(
+            self.pages_manager.main_script_hash
+        )
+        assert page_script is None
+
+    def test_get_page_script_valid_name(self):
+        """Ensure the page script is provided with valid page name specified"""
+
+        self.pages_manager.get_initial_active_script("", "page_name")
+        self.pages_manager.set_pages(
+            {
+                "page_hash": {
+                    "page_script_hash": "page_hash",
+                    "url_pathname": "page_name",
+                }
+            }
+        )
+
+        page_script = self.pages_manager.get_page_script(
+            self.pages_manager.main_script_hash
+        )
+        assert page_script["page_script_hash"] == "page_hash"
+
+    def test_get_page_script_invalid_name(self):
+        """Ensure the page script is not provided with invalid page name specified"""
+
+        self.pages_manager.get_initial_active_script("", "foo")
+        self.pages_manager.set_pages(
+            {
+                "page_hash": {
+                    "page_script_hash": "page_hash",
+                    "url_pathname": "page_name",
+                }
+            }
+        )
+
+        page_script = self.pages_manager.get_page_script(
+            self.pages_manager.main_script_hash
+        )
+        assert page_script is None
+
+    def test_get_initial_active_script(self):
+        """Test that the initial active script is correctly retrieved with the
+        main script path provided."""
+        page_info = self.pages_manager.get_initial_active_script("page_hash", "")
+
+        self.assertDictEqual(
+            page_info,
+            {"script_path": "main_script_path", "page_script_hash": "page_hash"},
+        )
+
+
 # NOTE: We write this test function using pytest conventions (as opposed to
 # using unittest.TestCase like in the rest of the codebase) because the tmpdir
 # pytest fixture is so useful for writing this test it's worth having the
 # slight inconsistency.
-def test_get_active_script(tmpdir):
+def test_get_initial_active_script_v1(tmpdir):
+    PagesManager.DefaultStrategy = PagesStrategyV1
     # Write an empty string to create a file.
     tmpdir.join("streamlit_app.py").write("")
 
@@ -111,26 +200,26 @@ def test_get_active_script(tmpdir):
     example_page_script_hash = calc_md5(str(pages_dir / "01-page.py"))
 
     # positive case - get by hash
-    page = pages_manager.get_active_script(example_page_script_hash, None)
+    page = pages_manager.get_initial_active_script(example_page_script_hash, None)
     assert page["page_script_hash"] == example_page_script_hash
 
     # bad hash should not return a page
-    page = pages_manager.get_active_script("random_hash", None)
+    page = pages_manager.get_initial_active_script("random_hash", None)
     assert page is None
 
     # Even if the page name is specified, we detect via the hash only
-    page = pages_manager.get_active_script("random_hash", "page")
+    page = pages_manager.get_initial_active_script("random_hash", "page")
     assert page is None
 
     # Find by page name works
-    page = pages_manager.get_active_script("", "page")
+    page = pages_manager.get_initial_active_script("", "page")
     assert page["page_script_hash"] == example_page_script_hash
 
     # Try different page name
     alternate_page_script_hash = calc_md5(str(pages_dir / "03_other_page.py"))
-    page = pages_manager.get_active_script("", "other_page")
+    page = pages_manager.get_initial_active_script("", "other_page")
     assert page["page_script_hash"] == alternate_page_script_hash
 
     # Even if the valid page name is specified, we detect via the hash only
-    page = pages_manager.get_active_script(alternate_page_script_hash, "page")
+    page = pages_manager.get_initial_active_script(alternate_page_script_hash, "page")
     assert page["page_script_hash"] == alternate_page_script_hash

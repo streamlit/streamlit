@@ -45,6 +45,9 @@ FD = FieldDescriptor
                 ("page_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("page_name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("icon", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("is_default", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("section_header", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("url_pathname", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (

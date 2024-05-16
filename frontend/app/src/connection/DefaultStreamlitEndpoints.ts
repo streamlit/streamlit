@@ -91,7 +91,8 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     pageIndex: number
   ): string {
     const pageName = page.pageName as string
-    const navigateTo = pageIndex === 0 ? "" : pageName
+    const urlPath = page.urlPathname || pageName
+    const navigateTo = pageIndex === 0 ? "" : urlPath
 
     if (pageLinkBaseURL != null && pageLinkBaseURL.length > 0) {
       return `${pageLinkBaseURL}/${navigateTo}`

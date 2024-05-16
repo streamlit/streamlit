@@ -25,6 +25,7 @@ import {
   ForwardMsgMetadata,
   IArrow,
   IArrowNamedDataSet,
+  Logo,
 } from "./proto"
 import {
   VegaLiteChartElement,
@@ -42,6 +43,11 @@ import {
 } from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
+interface AppLogo {
+  logo: Logo
+  // Associated scriptHash that created the logo
+  activeScriptHash: string
+}
 
 /**
  * An immutable node of the "App Data Tree".
@@ -112,6 +118,12 @@ export interface AppNode {
    * path. Throws an error if the path is invalid.
    */
   setIn(path: number[], node: AppNode, scriptRunId: string): AppNode
+
+  /**
+   * Recursively remove children nodes whose activeScriptHash is no longer
+   * associated with the mainScriptHash.
+   */
+  filterMainScriptElements(mainScriptHash: string): AppNode | undefined
 
   /**
    * Recursively remove children nodes whose scriptRunId is no longer current.
@@ -221,6 +233,16 @@ export class ElementNode implements AppNode {
   // eslint-disable-next-line class-methods-use-this
   public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
+  }
+
+  public filterMainScriptElements(
+    mainScriptHash: string
+  ): AppNode | undefined {
+    if (this.activeScriptHash !== mainScriptHash) {
+      return undefined
+    }
+
+    return this
   }
 
   public clearStaleNodes(
@@ -437,6 +459,25 @@ export class BlockNode implements AppNode {
     )
   }
 
+  filterMainScriptElements(mainScriptHash: string): AppNode | undefined {
+    if (this.activeScriptHash !== mainScriptHash) {
+      return undefined
+    }
+
+    // Recursively clear our children.
+    const newChildren = this.children
+      .map(child => child.filterMainScriptElements(mainScriptHash))
+      .filter(notUndefined)
+
+    return new BlockNode(
+      this.activeScriptHash,
+      newChildren,
+      this.deltaBlock,
+      this.scriptRunId,
+      this.fragmentId
+    )
+  }
+
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,
@@ -511,6 +552,8 @@ export class AppRoot {
   /* The hash of the main script that creates this AppRoot. */
   readonly mainScriptHash: string
 
+  readonly appLogo: AppLogo | null
+
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
@@ -583,13 +626,19 @@ export class AppRoot {
 
     return new AppRoot(
       mainScriptHash,
-      new BlockNode(mainScriptHash, [main, sidebar, event, bottom])
+      new BlockNode(mainScriptHash, [main, sidebar, event, bottom]),
+      null
     )
   }
 
-  public constructor(mainScriptHash: string, root: BlockNode) {
+  public constructor(
+    mainScriptHash: string,
+    root: BlockNode,
+    appLogo: AppLogo | null = null
+  ) {
     this.mainScriptHash = mainScriptHash
     this.root = root
+    this.appLogo = appLogo
 
     // Verify that our root node has exactly 4 children: a 'main' block,
     // a 'sidebar' block, a `bottom` block and an 'event' block.
@@ -622,6 +671,18 @@ export class AppRoot {
   public get bottom(): BlockNode {
     const [, , , bottom] = this.root.children
     return bottom as BlockNode
+  }
+
+  public get logo(): Logo | null {
+    return this.appLogo?.logo ?? null
+  }
+
+  public appRootWithLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
+    const { activeScriptHash } = metadata
+    return new AppRoot(this.mainScriptHash, this.root, {
+      logo,
+      activeScriptHash,
+    })
   }
 
   public applyDelta(
@@ -683,6 +744,37 @@ export class AppRoot {
     }
   }
 
+  filterMainScriptElements(mainScriptHash: string): AppRoot {
+    // clears all nodes that are not associated with the mainScriptHash
+    // Get the current script run id from one of the children
+    const currentScriptRunId = this.main.scriptRunId
+    const main =
+      this.main.filterMainScriptElements(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+    const sidebar =
+      this.sidebar.filterMainScriptElements(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+    const event =
+      this.event.filterMainScriptElements(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+    const bottom =
+      this.bottom.filterMainScriptElements(mainScriptHash) ||
+      new BlockNode(mainScriptHash)
+    const appLogo =
+      this.appLogo?.activeScriptHash === mainScriptHash ? this.appLogo : null
+
+    return new AppRoot(
+      mainScriptHash,
+      new BlockNode(
+        mainScriptHash,
+        [main, sidebar, event, bottom],
+        new BlockProto({ allowEmpty: true }),
+        currentScriptRunId
+      ),
+      appLogo
+    )
+  }
+
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>
@@ -707,7 +799,8 @@ export class AppRoot {
         [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
-      )
+      ),
+      this.appLogo
     )
   }
 
@@ -738,7 +831,8 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
+      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.appLogo
     )
   }
 
@@ -766,7 +860,8 @@ export class AppRoot {
     )
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, blockNode, scriptRunId)
+      this.root.setIn(deltaPath, blockNode, scriptRunId),
+      this.appLogo
     )
   }
 
@@ -783,7 +878,8 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
       this.mainScriptHash,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
+      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.appLogo
     )
   }
 }

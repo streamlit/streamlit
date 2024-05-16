@@ -78,7 +78,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: mockEndpointProp,
-    elements: AppRoot.empty(true),
+    elements: AppRoot.empty(FAKE_SCRIPT_HASH, true),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",

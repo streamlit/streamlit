@@ -15,8 +15,11 @@
  */
 
 import {
+  AppRoot,
+  BlockNode,
   HostCommunicationManager,
   IAppPage,
+  Navigation,
   NewSession,
   PagesChanged,
   PageNotFound,
@@ -26,6 +29,7 @@ interface AppNavigationState {
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
+  navSections: string[]
 }
 
 export type MaybeStateUpdate =
@@ -38,7 +42,15 @@ export type PageUrlUpdateCallback = (
 ) => void
 export type PageNotFoundCallback = (pageName?: string) => void
 
-export class V1Strategy {
+function getTitle(pageName: string): string {
+  if (!pageName) {
+    return "Streamlit"
+  }
+
+  return `${pageName} · Streamlit`
+}
+
+export class StrategyV1 {
   private appPages: IAppPage[]
 
   private currentPageScriptHash: string | null
@@ -77,7 +89,7 @@ export class V1Strategy {
     this.appNav.onUpdatePageUrl(mainPageName, newPageName, isViewingMainPage)
 
     // Set the title to its default value
-    document.title = `${newPageName ?? ""} · Streamlit`
+    document.title = getTitle(newPageName ?? "")
 
     return [
       {
@@ -131,6 +143,11 @@ export class V1Strategy {
     ]
   }
 
+  handleNavigation(_navigationMsg: Navigation): MaybeStateUpdate {
+    // This message does not apply to V1
+    return undefined
+  }
+
   findPageByUrlPath(pathname: string): IAppPage {
     return (
       this.appPages.find(appPage =>
@@ -139,6 +156,131 @@ export class V1Strategy {
         pathname.endsWith("/" + appPage.pageName)
       ) ?? this.appPages[0]
     )
+  }
+
+  clearPageElements(
+    _elements: AppRoot,
+    mainScriptHash: string,
+    sidebarElements: BlockNode | undefined
+  ): AppRoot {
+    return AppRoot.empty(mainScriptHash, false, sidebarElements)
+  }
+}
+
+export class StrategyV2 {
+  readonly appNav: AppNavigation
+
+  mainScriptHash: string | null
+
+  appPages: IAppPage[]
+
+  mainPage: IAppPage | null
+
+  hideSidebarNav: boolean | null
+
+  constructor(appNav: AppNavigation) {
+    this.appNav = appNav
+    this.mainScriptHash = null
+    this.appPages = []
+    this.mainPage = null
+    this.hideSidebarNav = null
+  }
+
+  handleNewSession(newSession: NewSession): MaybeStateUpdate {
+    this.mainScriptHash = newSession.mainScriptHash
+    // Initialize to the config value if provided
+    if (this.hideSidebarNav === null) {
+      this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
+    }
+
+    // We do not know the page name, so use an empty string version
+    document.title = getTitle("")
+
+    return [{ hideSidebarNav: this.hideSidebarNav ?? false }, () => {}]
+  }
+
+  handlePagesChanged(_pagesChangedMsg: PagesChanged): MaybeStateUpdate {
+    // This message does not apply to V2
+    return undefined
+  }
+
+  handlePageNotFound(pageNotFound: PageNotFound): MaybeStateUpdate {
+    const { pageName } = pageNotFound
+    this.appNav.onPageNotFound(pageName)
+
+    return [
+      { currentPageScriptHash: this.mainScriptHash ?? "" },
+      () => {
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_CURRENT_PAGE_NAME",
+          currentPageName: "",
+          currentPageScriptHash: this.mainScriptHash ?? "",
+        })
+      },
+    ]
+  }
+
+  handleNavigation(navigationMsg: Navigation): MaybeStateUpdate {
+    const { sections, position, appPages } = navigationMsg
+
+    this.appPages = appPages
+    this.hideSidebarNav = position === "hidden"
+
+    const currentPageScriptHash = navigationMsg.pageScriptHash
+    const currentPage = appPages.find(
+      p => p.pageScriptHash === currentPageScriptHash
+    ) as IAppPage
+    const mainPage = appPages.find(p => p.isDefault) as IAppPage
+    this.mainPage = mainPage
+    const currentPageName = currentPage.isDefault
+      ? ""
+      : (currentPage.urlPathname as string)
+
+    document.title = getTitle(currentPage.pageName as string)
+    this.appNav.onUpdatePageUrl(
+      mainPage.pageName as string,
+      currentPageName,
+      currentPage.isDefault ?? false
+    )
+
+    return [
+      {
+        appPages,
+        navSections: sections,
+        hideSidebarNav: this.hideSidebarNav,
+        currentPageScriptHash,
+      },
+      () => {
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_APP_PAGES",
+          appPages,
+        })
+
+        this.appNav.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_CURRENT_PAGE_NAME",
+          currentPageName: currentPageName,
+          currentPageScriptHash,
+        })
+      },
+    ]
+  }
+
+  findPageByUrlPath(pathname: string): IAppPage {
+    return (
+      this.appPages.find(appPage =>
+        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
+        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
+        pathname.endsWith("/" + appPage.urlPathname)
+      ) ?? (this.mainPage as IAppPage)
+    )
+  }
+
+  clearPageElements(
+    elements: AppRoot,
+    mainScriptHash: string,
+    _sidebarElements: BlockNode | undefined
+  ): AppRoot {
+    return elements.filterMainScriptElements(mainScriptHash)
   }
 }
 
@@ -149,7 +291,7 @@ export class AppNavigation {
 
   readonly onPageNotFound: PageNotFoundCallback
 
-  readonly strategy: V1Strategy
+  strategy: StrategyV1 | StrategyV2
 
   constructor(
     hostCommunicationMgr: HostCommunicationManager,
@@ -160,11 +302,22 @@ export class AppNavigation {
     this.onUpdatePageUrl = onUpdatePageUrl
     this.onPageNotFound = onPageNotFound
 
-    this.strategy = new V1Strategy(this)
+    // Start with the V1 strategy as it will apply to V0 as well
+    this.strategy = new StrategyV1(this)
   }
 
   handleNewSession(newSession: NewSession): MaybeStateUpdate {
     return this.strategy.handleNewSession(newSession)
+  }
+
+  handleNavigation(navigationMsg: Navigation): MaybeStateUpdate {
+    // Navigation call (through st.navigation) indicates we are using
+    // MPA v2. We can change strategy here. It will set the state properly
+    if (this.strategy instanceof StrategyV1) {
+      this.strategy = new StrategyV2(this)
+    }
+
+    return this.strategy.handleNavigation(navigationMsg)
   }
 
   handlePagesChanged(pagesChangedMsg: PagesChanged): MaybeStateUpdate {
@@ -177,5 +330,17 @@ export class AppNavigation {
 
   findPageByUrlPath(pathname: string): IAppPage {
     return this.strategy.findPageByUrlPath(pathname)
+  }
+
+  clearPageElements(
+    elements: AppRoot,
+    mainScriptHash: string,
+    sidebarElements: BlockNode | undefined
+  ): AppRoot {
+    return this.strategy.clearPageElements(
+      elements,
+      mainScriptHash,
+      sidebarElements
+    )
   }
 }
