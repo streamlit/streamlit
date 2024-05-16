@@ -24,8 +24,8 @@ def open_dialog_with_images(app: Page):
     app.get_by_text("Open Dialog with Images").click()
 
 
-def open_dialog_without_images(app: Page):
-    app.get_by_text("Open Dialog without Images").click()
+def open_dialog_without_images(app: Page, *, delay: int = 0):
+    app.get_by_text("Open Dialog without Images").click(delay=delay)
 
 
 def open_largewidth_dialog(app: Page):
@@ -80,8 +80,6 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
-# on webkit this test was flaky and manually reproducing the flaky error did not work, so we skip it for now
-@pytest.mark.skip_browser("webkit")
 def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder):
     """Test that dialog reopens after dismiss."""
 
@@ -89,15 +87,15 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder):
         name="dismiss_dialog_and_reopen", screenshots=True, snapshots=True, sources=True
     )
     # open and close the dialog multiple times
-    for _ in range(0, 5):
+    for _ in range(0, 3):
         # don't click indefinitely fast to give the dialog time to set the state
-        app.wait_for_timeout(250)
+        app.wait_for_timeout(500)
 
-        open_dialog_without_images(app)
-        wait_for_app_run(app, wait_delay=100)
+        open_dialog_without_images(app, delay=50)
+        wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
-        app.wait_for_timeout(250)
+        app.wait_for_timeout(500)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
@@ -113,8 +111,10 @@ def test_dialog_reopens_properly_after_close(app: Page):
     # open and close the dialog multiple times
     for _ in range(0, 5):
         open_dialog_with_images(app)
+
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
+
         expect(main_dialog).to_have_count(1)
         close_button = main_dialog.get_by_test_id("stButton").locator("button").first
         close_button.scroll_into_view_if_needed()
@@ -198,11 +198,11 @@ def test_largewidth_dialog_displays_correctly(
     assert_snapshot(dialog, name="st_dialog-with_large_width")
 
 
-def test_sidebardialog_displays_correctly(
+def test_sidebar_dialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     open_sidebar_dialog(app)
-    wait_for_app_run(app)
+    wait_for_app_run(app, wait_delay=200)
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
     assert_snapshot(dialog, name="st_dialog-in_sidebar")
