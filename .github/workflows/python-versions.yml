@@ -130,7 +130,7 @@ jobs:
           CONSTRAINT_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt"
           diff -y <(echo "Old"; curl -s "${CONSTRAINT_URL}") <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
       - name: Upload constraints file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: constraints
           path: ${{ env.CONSTRAINTS_FILE }}

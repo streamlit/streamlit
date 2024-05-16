@@ -191,7 +191,7 @@ jobs:
           sudo apt install rsync
           make package
       - name: Store Whl File
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: whl_file
           path: lib/dist/*.whl
