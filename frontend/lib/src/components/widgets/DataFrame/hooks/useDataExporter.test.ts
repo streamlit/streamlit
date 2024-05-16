@@ -108,7 +108,7 @@ describe("useDataExporter hook", () => {
 
   it("correctly writes data row-by-row to writable", async () => {
     const { result } = renderHook(() => {
-      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS)
+      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS, false)
     })
 
     if (typeof result.current.exportToCsv !== "function") {
@@ -130,7 +130,7 @@ describe("useDataExporter hook", () => {
 
   it("correctly creates a file picker", async () => {
     const { result } = renderHook(() => {
-      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS)
+      return useDataExporter(getCellContentMock, MOCK_COLUMNS, NUM_ROWS, false)
     })
 
     if (typeof result.current.exportToCsv !== "function") {
