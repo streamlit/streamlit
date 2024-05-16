@@ -460,9 +460,9 @@ class ButtonMixin:
         Parameters
         ----------
         page : str or st.Page
-            The file path (relative to the main script) of the page to switch to.
-            Alternatively, this can be the URL to an external page (must start
-            with "http://" or "https://").
+            The file path (relative to the main script) or an st.Page indicating
+            the page to switch to. Alternatively, this can be the URL to an
+            external page (must start with "http://" or "https://").
         label : str
             The label for the page link. Labels are required for external pages.
             Labels can optionally contain Markdown and supports the following

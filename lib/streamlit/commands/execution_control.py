@@ -108,7 +108,9 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
     Parameters
     ----------
     page: str or st.Page
-        The file path (relative to the main script) of the page to switch to.
+        The file path (relative to the main script) or an st.Page indicating
+        the page to switch to.
+
 
     Example
     -------
