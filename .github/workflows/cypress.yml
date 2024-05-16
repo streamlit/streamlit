@@ -118,13 +118,13 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cypress_videos
+          name: cypress_videos-${{ matrix.specs }}
           path: frontend/cypress/videos
       - name: Store Snapshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cypress_snapshots
+          name: cypress_snapshots-${{ matrix.specs }}
           path: frontend/cypress/snapshots
 
   cypress_summary:

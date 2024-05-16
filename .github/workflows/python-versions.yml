@@ -132,7 +132,7 @@ jobs:
       - name: Upload constraints file
         uses: actions/upload-artifact@v4
         with:
-          name: constraints
+          name: constraints-${{ matrix.python_version }}
           path: ${{ env.CONSTRAINTS_FILE }}
           if-no-files-found: error
 
@@ -164,10 +164,11 @@ jobs:
           # later git commands can work.
           persist-credentials: true
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: constraints
           path: .
+          pattern: constraints-*
+          merge-multiple: true
 
       - name: Commit and push constraint files
         run: |
