@@ -31,10 +31,10 @@ message Navigation {
 
   // Position of the Navigation
   enum Position {
-    // Plain, fixed width text.
-    SIDEBAR = 0;
+    // do not display the navigation
+    HIDDEN = 0;
 
-    // Shows an error message.
-    HIDDEN = 1;
+    // display navigation in the sidebar
+    SIDEBAR = 1;
   }
 }
