@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Literal
 
@@ -183,7 +184,9 @@ def navigation(
     page_to_return._can_be_called = True
     msg.navigation.page_script_hash = page_to_return._script_hash
 
-    # This will either navigation or yield if the page is not found
+    # We add a sleep here to give the web app time to react to the update. Otherwise,
+    # widget state management can get out of sync.
+    time.sleep(0.05)
     ctx.enqueue(msg)
 
     return page_to_return
