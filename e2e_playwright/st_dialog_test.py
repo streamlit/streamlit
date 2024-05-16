@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
+# import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -21,23 +21,25 @@ modal_test_id = "stModal"
 
 
 def open_dialog_with_images(app: Page):
-    app.get_by_text("Open Dialog with Images").click()
+    app.get_by_role("button").filter(has_text="Open Dialog with Images").click()
 
 
 def open_dialog_without_images(app: Page, *, delay: int = 0):
-    app.get_by_text("Open Dialog without Images").click(delay=delay)
+    app.get_by_role("button").filter(has_text="Open Dialog without Images").click(
+        delay=delay
+    )
 
 
 def open_largewidth_dialog(app: Page):
-    app.get_by_text("Open large-width Dialog").click()
+    app.get_by_role("button").filter(has_text="Open large-width Dialog").click()
 
 
 def open_headings_dialogs(app: Page):
-    app.get_by_text("Open headings Dialog").click()
+    app.get_by_role("button").filter(has_text="Open headings Dialog").click()
 
 
 def open_sidebar_dialog(app: Page):
-    app.get_by_text("Open Sidebar-Dialog").click()
+    app.get_by_role("button").filter(has_text="Open Sidebar-Dialog").click()
 
 
 def click_to_dismiss(app: Page):
@@ -89,20 +91,20 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
     )
     # open and close the dialog multiple times
     for _ in range(0, 3):
-        # don't click indefinitely fast to give the dialog time to set the state
-        app.wait_for_timeout(500)
-
         open_dialog_without_images(app, delay=50)
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
-        app.wait_for_timeout(500)
+        app.wait_for_timeout(750)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
 
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+        # don't click indefinitely fast to give the dialog time to set the state
+        app.wait_for_timeout(750)
 
     app.context.tracing.stop(
         path=output_folder / f"trace_dialog_close_and_reopen_{browser_name}.zip"
