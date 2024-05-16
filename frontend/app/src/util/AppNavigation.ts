@@ -331,7 +331,6 @@ export class AppNavigation {
   }
 
   handleNewSession(newSession: NewSession): MaybeStateUpdate {
-    // Reset the page title and icon
     this.isPageTitleSet = false
     this.isPageIconSet = false
 
