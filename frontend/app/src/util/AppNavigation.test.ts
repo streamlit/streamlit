@@ -287,7 +287,7 @@ describe("AppNavigation", () => {
             sectionHeader: "section2",
           }),
         ],
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
       })
       appNavigation.handleNavigation(navigation)
@@ -447,7 +447,7 @@ describe("AppNavigation", () => {
       const navigation = new Navigation({
         sections: ["section1", "section2"],
         appPages,
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
       })
       const maybeState = appNavigation.handleNavigation(navigation)
