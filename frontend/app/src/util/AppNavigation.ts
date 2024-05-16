@@ -21,6 +21,7 @@ import {
   IAppPage,
   Navigation,
   NewSession,
+  PageConfig,
   PagesChanged,
   PageNotFound,
 } from "@streamlit/lib"
@@ -41,6 +42,7 @@ export type PageUrlUpdateCallback = (
   isViewingMainPage: boolean
 ) => void
 export type PageNotFoundCallback = (pageName?: string) => void
+export type SetIconCallback = (icon: string) => void
 
 function getTitle(pageName: string): string {
   if (!pageName) {
@@ -236,7 +238,19 @@ export class StrategyV2 {
       ? ""
       : (currentPage.urlPathname as string)
 
-    document.title = getTitle(currentPage.pageName as string)
+    if (!this.appNav.isPageTitleSet) {
+      const title = getTitle(currentPage.pageName as string)
+      document.title = title
+      this.appNav.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_TITLE",
+        title,
+      })
+    }
+
+    if (!this.appNav.isPageIconSet && currentPage.icon) {
+      this.appNav.onPageIconChange(currentPage.icon)
+    }
+
     this.appNav.onUpdatePageUrl(
       mainPage.pageName as string,
       currentPageName,
@@ -291,22 +305,36 @@ export class AppNavigation {
 
   readonly onPageNotFound: PageNotFoundCallback
 
+  readonly onPageIconChange: SetIconCallback
+
+  isPageTitleSet: boolean
+
+  isPageIconSet: boolean
+
   strategy: StrategyV1 | StrategyV2
 
   constructor(
     hostCommunicationMgr: HostCommunicationManager,
     onUpdatePageUrl: PageUrlUpdateCallback,
-    onPageNotFound: PageNotFoundCallback
+    onPageNotFound: PageNotFoundCallback,
+    onPageIconChange: SetIconCallback
   ) {
     this.hostCommunicationMgr = hostCommunicationMgr
     this.onUpdatePageUrl = onUpdatePageUrl
     this.onPageNotFound = onPageNotFound
+    this.onPageIconChange = onPageIconChange
+    this.isPageIconSet = false
+    this.isPageTitleSet = false
 
     // Start with the V1 strategy as it will apply to V0 as well
     this.strategy = new StrategyV1(this)
   }
 
   handleNewSession(newSession: NewSession): MaybeStateUpdate {
+    // Reset the page title and icon
+    this.isPageTitleSet = false
+    this.isPageIconSet = false
+
     return this.strategy.handleNewSession(newSession)
   }
 
@@ -330,6 +358,11 @@ export class AppNavigation {
 
   findPageByUrlPath(pathname: string): IAppPage {
     return this.strategy.findPageByUrlPath(pathname)
+  }
+
+  handlePageConfigChanged(pageConfig: PageConfig): void {
+    this.isPageIconSet = Boolean(pageConfig.favicon)
+    this.isPageTitleSet = Boolean(pageConfig.title)
   }
 
   clearPageElements(
