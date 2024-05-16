@@ -132,11 +132,6 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     return test_module.__file__.replace("_test.py", ".py")
 
 
-def get_iframe_html_path() -> str:
-    """Get the absolute path of the given path."""
-    return f"file://{os.getcwd()}/test_assets/iframed_app.html"
-
-
 def hash_to_range(
     text: str,
     min: int = 10000,
@@ -353,7 +348,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
         ):
             page.goto(fake_iframe_server_route, wait_until="domcontentloaded")
             frame_locator = page.frame_locator("iframe")
-            frame_locator.nth(0).locator("[data-testid='stAppViewContainer']").wait_for(
+            frame_locator.nth(0).get_by_test_id("stAppViewContainer").wait_for(
                 timeout=30000, state="attached"
             )
         return frame_locator
