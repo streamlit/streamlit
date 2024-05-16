@@ -146,4 +146,4 @@ vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.0
 yarl==1.9.4
-zipp==3.18.1
+zipp==3.18.2
