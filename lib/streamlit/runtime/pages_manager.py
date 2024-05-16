@@ -14,14 +14,17 @@
 
 from __future__ import annotations
 
+import contextlib
+import os
 import threading
 from pathlib import Path
-from typing import Callable, Final, Optional
+from typing import Any, Callable, Final, Optional, Type
 
 from blinker import Signal
 
 import streamlit.source_util as source_util
 from streamlit.logger import get_logger
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
 from streamlit.util import calc_md5
 from streamlit.watcher import watch_dir
@@ -66,11 +69,9 @@ class PagesStrategyV1:
         return self.pages_manager.current_page_hash
 
     def set_active_script_hash(self, _page_hash: PageHash):
-        raise NotImplementedError(
-            "Unable to set the active script hash in this strategy"
-        )
+        raise NotImplementedError("Unable to set the active script hash in V1 strategy")
 
-    def get_active_script(
+    def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> Optional[PageInfo]:
         pages = self.pages_manager.get_pages()
@@ -100,19 +101,114 @@ class PagesStrategyV1:
         main_page_info = list(pages.values())[0]
         return main_page_info
 
+    def set_initial_script(
+        self, _page_script_hash: PageHash, _page_name: PageName
+    ) -> None:
+        # Intentionally does nothing
+        pass
+
     def get_pages(self) -> dict[PageHash, PageInfo]:
         return source_util.get_pages(self.pages_manager.main_script_path)
 
+    def set_pages(self, _pages: dict[PageHash, PageInfo]) -> None:
+        raise NotImplementedError("Unable to set pages in this V1 strategy")
+
+    def get_page_script(self, _fallback_page_hash: PageHash) -> Optional[PageInfo]:
+        raise NotImplementedError("Unable to get page script in this V1 strategy")
+
+
+class PagesStrategyV2:
+    def __init__(self, pages_manager: PagesManager, **kwargs):
+        self.pages_manager = pages_manager
+        self._active_script_hash: PageHash = self.pages_manager.main_script_hash
+        self._pages: dict[PageHash, PageInfo] | None = None
+        self._initial_page_script_hash: PageHash | None = None
+        self._initial_page_name: PageName | None = None
+
+    def get_active_script_hash(self) -> PageHash:
+        return self._active_script_hash
+
+    def set_active_script_hash(self, page_hash: PageHash):
+        self._active_script_hash = page_hash
+
+    def get_initial_active_script(
+        self, page_script_hash: PageHash, page_name: PageName
+    ) -> PageInfo:
+        # At this point, we cannot determine the active script at start
+        # as we don't have the list of pages yet. So we will pass
+        # the common code script path and the hash
+        self._initial_page_script_hash = page_script_hash
+        self._initial_page_name = page_name
+
+        return {
+            # We always run the main script in V2 as it's the common code
+            "script_path": self.pages_manager.main_script_path,
+            "page_script_hash": page_script_hash
+            or self.pages_manager.main_script_hash,  # Default Hash
+        }
+
+    def set_initial_script(
+        self, page_script_hash: PageHash, page_name: PageName
+    ) -> None:
+        self._initial_page_script_hash = page_script_hash
+        self._initial_page_name = page_name
+
+    def get_page_script(self, fallback_page_hash: PageHash) -> Optional[PageInfo]:
+        if self._pages is None:
+            return None
+
+        if self._initial_page_script_hash:
+            # We assume that if initial page hash is specified, that a page should
+            # exist, so we check out the page script hash or the default page hash
+            # as a backup
+            return self._pages.get(
+                self._initial_page_script_hash,
+                self._pages.get(fallback_page_hash, None),
+            )
+        elif self._initial_page_name:
+            # If a user navigates directly to a non-main page of an app, the
+            # the page name can identify the page script to run
+            return next(
+                filter(
+                    # There seems to be this weird bug with mypy where it
+                    # thinks that p can be None (which is impossible given the
+                    # types of pages), so we add `p and` at the beginning of
+                    # the predicate to circumvent this.
+                    lambda p: p and (p["url_pathname"] == self._initial_page_name),
+                    self._pages.values(),
+                ),
+                None,
+            )
+
+        return self._pages.get(fallback_page_hash, None)
+
+    def get_pages(self) -> dict[PageHash, PageInfo]:
+        # If pages are not set, provide the common page info
+        return self._pages or {
+            self.pages_manager.main_script_hash: {
+                "page_script_hash": self.pages_manager.main_script_hash,
+                "page_name": "",
+                "icon": "",
+                "script_path": self.pages_manager.main_script_path,
+            }
+        }
+
+    def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
+        self._pages = pages
+
 
 class PagesManager:
-    def __init__(self, main_script_path, setup_watcher=True):
+    DefaultStrategy: Type[PagesStrategyV1 | PagesStrategyV2] = PagesStrategyV1
+
+    def __init__(self, main_script_path, script_cache=None, **kwargs):
         self._cached_pages: dict[PageHash, PageInfo] | None = None
         self._pages_cache_lock = threading.RLock()
         self._on_pages_changed = Signal(doc="Emitted when the set of pages has changed")
         self._main_script_path: ScriptPath = main_script_path
         self._main_script_hash: PageHash = calc_md5(main_script_path)
         self._current_page_hash: PageHash = self._main_script_hash
-        self.pages_strategy = PagesStrategyV1(self, setup_watcher)
+        self.pages_strategy = PagesManager.DefaultStrategy(self, **kwargs)
+        self._script_cache: ScriptCache | None = script_cache
 
     @property
     def current_page_hash(self) -> PageHash:
@@ -144,10 +240,27 @@ class PagesManager:
     def set_active_script_hash(self, page_hash: PageHash):
         return self.pages_strategy.set_active_script_hash(page_hash)
 
-    def get_active_script(
+    def set_initial_script(
+        self, page_script_hash: PageHash, page_name: PageName
+    ) -> None:
+        return self.pages_strategy.set_initial_script(page_script_hash, page_name)
+
+    def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> Optional[PageInfo]:
-        return self.pages_strategy.get_active_script(page_script_hash, page_name)
+        return self.pages_strategy.get_initial_active_script(
+            page_script_hash, page_name
+        )
+
+    @contextlib.contextmanager
+    def run_with_active_hash(self, page_hash):
+        original_page_hash = self.get_active_script_hash()
+        self.set_active_script_hash(page_hash)
+        try:
+            yield
+        finally:
+            # in the event of any exception, ensure we set the active hash back
+            self.set_active_script_hash(original_page_hash)
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
         # Avoid taking the lock if the pages cache hasn't been invalidated.
@@ -165,6 +278,28 @@ class PagesManager:
             self._cached_pages = pages
 
             return pages
+
+    def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
+        # Manually setting the pages indicates we are using MPA v2.
+        if isinstance(self.pages_strategy, PagesStrategyV1):
+            if os.path.exists(Path(self.main_script_path).parent / "pages"):
+                _LOGGER.warning(
+                    "st.navigation was called in an app with a pages/ directory. This may cause unusual app behavior. You may want to rename the pages/ directory."
+                )
+            PagesManager.DefaultStrategy = PagesStrategyV2
+            self.pages_strategy = PagesStrategyV2(self)
+
+        self.pages_strategy.set_pages(pages)
+        self._cached_pages = pages
+        self._on_pages_changed.send()
+
+    def get_page_script(self, fallback_page_hash: PageHash = "") -> Optional[PageInfo]:
+        # We assume the pages strategy is V2 cause this is used
+        # in the st.navigation call, but we just swallow the error
+        try:
+            return self.pages_strategy.get_page_script(fallback_page_hash)
+        except NotImplementedError:
+            return None
 
     def invalidate_pages_cache(self) -> None:
         _LOGGER.debug("Set of pages have changed. Invalidating cache.")
@@ -190,3 +325,10 @@ class PagesManager:
         self._on_pages_changed.connect(callback, weak=False)
 
         return disconnect
+
+    def get_page_script_byte_code(self, script_path: str) -> Any:
+        if self._script_cache is None:
+            # Returning an empty string for an empty script
+            return ""
+
+        return self._script_cache.get_bytecode(script_path)

@@ -833,4 +833,30 @@ describe("WidgetStateDict", () => {
     expect(widgetStateDict.getState(widgetId2)).toEqual({ id: widgetId2 })
     expect(widgetStateDict.getState(widgetId3)).toEqual({ id: widgetId3 })
   })
+
+  it("supplies WidgetStates with for active widgets based on input", () => {
+    const widgetStateManager = new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    })
+
+    widgetStateManager.setStringValue({ id: "widget1" }, "foo", {
+      fromUi: false,
+    })
+    widgetStateManager.setStringValue({ id: "widget2" }, "bar", {
+      fromUi: false,
+    })
+
+    const activeIds = new Set(["widget2"])
+    const widgetStates = widgetStateManager.getActiveWidgetStates(activeIds)
+
+    expect(widgetStates).toEqual({
+      widgets: [
+        {
+          id: "widget2",
+          stringValue: "bar",
+        },
+      ],
+    })
+  })
 })

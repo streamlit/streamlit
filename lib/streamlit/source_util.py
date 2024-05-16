@@ -34,6 +34,7 @@ class PageInfo(TypedDict):
     page_script_hash: PageHash
     icon: NotRequired[Icon]
     page_name: NotRequired[PageName]
+    url_pathname: NotRequired[str]
 
 
 def open_python_file(filename: str):

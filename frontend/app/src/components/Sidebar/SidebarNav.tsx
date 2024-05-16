@@ -23,11 +23,11 @@ import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import {
   Icon,
-  EmojiIcon,
   useIsOverflowing,
   StreamlitEndpoints,
   IAppPage,
 } from "@streamlit/lib"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 import {
   StyledSidebarNavContainer,
@@ -124,7 +124,7 @@ const SidebarNav = ({
                   }}
                 >
                   {page.icon && page.icon.length && (
-                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
+                    <DynamicIcon size="md" iconValue={page.icon} />
                   )}
                   <StyledSidebarLinkText isActive={isActive}>
                     {tooltipContent}
