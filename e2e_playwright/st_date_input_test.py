@@ -167,7 +167,7 @@ def test_handles_range_start_end_date_changes(app: Page):
     )
 
 
-def test_calls_callback_on_change(app: Page, output_folder):
+def test_calls_callback_on_change(app: Page, output_folder, browser_name):
     app.context.tracing.start(
         name="callback_on_change", screenshots=True, snapshots=True, sources=True
     )
@@ -213,7 +213,9 @@ def test_calls_callback_on_change(app: Page, output_folder):
         use_inner_text=True,
     )
 
-    app.context.tracing.stop(path=output_folder / "trace_date_input_callback.zip")
+    app.context.tracing.stop(
+        path=output_folder / f"trace_date_input_callback_{browser_name}.zip"
+    )
 
 
 def test_single_date_calendar_picker_rendering(
