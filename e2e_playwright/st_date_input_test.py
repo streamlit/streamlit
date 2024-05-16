@@ -167,7 +167,11 @@ def test_handles_range_start_end_date_changes(app: Page):
     )
 
 
-def test_calls_callback_on_change(app: Page):
+def test_calls_callback_on_change(app: Page, output_folder):
+    app.context.tracing.start(
+        name="callback_on_change", screenshots=True, snapshots=True, sources=True
+    )
+
     """Test that it correctly calls the callback on change."""
     app.get_by_test_id("stDateInput").nth(11).click()
 
@@ -208,6 +212,8 @@ def test_calls_callback_on_change(app: Page):
         "Date Input Changed: False",
         use_inner_text=True,
     )
+
+    app.context.tracing.stop(path=output_folder / "trace")
 
 
 def test_single_date_calendar_picker_rendering(
