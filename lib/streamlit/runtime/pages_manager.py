@@ -24,6 +24,8 @@ from blinker import Signal
 
 import streamlit.source_util as source_util
 from streamlit.logger import get_logger
+from streamlit.proto.NewSession_pb2 import NewSession
+from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
 from streamlit.util import calc_md5
@@ -116,6 +118,18 @@ class PagesStrategyV1:
     def get_page_script(self, _fallback_page_hash: PageHash) -> Optional[PageInfo]:
         raise NotImplementedError("Unable to get page script in this V1 strategy")
 
+    def populate_app_pages(self, proto: NewSession | PagesChanged):
+        default_setting = True
+        for page_script_hash, page_info in self.pages_manager.get_pages().items():
+            page_proto = proto.app_pages.add()
+
+            page_proto.page_script_hash = page_script_hash
+            page_proto.page_name = page_info["page_name"]
+            page_proto.icon = page_info["icon"]
+            # Set the first page as default on first iteration
+            page_proto.is_default = default_setting
+            default_setting = False
+
 
 class PagesStrategyV2:
     def __init__(self, pages_manager: PagesManager, **kwargs):
@@ -195,6 +209,16 @@ class PagesStrategyV2:
 
     def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
         self._pages = pages
+
+    def populate_app_pages(self, proto: NewSession | PagesChanged):
+        # Always supply the first page as the main script.
+        # It should be disregarded by the frontend in favor of a
+        # navigation call
+        page_proto = proto.app_pages.add()
+        self.get_initial_active_script("", "")
+        page_proto.page_script_hash = self.pages_manager.main_script_path
+        page_proto.page_name = ""
+        page_proto.icon = ""
 
 
 class PagesManager:
@@ -300,6 +324,9 @@ class PagesManager:
             return self.pages_strategy.get_page_script(fallback_page_hash)
         except NotImplementedError:
             return None
+
+    def populate_app_pages(self, proto: NewSession | PagesChanged):
+        self.pages_strategy.populate_app_pages(proto)
 
     def invalidate_pages_cache(self) -> None:
         _LOGGER.debug("Set of pages have changed. Invalidating cache.")

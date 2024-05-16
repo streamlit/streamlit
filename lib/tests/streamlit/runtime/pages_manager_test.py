@@ -18,6 +18,7 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.pages_manager import PagesManager, PagesStrategyV1
 from streamlit.util import calc_md5
 
@@ -88,6 +89,28 @@ class PagesManagerTest(unittest.TestCase):
 
         on_pages_changed("/foo/bar/pages")
         pages_manager.invalidate_pages_cache.assert_called_once()
+
+    @patch(
+        "streamlit.source_util.get_pages",
+        MagicMock(
+            return_value={
+                "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
+                "hash2": {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
+            }
+        ),
+    )
+    def test_populate_page(self):
+        """Only populates one page for NewSession and PagesChanged events"""
+        pages_manager = PagesManager("main_script_path")
+        msg = ForwardMsg()
+        pages_manager.populate_app_pages(msg.pages_changed)
+
+        assert len(msg.pages_changed.app_pages) == 2
+
+        msg = ForwardMsg()
+        pages_manager.populate_app_pages(msg.new_session)
+
+        assert len(msg.new_session.app_pages) == 2
 
 
 class PagesManagerV2Test(unittest.TestCase):
@@ -174,6 +197,18 @@ class PagesManagerV2Test(unittest.TestCase):
             page_info,
             {"script_path": "main_script_path", "page_script_hash": "page_hash"},
         )
+
+    def test_populate_page(self):
+        """Only populates one page for NewSession and PagesChanged events"""
+        msg = ForwardMsg()
+        self.pages_manager.populate_app_pages(msg.pages_changed)
+
+        assert len(msg.pages_changed.app_pages) == 1
+
+        msg = ForwardMsg()
+        self.pages_manager.populate_app_pages(msg.new_session)
+
+        assert len(msg.new_session.app_pages) == 1
 
 
 # NOTE: We write this test function using pytest conventions (as opposed to

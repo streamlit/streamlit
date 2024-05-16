@@ -29,13 +29,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
-from streamlit.proto.NewSession_pb2 import (
-    Config,
-    CustomThemeConfig,
-    NewSession,
-    UserInfo,
-)
-from streamlit.proto.PagesChanged_pb2 import PagesChanged
+from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
@@ -456,7 +450,7 @@ class AppSession:
 
     def _on_pages_changed(self, _) -> None:
         msg = ForwardMsg()
-        self._populate_app_pages(msg.pages_changed)
+        self._pages_manager.populate_app_pages(msg.pages_changed)
         self._enqueue_forward_msg(msg)
 
         if self._local_sources_watcher is not None:
@@ -681,7 +675,7 @@ class AppSession:
         if fragment_ids_this_run:
             msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
-        self._populate_app_pages(msg.new_session)
+        self._pages_manager.populate_app_pages(msg.new_session)
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -831,14 +825,6 @@ class AppSession:
             )
 
         self._enqueue_forward_msg(msg)
-
-    def _populate_app_pages(self, msg: NewSession | PagesChanged) -> None:
-        for page_script_hash, page_info in self._pages_manager.get_pages().items():
-            page_proto = msg.app_pages.add()
-
-            page_proto.page_script_hash = page_script_hash
-            page_proto.page_name = page_info["page_name"]
-            page_proto.icon = page_info["icon"]
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so

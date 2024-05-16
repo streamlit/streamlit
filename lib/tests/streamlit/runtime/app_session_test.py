@@ -39,7 +39,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.pages_manager import PagesManager, PagesStrategyV1
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
@@ -97,6 +97,7 @@ class AppSessionTest(unittest.TestCase):
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
+        PagesManager.DefaultStrategy = PagesStrategyV1
 
     def tearDown(self) -> None:
         super().tearDown()
@@ -441,7 +442,12 @@ class AppSessionTest(unittest.TestCase):
         expected_msg = ForwardMsg()
         expected_msg.pages_changed.app_pages.extend(
             [
-                AppPage(page_script_hash="hash1", page_name="page1", icon=""),
+                AppPage(
+                    page_script_hash="hash1",
+                    page_name="page1",
+                    icon="",
+                    is_default=True,
+                ),
                 AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
             ]
         )
@@ -721,7 +727,12 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         self.assertEqual(
             list(new_session_msg.app_pages),
             [
-                AppPage(page_script_hash="hash1", page_name="page1", icon=""),
+                AppPage(
+                    page_script_hash="hash1",
+                    page_name="page1",
+                    icon="",
+                    is_default=True,
+                ),
                 AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
             ],
         )
