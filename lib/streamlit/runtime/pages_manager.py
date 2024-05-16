@@ -161,7 +161,10 @@ class PagesStrategyV2:
             # We assume that if initial page hash is specified, that a page should
             # exist, so we check out the page script hash or the default page hash
             # as a backup
-            return self._pages.get(self._initial_page_script_hash, None)
+            return self._pages.get(
+                self._initial_page_script_hash,
+                self._pages.get(fallback_page_hash, None),
+            )
         elif self._initial_page_name:
             # If a user navigates directly to a non-main page of an app, the
             # the page name can identify the page script to run
