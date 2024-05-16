@@ -39,21 +39,14 @@ def _expect_iframe_attached(app: Page):
     expect(app.locator("iframe").first).to_be_attached()
 
 
-@pytest.mark.parametrize(
-    ("name", "expected_text"),
-    [
-        ("componentsHtml1", "Hello World!"),
-        ("componentsHtml2", "Hello World 2!"),
-    ],
-)
-def test_components_html(app: Page, name: str, expected_text: str):
+def test_components_html(app: Page):
     """Test that components.html can be imported and used"""
-    _select_component(app, name)
+    _select_component(app, "componentsHtml")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
     iframe = app.frame_locator("iframe")
     div = iframe.locator("div")
-    expect(div).to_have_text(expected_text)
+    expect(div).to_have_text("Hello World!")
 
 
 @pytest.mark.parametrize(
@@ -64,6 +57,10 @@ def test_components_html(app: Page, name: str, expected_text: str):
     ],
 )
 def test_components_import(app: Page, name: str, expected_text: str):
+    """Test that components.iframe and components.declare_component can be imported and used.
+
+    We only make sure that they are importable but do not call them, so we don't have an iframe element in the DOM.
+    """
     _select_component(app, name)
     _expect_no_exception(app)
     div = app.get_by_test_id("stMarkdownContainer").filter(
