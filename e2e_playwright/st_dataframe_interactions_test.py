@@ -304,6 +304,12 @@ def _test_csv_download(
 def test_csv_download_button(
     app: Page, browser_name: str, browser_type_launch_args: dict
 ):
+    """Test that the csv download button works.
+
+    Note that the library we are using calls the file picker API to download the file. This is not supported in headless mode. Hence, the test
+    triggers different code paths in the app depending on the browser and the launch arguments.
+    """
+
     click_enter_on_file_picker = False
 
     # right now the filechooser will only be opened on Chrome. Maybe this will change in the future and the
