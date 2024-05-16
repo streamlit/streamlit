@@ -195,8 +195,7 @@ def test_calls_callback_on_change(app: Page, output_folder, browser_name):
 
     # Change different date input to trigger delta path change
     first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
-    first_date_input_field.type("1971/01/03", delay=50)
-    first_date_input_field.press("Enter")
+    first_date_input_field.fill("1971/01/03")
     wait_for_app_run(app)
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(

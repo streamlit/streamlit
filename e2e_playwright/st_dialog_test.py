@@ -95,7 +95,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
-        app.wait_for_timeout(750)
+        app.wait_for_timeout(1000)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
@@ -104,7 +104,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
         expect(main_dialog).to_have_count(0)
 
         # don't click indefinitely fast to give the dialog time to set the state
-        app.wait_for_timeout(750)
+        app.wait_for_timeout(1000)
 
     app.context.tracing.stop(
         path=output_folder / f"trace_dialog_close_and_reopen_{browser_name}.zip"
