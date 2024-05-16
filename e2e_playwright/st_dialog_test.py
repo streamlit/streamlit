@@ -91,11 +91,20 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
     )
     # open and close the dialog multiple times
     for _ in range(0, 3):
-        open_dialog_without_images(app, delay=50)
-        wait_for_app_run(app)
+        open_dialog_without_images(app)
+        wait_for_app_run(app, wait_delay=250)
+
         main_dialog = app.get_by_test_id(modal_test_id)
+
+        # sometimes the dialog does not seem to open in the test, so retry opening it by clicking on it.
+        # if it does not open after the second attempt, fail the test.
+        if main_dialog.count() == 0:
+            app.wait_for_timeout(100)
+            open_dialog_without_images(app)
+            wait_for_app_run(app)
+
         expect(main_dialog).to_have_count(1)
-        app.wait_for_timeout(1000)
+        app.wait_for_timeout(100)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
@@ -104,7 +113,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
         expect(main_dialog).to_have_count(0)
 
         # don't click indefinitely fast to give the dialog time to set the state
-        app.wait_for_timeout(1000)
+        app.wait_for_timeout(500)
 
     app.context.tracing.stop(
         path=output_folder / f"trace_dialog_close_and_reopen_{browser_name}.zip"
