@@ -104,7 +104,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
             wait_for_app_run(app)
 
         expect(main_dialog).to_have_count(1)
-        app.wait_for_timeout(100)
+        app.wait_for_timeout(1000)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
