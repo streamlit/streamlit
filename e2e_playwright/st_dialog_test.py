@@ -107,13 +107,13 @@ def test_dialog_reopens_properly_after_close(app: Page):
     # open and close the dialog multiple times
     for _ in range(0, 5):
         open_dialog_with_images(app)
-        wait_for_app_run(app)
+        wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
         close_button = main_dialog.get_by_test_id("stButton").locator("button").first
         close_button.scroll_into_view_if_needed()
         close_button.click()
-        wait_for_app_run(app)
+        wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
 
@@ -170,7 +170,11 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     open_dialog_without_images(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
-    expect(dialog.get_by_test_id("stButton")).to_be_visible()
+    # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
+    dialog.locator("div", has_text="Simple Dialog").click()
+    submit_button = dialog.get_by_test_id("stButton")
+    expect(submit_button).to_be_visible()
+    submit_button.get_by_test_id("baseButton-secondary").hover()
     assert_snapshot(dialog, name="st_dialog-default")
 
 
@@ -180,14 +184,18 @@ def test_largewidth_dialog_displays_correctly(
     open_largewidth_dialog(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
-    expect(dialog.get_by_test_id("stButton")).to_be_visible()
+    # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
+    dialog.locator("div", has_text="Simple Dialog").click()
+    submit_button = dialog.get_by_test_id("stButton")
+    expect(submit_button).to_be_visible()
+    submit_button.get_by_test_id("baseButton-secondary").hover()
     assert_snapshot(dialog, name="st_dialog-with_large_width")
 
 
 def test_sidebardialog_displays_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    open_dialog_without_images(app)
+    open_sidebar_dialog(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
