@@ -185,7 +185,7 @@ def test_largewidth_dialog_displays_correctly(
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
-    dialog.locator("div", has_text="Simple Dialog").click()
+    dialog.locator("div", has_text="Large-width Dialog").click()
     submit_button = dialog.get_by_test_id("stButton")
     expect(submit_button).to_be_visible()
     submit_button.get_by_test_id("baseButton-secondary").hover()
