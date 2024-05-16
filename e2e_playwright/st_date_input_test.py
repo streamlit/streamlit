@@ -213,7 +213,7 @@ def test_calls_callback_on_change(app: Page, output_folder):
         use_inner_text=True,
     )
 
-    app.context.tracing.stop(path=output_folder / "trace")
+    app.context.tracing.stop(path=output_folder / "trace_date_input_callback.zip")
 
 
 def test_single_date_calendar_picker_rendering(

@@ -105,7 +105,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder):
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
 
-    app.context.tracing.stop(path=output_folder / "trace")
+    app.context.tracing.stop(path=output_folder / "trace_dialog_close_and_reopen.zip")
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
