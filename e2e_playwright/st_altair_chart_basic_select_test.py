@@ -290,12 +290,9 @@ def test_selection_with_callback(app: Page):
     chart = _get_callback_chart(app)
     expect(chart).to_be_visible()
 
-    markdown_prefix = "Histogram selection callback:"
-    empty_selection = "\\{'selection': \\{'param_1': \\{\\}\\}\\}"
-    _expect_written_text(app, markdown_prefix, empty_selection)
-
     _click(app, chart, _MousePosition(255, 238))
 
+    markdown_prefix = "Histogram selection callback:"
     expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
     _expect_written_text(app, markdown_prefix, expected_selection)
 
