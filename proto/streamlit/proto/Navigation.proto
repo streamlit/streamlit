@@ -24,8 +24,17 @@ import "streamlit/proto/AppPage.proto";
 message Navigation {
   repeated string sections = 1;
   repeated AppPage app_pages = 2;
-  string position = 3;
+  Position position = 3;
 
   // The script hash for the page identified by st.navigation
   string page_script_hash = 4;
+
+  // Position of the Navigation
+  enum Position {
+    // do not display the navigation
+    HIDDEN = 0;
+
+    // display navigation in the sidebar
+    SIDEBAR = 1;
+  }
 }
