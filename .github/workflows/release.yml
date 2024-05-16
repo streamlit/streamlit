@@ -140,8 +140,9 @@ jobs:
           path: constraints
       - uses: actions/download-artifact@v4
         with:
-          name: constraints
           path: constraints
+          pattern: constraints-*
+          merge-multiple: true
       - name: Commit and push constraint files as tag
         run: |
           cd constraints;
