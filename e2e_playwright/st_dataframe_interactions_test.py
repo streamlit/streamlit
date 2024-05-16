@@ -298,6 +298,7 @@ def _test_csv_download(
         content = f.read()
         # the app uses a fixed seed, so the data is always the same. This is the reason why we can check it here.
         some_row = "1,-0.977277879876411,0.9500884175255894,-0.1513572082976979,-0.10321885179355784,0.41059850193837233"
+        # we usually try to avoid assert in playwright tests, but since we don't have to wait for any UI interaction or DOM state, it's ok here
         assert some_row in content
 
 
