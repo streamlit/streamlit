@@ -310,6 +310,9 @@ def test_selection_in_fragment(app: Page):
     expected_selection = "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
     _expect_written_text(app, markdown_prefix, expected_selection)
 
+    # Check that the main script has run once (the initial run), but not after the selection:
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+
 
 def test_shift_click_point_selection_scatter_chart_snapshot(
     app: Page, assert_snapshot: ImageCompareFunction

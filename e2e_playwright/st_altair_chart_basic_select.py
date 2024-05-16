@@ -284,3 +284,8 @@ def test_fragment():
 
 
 test_fragment()
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)

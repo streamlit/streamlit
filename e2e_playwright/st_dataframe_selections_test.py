@@ -364,7 +364,7 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
     )
 
-    # Check that the main script:
+    # Check that the main script has run once (the initial run), but not after the selection:
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
