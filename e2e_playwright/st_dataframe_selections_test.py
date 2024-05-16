@@ -300,7 +300,7 @@ def test_in_form_selection_and_session_state(app: Page):
 
     _expect_written_text(
         app,
-        _markdown_prefix,
+        "Dataframe-in-form selection in session state:",
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
     )
 

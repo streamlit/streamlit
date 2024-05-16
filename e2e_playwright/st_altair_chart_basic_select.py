@@ -229,3 +229,58 @@ if (
         "Histogram chart with selection_interval:",
         str(st.session_state.histogram_interval),
     )
+
+# SELECTIONS IN FORM
+st.header("Selections in form:")
+
+with st.form(key="my_form", clear_on_submit=True):
+    selection = st.altair_chart(
+        histogram_point,
+        on_select="rerun",
+        key="histogram_point_in_form",
+        use_container_width=True,
+    )
+    st.form_submit_button("Submit")
+
+st.write("Histogram-in-form selection:", str(selection))
+if "histogram_point_in_form" in st.session_state:
+    st.write(
+        "Histogram-in-form selection in session state:",
+        str(st.session_state.histogram_point_in_form),
+    )
+
+# SELECTIONS IN CALLBACK
+st.header("Selection callback:")
+
+
+def on_selection():
+    st.write(
+        "Histogram selection callback:",
+        str(st.session_state.histogram_point_in_callback),
+    )
+
+
+selection = st.altair_chart(
+    histogram_point,
+    on_select=on_selection,
+    key="histogram_point_in_callback",
+    use_container_width=True,
+)
+
+
+# SELECTIONS IN FRAGMENT
+st.header("Selections in fragment:")
+
+
+@st.experimental_fragment
+def test_fragment():
+    selection = st.altair_chart(
+        histogram_point,
+        on_select=on_selection,
+        key="histogram_point_in_fragment",
+        use_container_width=True,
+    )
+    st.write("Histogram-in-fragment selection:", str(selection))
+
+
+test_fragment()
