@@ -258,10 +258,8 @@ class PagesManager:
         self.set_active_script_hash(page_hash)
         try:
             yield
-        except Exception:
-            self.set_active_script_hash(original_page_hash)
-            raise
-        else:
+        finally:
+            # in the event of any exception, ensure we set the active hash back
             self.set_active_script_hash(original_page_hash)
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
