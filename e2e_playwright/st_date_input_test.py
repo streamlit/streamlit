@@ -188,6 +188,7 @@ def test_calls_callback_on_change(app: Page):
     first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
     first_date_input_field.type("1971/01/03")
     first_date_input_field.press("Enter")
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "Value 1: 1971-01-03", use_inner_text=True
