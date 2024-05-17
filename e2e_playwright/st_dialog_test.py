@@ -44,7 +44,6 @@ def open_sidebar_dialog(app: Page):
 
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
-    # app.get_by_test_id(modal_test_id).click(position={"x": 0, "y": 0})
     app.keyboard.press("Escape")
 
 
