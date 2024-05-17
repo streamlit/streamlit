@@ -46,6 +46,7 @@ from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunner
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.source_util import PageHash, PageInfo
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
@@ -456,7 +457,7 @@ class AppSession:
 
     def _on_pages_changed(self, _) -> None:
         msg = ForwardMsg()
-        self._populate_app_pages(msg.pages_changed)
+        self._populate_app_pages(msg.pages_changed, self._pages_manager.get_pages())
         self._enqueue_forward_msg(msg)
 
         if self._local_sources_watcher is not None:
@@ -474,6 +475,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
+        pages: dict[PageHash, PageInfo] = {},
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -490,6 +492,7 @@ class AppSession:
                 client_state,
                 page_script_hash,
                 fragment_ids_this_run,
+                pages,
             )
         )
 
@@ -502,6 +505,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
+        pages: dict[PageHash, PageInfo] = {},
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -573,7 +577,7 @@ class AppSession:
 
             self._enqueue_forward_msg(
                 self._create_new_session_message(
-                    page_script_hash, fragment_ids_this_run
+                    page_script_hash, fragment_ids_this_run, pages
                 )
             )
 
@@ -667,7 +671,10 @@ class AppSession:
         return msg
 
     def _create_new_session_message(
-        self, page_script_hash: str, fragment_ids_this_run: set[str] | None = None
+        self,
+        page_script_hash: str,
+        fragment_ids_this_run: set[str] | None = None,
+        pages: dict[PageHash, PageInfo] = {},
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
@@ -681,7 +688,9 @@ class AppSession:
         if fragment_ids_this_run:
             msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
-        self._populate_app_pages(msg.new_session)
+        self._populate_app_pages(
+            msg.new_session, pages or self._pages_manager.get_pages()
+        )
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -832,8 +841,10 @@ class AppSession:
 
         self._enqueue_forward_msg(msg)
 
-    def _populate_app_pages(self, msg: NewSession | PagesChanged) -> None:
-        for page_script_hash, page_info in self._pages_manager.get_pages().items():
+    def _populate_app_pages(
+        self, msg: NewSession | PagesChanged, pages: dict[PageHash, PageInfo]
+    ) -> None:
+        for page_script_hash, page_info in pages.items():
             page_proto = msg.app_pages.add()
 
             page_proto.page_script_hash = page_script_hash
