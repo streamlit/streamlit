@@ -24,7 +24,7 @@ def test_different_markdown_elements_in_one_block_displayed(
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
-    expect(markdown_elements).to_have_count(50)
+    expect(markdown_elements).to_have_count(53)
 
     # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
     multi_markdown_format_container = markdown_elements.nth(14)
@@ -197,3 +197,12 @@ def test_help_tooltip_works(app: Page):
 
     expect(tooltip_content).to_be_visible()
     expect(tooltip_content).to_have_text("This is a help tooltip!")
+
+
+def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    expect(themed_app.get_by_test_id("stMarkdown").nth(50)).to_contain_text("LATE​X")
+    expect(themed_app.get_by_test_id("stMarkdown").nth(51)).to_contain_text("a + b")
+    latex_elements = themed_app.get_by_test_id("stMarkdown")
+
+    for i in range(50, 53):
+        assert_snapshot(latex_elements.nth(i), name=f"st_latex-{i}")
