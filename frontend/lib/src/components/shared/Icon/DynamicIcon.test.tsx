@@ -19,12 +19,14 @@ import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
-import { DynamicIcon, DynamicIconProps } from "./DynamicIcon"
+import { DynamicIcon } from "./DynamicIcon"
+import { DynamicIconProps } from "./styled-components"
 
 const getProps = (
   props: Partial<DynamicIconProps> = {}
 ): DynamicIconProps => ({
   iconValue: ":material/flag:",
+  size: "lg",
   ...props,
 })
 
