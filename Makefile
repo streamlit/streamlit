@@ -353,7 +353,7 @@ playwright:
 playwright-custom-components:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment"; \
+	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-option-menu streamlit-url-fragment"; \
 	if command -v "uv" > /dev/null; then \
 		echo "Running command: uv pip install $${pip_args}"; \
 		uv pip install $${pip_args}; \
