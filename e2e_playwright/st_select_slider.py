@@ -31,7 +31,7 @@ w1 = st.select_slider(
     key="first_select_slider",
     help="Help in a select slider",
 )
-if st.session_state.first_select_slider:
+if "first_select_slider" in st.session_state:
     st.write("Value 1:", st.session_state.first_select_slider)
 st.write("Value 1:", w1)
 

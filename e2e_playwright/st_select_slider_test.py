@@ -21,7 +21,7 @@ def test_select_slider_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     st_select_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_select_sliders).to_have_count(9)
+    expect(st_select_sliders).to_have_count(11)
 
     assert_snapshot(
         st_select_sliders.nth(0),
@@ -38,7 +38,7 @@ def test_select_slider_contains_correct_format_func_value_and_in_session_state(
     expect(app.get_by_text("Value 1: ('orange', 'blue')")).to_have_count(2)
     first_slider = app.get_by_test_id("stSlider").nth(0)
     first_slider.hover()
-    click in middle
+    # click in middle
     app.mouse.down()
 
     # Move mouse to 500, 0 pixels on the screen to simulate dragging left
