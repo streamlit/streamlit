@@ -41,8 +41,6 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
 
 const DynamicIconDispatcher = ({
   iconValue,
-  margin = "",
-  padding = "",
   ...props
 }: DynamicIconProps): React.ReactElement => {
   const { pack, icon } = parseIconPackEntry(iconValue)
