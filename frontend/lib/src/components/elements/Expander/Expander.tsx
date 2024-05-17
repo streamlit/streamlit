@@ -93,14 +93,7 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   }
 
   if (icon) {
-    return (
-      <DynamicIcon
-        color="inherit"
-        iconValue={icon}
-        data-testid="stExpanderIconError"
-        {...iconProps}
-      />
-    )
+    return <DynamicIcon color="inherit" iconValue={icon} {...iconProps} />
   }
 
   return <></>
