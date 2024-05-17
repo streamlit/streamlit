@@ -38,6 +38,7 @@ from streamlit.components.v1.component_registry import (
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import SpecialArg
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -483,6 +484,34 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
             _serialize_dataframe_arg("default", df),
             proto.special_args[0],
         )
+
+    def test_on_change_handler(self):
+        """Test the 'on_change_handler' callback param."""
+
+        # we use a list here so that we can update it in the lambda; we cannot assign a variable there.
+        callback_call_value = []
+        expected_element_value = "Called with foo"
+
+        def create_on_change_handler(some_arg: str):
+            return lambda: callback_call_value.append("Called with " + some_arg)
+
+        return_value = self.test_component(
+            key="key", default="baz", on_change_handler=create_on_change_handler("foo")
+        )
+        self.assertEqual("baz", return_value)
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertJSONEqual({"key": "key", "default": "baz"}, proto.json_args)
+        current_widget_states = self.script_run_ctx.session_state.get_widget_states()
+        new_widget_state = WidgetState()
+        # copy the custom components state and update the value
+        new_widget_state.CopyFrom(current_widget_states[0])
+        # update the widget's value so that the rerun will execute the callback
+        new_widget_state.json_value = '{"key": "key", "default": "baz2"}'
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_widget_state])
+        )
+        self.assertEqual(callback_call_value[0], expected_element_value)
 
     def assertJSONEqual(self, a, b):
         """Asserts that two JSON dicts are equal. If either arg is a string,
