@@ -134,12 +134,6 @@ class PagesStrategyV2:
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> PageInfo:
-        # At this point, we cannot determine the active script at start
-        # as we don't have the list of pages yet. So we will pass
-        # the common code script path and the hash
-        self._initial_page_script_hash = page_script_hash
-        self._initial_page_name = page_name
-
         return {
             # We always run the main script in V2 as it's the common code
             "script_path": self.pages_manager.main_script_path,
@@ -147,25 +141,19 @@ class PagesStrategyV2:
             or self.pages_manager.main_script_hash,  # Default Hash
         }
 
-    def set_initial_script(
-        self, page_script_hash: PageHash, page_name: PageName
-    ) -> None:
-        self._initial_page_script_hash = page_script_hash
-        self._initial_page_name = page_name
-
     def get_page_script(self, fallback_page_hash: PageHash) -> Optional[PageInfo]:
         if self._pages is None:
             return None
 
-        if self._initial_page_script_hash:
+        if self.pages_manager.intent_page_script_hash:
             # We assume that if initial page hash is specified, that a page should
             # exist, so we check out the page script hash or the default page hash
             # as a backup
             return self._pages.get(
-                self._initial_page_script_hash,
+                self.pages_manager.intent_page_script_hash,
                 self._pages.get(fallback_page_hash, None),
             )
-        elif self._initial_page_name:
+        elif self.pages_manager.intent_page_name:
             # If a user navigates directly to a non-main page of an app, the
             # the page name can identify the page script to run
             return next(
@@ -174,7 +162,8 @@ class PagesStrategyV2:
                     # thinks that p can be None (which is impossible given the
                     # types of pages), so we add `p and` at the beginning of
                     # the predicate to circumvent this.
-                    lambda p: p and (p["url_pathname"] == self._initial_page_name),
+                    lambda p: p
+                    and (p["url_pathname"] == self.pages_manager.intent_page_name),
                     self._pages.values(),
                 ),
                 None,
@@ -209,6 +198,8 @@ class PagesManager:
         self._current_page_hash: PageHash = self._main_script_hash
         self.pages_strategy = PagesManager.DefaultStrategy(self, **kwargs)
         self._script_cache: ScriptCache | None = script_cache
+        self._intent_page_script_hash: PageHash | None = None
+        self._intent_page_name: PageName | None = None
 
     @property
     def current_page_hash(self) -> PageHash:
@@ -221,6 +212,14 @@ class PagesManager:
     @property
     def main_script_hash(self) -> PageHash:
         return self._main_script_hash
+
+    @property
+    def intent_page_name(self) -> PageName:
+        return self._intent_page_name
+
+    @property
+    def intent_page_script_hash(self) -> PageHash:
+        return self._intent_page_script_hash
 
     def get_main_page(self) -> PageInfo:
         return {
@@ -240,10 +239,11 @@ class PagesManager:
     def set_active_script_hash(self, page_hash: PageHash):
         return self.pages_strategy.set_active_script_hash(page_hash)
 
-    def set_initial_script(
+    def set_script_intent(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> None:
-        return self.pages_strategy.set_initial_script(page_script_hash, page_name)
+        self._intent_page_script_hash = page_script_hash
+        self._intent_page_name = page_name
 
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
@@ -276,6 +276,7 @@ class PagesManager:
 
             pages = self.pages_strategy.get_pages()
             self._cached_pages = pages
+            self._on_pages_changed.send()
 
             return pages
 
@@ -291,7 +292,7 @@ class PagesManager:
 
         self.pages_strategy.set_pages(pages)
         self._cached_pages = pages
-        self._on_pages_changed.send()
+        # We deliberately don't notify on page change as V2 does not require of this.
 
     def get_page_script(self, fallback_page_hash: PageHash = "") -> Optional[PageInfo]:
         # We assume the pages strategy is V2 cause this is used

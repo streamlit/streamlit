@@ -38,6 +38,9 @@ class PagesManagerTest(unittest.TestCase):
             # get_pages is called.
             assert new_pages is pages
 
+            pages_manager._on_pages_changed.send.assert_called_once()
+
+            pages_manager._on_pages_changed.reset_mock()
             pages_manager.invalidate_pages_cache()
             assert pages_manager._cached_pages is None
 
@@ -64,8 +67,6 @@ class PagesManagerTest(unittest.TestCase):
     @patch.object(PagesManager, "invalidate_pages_cache", MagicMock())
     def test_install_pages_watcher(self, patched_watch_dir):
         """Test that the pages watcher is correctly installed and uninstalled"""
-        # Ensure Default Strategy is V1 to start
-        PagesManager.DefaultStrategy = PagesStrategyV1
         # Ensure PagesStrategyV1.is_watching_pages_dir is False to start
         PagesStrategyV1.is_watching_pages_dir = False
         pages_manager = PagesManager(os.path.normpath("/foo/bar/streamlit_app.py"))
@@ -110,7 +111,7 @@ class PagesManagerV2Test(unittest.TestCase):
     def test_get_page_script_valid_hash(self):
         """Ensure the page script is provided with valid page hash specified"""
 
-        self.pages_manager.get_initial_active_script("page_hash", "")
+        self.pages_manager.set_script_intent("page_hash", "")
         self.pages_manager.set_pages({"page_hash": {"page_script_hash": "page_hash"}})
 
         page_script = self.pages_manager.get_page_script(
@@ -121,7 +122,7 @@ class PagesManagerV2Test(unittest.TestCase):
     def test_get_page_script_invalid_hash(self):
         """Ensure the page script is provided with invalid page hash specified"""
 
-        self.pages_manager.get_initial_active_script("bad_hash", "")
+        self.pages_manager.set_script_intent("bad_hash", "")
         self.pages_manager.set_pages({"page_hash": {"page_script_hash": "page_hash"}})
 
         page_script = self.pages_manager.get_page_script(
@@ -132,7 +133,7 @@ class PagesManagerV2Test(unittest.TestCase):
     def test_get_page_script_valid_name(self):
         """Ensure the page script is provided with valid page name specified"""
 
-        self.pages_manager.get_initial_active_script("", "page_name")
+        self.pages_manager.set_script_intent("", "page_name")
         self.pages_manager.set_pages(
             {
                 "page_hash": {
@@ -150,7 +151,7 @@ class PagesManagerV2Test(unittest.TestCase):
     def test_get_page_script_invalid_name(self):
         """Ensure the page script is not provided with invalid page name specified"""
 
-        self.pages_manager.get_initial_active_script("", "foo")
+        self.pages_manager.set_script_intent("", "foo")
         self.pages_manager.set_pages(
             {
                 "page_hash": {
@@ -175,13 +176,36 @@ class PagesManagerV2Test(unittest.TestCase):
             {"script_path": "main_script_path", "page_script_hash": "page_hash"},
         )
 
+    def test_does_not_call_pages_change(self):
+        """Test that the V2 Strategy does not call the pages changed callback"""
+        with patch.object(self.pages_manager, "_on_pages_changed", MagicMock()):
+            # pages should be cached from setUp
+            assert self.pages_manager._cached_pages is not None
+
+            pages = self.pages_manager.get_pages()
+
+            assert self.pages_manager._cached_pages is not None
+
+            new_pages = self.pages_manager.get_pages()
+            # Assert address-equality to verify the cache is used the second time
+            # get_pages is called.
+            assert new_pages is pages
+
+            assert not self.pages_manager._on_pages_changed.send.called
+
+            self.pages_manager._on_pages_changed.reset_mock()
+            self.pages_manager.set_pages({})
+
+            assert not self.pages_manager._on_pages_changed.send.called
+            another_new_set_of_pages = self.pages_manager.get_pages()
+            assert another_new_set_of_pages is not pages
+
 
 # NOTE: We write this test function using pytest conventions (as opposed to
 # using unittest.TestCase like in the rest of the codebase) because the tmpdir
 # pytest fixture is so useful for writing this test it's worth having the
 # slight inconsistency.
 def test_get_initial_active_script_v1(tmpdir):
-    PagesManager.DefaultStrategy = PagesStrategyV1
     # Write an empty string to create a file.
     tmpdir.join("streamlit_app.py").write("")
 
