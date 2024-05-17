@@ -103,8 +103,8 @@ export const StyledDynamicIcon = styled("span", {
     fontSize: theme.iconSizes[size],
     width: theme.iconSizes[size],
     height: theme.iconSizes[size],
-    margin: computeSpacingStyle(margin as string, theme),
-    padding: computeSpacingStyle(padding as string, theme),
+    margin: computeSpacingStyle(margin, theme),
+    padding: computeSpacingStyle(padding, theme),
     flexShrink: 0,
   }
 })
