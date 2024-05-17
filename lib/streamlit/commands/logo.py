@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 def _invalid_logo_text(field_name: str):
-    return f"The {field_name} passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+    return f"The {field_name} passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/develop/api-reference/media/st.logo) for more information on valid types"
 
 
 @gather_metrics("logo")
