@@ -167,11 +167,7 @@ def test_handles_range_start_end_date_changes(app: Page):
     )
 
 
-def test_calls_callback_on_change(app: Page, output_folder, browser_name):
-    app.context.tracing.start(
-        name="callback_on_change", screenshots=True, snapshots=True, sources=True
-    )
-
+def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     app.get_by_test_id("stDateInput").nth(11).click()
 
@@ -210,10 +206,6 @@ def test_calls_callback_on_change(app: Page, output_folder, browser_name):
     expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
         "Date Input Changed: False",
         use_inner_text=True,
-    )
-
-    app.context.tracing.stop(
-        path=output_folder / f"trace_date_input_callback_{browser_name}.zip"
     )
 
 

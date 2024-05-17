@@ -85,12 +85,9 @@ def test_dialog_dismisses_properly(app: Page):
 
 # on webkit this test was flaky and manually reproducing the flaky error did not work, so we skip it for now
 @pytest.mark.skip_browser("webkit")
-def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser_name):
+def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
 
-    app.context.tracing.start(
-        name="dismiss_dialog_and_reopen", screenshots=True, snapshots=True, sources=True
-    )
     # open and close the dialog multiple times
     for _ in range(0, 3):
         open_dialog_without_images(app)
@@ -116,10 +113,6 @@ def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser
 
         # don't click indefinitely fast to give the dialog time to set the state
         app.wait_for_timeout(500)
-
-    app.context.tracing.stop(
-        path=output_folder / f"trace_dialog_close_and_reopen_{browser_name}.zip"
-    )
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
