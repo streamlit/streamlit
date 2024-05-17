@@ -17,6 +17,7 @@ from __future__ import annotations
 import inspect
 import json
 import os
+import threading
 import unittest
 from typing import Any
 from unittest import mock
@@ -42,6 +43,7 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.scriptrunner import ScriptRunContext, add_script_run_ctx
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -75,6 +77,10 @@ class DeclareComponentTest(unittest.TestCase):
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
         )
         self.runtime = Runtime(config)
+
+        # declare_component needs a script_run_ctx to be set
+        self.script_run_ctx = MagicMock(spec=ScriptRunContext)
+        add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 
     def tearDown(self) -> None:
         Runtime._instance = None
