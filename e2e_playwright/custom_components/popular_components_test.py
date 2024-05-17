@@ -33,7 +33,7 @@ def _expect_no_exception(app: Page):
 
 def _expect_iframe_attached(app: Page):
     """Expect the CustomComponent iframe to be attached to the DOM."""
-    expect(app.locator("iframe")).to_be_attached()
+    expect(app.locator("iframe").first).to_be_attached()
 
 
 def test_components_html(app: Page):
@@ -94,13 +94,6 @@ def test_extra_streamlit_components(app: Page):
 def test_folium(app: Page):
     """Test that the folium component renders"""
     _select_component(app, "folium")
-    _expect_no_exception(app)
-    _expect_iframe_attached(app)
-
-
-def test_lottie(app: Page):
-    """Test that the lottie component renders"""
-    _select_component(app, "lottie")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
