@@ -125,7 +125,7 @@ toml==0.10.2
 tomlkit==0.12.5
 toolz==0.12.1
 tornado==6.4
-twine==5.0.0
+twine==5.1.0
 types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
