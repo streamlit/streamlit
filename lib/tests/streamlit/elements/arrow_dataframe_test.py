@@ -22,6 +22,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest as pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
@@ -207,6 +208,144 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(bytes_to_data_frame(proto.data).iat[0, 0], 42)
+
+    def test_dataframe_on_select_initial_returns(self):
+        """Test st.dataframe returns an empty selection as initial result."""
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        selection = st.dataframe(df, on_select="rerun", key="selectable_df")
+
+        self.assertEqual(selection.selection.rows, [])
+        self.assertEqual(selection.selection.columns, [])
+
+        # Check that the selection state is added to the session state:
+        self.assertEqual(st.session_state.selectable_df.selection.rows, [])
+        self.assertEqual(st.session_state.selectable_df.selection.columns, [])
+
+    def test_dataframe_with_invalid_on_select(self):
+        """Test that an exception is thrown if the on_select parameter is invalid."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        with self.assertRaises(StreamlitAPIException):
+            st.dataframe(df, on_select="invalid")
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        with st.form("form"):
+            st.dataframe(df, on_select="rerun")
+
+        # 2 elements will be created: form block, dataframe
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
+        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_selectable_df_disallows_callbacks_inside_form(self):
+        """Test that an exception is thrown if a callback is defined with a
+        selectable dataframe inside a form."""
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        with self.assertRaises(StreamlitAPIException):
+            with st.form("form"):
+                st.dataframe(df, on_select=lambda: None)
+
+    def test_selectable_df_throws_exception_with_modified_sessions_state(self):
+        """Test that an exception is thrown if the session state is modified."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        st.session_state.selectable_df = {
+            "selection": {"rows": [1], "columns": ["col1"]},
+        }
+        with self.assertRaises(StreamlitAPIException):
+            st.dataframe(df, on_select="rerun", key="selectable_df")
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when selections are activated and
+        it is used inside a cached function."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        st.cache_data(lambda: st.dataframe(df, on_select="rerun"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
+    @parameterized.expand(
+        [
+            ("rerun", [1]),
+            ("ignore", []),
+            (lambda: None, [1]),
+        ]
+    )
+    def test_dataframe_valid_on_select(self, on_select, proto_value):
+        """Test that the on_select parameter is parsed correctly."""
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        st.dataframe(df, on_select=on_select)
+
+        el = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(el.selection_mode, proto_value)
+
+    @parameterized.expand(
+        [
+            (("multi-row", "multi-column"), [1, 3]),
+            ({"single-row", "single-column"}, [0, 2]),
+            ({"single-row", "multi-column"}, [0, 3]),
+            (("multi-row", "single-column"), [1, 2]),
+            ("single-row", [0]),
+            ("multi-column", [3]),
+        ]
+    )
+    def test_selection_mode_parsing(self, input_modes, expected_modes):
+        """Test that the selection_mode parameter is parsed correctly."""
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        st.dataframe(df, on_select="rerun", selection_mode=input_modes)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_data_frame.selection_mode, expected_modes)
+
+    def test_selection_mode_parsing_invalid(self):
+        """Test that an exception is thrown if the selection_mode parameter is invalid."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        # Should throw an exception of the selection mode is parsed wrongly
+        with self.assertRaises(
+            StreamlitAPIException,
+            msg="Should show exception if an unknown selection mode is selected",
+        ):
+            st.dataframe(
+                df, on_select="rerun", selection_mode=["invalid", "single-row"]
+            )
+
+        with self.assertRaises(
+            StreamlitAPIException,
+            msg="Should show exception if single & multi row mode is selected",
+        ):
+            st.dataframe(
+                df, on_select="rerun", selection_mode=["single-row", "multi-row"]
+            )
+
+        with self.assertRaises(
+            StreamlitAPIException,
+            msg="Should show exception if single & multi column mode is selected",
+        ):
+            st.dataframe(
+                df, on_select="rerun", selection_mode=["single-column", "multi-column"]
+            )
+
+        # If selections are deactivated, the selection mode list should be empty
+        # even if the selection_mode parameter is set.
+        st.dataframe(
+            df, on_select="ignore", selection_mode=["single-row", "multi-column"]
+        )
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [])
 
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):
