@@ -33,6 +33,8 @@ pytest-xdist
 pytest-rerunfailures
 pytest-github-actions-annotate-failures
 
+mypy-protobuf>=3.2, <3.4
+
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
