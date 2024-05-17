@@ -82,6 +82,33 @@ export const StyledIcon = styled("span", {
   }
 })
 
+export interface DynamicIconProps {
+  iconValue: string
+  size: IconSize
+  margin?: string
+  padding?: string
+  testid?: string
+  color?: ThemeColor
+}
+
+export const StyledDynamicIcon = styled("span", {
+  shouldForwardProp: (prop: string) =>
+    isPropValid(prop) && !["size"].includes(prop),
+})<DynamicIconProps>(({ size, margin = "", padding = "", theme }) => {
+  return {
+    fill: "currentColor",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContents: "center",
+    fontSize: theme.iconSizes[size],
+    width: theme.iconSizes[size],
+    height: theme.iconSizes[size],
+    margin: computeSpacingStyle(margin as string, theme),
+    padding: computeSpacingStyle(padding as string, theme),
+    flexShrink: 0,
+  }
+})
+
 interface StyledEmojiIconProps {
   size: IconSize
   margin: string

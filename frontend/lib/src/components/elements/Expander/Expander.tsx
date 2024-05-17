@@ -15,13 +15,7 @@
  */
 
 import React, { ReactElement, useEffect, useRef, useState } from "react"
-import { useTheme } from "@emotion/react"
-import {
-  ExpandMore,
-  ExpandLess,
-  Check,
-  ErrorOutline,
-} from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import {
   DynamicIcon,
@@ -32,7 +26,6 @@ import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMar
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import {
   BORDER_SIZE,
@@ -45,7 +38,6 @@ import {
 
 export interface ExpanderIconProps {
   icon?: string
-  iconCustom?: string
 }
 
 /**
@@ -61,9 +53,8 @@ export interface ExpanderIconProps {
  * @returns {ReactElement}
  */
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
-  const { icon, iconCustom } = props
+  const { icon } = props
   const { activeTheme } = React.useContext(LibContext)
-  const { colors }: EmotionTheme = useTheme()
 
   const iconProps = {
     size: "lg" as IconSize,
@@ -81,9 +72,9 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
     )
   } else if (icon === "check") {
     return (
-      <StyledIcon
-        as={Check}
-        color={"inherit"}
+      <DynamicIcon
+        iconValue=":material/check:"
+        color="inherit"
         aria-hidden="true"
         data-testid="stExpanderIconCheck"
         {...iconProps}
@@ -91,9 +82,9 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
     )
   } else if (icon === "error") {
     return (
-      <StyledIcon
-        as={ErrorOutline}
-        color={"inherit"}
+      <DynamicIcon
+        iconValue=":material/error:"
+        color="inherit"
         aria-hidden="true"
         data-testid="stExpanderIconError"
         {...iconProps}
@@ -101,11 +92,12 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
     )
   }
 
-  if (iconCustom) {
+  if (icon) {
     return (
       <DynamicIcon
-        color={colors.bodyText}
-        iconValue={iconCustom}
+        color="inherit"
+        iconValue={icon}
+        data-testid="stExpanderIconError"
         {...iconProps}
       />
     )
@@ -259,9 +251,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StyledSummary onClick={toggle} empty={empty} ref={summaryRef}>
           <StyledSummaryHeading>
             {element.icon && <ExpanderIcon icon={element.icon} />}
-            {element.iconCustom && (
-              <ExpanderIcon iconCustom={element.iconCustom} />
-            )}
             <StreamlitMarkdown source={label} allowHTML={false} isLabel />
           </StyledSummaryHeading>
           {!empty ? (

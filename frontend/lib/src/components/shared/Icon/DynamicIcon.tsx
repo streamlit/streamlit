@@ -19,6 +19,7 @@ import React, { Suspense } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
+import { DynamicIconProps, StyledDynamicIcon } from "./styled-components"
 
 interface IconPackEntry {
   pack: string
@@ -38,32 +39,37 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   return { pack: iconPack, icon: iconNameInPack }
 }
 
-export interface DynamicIconProps {
-  iconValue: string
-  size?: IconSize
-  margin?: string
-  padding?: string
-  testid?: string
-  color?: ThemeColor
-}
-
 const DynamicIconDispatcher = ({
   iconValue,
+  margin = "",
+  padding = "",
   ...props
 }: DynamicIconProps): React.ReactElement => {
   const { pack, icon } = parseIconPackEntry(iconValue)
   switch (pack) {
     case "material":
-      return <MaterialFontIcon pack={pack} iconName={icon} {...props} />
+      return (
+        <StyledDynamicIcon iconValue={icon} {...props}>
+          <MaterialFontIcon pack={pack} iconName={icon} {...props} />
+        </StyledDynamicIcon>
+      )
     case "emoji":
     default:
-      return <EmojiIcon {...props}>{icon}</EmojiIcon>
+      return (
+        <StyledDynamicIcon iconValue={icon} {...props}>
+          <EmojiIcon {...props}>{icon}</EmojiIcon>
+        </StyledDynamicIcon>
+      )
   }
 }
 
 export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
   <Suspense
-    fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}
+    fallback={
+      <StyledDynamicIcon {...props}>
+        <EmojiIcon {...props}>&nbsp;</EmojiIcon>
+      </StyledDynamicIcon>
+    }
     key={props.iconValue}
   >
     <DynamicIconDispatcher {...props} />
