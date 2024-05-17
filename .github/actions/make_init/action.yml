@@ -51,7 +51,7 @@ runs:
     # Actions moves to a newer version of Ubunutu.
     - name: Add vendored `protoc` to $PATH
       run: |
-        echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
+        echo "./vendor/protoc-26.1-linux-x86_64/bin" >> $GITHUB_PATH
       shell: bash --login -eo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.

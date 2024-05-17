@@ -100,7 +100,7 @@ jobs:
       # Actions moves to a newer version of Ubunutu.
       - name: Add vendored `protoc` to $PATH
         run: |
-          echo "$PWD/vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
+          echo "$PWD/vendor/protoc-26.1-linux-x86_64/bin" >> $GITHUB_PATH
       # Combine hashes of the Python interpreter, requirements files, and today's
       # date into a file whose hash will key the Python virtualenv.
       - name: Create Python environment cache key
