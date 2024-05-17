@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import pytest
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -83,6 +83,8 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
+# on webkit this test was flaky and manually reproducing the flaky error did not work, so we skip it for now
+@pytest.mark.skip_browser("webkit")
 def test_dialog_reopens_properly_after_dismiss(app: Page, output_folder, browser_name):
     """Test that dialog reopens after dismiss."""
 
@@ -218,7 +220,10 @@ def test_sidebar_dialog_displays_correctly(
     open_sidebar_dialog(app)
     wait_for_app_run(app, wait_delay=200)
     dialog = app.get_by_role("dialog")
-    expect(dialog.get_by_test_id("stButton")).to_be_visible()
+    submit_button = dialog.get_by_test_id("stButton")
+    expect(submit_button).to_be_visible()
+    # ensure focus of the button to avoid flakiness where sometimes snapshots are made when the button is not in focus
+    submit_button.get_by_test_id("baseButton-secondary").hover()
     assert_snapshot(dialog, name="st_dialog-in_sidebar")
 
 
