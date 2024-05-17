@@ -498,7 +498,7 @@ class LayoutsMixin:
         expandable_proto.expanded = expanded
         expandable_proto.label = label
         if icon is not None:
-            expandable_proto.icon_custom = validate_icon_or_emoji(icon)
+            expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = False
