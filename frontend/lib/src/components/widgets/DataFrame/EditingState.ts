@@ -28,7 +28,7 @@ import { INDEX_IDENTIFIER } from "./hooks/useColumnLoader"
  * Get the column name for a given column to use in the widget state.
  * This is either the column name or the index identifier for index columns.
  */
-function getColumnName(column: BaseColumn): string {
+export function getColumnName(column: BaseColumn): string {
   // TODO(lukasmasuch): We need to adapt this once we want to support multi-index columns.
   return column.isIndex
     ? INDEX_IDENTIFIER
@@ -191,6 +191,14 @@ class EditingState {
     // List of column index -> edited value
     editingState.added_rows.forEach((row: Record<string, any>) => {
       const addedRow: Map<number, GridCell> = new Map()
+      // Initialize all columns with null (empty) values first
+      // This is necessary to ensure that all columns are present in the added row.
+      // We will overwrite the empty values with the actual values below
+      // if the actual value exists. We need to do this since we are only
+      // putting none-empty values in the widget state for optimization reasons.
+      columns.forEach(column => {
+        addedRow.set(column.indexNumber, column.getCell(null))
+      })
 
       // Set the cells that were actually edited in the row
       Object.keys(row).forEach(colName => {

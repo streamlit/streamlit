@@ -15,7 +15,7 @@
 import streamlit as st
 
 st.title("This title is awesome!")
-st.title("This title is awesome too!", anchor="awesome-title")
+st.title("This title is awesome too!", help="Some help tooltip", anchor="awesome-title")
 st.title("`Code` - Title with hidden Anchor", anchor=False)
 st.title("a [link](#test)")
 # Foreign language titles and anchors

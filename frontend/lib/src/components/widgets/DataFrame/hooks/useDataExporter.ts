@@ -23,7 +23,7 @@ import {
   toSafeString,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import { logWarning } from "@streamlit/lib/src/util/log"
+import { logError, logWarning } from "@streamlit/lib/src/util/log"
 
 // Delimiter between cells
 const CSV_DELIMITER = ","
@@ -77,6 +77,45 @@ type DataExporterReturn = {
 }
 
 /**
+ * Writes CSV data to a specified writable stream using provided data table parameters.
+ * Initiates by writing a UTF-8 Byte Order Mark (BOM) for Excel compatibility, followed by
+ * column headers and rows constructed from the cell values obtained through `getCellContent`.
+ * The function handles encoding and CSV formatting, concluding by closing the writable stream.
+ *
+ * @param {WritableStreamDefaultWriter} writable - Target stream for CSV data.
+ * @param {DataEditorProps["getCellContent"]} getCellContent - The cell content getter compatible with glide-data-grid.
+ * @param {BaseColumn[]} columns - The columns of the table.
+ * @param {number} numRows - The number of rows of the current state.
+ *
+ * @returns {Promise<void>} Promise that resolves when the CSV has been fully written.
+ */
+async function writeCsv(
+  writable: WritableStreamDefaultWriter,
+  getCellContent: DataEditorProps["getCellContent"],
+  columns: BaseColumn[],
+  numRows: number
+): Promise<void> {
+  const textEncoder = new TextEncoder()
+
+  // Write UTF-8 BOM for excel compatibility:
+  await writable.write(textEncoder.encode(CSV_UTF8_BOM))
+
+  // Write headers:
+  const headers: string[] = columns.map(column => column.name)
+  await writable.write(textEncoder.encode(toCsvRow(headers)))
+
+  for (let row = 0; row < numRows; row++) {
+    const rowData: any[] = []
+    columns.forEach((column: BaseColumn, col: number, _map) => {
+      rowData.push(column.getCellValue(getCellContent([col, row])))
+    })
+    // Write row to CSV:
+    await writable.write(textEncoder.encode(toCsvRow(rowData)))
+  }
+
+  await writable.close()
+}
+/**
  * Custom hook that handles all the data export/download logic.
  *
  * @param getCellContent - The cell content getter compatible with glide-data-grid.
@@ -88,9 +127,12 @@ type DataExporterReturn = {
 function useDataExporter(
   getCellContent: DataEditorProps["getCellContent"],
   columns: BaseColumn[],
-  numRows: number
+  numRows: number,
+  enforceDownloadInNewTab: boolean
 ): DataExporterReturn {
   const exportToCsv = React.useCallback(async () => {
+    const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
+    const suggestedName = `${timestamp}_export.csv`
     try {
       // Lazy import to prevent weird breakage in some niche cases
       // (e.g. usage within the replay.io browser). The package works well
@@ -100,40 +142,69 @@ function useDataExporter(
       const nativeFileSystemAdapter = await import(
         "native-file-system-adapter"
       )
-
-      const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
-      const suggestedName = `${timestamp}_export.csv`
-
       const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],
         excludeAcceptAllOption: false,
       })
 
-      const textEncoder = new TextEncoder()
       const writer = await fileHandle.createWritable()
 
-      // Write UTF-8 BOM for excel compatibility:
-      await writer.write(textEncoder.encode(CSV_UTF8_BOM))
-
-      // Write headers:
-      const headers: string[] = columns.map(column => column.name)
-      await writer.write(textEncoder.encode(toCsvRow(headers)))
-
-      for (let row = 0; row < numRows; row++) {
-        const rowData: any[] = []
-        columns.forEach((column: BaseColumn, col: number, _map) => {
-          rowData.push(column.getCellValue(getCellContent([col, row])))
-        })
-        // Write row to CSV:
-        await writer.write(textEncoder.encode(toCsvRow(rowData)))
+      await writeCsv(writer, getCellContent, columns, numRows)
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        // The user has canceled the save dialog. Do nothing.
+        return
       }
 
-      await writer.close()
-    } catch (error) {
-      logWarning("Failed to export data as CSV", error)
+      try {
+        logWarning(
+          "Failed to export data as CSV with FileSystem API, trying fallback method",
+          error
+        )
+        // Simulated WritableStream that builds CSV content in-memory for the Blob fallback method
+        let csvContent = ""
+
+        const inMemoryWriter = new WritableStream({
+          write: async chunk => {
+            csvContent += new TextDecoder("utf-8").decode(chunk)
+          },
+          close: async () => {},
+        })
+
+        await writeCsv(
+          inMemoryWriter.getWriter(),
+          getCellContent,
+          columns,
+          numRows
+        )
+
+        // Fallback to the old browser download method:
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        // Open the download link in a new tab to ensure that this is working in embedded
+        // setups that limit the URL that an iframe can navigate to (e.g. via CSP)
+        if (enforceDownloadInNewTab) {
+          link.setAttribute("target", "_blank")
+        } else {
+          link.setAttribute("target", "_self")
+        }
+
+        link.style.display = "none"
+        link.href = url
+        link.download = suggestedName
+        document.body.appendChild(link) // Required for FF
+        link.click()
+        document.body.removeChild(link) // Clean up
+        URL.revokeObjectURL(url) // Free up memory
+      } catch (error) {
+        logError("Failed to export data as CSV", error)
+      }
     }
-  }, [columns, numRows, getCellContent])
+  }, [columns, numRows, getCellContent, enforceDownloadInNewTab])
 
   return {
     exportToCsv,
