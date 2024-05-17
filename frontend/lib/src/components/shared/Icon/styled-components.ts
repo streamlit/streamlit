@@ -84,7 +84,7 @@ export const StyledIcon = styled("span", {
 
 export interface DynamicIconProps {
   iconValue: string
-  size: IconSize
+  size?: IconSize
   margin?: string
   padding?: string
   testid?: string
@@ -94,7 +94,7 @@ export interface DynamicIconProps {
 export const StyledDynamicIcon = styled("span", {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
-})<DynamicIconProps>(({ size, margin = "", padding = "", theme }) => {
+})<DynamicIconProps>(({ size = "lg", margin = "", padding = "", theme }) => {
   return {
     fill: "currentColor",
     display: "inline-flex",

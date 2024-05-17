@@ -26,7 +26,6 @@ const getProps = (
   props: Partial<DynamicIconProps> = {}
 ): DynamicIconProps => ({
   iconValue: ":material/flag:",
-  size: "lg",
   ...props,
 })
 
