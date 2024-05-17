@@ -124,7 +124,9 @@ def test_point_bar_chart_displays_selection_text(app: Page):
     _click(app, chart, _MousePosition(150, 180))
 
     expected_prefix = "Bar chart with selection_point:"
-    expected_selection = "\\{'selection': \\{'param_1': [{'a': 'B', 'b': 55\\}]\\}\\}"
+    expected_selection = (
+        "\\{'selection': \\{'param_1': \\[\\{'a': 'B', 'b': 55\\}]\\}\\}"
+    )
     _expect_written_text(app, expected_prefix, expected_selection)
 
 
