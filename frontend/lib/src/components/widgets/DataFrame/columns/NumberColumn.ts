@@ -95,6 +95,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     style: props.isIndex ? "faded" : "normal",
     allowNegative,
     fixedDecimals,
+    // Do not show a thousand separator in the overlay editor:
+    thousandSeparator: "",
   } as NumberCell
 
   const validateInput = (data?: any): boolean | number => {
@@ -207,6 +209,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
+        copyData: isNullOrUndefined(cellData) ? "" : String(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
