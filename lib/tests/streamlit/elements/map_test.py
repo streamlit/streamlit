@@ -57,19 +57,23 @@ class StMapTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get("initialViewState").get("pitch"), 0)
         self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
 
-    @parameterized.expand(
-        itertools.product(
+    def test_alternative_names_columns(self):
+        """Test that it can be called with alternative names of lat/lon columns."""
+        name_combination = itertools.product(
             {"lat", "latitude", "LAT", "LATITUDE"},
             {"lon", "longitude", "LON", "LONGITUDE"},
         )
-    )
-    def test_alternative_names_columns(self, lat_column_name, lon_column_name):
-        """Test that it can be called with alternative names of lat/lon columns."""
-        df = mock_df.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
-        st.map(df)
 
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-        self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+        for lat_column_name, lon_column_name in name_combination:
+            df = mock_df.rename(
+                columns={"lat": lat_column_name, "lon": lon_column_name}
+            )
+            st.map(df)
+
+            c = json.loads(
+                self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+            )
+            self.assertEqual(len(c.get("layers")[0].get("data")), 4)
 
     def test_map_uses_convert_anything_to_df(self):
         """Test that st.map uses convert_anything_to_df to convert input data."""
