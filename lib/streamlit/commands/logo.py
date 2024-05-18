@@ -66,7 +66,7 @@ def logo(
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
         start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
-        the logo will not inlude a hyperlink.
+        the logo will not include a hyperlink.
     icon_image: Anything supported by st.image or None
         An alternate image to replace ``image`` in the upper-left corner of the
         app's main body. If ``icon_image`` is ``None`` (default), Streamlit
