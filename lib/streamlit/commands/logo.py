@@ -60,20 +60,24 @@ def logo(
         sidebar. If ``icon_image`` is also provided, then Streamlit will only
         display ``image`` in the sidebar.
 
-        Streamlit scales the image to a height of 24 pixels.
+        Streamlit scales the image to a height of 24 pixels and a maximum
+        width of 240 pixels. Use images with an aspect ratio of 10:1 or less to
+        avoid distortion.
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
         start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
         the logo will not inlude a hyperlink.
     icon_image: Anything supported by st.image or None
         An alternate image to replace ``image`` in the upper-left corner of the
-        app's main body. If ``icon_image`` is ``None`` (default) or an empty
-        string, Streamlit will render ``image`` in the upper-left corner of the
-        app and its sidebar. Otherwise, Streamlit will render ``icon_image`` in
-        the upper-left corner of the app and ``image`` in the upper-left corner
+        app's main body. If ``icon_image`` is ``None`` (default), Streamlit
+        will render ``image`` in the upper-left corner of the app and its
+        sidebar. Otherwise, Streamlit will render ``icon_image`` in the
+        upper-left corner of the app and ``image`` in the upper-left corner
         of the sidebar.
 
-        Streamlit scales the image to a height of 24 pixels.
+        Streamlit scales the image to a height of 24 pixels and a maximum
+        width of 240 pixels. Use images with an aspect ratio of 10:1 or less to
+        avoid distortion.
 
     Examples
     --------
