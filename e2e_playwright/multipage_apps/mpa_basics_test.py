@@ -243,3 +243,27 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     expect(page).to_have_url(
         f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
     )
+
+
+def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that logos display properly in sidebar and main sections"""
+
+    # Go to logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(8).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")

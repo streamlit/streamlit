@@ -21,6 +21,7 @@ from types import FrameType
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 def _get_module_name(caller_frame: FrameType) -> str:
@@ -47,7 +48,9 @@ def declare_component(
     path: str | None = None,
     url: str | None = None,
 ) -> CustomComponent:
-    """Create and register a custom component.
+    """Create a custom component and register it if there is a ScriptRun context.
+
+    The component is not registered when there is no ScriptRun context; this can happen when CustomComponents are executed as standalone commands, e.g. for testing.
 
     Parameters
     ----------
@@ -84,8 +87,10 @@ def declare_component(
     component = CustomComponent(
         name=component_name, path=path, url=url, module_name=module_name
     )
-    get_instance().component_registry.register_component(component)
-
+    # the ctx can be None if a custom component script is run outside of Streamlit, e.g. via 'python ...'
+    ctx = get_script_run_ctx()
+    if ctx is not None:
+        get_instance().component_registry.register_component(component)
     return component
 
 

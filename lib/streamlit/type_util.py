@@ -741,7 +741,7 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # This is an imperfect check because there is no guarantee that an `index`
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
-    if callable(index_fn):
+    if callable(index_fn) and type(it) != EnumMeta:
         # We return a shallow copy of the Sequence here because the return value of
         # this function is saved in a widget serde class instance to be used in later
         # script runs, and we don't want mutations to the options object passed to a
@@ -782,11 +782,15 @@ def is_pandas_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
     """
     import pandas as pd
-    from packaging import version
 
-    return version.parse(pd.__version__) < version.parse(v)
+    return is_version_less_than(pd.__version__, v)
 
 
 def is_pyarrow_version_less_than(v: str) -> bool:
@@ -801,11 +805,54 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
     """
     import pyarrow as pa
+
+    return is_version_less_than(pa.__version__, v)
+
+
+def is_altair_version_less_than(v: str) -> bool:
+    """Return True if the current Altair version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
+    """
+    import altair as alt
+
+    return is_version_less_than(alt.__version__, v)
+
+
+def is_version_less_than(v1: str, v2: str) -> bool:
+    """Return True if the v1 version string is less than the v2 version string
+    based on semantic versioning.
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
     from packaging import version
 
-    return version.parse(pa.__version__) < version.parse(v)
+    return version.parse(v1) < version.parse(v2)
 
 
 def _maybe_truncate_table(

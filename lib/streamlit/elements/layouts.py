@@ -41,7 +41,7 @@ class LayoutsMixin:
         multiple elements. This allows you to, for example, insert multiple
         elements into your app out of order.
 
-        To add elements to the returned container, you can use the "with" notation
+        To add elements to the returned container, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -67,7 +67,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        Inserting elements using "with" notation:
+        Inserting elements using ``with`` notation:
 
         >>> import streamlit as st
         >>>
@@ -151,7 +151,7 @@ class LayoutsMixin:
         Inserts a number of multi-element containers laid out side-by-side and
         returns a list of container objects.
 
-        To add elements to the returned containers, you can use the "with" notation
+        To add elements to the returned containers, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -183,7 +183,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a column:
+        You can use the ``with`` notation to insert any element into a column:
 
         >>> import streamlit as st
         >>>
@@ -277,7 +277,7 @@ class LayoutsMixin:
         Tabs are a navigational element that allows users to easily
         move between groups of related content.
 
-        To add elements to the returned containers, you can use the "with" notation
+        To add elements to the returned containers, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -305,8 +305,10 @@ class LayoutsMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -319,7 +321,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a tab:
+        You can use the ``with`` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -390,7 +392,7 @@ class LayoutsMixin:
         and can be expanded or collapsed by the user. When collapsed, all that is
         visible is the provided label.
 
-        To add elements to the returned container, you can use the "with" notation
+        To add elements to the returned container, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -416,8 +418,10 @@ class LayoutsMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -428,18 +432,18 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into an expander
+        You can use the ``with`` notation to insert any element into an expander
 
         >>> import streamlit as st
         >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.expander("See explanation"):
-        ...     st.write(\"\"\"
+        ...     st.write('''
         ...         The chart above shows some numbers I picked for you.
         ...         I rolled actual dice for these, so they're *guaranteed* to
         ...         be random.
-        ...     \"\"\")
+        ...     ''')
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
@@ -453,11 +457,11 @@ class LayoutsMixin:
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> expander = st.expander("See explanation")
-        >>> expander.write(\"\"\"
+        >>> expander.write('''
         ...     The chart above shows some numbers I picked for you.
         ...     I rolled actual dice for these, so they're *guaranteed* to
         ...     be random.
-        ... \"\"\")
+        ... ''')
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
@@ -523,8 +527,10 @@ class LayoutsMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -545,7 +551,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a popover:
+        You can use the ``with`` notation to insert any element into a popover:
 
         >>> import streamlit as st
         >>>
@@ -609,11 +615,11 @@ class LayoutsMixin:
 
         The label, state, and expanded state can all be updated by calling ``.update()``
         on the returned object. To add elements to the returned container, you can
-        use "with" notation (preferred) or just call methods directly on the returned
+        use ``with`` notation (preferred) or just call methods directly on the returned
         object.
 
         By default, ``st.status()`` initializes in the "running" state. When called using
-        "with" notation, it automatically updates to the "complete" state at the end
+        ``with`` notation, it automatically updates to the "complete" state at the end
         of the "with" block. See examples below for more details.
 
         Parameters
@@ -636,8 +642,10 @@ class LayoutsMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -667,7 +675,7 @@ class LayoutsMixin:
         Examples
         --------
 
-        You can use the `with` notation to insert any element into an status container:
+        You can use the ``with`` notation to insert any element into an status container:
 
         >>> import time
         >>> import streamlit as st
@@ -680,13 +688,13 @@ class LayoutsMixin:
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
         >>>
-        >>> st.button('Rerun')
+        >>> st.button("Rerun")
 
         .. output ::
             https://doc-status.streamlit.app/
             height: 300px
 
-        You can also use `.update()` on the container to change the label, state,
+        You can also use ``.update()`` on the container to change the label, state,
         or expanded state:
 
         >>> import time
@@ -701,7 +709,7 @@ class LayoutsMixin:
         ...     time.sleep(1)
         ...     status.update(label="Download complete!", state="complete", expanded=False)
         >>>
-        >>> st.button('Rerun')
+        >>> st.button("Rerun")
 
         .. output ::
             https://doc-status-update.streamlit.app/

@@ -31,7 +31,6 @@ Following actions/components are tested:
 - streamlit-chat
 - streamlit-echarts
 - streamlit-folium
-- streamlit-lottie
 - streamlit-option-menu
 - streamlit-url-fragment
 """
@@ -127,8 +126,7 @@ def use_echarts():
 def use_extra_streamlit_components():
     from extra_streamlit_components import CookieManager
 
-    st.title("Cookies!")
-    st.help(CookieManager)
+    CookieManager()
 
 
 def use_folium():
@@ -143,13 +141,6 @@ def use_folium():
     ## call to render Folium map in Streamlit
     st_data = st_folium(m, width=725)
     st.write(st_data)
-
-
-def use_lottie():
-    from streamlit_lottie import st_lottie
-
-    with st.echo():
-        st_lottie("https://assets5.lottiefiles.com/packages/lf20_V9t630.json")
 
 
 def use_option_menu():
@@ -185,7 +176,6 @@ options: Dict[str, Callable] = {
     "echarts": use_echarts,
     "extraStreamlitComponents": use_extra_streamlit_components,
     "folium": use_folium,
-    "lottie": use_lottie,
     "optionMenu": use_option_menu,
     "urlFragment": use_url_fragment,
 }

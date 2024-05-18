@@ -176,7 +176,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     def test_create_page_profile_message_is_fragment_run(self):
         ctx = get_script_run_ctx()
-        ctx.current_fragment_id = "some_fragment_id"
+        ctx.fragment_ids_this_run = {"some_fragment_id"}
 
         forward_msg = metrics_util.create_page_profile_message(
             commands=[

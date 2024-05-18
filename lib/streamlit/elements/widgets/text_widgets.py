@@ -152,8 +152,10 @@ class TextWidgetsMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -212,8 +214,8 @@ class TextWidgetsMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> title = st.text_input('Movie title', 'Life of Brian')
-        >>> st.write('The current movie title is', title)
+        >>> title = st.text_input("Movie title", "Life of Brian")
+        >>> st.write("The current movie title is", title)
 
         .. output::
            https://doc-text-input.streamlit.app/
@@ -418,8 +420,10 @@ class TextWidgetsMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -481,7 +485,7 @@ class TextWidgetsMixin:
         ...     "despair, (...)",
         ...     )
         >>>
-        >>> st.write(f'You wrote {len(txt)} characters.')
+        >>> st.write(f"You wrote {len(txt)} characters.")
 
         .. output::
            https://doc-text-area.streamlit.app/

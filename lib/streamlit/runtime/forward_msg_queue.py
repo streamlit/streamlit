@@ -79,9 +79,29 @@ class ForwardMsgQueue:
         self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)
 
-    def clear(self) -> None:
-        """Clear the queue."""
-        self._queue = []
+    def clear(self, retain_lifecycle_msgs: bool = False) -> None:
+        """Clear the queue, potentially retaining lifecycle messages.
+
+        The retain_lifecycle_msgs argument exists because in some cases (in particular
+        when a currently running script is interrupted by a new BackMsg), we don't want
+        to remove certain messages from the queue as doing so may cause the client to
+        not hear about important script lifecycle events (such as the script being
+        stopped early in order to be rerun).
+        """
+        if not retain_lifecycle_msgs:
+            self._queue = []
+        else:
+            self._queue = [
+                msg
+                for msg in self._queue
+                if msg.WhichOneof("type")
+                in {
+                    "script_finished",
+                    "session_status_changed",
+                    "parent_message",
+                }
+            ]
+
         self._delta_index_map = dict()
 
     def flush(self) -> list[ForwardMsg]:

@@ -30,10 +30,16 @@ import {
   IGuestToHostMessage,
   StreamlitEndpoints,
   LibContext,
+  Logo,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
+import {
+  StyledSidebarOpenContainer,
+  StyledLogo,
+  StyledLogoLink,
+} from "@streamlit/app/src/components/Sidebar/styled-components"
 
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
@@ -76,6 +82,8 @@ export interface AppViewProps {
 
   formsData: FormsData
 
+  appLogo: Logo | null
+
   appPages: IAppPage[]
 
   onPageChange: (pageName: string) => void
@@ -99,6 +107,7 @@ function AppView(props: AppViewProps): ReactElement {
     uploadClient,
     componentRegistry,
     formsData,
+    appLogo,
     appPages,
     onPageChange,
     currentPageScriptHash,
@@ -126,6 +135,7 @@ function AppView(props: AppViewProps): ReactElement {
     disableScrolling,
     showToolbar,
     showColoredLine,
+    sidebarChevronDownshift,
   } = React.useContext(AppContext)
 
   const { addScriptFinishedHandler, removeScriptFinishedHandler, libConfig } =
@@ -167,6 +177,25 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
+  const renderLogo = (appLogo: Logo): ReactElement => {
+    const displayImage = appLogo.iconImage ? appLogo.iconImage : appLogo.image
+    const source = endpoints.buildMediaURL(displayImage)
+
+    if (appLogo.link) {
+      return (
+        <StyledLogoLink
+          href={appLogo.link}
+          target="_blank"
+          rel="noreferrer"
+          data-testid="stLogoLink"
+        >
+          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+        </StyledLogoLink>
+      )
+    }
+    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+  }
+
   // Activate scroll to bottom whenever there are bottom elements:
   const Component = hasBottomElements
     ? ScrollToBottomContainer
@@ -198,6 +227,7 @@ function AppView(props: AppViewProps): ReactElement {
         <ThemedSidebar
           endpoints={endpoints}
           initialSidebarState={initialSidebarState}
+          appLogo={appLogo}
           appPages={appPages}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}
@@ -208,6 +238,15 @@ function AppView(props: AppViewProps): ReactElement {
             {renderBlock(elements.sidebar)}
           </StyledSidebarBlockContainer>
         </ThemedSidebar>
+      )}
+      {!showSidebar && appLogo && (
+        <StyledSidebarOpenContainer
+          chevronDownshift={sidebarChevronDownshift}
+          isCollapsed={true}
+          data-testid="collapsedControl"
+        >
+          {renderLogo(appLogo)}
+        </StyledSidebarOpenContainer>
       )}
       <Component
         tabIndex={0}

@@ -220,6 +220,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 "useExternalAuthToken": False,
                 # Default host configuration settings.
                 "enableCustomParentMessages": False,
+                "enforceDownloadInNewTab": False,
             }
         )
         self.set_status(200)

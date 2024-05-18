@@ -122,10 +122,9 @@ class MediaMixin:
         loop: bool
             Whether the audio should loop playback.
         autoplay: bool
-            Whether the audio should start playing automatically.
-            Browsers will not autoplay audio files if the user has not interacted with
-            the page yet, for example by clicking on the page while it loads.
-            Defaults to False.
+            Whether the audio file should start playing automatically. This is
+            ``False`` by default. Browsers will not autoplay audio files if the
+            user has not interacted with the page by clicking somewhere.
 
         Examples
         --------
@@ -227,7 +226,7 @@ class MediaMixin:
             one of the following:
 
             * ``None`` (default): The element plays from the beginning.
-            * An``int`` or ``float`` specifying the time in seconds. ``float``
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
               values are rounded down to whole seconds.
             * A string specifying the time in a format supported by `Pandas'
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
@@ -275,14 +274,15 @@ class MediaMixin:
         loop: bool
             Whether the video should loop playback.
         autoplay: bool
-            Whether the video should start playing automatically.
-            Browsers will not autoplay video files if the user has not interacted with
-            the page yet, for example by clicking on the page while it loads.
-            To enable autoplay without user interaction, you can set muted=True.
-            Defaults to False.
+            Whether the video should start playing automatically. This is
+            ``False`` by default. Browsers will not autoplay unmuted videos
+            if the user has not interacted with the page by clicking somewhere.
+            To enable autoplay without user interaction, you must also set
+            ``muted=True``.
         muted: bool
-            Whether the video should play with the audio silenced. This can be used to
-            enable autoplay without user interaction. Defaults to False.
+            Whether the video should play with the audio silenced. This is
+            ``False`` by default. Use this in conjunction with ``autoplay=True``
+            to enable autoplay without user interaction.
 
         Example
         -------

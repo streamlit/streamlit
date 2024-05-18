@@ -181,8 +181,10 @@ class MultiSelectMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -240,11 +242,11 @@ class MultiSelectMixin:
         >>> import streamlit as st
         >>>
         >>> options = st.multiselect(
-        ...     'What are your favorite colors',
-        ...     ['Green', 'Yellow', 'Red', 'Blue'],
-        ...     ['Yellow', 'Red'])
+        ...     "What are your favorite colors",
+        ...     ["Green", "Yellow", "Red", "Blue"],
+        ...     ["Yellow", "Red"])
         >>>
-        >>> st.write('You selected:', options)
+        >>> st.write("You selected:", options)
 
         .. output::
            https://doc-multiselect.streamlit.app/

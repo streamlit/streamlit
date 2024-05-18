@@ -57,11 +57,6 @@ def _create_script_finished_msg(status) -> ForwardMsg:
     return msg
 
 
-def _patch_local_sources_watcher():
-    """Return a mock.patch for LocalSourcesWatcher"""
-    return patch("streamlit.runtime.runtime.LocalSourcesWatcher")
-
-
 class ServerTest(ServerTestCase):
     def setUp(self) -> None:
         self.original_ws_compression = config.get_option(
@@ -78,7 +73,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_start_stop(self):
         """Test that we can start and stop the server."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             await self.server.start()
             self.assertEqual(
                 RuntimeState.NO_SESSIONS_CONNECTED, self.server._runtime._state
@@ -99,7 +94,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             await self.server.start()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -125,7 +120,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_websocket_connect_to_nonexistent_session(self):
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             await self.server.start()
 
             ws_client = await self.ws_connect(existing_session_id="nonexistent_session")
@@ -139,7 +134,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_websocket_disconnect_and_reconnect(self):
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             await self.server.start()
 
             ws_client = await self.ws_connect()
@@ -168,7 +163,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     async def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             await self.server.start()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -201,7 +196,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_websocket_compression(self):
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", True, "test")
             await self.server.start()
 
@@ -217,7 +212,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     async def test_websocket_compression_disabled(self):
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
             await self.server.start()
 
@@ -235,7 +230,7 @@ class ServerTest(ServerTestCase):
         """Sending a message to a disconnected SessionClient raises an error.
         We should gracefully handle the error by cleaning up the session.
         """
-        with _patch_local_sources_watcher(), self._patch_app_session():
+        with self._patch_app_session():
             await self.server.start()
             await self.ws_connect()
 
