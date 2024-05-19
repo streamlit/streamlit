@@ -133,7 +133,7 @@ jobs:
       # End of inlined make_init action
 
       - name: Make local modules visible
-        run: pip install --editable lib --no-deps
+        run: uv pip install --editable lib --no-deps
       - name: Run Python Tests
         run: make pytest
       - name: CLI Smoke Tests

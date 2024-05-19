@@ -51,7 +51,11 @@ pydantic>=1.0, <2.0
 # semver 3 renames VersionInfo so temporarily pin until we deal with it
 semver<3
 langchain>=0.2.0
-langchain-core>=0.2.0
 # langchain imports StreamlitCallbackHandler directly from langchain_community
 # starting from langchain 0.2.0 version, so we need to install it here.
 langchain-community>=0.2.0
+packaging>=23.2
+
+
+
+
