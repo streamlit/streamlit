@@ -97,7 +97,7 @@ jobs:
       # of protoc in its package repository. To work around this, we vendor in
       # protoc 3.20.3.
       # We can remove the vendored protoc binary and this run step once Github
-      # Actions moves to a newer version of Ubunutu.
+      # Actions moves to a newer version of Ubuntu.
       - name: Add vendored `protoc` to $PATH
         run: |
           echo "$PWD/vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
