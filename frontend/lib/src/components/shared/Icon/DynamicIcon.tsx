@@ -16,7 +16,6 @@
 
 import React, { Suspense } from "react"
 
-import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
 import { DynamicIconProps, StyledDynamicIcon } from "./styled-components"
