@@ -109,6 +109,26 @@ describe("Expander container", () => {
     expect(screen.getByTestId("stExpanderIconError")).toBeInTheDocument()
   })
 
+  it("renders expander with an emoji icon", () => {
+    const props = getProps({ icon: "🚀" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByText("🚀")).toBeInTheDocument()
+  })
+
+  it("renders expander with a material icon", () => {
+    const props = getProps({ icon: ":material/add_circle:" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByText("add_circle")).toBeInTheDocument()
+  })
+
   it("should render a expanded component", () => {
     const props = getProps()
     render(
