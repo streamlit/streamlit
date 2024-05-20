@@ -25,7 +25,9 @@ from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
+    AsyncGenerator,
     Final,
+    Generator,
     Iterable,
     Literal,
     NamedTuple,
@@ -1337,6 +1339,19 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."
         )
+
+
+def async_generator_to_sync(
+    async_gen: AsyncGenerator[Any, Any]
+) -> Generator[Any, Any, Any]:
+    """Convert an async generator to a synchronous generator."""
+    import asyncio
+
+    while True:
+        try:
+            yield asyncio.run(anext(async_gen))
+        except StopAsyncIteration:
+            break
 
 
 # The code below is copied from Altair, and slightly modified.
