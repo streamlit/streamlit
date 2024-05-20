@@ -436,7 +436,7 @@ class LayoutsMixin:
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
         icon : str, None
-            An optional emoji or icon to display next to the button label. If ``icon``
+            An optional emoji or icon to display next to the expander label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
             string, the following options are valid:
 
