@@ -475,7 +475,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
-        pages: dict[PageHash, PageInfo] = {},
+        pages: dict[PageHash, PageInfo] | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -505,7 +505,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
-        pages: dict[PageHash, PageInfo] = {},
+        pages: dict[PageHash, PageInfo] | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -674,7 +674,7 @@ class AppSession:
         self,
         page_script_hash: str,
         fragment_ids_this_run: set[str] | None = None,
-        pages: dict[PageHash, PageInfo] = {},
+        pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
