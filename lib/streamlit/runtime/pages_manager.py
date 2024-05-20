@@ -214,11 +214,11 @@ class PagesManager:
         return self._main_script_hash
 
     @property
-    def intent_page_name(self) -> PageName:
+    def intent_page_name(self) -> PageName | None:
         return self._intent_page_name
 
     @property
-    def intent_page_script_hash(self) -> PageHash:
+    def intent_page_script_hash(self) -> PageHash | None:
         return self._intent_page_script_hash
 
     def get_main_page(self) -> PageInfo:
