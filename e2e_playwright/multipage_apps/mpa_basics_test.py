@@ -108,13 +108,12 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     page.goto(f"http://localhost:{app_port}/page_7")
     wait_for_app_loaded(page)
 
-    separator = page.get_by_test_id("stSidebarNavSeparator")
-    svg = separator.locator("svg")
+    view_button = page.get_by_test_id("stSidebarNavViewButton")
 
-    expect(svg).to_be_visible()
+    expect(view_button).to_be_visible()
 
     # Expand the nav
-    svg.click(force=True)
+    view_button.click(force=True)
     # We apply a quick timeout here so that the UI has some time to
     # adjust for the screenshot after the click
     page.wait_for_timeout(250)
@@ -123,14 +122,14 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     )
 
     # Collapse the nav
-    svg.click(force=True)
+    view_button.click(force=True)
     page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
 
     # Expand the nav again
-    svg.click(force=True)
+    view_button.click(force=True)
     page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
