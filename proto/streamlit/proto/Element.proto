@@ -80,7 +80,6 @@ message Element {
     Arrow arrow_table = 39;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;
-    AuthRedirect auth_redirect = 55;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
@@ -130,7 +129,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 56
+    // Next ID: 55
   }
 
   reserved 9;

@@ -14,11 +14,40 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterator, Mapping, NoReturn, Union
+import urllib.parse
+from typing import Iterator, Mapping, NoReturn, Union
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
 from streamlit.runtime.scriptrunner.script_run_context import UserInfo
+from streamlit.runtime.secrets import secrets_singleton
+
+
+def generate_login_redirect_url() -> str:
+    _OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+    if secrets_singleton.load_if_toml_exists():
+        auth_section = secrets_singleton.get("auth")
+        # TODO[kajarenc]: Add support for other OAuth providers
+        redirect_uri = auth_section["redirect_uri"]
+        client_id = auth_section["client_id"]
+        scope = ["profile", "email"]
+
+        args = {"response_type": "code", "approval_prompt": "auto"}
+        if redirect_uri is not None:
+            args["redirect_uri"] = redirect_uri
+
+        if client_id is not None:
+            args["client_id"] = client_id
+
+        if scope:
+            args["scope"] = " ".join(scope)
+
+        query_string = urllib.parse.urlencode(args)
+        url = _OAUTH_AUTHORIZE_URL
+
+        return f"{url}?{query_string}"
+    return ""
 
 
 def _get_user_info() -> UserInfo:
@@ -27,13 +56,6 @@ def _get_user_info() -> UserInfo:
         # TODO: Add appropriate warnings when ctx is missing
         return {}
     return ctx.user_info
-
-
-class AuthMixin:
-    def login(
-        self,
-    ) -> Any:
-        self.dg._enqueue("login", login_proto)
 
 
 # Class attributes are listed as "Parameters" in the docstring as a workaround
@@ -67,10 +89,18 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
 
     """
 
-    def __init__(self, auth_mixin) -> None:
-        object.__setattr__(self, "login", auth_mixin.login)
-        # self.login = auth_mixin.login
-        # self.logout = auth_mixin.logout
+    def login(self, send_redirect_to_host: bool = False) -> None:
+        context = _get_script_run_ctx()
+        if context is not None:
+
+            fwd_msg = ForwardMsg()
+            fwd_msg.auth_redirect.url = generate_login_redirect_url()
+            fwd_msg.auth_redirect.action_type = "login"
+            if send_redirect_to_host:
+                fwd_msg.auth_redirect.send_redirect_to_host = True
+            print("IN MIXIN!!!!")
+            print(fwd_msg.auth_redirect)
+            context.enqueue(fwd_msg)
 
     def __getitem__(self, key: str) -> str | None:
         return _get_user_info()[key]

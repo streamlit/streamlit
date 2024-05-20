@@ -106,6 +106,7 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  AuthRedirect,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -645,6 +646,16 @@ export class App extends PureComponent<Props, State> {
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
         logo: (logo: Logo) => this.setState({ appLogo: logo }),
+        authRedirect: (authRedirect: AuthRedirect) => {
+          if (authRedirect?.sendRedirectToHost) {
+            this.hostCommunicationMgr.sendMessageToHost({
+              type: "REDIRECT_TO_URL",
+              url: authRedirect.url,
+            })
+          } else {
+            window.location.href = authRedirect.url
+          }
+        },
       })
     } catch (e) {
       const err = ensureError(e)

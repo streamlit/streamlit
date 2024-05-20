@@ -710,10 +710,6 @@ const RawElementNodeRenderer = (
         />
       )
     }
-    case "authRedirect":
-      // @ts-ignore
-      window.location.href = node.element.authRedirect.url
-      return <></>
 
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)

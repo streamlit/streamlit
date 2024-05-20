@@ -23,5 +23,6 @@ option java_outer_classname = "AuthRedirectProto";
 message AuthRedirect {
   string url = 1; // URL TO REDIRECT TO
   string action_type = 2; // ONE OF [LOGIN/LOGOUT] TODO(kajarenc) add enum
+  bool send_redirect_to_host = 3; // IF TRUE, delegate redirect to parent iframe
 
 }

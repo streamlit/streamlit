@@ -239,7 +239,7 @@ connection = _connection
 experimental_fragment = _fragment
 experimental_memo = _experimental_memo
 experimental_singleton = _experimental_singleton
-experimental_user = _UserInfoProxy(auth_mixin=_event)
+experimental_user = _UserInfoProxy()
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
 

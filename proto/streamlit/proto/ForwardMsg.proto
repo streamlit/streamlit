@@ -33,6 +33,7 @@ import "streamlit/proto/PagesChanged.proto";
 import "streamlit/proto/ParentMessage.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionStatus.proto";
+import "streamlit/proto/AuthRedirect.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -81,6 +82,8 @@ message ForwardMsg {
     // App logo message
     Logo logo = 22;
 
+    AuthRedirect auth_redirect = 23;
+
     // Platform - message to host
     ParentMessage parent_message = 20;
 
@@ -97,7 +100,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 23
+  // Next: 24
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
