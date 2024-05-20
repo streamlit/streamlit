@@ -119,7 +119,7 @@ describe("sendEmptySelection", () => {
 
     widgetMgr.setStringValue(
       plotlyProto,
-      '{"select":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+      '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
       { fromUi: true }
     )
 
@@ -173,7 +173,7 @@ describe("handleSelection", () => {
     handleSelection(event, widgetMgr, proto, mockFragmentId)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       { id: "plotly_chart", selectionMode: [0, 1, 2] },
-      '{"select":{"points":[{"point_index":1,"point_indices":[1],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[]}}',
+      '{"selection":{"points":[{"point_index":1,"point_indices":[1],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[]}}',
       { fromUi: true },
       "testFragment"
     )
@@ -200,7 +200,7 @@ describe("handleSelection", () => {
     handleSelection(event, widgetMgr, proto, undefined)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       { id: "plotly_chart", selectionMode: [0, 1, 2] },
-      '{"select":{"points":[],"point_indices":[],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[]}}',
+      '{"selection":{"points":[],"point_indices":[],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[]}}',
       { fromUi: true },
       undefined
     )
@@ -219,7 +219,7 @@ describe("handleSelection", () => {
     handleSelection(event, widgetMgr, proto, mockFragmentId)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       { id: "plotly_chart", selectionMode: [0, 1, 2] },
-      '{"select":{"points":[],"point_indices":[],"box":[],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7.8]}]}}',
+      '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7.8]}]}}',
       { fromUi: true },
       "testFragment"
     )
@@ -284,7 +284,7 @@ describe("handleSelection", () => {
 
     widgetMgr.setStringValue(
       proto,
-      '{"select":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
+      '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
       { fromUi: true }
     )
 
@@ -367,7 +367,7 @@ describe("handleSelection", () => {
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
     expect(widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       { id: "plotly_chart", selectionMode: [1, 2] },
-      '{"select":{"points":[{"point_index":1,"point_indices":[1],"x":1,"y":1,"legendgroup":"group1"},{"point_index":0,"point_indices":[0],"x":0,"y":0,"legendgroup":"group2"}],"point_indices":[1,0],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7]}]}}',
+      '{"selection":{"points":[{"point_index":1,"point_indices":[1],"x":1,"y":1,"legendgroup":"group1"},{"point_index":0,"point_indices":[0],"x":0,"y":0,"legendgroup":"group2"}],"point_indices":[1,0],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7]}]}}',
       { fromUi: true },
       undefined
     )

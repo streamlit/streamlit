@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, Final, Literal, Mapping, Union
@@ -427,7 +428,9 @@ def process_config_mapping(
         elif isinstance(config, str):
             transformed_column_config[column] = ColumnConfig(label=config)
         elif isinstance(config, dict):
-            transformed_column_config[column] = config
+            # Ensure that the column config objects are cloned
+            # since we will apply in-place changes to it.
+            transformed_column_config[column] = copy.deepcopy(config)
         else:
             raise StreamlitAPIException(
                 f"Invalid column config for column `{column}`. "

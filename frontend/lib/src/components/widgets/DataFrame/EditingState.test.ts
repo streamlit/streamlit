@@ -300,4 +300,55 @@ describe("EditingState class", () => {
     // Test again if the edits were applied correctly:
     expect(editingState.toJson(MOCK_COLUMNS)).toEqual(editingStateJson)
   })
+
+  it("ensure all cells of added rows are filled even if empty", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    const MOCK_COLUMN_PROPS = {
+      id: "column_1",
+      name: "column_1",
+      title: "column_1",
+      indexNumber: 0,
+      arrowType: {
+        pandas_type: "unicode",
+        numpy_type: "object",
+      },
+      isEditable: false,
+      isRequired: false,
+      isHidden: false,
+      isIndex: false,
+      isStretched: false,
+    } as BaseColumnProps
+
+    const MOCK_COLUMNS = [
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        isIndex: true,
+        indexNumber: 0,
+        id: "index_col",
+        name: "index_col",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 1,
+        id: "column_1",
+        name: "column_1",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 2,
+        id: "column_2",
+        name: "column_2",
+      }),
+    ]
+    editingState.fromJson(
+      `{"edited_rows":{},"added_rows":[{"column_1":"foo"}],"deleted_rows":[]}`,
+      MOCK_COLUMNS
+    )
+    // Should have the value from the JSON:
+    expect(editingState.getCell(1, 3)).toEqual(MOCK_COLUMNS[1].getCell("foo"))
+    // Should have an empty cell since it wasn't specified in the JSON:
+    expect(editingState.getCell(2, 3)).toEqual(MOCK_COLUMNS[2].getCell(null))
+  })
 })
