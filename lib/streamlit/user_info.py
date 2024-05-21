@@ -99,7 +99,7 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
             fwd_msg.auth_redirect.action_type = "login"
             if send_redirect_to_host:
                 fwd_msg.auth_redirect.send_redirect_to_host = True
-            print("IN MIXIN!!!!")
+            print("IN USER LOGIN CALL!!!!")
             print(fwd_msg.auth_redirect)
             context.enqueue(fwd_msg)
 
