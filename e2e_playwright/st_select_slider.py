@@ -24,7 +24,7 @@ def format_option(option):
 
 
 w1 = st.select_slider(
-    "Label 1",
+    "Label 1 (format_func with key and help)",
     value=("orange", "blue"),
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     format_func=format_option,
@@ -36,20 +36,20 @@ if "first_select_slider" in st.session_state:
 st.write("Value 1:", w1)
 
 w2 = st.select_slider(
-    "Label 2",
+    "Label 2 (no default)",
     options=np.array([1, 2, 3, 4, 5]),
 )
 st.write("Value 2:", w2)
 
 w3 = st.select_slider(
-    "Label 3",
+    "Label 3 (default with ints and series)",
     value=[2, 5],
     options=pd.Series([1, 2, 3, 4, 5, 6, 7, 8, 9]),
 )
 st.write("Value 3:", w3)
 
 w4 = st.select_slider(
-    "Label 4",
+    "Label 4 (default with pandas df)",
     value=5,
     options=pd.DataFrame(
         {
@@ -61,7 +61,7 @@ w4 = st.select_slider(
 st.write("Value 4:", w4)
 
 w5 = st.select_slider(
-    "Label 5",
+    "Label 5 (disabled)",
     value=("orange", "blue"),
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     disabled=True,
@@ -69,7 +69,7 @@ w5 = st.select_slider(
 st.write("Value 5:", w5)
 
 w6 = st.select_slider(
-    "Label 6",
+    "Label 6 (hidden visibility)",
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     label_visibility="hidden",
 )
@@ -78,7 +78,7 @@ st.write("Value 6:", w6)
 
 
 w7 = st.select_slider(
-    "Label 7",
+    "Label 7 (collapsed visibility)",
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
     label_visibility="collapsed",
 )
@@ -92,7 +92,7 @@ if runtime.exists():
         st.write("Hello world")
 
     st.select_slider(
-        "Label 8",
+        "Label 8 (on change)",
         options=np.array([1, 2, 3, 4, 5]),
         key="select_slider8",
         on_change=on_change,
@@ -102,7 +102,7 @@ if runtime.exists():
 
 with st.expander("Expander", expanded=True):
     w9 = st.select_slider(
-        label="Label 9",
+        label="Label 9 (expander)",
         options=["foo", "bar", "baz", "This is a very, very long option"],
         value="This is a very, very long option",
     )
@@ -111,7 +111,7 @@ with st.expander("Expander", expanded=True):
 
 with st.form(key="my_form", clear_on_submit=True):
     selection = st.select_slider(
-        label="Label 10",
+        label="Label 10 (form)",
         options=np.array([1, 2, 3, 4, 5]),
     )
     st.form_submit_button("Submit")
@@ -122,7 +122,7 @@ st.write("select_slider-in-form selection:", str(selection))
 @st.experimental_fragment()
 def test_fragment():
     selection = st.select_slider(
-        label="Label 11",
+        label="Label 11 (fragment)",
         options=np.array([1, 2, 3, 4, 5]),
     )
     st.write("select_slider-in-fragment selection:", str(selection))
