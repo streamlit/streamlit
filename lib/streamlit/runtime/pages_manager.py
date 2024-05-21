@@ -20,8 +20,6 @@ import threading
 from pathlib import Path
 from typing import Any, Callable, Final, Optional, Type
 
-from blinker import Signal
-
 import streamlit.source_util as source_util
 from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -44,14 +42,14 @@ class PagesStrategyV1:
             if PagesStrategyV1.is_watching_pages_dir:
                 return
 
-            def _on_pages_changed(_path: str) -> None:
-                pages_manager.invalidate_pages_cache()
+            def _handle_page_changed(_path: str) -> None:
+                source_util.invalidate_pages_cache()
 
             main_script_path = Path(pages_manager.main_script_path)
             pages_dir = main_script_path.parent / "pages"
             watch_dir(
                 str(pages_dir),
-                _on_pages_changed,
+                _handle_page_changed,
                 glob_pattern="*.py",
                 allow_nonexistent=True,
             )
@@ -74,7 +72,7 @@ class PagesStrategyV1:
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> Optional[PageInfo]:
-        pages = self.pages_manager.get_pages()
+        pages = self.get_pages()
 
         if page_script_hash:
             return pages.get(page_script_hash, None)
@@ -109,6 +107,15 @@ class PagesStrategyV1:
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
         return source_util.get_pages(self.pages_manager.main_script_path)
+
+    def register_pages_changed_callback(
+        self,
+        callback: Callable[[str], None],
+    ) -> Callable[[], None]:
+        return source_util.register_pages_changed_callback(callback)
+
+    def invalidate_pages_cache(self) -> None:
+        source_util.invalidate_pages_cache()
 
     def set_pages(self, _pages: dict[PageHash, PageInfo]) -> None:
         raise NotImplementedError("Unable to set pages in this V1 strategy")
@@ -185,14 +192,21 @@ class PagesStrategyV2:
     def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
         self._pages = pages
 
+    def register_pages_changed_callback(
+        self,
+        callback: Callable[[str], None],
+    ) -> Callable[[], None]:
+        # V2 strategy does not handle any pages changed event
+        return lambda: None
+
+    def invalidate_pages_cache(self) -> None:
+        pass
+
 
 class PagesManager:
     DefaultStrategy: Type[PagesStrategyV1 | PagesStrategyV2] = PagesStrategyV1
 
     def __init__(self, main_script_path, script_cache=None, **kwargs):
-        self._cached_pages: dict[PageHash, PageInfo] | None = None
-        self._pages_cache_lock = threading.RLock()
-        self._on_pages_changed = Signal(doc="Emitted when the set of pages has changed")
         self._main_script_path: ScriptPath = main_script_path
         self._main_script_hash: PageHash = calc_md5(main_script_path)
         self._current_page_hash: PageHash = self._main_script_hash
@@ -263,22 +277,7 @@ class PagesManager:
             self.set_active_script_hash(original_page_hash)
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
-        # Avoid taking the lock if the pages cache hasn't been invalidated.
-        pages = self._cached_pages
-        if pages is not None:
-            return pages
-
-        with self._pages_cache_lock:
-            # The cache may have been repopulated while we were waiting to grab
-            # the lock.
-            if self._cached_pages is not None:
-                return self._cached_pages
-
-            pages = self.pages_strategy.get_pages()
-            self._cached_pages = pages
-            self._on_pages_changed.send()
-
-            return pages
+        return self.pages_strategy.get_pages()
 
     def set_pages(self, pages: dict[PageHash, PageInfo]) -> None:
         # Manually setting the pages indicates we are using MPA v2.
@@ -291,8 +290,6 @@ class PagesManager:
             self.pages_strategy = PagesStrategyV2(self)
 
         self.pages_strategy.set_pages(pages)
-        self._cached_pages = pages
-        # We deliberately don't notify on page change as V2 does not require of this.
 
     def get_page_script(self, fallback_page_hash: PageHash = "") -> Optional[PageInfo]:
         # We assume the pages strategy is V2 cause this is used
@@ -303,11 +300,7 @@ class PagesManager:
             return None
 
     def invalidate_pages_cache(self) -> None:
-        _LOGGER.debug("Set of pages have changed. Invalidating cache.")
-        with self._pages_cache_lock:
-            self._cached_pages = None
-
-        self._on_pages_changed.send()
+        self.pages_strategy.invalidate_pages_cache()
 
     def register_pages_changed_callback(
         self,
@@ -318,14 +311,7 @@ class PagesManager:
         The callback will be called with the path changed.
         """
 
-        def disconnect():
-            self._on_pages_changed.disconnect(callback)
-
-        # weak=False so that we have control of when the pages changed
-        # callback is deregistered.
-        self._on_pages_changed.connect(callback, weak=False)
-
-        return disconnect
+        return self.pages_strategy.register_pages_changed_callback(callback)
 
     def get_page_script_byte_code(self, script_path: str) -> Any:
         if self._script_cache is None:

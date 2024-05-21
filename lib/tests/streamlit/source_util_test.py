@@ -14,6 +14,7 @@
 
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -92,11 +93,33 @@ class PageHelperFunctionTests(unittest.TestCase):
     def test_page_icon_and_name(self, path_str, expected):
         assert source_util.page_icon_and_name(Path(path_str)) == expected
 
+    @patch("streamlit.source_util._on_pages_changed", MagicMock())
+    @patch("streamlit.source_util._cached_pages", new="Some pages")
+    def test_invalidate_pages_cache(self):
+        source_util.invalidate_pages_cache()
+
+        assert source_util._cached_pages is None
+        source_util._on_pages_changed.send.assert_called_once()
+
+    @patch("streamlit.source_util._on_pages_changed", MagicMock())
+    def test_register_pages_changed_callback(self):
+        callback = lambda: None
+
+        disconnect = source_util.register_pages_changed_callback(callback)
+
+        source_util._on_pages_changed.connect.assert_called_once_with(
+            callback, weak=False
+        )
+
+        disconnect()
+        source_util._on_pages_changed.disconnect.assert_called_once_with(callback)
+
 
 # NOTE: We write this test function using pytest conventions (as opposed to
 # using unittest.TestCase like in the rest of the codebase) because the tmpdir
 # pytest fixture is so useful for writing this test it's worth having the
 # slight inconsistency.
+@patch("streamlit.source_util._cached_pages", new=None)
 def test_get_pages(tmpdir):
     # Write an empty string to create a file.
     tmpdir.join("streamlit_app.py").write("")

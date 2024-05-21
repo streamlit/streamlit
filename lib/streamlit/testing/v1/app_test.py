@@ -323,9 +323,9 @@ class AppTest:
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
         pages_manager = PagesManager(self._script_path, setup_watcher=False)
-        with pages_manager._pages_cache_lock:
-            saved_cached_pages = pages_manager._cached_pages
-            pages_manager._cached_pages = None
+        with source_util._pages_cache_lock:
+            saved_cached_pages = source_util._cached_pages
+            source_util._cached_pages = None
 
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
@@ -351,8 +351,8 @@ class AppTest:
         self.query_params = parse.parse_qs(query_string)
 
         # teardown
-        with pages_manager._pages_cache_lock:
-            pages_manager._cached_pages = saved_cached_pages
+        with source_util._pages_cache_lock:
+            source_util._cached_pages = saved_cached_pages
 
         if self.secrets:
             if st.secrets._secrets is not None:
