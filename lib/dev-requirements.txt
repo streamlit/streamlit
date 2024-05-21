@@ -1,4 +1,4 @@
-black==22.6.0
+black==24.3.0
 pre-commit
 hypothesis>=6.17.4
 mypy>=1.4, <1.7
@@ -23,3 +23,4 @@ types-requests
 types-setuptools
 types-toml
 types-typed-ast
+requests>=2.32.0 # not directly required, pinned by Snyk to avoid a vulnerability
