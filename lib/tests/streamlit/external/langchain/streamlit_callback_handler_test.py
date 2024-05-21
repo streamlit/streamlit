@@ -16,28 +16,17 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
 
+import langchain
 import pytest
-import semver
 from google.protobuf.json_format import MessageToDict
 
 import streamlit as st
+from streamlit.type_util import is_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-
-try:
-    import langchain
-
-    from tests.streamlit.external.langchain.capturing_callback_handler import (
-        playback_callbacks,
-    )
-except ImportError:
-    # If langchain isn't installed (it doesn't work with Python 3.12 yet),
-    # we'll skip this test.
-    # TODO[kajarenc] Remove this once langchain supports Python 3.12.
-    langchain = MagicMock(__version__="0.0.0")
-    playback_callbacks = None
-    pytestmark = pytest.mark.skip(reason="Langchain doesn't support Python 3.12 yet.")
+from tests.streamlit.external.langchain.capturing_callback_handler import (
+    playback_callbacks,
+)
 
 
 class StreamlitCallbackHandlerAPITest(unittest.TestCase):
@@ -65,9 +54,14 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
             thought_labeler=LLMThoughtLabeler(),
         )
 
+    @pytest.mark.skipif(
+        not is_version_less_than(langchain.__version__, "0.2"),
+        reason="Skip test if langchain version >= 0.2, "
+        "since the langchain structure had been changed.",
+    )
     def test_import_from_langchain(self):
         """We can import and use the callback handler from LangChain itself."""
-        from langchain_community.callbacks import (
+        from langchain.callbacks import (
             StreamlitCallbackHandler as LangChainStreamlitCallbackHandler,
         )
 
@@ -89,8 +83,8 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 
 class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
     @pytest.mark.skipif(
-        semver.VersionInfo.parse(langchain.__version__) >= "0.0.296",
-        reason="Skip test if langchain version >= 0.0.296, "
+        not is_version_less_than(langchain.__version__, "0.1"),
+        reason="Skip test if langchain version >= 0.1, "
         "since test data (alanis.pickle) generated with old langchain version,"
         "and not valid for newer versions.",
     )
