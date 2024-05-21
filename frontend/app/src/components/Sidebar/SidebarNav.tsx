@@ -120,6 +120,15 @@ const SidebarNav = ({
     contents = appPages.map(generateNavLinks)
   }
 
+  // We should show the nav items as expanded if
+  // - there are no sidebar elements
+  // - the user has explicitly expanded the sidebar
+  const shouldShowNavItemsAsExpanded = !hasSidebarElements || expanded
+
+  // We should show the "View more" button if
+  // - there are sidebar elements and it produce an overflow
+  // - the user has explicitly expanded the sidebar indicating
+  //   the possibility to collapse it
   const shouldShowViewButton =
     (hasSidebarElements && isOverflowing) || expanded
 
@@ -127,7 +136,7 @@ const SidebarNav = ({
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems
         ref={navItemsRef}
-        isExpanded={expanded}
+        isExpanded={shouldShowNavItemsAsExpanded}
         hasSidebarElements={hasSidebarElements}
         data-testid="stSidebarNavItems"
       >
