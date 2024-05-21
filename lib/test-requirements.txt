@@ -52,3 +52,4 @@ pydantic>=1.0, <2.0
 semver<3
 # Langchain 0.2 migrated the Streamlit integration into a dedicated community package.
 langchain>=0.0.216, <0.2
+requests>=2.32.0 # not directly required, pinned by Snyk to avoid a vulnerability
