@@ -410,7 +410,7 @@ export function RenderedMarkdown({
           directiveName.length > 0 &&
           !colorMapping.has(directiveName)
         if (isUnsupportedTextDirective) {
-          // Convert unsupported text directives to plain text to avoid stripping them out
+          // Convert unsupported text directives to plain text to avoid them being ignored/not rendered
           // See https://github.com/streamlit/streamlit/issues/8726, https://github.com/streamlit/streamlit/issues/5968
           parent.children.splice(index, 1, {
             type: "text",
