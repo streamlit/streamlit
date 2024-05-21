@@ -59,8 +59,12 @@ text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
 
-# Workaround for https://github.com/pytest-dev/pytest/issues/12263.
-AsyncTestCase.runTest = lambda self: ...
+# Workaround for https://github.com/pytest-dev/pytest/issues/12263:
+def runTest(*args, **kwargs):
+    pass
+
+
+AsyncTestCase.runTest = runTest
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
