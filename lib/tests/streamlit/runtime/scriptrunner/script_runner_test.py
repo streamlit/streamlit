@@ -93,6 +93,10 @@ class ScriptRunnerTest(AsyncTestCase):
         super().tearDown()
         Runtime._instance = None
 
+    def runTest(self):
+        """Workaround for https://github.com/pytest-dev/pytest/issues/12263."""
+        pass
+
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
         scriptrunner = TestScriptRunner("good_script.py")
