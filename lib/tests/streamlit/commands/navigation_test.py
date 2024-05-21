@@ -55,6 +55,26 @@ class NavigationTest(DeltaGeneratorTestCase):
                 [st.Page("page1.py", default=True), st.Page("page2.py", default=True)]
             )
 
+    def test_same_url_paths_raises_APIException(self):
+        """Test that an error is thrown if multiple defaults are specified"""
+        with pytest.raises(StreamlitAPIException):
+            st.navigation(
+                [
+                    st.Page("page1.py", url_path="foo"),
+                    st.Page("page2.py", url_path="foo"),
+                ]
+            )
+
+    def test_same_inferred_url_paths_raises_APIException(self):
+        """Test that an error is thrown if multiple defaults are specified"""
+        with pytest.raises(StreamlitAPIException):
+            st.navigation(
+                [
+                    st.Page("page1.py", url_path="foo"),
+                    st.Page("foo.py"),
+                ]
+            )
+
     def test_page_found_by_hash(self):
         found_page = st.Page("page2.py")
         self.script_run_ctx.pages_manager.set_script_intent(found_page._script_hash, "")

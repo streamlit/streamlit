@@ -120,12 +120,12 @@ def test_supports_navigating_to_page_directly_via_url(app: Page, app_port: int):
     expect(page_heading(app)).to_contain_text("Page 5")
 
 
-def test_supports_navigating_to_page_directly_via_url_title(app: Page, app_port: int):
-    """Test that we can navigate to a page directly via URL. using the title."""
-    app.goto(f"http://localhost:{app_port}/Different_Title")
+def test_supports_navigating_to_page_directly_via_url_path(app: Page, app_port: int):
+    """Test that we can navigate to a page directly via URL. using the url_path."""
+    app.goto(f"http://localhost:{app_port}/my_url_path")
     wait_for_app_loaded(app)
-
-    expect(page_heading(app)).to_contain_text("Page 3")
+    expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")
+    expect(page_heading(app)).to_contain_text("Page 8")
 
 
 def test_can_switch_between_pages_and_edit_widgets(app: Page):
@@ -337,3 +337,13 @@ def test_set_default_navigation(app: Page, app_port: int):
     wait_for_app_loaded(app)
 
     expect(page_heading(app)).to_contain_text("Page 6")
+
+
+def test_page_url_path_appears_in_url(app: Page, app_port: int):
+    """Test that st.Page's url_path is included in the URL"""
+    link = get_page_link(app, "page 8")
+
+    expect(link).to_have_attribute("href", f"http://localhost:{app_port}/my_url_path")
+    link.click()
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")

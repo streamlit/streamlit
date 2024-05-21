@@ -274,7 +274,7 @@ export class StrategyV2 {
 
         this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
-          currentPageName: currentPageName,
+          currentPageName: currentPage.isDefault ? "" : currentPageName,
           currentPageScriptHash,
         })
       },
