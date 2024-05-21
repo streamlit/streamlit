@@ -92,7 +92,7 @@ def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
 
 @gather_metrics("experimental_dialog")
 def dialog_decorator(
-    title: F | None | str = "", *, width: DialogWidth = "small"
+    title: F | None | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
     """Function decorator to create a modal dialog.
 
