@@ -222,7 +222,7 @@ def app_server(
             "--server.headless",
             "true",
             "--global.developmentMode",
-            "false",
+            "true",
             "--server.port",
             str(app_port),
             "--browser.gatherUsageStats",
