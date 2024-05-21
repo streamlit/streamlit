@@ -24,7 +24,7 @@ test_dicts = [
 
 
 @pytest.mark.parametrize("app_with_query_params", test_dicts, indirect=True)
-def test_app_with_experiemtanl_get_query_params(app_with_query_params: Page):
+def test_app_with_experimental_get_query_params(app_with_query_params: Page):
     page, test_dict = app_with_query_params
     expect(page.get_by_test_id("stMarkdownContainer").nth(0)).to_contain_text(
         (

@@ -17,7 +17,7 @@ import re
 from playwright.sync_api import Page, expect
 
 
-def test_query_params_gets_set(app: Page):
+def test_query_params_set(app: Page):
     app.get_by_test_id("stButton").locator("button").first.click()
 
     expect(app.get_by_test_id("stMarkdownContainer").nth(1)).to_contain_text(
