@@ -146,6 +146,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     app = themed_app
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
     sidebar_element.get_by_test_id("baseButton-header").click()
     expect(sidebar_element).not_to_be_visible()
@@ -180,6 +181,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     app = themed_app
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
     sidebar_element.get_by_test_id("baseButton-header").click()
     expect(sidebar_element).not_to_be_visible()
