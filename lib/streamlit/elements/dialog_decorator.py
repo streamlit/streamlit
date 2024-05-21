@@ -173,13 +173,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
-    if func_or_title is None:
-        # Support passing the params via function decorator
-        def wrapper(f: F) -> F:
-            return _dialog_decorator(non_optional_func=f, title="", width=width)
-
-        return wrapper
-    elif type(func_or_title) is str:
+    if type(func_or_title) is str:
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title
