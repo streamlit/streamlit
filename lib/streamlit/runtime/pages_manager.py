@@ -145,15 +145,15 @@ class PagesStrategyV2:
         if self._pages is None:
             return None
 
-        if self.pages_manager.intent_page_script_hash:
+        if self.pages_manager.intended_page_script_hash:
             # We assume that if initial page hash is specified, that a page should
             # exist, so we check out the page script hash or the default page hash
             # as a backup
             return self._pages.get(
-                self.pages_manager.intent_page_script_hash,
+                self.pages_manager.intended_page_script_hash,
                 self._pages.get(fallback_page_hash, None),
             )
-        elif self.pages_manager.intent_page_name:
+        elif self.pages_manager.intended_page_name:
             # If a user navigates directly to a non-main page of an app, the
             # the page name can identify the page script to run
             return next(
@@ -163,7 +163,7 @@ class PagesStrategyV2:
                     # types of pages), so we add `p and` at the beginning of
                     # the predicate to circumvent this.
                     lambda p: p
-                    and (p["url_pathname"] == self.pages_manager.intent_page_name),
+                    and (p["url_pathname"] == self.pages_manager.intended_page_name),
                     self._pages.values(),
                 ),
                 None,
@@ -198,8 +198,8 @@ class PagesManager:
         self._current_page_hash: PageHash = self._main_script_hash
         self.pages_strategy = PagesManager.DefaultStrategy(self, **kwargs)
         self._script_cache: ScriptCache | None = script_cache
-        self._intent_page_script_hash: PageHash | None = None
-        self._intent_page_name: PageName | None = None
+        self._intended_page_script_hash: PageHash | None = None
+        self._intended_page_name: PageName | None = None
 
     @property
     def current_page_hash(self) -> PageHash:
@@ -214,12 +214,12 @@ class PagesManager:
         return self._main_script_hash
 
     @property
-    def intent_page_name(self) -> PageName | None:
-        return self._intent_page_name
+    def intended_page_name(self) -> PageName | None:
+        return self._intended_page_name
 
     @property
-    def intent_page_script_hash(self) -> PageHash | None:
-        return self._intent_page_script_hash
+    def intended_page_script_hash(self) -> PageHash | None:
+        return self._intended_page_script_hash
 
     def get_main_page(self) -> PageInfo:
         return {
@@ -242,8 +242,8 @@ class PagesManager:
     def set_script_intent(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> None:
-        self._intent_page_script_hash = page_script_hash
-        self._intent_page_name = page_name
+        self._intended_page_script_hash = page_script_hash
+        self._intended_page_name = page_name
 
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
