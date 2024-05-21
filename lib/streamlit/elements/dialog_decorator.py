@@ -92,7 +92,7 @@ def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F:
 
 @gather_metrics("experimental_dialog")
 def dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small"
+    title: F | str = "", *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
     """Function decorator to create a modal dialog.
 
@@ -189,3 +189,14 @@ def dialog_decorator(
 
     func: F = cast(F, func_or_title)
     return _dialog_decorator(func, "", width=width)
+
+
+# For our docs, we want to modify the default value of 'title' so that it does not look like you can pass an empty string
+# It does not have any impact on the actual function signature; only on what 'inspect.signature(dialog_decorator)' reports.
+from inspect import Parameter, signature
+
+sig = signature(dialog_decorator)
+sig_params = sig.parameters
+new_title_param = sig_params["title"].replace(default=Parameter.empty)
+sig = sig.replace(parameters=[new_title_param, *tuple(sig_params.values())[1:]])
+dialog_decorator.__signature__ = sig  # type: ignore[attr-defined]

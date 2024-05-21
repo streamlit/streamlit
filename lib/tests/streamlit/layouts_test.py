@@ -399,7 +399,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_decorator_title_required(self):
         """Test that the title is required in decorator"""
-        with self.assertRaises(TypeError) as e:
+        with self.assertRaises(StreamlitAPIException) as e:
 
             @st.experimental_dialog()
             def dialog():
@@ -407,13 +407,9 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog()
 
-        self.assertTrue(
-            e.exception.args[0].startswith(
-                "dialog_decorator() missing 1 required positional argument: 'title'"
-            )
-        )
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
 
-        with self.assertRaises(TypeError) as e:
+        with self.assertRaises(StreamlitAPIException) as e:
 
             @st.experimental_dialog()
             def dialog_with_arguments(a, b):
@@ -421,11 +417,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog_with_arguments("", "")
 
-        self.assertTrue(
-            e.exception.args[0].startswith(
-                "dialog_decorator() missing 1 required positional argument: 'title'"
-            )
-        )
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
 
         with self.assertRaises(StreamlitAPIException) as e:
 
