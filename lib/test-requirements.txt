@@ -52,4 +52,4 @@ pydantic>=1.0, <2.0
 semver<3
 # Required for testing the langchain integration
 langchain>=0.2.0
-langchain-community
+langchain-community>=0.2.0
