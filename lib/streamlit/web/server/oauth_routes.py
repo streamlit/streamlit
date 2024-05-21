@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import json
-from pprint import pprint
 
 import tornado.auth
 import tornado.web
@@ -38,21 +37,16 @@ class LoginHandler(tornado.auth.GoogleOAuth2Mixin, tornado.web.RequestHandler):
                     client_secret=auth_section["client_secret"],
                 )
 
-                print("ACCESSSSSSS")
-                pprint(access)
                 user = await self.oauth2_request(
                     "https://www.googleapis.com/oauth2/v1/userinfo",
                     access_token=access["access_token"],
                 )
-                print("USERSSSSSS")
-                pprint(user)
+
                 # Save the user and access token. For example:
                 user_cookie = dict(
                     email=user["email"], access_token=access["access_token"]
                 )
 
-                print("MAMAMA JAN!!!!!!!")
-                pprint(user_cookie)
                 self.set_signed_cookie("uzer", json.dumps(user_cookie))
                 self.redirect("/")
                 return

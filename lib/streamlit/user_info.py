@@ -17,6 +17,7 @@ from __future__ import annotations
 import urllib.parse
 from typing import Iterator, Mapping, NoReturn, Union
 
+from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
@@ -101,6 +102,15 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
             print("IN MIXIN!!!!")
             print(fwd_msg.auth_redirect)
             context.enqueue(fwd_msg)
+
+    def logout(self) -> None:
+        context = _get_script_run_ctx()
+        context.user_info.clear()
+        session_id = context.session_id
+
+        if runtime.exists():
+            instance = runtime.get_instance()
+            instance._session_mgr.get_session_info(session_id).session._user_info = {}
 
     def __getitem__(self, key: str) -> str | None:
         return _get_user_info()[key]
