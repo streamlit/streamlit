@@ -326,12 +326,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           <StyledSidebarContent
             data-testid="stSidebarContent"
             ref={this.sidebarRef}
+            onMouseOver={this.onMouseOver}
+            onMouseOut={this.onMouseOut}
           >
-            <StyledSidebarHeaderContainer
-              onMouseOver={this.onMouseOver}
-              onMouseOut={this.onMouseOut}
-              data-testid="stSidebarHeader"
-            >
+            <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
               {this.renderLogo(false)}
               <StyledCollapseSidebarButton
                 showSidebarCollapse={showSidebarCollapse}

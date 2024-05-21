@@ -258,6 +258,7 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-logo")
 
     # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
     app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
     app.wait_for_timeout(500)
 
