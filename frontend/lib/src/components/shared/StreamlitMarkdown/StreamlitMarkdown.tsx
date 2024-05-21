@@ -401,7 +401,27 @@ export function RenderedMarkdown({
       })
     }
   }
+  function disableUnsupportedTextDirectives() {
+    return (tree: any) => {
+      visit(tree, "textDirective", (node, index, parent) => {
+        const directiveName = node.name
+        const isUnsupportedTextDirective =
+          directiveName &&
+          directiveName.length > 0 &&
+          !colorMapping.has(directiveName)
+        if (isUnsupportedTextDirective) {
+          // Convert unsupported text directives to plain text to avoid stripping them out
+          // See https://github.com/streamlit/streamlit/issues/8726, https://github.com/streamlit/streamlit/issues/5968
+          parent.children.splice(index, 1, {
+            type: "text",
+            value: `:${node.name}`,
+          })
+        }
+      })
+    }
+  }
   const plugins = [
+    disableUnsupportedTextDirectives,
     remarkMathPlugin,
     remarkEmoji,
     remarkGfm,
