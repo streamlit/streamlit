@@ -23,7 +23,6 @@ st.json({"foo": "bar"}, expanded=False)
 st.subheader("Keep whitespaces:")
 st.json({"Hello     World": "Foo    Bar"})
 
-
 st.subheader("Complex dict:")
 st.json(
     {
