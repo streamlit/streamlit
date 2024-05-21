@@ -18,9 +18,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_st_exception_displays_correctly(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    json_elements = app.get_by_test_id("stJson")
+    json_elements = themed_app.get_by_test_id("stJson")
 
     expect(json_elements.nth(0)).to_contain_text("foo")
     expect(json_elements.nth(0)).to_contain_text("bar")
