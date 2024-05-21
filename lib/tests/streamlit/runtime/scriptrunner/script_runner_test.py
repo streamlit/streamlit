@@ -26,7 +26,6 @@ from tornado.testing import AsyncTestCase
 
 from streamlit import source_util
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -58,6 +57,10 @@ text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
 text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
+
+
+# Workaround for https://github.com/pytest-dev/pytest/issues/12263.
+AsyncTestCase.runTest = lambda self: ...
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
@@ -92,10 +95,6 @@ class ScriptRunnerTest(AsyncTestCase):
     def tearDown(self) -> None:
         super().tearDown()
         Runtime._instance = None
-
-    def runTest(self):
-        """Workaround for https://github.com/pytest-dev/pytest/issues/12263."""
-        pass
 
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
