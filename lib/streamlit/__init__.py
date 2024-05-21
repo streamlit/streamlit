@@ -72,10 +72,15 @@ from streamlit.delta_generator import (
     event_dg as _event_dg,
     bottom_dg as _bottom_dg,
 )
+
 from streamlit.elements.dialog_decorator import (
-    # rename so that it is available as st.dialog
-    dialog_decorator as experimental_dialog,
+    dialog_decorator as _dialog_decorator,
 )
+
+# assign to experimental_dialog to explicitly export it ('mypy --strict' does not complain)
+experimental_dialog = _dialog_decorator
+
+
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
