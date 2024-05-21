@@ -17,7 +17,7 @@ import streamlit as st
 st.subheader("Simple dict:")
 st.json({"foo": "bar"})
 
-st.subheader("Expanded=False:")
+st.subheader("Collapsed")
 st.json({"foo": "bar"}, expanded=False)
 
 st.subheader("Keep whitespaces:")
