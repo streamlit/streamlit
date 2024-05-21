@@ -17,7 +17,7 @@ vega_datasets
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
-pytest
+pytest<8.2
 pytest-cov
 requests-mock
 testfixtures
