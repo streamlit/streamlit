@@ -35,7 +35,8 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v44
         with:
-          files: e2e_playwright/**/*_test.py
+          path: e2e_playwright
+          files: /**/*_test.py
       - name: List all added files
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
