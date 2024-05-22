@@ -44,7 +44,7 @@ jobs:
         run: |
           echo "Changed files count: ${CHANGED_FILES_COUNT}"
           echo "$CHANGED_FILES"
-          if [[ "${CHANGED_FILES_COUNT}" -gt 2 || "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
+          if [[ "${CHANGED_FILES_COUNT}" -gt 10 || "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
             echo "This workflow only supports between 1-10 changed files. Otherwise its skipping running the tests.";
             echo "run_tests=false" >> $GITHUB_OUTPUT
           else
