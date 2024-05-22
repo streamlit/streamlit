@@ -20,6 +20,8 @@ from e2e_playwright.conftest import (
     wait_for_app_run,
 )
 
+# Baz
+
 
 def test_loads_main_script_on_initial_page_load(app: Page):
     """Test that the main script is loaded on initial page load."""
