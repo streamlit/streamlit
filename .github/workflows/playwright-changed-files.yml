@@ -36,12 +36,21 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           path: e2e_playwright
-      - name: List all added files
+      - name: Check changed files
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+          CHANGED_FILES_COUNT: ${{ steps.changed-files.outputs.all_changed_and_modified_files_count }}
         run: |
-          echo "Changed files:"
+          echo "Changed files count: ${CHANGED_FILES_COUNT}"
           echo "$CHANGED_FILES"
+          if [[ "${CHANGED_FILES_COUNT}" -gt 2 ]]; then
+            echo "This workflow only supports a maximum of 2 changed files. Exiting.";
+            exit 1;
+          fi
+          if [[ "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
+            echo "No changed e2e test files found. Exiting.";
+            exit 1;
+          fi
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
