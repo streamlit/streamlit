@@ -96,7 +96,7 @@ pytz==2024.1
 PyYAML==6.0.1
 readme_renderer==43.0
 referencing==0.35.1
-requests==2.32.1
+requests==2.32.2
 requests-mock==1.12.1
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
@@ -106,7 +106,7 @@ scipy==1.13.0
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
-setuptools==69.5.1
+setuptools==70.0.0
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
@@ -123,7 +123,7 @@ types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
 types-requests==2.32.0.20240521
-types-setuptools==69.5.0.20240519
+types-setuptools==69.5.0.20240522
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
