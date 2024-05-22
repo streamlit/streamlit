@@ -68,7 +68,7 @@ def cache(
     hash_funcs: HashFuncsDict | None = None,
     max_entries: int | None = None,
     ttl: float | None = None,
-) -> Callable[[F], F] | F:
+):
     """Function decorator to memoize function executions.
 
     Parameters
