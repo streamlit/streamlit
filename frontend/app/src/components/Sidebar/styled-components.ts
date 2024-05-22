@@ -21,6 +21,26 @@ import {
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
 import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
+
+export const StyledCollapseSidebarButton = styled.div(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    display: "none",
+    transition: "left 300ms",
+    transitionDelay: "left 300ms",
+    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+    lineHeight: "0",
+
+    [`@media print`]: {
+      display: "none",
+    },
+
+    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+      display: "inline",
+    },
+  }
+})
 export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
@@ -43,6 +63,12 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       maxWidth,
       transform: isCollapsed ? `translateX(-${sidebarWidth}px)` : "none",
       transition: "transform 300ms, min-width 300ms, max-width 300ms",
+
+      "&:hover": {
+        [StyledCollapseSidebarButton as any]: {
+          display: "inline",
+        },
+      },
 
       "&:focus": {
         outline: "none",
@@ -281,33 +307,6 @@ export const StyledOpenSidebarButton = styled.div(({ theme }) => {
     },
   }
 })
-
-export interface StyledCollapseSidebarButtonProps {
-  showSidebarCollapse: boolean
-}
-
-export const StyledCollapseSidebarButton =
-  styled.div<StyledCollapseSidebarButtonProps>(
-    ({ showSidebarCollapse, theme }) => {
-      const isLightTheme = hasLightBackgroundColor(theme)
-
-      return {
-        display: showSidebarCollapse ? "inline" : "none",
-        transition: "left 300ms",
-        transitionDelay: "left 300ms",
-        color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
-        lineHeight: "0",
-
-        [`@media print`]: {
-          display: "none",
-        },
-
-        [`@media (max-width: ${theme.breakpoints.sm})`]: {
-          display: "inline",
-        },
-      }
-    }
-  )
 
 export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
   const isLightTheme = hasLightBackgroundColor(theme)
