@@ -97,11 +97,102 @@ VegaLiteSpec: TypeAlias = "dict[str, Any]"
 
 class VegaLiteState(TypedDict, total=False):
     """
-    A dictionary representing the current selection state of the VegaLite chart.
+    The schema for the Vega-Lite event state.
+
+    If event handling is enabled for a Vega-Lite or Altair chart, the chart
+    function returns an ``AttributeDict`` with the event state information.
+    This ``AttributeDict`` can be used with both key and attribute notation.
+
+    Event states cannot be programmatically changed or set through Session
+    State.
+
+    Only selection events are supported at this time.
+
     Attributes
     ----------
     selection : AttributeDictionary
-        The state of the `on_select` event.
+        The state of the ``on_select`` event. The name of each selection
+        parameter becomes an attribute in the ``selection`` attribute
+        dictionary. The format of the data within each attribute is determined
+        by the selection parameter definition within Vega-Lite.
+
+    Examples
+    --------
+    The following two examples have equivalent definitions. Each one has a
+    point and interval selection parameter include in the chart definition.
+    The point seleciton parameter is named ``"point_selection"``. The interval
+    or box selection parameter is named ``"interval_selection"``.
+
+    The follow example uses ``st.altair_chart``:
+
+    >>> import streamlit as st
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> import altair as alt
+    >>>
+    >>> if "data" not in st.session_state:
+    >>>     st.session_state.data = pd.DataFrame(
+    ...         np.random.randn(20, 3), columns=["a", "b", "c"]
+    ...     )
+    >>>
+    >>> chart = (
+    ...     alt.Chart(st.session_state.data)
+    ...     .mark_circle()
+    ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
+    ...     .add_params(
+    ...         alt.selection_interval("interval_selection"),
+    ...         alt.selection_point("point_selection"),
+    ...     )
+    ... )
+    >>>
+    >>> st.altair_chart(chart, key="alt_chart", on_select="rerun")
+    >>>
+    >>> st.session_state.alt_chart
+
+    The following example uses ``st.vega_lite_chart``:
+
+    >>> import streamlit as st
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>>
+    >>> if "data" not in st.session_state:
+    >>>     st.session_state.data = pd.DataFrame(
+    ...         np.random.randn(20, 3), columns=["a", "b", "c"]
+    ...     )
+    >>>
+    >>> spec = {
+    ...     "mark": {"type": "circle", "tooltip": True},
+    ...     "encoding": {
+    ...         "x": {"field": "a", "type": "quantitative"},
+    ...         "y": {"field": "b", "type": "quantitative"},
+    ...         "size": {"field": "c", "type": "quantitative"},
+    ...         "color": {"field": "c", "type": "quantitative"},
+    ...     },
+    ...     "params": [
+    ...         {"name": "interval_selection", "select": "interval"},
+    ...         {"name": "point_selection", "select": "point"},
+    ...     ],
+    ... }
+    >>>
+    >>> st.vega_lite_chart(st.session_state.data, spec, key="vega_chart", on_select="rerun")
+    >>>
+    >>> st.session_state.vega_chart
+
+    Try selecting points in this interactive example. When you click a point,
+    the selection will appear under the attribute, ``"point_selection"``, which
+    is the name given to the point selection parameter. Similarly, when you
+    make an interval selection, it will appear under the attribute
+    ``"interval_selection"``. You can give your selection parameters other
+    names if desired.
+
+    If you hold ``Shift`` while selecting points, existing point selections
+    will be preserved. Interval selections are not preserved when making
+    additional selections.
+
+    .. output::
+        https://doc-chart-events-vega-lite-state.streamlit.app
+        height: 600px
+
     """
 
     selection: AttributeDictionary
@@ -1155,34 +1246,89 @@ class VegaChartsMixin:
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
     ) -> DeltaGenerator | VegaLiteState:
-        """Display a chart using the Altair library.
+        """Display a chart using the Vega-Altair library.
+
+        `Vega-Altair <https://altair-viz.github.io/>`_ is a declarative
+        statistical visualization library for Python, based on Vega and
+        Vega-Lite.
 
         Parameters
         ----------
         altair_chart : altair.Chart
-            The Altair chart object to display.
+            The Altair chart object to display. See
+            https://altair-viz.github.io/gallery/ for examples of graph
+            descriptions.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Altair's native ``width`` value.
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``False``
+            (default), Streamlit sets the width of the chart to fit its contents
+            according to the plotting library, up to the width of the parent
+            container. If ``use_contatiner_width`` is ``True``, Streamlit sets
+            the width of the figure to match the width of the parent container.
 
         theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
+            The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
+            Streamlit uses its own design default. If ``theme`` is ``None``,
+            Streamlit falls back to the default behavior of the library.
 
         key : str
-            An optional string to use as the unique key for this element when used in combination
-            with ```on_select```. If this is omitted, a key will be generated for the widget based
-            on its content. Multiple widgets of the same type may not share the same key.
+            An optional string to use for giving this element a stable
+            identity. If ``key`` is ``None`` (default), this element's identity
+            will be determined based on the values of the other parameters.
 
-        on_select : "ignore" or "rerun" or callable
-            Controls the behavior in response to selection events on the charts. Can be one of:
-            - "ignore" (default): Streamlit will not react to any selection events in the chart.
-            - "rerun: Streamlit will rerun the app when the user selects data in the chart. In this case,
-              ```st.altair_chart``` will return the selection data as a dictionary.
-            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
-              callback function before the rest of the app. The selection data can be retrieved through
-              session state by setting the key parameter.
+            Additionally, if selections are activated and ``key`` is provided,
+            Streamlit will register the key in Session State to store the
+            selection state. The selection state is read-only.
+
+        on_select : "ignore", "rerun", or callable
+            How the figure should respond to user selection events. This
+            controls whether or not the figure behaves like a widget.
+            ``on_select`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the chart. The figure will not behave like a widget and
+              Streamlit returns a ``DeltaGenerator`` when ``st.altair_chart``
+              is called.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              data in the chart. In this case, ``st.altair_chart`` will return
+              the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.altair_chart`` will return the selection data
+              as a dictionary.
+
+            To use selection events, the object passed to ``altair_chart`` must
+            include selection paramters. To learn about defining interactions
+            in Altair and how to declare selection-type parameters, see
+            `Interactive Charts \
+            <https://altair-viz.github.io/user_guide/interactions.html>`_
+            in Altair's documentation.
+
+        selection_mode : str or Iterable of str
+            The selection parameters Streamlit should use. If
+            ``selection_mode`` is ``None`` (default), Streamlit will use all
+            selection parameters defined in the chart spec.
+
+            When Streamlit uses a selection parameter, selections from that
+            parameter will trigger a rerun and be included in the selection
+            state. When Streamlit does not use a selection parameter,
+            selections from that parameter will not trigger a rerun and not be
+            included in the selection state.
+
+            Selection parameters are identified by their ``name`` property.
+
+        Returns
+        -------
+        element or AttributeDict
+            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            internal placeholder for the chart element that can be used with
+            the ``.add_rows()`` method. Otherwise, this method returns an
+            ``AttributeDict`` representing the selection state in a
+            dictionary-like object. The attributes are described by the
+            ``VegaLiteState`` schema.
 
         Example
         -------
@@ -1205,9 +1351,6 @@ class VegaChartsMixin:
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
            height: 300px
-
-        Examples of Altair charts can be found at
-        https://altair-viz.github.io/gallery/.
 
         """
         return self._altair_chart(
@@ -1264,6 +1407,9 @@ class VegaChartsMixin:
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
+        `Vega-Lite <https://vega.github.io/vega-lite/>`_ is a high-level
+        grammar for defining interactive graphics.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
@@ -1271,34 +1417,84 @@ class VegaChartsMixin:
             data (which more closely follows the Vega-Lite API).
 
         spec : dict or None
-            The Vega-Lite spec for the chart. If the spec was already passed in
-            the previous argument, this must be set to None. See
+            The Vega-Lite spec for the chart. If ``spec`` is ``None`` (default),
+            Streamlit uses the spec passed in ``data``. You cannot pass a spec
+            to both ``data`` and ``spec``. See
             https://vega.github.io/vega-lite/docs/ for more info.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Vega-Lite's native `width` value.
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``False``
+            (default), Streamlit sets the width of the chart to fit its contents
+            according to the plotting library, up to the width of the parent
+            container. If ``use_contatiner_width`` is ``True``, Streamlit sets
+            the width of the figure to match the width of the parent container.
 
         theme : "streamlit" or None
-            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
-            defined design or None to fallback to the default behavior of the library.
+            The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
+            Streamlit uses its own design default. If ``theme`` is ``None``,
+            Streamlit falls back to the default behavior of the library.
 
         key : str
-            An optional string to use as the unique key for this element when used in combination
-            with ```on_select```. If this is omitted, a key will be generated for the widget based
-            on its content. Multiple widgets of the same type may not share the same key.
+            An optional string to use for giving this element a stable
+            identity. If ``key`` is ``None`` (default), this element's identity
+            will be determined based on the values of the other parameters.
 
-        on_select : "ignore" or "rerun" or callable
-            Controls the behavior in response to selection events on the charts. Can be one of:
-            - "ignore" (default): Streamlit will not react to any selection events in the chart.
-            - "rerun: Streamlit will rerun the app when the user selects data in the chart. In this case,
-              ```st.vega_lite_chart``` will return the selection data as a dictionary.
-            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
-              callback function before the rest of the app. The selection data can be retrieved through
-              session state by setting the key parameter.
+            Additionally, if selections are activated and ``key`` is provided,
+            Streamlit will register the key in Session State to store the
+            selection state. The selection state is read-only.
+
+        on_select : "ignore", "rerun", or callable
+            How the figure should respond to user selection events. This
+            controls whether or not the figure behaves like a widget.
+            ``on_select`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the chart. The figure will not behave like a widget and
+              Streamlit returns a ``DeltaGenerator`` when ``st.altair_chart``
+              is called.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              data in the chart. In this case, ``st.vega_lite_chart`` will
+              return the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.altair_chart`` will return the selection data
+              as a dictionary.
+
+            To use selection events, the spec defined in ``data`` or ``spec``
+            must include selection parameters from the the charting library. To
+            learn about defining interactions in Vega-Lite, see `Dynamic Behaviors \
+            with Parameters <https://vega.github.io/vega-lite/docs/parameter.html>`_
+            in Vega-Lite's documentation.
+
+        selection_mode : str or Iterable of str
+            The selection parameters Streamlit should use. If
+            ``selection_mode`` is ``None`` (default), Streamlit will use all
+            selection parameters defined in the chart spec.
+
+            When Streamlit uses a selection parameter, selections from that
+            parameter will trigger a rerun and be included in the selection
+            state. When Streamlit does not use a selection parameter,
+            selections from that parameter will not trigger a rerun and not be
+            included in the selection state.
+
+            Selection parameters are identified by their ``name`` property.
 
         **kwargs : any
-            Same as spec, but as keywords.
+            The Vega-Lite spec for the chart as keywords. This is an alternative
+            to ``spec``.
+
+        Returns
+        -------
+        element or AttributeDict
+            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            internal placeholder for the chart element that can be used with
+            the ``.add_rows()`` method. Otherwise, this method returns an
+            ``AttributeDict`` representing the selection state in a
+            dictionary-like object. The attributes are described by the
+            ``VegaLiteState`` schema.
 
         Example
         -------
