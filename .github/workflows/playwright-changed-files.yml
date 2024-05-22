@@ -34,6 +34,9 @@ jobs:
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **.py
       - name: List all added files
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
