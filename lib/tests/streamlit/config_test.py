@@ -337,7 +337,6 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
-                "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
                 "client.showSidebarNavigation",
