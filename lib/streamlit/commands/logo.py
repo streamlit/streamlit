@@ -102,6 +102,7 @@ def logo(
     >>> main_body_logo = st.selectbox("Main body logo", options, 1)
     >>>
     >>> st.logo(sidebar_logo, icon_image=main_body_logo)
+    >>> st.sidebar.markdown("Hi!")
 
     .. output::
         https://doc-logo.streamlit.app/
