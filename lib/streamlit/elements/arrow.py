@@ -297,10 +297,10 @@ class ArrowMixin:
             dataframe width to match the width of the parent container.
 
         height : int or None
-            Desired height of the dataframe expressed in pixels. If None
-            (default), Streamlit sets the height to show at most ten rows.
-            Vertical scrolling within the dataframe element is enabled when the
-            height does not accomodate all rows.
+            Desired height of the dataframe expressed in pixels. If ``height``
+            is ``None`` (default), Streamlit sets the height to show at most
+            ten rows. Vertical scrolling within the dataframe element is
+            enabled when the height does not accomodate all rows.
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent

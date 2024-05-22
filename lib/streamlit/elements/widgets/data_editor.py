@@ -620,20 +620,29 @@ class DataEditorMixin:
                   changed through column configuration.
 
         width : int or None
-            Desired width of the data editor expressed in pixels. If None, the width will
-            be automatically determined.
+            Desired width of the data editor expressed in pixels. If ``width``
+            is ``None`` (default), Streamlit sets the data editor width to fit
+            its contents up to the width of the parent container. If ``width``
+            is greater than the width of the parent container, Streamlit sets
+            the data editor width to match the width of the parent container.
 
         height : int or None
-            Desired height of the data editor expressed in pixels. If None, the height will
-            be automatically determined.
+            Desired height of the data editor expressed in pixels. If ``height``
+            is ``None`` (default), Streamlit sets the height to show at most
+            ten rows. Vertical scrolling within the data editor element is
+            enabled when the height does not accomodate all rows.
 
         use_container_width : bool
-            If True, set the data editor width to the width of the parent container.
-            This takes precedence over the width argument. Defaults to False.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the data editor's width according to ``width``. If
+            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            the data editor to match the width of the parent container.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), the visibility of
-            index columns is automatically determined based on the data.
+            Whether to hide the index column(s). If ``hide_index`` is ``None``
+            (default), the visibility of index columns is automatically
+            determined based on the data.
 
         column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
