@@ -58,8 +58,11 @@ jobs:
         run: make protobuf
       - name: Run make frontend-fast
         run: make frontend-fast
-      # - name: Run make playwright
-      #   run: make playwright
+      - name: Run changed playwright tests
+        run: |
+          cd e2e_playwright;
+          rm -rf ./test-results;
+          pytest ${{ steps.changed-files.outputs.all_changed_and_modified_files }} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --full-page-screenshot --tracing retain-on-failure --output ./test-results/ -n --durations=5 -r aR -v
       - name: Check that all screenshot have been committed
         run: |
           set -x;
