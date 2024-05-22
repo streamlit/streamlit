@@ -27,7 +27,7 @@ class LoginHandler(tornado.auth.GoogleOAuth2Mixin, tornado.web.RequestHandler):
         if secrets_singleton.load_if_toml_exists():
             auth_section = secrets_singleton.get("auth")
 
-            redirect_uri = "https://rested-chicken-selected.ngrok-free.app/login"
+            redirect_uri = auth_section["redirect_uri"]
 
             if self.get_argument("code", False):
                 access = await self.get_authenticated_user(
@@ -66,7 +66,7 @@ class LoginHandler(tornado.auth.GoogleOAuth2Mixin, tornado.web.RequestHandler):
         # TODO[kajarenc]: change this post method to /oauth_callback instead of /login
         if secrets_singleton.load_if_toml_exists():
             auth_section = secrets_singleton.get("auth")
-            redirect_uri = "https://rested-chicken-selected.ngrok-free.app/login"
+            redirect_uri = auth_section["redirect_uri"]
 
             self.authorize_redirect(
                 redirect_uri=redirect_uri,
