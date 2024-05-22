@@ -144,7 +144,8 @@ class AppSession:
         self._stop_config_listener: Callable[[], bool] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
-        self.register_file_watchers()
+        if config.get_option("server.fileWatcherType") != "none":
+            self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 

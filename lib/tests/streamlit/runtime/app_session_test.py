@@ -501,7 +501,12 @@ class AppSessionTest(unittest.TestCase):
         session._local_sources_watcher = None
 
         session.register_file_watchers()
-        self.assertIsNotNone(session._local_sources_watcher)
+        assert session._local_sources_watcher
+
+    @patch_config_options({"server.fileWatcherType": "none"})
+    def test_no_local_sources_watcher_if_file_watching_disabled(self):
+        session = _create_test_session()
+        assert not session._local_sources_watcher
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
