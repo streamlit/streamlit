@@ -105,12 +105,22 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
 
     def logout(self) -> None:
         context = _get_script_run_ctx()
-        context.user_info.clear()
-        session_id = context.session_id
+        if context is not None:
+            context.user_info.clear()
+            session_id = context.session_id
 
-        if runtime.exists():
-            instance = runtime.get_instance()
-            instance._session_mgr.get_session_info(session_id).session._user_info = {}
+            if runtime.exists():
+                instance = runtime.get_instance()
+                instance._session_mgr.get_session_info(
+                    session_id
+                ).session._user_info = {}
+
+            fwd_msg = ForwardMsg()
+            fwd_msg.auth_redirect.url = ""
+            fwd_msg.auth_redirect.action_type = "logout"
+            print("IN USER LOGOUT CALL!!!!")
+            print(fwd_msg.auth_redirect)
+            context.enqueue(fwd_msg)
 
     def __getitem__(self, key: str) -> str | None:
         return _get_user_info()[key]

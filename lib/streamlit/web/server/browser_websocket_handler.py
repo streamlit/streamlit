@@ -101,7 +101,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
-            cookie_value = self.get_signed_cookie("uzer")
+            cookie_value = self.get_signed_cookie("_streamlit_uzer")
             if cookie_value:
                 email = json.loads(cookie_value).get("email", email)
 
@@ -111,6 +111,11 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             user_info["email"] = None
         else:
             user_info["email"] = email
+
+        cookie_value = self.get_signed_cookie("_streamlit_uzer")
+        if self.get_signed_cookie("_streamlit_uzer", None):
+            if cookie_value:
+                user_info["email"] = json.loads(cookie_value).get("email", email)
 
         existing_session_id = None
         try:

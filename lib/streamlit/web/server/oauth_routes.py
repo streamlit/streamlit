@@ -47,7 +47,7 @@ class LoginHandler(tornado.auth.GoogleOAuth2Mixin, tornado.web.RequestHandler):
                     email=user["email"], access_token=access["access_token"]
                 )
 
-                self.set_signed_cookie("uzer", json.dumps(user_cookie))
+                self.set_signed_cookie("_streamlit_uzer", json.dumps(user_cookie))
                 self.redirect("/")
                 return
         text = f"""

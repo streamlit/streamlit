@@ -653,7 +653,12 @@ export class App extends PureComponent<Props, State> {
               url: authRedirect.url,
             })
           } else {
-            window.location.href = authRedirect.url
+            if (authRedirect?.actionType == "logout") {
+              setCookie("_streamlit_uzer", undefined)
+              document.location.reload()
+            } else {
+              window.location.href = authRedirect.url
+            }
           }
         },
       })
