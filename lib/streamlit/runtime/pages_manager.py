@@ -31,6 +31,17 @@ _LOGGER: Final = get_logger(__name__)
 
 
 class PagesStrategyV1:
+    """
+    Strategy for MPA v1. This strategy handles pages being set directly
+    by a call to `st.navigation`. The key differences here are:
+    - The pages are defined by the existence of a `pages` directory
+    - We will ensure one watcher is watching the scripts in the directory.
+    - Only one script runs for a full rerun.
+    - We know at the beginning the intended page script to run.
+
+    NOTE: Thread safety of the pages is handled by the source_util module
+    """
+
     is_watching_pages_dir: bool = False
     pages_watcher_lock = threading.Lock()
 
@@ -99,12 +110,6 @@ class PagesStrategyV1:
         main_page_info = list(pages.values())[0]
         return main_page_info
 
-    def set_initial_script(
-        self, _page_script_hash: PageHash, _page_name: PageName
-    ) -> None:
-        # Intentionally does nothing
-        pass
-
     def get_pages(self) -> dict[PageHash, PageInfo]:
         return source_util.get_pages(self.pages_manager.main_script_path)
 
@@ -114,9 +119,6 @@ class PagesStrategyV1:
     ) -> Callable[[], None]:
         return source_util.register_pages_changed_callback(callback)
 
-    def invalidate_pages_cache(self) -> None:
-        source_util.invalidate_pages_cache()
-
     def set_pages(self, _pages: dict[PageHash, PageInfo]) -> None:
         raise NotImplementedError("Unable to set pages in this V1 strategy")
 
@@ -125,12 +127,24 @@ class PagesStrategyV1:
 
 
 class PagesStrategyV2:
+    """
+    Strategy for MPA v2. This strategy handles pages being set directly
+    by a call to `st.navigation`. The key differences here are:
+    - The pages are set directly by the user
+    - The initial active script will always be the main script
+    - More than one script can run in a single app run (sequentially),
+      so we must keep track of the active script hash
+    - We rely on pages manager to retrieve the intended page script per run
+
+    NOTE: We don't provide any locks on the pages since the pages are not
+    shared across sessions. Only the user script thread can write to
+    pages and the event loop thread only reads
+    """
+
     def __init__(self, pages_manager: PagesManager, **kwargs):
         self.pages_manager = pages_manager
         self._active_script_hash: PageHash = self.pages_manager.main_script_hash
         self._pages: dict[PageHash, PageInfo] | None = None
-        self._initial_page_script_hash: PageHash | None = None
-        self._initial_page_name: PageName | None = None
 
     def get_active_script_hash(self) -> PageHash:
         return self._active_script_hash
@@ -199,11 +213,20 @@ class PagesStrategyV2:
         # V2 strategy does not handle any pages changed event
         return lambda: None
 
-    def invalidate_pages_cache(self) -> None:
-        pass
-
 
 class PagesManager:
+    """
+    PagesManager is responsible for managing the set of pages based on the
+    strategy. By default, PagesManager uses V1 which relies on the original
+    assumption that there exists a `pages` directory with all the scripts.
+
+    If the `pages` are being set directly, the strategy is switched to V2.
+    This indicates someone has written an `st.navigation` call in their app
+    which informs us of the pages.
+
+    NOTE: Each strategy handles its own thread safety when accessing the pages
+    """
+
     DefaultStrategy: Type[PagesStrategyV1 | PagesStrategyV2] = PagesStrategyV1
 
     def __init__(self, main_script_path, script_cache=None, **kwargs):
@@ -298,9 +321,6 @@ class PagesManager:
             return self.pages_strategy.get_page_script(fallback_page_hash)
         except NotImplementedError:
             return None
-
-    def invalidate_pages_cache(self) -> None:
-        self.pages_strategy.invalidate_pages_cache()
 
     def register_pages_changed_callback(
         self,
