@@ -43,12 +43,8 @@ jobs:
         run: |
           echo "Changed files count: ${CHANGED_FILES_COUNT}"
           echo "$CHANGED_FILES"
-          if [[ "${CHANGED_FILES_COUNT}" -gt 2 ]]; then
+          if [[ "${CHANGED_FILES_COUNT}" -gt 2 || "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
             echo "This workflow only supports a maximum of 2 changed files. Exiting.";
-            exit 1;
-          fi
-          if [[ "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
-            echo "No changed e2e test files found. Exiting.";
             exit 1;
           fi
       - name: Set Python version vars
