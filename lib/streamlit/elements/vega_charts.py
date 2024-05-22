@@ -99,12 +99,9 @@ class VegaLiteState(TypedDict, total=False):
     """
     The schema for the Vega-Lite event state.
 
-    If event handling is enabled for a Vega-Lite or Altair chart, the chart
-    function returns an ``AttributeDict`` with the event state information.
-    This ``AttributeDict`` can be used with both key and attribute notation.
-
-    Event states cannot be programmatically changed or set through Session
-    State.
+    The event state is stored in a dictionary-like object that suports both
+    key and attribute notation. Event states cannot be programmatically
+    changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -152,9 +149,9 @@ class VegaLiteState(TypedDict, total=False):
     ...     .add_params(point_selector, interval_selector)
     ... )
     >>>
-    >>> st.altair_chart(chart, key="alt_chart", on_select="rerun")
+    >>> event = st.altair_chart(chart, key="alt_chart", on_select="rerun")
     >>>
-    >>> st.session_state.alt_chart
+    >>> event
 
     The following example uses ``st.vega_lite_chart``:
 
@@ -185,9 +182,9 @@ class VegaLiteState(TypedDict, total=False):
     ...     },
     ... }
     >>>
-    >>> st.vega_lite_chart(st.session_state.data, spec, key="vega_chart", on_select="rerun")
+    >>> event = st.vega_lite_chart(st.session_state.data, spec, key="vega_chart", on_select="rerun")
     >>>
-    >>> st.session_state.vega_chart
+    >>> event
 
     Try selecting points in this interactive example. When you click a point,
     the selection will appear under the attribute, ``"point_selection"``, which
@@ -571,8 +568,8 @@ class VegaChartsMixin:
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
+        the chart's Altair spec. As a result this is easier to use for many
+        "just plot this" scenarios, while being less customizable.
 
         If ``st.line_chart`` does not guess the data specification
         correctly, try specifying your desired chart using ``st.altair_chart``.
@@ -743,8 +740,8 @@ class VegaChartsMixin:
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
+        the chart's Altair spec. As a result this is easier to use for many
+        "just plot this" scenarios, while being less customizable.
 
         If ``st.area_chart`` does not guess the data specification
         correctly, try specifying your desired chart using ``st.altair_chart``.
@@ -915,8 +912,8 @@ class VegaChartsMixin:
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
+        the chart's Altair spec. As a result this is easier to use for many
+        "just plot this" scenarios, while being less customizable.
 
         If ``st.bar_chart`` does not guess the data specification
         correctly, try specifying your desired chart using ``st.altair_chart``.
@@ -1090,8 +1087,8 @@ class VegaChartsMixin:
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
-        the chart's spec. As a result this is easier to use for many "just plot
-        this" scenarios, while being less customizable.
+        the chart's Altair spec. As a result this is easier to use for many
+        "just plot this" scenarios, while being less customizable.
 
         If ``st.scatter_chart`` does not guess the data specification correctly,
         try specifying your desired chart using ``st.altair_chart``.
@@ -1360,7 +1357,7 @@ class VegaChartsMixin:
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
             ``selection_mode`` is ``None`` (default), Streamlit will use all
-            selection parameters defined in the chart spec.
+            selection parameters defined in the chart's Altair spec.
 
             When Streamlit uses a selection parameter, selections from that
             parameter will trigger a rerun and be included in the selection
@@ -1372,13 +1369,13 @@ class VegaChartsMixin:
 
         Returns
         -------
-        element or AttributeDict
+        element or dict
             If ``on_select`` is ``"ignore"`` (default), this method returns an
             internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns an
-            ``AttributeDict`` representing the selection state in a
-            dictionary-like object. The attributes are described by the
-            ``VegaLiteState`` schema.
+            the ``.add_rows()`` method. Otherwise, this method returns a
+            dictionary-like object that supports both key and attribute
+            notation. The attributes are described by the ``VegaLiteState``
+            dictionary schema.
 
         Example
         -------
@@ -1512,16 +1509,17 @@ class VegaChartsMixin:
               In this case, ``st.vega_lite_chart`` will return the selection data
               as a dictionary.
 
-            To use selection events, the spec defined in ``data`` or ``spec``
-            must include selection parameters from the the charting library. To
-            learn about defining interactions in Vega-Lite, see `Dynamic Behaviors \
-            with Parameters <https://vega.github.io/vega-lite/docs/parameter.html>`_
+            To use selection events, the Vega-Lite spec defined in ``data`` or
+            ``spec`` must include selection parameters from the the charting
+            library. To learn about defining interactions in Vega-Lite, see
+            `Dynamic Behaviors with Parameters \
+            <https://vega.github.io/vega-lite/docs/parameter.html>`_
             in Vega-Lite's documentation.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
             ``selection_mode`` is ``None`` (default), Streamlit will use all
-            selection parameters defined in the chart spec.
+            selection parameters defined in the chart's Vega-Lite spec.
 
             When Streamlit uses a selection parameter, selections from that
             parameter will trigger a rerun and be included in the selection
@@ -1537,13 +1535,13 @@ class VegaChartsMixin:
 
         Returns
         -------
-        element or AttributeDict
+        element or dict
             If ``on_select`` is ``"ignore"`` (default), this method returns an
             internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns an
-            ``AttributeDict`` representing the selection state in a
-            dictionary-like object. The attributes are described by the
-            ``VegaLiteState`` schema.
+            the ``.add_rows()`` method. Otherwise, this method returns a
+            dictionary-like object that supports both key and attribute
+            notation. The attributes are described by the ``VegaLiteState``
+            dictionary schema.
 
         Example
         -------

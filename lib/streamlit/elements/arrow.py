@@ -87,16 +87,16 @@ class DataframeSelectionState(TypedDict, total=False):
     """
     The schema for the dataframe selection state.
 
-    The selection state is stored in an ``AttributeDict``. This
-    ``AttributeDict`` can be used with both key and attribute notation.
-
-    Selection states cannot be programmatically changed or set through Session
-    State.
+    The selection state is stored in a dictionary-like object that suports both
+    key and attribute notation. Selection states cannot be programmatically
+    changed or set through Session State.
 
     Attributes
     ----------
     rows : list[int]
-        The selected rows, identified by their positional index.
+        The selected rows, identified by their positional index. The positional
+        indices match the original dataframe, even if the user sorts the
+        dataframe in their browser.
     columns : list[str]
         The selected columns, identified by their names.
 
@@ -115,14 +115,14 @@ class DataframeSelectionState(TypedDict, total=False):
     ...         np.random.randn(12, 5), columns=["a", "b", "c", "d", "e"]
     ...     )
     >>>
-    >>> st.dataframe(
+    >>> event = st.dataframe(
     ...     st.session_state.df,
     ...     key="data",
     ...     on_select="rerun",
     ...     selection_mode=["multi-row", "multi-column"],
     ... )
     >>>
-    >>> st.session_state.data.selection
+    >>> event.selection
 
     .. output::
         https://doc-dataframe-events-selection-state.streamlit.app
@@ -136,14 +136,11 @@ class DataframeSelectionState(TypedDict, total=False):
 
 class DataframeState(TypedDict, total=False):
     """
-    The schema for dataframe event state.
+    The schema for the datafrane event state.
 
-    If event handling is enabled for a dataframe, the dataframe function
-    returns an ``AttributeDict`` with the event state information. This
-    ``AttributeDict`` can be used with both key and attribute notation.
-
-    Event states cannote be programmatically changed or set through Session
-    State.
+    The event state is stored in a dictionary-like object that suports both
+    key and attribute notation. Event states cannot be programmatically
+    changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -394,14 +391,13 @@ class ArrowMixin:
 
         Returns
         -------
-        element or AttributeDict
+        element or dict
             If ``on_select`` is ``"ignore"`` (default), this method returns an
-            internal placeholder for the dataframe element that can be used
-            with the ``.add_rows()`` method. Otherwise, this method returns an
-            ``AttributeDict`` representing the selection state in a
-            dictionary-like object. The attributes are described by the
-            ``DataframeState`` schema.
-
+            internal placeholder for the chart element that can be used with
+            the ``.add_rows()`` method. Otherwise, this method returns a
+            dictionary-like object that supports both key and attribute
+            notation. The attributes are described by the ``DataframeState``
+            dictionary schema.
 
         Examples
         --------

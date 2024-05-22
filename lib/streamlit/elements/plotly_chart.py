@@ -82,11 +82,9 @@ class PlotlySelectionState(TypedDict, total=False):
     """
     The schema for the Plotly chart selection state.
 
-    The selection state is stored in an ``AttributeDict``. This
-    ``AttributeDict`` can be used with both key and attribute notation.
-
-    Selection states cannot be programmatically changed or set through Session
-    State.
+    The selection state is stored in a dictionary-like object that suports both
+    key and attribute notation. Selection states cannot be programmatically
+    changed or set through Session State.
 
     Attributes
     ----------
@@ -94,7 +92,7 @@ class PlotlySelectionState(TypedDict, total=False):
         The selected data points in the chart, including the data points
         selected by the box and lasso mode. The data includes the values
         associated to each point and a point index used to populate
-        ``point_indices``. If additional information has been assigned your
+        ``point_indices``. If additional information has been assigned to your
         points, such as size or legend group, this is also included.
 
     point_indices : list[int]
@@ -128,9 +126,9 @@ class PlotlySelectionState(TypedDict, total=False):
     ...     hover_data=["petal_width"],
     ... )
     >>>
-    >>> st.plotly_chart(fig, key="iris", on_select="rerun")
+    >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
     >>>
-    >>> st.session_state.iris.selection
+    >>> event.selection
 
     .. output::
         https://doc-chart-events-plotly-selection-state.streamlit.app
@@ -170,14 +168,11 @@ class PlotlySelectionState(TypedDict, total=False):
 
 class PlotlyState(TypedDict, total=False):
     """
-    The schema for Plotly chart event state.
+    The schema for the Plotly chart event state.
 
-    If event handling is enabled for a Plotly chart, the chart function returns
-    an ``AttributeDict`` with the event state information. This
-    ``AttributeDict`` can be used with both key and attribute notation.
-
-    Event states cannot be programmatically changed or set through Session
-    State.
+    The event state is stored in a dictionary-like object that suports both
+    key and attribute notation. Event states cannot be programmatically
+    changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -198,9 +193,9 @@ class PlotlyState(TypedDict, total=False):
     >>> df = px.data.iris()  # iris is a pandas DataFrame
     >>> fig = px.scatter(df, x="sepal_width", y="sepal_length")
     >>>
-    >>> st.plotly_chart(fig, key="iris", on_select="rerun")
+    >>> event = st.plotly_chart(fig, key="iris", on_select="rerun")
     >>>
-    >>> st.session_state.iris
+    >>> event
 
     .. output::
         https://doc-chart-events-plotly-state.streamlit.app
@@ -388,12 +383,12 @@ class PlotlyMixin:
 
         Returns
         -------
-        element or AttributeDict
+        element or dict
             If ``on_select`` is ``"ignore"`` (default), this method returns an
             internal placeholder for the chart element. Otherwise, this method
-            returns an ``AttributeDict`` representing the selection state in a
-            dictionary-like object. The attributes are described by the
-            ``PlotlyState`` schema.
+            returns a dictionary-like object that supports both key and
+            attribute notation. The attributes are described by the
+            ``PlotlyState`` dictionary schema.
 
         Example
         -------
