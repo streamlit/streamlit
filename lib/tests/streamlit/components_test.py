@@ -492,7 +492,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         )
 
     def test_on_change_handler(self):
-        """Test the 'on_change_handler' callback param."""
+        """Test the 'on_change' callback param."""
 
         # we use a list here so that we can update it in the lambda; we cannot assign a variable there.
         callback_call_value = []
@@ -502,7 +502,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
             return lambda: callback_call_value.append("Called with " + some_arg)
 
         return_value = self.test_component(
-            key="key", default="baz", on_change_handler=create_on_change_handler("foo")
+            key="key", default="baz", on_change=create_on_change_handler("foo")
         )
         self.assertEqual("baz", return_value)
 

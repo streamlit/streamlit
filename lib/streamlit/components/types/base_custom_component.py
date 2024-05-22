@@ -59,7 +59,7 @@ class BaseCustomComponent(ABC):
         *args,
         default: Any = None,
         key: str | None = None,
-        on_change_handler: WidgetCallback | None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
@@ -67,7 +67,7 @@ class BaseCustomComponent(ABC):
             *args,
             default=default,
             key=key,
-            on_change_handler=on_change_handler,
+            on_change=on_change,
             **kwargs,
         )
 
@@ -112,7 +112,7 @@ class BaseCustomComponent(ABC):
         *args,
         default: Any = None,
         key: str | None = None,
-        on_change_handler: WidgetCallback | None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -129,6 +129,8 @@ class BaseCustomComponent(ABC):
         key: str or None
             If not None, this is the user key we use to generate the
             component's "widget ID".
+        on_change: WidgetCallback or None
+            An optional callback invoked when the widget's value changes. No arguments are passed to it.
         **kwargs
             Keyword args to pass to the component.
 
