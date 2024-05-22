@@ -30,7 +30,7 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           path: e2e_playwright
-          files: "**_test.py"
+          files: "**/*_test.py"
       - name: Check changed files
         id: check_changed_files
         env:
