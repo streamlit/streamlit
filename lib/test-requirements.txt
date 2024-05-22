@@ -39,11 +39,6 @@ mypy-protobuf>=3.2, <3.4
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
 
-# Dependencies used in cache hashing tests:
-python-dateutil>=2.7.3
-tzlocal>=1.1
-cffi>=1.14
-
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
 pydantic>=1.0, <2.0
