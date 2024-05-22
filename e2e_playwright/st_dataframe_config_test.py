@@ -16,8 +16,6 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-# foo bar baz
-
 
 def test_dataframe_supports_various_configurations(
     themed_app: Page, assert_snapshot: ImageCompareFunction

@@ -16,8 +16,6 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-# Bar
-
 
 def test_dataframe_column_types_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction

@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_st_exception_displays_correctly(
+def test_st_json_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     json_elements = themed_app.get_by_test_id("stJson")
