@@ -300,7 +300,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "label")
         self.assertEqual(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, "check")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/check:")
 
     def test_state_param_error(self):
         """Test that it correctly applies state param with `error`."""
@@ -309,7 +309,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "label")
         self.assertEqual(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, "error")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
     def test_usage_with_context_manager(self):
         """Test that it correctly switches to complete state when used as context manager."""
@@ -321,7 +321,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "label")
         self.assertEqual(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, "check")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/check:")
 
     def test_mutation_via_update(self):
         """Test that update can be used to change the label, state and expand."""
@@ -331,7 +331,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "new label")
         self.assertEqual(status_block.add_block.expandable.expanded, True)
-        self.assertEqual(status_block.add_block.expandable.icon, "error")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
     def test_mutation_via_update_in_cm(self):
         """Test that update can be used in context manager to change the label, state and expand."""
@@ -341,7 +341,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "new label")
         self.assertEqual(status_block.add_block.expandable.expanded, True)
-        self.assertEqual(status_block.add_block.expandable.icon, "error")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
 
 class TabsTest(DeltaGeneratorTestCase):

@@ -1729,9 +1729,9 @@ class Status(Block):
     def state(self):
         if self.icon == "spinner":
             return "running"
-        elif self.icon == "check":
+        elif self.icon == ":material/check:":
             return "complete"
-        elif self.icon == "error":
+        elif self.icon == ":material/error:":
             return "error"
         else:
             raise ValueError("Unknown Status state")
