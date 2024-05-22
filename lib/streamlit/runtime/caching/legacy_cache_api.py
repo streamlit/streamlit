@@ -139,7 +139,7 @@ def cache(
     )
 
     if allow_output_mutation:
-        return st.cache_resource(
+        return st.cache_resource(  # type: ignore
             func,
             show_spinner=show_spinner,
             hash_funcs=hash_funcs,
@@ -147,7 +147,7 @@ def cache(
             ttl=ttl,
         )
     else:
-        return st.cache_data(
+        return st.cache_data(  # type: ignore
             func,
             persist=persist,
             show_spinner=show_spinner,
