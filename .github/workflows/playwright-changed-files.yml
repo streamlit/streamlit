@@ -37,6 +37,7 @@ jobs:
         with:
           path: e2e_playwright
       - name: Check changed files
+        id: check_changed_files
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
           CHANGED_FILES_COUNT: ${{ steps.changed-files.outputs.all_changed_and_modified_files_count }}
@@ -44,9 +45,12 @@ jobs:
           echo "Changed files count: ${CHANGED_FILES_COUNT}"
           echo "$CHANGED_FILES"
           if [[ "${CHANGED_FILES_COUNT}" -gt 2 || "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
-            echo "This workflow only supports a maximum of 2 changed files. Exiting.";
-            exit 1;
+            echo "This workflow only supports between 1-10 changed files. Otherwise its skipping running the tests.";
+            echo "::set-output name=run_tests::true"
           fi
+      - name: Use output
+        run: |
+          echo "The output value is: ${{ steps.check_changed_files.outputs.run_tests }}"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
