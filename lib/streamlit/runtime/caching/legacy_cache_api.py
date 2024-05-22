@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-from streamlit.deprecation_util import show_deprecation_warning
+from streamlit import deprecation_util
 from streamlit.runtime.caching import CACHE_DOCS_URL
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -133,7 +133,7 @@ def cache(
     """
     import streamlit as st
 
-    show_deprecation_warning(
+    deprecation_util.show_deprecation_warning(
         f"`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new caching commands,\n"
         f"`st.cache_data` or `st.cache_resource`.\n\n"
         f"More information [in our docs]({CACHE_DOCS_URL})."
