@@ -68,6 +68,9 @@ interface State {
   collapsedSidebar: boolean
   sidebarWidth: string
   lastInnerWidth: number
+
+  // When hovering sidebar header
+  showSidebarCollapse: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -96,6 +99,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
+      showSidebarCollapse: false,
     }
   }
 
@@ -203,6 +207,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
+  onMouseOver = (): void => {
+    this.setState({ showSidebarCollapse: true })
+  }
+
+  onMouseOut = (): void => {
+    this.setState({ showSidebarCollapse: false })
+  }
+
   // Additional safeguard for sidebar height sizing
   headerDecorationVisible(): boolean {
     let coloredLineExists = false
@@ -243,7 +255,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   public render(): ReactNode {
-    const { collapsedSidebar, sidebarWidth } = this.state
+    const { collapsedSidebar, sidebarWidth, showSidebarCollapse } = this.state
     const {
       appPages,
       chevronDownshift,
@@ -313,10 +325,15 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           <StyledSidebarContent
             data-testid="stSidebarContent"
             ref={this.sidebarRef}
+            onMouseOver={this.onMouseOver}
+            onMouseOut={this.onMouseOut}
           >
             <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
               {this.renderLogo(false)}
-              <StyledCollapseSidebarButton data-testid="stSidebarCollapseButton">
+              <StyledCollapseSidebarButton
+                showSidebarCollapse={showSidebarCollapse}
+                data-testid="stSidebarCollapseButton"
+              >
                 <BaseButton
                   kind={BaseButtonKind.HEADER_NO_PADDING}
                   onClick={this.toggleCollapse}
