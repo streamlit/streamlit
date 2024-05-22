@@ -36,7 +36,7 @@ pytest-github-actions-annotate-failures
 mypy-protobuf>=3.2, <3.4
 
 # Used for testing of st.connection
-sqlalchemy[mypy]>=1.4.25
+sqlalchemy[mypy]>=1.4.25, <2.0
 
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
