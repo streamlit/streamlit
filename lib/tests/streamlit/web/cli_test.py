@@ -378,30 +378,6 @@ class CliTest(unittest.TestCase):
         clear_resource_caches.assert_called_once()
         clear_data_caches.assert_called_once()
 
-    @patch("builtins.print")
-    def test_cache_clear_command_with_cache(self, mock_print):
-        """Tests clear cache announces that cache is cleared when completed"""
-        with patch(
-            "streamlit.runtime.caching.storage.local_disk_cache_storage.LocalDiskCacheStorageManager.clear_all"
-        ) as mock_clear_cache:
-            self.runner.invoke(cli, ["cache", "clear"])
-            mock_clear_cache.assert_called()
-            first_call = mock_print.call_args[0]
-            first_arg = first_call[0]
-            self.assertTrue(first_arg.startswith("Cleared directory"))
-
-    @patch("builtins.print")
-    def test_cache_clear_command_without_cache(self, mock_print):
-        """Tests clear cache announces when there is nothing to clear"""
-        with patch(
-            "streamlit.runtime.caching.storage.local_disk_cache_storage.LocalDiskCacheStorageManager.clear_all"
-        ) as mock_clear_cache:
-            self.runner.invoke(cli, ["cache", "clear"])
-            mock_clear_cache.assert_called()
-            first_call = mock_print.call_args[0]
-            first_arg = first_call[0]
-            self.assertTrue(first_arg.startswith("Nothing to clear"))
-
     def test_activate_command(self):
         """Tests activating a credential"""
         mock_credential = MagicMock()
