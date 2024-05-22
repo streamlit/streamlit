@@ -531,10 +531,7 @@ class HashTest(unittest.TestCase):
 
 
 class NotHashableTest(unittest.TestCase):
-    """Tests for various unhashable types. Many of these types *are*
-    hashable by @st.cache's hasher, and we're explicitly removing support for
-    them.
-    """
+    """Tests for various unhashable types."""
 
     def _build_cffi(self, name):
         ffibuilder = cffi.FFI()

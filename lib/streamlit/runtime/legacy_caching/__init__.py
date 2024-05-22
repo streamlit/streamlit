@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.legacy_caching.caching import cache, clear_cache, get_cache_path
+from streamlit.runtime.legacy_caching.caching import cache
 
-__all__ = ["cache", "clear_cache", "get_cache_path"]
+__all__ = ["cache"]

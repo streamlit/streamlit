@@ -24,9 +24,7 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit import source_util
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -34,7 +32,6 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
-from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -814,50 +811,6 @@ class ScriptRunnerTest(AsyncTestCase):
                     ScriptRunnerEvent.SHUTDOWN,
                 ],
             )
-
-    def test_invalidating_cache(self):
-        """Test that st.caches are cleared when a dependency changes."""
-        # Make sure there are no caches from other tests.
-        caching._mem_caches.clear()
-
-        # Run st_cache_script.
-        runner = TestScriptRunner("st_cache_script.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The script has 5 cached functions, each of which writes out
-        # some text.
-        self._assert_text_deltas(
-            runner,
-            [
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached_depending_on_not_yet_defined called",
-            ],
-        )
-
-        # Set _cached_pages to None manually (instead of using
-        # source_util.invalidate_pages_cache) to avoid firing on_pages_changed
-        # events.
-        source_util._cached_pages = None
-
-        # Run a slightly different script on a second runner.
-        runner = TestScriptRunner("st_cache_script_changed.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The cached functions should not have been called on this second run,
-        # except for the one that has actually changed.
-        self._assert_text_deltas(
-            runner,
-            [
-                "cached_depending_on_not_yet_defined called",
-            ],
-        )
 
     @patch(
         "streamlit.source_util.get_pages",

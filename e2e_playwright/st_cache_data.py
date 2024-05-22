@@ -19,6 +19,11 @@ st.button("click to rerun")
 side_effects = []
 
 
+@st.cache
+def bar():
+    return "Hello"
+
+
 @st.cache_data(experimental_allow_widgets=True)
 def foo():
     side_effects.append("function ran")
