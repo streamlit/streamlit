@@ -552,8 +552,8 @@ class VegaChartsMixin:
         x: str | None = None,
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display a line chart.
@@ -620,15 +620,25 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the chart's width according to ``width``. If
+            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            the chart to match the width of the parent container.
 
         Examples
         --------
@@ -714,8 +724,8 @@ class VegaChartsMixin:
         x: str | None = None,
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display an area chart.
@@ -782,15 +792,25 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the chart's width according to ``width``. If
+            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            the chart to match the width of the parent container.
 
         Examples
         --------
@@ -876,8 +896,8 @@ class VegaChartsMixin:
         x: str | None = None,
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display a bar chart.
@@ -944,15 +964,25 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the chart's width according to ``width``. If
+            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            the chart to match the width of the parent container.
 
         Examples
         --------
@@ -1041,8 +1071,8 @@ class VegaChartsMixin:
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
@@ -1118,15 +1148,25 @@ class VegaChartsMixin:
             * The name of the column to use for the size. This allows each
               datapoint to be represented by a circle of a different size.
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the chart's width according to ``width``. If
+            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            the chart to match the width of the parent container.
 
         Examples
         --------
