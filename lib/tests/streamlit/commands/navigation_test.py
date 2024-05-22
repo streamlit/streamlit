@@ -57,21 +57,19 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_page_found_by_hash(self):
         found_page = st.Page("page2.py")
-        self.script_run_ctx.pages_manager.get_initial_active_script(
-            found_page._script_hash, ""
-        )
+        self.script_run_ctx.pages_manager.set_script_intent(found_page._script_hash, "")
         page = st.navigation([st.Page("page1.py"), found_page, st.Page("page3.py")])
         assert page == found_page
 
     def test_page_found_by_name(self):
         found_page = st.Page("page2.py")
-        self.script_run_ctx.pages_manager.get_initial_active_script("", "page2")
+        self.script_run_ctx.pages_manager.set_script_intent("", "page2")
         page = st.navigation([st.Page("page1.py"), found_page, st.Page("page3.py")])
         assert page == found_page
 
     def test_page_not_found_by_name(self):
         default_page = st.Page("page1.py")
-        self.script_run_ctx.pages_manager.get_initial_active_script("", "bad_page")
+        self.script_run_ctx.pages_manager.set_script_intent("", "bad_page")
         page = st.navigation([default_page, st.Page("page2.py"), st.Page("page3.py")])
 
         c = self.get_message_from_queue(-2)
@@ -80,7 +78,7 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_page_not_found_by_hash_returns_default(self):
         default_page = st.Page("page1.py")
-        self.script_run_ctx.pages_manager.get_initial_active_script("bad_hash", "")
+        self.script_run_ctx.pages_manager.set_script_intent("bad_hash", "")
         page = st.navigation([default_page, st.Page("page2.py"), st.Page("page3.py")])
         assert page == default_page
 

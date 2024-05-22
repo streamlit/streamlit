@@ -429,7 +429,7 @@ class ScriptRunner:
             # Reset DeltaGenerators, widgets, media files.
             runtime.get_instance().media_file_mgr.clear_session_refs()
 
-            self._pages_manager.set_initial_script(
+            self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
             )
             active_script = self._pages_manager.get_initial_active_script(

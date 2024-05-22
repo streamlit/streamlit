@@ -15,13 +15,18 @@
 from __future__ import annotations
 
 import re
+import threading
 from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, Callable, Final, TypedDict, cast
 
+from blinker import Signal
 from typing_extensions import NotRequired, TypeAlias
 
+from streamlit.logger import get_logger
 from streamlit.string_util import extract_leading_emoji
 from streamlit.util import calc_md5
+
+_LOGGER: Final = get_logger(__name__)
 
 PageHash: TypeAlias = str
 PageName: TypeAlias = str
@@ -99,43 +104,86 @@ def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     return extract_leading_emoji(icon_and_name)
 
 
-def get_pages(main_script_path_str: str) -> dict[str, PageInfo]:
-    main_script_path = Path(main_script_path_str)
-    main_page_icon, main_page_name = page_icon_and_name(main_script_path)
-    main_script_hash = calc_md5(main_script_path_str)
+_pages_cache_lock = threading.RLock()
+_cached_pages: dict[PageHash, PageInfo] | None = None
+_on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
-    # NOTE: We include the script_hash in the dict even though it is
-    #       already used as the key because that occasionally makes things
-    #       easier for us when we need to iterate over pages.
-    pages: dict[str, PageInfo] = {
-        main_script_hash: {
-            "page_script_hash": main_script_hash,
-            "page_name": main_page_name,
-            "icon": main_page_icon,
-            "script_path": str(main_script_path.resolve()),
+
+def invalidate_pages_cache() -> None:
+    global _cached_pages
+
+    _LOGGER.debug("Pages directory changed")
+    with _pages_cache_lock:
+        _cached_pages = None
+
+    _on_pages_changed.send()
+
+
+def get_pages(main_script_path_str: ScriptPath) -> dict[PageHash, PageInfo]:
+    global _cached_pages
+
+    # Avoid taking the lock if the pages cache hasn't been invalidated.
+    precached_pages = _cached_pages
+    if precached_pages is not None:
+        return precached_pages
+
+    with _pages_cache_lock:
+        # The cache may have been repopulated while we were waiting to grab
+        # the lock.
+        if _cached_pages is not None:
+            return _cached_pages
+
+        main_script_path = Path(main_script_path_str)
+        main_page_icon, main_page_name = page_icon_and_name(main_script_path)
+        main_script_hash = calc_md5(main_script_path_str)
+
+        # NOTE: We include the script_hash in the dict even though it is
+        #       already used as the key because that occasionally makes things
+        #       easier for us when we need to iterate over pages.
+        pages: dict[PageHash, PageInfo] = {
+            main_script_hash: {
+                "page_script_hash": main_script_hash,
+                "page_name": main_page_name,
+                "icon": main_page_icon,
+                "script_path": str(main_script_path.resolve()),
+            }
         }
-    }
 
-    pages_dir = main_script_path.parent / "pages"
-    page_scripts = sorted(
-        [
-            f
-            for f in pages_dir.glob("*.py")
-            if not f.name.startswith(".") and not f.name == "__init__.py"
-        ],
-        key=page_sort_key,
-    )
+        pages_dir = main_script_path.parent / "pages"
+        page_scripts = sorted(
+            [
+                f
+                for f in pages_dir.glob("*.py")
+                if not f.name.startswith(".") and not f.name == "__init__.py"
+            ],
+            key=page_sort_key,
+        )
 
-    for script_path in page_scripts:
-        script_path_str = str(script_path.resolve())
-        pi, pn = page_icon_and_name(script_path)
-        psh = calc_md5(script_path_str)
+        for script_path in page_scripts:
+            script_path_str = str(script_path.resolve())
+            pi, pn = page_icon_and_name(script_path)
+            psh = calc_md5(script_path_str)
 
-        pages[psh] = {
-            "page_script_hash": psh,
-            "page_name": pn,
-            "icon": pi,
-            "script_path": script_path_str,
-        }
+            pages[psh] = {
+                "page_script_hash": psh,
+                "page_name": pn,
+                "icon": pi,
+                "script_path": script_path_str,
+            }
 
-    return pages
+        _cached_pages = pages
+
+        return pages
+
+
+def register_pages_changed_callback(
+    callback: Callable[[str], None],
+) -> Callable[[], None]:
+    def disconnect():
+        _on_pages_changed.disconnect(callback)
+
+    # weak=False so that we have control of when the pages changed
+    # callback is deregistered.
+    _on_pages_changed.connect(callback, weak=False)
+
+    return disconnect

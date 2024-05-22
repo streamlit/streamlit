@@ -80,6 +80,7 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
+@patch("streamlit.source_util._cached_pages", new=None)
 class ScriptRunnerTest(AsyncTestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -842,7 +843,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # Set _cached_pages to None manually (instead of using
         # source_util.invalidate_pages_cache) to avoid firing on_pages_changed
         # events.
-        runner._pages_manager._cached_pages = None
+        source_util._cached_pages = None
 
         # Run a slightly different script on a second runner.
         runner = TestScriptRunner("st_cache_script_changed.py")

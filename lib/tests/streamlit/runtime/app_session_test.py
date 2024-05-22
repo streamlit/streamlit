@@ -732,6 +732,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         "streamlit.runtime.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
+    @patch.object(
+        PagesManager,
+        "register_pages_changed_callback",
+        MagicMock(return_value=lambda: None),
+    )
     async def test_new_session_message_includes_fragment_ids(self):
         session = _create_test_session(asyncio.get_running_loop())
 
@@ -825,6 +830,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
     @patch(
         "streamlit.runtime.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
+    )
+    @patch.object(
+        PagesManager,
+        "register_pages_changed_callback",
+        MagicMock(return_value=lambda: None),
     )
     async def test_handle_backmsg_exception(self):
         """handle_backmsg_exception is a bit of a hack. Test that it does
