@@ -146,12 +146,12 @@ def cache(
             max_entries=max_entries,
             ttl=ttl,
         )
-    else:
-        return st.cache_data(  # type: ignore
-            func,
-            persist=persist,
-            show_spinner=show_spinner,
-            hash_funcs=hash_funcs,
-            max_entries=max_entries,
-            ttl=ttl,
-        )
+
+    return st.cache_data(  # type: ignore
+        func,
+        persist=persist,
+        show_spinner=show_spinner,
+        hash_funcs=hash_funcs,
+        max_entries=max_entries,
+        ttl=ttl,
+    )
