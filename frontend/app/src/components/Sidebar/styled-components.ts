@@ -298,13 +298,6 @@ export const StyledCollapseSidebarButton =
         color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
         lineHeight: "0",
 
-        button: {
-          padding: "0.25rem",
-          "&:hover": {
-            backgroundColor: theme.colors.darkenedBgMix25,
-          },
-        },
-
         [`@media print`]: {
           display: "none",
         },
@@ -341,10 +334,10 @@ export const StyledViewButton = styled.button(({ theme }) => {
     color: isLightTheme ? theme.colors.gray90 : theme.colors.gray10,
     backgroundColor: theme.colors.transparent,
     border: "none",
-    borderRadius: "0.5rem",
-    marginTop: "0.25rem",
-    marginLeft: "1.25rem",
-    padding: "0.125rem 0.5rem 0.125rem 0.5rem",
+    borderRadius: theme.radii.lg,
+    marginTop: theme.spacing.twoXS,
+    marginLeft: theme.spacing.xl,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
     "&:hover, &:active, &:focus": {
       border: "none",
       outline: "none",
@@ -359,6 +352,6 @@ export const StyledViewButton = styled.button(({ theme }) => {
 })
 
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
-  paddingTop: "1rem",
+  paddingTop: theme.spacing.lg,
   borderBottom: `1px solid ${theme.colors.fadedText10}`,
 }))
