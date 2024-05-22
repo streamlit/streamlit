@@ -16,35 +16,10 @@
 import time
 
 import altair as alt
-import numpy as np
 import pandas as pd
 from vega_datasets import data
 
 import streamlit as st
-
-np.random.seed(0)
-
-data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
-
-point = alt.selection_point("point_selection")
-interval = alt.selection_interval("interval_selection")
-chart = (
-    alt.Chart(data)
-    .mark_circle()
-    .encode(
-        x="a",
-        y="b",
-        size="c",
-        color="c",
-        tooltip=["a", "b", "c"],
-        fillOpacity=alt.condition(point, alt.value(1), alt.value(0.3)),
-    )
-    .add_params(point, interval)
-)
-
-st.altair_chart(chart, key="alt_chart", on_select="rerun")
-
-st.session_state.alt_chart
 
 # SCATTER CHART
 st.header("Altair Chart with point and interval selection")
