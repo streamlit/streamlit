@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 import streamlit as st
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching import CACHE_DOCS_URL
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.runtime.caching.hashing import HashFuncsDict
@@ -57,6 +58,7 @@ def cache(
     ...
 
 
+@gather_metrics("cache")
 def cache(
     func: F | None = None,
     persist: bool = False,
