@@ -53,7 +53,7 @@ jobs:
       - name: Run make playwright
         run: make playwright
       - name: Upload failed test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright_test_results
