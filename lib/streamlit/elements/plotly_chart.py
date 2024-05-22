@@ -80,11 +80,13 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 
 class PlotlySelectionState(TypedDict, total=False):
     """
-    A dictionary-like representation of the current, Plotly-chart selection state.
+    The schema for the Plotly chart selection state.
 
-    At runtime, objects of this class become ``AttributeDict`` objects that can
-    be used with both key and attribute notation. Selection states cannot be
-    programmatically changed or set through Session State.
+    The selection state is stored in an ``AttributeDict``. This
+    ``AttributeDict`` can be used with both key and attribute notation.
+
+    Selection states cannot be programmatically changed or set through Session
+    State.
 
     Attributes
     ----------
@@ -131,7 +133,7 @@ class PlotlySelectionState(TypedDict, total=False):
     >>> st.session_state.iris.selection
 
     .. output::
-        https://doc-chart-selections-plotly-selection-state.streamlit.app
+        https://doc-chart-events-plotly-selection-state.streamlit.app
         height: 600px
 
     This is an example of the selection state when selecting a single point:
@@ -168,11 +170,14 @@ class PlotlySelectionState(TypedDict, total=False):
 
 class PlotlyState(TypedDict, total=False):
     """
-    A dictionary-like representation of the current, Plotly-chart event state.
+    The schema for Plotly chart event state.
 
-    At runtime, objects of this class become ``AttributeDict`` objects that can
-    be used with both key and attribute notation. Event states cannot be
-    programmatically changed or set through Session State.
+    If event handling is enabled for a Plotly chart, the chart function returns
+    an ``AttributeDict`` with the event state information. This
+    ``AttributeDict`` can be used with both key and attribute notation.
+
+    Event states cannot be programmatically changed or set through Session
+    State.
 
     Only selection events are supported at this time.
 
@@ -198,7 +203,7 @@ class PlotlyState(TypedDict, total=False):
     >>> st.session_state.iris
 
     .. output::
-        https://doc-chart-selections-plotly-state.streamlit.app
+        https://doc-chart-events-plotly-state.streamlit.app
         height: 600px
 
     """
@@ -309,12 +314,12 @@ class PlotlyMixin:
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
-        Plotly is a charting library for Python. The arguments to this function
-        closely follow the ones for Plotly's ``plot()`` function. You can find
-        more about Plotly at https://plot.ly/python.
+        `Plotly <https://plot.ly/python>`_ is a charting library for Python.
+        The arguments to this function closely follow the ones for Plotly's
+        ``plot()`` function.
 
-        To show Plotly charts in Streamlit, call ``st.plotly_chart`` wherever you
-        would call Plotly's ``py.plot`` or ``py.iplot``.
+        To show Plotly charts in Streamlit, call ``st.plotly_chart`` wherever
+        you would call Plotly's ``py.plot`` or ``py.iplot``.
 
         Parameters
         ----------
@@ -338,17 +343,18 @@ class PlotlyMixin:
             Streamlit falls back to the default behavior of the library.
 
         key : str
-            An optional string to use as the unique key when you use the figure
-            as a widget to return user selections. If ``key`` is ``None``
-            (default), Streamlit will generate a key for the widget based on
-            the values of its other parameters. Multiple widgets of the same
-            type may not share the same key. Streamlit does not use this
-            parameter if ``on_select`` is ``"ignore"``.
+            An optional string to use for giving this element a stable
+            identity. If ``key`` is ``None`` (default), this element's identity
+            will be determined based on the values of the other parameters.
+
+            Additionally, if selections are activated and ``key`` is provided,
+            Streamlit will register the key in Session State to store the
+            selection state. The selection state is read-only.
 
         on_select : "ignore" or "rerun" or callable
-            How the figure should respond to user selections. This controls
-            whether or not the figure behaves like a widget and can be one of
-            the following:
+            How the figure should respond to user selection events. This
+            controls whether or not the figure behaves like a widget.
+            ``on_select`` can be one of the following:
 
             - ``"ignore"`` (default): Streamlit will not react to any selection
               events in the chart. The figure will not behave like a widget and
@@ -359,10 +365,10 @@ class PlotlyMixin:
               data in the chart. In this case, ``st.plotly_chart`` will return
               the selection data as a dictionary.
 
-            - A ``callable``: Streamlit will rerun and execute the ``callable``
-              as a callback function before the rest of the app. In this case,
-              ``st.plotly_chart`` will return the selection data as a
-              dictionary.
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.plotly_chart`` will return the selection data
+              as a dictionary.
 
         selection_mode : "points", "box", "lasso" or an Iterable of these
             The selection mode of the chart. This can be one of the following:
