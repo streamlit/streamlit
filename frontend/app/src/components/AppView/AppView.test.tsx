@@ -98,6 +98,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     formsData,
     appLogo: null,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
+    navSections: [],
     onPageChange: jest.fn(),
     currentPageScriptHash: "main_page_script_hash",
     hideSidebarNav: false,
