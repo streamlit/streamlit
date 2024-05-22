@@ -304,11 +304,10 @@ class ArrowMixin:
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``False`` (default), the
-            dataframe's width is the lesser of ``width`` and the width of the
-            parent container. If ``use_contatiner_width`` is ``True``,
-            Streamlit sets the width of the dataframe to match the width of the
-            parent container.
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the dataframe's width according to ``width``. If
+            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            the dataframe to match the width of the parent container.
 
         hide_index : bool or None
             Whether to hide the index column(s). If ``hide_index`` is ``None``
@@ -416,7 +415,7 @@ class ArrowMixin:
 
         .. output::
            https://doc-dataframe.streamlit.app/
-           height: 410px
+           height: 500px
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -431,7 +430,7 @@ class ArrowMixin:
 
         .. output::
            https://doc-dataframe1.streamlit.app/
-           height: 410px
+           height: 500px
 
         Or you can customize the dataframe via ``column_config``, ``hide_index``, or ``column_order``:
 

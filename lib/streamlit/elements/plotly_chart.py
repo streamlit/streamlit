@@ -424,7 +424,7 @@ class PlotlyMixin:
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
-           height: 400px
+           height: 550px
 
         """
         import plotly.io

@@ -1400,7 +1400,7 @@ class VegaChartsMixin:
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
-           height: 300px
+           height: 450px
 
         """
         return self._altair_chart(
@@ -1568,7 +1568,7 @@ class VegaChartsMixin:
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
-           height: 300px
+           height: 450px
 
         Examples of Vega-Lite usage without Streamlit can be found at
         https://vega.github.io/vega-lite/examples/. Most of those can be easily
