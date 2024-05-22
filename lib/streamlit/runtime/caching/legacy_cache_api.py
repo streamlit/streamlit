@@ -16,9 +16,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-import streamlit as st
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching import CACHE_DOCS_URL
 from streamlit.runtime.metrics_util import gather_metrics
@@ -132,6 +131,8 @@ def cache(
     ...     return MongoClient(url)
 
     """
+    import streamlit as st
+
     show_deprecation_warning(
         f"`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new caching commands,\n"
         f"`st.cache_data` or `st.cache_resource`.\n\n"
