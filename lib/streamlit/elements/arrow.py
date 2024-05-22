@@ -363,13 +363,12 @@ class ArrowMixin:
 
         on_select : "ignore" or "rerun" or callable
             How the dataframe should respond to user selection events. This
-            controls whether or not the dataframe behaves like a widget.
+            controls whether or not the dataframe behaves like an input widget.
             ``on_select`` can be one of the following:
 
             - ``"ignore"`` (default): Streamlit will not react to any selection
-              events in the dataframe. The dataframe will not behave like a
-              widget and Streamlit returns a ``DeltaGenerator`` when
-              ``st.dataframe`` is called.
+              events in the dataframe. The dataframe will not behave like an
+              input widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
               rows or columns in the dataframe. In this case, ``st.dataframe``
@@ -393,6 +392,17 @@ class ArrowMixin:
               selection based on the modes specified.
 
             When column selections are enabled, column sorting is disabled.
+
+        Returns
+        -------
+        element or AttributeDict
+            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            internal placeholder for the dataframe element that can be used
+            with the ``.add_rows()`` method. Otherwise, this method returns an
+            ``AttributeDict`` representing the selection state in a
+            dictionary-like object. The attributes are described by the
+            ``DataframeState`` schema.
+
 
         Examples
         --------

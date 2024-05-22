@@ -1283,13 +1283,12 @@ class VegaChartsMixin:
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
-            controls whether or not the figure behaves like a widget.
+            controls whether or not the figure behaves like an input widget.
             ``on_select`` can be one of the following:
 
             - ``"ignore"`` (default): Streamlit will not react to any selection
-              events in the chart. The figure will not behave like a widget and
-              Streamlit returns a ``DeltaGenerator`` when ``st.altair_chart``
-              is called.
+              events in the chart. The figure will not behave like an input
+              widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
               data in the chart. In this case, ``st.altair_chart`` will return
@@ -1446,13 +1445,12 @@ class VegaChartsMixin:
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
-            controls whether or not the figure behaves like a widget.
+            controls whether or not the figure behaves like an input widget.
             ``on_select`` can be one of the following:
 
             - ``"ignore"`` (default): Streamlit will not react to any selection
-              events in the chart. The figure will not behave like a widget and
-              Streamlit returns a ``DeltaGenerator`` when ``st.altair_chart``
-              is called.
+              events in the chart. The figure will not behave like an input
+              widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
               data in the chart. In this case, ``st.vega_lite_chart`` will

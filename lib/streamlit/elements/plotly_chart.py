@@ -353,13 +353,12 @@ class PlotlyMixin:
 
         on_select : "ignore" or "rerun" or callable
             How the figure should respond to user selection events. This
-            controls whether or not the figure behaves like a widget.
+            controls whether or not the figure behaves like an input widget.
             ``on_select`` can be one of the following:
 
             - ``"ignore"`` (default): Streamlit will not react to any selection
-              events in the chart. The figure will not behave like a widget and
-              Streamlit returns a ``DeltaGenerator`` when ``st.plotly_chart``
-              is called.
+              events in the chart. The figure will not behave like an input
+              widget.
 
             - ``"rerun"``: Streamlit will rerun the app when the user selects
               data in the chart. In this case, ``st.plotly_chart`` will return
@@ -389,12 +388,12 @@ class PlotlyMixin:
 
         Returns
         -------
-        DeltaGenerator or PlotlyState
-            If ``on_select`` is ``"ignore"`` (default), this method returns a
-            ``DeltaGenerator``, a class used by Streamlit to identify specific
-            instances of an element. Otherwise, this method returns a
-            ``PlotlyState`` object with information about a user's selections
-            within the figure.
+        element or AttributeDict
+            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            internal placeholder for the chart element. Otherwise, this method
+            returns an ``AttributeDict`` representing the selection state in a
+            dictionary-like object. The attributes are described by the
+            ``PlotlyState`` schema.
 
         Example
         -------
