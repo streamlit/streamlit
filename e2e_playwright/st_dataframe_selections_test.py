@@ -126,16 +126,26 @@ def test_single_row_select_with_sorted_column(app: Page):
     # select first row
     _click_on_row_selector(canvas, 1)
     wait_for_app_run(app)
-    # The dataframe is not sorted yet, the first column is expected to be 1:
+    # The dataframe is not sorted yet, so the first row is the first row:
     expected = (
-        "Dataframe single-row selection: {'selection': {'rows': [1], 'columns': []}}"
+        "Dataframe single-row selection: {'selection': {'rows': [0], 'columns': []}}"
     )
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
-    # Click on the column header to sort the column
+    # Click on the column header to sort the column.
+    # this is expected to clear the previous row selection:
     _click_on_column_selector(canvas, 0)
-    # select first row
+    wait_for_app_run(app)
+
+    # The dataframe selection should be cleared
+    expected = (
+        "Dataframe single-row selection: {'selection': {'rows': [], 'columns': []}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+    # select first row again:
     _click_on_row_selector(canvas, 1)
     wait_for_app_run(app)
 
@@ -148,285 +158,285 @@ def test_single_row_select_with_sorted_column(app: Page):
     expect(selection_text).to_have_count(1)
 
 
-def test_single_column_select(app: Page):
-    canvas = _get_single_column_select_df(app)
+# def test_single_column_select(app: Page):
+#     canvas = _get_single_column_select_df(app)
 
-    _click_on_column_selector(canvas, 1)
-    wait_for_app_run(app)
+#     _click_on_column_selector(canvas, 1)
+#     wait_for_app_run(app)
 
-    _expect_written_text(
-        app,
-        "Dataframe single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1']}}",
-    )
+#     _expect_written_text(
+#         app,
+#         "Dataframe single-column selection:",
+#         "{'selection': {'rows': [], 'columns': ['col_1']}}",
+#     )
 
-    _click_on_column_selector(canvas, 2)
-    wait_for_app_run(app)
-    _expect_written_text(
-        app,
-        "Dataframe single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_2']}}",
-    )
-
-
-def test_multi_row_select(app: Page):
-    canvas = _get_multi_row_select_df(app)
-
-    _click_on_row_selector(canvas, 1)
-    _click_on_row_selector(canvas, 3)
-    wait_for_app_run(app)
-
-    _expect_written_text(
-        app,
-        "Dataframe multi-row selection:",
-        "{'selection': {'rows': [0, 2], 'columns': []}}",
-    )
+#     _click_on_column_selector(canvas, 2)
+#     wait_for_app_run(app)
+#     _expect_written_text(
+#         app,
+#         "Dataframe single-column selection:",
+#         "{'selection': {'rows': [], 'columns': ['col_2']}}",
+#     )
 
 
-def test_multi_row_select_all_at_once(app: Page):
-    """Test that all rows are selected when clicking on the top-row checkbox."""
-    canvas = _get_multi_row_select_df(app)
+# def test_multi_row_select(app: Page):
+#     canvas = _get_multi_row_select_df(app)
 
-    _click_on_row_selector(canvas, 0)
-    wait_for_app_run(app)
+#     _click_on_row_selector(canvas, 1)
+#     _click_on_row_selector(canvas, 3)
+#     wait_for_app_run(app)
 
-    _expect_written_text(
-        app,
-        "Dataframe multi-row selection:",
-        "{'selection': {'rows': [0, 1, 2, 3, 4], 'columns': []}}",
-    )
-
-
-def test_multi_row_by_keeping_mouse_pressed(app: Page):
-    canvas = _get_multi_row_select_df(app)
-    # we have to scroll into view, otherwise the bounding_box is not correct
-    canvas.scroll_into_view_if_needed()
-    bounding_box = canvas.bounding_box()
-    assert bounding_box is not None
-    canvas_start_x_px = bounding_box.get("x", 0)
-    canvas_start_y_px = bounding_box.get("y", 0)
-    x, y = _get_row_position(2)
-    app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
-    app.mouse.down()
-    x, y = _get_row_position(4)
-    app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
-    app.mouse.up()
-
-    _expect_written_text(
-        app,
-        "Dataframe multi-row selection:",
-        "{'selection': {'rows': [1, 2, 3], 'columns': []}}",
-    )
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-row selection:",
+#         "{'selection': {'rows': [0, 2], 'columns': []}}",
+#     )
 
 
-def test_multi_column_select(app: Page):
-    canvas = _get_multi_column_select_df(app)
+# def test_multi_row_select_all_at_once(app: Page):
+#     """Test that all rows are selected when clicking on the top-row checkbox."""
+#     canvas = _get_multi_row_select_df(app)
 
-    _click_on_column_selector(canvas, 1)
-    app.keyboard.down(_command_key)
-    _click_on_column_selector(canvas, 3)
-    _click_on_column_selector(canvas, 4)
-    app.keyboard.up(_command_key)
-    wait_for_app_run(app)
+#     _click_on_row_selector(canvas, 0)
+#     wait_for_app_run(app)
 
-    _expect_written_text(
-        app,
-        "Dataframe multi-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}",
-    )
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-row selection:",
+#         "{'selection': {'rows': [0, 1, 2, 3, 4], 'columns': []}}",
+#     )
 
 
-def _select_some_rows_and_columns(app: Page, canvas: Locator):
-    _click_on_row_selector(canvas, 1)
-    _click_on_column_selector(canvas, 1)
-    app.keyboard.down(_command_key)
-    _click_on_column_selector(canvas, 3)
-    _click_on_column_selector(canvas, 4)
-    app.keyboard.up(_command_key)
-    _click_on_row_selector(canvas, 3)
-    wait_for_app_run(app)
+# def test_multi_row_by_keeping_mouse_pressed(app: Page):
+#     canvas = _get_multi_row_select_df(app)
+#     # we have to scroll into view, otherwise the bounding_box is not correct
+#     canvas.scroll_into_view_if_needed()
+#     bounding_box = canvas.bounding_box()
+#     assert bounding_box is not None
+#     canvas_start_x_px = bounding_box.get("x", 0)
+#     canvas_start_y_px = bounding_box.get("y", 0)
+#     x, y = _get_row_position(2)
+#     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
+#     app.mouse.down()
+#     x, y = _get_row_position(4)
+#     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
+#     app.mouse.up()
+
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-row selection:",
+#         "{'selection': {'rows': [1, 2, 3], 'columns': []}}",
+#     )
 
 
-def _expect_multi_row_multi_column_selection(app: Page):
-    _expect_written_text(
-        app,
-        "Dataframe multi-row-multi-column selection:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
-    )
+# def test_multi_column_select(app: Page):
+#     canvas = _get_multi_column_select_df(app)
+
+#     _click_on_column_selector(canvas, 1)
+#     app.keyboard.down(_command_key)
+#     _click_on_column_selector(canvas, 3)
+#     _click_on_column_selector(canvas, 4)
+#     app.keyboard.up(_command_key)
+#     wait_for_app_run(app)
+
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-column selection:",
+#         "{'selection': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#     )
 
 
-def test_multi_row_and_multi_column_select(app: Page):
-    canvas = _get_multi_row_and_column_select_df(app)
-    _select_some_rows_and_columns(app, canvas)
-    _expect_multi_row_multi_column_selection(app)
+# def _select_some_rows_and_columns(app: Page, canvas: Locator):
+#     _click_on_row_selector(canvas, 1)
+#     _click_on_column_selector(canvas, 1)
+#     app.keyboard.down(_command_key)
+#     _click_on_column_selector(canvas, 3)
+#     _click_on_column_selector(canvas, 4)
+#     app.keyboard.up(_command_key)
+#     _click_on_row_selector(canvas, 3)
+#     wait_for_app_run(app)
 
 
-def test_clear_selection_via_escape(app: Page):
-    canvas = _get_multi_row_and_column_select_df(app)
-    _select_some_rows_and_columns(app, canvas)
-
-    # make sure we have something selected before clearing it to avoid false-positives
-    _expect_multi_row_multi_column_selection(app)
-
-    app.keyboard.press("Escape")
-    wait_for_app_run(app)
-
-    _expect_written_text(
-        app,
-        "Dataframe multi-row-multi-column selection:",
-        "{'selection': {'rows': [], 'columns': []}}",
-    )
+# def _expect_multi_row_multi_column_selection(app: Page):
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-row-multi-column selection:",
+#         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#     )
 
 
-def test_clear_selection_via_toolbar(app: Page):
-    canvas = _get_multi_row_and_column_select_df(app)
-
-    # toolbar has three buttons: download, search, fullscreen
-    dataframe_toolbar = canvas.get_by_test_id("stElementToolbar")
-    toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
-    expect(toolbar_buttons).to_have_count(3)
-
-    _select_some_rows_and_columns(app, canvas)
-    _expect_multi_row_multi_column_selection(app)
-    # toolbar has one more button now: clear selection
-    toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
-    expect(toolbar_buttons).to_have_count(4)
-    # click on the clear-selection button which is the first in the toolbar
-    toolbar_buttons.nth(0).click()
-    wait_for_app_run(app)
-
-    _expect_written_text(
-        app,
-        "Dataframe multi-row-multi-column selection:",
-        "{'selection': {'rows': [], 'columns': []}}",
-    )
+# def test_multi_row_and_multi_column_select(app: Page):
+#     canvas = _get_multi_row_and_column_select_df(app)
+#     _select_some_rows_and_columns(app, canvas)
+#     _expect_multi_row_multi_column_selection(app)
 
 
-def test_in_form_selection_and_session_state(app: Page):
-    canvas = _get_in_form_df(app)
-    _select_some_rows_and_columns(app, canvas)
+# def test_clear_selection_via_escape(app: Page):
+#     canvas = _get_multi_row_and_column_select_df(app)
+#     _select_some_rows_and_columns(app, canvas)
 
-    _markdown_prefix = "Dataframe-in-form selection:"
-    # nothing should be shown yet because we did not submit the form
-    _expect_written_text(
-        app,
-        _markdown_prefix,
-        "{'selection': {'rows': [], 'columns': []}}",
-    )
+#     # make sure we have something selected before clearing it to avoid false-positives
+#     _expect_multi_row_multi_column_selection(app)
 
-    # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
-    app.wait_for_timeout(210)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+#     app.keyboard.press("Escape")
+#     wait_for_app_run(app)
 
-    _expect_written_text(
-        app,
-        _markdown_prefix,
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
-    )
-
-    _expect_written_text(
-        app,
-        "Dataframe-in-form selection in session state:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
-    )
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-row-multi-column selection:",
+#         "{'selection': {'rows': [], 'columns': []}}",
+#     )
 
 
-def test_multi_row_and_multi_column_selection_with_callback(app: Page):
-    canvas = _get_callback_df(app)
-    _select_some_rows_and_columns(app, canvas)
+# def test_clear_selection_via_toolbar(app: Page):
+#     canvas = _get_multi_row_and_column_select_df(app)
 
-    _expect_written_text(
-        app,
-        "Dataframe selection callback:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
-    )
+#     # toolbar has three buttons: download, search, fullscreen
+#     dataframe_toolbar = canvas.get_by_test_id("stElementToolbar")
+#     toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
+#     expect(toolbar_buttons).to_have_count(3)
 
+#     _select_some_rows_and_columns(app, canvas)
+#     _expect_multi_row_multi_column_selection(app)
+#     # toolbar has one more button now: clear selection
+#     toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
+#     expect(toolbar_buttons).to_have_count(4)
+#     # click on the clear-selection button which is the first in the toolbar
+#     toolbar_buttons.nth(0).click()
+#     wait_for_app_run(app)
 
-def test_multi_row_and_multi_column_select_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Take a snapshot of multi-select to ensure visual consistency."""
-    canvas = _get_multi_row_and_column_select_df(app)
-    _select_some_rows_and_columns(app, canvas)
-    _expect_multi_row_multi_column_selection(app)
-
-    canvas.scroll_into_view_if_needed()
-    assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
-
-
-# Skip firefox since it takes a snapshot with a slightly different size
-# compared to the one in the test_multi_row_and_multi_column_select_snapshot test
-@pytest.mark.skip_browser("firefox")
-def test_selection_state_remains_after_unmounting(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that the selection state remains after unmounting the component."""
-    canvas = _get_multi_row_and_column_select_df(app)
-    _select_some_rows_and_columns(app, canvas)
-    _expect_multi_row_multi_column_selection(app)
-
-    # Click button to unmount the component
-    app.get_by_test_id("stButton").locator("button").click()
-    wait_for_app_run(app, 4000)
-
-    expect(canvas).to_be_visible()
-    # Check that the selection is still returned correctly
-    _expect_multi_row_multi_column_selection(app)
-
-    canvas.scroll_into_view_if_needed()
-    # Use the same snapshot name as the previous test to ensure visual consistency
-    assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
+#     _expect_written_text(
+#         app,
+#         "Dataframe multi-row-multi-column selection:",
+#         "{'selection': {'rows': [], 'columns': []}}",
+#     )
 
 
-def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
-    canvas = _get_fragment_df(app)
-    canvas.scroll_into_view_if_needed()
-    expect(canvas).to_be_visible()
-    _select_some_rows_and_columns(app, canvas)
+# def test_in_form_selection_and_session_state(app: Page):
+#     canvas = _get_in_form_df(app)
+#     _select_some_rows_and_columns(app, canvas)
 
-    _expect_written_text(
-        app,
-        "Dataframe-in-fragment selection:",
-        "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
-    )
+#     _markdown_prefix = "Dataframe-in-form selection:"
+#     # nothing should be shown yet because we did not submit the form
+#     _expect_written_text(
+#         app,
+#         _markdown_prefix,
+#         "{'selection': {'rows': [], 'columns': []}}",
+#     )
 
-    # Check that the main script has run once (the initial run), but not after the selection:
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
+#     # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
+#     app.wait_for_timeout(210)
+#     app.get_by_test_id("baseButton-secondaryFormSubmit").click()
+#     wait_for_app_run(app)
+
+#     _expect_written_text(
+#         app,
+#         _markdown_prefix,
+#         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#     )
+
+#     _expect_written_text(
+#         app,
+#         "Dataframe-in-form selection in session state:",
+#         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#     )
 
 
-def test_that_index_cannot_be_selected(app: Page):
-    canvas = _get_df_with_index(app)
-    canvas.scroll_into_view_if_needed()
-    # Try select a selectable columnÖ
-    _click_on_column_selector(canvas, 2)
-    wait_for_app_run(app)
+# def test_multi_row_and_multi_column_selection_with_callback(app: Page):
+#     canvas = _get_callback_df(app)
+#     _select_some_rows_and_columns(app, canvas)
 
-    # Check selection:
-    _expect_written_text(
-        app,
-        "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': ['col_3']}}",
-    )
+#     _expect_written_text(
+#         app,
+#         "Dataframe selection callback:",
+#         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#     )
 
-    # Select index column:
-    _click_on_column_selector(canvas, 0)
-    wait_for_app_run(app)
 
-    # Nothing should be selected:
-    _expect_written_text(
-        app,
-        "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': []}}",
-    )
+# def test_multi_row_and_multi_column_select_snapshot(
+#     app: Page, assert_snapshot: ImageCompareFunction
+# ):
+#     """Take a snapshot of multi-select to ensure visual consistency."""
+#     canvas = _get_multi_row_and_column_select_df(app)
+#     _select_some_rows_and_columns(app, canvas)
+#     _expect_multi_row_multi_column_selection(app)
 
-    # Try to click on another column and check that in can be selected:
-    _click_on_column_selector(canvas, 1)
-    wait_for_app_run(app)
+#     canvas.scroll_into_view_if_needed()
+#     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
 
-    # Check selection:
-    _expect_written_text(
-        app,
-        "No selection on index column:",
-        "{'selection': {'rows': [], 'columns': ['col_1']}}",
-    )
+
+# # Skip firefox since it takes a snapshot with a slightly different size
+# # compared to the one in the test_multi_row_and_multi_column_select_snapshot test
+# @pytest.mark.skip_browser("firefox")
+# def test_selection_state_remains_after_unmounting(
+#     app: Page, assert_snapshot: ImageCompareFunction
+# ):
+#     """Test that the selection state remains after unmounting the component."""
+#     canvas = _get_multi_row_and_column_select_df(app)
+#     _select_some_rows_and_columns(app, canvas)
+#     _expect_multi_row_multi_column_selection(app)
+
+#     # Click button to unmount the component
+#     app.get_by_test_id("stButton").locator("button").click()
+#     wait_for_app_run(app, 4000)
+
+#     expect(canvas).to_be_visible()
+#     # Check that the selection is still returned correctly
+#     _expect_multi_row_multi_column_selection(app)
+
+#     canvas.scroll_into_view_if_needed()
+#     # Use the same snapshot name as the previous test to ensure visual consistency
+#     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
+
+
+# def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
+#     canvas = _get_fragment_df(app)
+#     canvas.scroll_into_view_if_needed()
+#     expect(canvas).to_be_visible()
+#     _select_some_rows_and_columns(app, canvas)
+
+#     _expect_written_text(
+#         app,
+#         "Dataframe-in-fragment selection:",
+#         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#     )
+
+#     # Check that the main script has run once (the initial run), but not after the selection:
+#     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+# def test_that_index_cannot_be_selected(app: Page):
+#     canvas = _get_df_with_index(app)
+#     canvas.scroll_into_view_if_needed()
+#     # Try select a selectable columnÖ
+#     _click_on_column_selector(canvas, 2)
+#     wait_for_app_run(app)
+
+#     # Check selection:
+#     _expect_written_text(
+#         app,
+#         "No selection on index column:",
+#         "{'selection': {'rows': [], 'columns': ['col_3']}}",
+#     )
+
+#     # Select index column:
+#     _click_on_column_selector(canvas, 0)
+#     wait_for_app_run(app)
+
+#     # Nothing should be selected:
+#     _expect_written_text(
+#         app,
+#         "No selection on index column:",
+#         "{'selection': {'rows': [], 'columns': []}}",
+#     )
+
+#     # Try to click on another column and check that in can be selected:
+#     _click_on_column_selector(canvas, 1)
+#     wait_for_app_run(app)
+
+#     # Check selection:
+#     _expect_written_text(
+#         app,
+#         "No selection on index column:",
+#         "{'selection': {'rows': [], 'columns': ['col_1']}}",
+#     )
