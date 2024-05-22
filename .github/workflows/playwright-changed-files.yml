@@ -32,6 +32,7 @@ jobs:
           submodules: "recursive"
           fetch-depth: 2
       - name: Get changed files
+        id: changed-files
         uses: tj-actions/changed-files@v44
         with:
           files: |
@@ -40,9 +41,7 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
         run: |
-          for file in ${CHANGED_FILES}; do
-            echo "$file was changed"
-          done
+          echo "$CHANGED_FILES"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
