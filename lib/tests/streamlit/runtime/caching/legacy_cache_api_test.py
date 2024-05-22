@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.cache (legacy) unit tests."""
+"""st.cache (legacy) unit tests. These tests just test that `st.cache` correctly routes
+to `st.cache_data` and `st.cache_resource` as expected. It does not test the actual
+caching functionality, which is tested in the cache_data & cache_resource tests."""
+
 from __future__ import annotations
 
 import threading
