@@ -104,6 +104,13 @@ def test_option_menu(app: Page):
     _expect_no_exception(app)
     _expect_iframe_attached(app)
 
+    # TODO: uncomment the on_change callback as soon as streamlit-option-menu is updated and uses the new on_change callback
+    # frame_locator = app.frame_locator("iframe")
+    # frame_locator.locator("a", has_text="Home").click()
+    # expect(
+    #     app.get_by_test_id("stMarkdown").filter(has_text="Selection changed to Home")
+    # ).to_be_visible()
+
 
 def test_url_fragment(app: Page):
     """Test that the url-fragment component renders"""
