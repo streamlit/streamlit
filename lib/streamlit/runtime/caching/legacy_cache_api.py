@@ -26,36 +26,9 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.runtime.caching.hashing import HashFuncsDict
 
-
+# Type-annotate the decorator function.
+# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
 F = TypeVar("F", bound=Callable[..., Any])
-
-
-@overload
-def cache(
-    func: F,
-    persist: bool = False,
-    allow_output_mutation: bool = False,
-    show_spinner: bool = True,
-    suppress_st_warning: bool = False,
-    hash_funcs: HashFuncsDict | None = None,
-    max_entries: int | None = None,
-    ttl: float | None = None,
-) -> F:
-    ...
-
-
-@overload
-def cache(
-    func: None = None,
-    persist: bool = False,
-    allow_output_mutation: bool = False,
-    show_spinner: bool = True,
-    suppress_st_warning: bool = False,
-    hash_funcs: HashFuncsDict | None = None,
-    max_entries: int | None = None,
-    ttl: float | None = None,
-) -> Callable[[F], F]:
-    ...
 
 
 @gather_metrics("cache")
