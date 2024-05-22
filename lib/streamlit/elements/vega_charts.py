@@ -1498,7 +1498,7 @@ class VegaChartsMixin:
 
             - A ``callable``: Streamlit will rerun the app and execute the
               ``callable`` as a callback function before the rest of the app.
-              In this case, ``st.altair_chart`` will return the selection data
+              In this case, ``st.vega_lite_chart`` will return the selection data
               as a dictionary.
 
             To use selection events, the spec defined in ``data`` or ``spec``
