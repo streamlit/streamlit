@@ -309,8 +309,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           }}
           size={{
             width: sidebarWidth,
-            // Addresses height glitch when anchor used - issue #6264
-            height: sidebarAdjust ? "calc(100vh - 2px)" : "100%",
+            height: "auto",
           }}
           as={StyledSidebar}
           onResizeStop={(e, direction, ref, d) => {

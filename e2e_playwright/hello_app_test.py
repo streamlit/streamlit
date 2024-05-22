@@ -148,7 +148,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-header").click()
+    sidebar_element.get_by_test_id("baseButton-headerNoPadding").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
@@ -183,7 +183,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-header").click()
+    sidebar_element.get_by_test_id("baseButton-headerNoPadding").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
