@@ -16,9 +16,10 @@
 
 import React, { Suspense } from "react"
 
+import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
-import { DynamicIconProps, StyledDynamicIcon } from "./styled-components"
+import { StyledDynamicIcon } from "./styled-components"
 
 interface IconPackEntry {
   pack: string
@@ -36,6 +37,15 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   const iconPack = matchResult[1]
   const iconNameInPack = matchResult[2]
   return { pack: iconPack, icon: iconNameInPack }
+}
+
+export interface DynamicIconProps {
+  iconValue: string
+  size?: IconSize
+  margin?: string
+  padding?: string
+  testid?: string
+  color?: ThemeColor
 }
 
 const DynamicIconDispatcher = ({

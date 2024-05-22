@@ -390,6 +390,7 @@ class LayoutsMixin:
         self,
         label: str,
         expanded: bool = False,
+        *,
         icon: str | None = None,
     ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.

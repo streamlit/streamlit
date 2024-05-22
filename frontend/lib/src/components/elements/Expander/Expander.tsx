@@ -61,6 +61,12 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
     margin: "",
     padding: "",
   }
+
+  const statusIconTestIds: Record<string, string> = {
+    ":material/check:": "stExpanderIconCheck",
+    ":material/error:": "stExpanderIconError",
+  }
+
   if (icon === "spinner") {
     const usingCustomTheme = !isPresetTheme(activeTheme)
     return (
@@ -70,33 +76,19 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
         {...iconProps}
       />
     )
-  } else if (icon === "check") {
-    return (
-      <DynamicIcon
-        iconValue=":material/check:"
-        color="inherit"
-        aria-hidden="true"
-        data-testid="stExpanderIconCheck"
-        {...iconProps}
-      />
-    )
-  } else if (icon === "error") {
-    return (
-      <DynamicIcon
-        iconValue=":material/error:"
-        color="inherit"
-        aria-hidden="true"
-        data-testid="stExpanderIconError"
-        {...iconProps}
-      />
-    )
   }
 
-  if (icon) {
-    return <DynamicIcon color="inherit" iconValue={icon} {...iconProps} />
-  }
-
-  return <></>
+  return icon ? (
+    <DynamicIcon
+      color="inherit"
+      iconValue={icon}
+      aria-hidden={statusIconTestIds[icon] ? "true" : undefined}
+      data-testid={statusIconTestIds[icon] || "stExpanderIcon"}
+      {...iconProps}
+    />
+  ) : (
+    <></>
+  )
 }
 
 export interface ExpanderProps {
