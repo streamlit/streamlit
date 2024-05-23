@@ -41,7 +41,7 @@ def test_pydeck_chart_has_consistent_visuals(
     )
 
     assert_snapshot(
-        pydeck_charts.nth(3).locator("canvas").nth(2), name="st_pydeck_chart-geo_layers"
+        pydeck_charts.nth(3).locator("canvas").nth(1), name="st_pydeck_chart-geo_layers"
     )
 
 
