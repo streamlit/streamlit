@@ -18,7 +18,11 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from shared.dataframe_utils import calc_middle_cell_position, select_column, select_row
+from e2e_playwright.shared.dataframe_utils import (
+    calc_middle_cell_position,
+    select_column,
+    select_row,
+)
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 _command_key = "Meta" if platform.system() == "Darwin" else "Control"
