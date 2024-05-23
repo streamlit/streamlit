@@ -46,6 +46,7 @@ def calc_middle_cell_position(
 
     col_pos : int
         The column number to use for the calculation. Starts with 0 with the first column.
+        If has_row_marker_col is True, the first column is the row marker column.
 
     column_width : "small" | "medium" | "large"
         The shared width setting of all columns. Can be "small", "medium" or "large".
@@ -102,6 +103,7 @@ def click_on_cell(
 
     col_pos : int
         The column number to click on. Starts with 0 with the first column.
+        If has_row_marker_col is True, the first column is the row marker column.
 
     column_width : "small" | "medium" | "large"
         The shared width setting of all columns. Can be "small", "medium" or "large".
@@ -131,6 +133,8 @@ def select_row(
 ) -> None:
     """Select the specified row in the dataframe.
 
+    This expects row selections to be activated.
+
     Parameters
     ----------
 
@@ -147,13 +151,13 @@ def select_row(
     click_on_cell(dataframe_element, row_pos, 0, column_width, has_row_marker_col=True)
 
 
-def select_column(
+def sort_column(
     dataframe_element: Locator,
     col_pos: int,
     column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
     has_row_marker_col: bool = False,
 ) -> None:
-    """Select the specified column in the dataframe.
+    """Sort the specified column in the dataframe.
 
     Parameters
     ----------
@@ -163,6 +167,43 @@ def select_column(
 
     col_pos : int
         The column number to select. Starts with 0 with the first column.
+        If has_row_marker_col is True, the first column is the row marker column.
+
+    column_width : "small" | "medium" | "large"
+        The shared width setting of all columns. Can be "small", "medium" or "large".
+        This needs to be enforced in the dataframe via column config.
+
+    has_row_marker_col : bool
+        Whether the dataframe has a row marker column (used when row selections are activated).
+    """
+    click_on_cell(
+        dataframe_element,
+        0,
+        col_pos,
+        column_width,
+        has_row_marker_col=has_row_marker_col,
+    )
+
+
+def select_column(
+    dataframe_element: Locator,
+    col_pos: int,
+    column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
+    has_row_marker_col: bool = False,
+) -> None:
+    """Select the specified column in the dataframe.
+
+    This expects column selections to be activated.
+
+    Parameters
+    ----------
+
+    dataframe_element : Locator
+        The dataframe element to select the column in.
+
+    col_pos : int
+        The column number to select. Starts with 0 with the first column.
+        If has_row_marker_col is True, the first column is the row marker column.
 
     column_width : "small" | "medium" | "large"
         The shared width setting of all columns. Can be "small", "medium" or "large".

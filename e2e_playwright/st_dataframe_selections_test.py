@@ -22,6 +22,7 @@ from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
     select_column,
     select_row,
+    sort_column,
 )
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
@@ -113,9 +114,9 @@ def test_single_row_select_with_sorted_column(app: Page):
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
-    # Click on the column header to sort the column.
+    # Sort the first column
     # this is expected to clear the previous row selection:
-    select_column(canvas, 1, has_row_marker_col=True)
+    sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
 
     # The dataframe selection should be cleared
