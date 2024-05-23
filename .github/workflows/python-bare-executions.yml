@@ -39,7 +39,5 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
       - name: Run Bare Execution Tests
         run: make bare-execution-tests
