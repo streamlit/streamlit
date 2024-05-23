@@ -136,7 +136,7 @@ class DataframeSelectionState(TypedDict, total=False):
 
 class DataframeState(TypedDict, total=False):
     """
-    The schema for the datafrane event state.
+    The schema for the dataframe event state.
 
     The event state is stored in a dictionary-like object that suports both
     key and attribute notation. Event states cannot be programmatically
@@ -303,7 +303,7 @@ class ArrowMixin:
             Whether to override ``width`` with the width of the parent
             container. If ``use_container_width`` is ``False`` (default),
             Streamlit sets the dataframe's width according to ``width``. If
-            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            ``use_container_width`` is ``True``, Streamlit sets the width of
             the dataframe to match the width of the parent container.
 
         hide_index : bool or None
@@ -393,8 +393,8 @@ class ArrowMixin:
         -------
         element or dict
             If ``on_select`` is ``"ignore"`` (default), this method returns an
-            internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns a
+            internal placeholder for the dataframe element that can be used
+            with the ``.add_rows()`` method. Otherwise, this method returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``DataframeState``
             dictionary schema.

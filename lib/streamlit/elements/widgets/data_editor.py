@@ -636,7 +636,7 @@ class DataEditorMixin:
             Whether to override ``width`` with the width of the parent
             container. If ``use_container_width`` is ``False`` (default),
             Streamlit sets the data editor's width according to ``width``. If
-            ``use_contatiner_width`` is ``True``, Streamlit sets the width of
+            ``use_container_width`` is ``True``, Streamlit sets the width of
             the data editor to match the width of the parent container.
 
         hide_index : bool or None

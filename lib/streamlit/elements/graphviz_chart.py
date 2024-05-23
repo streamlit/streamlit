@@ -54,7 +54,7 @@ class GraphvizMixin:
             the parent container. If ``use_container_width`` is ``False``
             (default), Streamlit sets the width of the chart to fit its contents
             according to the plotting library, up to the width of the parent
-            container. If ``use_contatiner_width`` is ``True``, Streamlit sets
+            container. If ``use_container_width`` is ``True``, Streamlit sets
             the width of the figure to match the width of the parent container.
 
         Example
