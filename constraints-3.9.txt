@@ -31,7 +31,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.102.4
+hypothesis==6.102.5
 identify==2.5.36
 idna==3.7
 importlib_metadata==7.1.0
@@ -52,7 +52,7 @@ langchain==0.1.20
 langchain-community==0.0.38
 langchain-core==0.1.52
 langchain-text-splitters==0.0.2
-langsmith==0.1.60
+langsmith==0.1.62
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -110,7 +110,7 @@ requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
 rpds-py==0.18.1
-scipy==1.13.0
+scipy==1.13.1
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
@@ -134,7 +134,7 @@ types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
 types-requests==2.31.0.6
-types-setuptools==69.5.0.20240522
+types-setuptools==70.0.0.20240523
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.14
@@ -143,7 +143,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
-uv==0.1.45
+uv==0.2.2
 vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.0
