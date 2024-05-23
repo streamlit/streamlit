@@ -28,13 +28,13 @@ def test_pydeck_chart_has_consistent_visuals(
 
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
 
-    wait_for_app_run(themed_app, 20000)
+    wait_for_app_run(themed_app, 15000)
     assert_snapshot(
         pydeck_charts.nth(1).locator("canvas").nth(0),
         name="st_pydeck_chart-san_francisco",
     )
 
-    wait_for_app_run(themed_app, 20000)
+    wait_for_app_run(themed_app, 15000)
     assert_snapshot(
         pydeck_charts.nth(2).locator("canvas").nth(1), name="st_pydeck_chart-continents"
     )
