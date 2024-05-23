@@ -223,6 +223,8 @@ def app_server(
             "true",
             "--global.developmentMode",
             "false",
+            "--global.e2eTest",
+            "true",
             "--server.port",
             str(app_port),
             "--browser.gatherUsageStats",
