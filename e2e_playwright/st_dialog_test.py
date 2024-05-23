@@ -174,7 +174,13 @@ def test_actions_for_dialog_headings(app: Page):
     tooltip_element = action_elements.get_by_test_id("stTooltipIcon")
     expect(tooltip_element).to_have_count(1)
     tooltip_element.hover()
-    expect(app.get_by_text("Some tooltip!")).to_be_visible()
+    leading_indent_regular_text_tooltip = """
+This is a regular text block!
+Test1
+Test2
+
+"""
+    expect(app.get_by_text(leading_indent_regular_text_tooltip)).to_be_visible()
 
     # check that the link-icon does not exist
     expect(tooltip_element.locator("a")).not_to_be_attached()

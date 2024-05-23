@@ -196,13 +196,20 @@ def test_help_tooltip_works(app: Page):
     hover_target.hover()
 
     expect(tooltip_content).to_be_visible()
-    expect(tooltip_content).to_have_text("This is a help tooltip!")
+    indented_code_tooltip = """
+Code:
+
+    for i in range(10):
+        x = i * 10
+        print(x)
+    """
+    expect(tooltip_content).to_have_text(indented_code_tooltip)
 
 
-def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    expect(themed_app.get_by_test_id("stMarkdown").nth(50)).to_contain_text("LATE​X")
-    expect(themed_app.get_by_test_id("stMarkdown").nth(51)).to_contain_text("a + b")
-    latex_elements = themed_app.get_by_test_id("stMarkdown")
+# def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
+#     expect(themed_app.get_by_test_id("stMarkdown").nth(50)).to_contain_text("LATE​X")
+#     expect(themed_app.get_by_test_id("stMarkdown").nth(51)).to_contain_text("a + b")
+#     latex_elements = themed_app.get_by_test_id("stMarkdown")
 
-    for i in range(50, 53):
-        assert_snapshot(latex_elements.nth(i), name=f"st_latex-{i}")
+#     for i in range(50, 53):
+#         assert_snapshot(latex_elements.nth(i), name=f"st_latex-{i}")

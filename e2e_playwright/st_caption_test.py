@@ -47,8 +47,17 @@ def test_help_tooltip_works(app: Page):
 
     hover_target.hover()
 
+    leading_indent_code_tooltip = """
+Code:
+
+    This
+    is
+    a
+    code
+    block!"""
+
     expect(tooltip_content).to_be_visible()
-    expect(tooltip_content).to_have_text("This is some help tooltip!")
+    expect(tooltip_content).to_have_text(leading_indent_code_tooltip)
 
 
 def test_match_snapshot_for_caption_with_html_and_unsafe_html_true(

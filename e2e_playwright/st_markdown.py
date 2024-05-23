@@ -17,9 +17,14 @@ import streamlit as st
 # keep the sidebar collapsed by default to prevent render flakiness
 st.set_page_config(initial_sidebar_state="collapsed")
 
-st.markdown(
-    "This **markdown** is awesome! :sunglasses:", help="This is a help tooltip!"
-)
+indented_code_tooltip = """
+Code:
+
+    for i in range(10):
+        x = i * 10
+        print(x)
+    """
+st.markdown("This **markdown** is awesome! :sunglasses:", help=indented_code_tooltip)
 
 st.markdown("This <b>HTML tag</b> is escaped!")
 

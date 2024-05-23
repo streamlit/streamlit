@@ -38,8 +38,9 @@ with st.popover(
     col3.text_input("Column 3")
     st.selectbox("Selectbox", ["a", "b", "c"])
 
+no_indent_tooltip = "thisisatooltipwithnoindents. It has some spaces but no idents."
 
-with st.popover("popover 4 (with dataframe)", help="help text"):
+with st.popover("popover 4 (with dataframe)", help=no_indent_tooltip):
     st.markdown("Popover with dataframe")
     st.dataframe(df, use_container_width=False)
     st.image(np.repeat(0, 100).reshape(10, 10))

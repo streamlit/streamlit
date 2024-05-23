@@ -19,6 +19,17 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 
+default_tooltip = """
+This is a really long tooltip.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
+justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
+tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
+In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
+sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
+malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
+""".strip()
+
 
 def _get_title_elements(app: Page) -> Locator:
     """Title elements are rendered as h1 elements"""
@@ -45,7 +56,7 @@ def _expect_tooltip(app: Page, el_with_help_tooltip: Locator):
     hover_target.hover()
 
     expect(tooltip_content).to_be_visible()
-    expect(tooltip_content).to_have_text("Some help tooltip")
+    expect(tooltip_content).to_have_text(default_tooltip)
 
     # reset the hovering in case _expect_tooltip is called multiple times in the same test
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
