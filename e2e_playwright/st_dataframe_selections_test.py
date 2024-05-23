@@ -121,6 +121,43 @@ def test_single_row_select(app: Page):
     )
 
 
+def test_single_row_select_with_sorted_column(app: Page):
+    canvas = _get_single_row_select_df(app)
+    # select first row
+    _click_on_row_selector(canvas, 1)
+    wait_for_app_run(app)
+    # The dataframe is not sorted yet, so the first row is the first row:
+    expected = (
+        "Dataframe single-row selection: {'selection': {'rows': [0], 'columns': []}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+    # Click on the column header to sort the column.
+    # this is expected to clear the previous row selection:
+    _click_on_column_selector(canvas, 0)
+    wait_for_app_run(app)
+
+    # The dataframe selection should be cleared
+    expected = (
+        "Dataframe single-row selection: {'selection': {'rows': [], 'columns': []}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+    # select first row again:
+    _click_on_row_selector(canvas, 1)
+    wait_for_app_run(app)
+
+    # The first row got selected, but the real numerical row index
+    # should be different since the first column is sorted
+    expected = (
+        "Dataframe single-row selection: {'selection': {'rows': [4], 'columns': []}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
 def test_single_column_select(app: Page):
     canvas = _get_single_column_select_df(app)
 
