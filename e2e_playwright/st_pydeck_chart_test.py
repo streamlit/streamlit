@@ -38,3 +38,8 @@ def test_pydeck_chart_has_consistent_visuals(
     assert_snapshot(
         pydeck_charts.nth(2).locator("canvas").nth(1), name="st_pydeck_chart-continents"
     )
+
+    wait_for_app_run(themed_app, 15000)
+    assert_snapshot(
+        pydeck_charts.nth(3).locator("canvas").nth(1), name="st_pydeck_chart-geo_layers"
+    )
