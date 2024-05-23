@@ -29,7 +29,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.102.5
+hypothesis==6.102.6
 identify==2.5.36
 idna==3.7
 importlib_metadata==7.1.0
@@ -141,6 +141,6 @@ urllib3==2.2.1
 uv==0.2.2
 vega-datasets==0.9.0
 virtualenv==20.26.2
-watchdog==4.0.0
+watchdog==4.0.1
 yarl==1.9.4
 zipp==3.18.2
