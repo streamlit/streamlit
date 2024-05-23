@@ -29,6 +29,9 @@ COLUMN_LARGE_WIDTH_PX: Final = 400
 # This value is defined in useTableSizer of the DataFrame component:
 ROW_HEIGHT_PX: Final = 35
 
+# The column headers are in row 0
+HEADER_ROW_INDEX: Final = 0
+
 
 def calc_middle_cell_position(
     row_pos: int,
@@ -178,7 +181,7 @@ def sort_column(
     """
     click_on_cell(
         dataframe_element,
-        0,
+        HEADER_ROW_INDEX,
         col_pos,
         column_width,
         has_row_marker_col=has_row_marker_col,
@@ -214,7 +217,7 @@ def select_column(
     """
     click_on_cell(
         dataframe_element,
-        0,
+        HEADER_ROW_INDEX,
         col_pos,
         column_width,
         has_row_marker_col=has_row_marker_col,
