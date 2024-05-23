@@ -40,6 +40,9 @@ jobs:
           echo "Changed files count: ${CHANGED_FILES_COUNT}"
           echo "$CHANGED_FILES"
           if [[ "${CHANGED_FILES_COUNT}" -gt 5 || "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
+            # We limit the workflow to a max of 5 changed files, since otherwise it would
+            # take too long and would not provide any benefit compared to the main playwright
+            # workflow.
             echo "This workflow only supports between 1-5 changed files. Otherwise its skipping running the tests.";
             echo "run_tests=false" >> $GITHUB_OUTPUT
           else
