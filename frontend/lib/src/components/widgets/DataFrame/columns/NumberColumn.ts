@@ -210,7 +210,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
-        copyData: isNullOrUndefined(cellData) ? "" : String(cellData),
+        copyData: isNullOrUndefined(cellData) ? "" : toSafeString(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
