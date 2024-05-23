@@ -20,7 +20,7 @@ from typing import Callable, TypeVar, cast, overload
 from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
 from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
 
 
