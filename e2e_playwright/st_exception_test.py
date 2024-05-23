@@ -14,6 +14,17 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction
 
-def test_snow_is_present_on_page(app: Page):
-    expect(app.get_by_test_id("snow")).to_have_count(1)
+
+def test_st_exception_displays_correctly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    expect(themed_app.get_by_test_id("stException").nth(0)).to_have_text(
+        "RuntimeError: This exception message is awesome!"
+    )
+
+    for i in range(2):
+        assert_snapshot(
+            themed_app.get_by_test_id("stException").nth(i), name=f"st_exception-{i}"
+        )

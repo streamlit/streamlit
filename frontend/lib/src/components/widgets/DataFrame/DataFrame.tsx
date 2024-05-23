@@ -321,7 +321,14 @@ function DataFrame({
         )
       }
     }),
-    [element.id, element.formId, widgetMgr, fragmentId]
+    [
+      element.id,
+      element.formId,
+      widgetMgr,
+      fragmentId,
+      getOriginalIndex,
+      getColumnName,
+    ]
   )
 
   const {

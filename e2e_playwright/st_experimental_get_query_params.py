@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+import streamlit as st
 
-
-def test_snow_is_present_on_page(app: Page):
-    expect(app.get_by_test_id("snow")).to_have_count(1)
+query_params = st.experimental_get_query_params()
+st.write(str(query_params))

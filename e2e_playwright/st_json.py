@@ -12,8 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+import streamlit as st
 
+st.subheader("Simple dict:")
+st.json({"foo": "bar"})
 
-def test_snow_is_present_on_page(app: Page):
-    expect(app.get_by_test_id("snow")).to_have_count(1)
+st.subheader("Collapsed")
+st.json({"foo": "bar"}, expanded=False)
+
+st.subheader("Keep whitespaces:")
+st.json({"Hello     World": "Foo    Bar"})
+
+st.subheader("Complex dict:")
+st.json(
+    {
+        "array": [1, 2],
+        "boolean": True,
+        "null": None,
+        "integer": 123,
+        "float": 123.45,
+        "object": {"a": "b", "c": "d"},
+        "string": "Hello World",
+    }
+)
+
+st.subheader("Simple List:")
+st.json(["a", "b"])
+
+st.subheader("Empty dict:")
+st.json({})
