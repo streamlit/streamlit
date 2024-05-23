@@ -26,20 +26,18 @@ def test_pydeck_chart_has_consistent_visuals(
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(4)
 
+    wait_for_app_run(themed_app, 20000)
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
 
-    wait_for_app_run(themed_app, 15000)
     assert_snapshot(
         pydeck_charts.nth(1).locator("canvas").nth(0),
         name="st_pydeck_chart-san_francisco",
     )
 
-    wait_for_app_run(themed_app, 15000)
     assert_snapshot(
         pydeck_charts.nth(2).locator("canvas").nth(1), name="st_pydeck_chart-continents"
     )
 
-    wait_for_app_run(themed_app, 15000)
     assert_snapshot(
         pydeck_charts.nth(3).locator("canvas").nth(2), name="st_pydeck_chart-geo_layers"
     )
