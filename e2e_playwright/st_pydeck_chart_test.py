@@ -15,18 +15,20 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.only_browser("chromium")
 def test_pydeck_chart_has_consistent_visuals(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
+    pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(4)
 
-    wait_for_app_run(themed_app, 20000)
+    wait_for_app_run(app, 10000)
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
 
     assert_snapshot(
@@ -40,4 +42,30 @@ def test_pydeck_chart_has_consistent_visuals(
 
     assert_snapshot(
         pydeck_charts.nth(3).locator("canvas").nth(2), name="st_pydeck_chart-geo_layers"
+    )
+
+
+# When using themed_app, it will navigate to a new page on each snapshot and refresh and thus unnecessary extra load time
+def test_pydeck_chart_has_consistent_visuals_dark(
+    app: Page, app_port: int, assert_snapshot: ImageCompareFunction
+):
+    app.goto(f"http://localhost:{app_port}/?embed_options=dark_theme")
+    wait_for_app_loaded(app)
+    pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
+    expect(pydeck_charts).to_have_count(4)
+
+    wait_for_app_run(app, 10000)
+    assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
+
+    assert_snapshot(
+        pydeck_charts.nth(1).locator("canvas").nth(0),
+        name="st_pydeck_chart-san_francisco",
+    )
+
+    assert_snapshot(
+        pydeck_charts.nth(2).locator("canvas").nth(1), name="st_pydeck_chart-continents"
+    )
+
+    assert_snapshot(
+        pydeck_charts.nth(3).locator("canvas").nth(1), name="st_pydeck_chart-geo_layers"
     )
