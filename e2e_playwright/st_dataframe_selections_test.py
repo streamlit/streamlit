@@ -17,35 +17,11 @@ import platform
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
-
-# determined by measuring a screenshot
-_first_column_width_px = 30
-_column_width_px = 80
-_row_height_px = 35
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from shared.dataframe_utils import calc_middle_cell_position, select_column, select_row
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 _command_key = "Meta" if platform.system() == "Darwin" else "Control"
-
-
-def _get_row_position(row_number: int):
-    """Get the x,y positions of a row for the very first column."""
-    row_middle_height_px = row_number * _row_height_px + (_row_height_px / 2)
-    row_middle_width_px = _first_column_width_px / 2
-    return row_middle_width_px, row_middle_height_px
-
-
-def _click_on_row_selector(canvas: Locator, row_number: int):
-    """Click on the middle of the row selector. row_number 0 would be the header row."""
-    row_middle_width_px, row_middle_height_px = _get_row_position(row_number)
-    canvas.click(position={"x": row_middle_width_px, "y": row_middle_height_px})
-
-
-def _click_on_column_selector(canvas: Locator, column_number: int):
-    """Click on the middle of the row selector. column_number must start at 1, because the first column has a different width."""
-    row_middle_height_px = _row_height_px / 2
-    column_middle_width_px = column_number * _column_width_px + (_column_width_px / 2)
-    canvas.click(position={"x": column_middle_width_px, "y": row_middle_height_px})
 
 
 def _expect_written_text(app: Page, expected_prefix: str, expected_selection: str):
@@ -103,7 +79,7 @@ def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
 
     # select first row
-    _click_on_row_selector(canvas, 1)
+    select_row(canvas, 1)
     wait_for_app_run(app)
 
     expected = (
@@ -112,7 +88,7 @@ def test_single_row_select(app: Page):
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
-    _click_on_row_selector(canvas, 2)
+    select_row(canvas, 2)
     wait_for_app_run(app)
     _expect_written_text(
         app,
@@ -124,7 +100,7 @@ def test_single_row_select(app: Page):
 def test_single_row_select_with_sorted_column(app: Page):
     canvas = _get_single_row_select_df(app)
     # select first row
-    _click_on_row_selector(canvas, 1)
+    select_row(canvas, 1)
     wait_for_app_run(app)
     # The dataframe is not sorted yet, so the first row is the first row:
     expected = (
@@ -135,7 +111,7 @@ def test_single_row_select_with_sorted_column(app: Page):
 
     # Click on the column header to sort the column.
     # this is expected to clear the previous row selection:
-    _click_on_column_selector(canvas, 0)
+    select_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
 
     # The dataframe selection should be cleared
@@ -146,7 +122,7 @@ def test_single_row_select_with_sorted_column(app: Page):
     expect(selection_text).to_have_count(1)
 
     # select first row again:
-    _click_on_row_selector(canvas, 1)
+    select_row(canvas, 1)
     wait_for_app_run(app)
 
     # The first row got selected, but the real numerical row index
@@ -161,7 +137,7 @@ def test_single_row_select_with_sorted_column(app: Page):
 def test_single_column_select(app: Page):
     canvas = _get_single_column_select_df(app)
 
-    _click_on_column_selector(canvas, 1)
+    select_column(canvas, 1)
     wait_for_app_run(app)
 
     _expect_written_text(
@@ -170,7 +146,7 @@ def test_single_column_select(app: Page):
         "{'selection': {'rows': [], 'columns': ['col_1']}}",
     )
 
-    _click_on_column_selector(canvas, 2)
+    select_column(canvas, 2)
     wait_for_app_run(app)
     _expect_written_text(
         app,
@@ -182,8 +158,8 @@ def test_single_column_select(app: Page):
 def test_multi_row_select(app: Page):
     canvas = _get_multi_row_select_df(app)
 
-    _click_on_row_selector(canvas, 1)
-    _click_on_row_selector(canvas, 3)
+    select_row(canvas, 1)
+    select_row(canvas, 3)
     wait_for_app_run(app)
 
     _expect_written_text(
@@ -197,7 +173,7 @@ def test_multi_row_select_all_at_once(app: Page):
     """Test that all rows are selected when clicking on the top-row checkbox."""
     canvas = _get_multi_row_select_df(app)
 
-    _click_on_row_selector(canvas, 0)
+    select_row(canvas, 0)
     wait_for_app_run(app)
 
     _expect_written_text(
@@ -215,10 +191,10 @@ def test_multi_row_by_keeping_mouse_pressed(app: Page):
     assert bounding_box is not None
     canvas_start_x_px = bounding_box.get("x", 0)
     canvas_start_y_px = bounding_box.get("y", 0)
-    x, y = _get_row_position(2)
+    x, y = calc_middle_cell_position(2, 0, has_row_marker_col=True)
     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
     app.mouse.down()
-    x, y = _get_row_position(4)
+    x, y = calc_middle_cell_position(4, 0, has_row_marker_col=True)
     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
     app.mouse.up()
 
@@ -232,10 +208,10 @@ def test_multi_row_by_keeping_mouse_pressed(app: Page):
 def test_multi_column_select(app: Page):
     canvas = _get_multi_column_select_df(app)
 
-    _click_on_column_selector(canvas, 1)
+    select_column(canvas, 1)
     app.keyboard.down(_command_key)
-    _click_on_column_selector(canvas, 3)
-    _click_on_column_selector(canvas, 4)
+    select_column(canvas, 3)
+    select_column(canvas, 4)
     app.keyboard.up(_command_key)
     wait_for_app_run(app)
 
@@ -247,13 +223,13 @@ def test_multi_column_select(app: Page):
 
 
 def _select_some_rows_and_columns(app: Page, canvas: Locator):
-    _click_on_row_selector(canvas, 1)
-    _click_on_column_selector(canvas, 1)
+    select_row(canvas, 1)
+    select_column(canvas, 1, has_row_marker_col=True)
     app.keyboard.down(_command_key)
-    _click_on_column_selector(canvas, 3)
-    _click_on_column_selector(canvas, 4)
+    select_column(canvas, 3, has_row_marker_col=True)
+    select_column(canvas, 4, has_row_marker_col=True)
     app.keyboard.up(_command_key)
-    _click_on_row_selector(canvas, 3)
+    select_row(canvas, 3)
     wait_for_app_run(app)
 
 
@@ -409,7 +385,7 @@ def test_that_index_cannot_be_selected(app: Page):
     canvas = _get_df_with_index(app)
     canvas.scroll_into_view_if_needed()
     # Try select a selectable columnÖ
-    _click_on_column_selector(canvas, 2)
+    select_column(canvas, 2)
     wait_for_app_run(app)
 
     # Check selection:
@@ -420,7 +396,7 @@ def test_that_index_cannot_be_selected(app: Page):
     )
 
     # Select index column:
-    _click_on_column_selector(canvas, 0)
+    select_column(canvas, 0)
     wait_for_app_run(app)
 
     # Nothing should be selected:
@@ -431,7 +407,7 @@ def test_that_index_cannot_be_selected(app: Page):
     )
 
     # Try to click on another column and check that in can be selected:
-    _click_on_column_selector(canvas, 1)
+    select_column(canvas, 1)
     wait_for_app_run(app)
 
     # Check selection:
