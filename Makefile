@@ -95,11 +95,6 @@ python-init-dev-only:
 python-init-test-only: lib/test-requirements.txt
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
 
-.PHONY: python-init-test-min-deps
-# Install Streamlit and test requirements, with minimum dependency versions
-python-init-test-min-deps:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true USE_CONSTRAINTS_FILE=true CONSTRAINTS_URL="lib/min-constraints-gen.txt" make python-init
-
 .PHONY: python-init
 python-init:
 	pip_args=("--editable" "lib[snowflake]");\
