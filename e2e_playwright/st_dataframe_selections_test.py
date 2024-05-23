@@ -228,10 +228,11 @@ def test_multi_column_select(app: Page):
 
 def _select_some_rows_and_columns(app: Page, canvas: Locator):
     select_row(canvas, 1)
-    select_column(canvas, 1, has_row_marker_col=True)
+    # Column 0 is the row marker column
+    select_column(canvas, 2, has_row_marker_col=True)
     app.keyboard.down(_command_key)
-    select_column(canvas, 3, has_row_marker_col=True)
     select_column(canvas, 4, has_row_marker_col=True)
+    select_column(canvas, 5, has_row_marker_col=True)
     app.keyboard.up(_command_key)
     select_row(canvas, 3)
     wait_for_app_run(app)
