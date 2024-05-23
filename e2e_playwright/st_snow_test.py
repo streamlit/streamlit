@@ -15,5 +15,5 @@
 from playwright.sync_api import Page, expect
 
 
-def test_balloons_are_present_on_page(app: Page):
+def test_snow_is_present_on_page(app: Page):
     expect(app.get_by_test_id("snow")).to_have_count(1)

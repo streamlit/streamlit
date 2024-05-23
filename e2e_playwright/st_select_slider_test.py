@@ -43,8 +43,8 @@ def test_select_slider_contains_correct_format_func_value_and_in_session_state(
 
     # Move mouse to 500, 0 pixels on the screen to simulate dragging left
     app.mouse.move(500, 0)
-    wait_for_app_run(app)
     app.mouse.up()
+    wait_for_app_run(app)
 
     expect(app.get_by_text("Value 1: ('orange', 'yellow')")).to_have_count(2)
 

@@ -14,8 +14,30 @@
 
 import streamlit as st
 
-data = {"foo": "bar"}
-st.json(data)
-st.json(data, expanded=False)
-data = {"Hello     World": "Foo    Bar"}
-st.json(data)
+st.subheader("Simple dict:")
+st.json({"foo": "bar"})
+
+st.subheader("Collapsed")
+st.json({"foo": "bar"}, expanded=False)
+
+st.subheader("Keep whitespaces:")
+st.json({"Hello     World": "Foo    Bar"})
+
+st.subheader("Complex dict:")
+st.json(
+    {
+        "array": [1, 2],
+        "boolean": True,
+        "null": None,
+        "integer": 123,
+        "float": 123.45,
+        "object": {"a": "b", "c": "d"},
+        "string": "Hello World",
+    }
+)
+
+st.subheader("Simple List:")
+st.json(["a", "b"])
+
+st.subheader("Empty dict:")
+st.json({})
