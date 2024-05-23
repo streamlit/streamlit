@@ -24,7 +24,7 @@ def test_pydeck_chart_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(3)
+    expect(pydeck_charts).to_have_count(4)
 
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
 
@@ -41,5 +41,5 @@ def test_pydeck_chart_has_consistent_visuals(
 
     wait_for_app_run(themed_app, 15000)
     assert_snapshot(
-        pydeck_charts.nth(3).locator("canvas").nth(1), name="st_pydeck_chart-geo_layers"
+        pydeck_charts.nth(3).locator("canvas").nth(2), name="st_pydeck_chart-geo_layers"
     )
