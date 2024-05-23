@@ -24,6 +24,7 @@ from streamlit.elements.lib import utils
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.errors import StreamlitAPIException
@@ -188,3 +189,43 @@ class CheckCacheReplayTest(ElementPoliciesTest):
     def test_cache_replay_rules_fails(self, patched_st_exception):
         check_cache_replay_rules()
         patched_st_exception.assert_called()
+
+
+class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
+    def setUp(self):
+        ctx = MagicMock()
+        ctx.current_fragment_id = "my_fragment_id"
+        ctx.current_fragment_delta_path = [0, 1, 2]
+        self.ctx = ctx
+
+    @patch("streamlit.elements.policies.get_script_run_ctx")
+    def test_when_element_delta_path_length_is_smaller_than_parent_then_raise(
+        self, patched_get_script_run_ctx: MagicMock
+    ):
+        patched_get_script_run_ctx.return_value = self.ctx
+        dg = MagicMock()
+        dg._active_dg._cursor = MagicMock()
+        dg._active_dg._cursor.delta_path = [0, 1]
+        with self.assertRaises(StreamlitAPIException):
+            check_fragment_path_policy(dg)
+
+    @patch("streamlit.elements.policies.get_script_run_ctx")
+    def test_when_element_delta_path_is_not_in_parent_delta_path_then_raise(
+        self, patched_get_script_run_ctx: MagicMock
+    ):
+        patched_get_script_run_ctx.return_value = self.ctx
+        dg = MagicMock()
+        dg._active_dg._cursor = MagicMock()
+        dg._active_dg._cursor.delta_path = [0, 2, 0]
+        with self.assertRaises(StreamlitAPIException):
+            check_fragment_path_policy(dg)
+
+    @patch("streamlit.elements.policies.get_script_run_ctx")
+    def test_when_element_delta_path_is_in_parent_delta_path_then_dont_raise(
+        self, patched_get_script_run_ctx: MagicMock
+    ):
+        patched_get_script_run_ctx.return_value = self.ctx
+        dg = MagicMock()
+        dg._active_dg._cursor = MagicMock()
+        dg._active_dg._cursor.delta_path = [0, 1, 2, 0]
+        check_fragment_path_policy(dg)

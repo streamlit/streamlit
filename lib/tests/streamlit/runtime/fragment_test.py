@@ -18,10 +18,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class MemoryFragmentStorageTest(unittest.TestCase):
@@ -294,3 +297,34 @@ class FragmentTest(unittest.TestCase):
             patched_run_with_active_hash.reset_mock()
             saved_fragment()
             patched_run_with_active_hash.assert_called_with("some_hash")
+
+class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+    def test_write_widget_inside_container_succeeds(self):
+        @st.experimental_fragment
+        def _some_method():
+            inside_container = st.container()
+
+            st.write("Hello")
+            # this is forbidden
+            inside_container.button("Click me")
+
+        _some_method()
+
+    def test_write_widget_outside_container_raises_exception_for_widgets(self):
+        for element, args in [(st.button, "Click me"), (st.slider, "Slide me")]:
+            with self.subTest(msg=f"test_{str(element)}", p1=element, p2=args):
+                outside_container = st.container()
+
+                @st.experimental_fragment
+                def _some_method():
+                    st.write("Hello")
+                    # this is forbidden
+                    with outside_container:
+                        element(args)
+
+                with self.assertRaises(StreamlitAPIException) as e:
+                    _some_method()
+                assert (
+                    e.exception.args[0]
+                    == "Fragments cannot write to elements outside of their container."
+                )

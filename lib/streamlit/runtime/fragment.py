@@ -174,6 +174,7 @@ def _fragment(
                 )
                 with active_hash_context:
                     with st.container():
+                        ctx.current_fragment_delta_path = active_dg._cursor.delta_path
                         result = non_optional_func(*args, **kwargs)
             finally:
                 ctx.current_fragment_id = None
@@ -204,8 +205,7 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
-) -> F:
-    ...
+) -> F: ...
 
 
 # Support being able to pass parameters to this decorator (that is, being able to write
@@ -215,8 +215,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
-) -> Callable[[F], F]:
-    ...
+) -> Callable[[F], F]: ...
 
 
 @gather_metrics("experimental_fragment")
