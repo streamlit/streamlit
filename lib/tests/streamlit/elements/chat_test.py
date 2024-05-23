@@ -234,7 +234,7 @@ class ChatTest(DeltaGeneratorTestCase):
             st.chat_input("Placeholder", key="my_key")
 
         self.assertIn(
-            "Values of the widget with key",
+            "Values for the widget with key",
             str(exception_message.value),
         )
 

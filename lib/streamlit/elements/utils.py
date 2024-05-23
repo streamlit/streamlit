@@ -55,7 +55,7 @@ def check_session_state_rules(
 
     if not writes_allowed:
         raise StreamlitAPIException(
-            f'Values of the widget with key "{key}" cannot be set using `st.session_state`.'
+            f'Values for the widget with key "{key}" cannot be set using `st.session_state`.'
         )
 
     if (
