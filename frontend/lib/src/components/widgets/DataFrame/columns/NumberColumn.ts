@@ -95,7 +95,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     style: props.isIndex ? "faded" : "normal",
     allowNegative,
     fixedDecimals,
-    // Do not show a thousand separator in the overlay editor:
+    // We don't want to show any thousand separators
+    // in the cell overlay/editor:
     thousandSeparator: "",
   } as NumberCell
 
