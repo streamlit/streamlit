@@ -26,7 +26,7 @@ from e2e_playwright.shared.dataframe_utils import (
 )
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-_command_key = "Meta" if platform.system() == "Darwin" else "Control"
+_COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
 
 
 def _expect_written_text(app: Page, expected_prefix: str, expected_selection: str):
@@ -214,10 +214,10 @@ def test_multi_column_select(app: Page):
     canvas = _get_multi_column_select_df(app)
 
     select_column(canvas, 1)
-    app.keyboard.down(_command_key)
+    app.keyboard.down(_COMMAND_KEY)
     select_column(canvas, 3)
     select_column(canvas, 4)
-    app.keyboard.up(_command_key)
+    app.keyboard.up(_COMMAND_KEY)
     wait_for_app_run(app)
 
     _expect_written_text(
@@ -231,10 +231,10 @@ def _select_some_rows_and_columns(app: Page, canvas: Locator):
     select_row(canvas, 1)
     # Column 0 is the row marker column
     select_column(canvas, 2, has_row_marker_col=True)
-    app.keyboard.down(_command_key)
+    app.keyboard.down(_COMMAND_KEY)
     select_column(canvas, 4, has_row_marker_col=True)
     select_column(canvas, 5, has_row_marker_col=True)
-    app.keyboard.up(_command_key)
+    app.keyboard.up(_COMMAND_KEY)
     select_row(canvas, 3)
     wait_for_app_run(app)
 
