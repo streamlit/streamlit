@@ -118,8 +118,8 @@ def generate_chart(
     y_from_user: str | Sequence[str] | None = None,
     color_from_user: str | Color | list[Color] | None = None,
     size_from_user: str | float | None = None,
-    width: int = 0,
-    height: int = 0,
+    width: int | None = None,
+    height: int | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -167,8 +167,8 @@ def generate_chart(
     chart = alt.Chart(
         data=df,
         mark=chart_type.value["mark_type"],
-        width=width,
-        height=height,
+        width=width or 0,
+        height=height or 0,
     ).encode(
         x=_get_x_encoding(df, x_column, x_from_user, chart_type),
         y=_get_y_encoding(df, y_column, y_from_user),
