@@ -21,9 +21,62 @@ from e2e_playwright.conftest import (
 )
 
 
+def main_heading(app: Page):
+    return app.get_by_test_id("stHeading").nth(0)
+
+
+def page_heading(app: Page):
+    return app.get_by_test_id("stHeading").nth(1)
+
+
+def check_field(
+    app: Page, *, hide_sidebarnav=False, dynamic_pages=False, add_sidebar_elements=False
+):
+    checkboxes = app.get_by_test_id("stCheckbox")
+
+    if hide_sidebarnav:
+        checkboxes.nth(0).click(delay=50)
+
+    if dynamic_pages:
+        checkboxes.nth(1).click(delay=50)
+
+    if add_sidebar_elements:
+        checkboxes.nth(2).click(delay=50)
+
+
+expected_page_order = [
+    "page 2",
+    "Different Title",
+    "page 4",
+    "page 5",
+    "page 6",
+    "page 7",
+    "page 8",
+    "page 9",
+    "page 10",
+    "page 11",
+    "page 12",
+]
+
+
+def get_page_link(
+    app: Page, page_name: str, page_order: list[str] = expected_page_order
+):
+    return (
+        app.get_by_test_id("stSidebarNav").locator("a").nth(page_order.index(page_name))
+    )
+
+
+def expect_page_order(app: Page, page_order: list[str] = expected_page_order):
+    """Test that the page order is correct"""
+    nav = app.get_by_test_id("stSidebarNav")
+    for i, title in enumerate(page_order):
+        expect(nav.locator("a").nth(i)).to_contain_text(title)
+
+
 def test_loads_main_script_on_initial_page_load(app: Page):
     """Test that the main script is loaded on initial page load."""
-    expect(app.get_by_test_id("stHeading").nth(0)).to_contain_text("Main Page")
+    expect(main_heading(app)).to_contain_text("Main Page")
 
 
 def test_renders_sidebar_nav_correctly(
@@ -35,16 +88,16 @@ def test_renders_sidebar_nav_correctly(
 
 def test_can_switch_between_pages_by_clicking_on_sidebar_links(app: Page):
     """Test that we can switch between pages by clicking on sidebar links."""
-    app.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    get_page_link(app, "Different Title").click()
     wait_for_app_run(app)
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 3")
+    expect(page_heading(app)).to_contain_text("Page 3")
 
 
 def test_main_script_persists_across_page_changes(app: Page):
     """Test that we can switch between pages and content from main script persists."""
-    app.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    get_page_link(app, "Different Title").click()
     wait_for_app_run(app)
-    expect(app.get_by_test_id("stHeading").nth(0)).to_contain_text("Main Page")
+    expect(main_heading(app)).to_contain_text("Main Page")
 
 
 def test_main_script_widgets_persist_across_page_changes(app: Page):
@@ -54,7 +107,7 @@ def test_main_script_widgets_persist_across_page_changes(app: Page):
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
 
-    app.get_by_test_id("stSidebarNav").locator("a").nth(3).click()
+    get_page_link(app, "page 5").click()
     wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_contain_text("x is 1")
 
@@ -64,7 +117,7 @@ def test_supports_navigating_to_page_directly_via_url(page: Page, app_port: int)
     page.goto(f"http://localhost:{app_port}/page_5")
     wait_for_app_loaded(page)
 
-    expect(page.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 5")
+    expect(page_heading(page)).to_contain_text("Page 5")
 
 
 def test_supports_navigating_to_page_directly_via_url_title(page: Page, app_port: int):
@@ -72,12 +125,12 @@ def test_supports_navigating_to_page_directly_via_url_title(page: Page, app_port
     page.goto(f"http://localhost:{app_port}/Different_Title")
     wait_for_app_loaded(page)
 
-    expect(page.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 3")
+    expect(page_heading(page)).to_contain_text("Page 3")
 
 
 def test_can_switch_between_pages_and_edit_widgets(app: Page):
     """Test that we can switch between pages and page widgets do not persist."""
-    app.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    get_page_link(app, "Different Title").click()
     wait_for_app_run(app, wait_delay=1000)
 
     slider = app.locator('.stSlider [role="slider"]').nth(1)
@@ -86,10 +139,10 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_contain_text("x is 1")
 
-    app.get_by_test_id("stSidebarNav").locator("a").nth(0).click()
+    get_page_link(app, "page 2").click()
     wait_for_app_run(app, wait_delay=1000)
 
-    app.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    get_page_link(app, "Different Title").click()
     wait_for_app_run(app, wait_delay=1000)
 
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_contain_text("x is 0")
@@ -97,30 +150,16 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
 
 def test_titles_are_set_correctly(app: Page):
     """Test that page titles work as expected"""
-    nav = app.get_by_test_id("stSidebarNav")
-    expect(nav.locator("a").nth(0)).to_contain_text("page 2")
-    expect(nav.locator("a").nth(1)).to_contain_text("Different Title")
-    expect(nav.locator("a").nth(2)).to_contain_text("page 4")
-    expect(nav.locator("a").nth(3)).to_contain_text("page 5")
-    expect(nav.locator("a").nth(4)).to_contain_text("page 6")
-    expect(nav.locator("a").nth(5)).to_contain_text("page 7")
-    expect(nav.locator("a").nth(6)).to_contain_text("page 8")
-    expect(nav.locator("a").nth(7)).to_contain_text("page 9")
-    expect(nav.locator("a").nth(8)).to_contain_text("page 10")
-    expect(nav.locator("a").nth(9)).to_contain_text("page 11")
-    expect(nav.locator("a").nth(10)).to_contain_text("page 12")
+    expect_page_order(app)
 
 
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that dynamic pages are defined"""
-    themed_app.get_by_test_id("stCheckbox").nth(1).click(delay=50)
+    check_field(themed_app, dynamic_pages=True)
     wait_for_app_run(themed_app)
 
     nav = themed_app.get_by_test_id("stSidebarNav")
-    expect(nav.locator("a").nth(0)).to_contain_text("page 2")
-    expect(nav.locator("a").nth(1)).to_contain_text("Different Title")
-    expect(nav.locator("a").nth(2)).to_contain_text("page 5")
-    expect(nav.locator("a").nth(3)).to_contain_text("page 9")
+    expect_page_order(themed_app, ["page 2", "Different Title", "page 5", "page 9"])
 
     assert_snapshot(nav, name="dynamic-pages")
 
@@ -138,7 +177,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
 ):
     """Test that we handle expand/collapse of MPA nav correctly."""
 
-    themed_app.get_by_test_id("stCheckbox").nth(2).click(delay=50)
+    check_field(themed_app, add_sidebar_elements=True)
     wait_for_app_run(themed_app)
 
     view_button = themed_app.get_by_test_id("stSidebarNavViewButton")
@@ -172,19 +211,19 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
 def test_switch_page_by_path(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with a path."""
 
-    app.get_by_test_id("stButton").nth(0).locator("button").first.click()
+    app.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 5")
+    expect(page_heading(app)).to_contain_text("Page 5")
 
 
 def test_switch_page_by_st_page(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with st.Page."""
 
-    app.get_by_test_id("stButton").nth(1).locator("button").first.click()
+    app.get_by_test_id("baseButton-secondary").filter(has_text="page 9").click()
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 9")
+    expect(page_heading(app)).to_contain_text("Page 9")
 
 
 def test_switch_page_removes_query_params(page: Page, app_port: int):
@@ -195,7 +234,7 @@ def test_switch_page_removes_query_params(page: Page, app_port: int):
     wait_for_app_loaded(page)
 
     # Trigger st.switch_page
-    page.get_by_test_id("stButton").nth(0).locator("button").first.click()
+    page.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
     wait_for_app_loaded(page)
     # Check that query params don't persist
     expect(page).to_have_url(f"http://localhost:{app_port}/page_5")
@@ -207,7 +246,7 @@ def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
     page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
     wait_for_app_loaded(page)
 
-    page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    get_page_link(page, "page 4").click()
     wait_for_app_loaded(page)
     expect(page).to_have_url(f"http://localhost:{app_port}/page_4")
 
@@ -220,7 +259,7 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     )
     wait_for_app_loaded(page)
 
-    page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    get_page_link(page, "page 4").click()
     wait_for_app_loaded(page)
 
     expect(page).to_have_url(
@@ -232,7 +271,7 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that logos display properly in sidebar and main sections"""
 
     # Go to logo page & wait short moment for logo to appear
-    app.get_by_test_id("stSidebarNav").locator("a").nth(8).click()
+    get_page_link(app, "page 8").click()
     wait_for_app_loaded(app)
 
     # Sidebar logo
@@ -256,29 +295,29 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
 def test_page_link_with_path(app: Page):
     """Test st.page_link works with a path"""
 
-    app.get_by_test_id("stPageLink-NavLink").nth(0).click()
+    app.get_by_test_id("stPageLink-NavLink").filter(has_text="page 5 page link").click()
     wait_for_app_loaded(app)
 
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 5")
+    expect(page_heading(app)).to_contain_text("Page 5")
 
 
 def test_page_link_with_st_file(app: Page):
     """Test st.page_link works with a st.Page"""
 
-    app.get_by_test_id("stPageLink-NavLink").nth(1).click()
+    app.get_by_test_id("stPageLink-NavLink").filter(has_text="page 9 page link").click()
     wait_for_app_loaded(app)
 
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 9")
+    expect(page_heading(app)).to_contain_text("Page 9")
 
 
 def test_hidden_navigation(app: Page):
     """Test position=hidden hides the navigation"""
 
     expect(app.get_by_test_id("stSidebarNav")).to_be_visible()
-    app.get_by_test_id("stCheckbox").nth(2).click(delay=50)
+    check_field(app, add_sidebar_elements=True)
     wait_for_app_run(app)
 
-    app.get_by_test_id("stCheckbox").nth(0).click(delay=50)
+    check_field(app, hide_sidebarnav=True)
     wait_for_app_run(app)
 
     nav_exists = app.get_by_test_id("stSidebarNav")
@@ -288,10 +327,10 @@ def test_hidden_navigation(app: Page):
 def test_set_default_navigation(app: Page, app_port: int):
     """Test the default page set will be shown on initial load"""
 
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 2")
+    expect(page_heading(app)).to_contain_text("Page 2")
     wait_for_app_run(app)
 
     app.goto(f"http://localhost:{app_port}/?default=True")
     wait_for_app_loaded(app)
 
-    expect(app.get_by_test_id("stHeading").nth(1)).to_contain_text("Page 6")
+    expect(page_heading(app)).to_contain_text("Page 6")

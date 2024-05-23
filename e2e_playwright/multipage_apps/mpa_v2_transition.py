@@ -14,11 +14,16 @@
 
 import streamlit as st
 
-st.subheader("Page 2")
+st.header("Main Page")
 
-page_6 = st.button("page_6")
-if page_6:
-    st.switch_page("page_6.py")
+pg = st.navigation(
+    [
+        st.Page("pages/02_page2.py"),
+        st.Page("pages/03_page3.py", default=True),
+        st.Page("pages/09_logo_page.py"),
+    ]
+)
 
-if st.button("Throw exception"):
-    raise Exception("This is a test exception")
+pg.run()
+
+st.write("End of Main Page")
