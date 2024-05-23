@@ -38,6 +38,7 @@ from typing_extensions import TypeAlias
 from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
+from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -69,6 +70,7 @@ if TYPE_CHECKING:
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
     Arrow,
+    ArrowVegaLiteChart,
     Button,
     CameraInput,
     ChatInput,
@@ -80,13 +82,13 @@ WidgetProto: TypeAlias = Union[
     FileUploader,
     MultiSelect,
     NumberInput,
+    PlotlyChart,
     Radio,
     Selectbox,
     Slider,
     TextArea,
     TextInput,
     TimeInput,
-    PlotlyChart,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
@@ -215,7 +217,7 @@ def user_key_from_widget_id(widget_id: str) -> str | None:
     "None" as a key, but we can't avoid this kind of problem while storing the
     string representation of the no-user-key sentinel as part of the widget id.
     """
-    user_key = widget_id.split("-", maxsplit=2)[-1]
+    user_key: str | None = widget_id.split("-", maxsplit=2)[-1]
     user_key = None if user_key == "None" else user_key
     return user_key
 

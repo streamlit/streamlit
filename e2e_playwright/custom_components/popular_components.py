@@ -31,7 +31,6 @@ Following actions/components are tested:
 - streamlit-chat
 - streamlit-echarts
 - streamlit-folium
-- streamlit-lottie
 - streamlit-option-menu
 - streamlit-url-fragment
 """
@@ -144,15 +143,15 @@ def use_folium():
     st.write(st_data)
 
 
-def use_lottie():
-    from streamlit_lottie import st_lottie
-
-    with st.echo():
-        st_lottie("https://assets5.lottiefiles.com/packages/lf20_V9t630.json")
-
-
 def use_option_menu():
     from streamlit_option_menu import option_menu
+
+    key = "my_option_menu"
+
+    # TODO: uncomment the on_change callback as soon as streamlit-option-menu is updated and uses the new on_change callback
+    # def on_change():
+    #     selection = st.session_state[key]
+    #     st.write(f"Selection changed to {selection}")
 
     with st.sidebar:
         selected = option_menu(
@@ -161,6 +160,8 @@ def use_option_menu():
             icons=["house", "gear"],
             menu_icon="cast",
             default_index=1,
+            key=key,
+            # on_change=on_change,
         )
         st.write(selected)
 
@@ -184,7 +185,6 @@ options: Dict[str, Callable] = {
     "echarts": use_echarts,
     "extraStreamlitComponents": use_extra_streamlit_components,
     "folium": use_folium,
-    "lottie": use_lottie,
     "optionMenu": use_option_menu,
     "urlFragment": use_url_fragment,
 }

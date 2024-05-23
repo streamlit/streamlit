@@ -179,3 +179,24 @@ with st.container():
         st.text_input("This is a label", key="2")
 
 "---"
+
+st.latex(r"\LaTeX")
+
+try:
+    import sympy
+
+    a, b = sympy.symbols("a b")
+    out = a + b
+except:
+    out = "a + b"
+
+st.latex(out)
+
+st.latex(
+    r"""
+    a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+    \sum_{k=0}^{n-1} ar^k =
+    a \left(\frac{1-r^{n}}{1-r}\right)
+    """,
+    help="This is example tooltip displayed on latex.",
+)

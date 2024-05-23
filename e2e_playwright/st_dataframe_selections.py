@@ -32,6 +32,7 @@ df = pd.DataFrame(
 # set fixed column with so our pixel-clicks in the test are stable
 column_with_fixed_width = st.column_config.Column(width="small")
 column_config = {
+    "_index": column_with_fixed_width,
     "col_0": column_with_fixed_width,
     "col_1": column_with_fixed_width,
     "col_2": column_with_fixed_width,
@@ -155,3 +156,17 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+st.header("Dataframe with Index:")
+
+
+selection = st.dataframe(
+    df,
+    hide_index=False,
+    on_select="rerun",
+    selection_mode=["multi-column"],
+    key="with_index",
+    column_config=column_config,
+    column_order=["col_1", "col_3"],
+)
+st.write("No selection on index column:", str(selection))

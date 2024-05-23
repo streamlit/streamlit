@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+import pytest
+from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
+
+from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -265,11 +266,112 @@ def test_data_editor_keeps_state_after_unmounting(
     )
 
 
+def _test_csv_download(
+    page: Page,
+    locator: FrameLocator | Locator,
+    click_enter_on_file_picker: bool = False,
+):
+    dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
+    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+
+    download_csv_toolbar_button = dataframe_toolbar.get_by_test_id(
+        "stElementToolbarButton"
+    ).first
+
+    # Activate toolbar:
+    dataframe_element.hover()
+    # Check that it is visible
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    with page.expect_download(timeout=10000) as download_info:
+        download_csv_toolbar_button.click()
+
+        # playwright does not support all fileaccess APIs yet (see this issue: https://github.com/microsoft/playwright/issues/8850)
+        # this means we don't know if the system dialog opened to pick a location (expect_file_chooser does not work). So as a workaround, we wait for now and then press enter.
+        if click_enter_on_file_picker:
+            page.wait_for_timeout(1000)
+            page.keyboard.press("Enter")
+
+    download = download_info.value
+    download_path = download.path()
+    with open(download_path, "r", encoding="UTF-8") as f:
+        content = f.read()
+        # the app uses a fixed seed, so the data is always the same. This is the reason why we can check it here.
+        some_row = "1,-0.977277879876411,0.9500884175255894,-0.1513572082976979,-0.10321885179355784,0.41059850193837233"
+        # we usually try to avoid assert in playwright tests, but since we don't have to wait for any UI interaction or DOM state, it's ok here
+        assert some_row in content
+
+
+def test_csv_download_button(
+    app: Page, browser_name: str, browser_type_launch_args: dict
+):
+    """Test that the csv download button works.
+
+    Note that the library we are using calls the file picker API to download the file. This is not supported in headless mode. Hence, the test
+    triggers different code paths in the app depending on the browser and the launch arguments.
+    """
+
+    click_enter_on_file_picker = False
+
+    # right now the filechooser will only be opened on Chrome. Maybe this will change in the future and the
+    # check has to be updated; or maybe playwright will support the file-access APIs better.
+    # In headless mode, the file-access API our csv-download button uses under-the-hood does not work. So we monkey-patch it to throw an error and trigger our alternative download logic.
+    if browser_name == "chromium":
+        if browser_type_launch_args.get("headless", False):
+            click_enter_on_file_picker = True
+        else:
+            app.evaluate(
+                "() => window.showSaveFilePicker = () => {throw new Error('Monkey-patched showOpenFilePicker')}",
+            )
+    _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
+
+
+def test_csv_download_button_in_iframe(iframed_app: IframedPage):
+    """Test that the csv download button works in an iframe.
+
+    Based on the test behavior and the fact that we don't have to patch the 'window.showSaveFilePicker' as in the test above,
+    it seems that the fallback download method is used.
+    """
+
+    page: Page = iframed_app.page
+    frame_locator: FrameLocator = iframed_app.open_app()
+
+    _test_csv_download(page, frame_locator)
+
+
+def test_csv_download_button_in_iframe_with_new_tab_host_config(
+    iframed_app: IframedPage,
+):
+    """Test that the csv download button works in an iframe and the host-config enforced download in new tab.
+
+    Based on the test behavior and the fact that we don't have to patch the 'window.showSaveFilePicker' as in the test above,
+    it seems that the fallback download method is used.
+    If this ever changes, the host-config[enforceDownloadInNewTab] might not take any effect as it is only used in the fallback mechanism.
+    """
+    page: Page = iframed_app.page
+
+    def fulfill_host_config_request(route: Route):
+        response = route.fetch()
+        result = response.json()
+        result["enforceDownloadInNewTab"] = True
+        route.fulfill(json=result)
+
+    page.route("**/_stcore/host-config", fulfill_host_config_request)
+
+    # ensure that the route interception works and we get the correct enforceDownloadInNewTab config
+    with page.expect_event(
+        "response",
+        lambda response: response.url.endswith("_stcore/host-config")
+        and response.json()["enforceDownloadInNewTab"] == True,
+        timeout=10000,
+    ):
+        frame_locator: FrameLocator = iframed_app.open_app()
+        _test_csv_download(page, frame_locator)
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
 # - Selecting a cell
 # - Opening a cell
 # - Applying a cell edit
 # - Copy data to clipboard
 # - Paste in data
-# - Download data via toolbar: I wasn't able to find out how to detect the
-#   showSaveFilePicker the filechooser doesn't work.

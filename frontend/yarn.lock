@@ -9568,10 +9568,10 @@ ieee754@^1.1.12, ieee754@^1.1.13, ieee754@^1.2.1:
   resolved "https://registry.yarnpkg.com/ieee754/-/ieee754-1.2.1.tgz#8eb7a10a63fff25d15a57b001586d177d1b0d352"
   integrity sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==
 
-iframe-resizer@^4.3.3:
-  version "4.3.3"
-  resolved "https://registry.yarnpkg.com/iframe-resizer/-/iframe-resizer-4.3.3.tgz#0f0d7ff4bb2bc604076b64344028428b285c58a6"
-  integrity sha512-emI63nkTCaQrAoHMLpl+1gDGL4VjexameFoUKoE7bSudf2//n0KdwMyKXtvScqzps9KR68TrVLjFNw+Qo6rLaw==
+iframe-resizer@4.3.11:
+  version "4.3.11"
+  resolved "https://registry.yarnpkg.com/iframe-resizer/-/iframe-resizer-4.3.11.tgz#6d13c23b19c528f3a43e301b4a0ea847cd034d90"
+  integrity sha512-5QtnsmfH11GDsuC7Gxd/eNzojudX3346Gb0E+Ku8ln8AtfSq+cWCZtnhCrthrtE7f1CI2/kwHkZ9G4sFYzHP7A==
 
 ignore@^5.2.0:
   version "5.2.0"
@@ -12142,10 +12142,10 @@ nanoid@^3.3.4:
   resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.4.tgz#730b67e3cd09e2deacf03c027c81c9d9dbc5e8ab"
   integrity sha512-MqBkQh/OHTS2egovRtLk45wEyNXwF+cokD+1YPf9u5VfJiRdAiRwB2froX5Co9Rh20xs4siNPm8naNotSD6RBw==
 
-native-file-system-adapter@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/native-file-system-adapter/-/native-file-system-adapter-3.0.0.tgz#602317f30fdc2495efe598055a0cda75c1c6e051"
-  integrity sha512-IXwQiLiS7UlrlUetr9rHp+6uAAHT3291w2FGse5rdrQ7YXKtZHaqC4+tEXHMXVcevwsJNB3c7q9KO1Iu3IxgLw==
+native-file-system-adapter@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/native-file-system-adapter/-/native-file-system-adapter-3.0.1.tgz#d8881903a94e17eac368c4c0e8805f98a4e2ddc1"
+  integrity sha512-ocuhsYk2SY0906LPc3QIMW+rCV3MdhqGiy7wV5Bf0e8/5TsMjDdyIwhNiVPiKxzTJLDrLT6h8BoV9ERfJscKhw==
   optionalDependencies:
     fetch-blob "^3.2.0"
 

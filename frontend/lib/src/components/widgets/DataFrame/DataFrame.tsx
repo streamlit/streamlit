@@ -45,6 +45,7 @@ import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import EditingState, { getColumnName } from "./EditingState"
 import {
@@ -92,7 +93,7 @@ const WEBKIT_SCROLLBAR_SIZE = 6
 // This needs to be the same structure that is also defined
 // in the Python code.
 export interface DataframeState {
-  select: {
+  selection: {
     rows: number[]
     // We use column names instead of indices to make
     // it easier to use and unify with how data editor edits
@@ -144,6 +145,10 @@ function DataFrame({
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
   const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
+
+  const {
+    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
+  } = React.useContext(LibContext)
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
@@ -278,19 +283,19 @@ function DataFrame({
       // state and the selection state.
 
       const selectionState: DataframeState = {
-        select: {
+        selection: {
           rows: [] as number[],
           columns: [] as string[],
         },
       }
 
-      selectionState.select.rows = newSelection.rows.toArray().map(row => {
+      selectionState.selection.rows = newSelection.rows.toArray().map(row => {
         return getOriginalIndex(row)
       })
-      selectionState.select.columns = newSelection.columns
+      selectionState.selection.columns = newSelection.columns
         .toArray()
         .map(columnIdx => {
-          return getColumnName(originalColumns[columnIdx])
+          return getColumnName(columns[columnIdx])
         })
       const newWidgetState = JSON.stringify(selectionState)
       const currentWidgetState = widgetMgr.getStringValue({
@@ -316,7 +321,14 @@ function DataFrame({
         )
       }
     }),
-    [element.id, element.formId, widgetMgr, fragmentId]
+    [
+      element.id,
+      element.formId,
+      widgetMgr,
+      fragmentId,
+      getOriginalIndex,
+      getColumnName,
+    ]
   )
 
   const {
@@ -330,7 +342,13 @@ function DataFrame({
     isCellSelected,
     clearSelection,
     processSelectionChange,
-  } = useSelectionHandler(element, isEmptyTable, disabled, syncSelectionState)
+  } = useSelectionHandler(
+    element,
+    isEmptyTable,
+    disabled,
+    columns,
+    syncSelectionState
+  )
 
   React.useEffect(() => {
     // Clear cell selections if fullscreen mode changes
@@ -385,11 +403,11 @@ function DataFrame({
         let rowSelection = CompactSelection.empty()
         let columnSelection = CompactSelection.empty()
 
-        selectionState.select?.rows?.forEach(row => {
+        selectionState.selection?.rows?.forEach(row => {
           rowSelection = rowSelection.add(row)
         })
 
-        selectionState.select?.columns?.forEach(column => {
+        selectionState.selection?.columns?.forEach(column => {
           columnSelection = columnSelection.add(columnNames.indexOf(column))
         })
 
@@ -469,7 +487,12 @@ function DataFrame({
     ]
   )
 
-  const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
+  const { exportToCsv } = useDataExporter(
+    getCellContent,
+    columns,
+    numRows,
+    enforceDownloadInNewTab
+  )
 
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor(
@@ -552,6 +575,9 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
+  // The index columns are always at the beginning of the table,
+  // so we can just count them to determine the number of columns
+  // that should be frozen.
   const freezeColumns = isEmptyTable
     ? 0
     : columns.filter((col: BaseColumn) => col.isIndex).length
@@ -804,7 +830,7 @@ function DataFrame({
             if (isEmptyTable || isLargeTable || isColumnSelectionActivated) {
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
-              return undefined
+              return
             }
 
             if (isRowSelectionActivated && isRowSelected) {

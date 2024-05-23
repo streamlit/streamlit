@@ -215,12 +215,12 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
         selection = st.dataframe(df, on_select="rerun", key="selectable_df")
 
-        self.assertEqual(selection.select.rows, [])
-        self.assertEqual(selection.select.columns, [])
+        self.assertEqual(selection.selection.rows, [])
+        self.assertEqual(selection.selection.columns, [])
 
         # Check that the selection state is added to the session state:
-        self.assertEqual(st.session_state.selectable_df.select.rows, [])
-        self.assertEqual(st.session_state.selectable_df.select.columns, [])
+        self.assertEqual(st.session_state.selectable_df.selection.rows, [])
+        self.assertEqual(st.session_state.selectable_df.selection.columns, [])
 
     def test_dataframe_with_invalid_on_select(self):
         """Test that an exception is thrown if the on_select parameter is invalid."""
@@ -259,7 +259,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that an exception is thrown if the session state is modified."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
         st.session_state.selectable_df = {
-            "select": {"rows": [1], "columns": ["col1"]},
+            "selection": {"rows": [1], "columns": ["col1"]},
         }
         with self.assertRaises(StreamlitAPIException):
             st.dataframe(df, on_select="rerun", key="selectable_df")

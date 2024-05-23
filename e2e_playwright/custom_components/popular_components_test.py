@@ -33,7 +33,7 @@ def _expect_no_exception(app: Page):
 
 def _expect_iframe_attached(app: Page):
     """Expect the CustomComponent iframe to be attached to the DOM."""
-    expect(app.locator("iframe")).to_be_attached()
+    expect(app.locator("iframe").first).to_be_attached()
 
 
 def test_components_html(app: Page):
@@ -98,18 +98,18 @@ def test_folium(app: Page):
     _expect_iframe_attached(app)
 
 
-def test_lottie(app: Page):
-    """Test that the lottie component renders"""
-    _select_component(app, "lottie")
-    _expect_no_exception(app)
-    _expect_iframe_attached(app)
-
-
 def test_option_menu(app: Page):
     """Test that the option-menu component renders"""
     _select_component(app, "optionMenu")
     _expect_no_exception(app)
     _expect_iframe_attached(app)
+
+    # TODO: uncomment the on_change callback as soon as streamlit-option-menu is updated and uses the new on_change callback
+    # frame_locator = app.frame_locator("iframe")
+    # frame_locator.locator("a", has_text="Home").click()
+    # expect(
+    #     app.get_by_test_id("stMarkdown").filter(has_text="Selection changed to Home")
+    # ).to_be_visible()
 
 
 def test_url_fragment(app: Page):
