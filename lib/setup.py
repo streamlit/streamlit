@@ -33,8 +33,8 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    "numpy>=1.20.0, <2",
-    "packaging>=16.8, <25",
+    "numpy>=1.20, <2",
+    "packaging>=20, <25",
     # Lowest version with available wheel for 3.7 + amd64 + linux
     "pandas>=1.3.0, <3",
     "pillow>=7.1.0, <11",
