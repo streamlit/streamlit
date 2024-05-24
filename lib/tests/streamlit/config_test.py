@@ -355,6 +355,7 @@ class ConfigTest(unittest.TestCase):
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.disableWidgetStateDuplicationWarning",
+                "global.e2eTest",
                 "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",

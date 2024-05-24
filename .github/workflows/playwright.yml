@@ -42,12 +42,8 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
       - name: Install playwright
         run: python -m playwright install --with-deps
-      - name: Run make protobuf
-        run: make protobuf
       - name: Run make frontend-fast
         run: make frontend-fast
       - name: Run make playwright

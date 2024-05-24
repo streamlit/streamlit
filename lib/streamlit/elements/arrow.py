@@ -85,14 +85,49 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {
 
 class DataframeSelectionState(TypedDict, total=False):
     """
-    A dictionary representing the current selection state of the dataframe.
+    The schema for the dataframe selection state.
+
+    The selection state is stored in a dictionary-like object that suports both
+    key and attribute notation. Selection states cannot be programmatically
+    changed or set through Session State.
 
     Attributes
     ----------
-    rows
-        The selected rows (numerical indices).
-    columns
-        The selected columns (column names).
+    rows : list[int]
+        The selected rows, identified by their positional index. The positional
+        indices match the original dataframe, even if the user sorts the
+        dataframe in their browser.
+    columns : list[str]
+        The selected columns, identified by their names.
+
+    Example
+    -------
+    The following example has multi-row and multi-column selections enabled.
+    Try selecting some rows. To select multiple columns, hold ``Ctrl`` while
+    selecting columns. Hold ``Shift`` to select a range of columns.
+
+    >>> import streamlit as st
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>>
+    >>> if "df" not in st.session_state:
+    >>>     st.session_state.df = pd.DataFrame(
+    ...         np.random.randn(12, 5), columns=["a", "b", "c", "d", "e"]
+    ...     )
+    >>>
+    >>> event = st.dataframe(
+    ...     st.session_state.df,
+    ...     key="data",
+    ...     on_select="rerun",
+    ...     selection_mode=["multi-row", "multi-column"],
+    ... )
+    >>>
+    >>> event.selection
+
+    .. output::
+        https://doc-dataframe-events-selection-state.streamlit.app
+        height: 600px
+
     """
 
     rows: list[int]
@@ -101,12 +136,19 @@ class DataframeSelectionState(TypedDict, total=False):
 
 class DataframeState(TypedDict, total=False):
     """
-    A dictionary representing the current state of the dataframe.
+    The schema for the dataframe event state.
+
+    The event state is stored in a dictionary-like object that suports both
+    key and attribute notation. Event states cannot be programmatically
+    changed or set through Session State.
+
+    Only selection events are supported at this time.
 
     Attributes
     ----------
     selection : DataframeSelectionState
-        The state of the `on_select` event.
+        The state of the ``on_select`` event.
+
     """
 
     selection: DataframeSelectionState
@@ -234,75 +276,128 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, \
+            pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
+            snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to display.
 
-            If 'data' is a pandas.Styler, it will be used to style its
-            underlying DataFrame. Streamlit supports custom cell
+            If ``data`` is a ``pandas.Styler``, it will be used to style its
+            underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values and colors. It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.
 
         width : int or None
-            Desired width of the dataframe expressed in pixels. If None, the width
-            will be automatically calculated based on the column content.
+            Desired width of the dataframe expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the dataframe width to fit its
+            contents up to the width of the parent container. If ``width`` is
+            greater than the width of the parent container, Streamlit sets the
+            dataframe width to match the width of the parent container.
 
         height : int or None
-            Desired height of the dataframe expressed in pixels. If None, a
-            default height is used.
+            Desired height of the dataframe expressed in pixels. If ``height``
+            is ``None`` (default), Streamlit sets the height to show at most
+            ten rows. Vertical scrolling within the dataframe element is
+            enabled when the height does not accomodate all rows.
 
         use_container_width : bool
-            If True, set the dataframe width to the width of the parent container.
-            This takes precedence over the width argument.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the dataframe's width according to ``width``. If
+            ``use_container_width`` is ``True``, Streamlit sets the width of
+            the dataframe to match the width of the parent container.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), the visibility of
-            index columns is automatically determined based on the data.
+            Whether to hide the index column(s). If ``hide_index`` is ``None``
+            (default), the visibility of index columns is automatically
+            determined based on the data.
 
         column_order : Iterable of str or None
-            Specifies the display order of columns. This also affects which columns are
-            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
-            first, followed by 'col1', and will hide all other non-index columns. If
-            None (default), the order is inherited from the original data structure.
+            The ordered list of columns to display. If ``column_order`` is
+            ``None`` (default), Streamlit displays all columns in the order
+            inherited from the underlying data structure. If ``column_order``
+            is a list, the indicated columns will display in the order they
+            appear within the list. Columns may be omitted or repeated within
+            the list.
+
+            For example, ``column_order=("col2", "col1")`` will display
+            ``"col2"`` first, followed by ``"col1"``, and will hide all other
+            non-index columns.
 
         column_config : dict or None
-            Configures how columns are displayed, e.g. their title, visibility, type, or
-            format. This needs to be a dictionary where each key is a column name and
-            the value is one of:
+            Configuration to customize how columns display. If ``column_config``
+            is ``None`` (default), columns are styled based on the underlying
+            data type of each column.
 
-            * ``None`` to hide the column.
+            Column configuration can modify column names, visibility, type,
+            width, or format, among other things. ``column_config`` must be a
+            dictionary where each key is a column name and the associated value
+            is one of the following:
 
-            * A string to set the display label of the column.
+            * ``None``: Streamlit hides the column.
 
-            * One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
-              a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+            * A string: Streamlit changes the display label of the column to
+              the given string.
+
+            * A column type within ``st.column_config``: Streamlit applies the
+              defined configuration to the column. For example, use
+              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")``
+              to change the displayed name of the column to "Dollar values"
+              and add a "$" prefix in each cell. For more info on the
+              available column types and config options, see
+              `Column configuration <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 
         key : str
-            An optional string to use as the unique key for this element when used in combination
-            with ```on_select```. If this is omitted, a key will be generated for the widget based
-            on its content. Multiple widgets of the same type may not share the same key.
+            An optional string to use for giving this element a stable
+            identity. If ``key`` is ``None`` (default), this element's identity
+            will be determined based on the values of the other parameters.
+
+            Additionally, if selections are activated and ``key`` is provided,
+            Streamlit will register the key in Session State to store the
+            selection state. The selection state is read-only.
 
         on_select : "ignore" or "rerun" or callable
-            Controls the behavior in response to selection events on the table. Can be one of:
+            How the dataframe should respond to user selection events. This
+            controls whether or not the dataframe behaves like an input widget.
+            ``on_select`` can be one of the following:
 
-            - "ignore" (default): Streamlit will not react to any selection events in the chart.
-            - "rerun": Streamlit will rerun the app when the user selects rows or columns in the table.
-              In this case, ```st.dataframe``` will return the selection data as a dictionary.
-            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
-              callback function before the rest of the app. The selection data can be retrieved through
-              session state by setting the key parameter.
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the dataframe. The dataframe will not behave like an
+              input widget.
 
-        selection_mode : "single-row", "multi-row", single-column", "multi-column", or an iterable of these
-            The selection mode of the table. Can be one of:
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              rows or columns in the dataframe. In this case, ``st.dataframe``
+              will return the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.dataframe`` will return the selection data
+              as a dictionary.
+
+        selection_mode : "single-row", "multi-row", single-column", \
+            "multi-column", or Iterable of these
+            The types of selections Streamlit should allow. This can be one of
+            the following:
 
             - "multi-row" (default): Multiple rows can be selected at a time.
             - "single-row": Only one row can be selected at a time.
             - "multi-column": Multiple columns can be selected at a time.
             - "single-column": Only one column can be selected at a time.
-            - An iterable of the above options: The table will allow selection based on the modes specified.
+            - An ``Iterable`` of the above options: The table will allow
+              selection based on the modes specified.
+
+            When column selections are enabled, column sorting is disabled.
+
+        Returns
+        -------
+        element or dict
+            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            internal placeholder for the dataframe element that can be used
+            with the ``.add_rows()`` method. Otherwise, this method returns a
+            dictionary-like object that supports both key and attribute
+            notation. The attributes are described by the ``DataframeState``
+            dictionary schema.
 
         Examples
         --------
@@ -316,7 +411,7 @@ class ArrowMixin:
 
         .. output::
            https://doc-dataframe.streamlit.app/
-           height: 410px
+           height: 500px
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -331,7 +426,7 @@ class ArrowMixin:
 
         .. output::
            https://doc-dataframe1.streamlit.app/
-           height: 410px
+           height: 500px
 
         Or you can customize the dataframe via ``column_config``, ``hide_index``, or ``column_order``:
 
