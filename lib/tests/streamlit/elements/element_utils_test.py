@@ -153,7 +153,7 @@ class ElementUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException) as e:
             check_session_state_rules(5, key="the key", writes_allowed=False)
 
-        assert "cannot be set using st.session_state" in str(e.value)
+        assert 'Values for the widget with key "the key"' in str(e.value)
 
     def test_maybe_coerce_enum(self):
         class EnumA(enum.Enum):
