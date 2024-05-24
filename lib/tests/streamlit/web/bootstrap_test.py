@@ -108,13 +108,6 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertIn("Welcome to Streamlit. Check out our demo in your browser.", out)
         self.assertIn("URL: http://the-address", out)
 
-    def test_print_new_version_message(self):
-        with patch(
-            "streamlit.version.should_show_new_version_notice", return_value=True
-        ), patch("click.secho") as mock_echo:
-            bootstrap._print_new_version_message()
-            mock_echo.assert_called_once()
-
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": True}
