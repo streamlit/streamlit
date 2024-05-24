@@ -374,6 +374,7 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
 def test_number_cell_read_only_overlay_formatting(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the number cell overlay is formatted correctly."""
     overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
     # Click on the first cell of the table
     click_on_cell(overlay_test_df, 1, 0, double_click=True, column_width="medium")
@@ -384,6 +385,7 @@ def test_number_cell_read_only_overlay_formatting(
 
 
 def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number cell can be edited."""
     cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
     # Click on the first cell of the table
     click_on_cell(cell_overlay_test_df, 1, 0, double_click=True, column_width="medium")
