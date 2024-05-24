@@ -49,7 +49,7 @@ langchain==0.1.20
 langchain-community==0.0.38
 langchain-core==0.1.52
 langchain-text-splitters==0.0.2
-langsmith==0.1.62
+langsmith==0.1.63
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -130,11 +130,11 @@ types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
 types-requests==2.32.0.20240523
-types-setuptools==70.0.0.20240523
+types-setuptools==70.0.0.20240524
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
-typing_extensions==4.11.0
+typing_extensions==4.12.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==2.2.1
