@@ -17,6 +17,7 @@ import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_prefixed_markdown
 from e2e_playwright.shared.dataframe_utils import click_on_cell, get_open_cell_overlay
 
 # This test suite covers all interactions of dataframe & data_editor
@@ -370,7 +371,7 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
         _test_csv_download(page, frame_locator)
 
 
-def test_number_cell_overlay_formatting(
+def test_number_cell_read_only_overlay_formatting(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
@@ -382,7 +383,25 @@ def test_number_cell_overlay_formatting(
     assert_snapshot(cell_overlay, name="st_dataframe-number_col_overlay")
 
 
+def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
+    # Click on the first cell of the table
+    click_on_cell(cell_overlay_test_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    assert_snapshot(cell_overlay, name="st_dataframe-number_col_editor")
+
+    # Change the value
+    cell_overlay.locator(".gdg-input").fill("9876.54")
+    # Press Enter to apply the change
+    themed_app.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(themed_app, "Edited DF:", "9876.54", exact_match=False)
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
-# - Applying a cell edit
 # - Copy data to clipboard
 # - Paste in data
