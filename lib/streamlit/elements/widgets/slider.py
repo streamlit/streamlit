@@ -23,12 +23,12 @@ from typing import TYPE_CHECKING, Any, Final, Sequence, Tuple, TypeVar, Union, c
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto

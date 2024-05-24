@@ -575,7 +575,7 @@ class ButtonMixin:
         key = to_key(key)
 
         # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
+        from streamlit.elements.policies import (
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
@@ -739,7 +739,7 @@ class ButtonMixin:
         key = to_key(key)
 
         # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
+        from streamlit.elements.policies import (
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
