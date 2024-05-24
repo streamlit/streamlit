@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-import urllib.parse
-from typing import Iterator, Mapping, NoReturn, Union
+from typing import Iterator, Mapping, NoReturn, Optional, Union
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
@@ -25,30 +24,11 @@ from streamlit.runtime.scriptrunner.script_run_context import UserInfo
 from streamlit.runtime.secrets import secrets_singleton
 
 
-def generate_login_redirect_url() -> str:
-    _OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-    if secrets_singleton.load_if_toml_exists():
-        auth_section = secrets_singleton.get("auth")
-        # TODO[kajarenc]: Add support for other OAuth providers
-        redirect_uri = auth_section["redirect_uri"]
-        client_id = auth_section["client_id"]
-        scope = ["profile", "email"]
-
-        args = {"response_type": "code", "approval_prompt": "auto"}
-        if redirect_uri is not None:
-            args["redirect_uri"] = redirect_uri
-
-        if client_id is not None:
-            args["client_id"] = client_id
-
-        if scope:
-            args["scope"] = " ".join(scope)
-
-        query_string = urllib.parse.urlencode(args)
-        url = _OAUTH_AUTHORIZE_URL
-
-        return f"{url}?{query_string}"
-    return ""
+def generate_login_redirect_url(provider: Optional[str] = None) -> str:
+    base_url = "/authliblogin"
+    if provider is not None:
+        base_url += f"?provider={provider}"
+    return base_url
 
 
 def _get_user_info() -> UserInfo:
@@ -90,12 +70,14 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
 
     """
 
-    def login(self, send_redirect_to_host: bool = False) -> None:
+    def login(
+        self, send_redirect_to_host: bool = False, provider: Optional[str] = None
+    ) -> None:
         context = _get_script_run_ctx()
         if context is not None:
 
             fwd_msg = ForwardMsg()
-            fwd_msg.auth_redirect.url = generate_login_redirect_url()
+            fwd_msg.auth_redirect.url = generate_login_redirect_url(provider=provider)
             fwd_msg.auth_redirect.action_type = "login"
             if send_redirect_to_host:
                 fwd_msg.auth_redirect.send_redirect_to_host = True

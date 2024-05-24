@@ -42,7 +42,11 @@ from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
-from streamlit.web.server.oauth_routes import LoginHandler, LogoutHandler
+from streamlit.web.server.oauth_authlib_routes import (
+    AuthlibCallbackHandler,
+    AuthlibLoginHandler,
+)
+from streamlit.web.server.oauth_routes import LogoutHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     HealthHandler,
@@ -286,7 +290,11 @@ class Server:
         routes: list[Any] = [
             (
                 make_url_path_regex(base, "login"),
-                LoginHandler,
+                AuthlibCallbackHandler,
+            ),
+            (
+                make_url_path_regex(base, "authliblogin"),
+                AuthlibLoginHandler,
             ),
             (
                 make_url_path_regex(base, "logout"),
