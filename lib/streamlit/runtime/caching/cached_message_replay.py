@@ -19,21 +19,12 @@ import hashlib
 import threading
 import types
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Iterator,
-    Protocol,
-    Union,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Any, Iterator, Union
 
 from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import runtime, util
-from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_type import CacheType
@@ -47,13 +38,6 @@ from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-_LOGGER: Final = get_logger(__name__)
-
-
-@runtime_checkable
-class Widget(Protocol):
-    id: str
 
 
 @dataclass(frozen=True)
@@ -301,14 +285,12 @@ class CachedMessageReplayContext(threading.local):
             return
         if len(self._cached_message_stack) >= 1:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
-            # Arrow dataframes have an ID but only set it when used as data editor
-            # widgets, so we have to check that the ID has been actually set to
-            # know if an element is a widget.
             if (
-                isinstance(element_proto, Widget)
+                hasattr(element_proto, "id")
                 and element_proto.id
                 and self._registered_metadata
             ):
+                # This looks like a proper registered widget
                 wid = element_proto.id
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
