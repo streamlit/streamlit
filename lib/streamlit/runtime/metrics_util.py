@@ -373,6 +373,10 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         )
 
         command_telemetry: Command | None = None
+        # This flag is needed to make sure that only
+        # the outermost command switches the ctx.command_tracking_deactivated
+        # flag back to False.
+        deactivated_command_tracking = False
 
         if ctx and tracking_activated:
             try:
@@ -389,6 +393,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
                 ctx.tracked_commands_counter.update([command_telemetry.name])
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
+                deactivated_command_tracking = True
             except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
@@ -403,7 +408,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             raise ex
         finally:
             # Activate tracking again if command executes without any exceptions
-            if ctx:
+            if ctx and deactivated_command_tracking:
                 ctx.command_tracking_deactivated = False
 
         if tracking_activated and command_telemetry:
