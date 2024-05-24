@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
-from playwright.sync_api import Locator
+from playwright.sync_api import Locator, expect
 
 # Determined by measuring a screenshot
 ROW_MARKER_COLUMN_WIDTH_PX: Final = 30
@@ -222,3 +222,25 @@ def select_column(
         column_width,
         has_row_marker_col=has_row_marker_col,
     )
+
+
+def get_open_cell_overlay(app: Locator) -> Locator:
+    """Get the currently open cell overlay / editor.
+
+    Parameters
+    ----------
+
+    app : Locator
+        The app.
+
+    Returns
+    -------
+    Locator
+        The open cell overlay.
+    """
+    # This is currently the best way to get the cell overlay
+    # We should add a test ID to the cell overlay within GDG to better
+    # target it.
+    cell_overlay = app.get_by_test_id("portal").locator(".gdg-style")
+    expect(cell_overlay).to_be_visible()
+    return cell_overlay

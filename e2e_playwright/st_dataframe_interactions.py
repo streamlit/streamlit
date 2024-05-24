@@ -40,3 +40,18 @@ if st.button("Create some elements to unmount component"):
 
 
 st.data_editor(random_df, num_rows="dynamic")
+
+st.header("Test read-only cell overlay")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "big_numbers": [1231231.41, 12012, 0, None],
+        }
+    ),
+    hide_index=True,
+    column_config={
+        "big_numbers": st.column_config.NumberColumn(
+            width="medium",  # the e2e test requires all cells to medium width
+        ),
+    },
+)

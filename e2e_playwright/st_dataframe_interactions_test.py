@@ -17,6 +17,7 @@ import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.dataframe_utils import click_on_cell, get_open_cell_overlay
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -369,9 +370,19 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
         _test_csv_download(page, frame_locator)
 
 
+def test_number_cell_overlay_formatting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
+    # Click on the first cell of the table
+    click_on_cell(overlay_test_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    assert_snapshot(cell_overlay, name="st_dataframe-number_col_overlay")
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
-# - Selecting a cell
-# - Opening a cell
 # - Applying a cell edit
 # - Copy data to clipboard
 # - Paste in data
