@@ -31,7 +31,7 @@ export default function CodeBlock({
   return (
     <StyledCodeBlock
       className="stCodeBlock"
-      data-testid="stCodeBlock"
+      data-testid="foo"
       isMarkdown={true}
     >
       {children}
