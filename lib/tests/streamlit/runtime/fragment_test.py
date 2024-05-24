@@ -13,8 +13,12 @@
 # limitations under the License.
 
 import unittest
+from typing import Callable
 from unittest.mock import MagicMock, patch
 
+import altair as alt
+import pandas as pd
+import plotly.express as px
 import pytest
 from parameterized import parameterized
 
@@ -310,21 +314,115 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
 
         _some_method()
 
-    def test_write_widget_outside_container_raises_exception_for_widgets(self):
-        for element, args in [(st.button, "Click me"), (st.slider, "Slide me")]:
-            with self.subTest(msg=f"test_{str(element)}", p1=element, p2=args):
-                outside_container = st.container()
+    @staticmethod
+    def _run_fragment_writes_to_outside_container_app(
+        element_producer: Callable[[], DeltaGenerator]
+    ):
+        outside_container = st.container()
 
-                @st.experimental_fragment
-                def _some_method():
-                    st.write("Hello")
-                    # this is forbidden
-                    with outside_container:
-                        element(args)
+        @st.experimental_fragment
+        def _some_method():
+            st.write("Hello")
+            # this is forbidden
+            with outside_container:
+                element_producer()
 
-                with self.assertRaises(StreamlitAPIException) as e:
-                    _some_method()
-                assert (
-                    e.exception.args[0]
-                    == "Fragments cannot write to elements outside of their container."
-                )
+        _some_method()
+
+    @parameterized.expand(
+        [
+            lambda: st.button("Click me"),
+            lambda: st.camera_input("Take a picture"),
+            lambda: st.chat_input("Chat with me"),
+            # checkboxes
+            lambda: st.checkbox("Check me"),
+            lambda: st.toggle("Toggle me"),
+            # end checkboxes
+            lambda: st.color_picker("Pick a color"),
+            lambda: st.data_editor("Edit me"),
+            lambda: st.file_uploader("Upload me"),
+            lambda: st.multiselect("Show me", ["a", "b", "c"]),
+            lambda: st.number_input("Enter a number"),
+            lambda: st.radio("Choose me", ["a", "b", "c"]),
+            lambda: st.slider("Slide me"),
+            lambda: st.selectbox("Select me", ["a", "b", "c"]),
+            # text_widgets
+            lambda: st.text_area("Write me"),
+            lambda: st.text_input("Write me"),
+            # time_widgets
+            lambda: st.date_input("Pick a date"),
+            lambda: st.time_input("Pick a time"),
+            # hybrid-widgets
+            lambda: st.altair_chart(MagicMock(), on_select="rerun"),
+            lambda: st.vega_lite_chart(MagicMock(), on_select="rerun"),
+            lambda: st.plotly_chart(MagicMock(), on_select="rerun"),
+        ]
+    )
+    def test_write_element_outside_container_raises_exception_for_widgets(
+        self, element_producer: Callable[[], DeltaGenerator]
+    ):
+        with self.assertRaises(StreamlitAPIException) as e:
+            FragmentCannotWriteToOutsidePathTest._run_fragment_writes_to_outside_container_app(
+                element_producer
+            )
+        assert (
+            e.exception.args[0]
+            == "Fragments cannot write to elements outside of their container."
+        )
+
+    @parameterized.expand(
+        [
+            # alerts
+            ("error", lambda: st.error("Hello")),
+            ("info", lambda: st.info("Hello")),
+            ("success", lambda: st.success("Hello")),
+            ("warning", lambda: st.warning("Hello")),
+            # arrows
+            ("dataframe", lambda: st.dataframe(None)),
+            # balloons
+            ("balloons", lambda: st.balloons()),
+            ("snow", lambda: st.snow()),
+            # docstrings
+            ("help", lambda: st.help("Hello")),
+            # headings
+            ("header", lambda: st.header("Header")),
+            ("title", lambda: st.title("Title")),
+            ("subheader", lambda: st.subheader("Subheader")),
+            # html, markdown
+            ("code", lambda: st.code("Hello")),
+            ("html", lambda: st.html("Hello")),
+            ("latex", lambda: st.latex("Hello")),
+            ("markdown", lambda: st.markdown("Hello")),
+            ("write", lambda: st.write("Hello")),
+            ("toast", lambda: st.toast("Hello")),
+            # progress
+            ("spinner", lambda: st.spinner("Hello")),
+            ("progress", lambda: st.progress(0.5)),
+            # media
+            ("audio", lambda: st.audio(b"")),
+            ("video", lambda: st.video(b"")),
+            # hybrid-widgets
+            (
+                "altair_chart",
+                lambda: st.altair_chart(
+                    alt.Chart().mark_bar(),
+                    on_select="ignore",
+                ),
+            ),
+            (
+                "vega_lite_chart",
+                lambda: st.vega_lite_chart({"mark": "rect"}, on_select="ignore"),
+            ),
+            (
+                "plotly_chart",
+                lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="ignore"),
+            ),
+        ]
+    )
+    # the name parameter is used by parameterized to show the name in the test output
+    def test_write_element_outside_container_succeeds_for_nonwidgets(
+        self, name: str, element_producer: Callable[[], DeltaGenerator]
+    ):
+        FragmentCannotWriteToOutsidePathTest._run_fragment_writes_to_outside_container_app(
+            element_producer
+        )

@@ -791,10 +791,13 @@ class DataEditorMixin:
         import pandas as pd
         import pyarrow as pa
 
+        from streamlit.elements.policies import check_fragment_path_policy
+
         # Import here to avoid cyclic import warning
 
         key = to_key(key)
 
+        check_fragment_path_policy(self.dg)
         check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)

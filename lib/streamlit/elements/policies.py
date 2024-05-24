@@ -30,6 +30,7 @@ _fragment_writes_widget_to_outside_error = (
 
 def check_fragment_path_policy(dg: DeltaGenerator):
     ctx = get_script_run_ctx()
+    # Check is only relevant for fragments
     if ctx is None or ctx.current_fragment_id is None:
         return
 
