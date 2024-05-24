@@ -27,7 +27,6 @@ import streamlit.components.v1 as components
 from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
-from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -233,7 +232,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 cache_resource_api.ResourceCache.write_result,
                 "_cache_resource_object",
             ),
-            (caching._write_to_cache, "_cache_object"),
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
