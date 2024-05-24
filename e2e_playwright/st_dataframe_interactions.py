@@ -48,28 +48,22 @@ cell_overlay_test_df = pd.DataFrame(
     }
 )
 
+cell_overlay_test_column_config = {
+    "big_numbers": st.column_config.NumberColumn(
+        width="medium",  # the e2e test requires all cells to medium width
+    ),
+}
+
 
 st.header("Test read-only cell overlay")
 st.dataframe(
-    cell_overlay_test_df,
-    hide_index=True,
-    column_config={
-        "big_numbers": st.column_config.NumberColumn(
-            width="medium",  # the e2e test requires all cells to medium width
-        ),
-    },
+    cell_overlay_test_df, hide_index=True, column_config=cell_overlay_test_column_config
 )
 
 st.header("Test cell editor")
 
 result = st.data_editor(
-    cell_overlay_test_df,
-    hide_index=True,
-    column_config={
-        "big_numbers": st.column_config.NumberColumn(
-            width="medium",  # the e2e test requires all cells to medium width
-        ),
-    },
+    cell_overlay_test_df, hide_index=True, column_config=cell_overlay_test_column_config
 )
 
 st.write("Edited DF:", str(result))
