@@ -135,12 +135,10 @@ def cache(
 
     deprecation_util.show_deprecation_warning(
         f"""
-`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new caching commands,
-`st.cache_data` or `st.cache_resource`.
+`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new caching commands, `st.cache_data` or `st.cache_resource`.
 More information [in our docs]({CACHE_DOCS_URL}).
 
-**Note**: The behavior of `st.cache` was updated in Streamlit 1.36 to the new caching logic
-used by `st.cache_data` and `st.cache_resource`.
+**Note**: The behavior of `st.cache` was updated in Streamlit 1.36 to the new caching logic used by `st.cache_data` and `st.cache_resource`.
 This might lead to some problems or unexpected behavior in certain edge cases.
 """
     )
