@@ -44,6 +44,11 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -477,17 +482,12 @@ class ArrowMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            # Import here to avoid circular imports
-            from streamlit.elements.utils import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
-
-            check_cache_replay_rules()
+            check_cache_replay_rules(self.dg)
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            check_session_state_rules(
+                self.dg, default_value=None, key=key, writes_allowed=False
+            )
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)

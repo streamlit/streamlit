@@ -19,11 +19,10 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -282,10 +281,10 @@ class CheckboxMixin:
     ) -> bool:
         key = to_key(key)
 
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=None if value is False else value, key=key
+            self.dg, default_value=None if value is False else value, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 

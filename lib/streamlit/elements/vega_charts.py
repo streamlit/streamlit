@@ -43,6 +43,11 @@ from streamlit.elements.lib.built_in_chart_utils import (
     generate_chart,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -1651,17 +1656,12 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            # Import here to avoid circular imports
-            from streamlit.elements.utils import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
-
-            check_cache_replay_rules()
+            check_cache_replay_rules(self.dg)
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            check_session_state_rules(
+                self.dg, default_value=None, key=key, writes_allowed=False
+            )
 
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)

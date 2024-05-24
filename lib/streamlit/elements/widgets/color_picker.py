@@ -21,11 +21,10 @@ from typing import cast
 
 import streamlit
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
@@ -174,9 +173,9 @@ class ColorPickerMixin:
     ) -> str:
         key = to_key(key)
 
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(self.dg, default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(

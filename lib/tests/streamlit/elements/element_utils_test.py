@@ -20,14 +20,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit import config
+from streamlit import _main_dg, config
 from streamlit.elements import utils
-from streamlit.elements.utils import (
-    check_callback_rules,
-    check_session_state_rules,
-    maybe_coerce_enum,
-    maybe_coerce_enum_sequence,
-)
+from streamlit.elements.policies import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import maybe_coerce_enum, maybe_coerce_enum_sequence
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.common import RegisterWidgetResult
 
@@ -57,24 +53,24 @@ class ElementUtilsTest(unittest.TestCase):
     @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=False))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_not_in_form(self):
-        check_callback_rules(None, lambda x: x)
+        check_callback_rules(_main_dg, None, lambda x: x)
 
     @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_in_form(self):
-        check_callback_rules(None, None)
+        check_callback_rules(_main_dg, None, None)
 
     @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_error(self):
         with pytest.raises(StreamlitAPIException) as e:
-            check_callback_rules(None, lambda x: x)
+            check_callback_rules(_main_dg, None, lambda x: x)
 
         assert "is not allowed." in str(e.value)
 
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_key(self, patched_st_warning):
-        check_session_state_rules(5, key=None)
+        check_session_state_rules(_main_dg, 5, key=None)
 
         patched_st_warning.assert_not_called()
 
@@ -88,7 +84,7 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules(None, key="the key")
+        check_session_state_rules(_main_dg, None, key="the key")
 
         patched_st_warning.assert_not_called()
 
@@ -102,7 +98,7 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state.is_new_state_value.return_value = False
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules(5, key="the key")
+        check_session_state_rules(_main_dg, 5, key="the key")
 
         patched_st_warning.assert_not_called()
 
@@ -118,7 +114,7 @@ class ElementUtilsTest(unittest.TestCase):
         # Reset globale flag:
         utils._shown_default_value_warning = False
 
-        check_session_state_rules(5, key="the key")
+        check_session_state_rules(_main_dg, 5, key="the key")
 
         patched_st_warning.assert_called_once()
         args, kwargs = patched_st_warning.call_args
@@ -137,7 +133,7 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules(5, key="the key")
+        check_session_state_rules(_main_dg, 5, key="the key")
 
         patched_st_warning.assert_not_called()
 
@@ -151,7 +147,7 @@ class ElementUtilsTest(unittest.TestCase):
         patched_get_session_state.return_value = mock_session_state
 
         with pytest.raises(StreamlitAPIException) as e:
-            check_session_state_rules(5, key="the key", writes_allowed=False)
+            check_session_state_rules(_main_dg, 5, key="the key", writes_allowed=False)
 
         assert "cannot be set using st.session_state" in str(e.value)
 

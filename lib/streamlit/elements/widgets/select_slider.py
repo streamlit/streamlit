@@ -21,10 +21,12 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 from typing_extensions import TypeGuard
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
+)
+from streamlit.elements.utils import (
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -261,9 +263,9 @@ class SelectSliderMixin:
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(self.dg, default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)

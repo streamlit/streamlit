@@ -21,6 +21,11 @@ from typing import TYPE_CHECKING, Literal, cast
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -311,15 +316,11 @@ class ChatMixin:
         default = ""
         key = to_key(key)
 
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
-
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_submit)
-        check_session_state_rules(default_value=default, key=key, writes_allowed=False)
+        check_session_state_rules(
+            self.dg, default_value=default, key=key, writes_allowed=False
+        )
 
         ctx = get_script_run_ctx()
         id = compute_widget_id(

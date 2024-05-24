@@ -21,11 +21,10 @@ from typing import TYPE_CHECKING, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
@@ -200,9 +199,11 @@ class CameraInputMixin:
     ) -> UploadedFile | None:
         key = to_key(key)
 
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_session_state_rules(
+            self.dg, default_value=None, key=key, writes_allowed=False
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(

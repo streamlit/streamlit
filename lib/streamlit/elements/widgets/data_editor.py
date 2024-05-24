@@ -55,6 +55,11 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -786,18 +791,13 @@ class DataEditorMixin:
         import pandas as pd
         import pyarrow as pa
 
-        # Import here to avoid cyclic import warning
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
-
         key = to_key(key)
 
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_session_state_rules(
+            self.dg, default_value=None, key=key, writes_allowed=False
+        )
 
         if column_order is not None:
             column_order = list(column_order)

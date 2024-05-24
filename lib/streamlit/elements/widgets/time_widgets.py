@@ -33,12 +33,12 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -427,10 +427,10 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=value if value != "now" else None, key=key
+            self.dg, default_value=value if value != "now" else None, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -691,10 +691,12 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
 
-        check_cache_replay_rules()
+        check_cache_replay_rules(self.dg)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=value if value != "default_value_today" else None, key=key
+            self.dg,
+            default_value=value if value != "default_value_today" else None,
+            key=key,
         )
         maybe_raise_label_warnings(label, label_visibility)
 

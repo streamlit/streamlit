@@ -41,6 +41,11 @@ from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -451,17 +456,12 @@ class PlotlyMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            # Import here to avoid circular imports
-            from streamlit.elements.utils import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
-
-            check_cache_replay_rules()
+            check_cache_replay_rules(self.dg)
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            check_session_state_rules(
+                self.dg, default_value=None, key=key, writes_allowed=False
+            )
 
         if type_util.is_type(figure_or_data, "matplotlib.figure.Figure"):
             # Convert matplotlib figure to plotly figure:
