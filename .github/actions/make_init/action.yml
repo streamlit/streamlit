@@ -37,11 +37,10 @@ runs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        # protobuf, dot, & graphviz dependencies
+        # dot & graphviz dependencies
         sudo apt install -y gnupg \
             graphviz \
-            libgvc6 \
-            protobuf-compiler
+            libgvc6
       shell: bash --login -eo pipefail {0}
     # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
     # Actions are running as of 2023.05.03 - doesn't have recent versions
