@@ -343,6 +343,14 @@ _create_option(
 )
 
 _create_option(
+    "global.e2eTest",
+    description="Are we in an e2e (playwright) test? Set automatically when our e2e tests are running.",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "global.unitTest",
     description="Are we in a unit test?",
     visibility="hidden",

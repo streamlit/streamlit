@@ -18,10 +18,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.utils import SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -235,8 +233,8 @@ class ChatTest(DeltaGeneratorTestCase):
             st.session_state.my_key = "Foo"
             st.chat_input("Placeholder", key="my_key")
 
-        self.assertEqual(
-            SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT,
+        self.assertIn(
+            "Values for the widget with key",
             str(exception_message.value),
         )
 
