@@ -33,8 +33,10 @@ from typing import (
     overload,
 )
 
+import altair as alt
 from typing_extensions import TypeAlias
 
+import streamlit as st
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import type_util
 from streamlit.elements.lib.built_in_chart_utils import (
@@ -626,6 +628,7 @@ class VegaChartsMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        stack: bool | "normalize" | "zero" | "center" = False,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -767,6 +770,19 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
+
+        chart_dict = chart.to_dict()
+
+        encoding = chart_dict["encoding"]
+        y_spec = encoding["y"]["field"]
+
+        if stack == "normalize":
+            chart = chart.encode(alt.Y(f"{y_spec}:Q", stack=stack, title=None))
+        if stack == "center":
+            chart = chart.encode(alt.Y(f"{y_spec}:Q", stack=stack, title=None))
+        if stack:
+            chart = chart.encode(alt.Y(f"{y_spec}:Q", stack=stack, title=None))
+
         return cast(
             "DeltaGenerator",
             self._altair_chart(
@@ -788,6 +804,8 @@ class VegaChartsMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        stack: bool | "normalize" | "zero" | "center" = True,
+        horizontal: bool = False,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -862,6 +880,17 @@ class VegaChartsMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+        stack : bool, "normalize", "zero", "center"
+            Determines how the bars are stacked:
+            - True: Stacks the bars on top of each other (default).
+            - "normalize": Stacks and normalizes the bars to 100%.
+            - "zero": Stacks the bars with the baseline set to 0.
+            - "center": Stacks the bars with the baseline set to the center of the bars.
+        horizontal : bool
+            Determines the orientation of the chart:
+            - True: Displays the chart horizontally, with the x-axis and y-axis swapped.
+            - False: Displays the chart vertically (default).
+
 
         Examples
         --------
@@ -924,13 +953,35 @@ class VegaChartsMixin:
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.BAR,
             data=data,
-            x_from_user=x,
-            y_from_user=y,
+            x_from_user=x if not horizontal else y,
+            y_from_user=y if not horizontal else x,
             color_from_user=color,
             size_from_user=None,
             width=width,
             height=height,
         )
+
+        if type(color) == str and not stack:
+            chart = chart.encode(xOffset=f"{color}:N")
+        # If stack is either normalize, zero or center, we need to encode the y axis with the stack parameter
+        elif type(color) == str and stack in ["normalize", "zero", "center"]:
+            chart = chart.encode(
+                alt.Y(f"{y}:Q", stack=stack),
+            )
+
+        if horizontal:
+            if stack:
+                chart = chart.encode(
+                    alt.X(f"{y}:Q", stack=stack),
+                    alt.Y(f"{x}:N"),
+                )
+            else:
+                chart = chart.encode(
+                    alt.X(f"{y}:Q"),
+                    alt.Y(f"{x}:N"),
+                    yOffset=f"{color}:N",
+                )
+
         return cast(
             "DeltaGenerator",
             self._altair_chart(
