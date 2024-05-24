@@ -20,7 +20,7 @@ distlib==0.3.8
 docutils==0.21.2
 execnet==2.1.1
 filelock==3.14.0
-fonttools==4.51.0
+fonttools==4.52.1
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -123,15 +123,14 @@ types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
 types-requests==2.32.0.20240523
-types-setuptools==70.0.0.20240523
+types-setuptools==70.0.0.20240524
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
 typing_extensions==4.12.0
 tzdata==2024.1
-tzlocal==5.2
 urllib3==2.2.1
-uv==0.2.2
+uv==0.2.3
 vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.1
