@@ -40,11 +40,6 @@ def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -
 
 _shown_default_value_warning: bool = False
 
-SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT = """
-Values for st.button, st.download_button, st.file_uploader, st.data_editor,
-st.chat_input, and st.form cannot be set using st.session_state.
-"""
-
 
 def check_session_state_rules(
     default_value: Any, key: str | None, writes_allowed: bool = True
@@ -59,7 +54,9 @@ def check_session_state_rules(
         return
 
     if not writes_allowed:
-        raise StreamlitAPIException(SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT)
+        raise StreamlitAPIException(
+            f'Values for the widget with key "{key}" cannot be set using `st.session_state`.'
+        )
 
     if (
         default_value is not None
