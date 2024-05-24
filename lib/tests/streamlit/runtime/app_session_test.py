@@ -193,17 +193,13 @@ class AppSessionTest(unittest.TestCase):
         session._handle_clear_cache_request()
         assert "foo" not in session._session_state
 
-    @patch("streamlit.runtime.legacy_caching.clear_cache")
     @patch("streamlit.runtime.caching.cache_data.clear")
     @patch("streamlit.runtime.caching.cache_resource.clear")
-    def test_clear_cache_all_caches(
-        self, clear_resource_caches, clear_data_caches, clear_legacy_cache
-    ):
+    def test_clear_cache_all_caches(self, clear_resource_caches, clear_data_caches):
         session = _create_test_session()
         session._handle_clear_cache_request()
         clear_resource_caches.assert_called_once()
         clear_data_caches.assert_called_once()
-        clear_legacy_cache.assert_called_once()
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"

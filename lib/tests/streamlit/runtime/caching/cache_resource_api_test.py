@@ -165,7 +165,7 @@ class CacheResourceTest(unittest.TestCase):
 
         str_hash_func = Mock(return_value=None)
 
-        @st.cache(hash_funcs={str: str_hash_func})
+        @st.cache_resource(hash_funcs={str: str_hash_func})
         def foo(string_arg):
             return []
 
