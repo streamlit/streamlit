@@ -188,21 +188,21 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     view_button.click(force=True)
     # We apply a quick timeout here so that the UI has some time to
     # adjust for the screenshot after the click
-    themed_app.wait_for_timeout(250)
+    expect(view_button).to_have_text("View less")
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
     # Collapse the nav
     view_button.click(force=True)
-    themed_app.wait_for_timeout(250)
+    expect(view_button).to_have_text("View more")
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
 
     # Expand the nav again
     view_button.click(force=True)
-    themed_app.wait_for_timeout(250)
+    expect(view_button).to_have_text("View less")
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
@@ -226,7 +226,7 @@ def test_switch_page_by_st_page(app: Page):
     expect(page_heading(app)).to_contain_text("Page 9")
 
 
-def test_switch_page_removes_query_params(page: Page, app_port: int):
+def test_removes_query_params_with_st_switch_page(page: Page, app_port: int):
     """Test that query params are removed when navigating via st.switch_page"""
 
     # Start at main page with query params
@@ -240,8 +240,8 @@ def test_switch_page_removes_query_params(page: Page, app_port: int):
     expect(page).to_have_url(f"http://localhost:{app_port}/page_5")
 
 
-def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
-    """Test that query params are removed when swapping pages"""
+def test_removes_query_params_when_clicking_link(page: Page, app_port: int):
+    """Test that query params are removed when swapping pages by clicking on a link"""
 
     page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
     wait_for_app_loaded(page)
