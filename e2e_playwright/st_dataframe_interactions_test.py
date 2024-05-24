@@ -395,7 +395,7 @@ def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunc
     # Change the value
     cell_overlay.locator(".gdg-input").fill("9876.54")
     # Press Enter to apply the change
-    themed_app.press("Enter")
+    themed_app.keyboard.press("Enter")
     wait_for_app_run(themed_app)
 
     # Check if that the value was submitted
