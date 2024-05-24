@@ -304,14 +304,12 @@ class CachedMessageReplayContext(threading.local):
             # Arrow dataframes have an ID but only set it when used as data editor
             # widgets, so we have to check that the ID has been actually set to
             # know if an element is a widget.
-            if isinstance(element_proto, Widget) and element_proto.id:
+            if (
+                isinstance(element_proto, Widget)
+                and element_proto.id
+                and self._registered_metadata
+            ):
                 wid = element_proto.id
-                # TODO replace `Message` with a more precise type
-                if not self._registered_metadata:
-                    _LOGGER.error(
-                        "Trying to save widget message that wasn't registered. This should not be possible."
-                    )
-                    raise AttributeError
                 widget_meta = WidgetMsgMetadata(
                     wid, None, metadata=self._registered_metadata
                 )
