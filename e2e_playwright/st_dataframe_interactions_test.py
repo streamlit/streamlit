@@ -404,6 +404,45 @@ def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunc
     expect_prefixed_markdown(themed_app, "Edited DF:", "9876.54", exact_match=False)
 
 
+def test_text_cell_read_only_overlay_formatting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the text cell overlay is formatted correctly."""
+    overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
+    # Click on the first cell of the table
+    click_on_cell(overlay_test_df, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (text) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute(
+        "value", "hello\nworld"
+    )
+    assert_snapshot(cell_overlay, name="st_dataframe-text_col_overlay")
+
+
+def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number cell can be edited."""
+    cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
+    # Click on the first cell of the table
+    click_on_cell(cell_overlay_test_df, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute(
+        "value", "hello\nworld"
+    )
+    assert_snapshot(cell_overlay, name="st_data_editor-text_col_editor")
+
+    # Change the value
+    cell_overlay.locator(".gdg-input").fill("edited value")
+    # Press Enter to apply the change
+    themed_app.keyboard.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(
+        themed_app, "Edited DF:", "edited value", exact_match=False
+    )
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
 # - Copy data to clipboard
 # - Paste in data

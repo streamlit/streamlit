@@ -45,12 +45,17 @@ st.data_editor(random_df, num_rows="dynamic")
 cell_overlay_test_df = pd.DataFrame(
     {
         "big_numbers": [1231231.41, 12012],
+        "text": ["hello\nworld", "foo"],
     }
 )
 
 cell_overlay_test_column_config = {
+    # the e2e test requires all cells to medium width
     "big_numbers": st.column_config.NumberColumn(
-        width="medium",  # the e2e test requires all cells to medium width
+        width="medium",
+    ),
+    "text": st.column_config.TextColumn(
+        width="medium",
     ),
 }
 
