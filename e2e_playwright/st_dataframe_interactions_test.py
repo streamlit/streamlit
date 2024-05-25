@@ -413,9 +413,7 @@ def test_text_cell_read_only_overlay_formatting(
     click_on_cell(overlay_test_df, 1, 1, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(themed_app)
     # Get the (text) input element and check the value
-    expect(cell_overlay.locator(".gdg-input")).to_have_attribute(
-        "value", "hello\nworld"
-    )
+    expect(cell_overlay.locator(".gdg-input")).to_have_text("hello\nworld")
     assert_snapshot(cell_overlay, name="st_dataframe-text_col_overlay")
 
 
@@ -426,9 +424,7 @@ def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFuncti
     click_on_cell(cell_overlay_test_df, 1, 1, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(themed_app)
     # Get the (number) input element and check the value
-    expect(cell_overlay.locator(".gdg-input")).to_have_attribute(
-        "value", "hello\nworld"
-    )
+    expect(cell_overlay.locator(".gdg-input")).to_have_text("hello\nworld")
     assert_snapshot(cell_overlay, name="st_data_editor-text_col_editor")
 
     # Change the value
