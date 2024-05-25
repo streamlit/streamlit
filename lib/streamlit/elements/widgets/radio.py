@@ -121,8 +121,10 @@ class RadioMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -189,10 +191,10 @@ class RadioMixin:
         ...     [":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"],
         ...     captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."])
         >>>
-        >>> if genre == ':rainbow[Comedy]':
-        ...     st.write('You selected comedy.')
+        >>> if genre == ":rainbow[Comedy]":
+        ...     st.write("You selected comedy.")
         ... else:
-        ...     st.write("You didn\'t select comedy.")
+        ...     st.write("You didn't select comedy.")
 
         .. output::
            https://doc-radio.streamlit.app/

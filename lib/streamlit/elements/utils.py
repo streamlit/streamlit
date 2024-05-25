@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, overload
 
 import streamlit
 from streamlit import config, runtime, type_util
@@ -28,19 +28,6 @@ from streamlit.type_util import T
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import DataFrameCompatible
-
-
-def last_index_for_melted_dataframes(
-    data: DataFrameCompatible | Any,
-) -> Hashable | None:
-    if type_util.is_dataframe_compatible(data):
-        data = type_util.convert_anything_to_df(data)
-
-        if data.index.size > 0:
-            return cast(Hashable, data.index[-1])
-
-    return None
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
@@ -52,11 +39,6 @@ def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -
 
 
 _shown_default_value_warning: bool = False
-
-SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT = """
-Values for st.button, st.download_button, st.file_uploader, st.data_editor,
-st.chat_input, and st.form cannot be set using st.session_state.
-"""
 
 
 def check_session_state_rules(
@@ -72,7 +54,9 @@ def check_session_state_rules(
         return
 
     if not writes_allowed:
-        raise StreamlitAPIException(SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT)
+        raise StreamlitAPIException(
+            f'Values for the widget with key "{key}" cannot be set using `st.session_state`.'
+        )
 
     if (
         default_value is not None

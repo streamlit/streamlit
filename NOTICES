@@ -287,7 +287,7 @@ SOFTWARE.
 
 The following software may be included in this product: @deck.gl/aggregation-layers, @deck.gl/carto, @deck.gl/core, @deck.gl/extensions, @deck.gl/geo-layers, @deck.gl/google-maps, @deck.gl/json, @deck.gl/layers, @deck.gl/mapbox, @deck.gl/mesh-layers, @deck.gl/react, deck.gl. A copy of the source code may be downloaded from https://github.com/visgl/deck.gl.git (@deck.gl/aggregation-layers), https://github.com/visgl/deck.gl.git (@deck.gl/carto), https://github.com/visgl/deck.gl.git (@deck.gl/core), https://github.com/visgl/deck.gl.git (@deck.gl/extensions), https://github.com/visgl/deck.gl.git (@deck.gl/geo-layers), https://github.com/visgl/deck.gl.git (@deck.gl/google-maps), https://github.com/visgl/deck.gl.git (@deck.gl/json), https://github.com/visgl/deck.gl.git (@deck.gl/layers), https://github.com/visgl/deck.gl.git (@deck.gl/mapbox), https://github.com/visgl/deck.gl.git (@deck.gl/mesh-layers), https://github.com/visgl/deck.gl.git (@deck.gl/react), https://github.com/visgl/deck.gl.git (deck.gl). This software contains the following license and notice below:
 
-Copyright (c) 2020 Urban Computing Foundation
+Copyright Vis.gl contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -510,7 +510,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @loaders.gl/3d-tiles, @loaders.gl/core, @loaders.gl/csv, @loaders.gl/draco, @loaders.gl/gis, @loaders.gl/gltf, @loaders.gl/images, @loaders.gl/loader-utils, @loaders.gl/math, @loaders.gl/mvt, @loaders.gl/schema, @loaders.gl/terrain, @loaders.gl/textures, @loaders.gl/tiles, @loaders.gl/worker-utils. A copy of the source code may be downloaded from https://github.com/visgl/loaders.gl (@loaders.gl/3d-tiles), https://github.com/visgl/loaders.gl (@loaders.gl/core), https://github.com/visgl/loaders.gl (@loaders.gl/csv), https://github.com/visgl/loaders.gl (@loaders.gl/draco), https://github.com/visgl/loaders.gl (@loaders.gl/gis), https://github.com/visgl/loaders.gl (@loaders.gl/gltf), https://github.com/visgl/loaders.gl (@loaders.gl/images), https://github.com/visgl/loaders.gl (@loaders.gl/loader-utils), https://github.com/visgl/loaders.gl (@loaders.gl/math), https://github.com/visgl/loaders.gl (@loaders.gl/mvt), https://github.com/visgl/loaders.gl (@loaders.gl/schema), https://github.com/visgl/loaders.gl (@loaders.gl/terrain), https://github.com/visgl/loaders.gl (@loaders.gl/textures), https://github.com/visgl/loaders.gl (@loaders.gl/tiles), https://github.com/visgl/loaders.gl (@loaders.gl/worker-utils). This software contains the following license and notice below:
+The following software may be included in this product: @loaders.gl/3d-tiles, @loaders.gl/core, @loaders.gl/csv, @loaders.gl/draco, @loaders.gl/gis, @loaders.gl/gltf, @loaders.gl/images, @loaders.gl/loader-utils, @loaders.gl/math, @loaders.gl/mvt, @loaders.gl/schema, @loaders.gl/terrain, @loaders.gl/textures, @loaders.gl/tiles, @loaders.gl/wms, @loaders.gl/worker-utils, @loaders.gl/xml. A copy of the source code may be downloaded from https://github.com/visgl/loaders.gl (@loaders.gl/3d-tiles), https://github.com/visgl/loaders.gl (@loaders.gl/core), https://github.com/visgl/loaders.gl (@loaders.gl/csv), https://github.com/visgl/loaders.gl (@loaders.gl/draco), https://github.com/visgl/loaders.gl (@loaders.gl/gis), https://github.com/visgl/loaders.gl (@loaders.gl/gltf), https://github.com/visgl/loaders.gl (@loaders.gl/images), https://github.com/visgl/loaders.gl (@loaders.gl/loader-utils), https://github.com/visgl/loaders.gl (@loaders.gl/math), https://github.com/visgl/loaders.gl (@loaders.gl/mvt), https://github.com/visgl/loaders.gl (@loaders.gl/schema), https://github.com/visgl/loaders.gl (@loaders.gl/terrain), https://github.com/visgl/loaders.gl (@loaders.gl/textures), https://github.com/visgl/loaders.gl (@loaders.gl/tiles), https://github.com/visgl/loaders.gl (@loaders.gl/wms), https://github.com/visgl/loaders.gl (@loaders.gl/worker-utils), https://github.com/visgl/loaders.gl (@loaders.gl/xml). This software contains the following license and notice below:
 
 Copyright (c) 2015 Uber Technologies, Inc.
 
@@ -701,7 +701,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 -----
 
-The following software may be included in this product: @mapbox/tile-cover, @mapbox/tilebelt. A copy of the source code may be downloaded from https://github.com/mapbox/tile-cover.git (@mapbox/tile-cover), https://github.com/mapbox/tilebelt.git (@mapbox/tilebelt). This software contains the following license and notice below:
+The following software may be included in this product: @mapbox/tile-cover, tilebelt. A copy of the source code may be downloaded from https://github.com/mapbox/tile-cover.git (@mapbox/tile-cover), https://github.com/mapbox/tilebelt.git (tilebelt). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -735,6 +735,20 @@ This code available under the terms of the BSD 2-Clause license.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-----
+
+The following software may be included in this product: @mapbox/tiny-sdf. A copy of the source code may be downloaded from git+https://github.com/mapbox/tiny-sdf.git. This software contains the following license and notice below:
+
+BSD-2-Clause
+Copyright (c) 2016-2022 Mapbox, Inc.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
@@ -1378,7 +1392,7 @@ limitations under the License.
 
 -----
 
-The following software may be included in this product: @turf/area, @turf/bbox, @turf/centroid, @turf/helpers, @turf/meta. A copy of the source code may be downloaded from git://github.com/Turfjs/turf.git (@turf/area), git://github.com/Turfjs/turf.git (@turf/bbox), git://github.com/Turfjs/turf.git (@turf/centroid), git://github.com/Turfjs/turf.git (@turf/helpers), git://github.com/Turfjs/turf.git (@turf/meta). This software contains the following license and notice below:
+The following software may be included in this product: @turf/area, @turf/bbox, @turf/boolean-clockwise, @turf/centroid, @turf/clone, @turf/helpers, @turf/invariant, @turf/meta, @turf/rewind. A copy of the source code may be downloaded from git://github.com/Turfjs/turf.git (@turf/area), git://github.com/Turfjs/turf.git (@turf/bbox), git://github.com/Turfjs/turf.git (@turf/boolean-clockwise), git://github.com/Turfjs/turf.git (@turf/centroid), git://github.com/Turfjs/turf.git (@turf/clone), git://github.com/Turfjs/turf.git (@turf/helpers), git://github.com/Turfjs/turf.git (@turf/invariant), git://github.com/Turfjs/turf.git (@turf/meta), git://github.com/Turfjs/turf.git (@turf/rewind). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -6277,7 +6291,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: array-find-index, escape-string-regexp, is-obj, is-plain-obj, math-log2, number-is-integer, object-assign, path-is-absolute. A copy of the source code may be downloaded from https://github.com/sindresorhus/array-find-index.git (array-find-index), https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), https://github.com/sindresorhus/is-obj.git (is-obj), https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), https://github.com/sindresorhus/math-log2.git (math-log2), https://github.com/sindresorhus/number-is-integer.git (number-is-integer), https://github.com/sindresorhus/object-assign.git (object-assign), https://github.com/sindresorhus/path-is-absolute.git (path-is-absolute). This software contains the following license and notice below:
+The following software may be included in this product: array-find-index, buf-compare, core-assert, deep-strict-equal, escape-string-regexp, is-obj, is-plain-obj, math-log2, number-is-integer, object-assign, path-is-absolute. A copy of the source code may be downloaded from https://github.com/sindresorhus/array-find-index.git (array-find-index), https://github.com/sindresorhus/buf-compare.git (buf-compare), https://github.com/sindresorhus/core-assert.git (core-assert), https://github.com/sindresorhus/deep-strict-equal.git (deep-strict-equal), https://github.com/sindresorhus/escape-string-regexp.git (escape-string-regexp), https://github.com/sindresorhus/is-obj.git (is-obj), https://github.com/sindresorhus/is-plain-obj.git (is-plain-obj), https://github.com/sindresorhus/math-log2.git (math-log2), https://github.com/sindresorhus/number-is-integer.git (number-is-integer), https://github.com/sindresorhus/object-assign.git (object-assign), https://github.com/sindresorhus/path-is-absolute.git (path-is-absolute). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -10862,6 +10876,32 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
+The following software may be included in this product: fast-xml-parser. A copy of the source code may be downloaded from https://github.com/NaturalIntelligence/fast-xml-parser. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2017 Amit Kumar Gupta
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
 The following software may be included in this product: fbemitter. A copy of the source code may be downloaded from https://github.com/facebook/emitter.git. This software contains the following license and notice below:
 
 BSD License
@@ -12015,7 +12055,7 @@ The following software may be included in this product: iframe-resizer. A copy o
 
 The MIT License (MIT)
 
-Copyright (c) 2013-2021 David J. Bradshaw
+Copyright (c) 2013-2023 David J. Bradshaw
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -12259,6 +12299,30 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: is-error. A copy of the source code may be downloaded from git://github.com/mk-pmb/is-error-js.git. This software contains the following license and notice below:
+
+Copyright (c) 2015 is-error.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 -----
 
@@ -17665,6 +17729,32 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
+The following software may be included in this product: strnum. A copy of the source code may be downloaded from https://github.com/NaturalIntelligence/strnum. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2021 Natural Intelligence
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
 The following software may be included in this product: style-to-object. A copy of the source code may be downloaded from https://github.com/remarkablemark/style-to-object. This software contains the following license and notice below:
 
 The MIT License (MIT)
@@ -18674,7 +18764,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -----
 
-The following software may be included in this product: vega, vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-functions, vega-geo, vega-hierarchy, vega-interpreter, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-crossfilter), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-format), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-interpreter), https://github.com/vega/vega.git (vega-label), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
+The following software may be included in this product: vega, vega-canvas, vega-crossfilter, vega-dataflow, vega-encode, vega-event-selector, vega-expression, vega-force, vega-format, vega-functions, vega-geo, vega-hierarchy, vega-interpreter, vega-label, vega-loader, vega-parser, vega-projection, vega-regression, vega-runtime, vega-scale, vega-scenegraph, vega-selections, vega-statistics, vega-time, vega-transforms, vega-typings, vega-util, vega-view, vega-view-transforms, vega-voronoi, vega-wordcloud. A copy of the source code may be downloaded from https://github.com/vega/vega.git (vega), https://github.com/vega/vega.git (vega-canvas), https://github.com/vega/vega.git (vega-crossfilter), https://github.com/vega/vega.git (vega-dataflow), https://github.com/vega/vega.git (vega-encode), https://github.com/vega/vega.git (vega-event-selector), https://github.com/vega/vega.git (vega-expression), https://github.com/vega/vega.git (vega-force), https://github.com/vega/vega.git (vega-format), https://github.com/vega/vega.git (vega-functions), https://github.com/vega/vega.git (vega-geo), https://github.com/vega/vega.git (vega-hierarchy), https://github.com/vega/vega.git (vega-interpreter), https://github.com/vega/vega.git (vega-label), https://github.com/vega/vega.git (vega-loader), https://github.com/vega/vega.git (vega-parser), https://github.com/vega/vega.git (vega-projection), https://github.com/vega/vega.git (vega-regression), https://github.com/vega/vega.git (vega-runtime), https://github.com/vega/vega.git (vega-scale), https://github.com/vega/vega.git (vega-scenegraph), https://github.com/vega/vega.git (vega-selections), https://github.com/vega/vega.git (vega-statistics), https://github.com/vega/vega.git (vega-time), https://github.com/vega/vega.git (vega-transforms), https://github.com/vega/vega.git (vega-typings), https://github.com/vega/vega.git (vega-util), https://github.com/vega/vega.git (vega-view), https://github.com/vega/vega.git (vega-view-transforms), https://github.com/vega/vega.git (vega-voronoi), https://github.com/vega/vega.git (vega-wordcloud). This software contains the following license and notice below:
 
 Copyright (c) 2015-2023, University of Washington Interactive Data Lab
 All rights reserved.

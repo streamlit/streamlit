@@ -30,6 +30,7 @@ import {
   isScrollingHidden,
   isLightTheme,
   isDarkTheme,
+  keysToSnakeCase,
 } from "./utils"
 
 describe("getCookie", () => {
@@ -503,5 +504,24 @@ describe("getLoadingScreenType", () => {
         "embed=true&embed_options=option1&embed_options=option2"
       )
     })
+  })
+})
+
+describe("keysToSnakeCase", () => {
+  it("should replace . with _", () => {
+    expect(keysToSnakeCase({ "marker.size": "bob" })).toEqual({
+      marker_size: "bob",
+    })
+  })
+
+  it("should return decamelized keys for regular keys", () => {
+    expect(keysToSnakeCase({ aliceName: "alice", bobName: "bob" })).toEqual({
+      alice_name: "alice",
+      bob_name: "bob",
+    })
+  })
+
+  it("should return an empty dictionary when passed an empty dictionary", () => {
+    expect(keysToSnakeCase({})).toEqual({})
   })
 })

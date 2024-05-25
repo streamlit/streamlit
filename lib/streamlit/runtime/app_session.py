@@ -36,7 +36,7 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
-from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime import caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
@@ -83,7 +83,6 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
-        local_sources_watcher: LocalSourcesWatcher,
         user_info: dict[str, str | None],
         session_id_override: str | None = None,
     ) -> None:
@@ -104,9 +103,6 @@ class AppSession:
 
         message_enqueued_callback
             After enqueuing a message, this callable notification will be invoked.
-
-        local_sources_watcher
-            The file watcher that lets the session know local files have changed.
 
         user_info
             A dict that contains information about the current user. For now,
@@ -144,11 +140,12 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        self._local_sources_watcher: LocalSourcesWatcher | None = local_sources_watcher
+        self._local_sources_watcher: LocalSourcesWatcher | None = None
         self._stop_config_listener: Callable[[], bool] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
-        self.register_file_watchers()
+        if config.get_option("server.fileWatcherType") != "none":
+            self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -465,7 +462,7 @@ class AppSession:
             self._local_sources_watcher.update_watched_pages()
 
     def _clear_queue(self) -> None:
-        self._browser_queue.clear()
+        self._browser_queue.clear(retain_lifecycle_msgs=True)
 
     def _on_scriptrunner_event(
         self,
@@ -783,7 +780,6 @@ class AppSession:
         Because this cache is global, it will be cleared for all users.
 
         """
-        legacy_caching.clear_cache()
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()

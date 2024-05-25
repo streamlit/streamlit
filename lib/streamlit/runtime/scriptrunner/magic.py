@@ -171,8 +171,6 @@ def _build_st_write_call(nodes):
         ),
         args=nodes,
         keywords=[],
-        kwargs=None,
-        starargs=None,
     )
 
 

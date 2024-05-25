@@ -33,12 +33,12 @@ class EmptyMixin:
         several elements at once (using a child multi-element container).
 
         To insert/replace/clear an element on the returned container, you can
-        use "with" notation or just call methods directly on the returned object.
+        use ``with`` notation or just call methods directly on the returned object.
         See examples below.
 
         Examples
         --------
-        Overwriting elements in-place using "with" notation:
+        Overwriting elements in-place using ``with`` notation:
 
         >>> import streamlit as st
         >>> import time
@@ -82,7 +82,7 @@ class EmptyMixin:
         several elements at once (using a child multi-element container).
 
         To insert/replace/clear an element on the returned container, you can
-        use "with" notation or just call methods directly on the returned object.
+        use ``with`` notation or just call methods directly on the returned object.
         See some of the examples below.
 
         This is an internal method and should not be used directly.

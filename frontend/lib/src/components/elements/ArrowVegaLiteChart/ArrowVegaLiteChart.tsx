@@ -15,26 +15,43 @@
  */
 
 import React, { PureComponent } from "react"
+
 import { withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
+import { SignalValue } from "vega"
 import { expressionInterpreter } from "vega-interpreter"
+import isEqual from "lodash/isEqual"
 
-import { logMessage } from "@streamlit/lib/src/util/log"
+import {
+  WidgetInfo,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
+import {
+  debounce,
+  notNullOrUndefined,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
+import { logWarning, logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
-import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
 import "@streamlit/lib/src/assets/css/vega-embed.css"
 import "@streamlit/lib/src/assets/css/vega-tooltip.css"
 
+import {
+  getDataSets,
+  VegaLiteChartElement,
+  getDataArray,
+  dataIsAnAppendOfPrev,
+  getDataArrays,
+  getInlineData,
+} from "./arrowUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
-
-const MagicFields = {
-  DATAFRAME_INDEX: "(index)",
-}
 
 const DEFAULT_DATA_NAME = "source"
 
@@ -44,59 +61,26 @@ const DEFAULT_DATA_NAME = "source"
  */
 const BOTTOM_PADDING = 20
 
-/** Types of dataframe-indices that are supported as x axis. */
-const SUPPORTED_INDEX_TYPES = new Set([
-  IndexTypeName.DatetimeIndex,
-  IndexTypeName.Float64Index,
-  IndexTypeName.Int64Index,
-  IndexTypeName.RangeIndex,
-  IndexTypeName.UInt64Index,
-])
+/**
+ * Debounce time for triggering a widget state update
+ * This prevents to rapid updates to the widget state.
+ */
+const DEBOUNCE_TIME_MS = 150
+
+/** This is the state that is sent to the backend
+ * This needs to be the same structure that is also defined
+ * in the Python code.
+ */
+export interface VegaLiteState {
+  selection: Record<string, any>
+}
 
 interface Props {
   element: VegaLiteChartElement
   theme: EmotionTheme
   width: number
-}
-
-/** All of the data that makes up a VegaLite chart. */
-export interface VegaLiteChartElement {
-  /**
-   * The dataframe that will be used as the chart's main data source, if
-   * specified using Vega-Lite's inline API.
-   *
-   * This is mutually exclusive with WrappedNamedDataset - if `data` is non-null,
-   * `datasets` will not be populated; if `datasets` is populated, then `data`
-   * will be null.
-   */
-  data: Quiver | null
-
-  /** The a JSON-formatted string with the Vega-Lite spec. */
-  spec: string
-
-  /**
-   * Dataframes associated with this chart using Vega-Lite's datasets API,
-   * if any.
-   */
-  datasets: WrappedNamedDataset[]
-
-  /** If True, will overwrite the chart width spec to fit to container. */
-  useContainerWidth: boolean
-
-  /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
-  vegaLiteTheme: string
-}
-
-/** A mapping of `ArrowNamedDataSet.proto`. */
-export interface WrappedNamedDataset {
-  /** The dataset's optional name. */
-  name: string | null
-
-  /** True if the name field (above) was manually set. */
-  hasName: boolean
-
-  /** The data itself, wrapped in a Quiver object. */
-  data: Quiver
+  widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 export interface PropsWithFullScreen extends Props {
@@ -106,6 +90,56 @@ export interface PropsWithFullScreen extends Props {
 
 interface State {
   error?: Error
+}
+
+/**
+ * Prepares the vega-lite spec for selections by transforming the select parameters
+ * to a full object specification and by automatically adding encodings (if missing)
+ * to point selections.
+ *
+ * The changes are applied in-place to the spec object.
+ *
+ * @param spec The Vega-Lite specification of the chart.
+ */
+export function prepareSpecForSelections(spec: any): void {
+  if ("params" in spec && "encoding" in spec) {
+    spec.params.forEach((param: any) => {
+      if (!("select" in param)) {
+        // We are only interested in transforming select parameters.
+        // Other parameters are skipped.
+        return
+      }
+
+      if (["interval", "point"].includes(param.select)) {
+        // The select object can be either a single string (short-hand) specifying
+        // "interval" or "point" or an object that can contain additional
+        // properties as defined here: https://vega.github.io/vega-lite/docs/selection.html
+        // We convert the short-hand notation to the full object specification,
+        // so that we can attach additional properties to this below.
+        param.select = {
+          type: param.select,
+        }
+      }
+
+      if (!("type" in param.select)) {
+        // The type property is required in the spec.
+        // But we check anyways and skip all parameters that don't have it.
+        return
+      }
+
+      if (
+        param.select.type === "point" &&
+        !("encodings" in param.select) &&
+        isNullOrUndefined(param.select.encodings)
+      ) {
+        // If encodings are not specified by the user, we add all the encodings from
+        // the chart to the selection parameter. This is required so that points
+        // selections are correctly resolved to a PointSelection and not an IndexSelection:
+        // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
+        param.select.encodings = Object.keys(spec.encoding)
+      }
+    })
+  }
 }
 
 export class ArrowVegaLiteChart extends PureComponent<
@@ -132,6 +166,12 @@ export class ArrowVegaLiteChart extends PureComponent<
    * The html element we attach the Vega view to.
    */
   private element: HTMLDivElement | null = null
+
+  /**
+   * Helper to manage form clear listeners.
+   * This is used to reset the selection state when the form is cleared.
+   */
+  private readonly formClearHelper = new FormClearHelper()
 
   readonly state = {
     error: undefined,
@@ -177,7 +217,11 @@ export class ArrowVegaLiteChart extends PureComponent<
       prevTheme !== theme ||
       prevProps.width !== this.props.width ||
       prevProps.height !== this.props.height ||
-      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme
+      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
+      !isEqual(
+        prevProps.element.selectionMode,
+        this.props.element.selectionMode
+      )
     ) {
       logMessage("Vega spec changed.")
       try {
@@ -263,6 +307,9 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw new Error("Datasets should not be passed as part of the spec")
     }
 
+    if (el.selectionMode.length > 0) {
+      prepareSpecForSelections(spec)
+    }
     return spec
   }
 
@@ -272,7 +319,7 @@ export class ArrowVegaLiteChart extends PureComponent<
    *
    * @param name The name of the dataset.
    * @param prevData The dataset before the update.
-   * @param data The dataset at the current state.
+   * @param data The dataset to use for the update.
    */
   private updateData(
     name: string,
@@ -284,16 +331,17 @@ export class ArrowVegaLiteChart extends PureComponent<
     }
 
     if (!data || data.data.numRows === 0) {
-      const view = this.vegaView as any
-      // eslint-disable-next-line no-underscore-dangle
-      const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
-      if (viewHasDataWithName) {
+      // The new data is empty, so we remove the dataset from the
+      // chart view if the named dataset exists.
+      try {
         this.vegaView.remove(name, vega.truthy)
+      } finally {
+        return
       }
-      return
     }
 
     if (!prevData || prevData.data.numRows === 0) {
+      // The previous data was empty, so we just insert the new data.
       this.vegaView.insert(name, getDataArray(data))
       return
     }
@@ -314,17 +362,161 @@ export class ArrowVegaLiteChart extends PureComponent<
       )
     ) {
       if (prevNumRows < numRows) {
+        // Insert the new rows.
         this.vegaView.insert(name, getDataArray(data, prevNumRows))
       }
     } else {
       // Clean the dataset and insert from scratch.
-      const cs = vega
-        .changeset()
-        .remove(vega.truthy)
-        .insert(getDataArray(data))
-      this.vegaView.change(name, cs)
+      this.vegaView.data(name, getDataArray(data))
       logMessage(
         `Had to clear the ${name} dataset before inserting data through Vega view.`
+      )
+    }
+  }
+
+  /**
+   * Configure the selections for this chart if the chart has selections enabled.
+   */
+  private maybeConfigureSelections = (): void => {
+    if (this.vegaView === undefined) {
+      // This check is mainly to make the type checker happy.
+      // this.vegaView is guaranteed to be defined here.
+      return
+    }
+
+    const { widgetMgr, element } = this.props
+
+    if (!element?.id || element.selectionMode.length === 0) {
+      // To configure selections, it needs to be activated and
+      // the element ID must be set.
+      return
+    }
+
+    // Try to load the previous state of the chart from the element state.
+    // This is useful to restore the selection state when the component is re-mounted
+    // or when its put into fullscreen mode.
+    const viewState = widgetMgr.getElementState(
+      this.props.element.id,
+      "viewState"
+    )
+    if (notNullOrUndefined(viewState)) {
+      try {
+        this.vegaView = this.vegaView.setState(viewState)
+      } catch (e) {
+        logWarning("Failed to restore view state", e)
+      }
+    }
+
+    // Add listeners for all selection events. Find out more here:
+    // https://vega.github.io/vega/docs/api/view/#view_addSignalListener
+    element.selectionMode.forEach((param, _index) => {
+      this.vegaView?.addSignalListener(
+        param,
+        debounce(DEBOUNCE_TIME_MS, (name: string, value: SignalValue) => {
+          // Store the current chart selection state with the widget manager so that it
+          // can be used for restoring the state when the component unmounted and
+          // created again. This can happen when elements are added before it within
+          // the delta path. The viewState is only stored in the frontend, and not
+          // synced to the backend.
+          const viewState = this.vegaView?.getState({
+            // There are also `signals` data, but I believe its
+            // not relevant for restoring the selection state.
+            data: (name?: string, _operator?: any) => {
+              // Vega lite stores the selection state in a <param name>_store parameter
+              // under `data` that can be retrieved via the getState method.
+              // https://vega.github.io/vega/docs/api/view/#view_getState
+              return element.selectionMode.some(
+                mode => `${mode}_store` === name
+              )
+            },
+            // Don't include subcontext data since it will lead to exceptions
+            // when loading the state.
+            recurse: false,
+          })
+
+          if (notNullOrUndefined(viewState)) {
+            widgetMgr.setElementState(element.id, "viewState", viewState)
+          }
+
+          // If selection encodings are correctly specified, vega-lite will return
+          // a list of selected points within the vlPoint.or property:
+          // https://github.com/vega/altair/blob/f1b4e2c84da2fba220022c8a285cc8280f824ed8/altair/utils/selection.py#L50
+          // We want to just return this list of points instead of the entire object
+          // since the other parts of the selection object are not useful.
+          let processedSelection = value
+          if ("vlPoint" in value && "or" in value.vlPoint) {
+            processedSelection = value.vlPoint.or
+          }
+
+          // Get the current widget state
+          const currentWidgetState = JSON.parse(
+            widgetMgr.getStringValue(element as WidgetInfo) || "{}"
+          )
+
+          // Update the component-internal selection state
+          const updatedSelections = {
+            selection: {
+              ...(currentWidgetState?.selection || {}),
+              [name]: processedSelection || {},
+            } as VegaLiteState,
+          }
+
+          // Update the widget state if the selection state has changed
+          // compared to the last update. This selection state will be synced
+          // with the backend.
+          if (!isEqual(currentWidgetState, updatedSelections)) {
+            widgetMgr.setStringValue(
+              element as WidgetInfo,
+              JSON.stringify(updatedSelections),
+              {
+                fromUi: true,
+              },
+              this.props.fragmentId
+            )
+          }
+        })
+      )
+    })
+
+    /**
+     * Callback to reset the selection and update the widget state.
+     * This might also send the empty selection state to the backend.
+     */
+    const reset = (): void => {
+      const emptySelectionState: VegaLiteState = {
+        selection: {},
+      }
+      // Initialize all parameters defined in the selectionMode with an empty object.
+      this.props.element.selectionMode.forEach(param => {
+        emptySelectionState.selection[param] = {}
+      })
+      const currentWidgetStateStr = widgetMgr.getStringValue(
+        element as WidgetInfo
+      )
+      const currentWidgetState = currentWidgetStateStr
+        ? JSON.parse(currentWidgetStateStr)
+        : // If there wasn't any selection yet, the selection state
+          // is assumed to be empty.
+          emptySelectionState
+
+      if (!isEqual(currentWidgetState, emptySelectionState)) {
+        this.props.widgetMgr?.setStringValue(
+          this.props.element as WidgetInfo,
+          JSON.stringify(emptySelectionState),
+          {
+            fromUi: true,
+          },
+          this.props.fragmentId
+        )
+      }
+    }
+
+    // Add the form clear listener if we are in a form (formId defined)
+    if (this.props.element.formId) {
+      this.formClearHelper.manageFormClearListener(
+        this.props.widgetMgr,
+        this.props.element.formId,
+        reset
       )
     }
   }
@@ -342,7 +534,7 @@ export class ArrowVegaLiteChart extends PureComponent<
     // Finalize the previous view so it can be garbage collected.
     this.finalizeView()
 
-    const el = this.props.element
+    const { element } = this.props
     const spec = this.generateSpec()
     const options = {
       // Adds interpreter support for Vega expressions that is compliant with CSP
@@ -360,9 +552,12 @@ export class ArrowVegaLiteChart extends PureComponent<
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)
 
     this.vegaView = view
+
+    this.maybeConfigureSelections()
+
     this.vegaFinalizer = finalize
 
-    const datasets = getDataArrays(el)
+    const datasets = getDataArrays(element)
 
     // Heuristic to determine the default dataset name.
     const datasetNames = datasets ? Object.keys(datasets) : []
@@ -373,7 +568,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       this.defaultDataName = DEFAULT_DATA_NAME
     }
 
-    const dataObj = getInlineData(el)
+    const dataObj = getInlineData(element)
     if (dataObj) {
       view.insert(this.defaultDataName, dataObj)
     }
@@ -408,152 +603,6 @@ export class ArrowVegaLiteChart extends PureComponent<
       />
     )
   }
-}
-
-function getInlineData(
-  el: VegaLiteChartElement
-): { [field: string]: any }[] | null {
-  const dataProto = el.data
-
-  if (!dataProto || dataProto.data.numRows === 0) {
-    return null
-  }
-
-  return getDataArray(dataProto)
-}
-
-function getDataArrays(
-  el: VegaLiteChartElement
-): { [dataset: string]: any[] } | null {
-  const datasets = getDataSets(el)
-  if (datasets == null) {
-    return null
-  }
-
-  const datasetArrays: { [dataset: string]: any[] } = {}
-
-  for (const [name, dataset] of Object.entries(datasets)) {
-    datasetArrays[name] = getDataArray(dataset)
-  }
-
-  return datasetArrays
-}
-
-function getDataSets(
-  el: VegaLiteChartElement
-): { [dataset: string]: Quiver } | null {
-  if (el.datasets?.length === 0) {
-    return null
-  }
-
-  const datasets: { [dataset: string]: Quiver } = {}
-
-  el.datasets.forEach((x: WrappedNamedDataset) => {
-    if (!x) {
-      return
-    }
-    const name = x.hasName ? x.name : null
-    datasets[name as string] = x.data
-  })
-
-  return datasets
-}
-
-export function getDataArray(
-  dataProto: Quiver,
-  startIndex = 0
-): { [field: string]: any }[] {
-  if (dataProto.isEmpty()) {
-    return []
-  }
-
-  const dataArr = []
-  const { dataRows: rows, dataColumns: cols } = dataProto.dimensions
-
-  const indexType = Quiver.getTypeName(dataProto.types.index[0])
-  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
-    indexType as IndexTypeName
-  )
-
-  for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
-    const row: { [field: string]: any } = {}
-
-    if (hasSupportedIndex) {
-      const indexValue = dataProto.getIndexValue(rowIndex, 0)
-      // VegaLite can't handle BigInts, so they have to be converted to Numbers first
-      row[MagicFields.DATAFRAME_INDEX] =
-        typeof indexValue === "bigint" ? Number(indexValue) : indexValue
-    }
-
-    for (let colIndex = 0; colIndex < cols; colIndex++) {
-      const dataValue = dataProto.getDataValue(rowIndex, colIndex)
-      const dataType = dataProto.types.data[colIndex]
-      const typeName = Quiver.getTypeName(dataType)
-
-      if (
-        typeName !== "datetimetz" &&
-        (dataValue instanceof Date || Number.isFinite(dataValue)) &&
-        (typeName.startsWith("datetime") || typeName === "date")
-      ) {
-        // For dates that do not contain timezone information.
-        // Vega JS assumes dates in the local timezone, so we need to convert
-        // UTC date to be the same date in the local timezone.
-        const offset = new Date(dataValue).getTimezoneOffset() * 60 * 1000 // minutes to milliseconds
-        row[dataProto.columns[0][colIndex]] = dataValue.valueOf() + offset
-      } else if (typeof dataValue === "bigint") {
-        row[dataProto.columns[0][colIndex]] = Number(dataValue)
-      } else {
-        row[dataProto.columns[0][colIndex]] = dataValue
-      }
-    }
-    dataArr.push(row)
-  }
-
-  return dataArr
-}
-
-/**
- * Checks if data looks like it's just prevData plus some appended rows.
- */
-function dataIsAnAppendOfPrev(
-  prevData: Quiver,
-  prevNumRows: number,
-  prevNumCols: number,
-  data: Quiver,
-  numRows: number,
-  numCols: number
-): boolean {
-  // Check whether dataframes have the same shape.
-
-  // not an append
-  if (prevNumCols !== numCols) {
-    return false
-  }
-
-  // Data can be updated, but still have the same number of rows.
-  // We consider the case an append only when the number of rows has increased
-  if (prevNumRows >= numRows) {
-    return false
-  }
-
-  // if no previous data, render from scratch
-  if (prevNumRows === 0) {
-    return false
-  }
-
-  const c = numCols - 1
-  const r = prevNumRows - 1
-
-  // Check if the new dataframe looks like it's a superset of the old one.
-  // (this is a very light check, and not guaranteed to be right!)
-  if (
-    prevData.getDataValue(0, c) !== data.getDataValue(0, c) ||
-    prevData.getDataValue(r, c) !== data.getDataValue(r, c)
-  ) {
-    return false
-  }
-
-  return true
 }
 
 export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart))

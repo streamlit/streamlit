@@ -92,3 +92,14 @@ def test_page_link_href(
     expect(page_links.nth(1)).to_have_attribute("href", "page2")
     expect(page_links.nth(2)).to_have_attribute("href", "page3")
     expect(page_links.nth(3)).to_have_attribute("href", "page_with_duplicate_name")
+
+
+def test_logo_no_sidebar(
+    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
+):
+    """Test that logo renders properly with no sidebar."""
+    expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
+    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("collapsedControl"), name="logo-no-sidebar")

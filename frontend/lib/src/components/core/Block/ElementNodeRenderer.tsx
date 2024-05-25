@@ -76,7 +76,7 @@ import Metric from "@streamlit/lib/src/components/elements/Metric"
 import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
 import Maybe from "@streamlit/lib/src/components/core/Maybe"
@@ -269,14 +269,6 @@ const RawElementNodeRenderer = (
         <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
       )
 
-    case "arrowVegaLiteChart":
-      return (
-        <ArrowVegaLiteChart
-          element={node.vegaLiteChartElement as VegaLiteChartElement}
-          {...elementProps}
-        />
-      )
-
     case "audio":
       return (
         <Audio
@@ -406,15 +398,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "plotlyChart":
-      return (
-        <PlotlyChart
-          element={node.element.plotlyChart as PlotlyChartProto}
-          height={undefined}
-          {...elementProps}
-        />
-      )
-
     case "progress":
       return (
         <Progress
@@ -492,6 +475,20 @@ const RawElementNodeRenderer = (
         />
       )
     }
+
+    case "arrowVegaLiteChart":
+      const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
+      return (
+        <ArrowVegaLiteChart
+          element={vegaLiteElement}
+          // Vega-lite chart can be used as a widget (when selections are activated) or
+          // an element. We only want to set the key in case of it being used as a widget
+          // since otherwise it might break some apps that show the same charts multiple times.
+          // So we only compute an element ID if it's a widget, otherwise its an empty string.
+          key={vegaLiteElement.id || undefined}
+          {...widgetProps}
+        />
+      )
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
@@ -634,6 +631,17 @@ const RawElementNodeRenderer = (
         <NumberInput
           key={numberInputProto.id}
           element={numberInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "plotlyChart": {
+      const plotlyProto = node.element.plotlyChart as PlotlyChartProto
+      return (
+        <PlotlyChart
+          key={plotlyProto.id}
+          element={plotlyProto}
           {...widgetProps}
         />
       )

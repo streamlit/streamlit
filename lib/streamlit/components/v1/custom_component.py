@@ -33,6 +33,7 @@ from streamlit.type_util import to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -49,10 +50,17 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
-        return self.create_instance(*args, default=default, key=key, **kwargs)
+        return self.create_instance(
+            *args,
+            default=default,
+            key=key,
+            on_change=on_change,
+            **kwargs,
+        )
 
     @gather_metrics("create_instance")
     def create_instance(
@@ -60,6 +68,7 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -76,6 +85,8 @@ class CustomComponent(BaseCustomComponent):
         key: str or None
             If not None, this is the user key we use to generate the
             component's "widget ID".
+        on_change: WidgetCallback or None
+            An optional callback invoked when the widget's value changes. No arguments are passed to it.
         **kwargs
             Keyword args to pass to the component.
 
@@ -195,6 +206,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=ctx,
+                on_change_handler=on_change,
             )
             widget_value = component_state.value
 
@@ -205,11 +217,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 widget_value = default
             elif isinstance(widget_value, ArrowTableProto):
                 widget_value = component_arrow.arrow_proto_to_dataframe(widget_value)
-
-            # widget_value will be either None or whatever the component's most
-            # recent setWidgetValue value is. We coerce None -> NoValue,
-            # because that's what DeltaGenerator._enqueue expects.
-            return widget_value if widget_value is not None else NoValue
+            return widget_value
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
@@ -217,11 +225,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         element = Element()
         return_value = marshall_component(dg, element)
-        result = dg._enqueue(
-            "component_instance", element.component_instance, return_value
-        )
 
-        return result
+        dg._enqueue("component_instance", element.component_instance)
+        return return_value
 
     def __eq__(self, other) -> bool:
         """Equality operator."""

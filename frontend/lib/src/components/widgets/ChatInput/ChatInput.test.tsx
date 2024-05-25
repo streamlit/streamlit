@@ -120,6 +120,29 @@ describe("ChatInput widget", () => {
     expect(chatInput).toHaveTextContent("")
   })
 
+  it("ensures chat input has focus on submit by keyboard", () => {
+    const props = getProps()
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.keyDown(chatInput, { key: "Enter" })
+    expect(chatInput).toHaveFocus()
+  })
+
+  it("ensures chat input has focus on submit by button click", () => {
+    const props = getProps()
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    const chatButton = screen.getByTestId("stChatInputSubmitButton")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.click(chatButton)
+    expect(chatInput).toHaveFocus()
+  })
+
   it("can set fragmentId when sending value", () => {
     const props = getProps(undefined, { fragmentId: "myFragmentId" })
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")

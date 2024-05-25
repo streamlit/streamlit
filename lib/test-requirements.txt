@@ -12,11 +12,14 @@ seaborn>=0.11.2
 setuptools>=65.5.1
 watchdog>=2.1.5
 urllib3>=1.9
-
+# Use by vega-lite / altair e2e tests:
+vega_datasets
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
-pytest
+# Pinned for now because AsyncTest doesn't work with pytest 8.2.0
+# https://github.com/pytest-dev/pytest/issues/12263
+pytest<8.2.0
 pytest-cov
 requests-mock
 testfixtures
@@ -32,14 +35,8 @@ pytest-github-actions-annotate-failures
 
 mypy-protobuf>=3.2, <3.4
 
-# SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
-# choosing not to support it.)
-sqlalchemy[mypy]>=1.4.25, <2.0
-
-# Dependencies used in cache hashing tests:
-python-dateutil>=2.7.3
-tzlocal>=1.1
-cffi>=1.14
+# Used for testing of st.connection
+sqlalchemy[mypy]>=1.4.25, <2
 
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
@@ -47,4 +44,5 @@ pydantic>=1.0, <2.0
 
 # semver 3 renames VersionInfo so temporarily pin until we deal with it
 semver<3
-langchain>=0.0.216
+# Langchain 0.2 migrated the Streamlit integration into a dedicated community package.
+langchain>=0.0.216, <0.2

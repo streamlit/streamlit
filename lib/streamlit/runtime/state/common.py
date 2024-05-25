@@ -26,7 +26,7 @@ from typing import (
     Dict,
     Final,
     Generic,
-    Sequence,
+    Iterable,
     Tuple,
     TypeVar,
     Union,
@@ -38,6 +38,7 @@ from typing_extensions import TypeAlias
 from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
+from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -49,6 +50,7 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.PlotlyChart_pb2 import PlotlyChart
 from streamlit.proto.Radio_pb2 import Radio
 from streamlit.proto.Selectbox_pb2 import Selectbox
 from streamlit.proto.Slider_pb2 import Slider
@@ -68,6 +70,7 @@ if TYPE_CHECKING:
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
     Arrow,
+    ArrowVegaLiteChart,
     Button,
     CameraInput,
     ChatInput,
@@ -79,6 +82,7 @@ WidgetProto: TypeAlias = Union[
     FileUploader,
     MultiSelect,
     NumberInput,
+    PlotlyChart,
     Radio,
     Selectbox,
     Slider,
@@ -180,7 +184,7 @@ SAFE_VALUES = Union[
 def compute_widget_id(
     element_type: str,
     user_key: str | None = None,
-    **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],
+    **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.
@@ -213,7 +217,7 @@ def user_key_from_widget_id(widget_id: str) -> str | None:
     "None" as a key, but we can't avoid this kind of problem while storing the
     string representation of the no-user-key sentinel as part of the widget id.
     """
-    user_key = widget_id.split("-", maxsplit=2)[-1]
+    user_key: str | None = widget_id.split("-", maxsplit=2)[-1]
     user_key = None if user_key == "None" else user_key
     return user_key
 
