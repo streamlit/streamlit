@@ -28,6 +28,14 @@ if TYPE_CHECKING:
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
+    """Ensures that widgets other than `st.form_submit` within a form don't have an on_change callback set.
+
+    Raises
+    ------
+    StreamlitAPIException:
+        Raised when the described rule is violated.
+    """
+
     if runtime.exists() and is_in_form(dg) and on_change is not None:
         raise StreamlitAPIException(
             "With forms, callbacks can only be defined on the `st.form_submit_button`."
@@ -41,6 +49,15 @@ _shown_default_value_warning: bool = False
 def check_session_state_rules(
     default_value: Any, key: str | None, writes_allowed: bool = True
 ) -> None:
+    """Ensures that no values are set for widgets with the given key when writing is not allowed.
+
+    Additionally, if `global.disableWidgetStateDuplicationWarning` is False a warning is shown when a widget has a default value but its value is also set via session state.
+
+    Raises
+    ------
+    StreamlitAPIException:
+        Raised when the described rule is violated.
+    """
     global _shown_default_value_warning
 
     if key is None or not runtime.exists():
