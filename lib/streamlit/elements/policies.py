@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import streamlit
 from streamlit import config, runtime
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
@@ -77,7 +76,9 @@ def check_session_state_rules(
         and not _shown_default_value_warning
         and not config.get_option("global.disableWidgetStateDuplicationWarning")
     ):
-        streamlit.warning(
+        from streamlit import warning
+
+        warning(
             f'The widget with key "{key}" was created with a default value but'
             " also had its value set via the Session State API."
         )
@@ -110,10 +111,12 @@ def check_cache_replay_rules() -> None:
     function to check for those as well. And rename it to check_widget_usage_rules.
     """
     if runtime.exists():
-        from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+        # from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
         if ctx and ctx.disallow_cached_widget_usage:
+            from streamlit import exception
+
             # We use an exception here to show a proper stack trace
             # that indicates to the user where the issue is.
-            streamlit.exception(CachedWidgetWarning())
+            exception(CachedWidgetWarning())

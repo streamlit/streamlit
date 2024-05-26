@@ -43,6 +43,11 @@ from streamlit.elements.lib.built_in_chart_utils import (
     generate_chart,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -1650,13 +1655,6 @@ class VegaChartsMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-
-            # Import here to avoid circular imports
-            from streamlit.elements.policies import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
 
             check_cache_replay_rules()
             if callable(on_select):

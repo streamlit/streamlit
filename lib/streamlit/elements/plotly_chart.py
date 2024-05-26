@@ -41,6 +41,11 @@ from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
+from streamlit.elements.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -274,7 +279,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator:
         ...
@@ -289,7 +298,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> PlotlyState:
         ...
@@ -304,7 +317,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
@@ -450,14 +467,6 @@ class PlotlyMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-
-            # Import here to avoid circular imports
-            from streamlit.elements.policies import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
-
             check_cache_replay_rules()
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
