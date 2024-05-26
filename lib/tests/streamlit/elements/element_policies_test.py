@@ -181,7 +181,7 @@ class CheckCacheReplayTest(ElementPoliciesTest):
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch(
-        "streamlit.elements.policies.get_script_run_ctx",
+        "streamlit.runtime.scriptrunner.script_run_context.get_script_run_ctx",
         MagicMock(return_value=MagicMock(disallow_cached_widget_usage=True)),
     )
     @patch("streamlit.exception")

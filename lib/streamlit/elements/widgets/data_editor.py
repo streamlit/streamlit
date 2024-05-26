@@ -787,7 +787,7 @@ class DataEditorMixin:
         import pyarrow as pa
 
         # Import here to avoid cyclic import warning
-        from streamlit.elements.utils import (
+        from streamlit.elements.policies import (
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
