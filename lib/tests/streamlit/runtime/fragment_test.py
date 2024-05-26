@@ -302,6 +302,21 @@ class FragmentTest(unittest.TestCase):
             saved_fragment()
             patched_run_with_active_hash.assert_called_with("some_hash")
 
+def _run_fragment_writes_to_outside_container_app(
+    element_producer: Callable[[], DeltaGenerator]
+) -> None:
+    outside_container = st.container()
+
+    @st.experimental_fragment
+    def _some_method():
+        st.write("Hello")
+        # this is forbidden
+        with outside_container:
+            element_producer()
+
+    _some_method()
+
+
 class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
     def test_write_widget_inside_container_succeeds(self):
         @st.experimental_fragment
@@ -314,23 +329,32 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
 
         _some_method()
 
-    @staticmethod
-    def _run_fragment_writes_to_outside_container_app(
-        element_producer: Callable[[], DeltaGenerator]
-    ):
-        outside_container = st.container()
-
-        @st.experimental_fragment
-        def _some_method():
-            st.write("Hello")
-            # this is forbidden
-            with outside_container:
-                element_producer()
-
-        _some_method()
-
     @parameterized.expand(
-        [
+        ("name", _app, _element_producer)
+        # for name in (
+        #     "button",
+        #     "camera_input",
+        #     "chat_input",
+        #     "checkbox",
+        #     "toggle",
+        #     "color_picker",
+        #     "data_editor",
+        #     "file_uploader",
+        #     "multiselect",
+        #     "number_input",
+        #     "radio",
+        #     "slider",
+        #     "selectbox",
+        #     "text_area",
+        #     "text_input",
+        #     "date_input",
+        #     "time_input",
+        #     "altair_chart",
+        #     "vega_lite_chart",
+        #     "plotly_chart",
+        # )
+        for _app in [_run_fragment_writes_to_outside_container_app]
+        for _element_producer in (
             lambda: st.button("Click me"),
             lambda: st.camera_input("Take a picture"),
             lambda: st.chat_input("Chat with me"),
@@ -356,15 +380,16 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
             lambda: st.altair_chart(MagicMock(), on_select="rerun"),
             lambda: st.vega_lite_chart(MagicMock(), on_select="rerun"),
             lambda: st.plotly_chart(MagicMock(), on_select="rerun"),
-        ]
+        )
     )
     def test_write_element_outside_container_raises_exception_for_widgets(
-        self, element_producer: Callable[[], DeltaGenerator]
+        self,
+        name: str,
+        _app: Callable[[Callable[[], DeltaGenerator]], None],
+        _element_producer: Callable[[], DeltaGenerator],
     ):
         with self.assertRaises(StreamlitAPIException) as e:
-            FragmentCannotWriteToOutsidePathTest._run_fragment_writes_to_outside_container_app(
-                element_producer
-            )
+            _app(_element_producer)
         assert (
             e.exception.args[0]
             == "Fragments cannot write to elements outside of their container."
@@ -423,6 +448,4 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
     def test_write_element_outside_container_succeeds_for_nonwidgets(
         self, name: str, element_producer: Callable[[], DeltaGenerator]
     ):
-        FragmentCannotWriteToOutsidePathTest._run_fragment_writes_to_outside_container_app(
-            element_producer
-        )
+        _run_fragment_writes_to_outside_container_app(element_producer)
