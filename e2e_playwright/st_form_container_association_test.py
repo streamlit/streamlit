@@ -14,7 +14,7 @@
 
 import re
 
-from parameterized import parameterized
+import pytest
 from playwright.sync_api import Page
 
 from e2e_playwright.shared.app_utils import (
@@ -24,7 +24,8 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-@parameterized.expand(
+@pytest.mark.parametrize(
+    "form_key,is_checkbox_inside_form",
     [
         ["form_0", True],
         ["form_1", False],
@@ -36,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
         ["form_7", True],
         ["form_8", True],
         ["form_9", True],
-    ]
+    ],
 )
 def test_form_container_association(
     app: Page, form_key: str, is_checkbox_inside_form: bool
