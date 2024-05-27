@@ -222,3 +222,40 @@ def click_checkbox(
     checkbox_element = get_checkbox(page, label)
     checkbox_element.click()
     wait_for_app_run(page)
+
+
+def expect_help_tooltip(
+    app: Page, el_with_help_tooltip: Locator, tooltip_text: str | Pattern[str]
+):
+    """Expect a tooltip to be displayed when hovering over the help symbol of an element.
+
+    This only works for elements that have our shared help tooltip implemented.
+    It doesn't work for elements with a custom tooltip implementation, e.g. st.button.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the tooltip.
+
+    el_with_help_tooltip : Locator
+        The locator of the element with the help tooltip.
+
+    tooltip_text : str or Pattern[str]
+        The text of the tooltip to expect.
+    """
+    hover_target = el_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).not_to_be_attached()
+
+    hover_target.hover()
+
+    expect(tooltip_content).to_be_visible()
+    expect(tooltip_content).to_have_text(tooltip_text)
+
+    # reset the hovering in case this method is called multiple times in the same test
+    app.get_by_test_id("stApp").hover(
+        position={"x": 0, "y": 0}, no_wait_after=True, force=True
+    )
+    expect(tooltip_content).not_to_be_attached()
