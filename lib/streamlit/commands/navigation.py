@@ -106,12 +106,12 @@ def navigation(
     default_page = None
     pagehash_to_pageinfo: dict[PageHash, PageInfo] = {}
 
-    # This nested loop keeps track of three things:
+    # This nested loop keeps track of two things:
     # 1. the default page
     # 2. the pagehash to pageinfo mapping
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
-            if page.default:
+            if page._default:
                 if default_page is not None:
                     raise StreamlitAPIException(
                         "Multiple Pages specified with `default=True`. "
@@ -128,7 +128,7 @@ def navigation(
             if script_hash in pagehash_to_pageinfo:
                 raise StreamlitAPIException(
                     f"Multiple Pages specified with title {page.title}. "
-                    "Page titles should be unique. If not specified, "
+                    "Page titles should be unique. If not specified, the "
                     "title is inferred from the file path or callable name."
                 )
 
@@ -142,7 +142,7 @@ def navigation(
 
     if default_page is None:
         default_page = page_list[0]
-        default_page.default = True
+        default_page._default = True
 
     msg = ForwardMsg()
     if position == "hidden":
@@ -156,7 +156,7 @@ def navigation(
             p.page_script_hash = page._script_hash
             p.page_name = page.title
             p.icon = page.icon
-            p.is_default = page.default
+            p.is_default = page._default
             p.section_header = section_header
             p.url_pathname = page.title.replace(" ", "_")
 

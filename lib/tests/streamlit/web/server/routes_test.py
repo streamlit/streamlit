@@ -167,7 +167,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         for r in responses:
             assert r.code == 200
 
-    def test_most_404_return_default(self):
+    def test_nonexistent_urls_return_default_page(self):
         responses = [
             self.fetch("/nonexistent"),
             self.fetch("/page2/nonexistent"),

@@ -39,14 +39,14 @@ class NavigationTest(DeltaGeneratorTestCase):
         single_page = st.Page("page1.py")
         page = st.navigation([single_page, st.Page("page2.py"), st.Page("page3.py")])
         assert page == single_page
-        assert page.default
+        assert page._default
 
     def test_default_page_returned_if_specified(self):
         """Test that the first page is returned if there are multiple pages and no default"""
         default_page = st.Page("page3.py", default=True)
         page = st.navigation([st.Page("page1.py"), st.Page("page2.py"), default_page])
         assert page == default_page
-        assert page.default
+        assert page._default
 
     def test_multiple_defaults_raises_APIException(self):
         """Test that an error is thrown if multiple defaults are specified"""

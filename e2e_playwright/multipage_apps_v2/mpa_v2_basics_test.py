@@ -240,15 +240,15 @@ def test_removes_query_params_with_st_switch_page(page: Page, app_port: int):
     expect(page).to_have_url(f"http://localhost:{app_port}/page_5")
 
 
-def test_removes_query_params_when_clicking_link(page: Page, app_port: int):
+def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
     """Test that query params are removed when swapping pages by clicking on a link"""
 
-    page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
-    wait_for_app_loaded(page)
+    app.goto(f"http://localhost:{app_port}/page_7?foo=bar")
+    wait_for_app_loaded(app)
 
-    get_page_link(page, "page 4").click()
-    wait_for_app_loaded(page)
-    expect(page).to_have_url(f"http://localhost:{app_port}/page_4")
+    get_page_link(app, "page 4").click()
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
 
 
 def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):

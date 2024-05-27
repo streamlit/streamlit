@@ -498,7 +498,7 @@ describe("AppNavigation", () => {
 
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_PAGE_TITLE",
-        title: "streamlit_app · Streamlit",
+        title: "streamlit_app",
       })
 
       expect(onPageIconChange).toBeCalled()

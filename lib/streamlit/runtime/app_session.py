@@ -608,6 +608,7 @@ class AppSession:
                 # that change which modules should be watched.
                 if self._local_sources_watcher:
                     self._local_sources_watcher.update_watched_modules()
+                    self._local_sources_watcher.update_watched_pages()
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
