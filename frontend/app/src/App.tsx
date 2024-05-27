@@ -1168,8 +1168,20 @@ export class App extends PureComponent<Props, State> {
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
-      // the cache.
-      if (this.connectionManager !== null) {
+      // the cache. We expect the sessionInfo to be populated at this point,
+      // but we have observed race conditions tied to a rerun occurring
+      // before a NewSession message is processed. This issue should not
+      // disrupt users and is not a critical need for the message cache
+      console.log(this.connectionManager !== null)
+      console.log(
+        status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+      console.log(this.sessionInfo.isSet)
+      if (
+        this.connectionManager !== null &&
+        status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
+        this.sessionInfo.isSet
+      ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge
         )
