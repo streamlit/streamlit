@@ -181,6 +181,9 @@ class LayoutsMixin:
         gap : "small", "medium", or "large"
             The size of the gap between the columns. Defaults to "small".
 
+        vertical_alignment : "top", "center", or "bottom"
+            The vertical alignment of the content inside the columns. Defaults to "top".
+
         Returns
         -------
         list of containers
