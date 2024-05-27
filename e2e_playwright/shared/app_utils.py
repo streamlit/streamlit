@@ -17,7 +17,79 @@ from __future__ import annotations
 import re
 from typing import Pattern
 
-from playwright.sync_api import Locator, expect
+from playwright.sync_api import Locator, Page, expect
+
+from e2e_playwright.conftest import wait_for_app_run
+
+
+def get_checkbox(locator: Locator, label: str | Pattern[str]) -> Locator:
+    """Get a checkbox widget with the given label.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stCheckbox").filter(has_text=label)
+    expect(element).to_be_visible()
+    return element
+
+
+def get_button(locator: Locator, label: str | Pattern[str]) -> Locator:
+    """Get a button widget with the given label.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = (
+        locator.get_by_test_id("stButton").filter(has_text=label).locator("button")
+    )
+    expect(element).to_be_visible()
+    return element
+
+
+def get_form_submit_button(locator: Locator, label: str | Pattern[str]) -> Locator:
+    """Get a form submit button with the given label.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    label : str or Pattern[str]
+        The label of the element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("baseButton-secondaryFormSubmit").filter(
+        has_text=label
+    )
+    expect(element).to_be_visible()
+    return element
 
 
 def expect_prefixed_markdown(
@@ -26,10 +98,12 @@ def expect_prefixed_markdown(
     expected_markdown: str | Pattern[str],
     exact_match: bool = False,
 ) -> None:
-    """Find the markdown with the prefix and then ensure that the `expected_markdown` is in the text as well.
+    """Find the markdown with the prefix and then ensure that the
+    `expected_markdown` is in the text as well.
 
-    Splitting it into a `filter` and a `to_have_text` check has the advantage that we see the diff in case of a mismatch;
-    this would not be the case if we just used the `filter`.
+    Splitting it into a `filter` and a `to_have_text` check has the advantage
+    that we see the diff in case of a mismatch; this would not be the case if we
+    just used the `filter`.
 
     Only one markdown-element must be returned, otherwise an error is thrown.
 
@@ -42,7 +116,8 @@ def expect_prefixed_markdown(
         The prefix of the markdown element.
 
     expected_markdown : str or Pattern[str]
-        The markdown content that should be found. If a pattern is provided, the text will be matched against this pattern.
+        The markdown content that should be found. If a pattern is provided,
+        the text will be matched against this pattern.
 
     exact_match : bool, optional
         Whether the markdown should exactly match the `expected_markdown`, by default True.
@@ -63,3 +138,87 @@ def expect_prefixed_markdown(
         expect(selection_text).to_have_text(text_to_match)
     else:
         expect(selection_text).to_contain_text(expected_markdown)
+
+
+def expect_exception(
+    locator: Locator,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect an exception to be displayed in the app.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the exception element.
+
+    expected_markdown : str or Pattern[str]
+        The expected message to be displayed in the exception.
+    """
+    exception_el = locator.get_by_test_id("stException").filter(
+        has_text=expected_message
+    )
+    expect(exception_el).to_be_visible()
+
+
+def click_button(
+    page: Page,
+    label: str | Pattern[str],
+) -> None:
+    """Click a button with the given label
+    and wait for the app to run.
+
+    Parameters
+    ----------
+
+    page : Page
+        The page to click the button on.
+
+    label : str or Pattern[str]
+        The label of the button to click.
+    """
+    button_element = get_button(page, label)
+    button_element.click()
+    wait_for_app_run(page)
+
+
+def click_form_button(
+    page: Page,
+    label: str | Pattern[str],
+) -> None:
+    """Click a form submit button with the given label
+    and wait for the app to run.
+
+    Parameters
+    ----------
+
+    page : Page
+        The page to click the button on.
+
+    label : str or Pattern[str]
+        The label of the button to click.
+    """
+    button_element = get_form_submit_button(page, label)
+    button_element.click()
+    wait_for_app_run(page)
+
+
+def click_checkbox(
+    page: Page,
+    label: str | Pattern[str],
+) -> None:
+    """Click a checkbox with the given label
+    and wait for the app to run.
+
+    Parameters
+    ----------
+
+    page : Page
+        The page to click the checkbox on.
+
+    label : str or Pattern[str]
+        The label of the checkbox to click.
+    """
+    checkbox_element = get_checkbox(page, label)
+    checkbox_element.click()
+    wait_for_app_run(page)
