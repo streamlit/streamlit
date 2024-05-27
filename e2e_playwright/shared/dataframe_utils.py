@@ -240,7 +240,7 @@ def get_open_cell_overlay(app: Locator) -> Locator:
     """
     # This is currently the best way to get the cell overlay
     # We should eventually add a stable test ID to the cell overlay
-    # within GDG to better target it.
+    # within glide-data-grid to better target it.
     cell_overlay = app.get_by_test_id("portal").locator(".gdg-clip-region")
     expect(cell_overlay).to_be_visible()
     return cell_overlay

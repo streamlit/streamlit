@@ -50,7 +50,8 @@ cell_overlay_test_df = pd.DataFrame(
 )
 
 cell_overlay_test_column_config = {
-    # the e2e test requires all cells to medium width
+    # the e2e interaction testing logic requires all cells to medium
+    # width to calculate the cell positions correctly.
     "big_numbers": st.column_config.NumberColumn(
         width="medium",
     ),
