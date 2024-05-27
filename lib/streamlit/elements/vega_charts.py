@@ -825,7 +825,10 @@ class VegaChartsMixin:
             the chart to match the width of the parent container.
 
         stack : bool, "normalize", "zero", or "center"
-            Determines how the data is stacked. If False (default), stacks the data. If "normalize",
+            Determines how the data is stacked. If False (default), doesn't stack the data.
+            If True, stacks the data. If "normalize", normalizes the data.
+            If "zero", stacks the data and sets the baseline to zero. If "center",
+            stacks the data and sets the baseline to the middle of the y range.
 
         horizontal : bool
             Determines the orientation of the chart:
