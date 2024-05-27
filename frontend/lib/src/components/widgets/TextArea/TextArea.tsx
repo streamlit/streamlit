@@ -176,7 +176,10 @@ class TextArea extends React.PureComponent<Props, State> {
       this.commitWidgetValue({ fromUi: true })
       const { formId } = this.props.element
       if (isInForm({ formId })) {
-        this.props.widgetMgr.submitForm(this.props.element.formId)
+        this.props.widgetMgr.submitForm(
+          this.props.element.formId,
+          this.props.fragmentId
+        )
       }
     }
   }

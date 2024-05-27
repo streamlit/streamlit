@@ -120,7 +120,8 @@ describe("sendEmptySelection", () => {
     widgetMgr.setStringValue(
       plotlyProto,
       '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     sendEmptySelection(
@@ -285,7 +286,8 @@ describe("handleSelection", () => {
     widgetMgr.setStringValue(
       proto,
       '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     handleSelection(event, widgetMgr, proto, mockFragmentId)

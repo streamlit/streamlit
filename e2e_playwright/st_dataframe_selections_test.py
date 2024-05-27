@@ -18,6 +18,7 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_prefixed_markdown
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
     select_column,
@@ -27,21 +28,6 @@ from e2e_playwright.shared.dataframe_utils import (
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 _COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
-
-
-def _expect_written_text(app: Page, expected_prefix: str, expected_selection: str):
-    """Find the markdown with the prefix and then ensure that the `expected_selection` is in the text as well.
-
-    Splitting it into a `filter` and a `to_have_text` check has the advantage that we see the diff in case of a mistmatch;
-    this would not be the case if we just used the `filter`.
-
-    Only one markdown-element must be returned, otherwise an error is thrown.
-    """
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected_prefix
-    )
-    expected_selection = expected_prefix + " " + expected_selection
-    expect(selection_text).to_have_text(expected_selection)
 
 
 def _get_single_row_select_df(app: Page) -> Locator:
@@ -95,7 +81,7 @@ def test_single_row_select(app: Page):
 
     select_row(canvas, 2)
     wait_for_app_run(app)
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe single-row selection:",
         "{'selection': {'rows': [1], 'columns': []}}",
@@ -145,18 +131,20 @@ def test_single_column_select(app: Page):
     select_column(canvas, 1)
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe single-column selection:",
         "{'selection': {'rows': [], 'columns': ['col_1']}}",
+        exact_match=True,
     )
 
     select_column(canvas, 2)
     wait_for_app_run(app)
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe single-column selection:",
         "{'selection': {'rows': [], 'columns': ['col_2']}}",
+        exact_match=True,
     )
 
 
@@ -167,10 +155,11 @@ def test_multi_row_select(app: Page):
     select_row(canvas, 3)
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
         "{'selection': {'rows': [0, 2], 'columns': []}}",
+        exact_match=True,
     )
 
 
@@ -181,10 +170,11 @@ def test_multi_row_select_all_at_once(app: Page):
     select_row(canvas, 0)
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
         "{'selection': {'rows': [0, 1, 2, 3, 4], 'columns': []}}",
+        exact_match=True,
     )
 
 
@@ -203,10 +193,11 @@ def test_multi_row_by_keeping_mouse_pressed(app: Page):
     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
     app.mouse.up()
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-row selection:",
         "{'selection': {'rows': [1, 2, 3], 'columns': []}}",
+        exact_match=True,
     )
 
 
@@ -220,10 +211,11 @@ def test_multi_column_select(app: Page):
     app.keyboard.up(_COMMAND_KEY)
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-column selection:",
         "{'selection': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
     )
 
 
@@ -240,10 +232,11 @@ def _select_some_rows_and_columns(app: Page, canvas: Locator):
 
 
 def _expect_multi_row_multi_column_selection(app: Page):
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-row-multi-column selection:",
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
     )
 
 
@@ -263,10 +256,11 @@ def test_clear_selection_via_escape(app: Page):
     app.keyboard.press("Escape")
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-row-multi-column selection:",
         "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
     )
 
 
@@ -287,10 +281,11 @@ def test_clear_selection_via_toolbar(app: Page):
     toolbar_buttons.nth(0).click()
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe multi-row-multi-column selection:",
         "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
     )
 
 
@@ -300,10 +295,11 @@ def test_in_form_selection_and_session_state(app: Page):
 
     _markdown_prefix = "Dataframe-in-form selection:"
     # nothing should be shown yet because we did not submit the form
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         _markdown_prefix,
         "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
     )
 
     # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
@@ -311,16 +307,18 @@ def test_in_form_selection_and_session_state(app: Page):
     app.get_by_test_id("baseButton-secondaryFormSubmit").click()
     wait_for_app_run(app)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         _markdown_prefix,
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
     )
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe-in-form selection in session state:",
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
     )
 
 
@@ -328,10 +326,11 @@ def test_multi_row_and_multi_column_selection_with_callback(app: Page):
     canvas = _get_callback_df(app)
     _select_some_rows_and_columns(app, canvas)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe selection callback:",
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
     )
 
 
@@ -377,10 +376,11 @@ def test_multi_row_and_multi_column_selection_in_fragment(app: Page):
     expect(canvas).to_be_visible()
     _select_some_rows_and_columns(app, canvas)
 
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "Dataframe-in-fragment selection:",
         "{'selection': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+        exact_match=True,
     )
 
     # Check that the main script has run once (the initial run), but not after the selection:
@@ -395,10 +395,11 @@ def test_that_index_cannot_be_selected(app: Page):
     wait_for_app_run(app)
 
     # Check selection:
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "No selection on index column:",
         "{'selection': {'rows': [], 'columns': ['col_3']}}",
+        exact_match=True,
     )
 
     # Select index column:
@@ -406,10 +407,11 @@ def test_that_index_cannot_be_selected(app: Page):
     wait_for_app_run(app)
 
     # Nothing should be selected:
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "No selection on index column:",
         "{'selection': {'rows': [], 'columns': []}}",
+        exact_match=True,
     )
 
     # Try to click on another column and check that in can be selected:
@@ -417,8 +419,9 @@ def test_that_index_cannot_be_selected(app: Page):
     wait_for_app_run(app)
 
     # Check selection:
-    _expect_written_text(
+    expect_prefixed_markdown(
         app,
         "No selection on index column:",
         "{'selection': {'rows': [], 'columns': ['col_1']}}",
+        exact_match=True,
     )

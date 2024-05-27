@@ -301,4 +301,23 @@ describe("NumberColumn", () => {
       expect(isErrorCell(cell)).toEqual(true)
     }
   )
+
+  it.each([
+    [10, "10"],
+    [1234567, "1234567"],
+    [12345.678, "12345.678"],
+    [-0.000123456, "-0.000123456"],
+    [null, ""],
+    [undefined, ""],
+  ])(
+    "uses raw number for copyData so that %p is copied as %p",
+    (input: number | null | undefined, expectedCopyData: string) => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        format: "$%.2f",
+      })
+
+      const cell = mockColumn.getCell(input)
+      expect(cell.copyData).toEqual(expectedCopyData)
+    }
+  )
 })
