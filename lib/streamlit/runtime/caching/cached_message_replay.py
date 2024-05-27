@@ -290,7 +290,8 @@ class CachedMessageReplayContext(threading.local):
                 and element_proto.id
                 and self._registered_metadata
             ):
-                # This looks like a valid registered widget
+                # The element has an ID and has associated widget metadata
+                # -> looks like a valid registered widget
                 widget_meta = WidgetMsgMetadata(
                     element_proto.id, None, metadata=self._registered_metadata
                 )
