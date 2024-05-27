@@ -737,7 +737,7 @@ class VegaChartsMixin:
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
-        stack: bool | "normalize" | "zero" | "center" = False,
+        stack: bool | "normalize" | "center" = False,
         horizontal: bool = False,
     ) -> DeltaGenerator:
         """Display an area chart.
@@ -824,11 +824,10 @@ class VegaChartsMixin:
             ``use_container_width`` is ``True``, Streamlit sets the width of
             the chart to match the width of the parent container.
 
-        stack : bool, "normalize", "zero", or "center"
+        stack : bool, "normalize", or "center"
             Determines how the data is stacked. If False (default), doesn't stack the data.
             If True, stacks the data. If "normalize", normalizes the data.
-            If "zero", stacks the data and sets the baseline to zero. If "center",
-            stacks the data and sets the baseline to the middle of the y range.
+            If "center", stacks the data and sets the baseline to the middle of the y range.
 
         horizontal : bool
             Determines the orientation of the chart:
@@ -944,7 +943,7 @@ class VegaChartsMixin:
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
-        stack: bool | "normalize" | "zero" | "center" = True,
+        stack: bool | "normalize" | "center" = True,
         horizontal: bool = False,
     ) -> DeltaGenerator:
         """Display a bar chart.
@@ -1035,7 +1034,6 @@ class VegaChartsMixin:
             Determines how the bars are stacked:
             - True: Stacks the bars on top of each other (default).
             - "normalize": Stacks and normalizes the bars to 100%.
-            - "zero": Stacks the bars with the baseline set to 0.
             - "center": Stacks the bars with the baseline set to the center of the bars.
 
         horizontal : bool
@@ -1115,7 +1113,7 @@ class VegaChartsMixin:
         if type(color) == str and not stack:
             chart = chart.encode(xOffset=f"{color}:N")
         # If stack is either normalize, zero or center, we need to encode the y axis with the stack parameter
-        elif type(color) == str and stack in ["normalize", "zero", "center"]:
+        elif type(color) == str and stack in ["normalize", "center"]:
             chart = chart.encode(
                 alt.Y(f"{y}:Q", stack=stack),
             )
