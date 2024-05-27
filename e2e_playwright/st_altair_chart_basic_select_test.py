@@ -202,7 +202,7 @@ def test_double_click_interval_shows_no_selection_text(app: Page):
     chart.dblclick(position={"x": 130, "y": 100})
     wait_for_app_run(app)
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=expected_prefix + " " + expected_selection
+        has_text=expected_selection
     )
     expect(selection_text).to_have_count(0)
 
