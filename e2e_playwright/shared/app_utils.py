@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
+import re
+from typing import Pattern
+
 from playwright.sync_api import Locator, expect
 
 
 def expect_prefixed_markdown(
     locator: Locator,
     expected_prefix: str,
-    expected_markdown: str,
+    expected_markdown: str | Pattern[str],
     exact_match: bool = False,
 ) -> None:
     """Find the markdown with the prefix and then ensure that the `expected_markdown` is in the text as well.
@@ -38,8 +41,8 @@ def expect_prefixed_markdown(
     expected_prefix : str
         The prefix of the markdown element.
 
-    expected_markdown : str
-        The markdown content that should be found.
+    expected_markdown : str or Pattern[str]
+        The markdown content that should be found. If a pattern is provided, the text will be matched against this pattern.
 
     exact_match : bool, optional
         Whether the markdown should exactly match the `expected_markdown`, by default True.
@@ -50,6 +53,13 @@ def expect_prefixed_markdown(
         has_text=expected_prefix
     )
     if exact_match:
-        expect(selection_text).to_have_text(f"{expected_prefix} {expected_markdown}")
+        text_to_match: str | Pattern[str]
+        if isinstance(expected_markdown, Pattern):
+            # Recompile the pattern with the prefix:
+            text_to_match = re.compile(f"{expected_prefix} {expected_markdown.pattern}")
+        else:
+            text_to_match = f"{expected_prefix} {expected_markdown}"
+
+        expect(selection_text).to_have_text(text_to_match)
     else:
         expect(selection_text).to_contain_text(expected_markdown)
