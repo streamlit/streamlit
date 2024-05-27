@@ -738,6 +738,7 @@ class VegaChartsMixin:
         height: int | None = None,
         use_container_width: bool = True,
         stack: bool | "normalize" | "zero" | "center" = False,
+        horizontal: bool = False,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -823,6 +824,15 @@ class VegaChartsMixin:
             ``use_container_width`` is ``True``, Streamlit sets the width of
             the chart to match the width of the parent container.
 
+        stack : bool, "normalize", "zero", or "center"
+            Determines how the data is stacked. If False (default), stacks the data. If "normalize",
+
+        horizontal : bool
+            Determines the orientation of the chart:
+            - True: Displays the chart horizontally, with the x-axis and y-axis swapped.
+            - False: Displays the chart vertically (default).
+
+
         Examples
         --------
         >>> import streamlit as st
@@ -894,6 +904,7 @@ class VegaChartsMixin:
 
         encoding = chart_dict["encoding"]
         y_spec = encoding["y"]["field"]
+        x_spec = encoding["x"]["field"]
 
         if stack == "normalize":
             chart = chart.encode(alt.Y(f"{y_spec}:Q", stack=stack, title=None))
@@ -901,6 +912,13 @@ class VegaChartsMixin:
             chart = chart.encode(alt.Y(f"{y_spec}:Q", stack=stack, title=None))
         if stack:
             chart = chart.encode(alt.Y(f"{y_spec}:Q", stack=stack, title=None))
+
+        if horizontal:
+            chart = chart.mark_area().encode(
+                x=alt.X(f"{y_spec}:Q", title=None, stack=stack),
+                y=alt.Y(f"{x_spec}:N", title=None, stack=stack),
+                # color=color,
+            )
 
         return cast(
             "DeltaGenerator",
