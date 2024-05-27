@@ -151,6 +151,16 @@ class SelectboxTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.selectbox("the label", ("m", "f"), 2)
 
+    def test_raises_exception_of_index_larger_than_options(self):
+        """Test that it raises an exception if index is larger than options."""
+        with self.assertRaises(StreamlitAPIException) as ex:
+            st.selectbox("Test box", ["a"], index=1)
+
+        assert (
+            str(ex.exception)
+            == "Selectbox index must be greater than 0 and less than length of options."
+        )
+
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
 
