@@ -16,7 +16,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==2.2.1
 contourpy==1.2.1
-coverage==7.5.1
+coverage==7.5.2
 cryptography==42.0.7
 cycler==0.12.1
 dataclasses-json==0.6.6
@@ -140,9 +140,9 @@ typing-inspect==0.9.0
 typing_extensions==4.12.0
 tzdata==2024.1
 urllib3==2.2.1
-uv==0.2.3
+uv==0.2.4
 vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.1
 yarl==1.9.4
-zipp==3.18.2
+zipp==3.19.0
