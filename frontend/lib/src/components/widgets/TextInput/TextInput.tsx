@@ -184,7 +184,10 @@ class TextInput extends React.PureComponent<Props, State> {
         this.commitWidgetValue({ fromUi: true })
       }
       if (isInForm(this.props.element)) {
-        this.props.widgetMgr.submitForm(this.props.element.formId)
+        this.props.widgetMgr.submitForm(
+          this.props.element.formId,
+          this.props.fragmentId
+        )
       }
     }
   }
