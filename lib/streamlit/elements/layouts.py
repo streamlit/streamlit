@@ -149,7 +149,7 @@ class LayoutsMixin:
         spec: SpecType,
         *,
         gap: str | None = "small",
-        vertical_align: Literal["top", "center", "bottom"] = "top",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -266,9 +266,9 @@ class LayoutsMixin:
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
 
-            if vertical_align == "bottom":
+            if vertical_alignment == "bottom":
                 col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.BOTTOM
-            elif vertical_align == "center":
+            elif vertical_alignment == "center":
                 col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.CENTER
             else:
                 # The default alignment is "top":
