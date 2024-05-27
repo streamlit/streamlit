@@ -32,11 +32,10 @@ subcol1, subcol2 = col1.columns(2)
 subcol1.text_input("Text input 1")
 subcol2.text_input("Text input 2")
 col1.text_area("Text Area 1")
-subcolA, subcolB, subcolC, subcolD = col1.columns(4)
+subcolA, subcolB, subcolC = col1.columns(3)
 subcolA.checkbox("One")
 subcolB.checkbox("Two")
 subcolC.checkbox("Three")
-subcolD.checkbox("Four")
 
 np.random.seed(0)
 
