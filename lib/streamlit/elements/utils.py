@@ -43,7 +43,8 @@ def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[Enum],
     options: type[Enum],
     opt_sequence: Sequence[Any],
-) -> RegisterWidgetResult[Enum]: ...
+) -> RegisterWidgetResult[Enum]:
+    ...
 
 
 @overload
@@ -51,7 +52,8 @@ def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[T],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[T]: ...
+) -> RegisterWidgetResult[T]:
+    ...
 
 
 def maybe_coerce_enum(register_widget_result, options, opt_sequence):
@@ -84,7 +86,8 @@ def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[list[T]],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[list[T]]: ...
+) -> RegisterWidgetResult[list[T]]:
+    ...
 
 
 @overload
@@ -92,7 +95,8 @@ def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[tuple[T, T]],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[tuple[T, T]]: ...
+) -> RegisterWidgetResult[tuple[T, T]]:
+    ...
 
 
 def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
