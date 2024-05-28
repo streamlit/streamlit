@@ -148,7 +148,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: str = "small",
+        gap: Literal["small", "medium", "large"] = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
