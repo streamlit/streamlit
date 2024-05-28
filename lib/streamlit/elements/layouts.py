@@ -233,13 +233,6 @@ class LayoutsMixin:
 
         """
         weights = spec
-        weights_exception = StreamlitAPIException(
-            "The input argument to st.columns must be either a "
-            + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
-            + "for more information."
-        )
-
         if isinstance(weights, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
@@ -247,7 +240,24 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise weights_exception
+            raise StreamlitAPIException(
+                "The input argument to st.columns must be either a "
+                + "positive integer or a list of positive numeric weights. "
+                + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
+                + "for more information."
+            )
+
+        vertical_alignment_mapping = {
+            "top": BlockProto.Column.VerticalAlign.TOP,
+            "center": BlockProto.Column.VerticalAlign.CENTER,
+            "bottom": BlockProto.Column.VerticalAlign.BOTTOM,
+        }
+
+        if vertical_alignment not in vertical_alignment_mapping:
+            raise StreamlitAPIException(
+                'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
+                f"The argument passed was {gap}."
+            )
 
         def column_gap(gap):
             if type(gap) == str:
@@ -268,15 +278,9 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
-
-            if vertical_alignment == "bottom":
-                col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.BOTTOM
-            elif vertical_alignment == "center":
-                col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.CENTER
-            else:
-                # The default alignment is "top":
-                col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.TOP
-
+            col_proto.column.vertical_alignment = vertical_alignment_mapping[
+                vertical_alignment
+            ]
             col_proto.allow_empty = True
             return col_proto
 

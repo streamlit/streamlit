@@ -49,12 +49,12 @@ message Block {
     double weight = 1;
     string gap = 2;
     // Vertical alignment used by columns
-    enum VerticalAlign {
+    enum VerticalAlignment {
       TOP = 0;
       CENTER = 1;
       BOTTOM = 2;
     }
-    VerticalAlign vertical_align = 3;
+    VerticalAlignment vertical_alignment = 3;
   }
 
   message Expandable {
