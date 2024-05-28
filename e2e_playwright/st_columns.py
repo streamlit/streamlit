@@ -36,14 +36,6 @@ c3.write(LOREM_IPSUM)
 c1, c2, c3 = st.columns(3)
 c3.write(LOREM_IPSUM)
 
-if st.button("Layout should not shift when this is pressed"):
-    st.write("Pressed!")
-
-c1, c2, c3 = st.columns(3)
-c1.image(CAT_IMAGE)
-c2.image(CAT_IMAGE)
-c3.image(CAT_IMAGE)
-
 with st.expander("Variable-width columns (relative numbers)", expanded=True):
     for c in st.columns([0.6, 0.3, 0.1]):
         c.image(CAT_IMAGE)

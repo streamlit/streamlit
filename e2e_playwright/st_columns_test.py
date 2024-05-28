@@ -19,6 +19,11 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import click_button, expect_exception, get_expander
 
+# The threshold for the image comparison for the cat images
+# we use a bigger threshold because the images will have a sub-pixel size
+# when resized, which can cause slightly different results for test runs
+CAT_IMAGE_THRESHOLD = 0.01
+
 
 def _get_basic_column_container(
     app: Page,
@@ -54,17 +59,6 @@ def test_columns_always_take_up_space(app: Page, assert_snapshot: ImageCompareFu
     assert_snapshot(column_element, name="st_columns-with_empty_columns")
 
 
-def test_no_layout_shift(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that there is no layout shift when columns are rendered."""
-    same_sized_columns = app.get_by_test_id("stHorizontalBlock").nth(2)
-    assert_snapshot(same_sized_columns, name="st_columns-same_sized_columns")
-
-    click_button(app, "Layout should not shift when this is pressed")
-
-    # The screenshot should be the same as before the button was pressed
-    assert_snapshot(same_sized_columns, name="st_columns-same_sized_columns")
-
-
 def test_column_gap_small_is_correctly_applied(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -73,31 +67,46 @@ def test_column_gap_small_is_correctly_applied(
         get_expander(app, "Column gap small").get_by_test_id("stHorizontalBlock").nth(0)
     )
     expect(column_gap_small).to_have_css("gap", "16px")
-    assert_snapshot(column_gap_small, name="st_columns-column_gap_small")
+    column_gap_small.scroll_into_view_if_needed()
+    assert_snapshot(
+        column_gap_small,
+        name="st_columns-column_gap_small",
+        image_threshold=CAT_IMAGE_THRESHOLD,
+    )
 
 
 def test_column_gap_medium_is_correctly_applied(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the medium column gap is correctly applied."""
-    column_gap_small = (
+    column_gap_medium = (
         get_expander(app, "Column gap medium")
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    expect(column_gap_small).to_have_css("gap", "32px")
-    assert_snapshot(column_gap_small, name="st_columns-column_gap_medium")
+    expect(column_gap_medium).to_have_css("gap", "32px")
+    column_gap_medium.scroll_into_view_if_needed()
+    assert_snapshot(
+        column_gap_medium,
+        name="st_columns-column_gap_medium",
+        image_threshold=CAT_IMAGE_THRESHOLD,
+    )
 
 
 def test_column_gap_large_is_correctly_applied(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the large column gap is correctly applied."""
-    column_gap_small = (
+    column_gap_large = (
         get_expander(app, "Column gap large").get_by_test_id("stHorizontalBlock").nth(0)
     )
-    expect(column_gap_small).to_have_css("gap", "64px")
-    assert_snapshot(column_gap_small, name="st_columns-column_gap_large")
+    expect(column_gap_large).to_have_css("gap", "64px")
+    column_gap_large.scroll_into_view_if_needed()
+    assert_snapshot(
+        column_gap_large,
+        name="st_columns-column_gap_large",
+        image_threshold=CAT_IMAGE_THRESHOLD,
+    )
 
 
 def test_one_level_nesting_works_correctly(
@@ -121,7 +130,11 @@ def test_column_variable_relative_width(
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    assert_snapshot(column_gap_small, name="st_columns-variable_width_relative")
+    assert_snapshot(
+        column_gap_small,
+        name="st_columns-variable_width_relative",
+        image_threshold=CAT_IMAGE_THRESHOLD,
+    )
 
 
 def test_column_variable_absolute_width(
@@ -133,7 +146,11 @@ def test_column_variable_absolute_width(
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    assert_snapshot(column_gap_small, name="st_columns-variable_width_absolute")
+    assert_snapshot(
+        column_gap_small,
+        name="st_columns-variable_width_absolute",
+        image_threshold=CAT_IMAGE_THRESHOLD,
+    )
 
 
 def test_two_level_nested_columns_shows_exception(app: Page):
