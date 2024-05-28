@@ -158,7 +158,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
         assert (
             str(ex.exception)
-            == "Selectbox index must be greater than 0 and less than the length of options."
+            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
         )
 
     def test_outside_form(self):
