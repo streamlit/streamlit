@@ -15,6 +15,12 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    click_on_expander,
+    expect_exception,
+    get_expander,
+)
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
@@ -94,3 +100,28 @@ def test_expander_session_state_set(app: Page):
 
     expect(text_elements.nth(0)).to_have_text("0.0", use_inner_text=True)
     expect(text_elements.nth(1)).to_have_text("0.0", use_inner_text=True)
+
+
+def test_nested_expanders_raises_exception(app: Page):
+    """Test that st.expander may not be nested inside other expanders."""
+
+    click_button(app, "Nested expander (raises exception)")
+    expect_exception(
+        app,
+        "Expanders may not be nested inside other expanders.",
+    )
+
+
+def test_expandable_state(app: Page):
+    """Test whether expander state is not retained for a distinct expander."""
+    click_button(app, "Show expander_1")
+    # Open expander_1
+    click_on_expander(app, "expander_1")
+
+    expander_1 = get_expander(app, "expander_1")
+    expander_1_details = expander_1.get_by_test_id("stExpanderDetails")
+    expect(expander_1_details).to_contain_text("expander_1 write")
+
+    click_button(app, "Show expander_2")
+    expect(expander_1_details).not_to_contain_text("expander_1 write")
+    expect(expander_1_details).to_be_hidden()

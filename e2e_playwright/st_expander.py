@@ -67,3 +67,26 @@ collapsed_long = st.expander(
     "dolor, eleifend sit amet purus id, dictum aliquam quam."
 )
 collapsed_long.write("I am already collapsed")
+
+
+st.subheader("Expander state test:")
+
+show_expander_1 = st.button("Show expander_1")
+show_expander_2 = st.button("Show expander_2")
+
+if show_expander_1:
+    with st.expander("expander_1", expanded=False):
+        st.write("expander_1 write")
+
+if show_expander_2:
+    with st.expander("expander_2", expanded=False):
+        st.write("expander_2 write")
+
+
+if st.button("Nested expander (raises exception)"):
+    level1 = st.expander("See explanation")
+    level1.write("First level expander")
+    level1.image("https://static.streamlit.io/examples/dice.jpg")
+
+    level2 = level1.expander("Nested expander")
+    level2.write("Second level expander")
