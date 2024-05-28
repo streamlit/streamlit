@@ -38,6 +38,11 @@ from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
@@ -274,7 +279,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator:
         ...
@@ -289,7 +298,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> PlotlyState:
         ...
@@ -304,7 +317,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
@@ -450,14 +467,6 @@ class PlotlyMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-
-            # Import here to avoid circular imports
-            from streamlit.elements.utils import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
-
             check_cache_replay_rules()
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
