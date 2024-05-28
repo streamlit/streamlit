@@ -58,6 +58,7 @@ from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.errors import StreamlitAPIException
@@ -790,10 +791,6 @@ class DataEditorMixin:
         # Lazy-loaded import
         import pandas as pd
         import pyarrow as pa
-
-        from streamlit.elements.policies import check_fragment_path_policy
-
-        # Import here to avoid cyclic import warning
 
         key = to_key(key)
 

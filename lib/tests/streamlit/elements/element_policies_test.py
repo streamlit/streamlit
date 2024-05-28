@@ -198,7 +198,7 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         ctx.current_fragment_delta_path = [0, 1, 2]
         self.ctx = ctx
 
-    @patch("streamlit.elements.policies.get_script_run_ctx")
+    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
     def test_when_element_delta_path_length_is_smaller_than_parent_then_raise(
         self, patched_get_script_run_ctx: MagicMock
     ):
@@ -209,7 +209,7 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         with self.assertRaises(StreamlitAPIException):
             check_fragment_path_policy(dg)
 
-    @patch("streamlit.elements.policies.get_script_run_ctx")
+    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
     def test_when_element_delta_path_is_not_in_parent_delta_path_then_raise(
         self, patched_get_script_run_ctx: MagicMock
     ):
@@ -220,7 +220,7 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         with self.assertRaises(StreamlitAPIException):
             check_fragment_path_policy(dg)
 
-    @patch("streamlit.elements.policies.get_script_run_ctx")
+    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
     def test_when_element_delta_path_is_in_parent_delta_path_then_dont_raise(
         self, patched_get_script_run_ctx: MagicMock
     ):
