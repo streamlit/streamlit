@@ -174,7 +174,9 @@ def _fragment(
                 )
                 with active_hash_context:
                     with st.container():
-                        ctx.current_fragment_delta_path = active_dg._cursor.delta_path
+                        ctx.current_fragment_delta_path = (
+                            active_dg._cursor.delta_path if active_dg._cursor else []
+                        )
                         result = non_optional_func(*args, **kwargs)
             finally:
                 ctx.current_fragment_id = None
