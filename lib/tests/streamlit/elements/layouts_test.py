@@ -39,7 +39,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         # Should use top alignment as default
         assert (
             horizontal_block.add_block.column.vertical_alignment
-            == BlockProto.Column.VerticalAlign.TOP
+            == BlockProto.Column.VerticalAlignment.TOP
         )
 
         # Should use the default gap size of "small"
@@ -54,9 +54,9 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("bottom", BlockProto.Column.VerticalAlign.BOTTOM),
-            ("top", BlockProto.Column.VerticalAlign.TOP),
-            ("center", BlockProto.Column.VerticalAlign.CENTER),
+            ("bottom", BlockProto.Column.VerticalAlignment.BOTTOM),
+            ("top", BlockProto.Column.VerticalAlignment.TOP),
+            ("center", BlockProto.Column.VerticalAlignment.CENTER),
         ]
     )
     def test_columns_with_vertical_alignment(
