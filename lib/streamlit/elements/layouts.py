@@ -247,10 +247,12 @@ class LayoutsMixin:
                 + "for more information."
             )
 
-        vertical_alignment_mapping = {
-            "top": BlockProto.Column.VerticalAlign.TOP,
-            "center": BlockProto.Column.VerticalAlign.CENTER,
-            "bottom": BlockProto.Column.VerticalAlign.BOTTOM,
+        vertical_alignment_mapping: dict[
+            str, BlockProto.Column.VerticalAlignment.ValueType
+        ] = {
+            "top": BlockProto.Column.VerticalAlignment.TOP,
+            "center": BlockProto.Column.VerticalAlignment.CENTER,
+            "bottom": BlockProto.Column.VerticalAlignment.BOTTOM,
         }
 
         if vertical_alignment not in vertical_alignment_mapping:
