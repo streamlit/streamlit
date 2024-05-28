@@ -31,18 +31,18 @@ c1, c2, c3 = st.columns(3)
 c1.write(LOREM_IPSUM)
 c2.write(LOREM_IPSUM)
 c3.write(LOREM_IPSUM)
-# Only add another element to the last column
+
+# Only fill in the last column and keep the others empty
+c1, c2, c3 = st.columns(3)
 c3.write(LOREM_IPSUM)
 
 if st.button("Layout should not shift when this is pressed"):
     st.write("Pressed!")
 
-# Same-width columns
-with st.expander("Same-width columns", expanded=True):
-    c1, c2, c3 = st.columns(3)
-    c1.image(CAT_IMAGE)
-    c2.image(CAT_IMAGE)
-    c3.image(CAT_IMAGE)
+c1, c2, c3 = st.columns(3)
+c1.image(CAT_IMAGE)
+c2.image(CAT_IMAGE)
+c3.image(CAT_IMAGE)
 
 with st.expander("Variable-width columns (relative numbers)", expanded=True):
     for c in st.columns([0.6, 0.3, 0.1]):
