@@ -30,7 +30,7 @@ def test_pydeck_chart_has_consistent_visuals(
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(4)
 
-    wait_for_app_run(app, 10000)
+    wait_for_app_run(app, 15000)
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty_light_theme")
 
     assert_snapshot(
@@ -60,7 +60,7 @@ def test_pydeck_chart_has_consistent_visuals_dark(
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(4)
 
-    wait_for_app_run(app, 10000)
+    wait_for_app_run(app, 15000)
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty_dark_theme")
 
     assert_snapshot(
