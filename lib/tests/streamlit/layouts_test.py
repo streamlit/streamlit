@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from parameterized import parameterized
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -30,12 +33,51 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
+        # The first element is the horizontal block (column container)
+        horizontal_block = all_deltas[0]
+
+        # Should use top alignment as default
+        assert (
+            horizontal_block.add_block.column.vertical_alignment
+            == BlockProto.Column.VerticalAlign.TOP
+        )
+
+        # Should use the default gap size of "small"
+        assert horizontal_block.add_block.column.gap == "small"
+
         columns_blocks = all_deltas[1:4]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
         self.assertEqual(columns_blocks[0].add_block.column.weight, 1.0 / 3)
         self.assertEqual(columns_blocks[1].add_block.column.weight, 1.0 / 3)
         self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0 / 3)
+
+    @parameterized.expand(
+        [
+            ("bottom", BlockProto.Column.VerticalAlign.BOTTOM),
+            ("top", BlockProto.Column.VerticalAlign.TOP),
+            ("center", BlockProto.Column.VerticalAlign.CENTER),
+        ]
+    )
+    def test_columns_with_vertical_alignment(
+        self, vertical_alignment: str, expected_alignment
+    ):
+        """Test that it works correctly with vertical_alignment argument"""
+
+        st.columns(3, vertical_alignment=vertical_alignment)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        # The first element is the horizontal block (column container)
+        horizontal_block = all_deltas[0]
+
+        assert (
+            horizontal_block.add_block.column.vertical_alignment == expected_alignment
+        )
+
+    def test_columns_with_invalid_vertical_alignment(self):
+        """Test that it throws an error on invalid vertical_alignment argument"""
+        with self.assertRaises(StreamlitAPIException):
+            st.columns(3, vertical_alignment="invalid")
 
     def test_not_equal_width_int_columns(self):
         """Test that it works correctly when spec is list of ints"""
@@ -96,7 +138,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     def test_columns_with_medium_gap(self):
         """Test that it works correctly with "medium" gap argument"""
 
-        columns = st.columns(3, gap="medium")
+        st.columns(3, gap="medium")
 
         all_deltas = self.get_all_deltas_from_queue()
 
@@ -113,7 +155,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     def test_columns_with_large_gap(self):
         """Test that it works correctly with "large" gap argument"""
 
-        columns = st.columns(3, gap="LARGE")
+        st.columns(3, gap="LARGE")
 
         all_deltas = self.get_all_deltas_from_queue()
 

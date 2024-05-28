@@ -148,7 +148,7 @@ class LayoutsMixin:
         self,
         spec: SpecType,
         *,
-        gap: str | None = "small",
+        gap: str = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
@@ -256,7 +256,7 @@ class LayoutsMixin:
         if vertical_alignment not in vertical_alignment_mapping:
             raise StreamlitAPIException(
                 'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
-                f"The argument passed was {gap}."
+                f"The argument passed was {vertical_alignment}."
             )
 
         def column_gap(gap):
