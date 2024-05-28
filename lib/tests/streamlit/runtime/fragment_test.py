@@ -77,7 +77,15 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 class FragmentTest(unittest.TestCase):
     def setUp(self):
         self.original_dg_stack = dg_stack.get()
-        dg_stack.set((DeltaGenerator(),))
+        root_container = MagicMock()
+        dg_stack.set(
+            (
+                DeltaGenerator(
+                    root_container=root_container,
+                    cursor=MagicMock(root_container=root_container),
+                ),
+            )
+        )
 
     def tearDown(self):
         dg_stack.set(self.original_dg_stack)
@@ -378,8 +386,21 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
             lambda: st.date_input("Pick a date"),
             lambda: st.time_input("Pick a time"),
             # hybrid-widgets
-            lambda: st.altair_chart(MagicMock(), on_select="rerun"),
-            lambda: st.vega_lite_chart(MagicMock(), on_select="rerun"),
+            lambda: (
+                st.altair_chart(
+                    alt.Chart().mark_bar(),
+                    on_select="rerun",
+                )
+                # altair with 'on_select' only works for versions >= 5.0.0
+                if is_altair_version_less_than("5.0.0") is False
+                else st.write("")
+            ),
+            lambda: (
+                st.vega_lite_chart({"mark": "rect"}, on_select="rerun")
+                # altair with 'on_select' only works for versions >= 5.0.0
+                if is_altair_version_less_than("5.0.0") is False
+                else st.write("")
+            ),
             lambda: st.plotly_chart(MagicMock(), on_select="rerun"),
         )
     )
@@ -437,7 +458,7 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
                     )
                     # altair with 'on_select' only works for versions >= 5.0.0
                     if is_altair_version_less_than("5.0.0") is False
-                    else lambda: st.write("")
+                    else st.write("")
                 ),
             ),
             (
@@ -446,7 +467,7 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
                     st.vega_lite_chart({"mark": "rect"}, on_select="ignore")
                     # altair with 'on_select' only works for versions >= 5.0.0
                     if is_altair_version_less_than("5.0.0") is False
-                    else lambda: st.write("")
+                    else st.write("")
                 ),
             ),
             (
