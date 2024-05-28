@@ -311,7 +311,7 @@ class ChatMixin:
         default = ""
         key = to_key(key)
 
-        from streamlit.elements.policies import (
+        from streamlit.elements.lib.policies import (
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,

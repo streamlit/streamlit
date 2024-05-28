@@ -43,7 +43,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     generate_chart,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.policies import (
+from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,

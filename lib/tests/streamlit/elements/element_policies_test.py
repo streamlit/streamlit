@@ -20,8 +20,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit import config
-from streamlit.elements import utils
-from streamlit.elements.policies import (
+from streamlit.elements.lib import utils
+from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
@@ -35,17 +35,17 @@ class ElementPoliciesTest(unittest.TestCase):
 
 
 class CheckCallbackRulesTest(ElementPoliciesTest):
-    @patch("streamlit.elements.policies.is_in_form", MagicMock(return_value=False))
+    @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=False))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_not_in_form(self):
         check_callback_rules(None, lambda x: x)
 
-    @patch("streamlit.elements.policies.is_in_form", MagicMock(return_value=True))
+    @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_in_form(self):
         check_callback_rules(None, None)
 
-    @patch("streamlit.elements.policies.is_in_form", MagicMock(return_value=True))
+    @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_error(self):
         with pytest.raises(StreamlitAPIException) as e:
@@ -62,7 +62,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         patched_st_warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.policies.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_val(
         self, patched_st_warning, patched_get_session_state
@@ -76,7 +76,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         patched_st_warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.policies.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_state_val(
         self, patched_st_warning, patched_get_session_state
@@ -90,7 +90,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         patched_st_warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.policies.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_hide_warning_if_state_duplication_disabled(
         self, patched_st_warning, patched_get_session_state
@@ -106,7 +106,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         patched_st_warning.assert_not_called()
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.policies.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     def test_check_session_state_rules_writes_not_allowed(
         self, patched_get_session_state
     ):
@@ -149,7 +149,7 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
         config._delete_option("_test.tomlTest")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.policies.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_prints_warning(
         self, patched_st_warning, patched_get_session_state
@@ -171,7 +171,7 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
 class CheckCacheReplayTest(ElementPoliciesTest):
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch(
-        "streamlit.elements.policies.get_script_run_ctx",
+        "streamlit.elements.lib.policies.get_script_run_ctx",
         MagicMock(return_value=MagicMock(disallow_cached_widget_usage=False)),
     )
     @patch("streamlit.exception")
@@ -181,7 +181,7 @@ class CheckCacheReplayTest(ElementPoliciesTest):
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch(
-        "streamlit.elements.policies.get_script_run_ctx",
+        "streamlit.elements.lib.policies.get_script_run_ctx",
         MagicMock(return_value=MagicMock(disallow_cached_widget_usage=True)),
     )
     @patch("streamlit.exception")

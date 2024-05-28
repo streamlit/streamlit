@@ -15,7 +15,7 @@
 import enum
 import unittest
 
-from streamlit.elements.utils import maybe_coerce_enum, maybe_coerce_enum_sequence
+from streamlit.elements.lib.utils import maybe_coerce_enum, maybe_coerce_enum_sequence
 from streamlit.runtime.state.common import RegisterWidgetResult
 
 

@@ -22,12 +22,12 @@ from typing_extensions import TypeAlias
 
 from streamlit import config
 from streamlit.elements.form import current_form_id
-from streamlit.elements.policies import (
+from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
 )
-from streamlit.elements.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto

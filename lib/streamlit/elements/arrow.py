@@ -44,7 +44,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
-from streamlit.elements.policies import (
+from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,

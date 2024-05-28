@@ -38,13 +38,13 @@ from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.lib.streamlit_plotly_theme import (
-    configure_streamlit_plotly_theme,
-)
-from streamlit.elements.policies import (
+from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
+)
+from streamlit.elements.lib.streamlit_plotly_theme import (
+    configure_streamlit_plotly_theme,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
