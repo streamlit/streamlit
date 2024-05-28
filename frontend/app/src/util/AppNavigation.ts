@@ -238,9 +238,7 @@ export class StrategyV2 {
     ) as IAppPage
     const mainPage = appPages.find(p => p.isDefault) as IAppPage
     this.mainPage = mainPage
-    const currentPageName = currentPage.isDefault
-      ? ""
-      : (currentPage.urlPathname as string)
+    const currentPageName = currentPage.urlPathname as string
 
     if (!this.appNav.isPageTitleSet) {
       const title = getTitle(currentPage.pageName as string)
@@ -256,7 +254,7 @@ export class StrategyV2 {
     }
 
     this.appNav.onUpdatePageUrl(
-      mainPage.pageName ?? "",
+      mainPage.urlPathname ?? "",
       currentPageName,
       currentPage.isDefault ?? false
     )

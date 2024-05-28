@@ -361,13 +361,13 @@ describe("AppNavigation", () => {
         sections: ["section1", "section2"],
         appPages: [
           new AppPage({
-            pageName: "streamlit_app",
+            pageName: "streamlit app",
             pageScriptHash: "page_script_hash",
             isDefault: true,
             urlPathname: "streamlit_app",
           }),
           new AppPage({
-            pageName: "streamlit_app2",
+            pageName: "streamlit app2",
             pageScriptHash: "page_script_hash2",
             isDefault: false,
             urlPathname: "streamlit_app2",
