@@ -12,76 +12,84 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import streamlit as st
 
-CAT_IMAGE = "https://images.unsplash.com/photo-1552933529-e359b2477252?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=950&q=80"
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
+TEST_ASSETS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "test_assets"
+)
+
+CAT_IMAGE = os.path.join(TEST_ASSETS_DIR, "cat.jpg")
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 
-# Get first element after title/header
+# Basic columns:
 c1, c2, c3 = st.columns(3)
 
-c1.write("Foo")
-c2.write("Bar")
-c3.write("Baz")
-
-c1, c2, c3 = st.columns(3)
-
-# We use longer text here because movement should
-# be considered a large change in the screenshot comparison
-c3.write("Some long text to write")
+c1.write(LOREM_IPSUM)
+c2.write(LOREM_IPSUM)
+c3.write(LOREM_IPSUM)
+# Only add another element to the last column
+c3.write(LOREM_IPSUM)
 
 if st.button("Layout should not shift when this is pressed"):
     st.write("Pressed!")
 
 # Same-width columns
-c1, c2, c3 = st.columns(3)
-c1.image(CAT_IMAGE)
-c2.image(CAT_IMAGE)
-c3.image(CAT_IMAGE)
+with st.expander("Same-width columns", expanded=True):
+    c1, c2, c3 = st.columns(3)
+    c1.image(CAT_IMAGE)
+    c2.image(CAT_IMAGE)
+    c3.image(CAT_IMAGE)
 
+with st.expander("Variable-width columns (relative numbers)", expanded=True):
+    for c in st.columns([0.6, 0.3, 0.1]):
+        c.image(CAT_IMAGE)
 
-# Variable-width columns
-for c in st.columns((1, 2, 3, 4)):
-    c.image(CAT_IMAGE)
+with st.expander("Variable-width columns (absolute numbers)", expanded=True):
+    for c in st.columns((1, 2, 3, 4)):
+        c.image(CAT_IMAGE)
 
 # Various column gaps
-c4, c5, c6 = st.columns(3, gap="small")
-c4.image(CAT_IMAGE)
-c5.image(CAT_IMAGE)
-c6.image(CAT_IMAGE)
+with st.expander("Column gap small", expanded=True):
+    c4, c5, c6 = st.columns(3, gap="small")
+    c4.image(CAT_IMAGE)
+    c5.image(CAT_IMAGE)
+    c6.image(CAT_IMAGE)
 
-c7, c8, c9 = st.columns(3, gap="medium")
-c7.image(CAT_IMAGE)
-c8.image(CAT_IMAGE)
-c9.image(CAT_IMAGE)
+with st.expander("Column gap medium", expanded=True):
+    c7, c8, c9 = st.columns(3, gap="medium")
+    c7.image(CAT_IMAGE)
+    c8.image(CAT_IMAGE)
+    c9.image(CAT_IMAGE)
 
-c10, c11, c12 = st.columns(3, gap="large")
-c10.image(CAT_IMAGE)
-c11.image(CAT_IMAGE)
-c12.image(CAT_IMAGE)
+with st.expander("Column gap large", expanded=True):
+    c10, c11, c12 = st.columns(3, gap="large")
+    c10.image(CAT_IMAGE)
+    c11.image(CAT_IMAGE)
+    c12.image(CAT_IMAGE)
 
-st.subheader("Nested columns")
-
-if st.button("Nested columns - one level"):
-    col1, col2 = st.columns(2, gap="large")
+with st.expander("Nested columns - one level", expanded=True):
+    col1, col2 = st.columns(2)
     with col1:
-        subcol1, subcol2 = st.columns(2, gap="medium")
+        subcol1, subcol2 = st.columns(2)
         subcol1.write(LOREM_IPSUM)
         subcol2.write(LOREM_IPSUM)
         st.write("")
         st.write(LOREM_IPSUM)
 
     with col2:
-        subcol1, subcol2 = st.columns(2, gap="medium")
+        subcol1, subcol2 = st.columns(2)
         subcol1.write(LOREM_IPSUM)
         subcol2.write(LOREM_IPSUM)
-
         st.write("")
-        subcol1, subcol2 = st.columns(2, gap="medium")
+        subcol1, subcol2 = st.columns(2)
         subcol1.write(LOREM_IPSUM)
         subcol2.write(LOREM_IPSUM)
 
-if st.button("Nested columns - two levels"):
+if st.button("Nested columns - two levels (raises exception)"):
     col1, col2 = st.columns(2)
     with col1:
         subcol1, subcol2 = st.columns(2)
@@ -93,7 +101,7 @@ if st.button("Nested columns - two levels"):
         subcol2.write(LOREM_IPSUM)
         st.write(LOREM_IPSUM)
 
-if st.button("Nested columns - in sidebar"):
+if st.button("Nested columns - in sidebar (raises exception)"):
     with st.sidebar:
         col1, col2 = st.columns(2)
         col1.text_input("Text input 1")
