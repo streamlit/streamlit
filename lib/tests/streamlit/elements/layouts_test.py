@@ -33,21 +33,18 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        # The first element is the horizontal block (column container)
-        horizontal_block = all_deltas[0]
-
-        # Should use top alignment as default
-        assert (
-            horizontal_block.add_block.column.vertical_alignment
-            == BlockProto.Column.VerticalAlignment.TOP
-        )
-
-        # Should use the default gap size of "small"
-        assert horizontal_block.add_block.column.gap == "small"
-
         columns_blocks = all_deltas[1:4]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
+
+        # Check the defaults have been applied correctly for the first column
+        self.assertEqual(
+            columns_blocks[0].add_block.column.vertical_alignment,
+            BlockProto.Column.VerticalAlignment.TOP,
+        )
+        self.assertEqual(columns_blocks[0].add_block.column.gap, "small")
+
+        # Check the weights are correct
         self.assertEqual(columns_blocks[0].add_block.column.weight, 1.0 / 3)
         self.assertEqual(columns_blocks[1].add_block.column.weight, 1.0 / 3)
         self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0 / 3)
@@ -67,11 +64,19 @@ class ColumnsTest(DeltaGeneratorTestCase):
         st.columns(3, vertical_alignment=vertical_alignment)
 
         all_deltas = self.get_all_deltas_from_queue()
-        # The first element is the horizontal block (column container)
-        horizontal_block = all_deltas[0]
 
+        # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
+        columns_blocks = all_deltas[1:4]
+
+        # Check that the vertical alignment is correct for all columns
         assert (
-            horizontal_block.add_block.column.vertical_alignment == expected_alignment
+            columns_blocks[0].add_block.column.vertical_alignment == expected_alignment
+        )
+        assert (
+            columns_blocks[1].add_block.column.vertical_alignment == expected_alignment
+        )
+        assert (
+            columns_blocks[2].add_block.column.vertical_alignment == expected_alignment
         )
 
     def test_columns_with_invalid_vertical_alignment(self):
