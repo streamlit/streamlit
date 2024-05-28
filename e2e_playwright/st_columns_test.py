@@ -66,7 +66,8 @@ def test_column_gap_small_is_correctly_applied(
     column_gap_small = (
         get_expander(app, "Column gap small").get_by_test_id("stHorizontalBlock").nth(0)
     )
-    expect(column_gap_small).to_have_css("gap", "16px")
+    # We use regex here since some browsers may resolve this to two numbers:
+    expect(column_gap_small).to_have_css("gap", re.compile("16px"))
     column_gap_small.scroll_into_view_if_needed()
     assert_snapshot(
         column_gap_small,
@@ -84,7 +85,8 @@ def test_column_gap_medium_is_correctly_applied(
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    expect(column_gap_medium).to_have_css("gap", "32px")
+    # We use regex here since some browsers may resolve this to two numbers:
+    expect(column_gap_medium).to_have_css("gap", re.compile("32px"))
     column_gap_medium.scroll_into_view_if_needed()
     assert_snapshot(
         column_gap_medium,
@@ -100,7 +102,8 @@ def test_column_gap_large_is_correctly_applied(
     column_gap_large = (
         get_expander(app, "Column gap large").get_by_test_id("stHorizontalBlock").nth(0)
     )
-    expect(column_gap_large).to_have_css("gap", "64px")
+    # We use regex here since some browsers may resolve this to two numbers:
+    expect(column_gap_large).to_have_css("gap", re.compile("64px"))
     column_gap_large.scroll_into_view_if_needed()
     assert_snapshot(
         column_gap_large,
