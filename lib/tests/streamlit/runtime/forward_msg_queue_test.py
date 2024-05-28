@@ -60,30 +60,30 @@ ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 class ForwardMsgQueueTest(unittest.TestCase):
     def test_simple_enqueue(self):
         """Enqueue a single ForwardMsg."""
-        fmq = ForwardMsgQueue()
-        self.assertTrue(fmq.is_empty())
+        rq = ForwardMsgQueue()
+        self.assertTrue(rq.is_empty())
 
-        fmq.enqueue(NEW_SESSION_MSG)
+        rq.enqueue(NEW_SESSION_MSG)
 
-        self.assertFalse(fmq.is_empty())
-        queue = fmq.flush()
-        self.assertTrue(fmq.is_empty())
+        self.assertFalse(rq.is_empty())
+        queue = rq.flush()
+        self.assertTrue(rq.is_empty())
         self.assertEqual(1, len(queue))
         self.assertTrue(queue[0].new_session.config.allow_run_on_save)
 
     def test_enqueue_two(self):
         """Enqueue two ForwardMsgs."""
-        fmq = ForwardMsgQueue()
-        self.assertTrue(fmq.is_empty())
+        rq = ForwardMsgQueue()
+        self.assertTrue(rq.is_empty())
 
-        fmq.enqueue(NEW_SESSION_MSG)
+        rq.enqueue(NEW_SESSION_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
         )
-        fmq.enqueue(TEXT_DELTA_MSG1)
+        rq.enqueue(TEXT_DELTA_MSG1)
 
-        queue = fmq.flush()
+        queue = rq.flush()
         self.assertEqual(2, len(queue))
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
@@ -92,22 +92,22 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
     def test_enqueue_three(self):
         """Enqueue 3 ForwardMsgs."""
-        fmq = ForwardMsgQueue()
-        self.assertTrue(fmq.is_empty())
+        rq = ForwardMsgQueue()
+        self.assertTrue(rq.is_empty())
 
-        fmq.enqueue(NEW_SESSION_MSG)
+        rq.enqueue(NEW_SESSION_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
         )
-        fmq.enqueue(TEXT_DELTA_MSG1)
+        rq.enqueue(TEXT_DELTA_MSG1)
 
         TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 1
         )
-        fmq.enqueue(TEXT_DELTA_MSG2)
+        rq.enqueue(TEXT_DELTA_MSG2)
 
-        queue = fmq.flush()
+        queue = rq.flush()
         self.assertEqual(3, len(queue))
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
@@ -122,22 +122,22 @@ class ForwardMsgQueueTest(unittest.TestCase):
         """Enqueuing an element with the same delta_path as another element
         already in the queue should replace the original element.
         """
-        fmq = ForwardMsgQueue()
-        self.assertTrue(fmq.is_empty())
+        rq = ForwardMsgQueue()
+        self.assertTrue(rq.is_empty())
 
-        fmq.enqueue(NEW_SESSION_MSG)
+        rq.enqueue(NEW_SESSION_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
         )
-        fmq.enqueue(TEXT_DELTA_MSG1)
+        rq.enqueue(TEXT_DELTA_MSG1)
 
         TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
         )
-        fmq.enqueue(TEXT_DELTA_MSG2)
+        rq.enqueue(TEXT_DELTA_MSG2)
 
-        queue = fmq.flush()
+        queue = rq.flush()
         self.assertEqual(2, len(queue))
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
@@ -148,8 +148,8 @@ class ForwardMsgQueueTest(unittest.TestCase):
     def test_dont_replace_block(self, other_msg: ForwardMsg):
         """add_block deltas should never be replaced because they can
         have dependent deltas later in the queue."""
-        fmq = ForwardMsgQueue()
-        self.assertTrue(fmq.is_empty())
+        rq = ForwardMsgQueue()
+        self.assertTrue(rq.is_empty())
 
         ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -159,34 +159,34 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         # Delta messages should not replace `add_block` deltas with the
         # same delta_path.
-        fmq.enqueue(ADD_BLOCK_MSG)
-        fmq.enqueue(other_msg)
-        queue = fmq.flush()
+        rq.enqueue(ADD_BLOCK_MSG)
+        rq.enqueue(other_msg)
+        queue = rq.flush()
         self.assertEqual(2, len(queue))
         self.assertEqual(ADD_BLOCK_MSG, queue[0])
         self.assertEqual(other_msg, queue[1])
 
     def test_multiple_containers(self):
         """Deltas should only be coalesced if they're in the same container"""
-        fmq = ForwardMsgQueue()
-        self.assertTrue(fmq.is_empty())
+        rq = ForwardMsgQueue()
+        self.assertTrue(rq.is_empty())
 
-        fmq.enqueue(NEW_SESSION_MSG)
+        rq.enqueue(NEW_SESSION_MSG)
 
         def enqueue_deltas(container: int, path: Tuple[int, ...]):
             # We deep-copy the protos because we mutate each one
             # multiple times.
             msg = copy.deepcopy(TEXT_DELTA_MSG1)
             msg.metadata.delta_path[:] = make_delta_path(container, path, 0)
-            fmq.enqueue(msg)
+            rq.enqueue(msg)
 
             msg = copy.deepcopy(DF_DELTA_MSG)
             msg.metadata.delta_path[:] = make_delta_path(container, path, 1)
-            fmq.enqueue(msg)
+            rq.enqueue(msg)
 
             msg = copy.deepcopy(ADD_ROWS_MSG)
             msg.metadata.delta_path[:] = make_delta_path(container, path, 1)
-            fmq.enqueue(msg)
+            rq.enqueue(msg)
 
         enqueue_deltas(RootContainer.MAIN, ())
         enqueue_deltas(RootContainer.SIDEBAR, (0, 0, 1))
@@ -198,38 +198,8 @@ class ForwardMsgQueueTest(unittest.TestCase):
             )
             self.assertEqual("text1", queue[idx].delta.new_element.text.body)
 
-        queue = fmq.flush()
+        queue = rq.flush()
         self.assertEqual(7, len(queue))
 
         assert_deltas(RootContainer.MAIN, (), 1)
         assert_deltas(RootContainer.SIDEBAR, (0, 0, 1), 4)
-
-    def test_clear_retain_lifecycle_msgs(self):
-        fmq = ForwardMsgQueue()
-
-        script_finished_msg = ForwardMsg()
-        script_finished_msg.script_finished = (
-            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
-        )
-
-        session_status_changed_msg = ForwardMsg()
-        session_status_changed_msg.session_status_changed.script_is_running = True
-
-        parent_msg = ForwardMsg()
-        parent_msg.parent_message.message = "hello"
-
-        fmq.enqueue(NEW_SESSION_MSG)
-        fmq.enqueue(TEXT_DELTA_MSG1)
-        fmq.enqueue(script_finished_msg)
-        fmq.enqueue(session_status_changed_msg)
-        fmq.enqueue(parent_msg)
-
-        fmq.clear(retain_lifecycle_msgs=True)
-        assert fmq._queue == [
-            script_finished_msg,
-            session_status_changed_msg,
-            parent_msg,
-        ]
-
-        fmq.clear()
-        assert fmq._queue == []
