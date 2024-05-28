@@ -28,6 +28,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -429,14 +430,24 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
             # hybrid-widgets
             (
                 "altair_chart",
-                lambda: st.altair_chart(
-                    alt.Chart().mark_bar(),
-                    on_select="ignore",
+                lambda: (
+                    st.altair_chart(
+                        alt.Chart().mark_bar(),
+                        on_select="ignore",
+                    )
+                    # altair with 'on_select' only works for versions >= 5.0.0
+                    if is_altair_version_less_than("5.0.0") is False
+                    else lambda: st.write("")
                 ),
             ),
             (
                 "vega_lite_chart",
-                lambda: st.vega_lite_chart({"mark": "rect"}, on_select="ignore"),
+                lambda: (
+                    st.vega_lite_chart({"mark": "rect"}, on_select="ignore")
+                    # altair with 'on_select' only works for versions >= 5.0.0
+                    if is_altair_version_less_than("5.0.0") is False
+                    else lambda: st.write("")
+                ),
             ),
             (
                 "plotly_chart",
