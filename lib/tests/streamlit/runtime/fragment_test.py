@@ -393,13 +393,17 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
                 )
                 # altair with 'on_select' only works for versions >= 5.0.0
                 if is_altair_version_less_than("5.0.0") is False
-                else st.write("")
+                else st.text_input(
+                    "Write me"
+                )  # some other widget that raises an exception
             ),
             lambda: (
                 st.vega_lite_chart({"mark": "rect"}, on_select="rerun")
                 # altair with 'on_select' only works for versions >= 5.0.0
                 if is_altair_version_less_than("5.0.0") is False
-                else st.write("")
+                else st.text_input(
+                    "Write me"
+                )  # some other widget that raises an exception
             ),
             lambda: st.plotly_chart(MagicMock(), on_select="rerun"),
         )
