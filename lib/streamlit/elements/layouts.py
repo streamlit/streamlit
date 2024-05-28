@@ -260,7 +260,7 @@ class LayoutsMixin:
             )
 
         def column_gap(gap):
-            if type(gap) == str:
+            if isinstance(gap, str):
                 gap_size = gap.lower()
                 valid_sizes = ["small", "medium", "large"]
 
