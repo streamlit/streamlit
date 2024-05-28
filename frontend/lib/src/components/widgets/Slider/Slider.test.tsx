@@ -219,7 +219,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuenow", "6")
 
       // "Submit" the form
-      props.widgetMgr.submitForm("form")
+      props.widgetMgr.submitForm("form", undefined)
 
       // Our widget should be reset, and the widgetMgr should be updated
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
