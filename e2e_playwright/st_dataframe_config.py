@@ -178,7 +178,7 @@ st.dataframe(
             default=True,  # Should be ignored
             options=[1, 2, 3, 4, 5],
         ),
-        "col_1": st.column_config.SelectboxColumn(),
+        "col_1": st.column_config.SelectboxColumn(options=["a", "b", "c", "d"]),
     },
 )
 

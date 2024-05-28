@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics

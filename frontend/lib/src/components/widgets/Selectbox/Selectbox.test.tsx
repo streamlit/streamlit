@@ -123,7 +123,7 @@ describe("Selectbox widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByText("a")).toBeInTheDocument()
