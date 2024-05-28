@@ -156,8 +156,10 @@ interface State {
   navSections: string[]
   // The hash of the current page executing
   currentPageScriptHash: string
-  // mainScriptHash is the script hash of the main script
-  // In MPAv2, the main page is executed before the current page
+  // In MPAv2, the main page is executed before and after the current
+  // page. The main page is the script the app is started with, and the current
+  // page is the dynamically loaded page-script. In MPAv1, the main page holds
+  // no relevance as only one page loads at a time.
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>

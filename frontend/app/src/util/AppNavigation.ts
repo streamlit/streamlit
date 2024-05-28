@@ -256,7 +256,7 @@ export class StrategyV2 {
     }
 
     this.appNav.onUpdatePageUrl(
-      mainPage.pageName as string,
+      mainPage.pageName ?? "",
       currentPageName,
       currentPage.isDefault ?? false
     )

@@ -364,18 +364,24 @@ describe("AppNavigation", () => {
             pageName: "streamlit_app",
             pageScriptHash: "page_script_hash",
             isDefault: true,
+            urlPathname: "streamlit_app",
           }),
           new AppPage({
             pageName: "streamlit_app2",
             pageScriptHash: "page_script_hash2",
             isDefault: false,
+            urlPathname: "streamlit_app2",
           }),
         ],
         position: "hidden",
         pageScriptHash: "page_script_hash2",
       })
       appNavigation.handleNavigation(navigation)
-      expect(onUpdatePageUrl).toHaveBeenCalledWith("streamlit_app", "", true)
+      expect(onUpdatePageUrl).toHaveBeenCalledWith(
+        "streamlit_app",
+        "streamlit_app2",
+        false
+      )
     })
 
     it("finds url by path when path is valid", () => {

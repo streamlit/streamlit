@@ -54,7 +54,7 @@ def send_page_not_found(ctx: ScriptRunContext):
 def navigation(
     pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
-    position: Literal["sidebar"] | Literal["hidden"] = "sidebar",
+    position: Literal["sidebar", "hidden"] = "sidebar",
 ) -> StreamlitPage | None:
     """
     Configure the available pages in a multipage app.
@@ -78,7 +78,7 @@ def navigation(
         A list of `st.Page` objects or a dictionary where the keys are section
         headers and the values are lists of `st.Page` objects.
 
-    position: str
+    position: "sidebar" or "hidden"
         The position of the navigation menu. Can be "sidebar" or "hidden".
 
     Example
