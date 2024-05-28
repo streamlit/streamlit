@@ -29,6 +29,9 @@ class AuthCache:
     def set(self, key, value, expires_in):
         self.cache[key] = value
 
+    def get_dict(self):
+        return self.cache
+
     def delete(self, key):
         self.cache.pop(key, None)
 
@@ -45,13 +48,21 @@ else:
 
 oauth = TornadoOAuth(config, cache=my_cache)
 
-oauth.register(
-    "google",
-    client_kwargs={
-        "scope": "openid email profile",
-        "prompt": "select_account",  # force to select account
-    },
-)
+if secrets_singleton.load_if_toml_exists():
+    auth_section = secrets_singleton.get("auth")
+
+    for key in auth_section.keys():
+        if key == "redirect_uri":
+            continue
+        print("KEY")
+        print(key)
+        oauth.register(
+            key,
+            client_kwargs={
+                "scope": "openid email profile",
+                "prompt": "select_account",  # force to select account
+            },
+        )
 
 
 class AuthlibLoginHandler(tornado.web.RequestHandler):
@@ -63,10 +74,28 @@ class AuthlibLoginHandler(tornado.web.RequestHandler):
 
 class AuthlibCallbackHandler(tornado.web.RequestHandler):
     async def get(self):
-        provider = "google"
+        state_code_from_url = self.get_argument("state")
+        print("MMMMMMMMMM")
+        print(state_code_from_url)
+
+        current_cache_keys = [x for x in my_cache.get_dict().keys()]
+        state_provider_mapping = dict()
+        print("CURRENT KEYS")
+        print(current_cache_keys)
+        for key in current_cache_keys:
+            _, _, provider, code = key.split("_")
+            state_provider_mapping[code] = provider
+        provider = state_provider_mapping.get(state_code_from_url, None)
+        print("PROVIDER")
+        print(provider)
+
         client = oauth.create_client(provider)
         token = client.authorize_access_token(self)
         user = token.get("userinfo")
         if user:
             self.set_signed_cookie("_streamlit_uzer", json.dumps(user))
+        if not user:
+            access_token = token.get("access_token")
+            print("AAAAAAA BBBBBBBBBBBB")
+            print(access_token)
         self.redirect("/")
