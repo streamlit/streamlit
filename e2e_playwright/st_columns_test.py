@@ -156,6 +156,51 @@ def test_column_variable_absolute_width(
     )
 
 
+def test_column_vertical_alignment_top(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that vertical alignment top works correctly."""
+    column_gap_small = (
+        get_expander(app, "Vertical alignment - top")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(0)
+    )
+    assert_snapshot(
+        column_gap_small,
+        name="st_columns-vertical_alignment_top",
+    )
+
+
+def test_column_vertical_alignment_center(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that vertical alignment center works correctly."""
+    column_gap_small = (
+        get_expander(app, "Vertical alignment - center")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(0)
+    )
+    assert_snapshot(
+        column_gap_small,
+        name="st_columns-vertical_alignment_center",
+    )
+
+
+def test_column_vertical_alignment_bottom(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that vertical alignment center works correctly."""
+    column_gap_small = (
+        get_expander(app, "Vertical alignment - bottom")
+        .get_by_test_id("stHorizontalBlock")
+        .nth(0)
+    )
+    assert_snapshot(
+        column_gap_small,
+        name="st_columns-vertical_alignment_bottom",
+    )
+
+
 def test_two_level_nested_columns_shows_exception(app: Page):
     """Shows exception when trying to nest columns more than one level deep."""
 
