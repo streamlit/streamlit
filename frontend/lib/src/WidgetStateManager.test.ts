@@ -962,12 +962,22 @@ describe("WidgetStateDict", () => {
       formsDataChanged: jest.fn(),
     })
 
-    widgetStateManager.setStringValue({ id: "widget1" }, "foo", {
-      fromUi: false,
-    })
-    widgetStateManager.setStringValue({ id: "widget2" }, "bar", {
-      fromUi: false,
-    })
+    widgetStateManager.setStringValue(
+      { id: "widget1" },
+      "foo",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+    widgetStateManager.setStringValue(
+      { id: "widget2" },
+      "bar",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
 
     const activeIds = new Set(["widget2"])
     const widgetStates = widgetStateManager.getActiveWidgetStates(activeIds)
