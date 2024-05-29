@@ -88,7 +88,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
       borderRadius: theme.radii.lg,
-      minHeight: "38.4px",
+      minHeight: "2.5rem",
       margin: 0,
       lineHeight: theme.lineHeights.base,
       color: "inherit",
