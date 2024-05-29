@@ -205,5 +205,10 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
     markdown_element = get_markdown(
         app, "Images in markdown should keep inside the container width"
     )
-    expect(markdown_element.locator("img")).to_have_css("max-width", "100%")
+    image_element = markdown_element.locator("img")
+
+    expect(image_element).to_be_visible()
+    expect(image_element).to_have_css("max-width", "100%")
+    # Wait for the image to load:
+    app.expect_response("**/streamlit-logo-primary-colormark-darktext.png")
     assert_snapshot(markdown_element, name="st_markdown-with_large_image")
