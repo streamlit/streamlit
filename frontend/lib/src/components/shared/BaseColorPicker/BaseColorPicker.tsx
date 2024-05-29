@@ -108,10 +108,7 @@ class BaseColorPicker extends React.PureComponent<
     const { value } = this.state
     const cursor = disabled ? "not-allowed" : "default"
     const style = { width, cursor }
-    const previewStyle = {
-      cursor,
-      "pointer-events": disabled ? "none" : "auto",
-    }
+
     const blockStyle = {
       backgroundColor: value,
       opacity: disabled ? "0.4" : "",
@@ -142,7 +139,9 @@ class BaseColorPicker extends React.PureComponent<
             </StyledChromePicker>
           )}
         >
-          <StyledColorPreview style={previewStyle}>
+          <StyledColorPreview
+            style={{ cursor, pointerEvents: disabled ? "none" : "auto" }}
+          >
             <StyledColorBlock style={blockStyle} data-testid="stColorBlock" />
             {showValue && (
               <StyledColorValue>{value.toUpperCase()}</StyledColorValue>

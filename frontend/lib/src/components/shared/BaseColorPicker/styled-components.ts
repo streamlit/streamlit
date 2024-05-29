@@ -32,7 +32,7 @@ export const StyledChromePicker = styled.div(() => ({
 }))
 
 export const StyledColorPreview = styled.div(({ theme }) => ({
-  height: "1.8rem",
+  height: "2.5rem",
   borderRadius: theme.radii.md,
   borderColor: theme.colors.fadedText10,
   cursor: "pointer",
@@ -45,8 +45,8 @@ export const StyledColorPreview = styled.div(({ theme }) => ({
 }))
 
 export const StyledColorBlock = styled.div(({ theme }) => ({
-  height: "1.8rem",
-  width: "1.8rem",
+  height: "2.5rem",
+  width: "2.5rem",
   borderRadius: theme.radii.md,
   borderColor: theme.colors.fadedText10,
   borderWidth: "1px",
