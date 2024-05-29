@@ -15,6 +15,7 @@
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_different_markdown_elements_in_one_block_displayed(
@@ -187,16 +188,7 @@ def test_help_tooltip_works(app: Page):
         .get_by_test_id("stMarkdown")
         .nth(0)
     )
-    hover_target = markdown_with_help.get_by_test_id("stTooltipHoverTarget")
-    expect(hover_target).to_be_visible()
-
-    tooltip_content = app.get_by_test_id("stTooltipContent")
-    expect(tooltip_content).not_to_be_attached()
-
-    hover_target.hover()
-
-    expect(tooltip_content).to_be_visible()
-    expect(tooltip_content).to_have_text("This is a help tooltip!")
+    expect_help_tooltip(app, markdown_with_help, "This is a help tooltip!")
 
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):

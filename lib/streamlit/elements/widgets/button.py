@@ -24,6 +24,11 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
@@ -576,13 +581,6 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
-
         check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         check_callback_rules(self.dg, on_click)
@@ -746,13 +744,6 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
-
-        # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
 
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)

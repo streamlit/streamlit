@@ -72,13 +72,12 @@ from streamlit.delta_generator import (
     event_dg as _event_dg,
     bottom_dg as _bottom_dg,
 )
-from streamlit.elements.dialog_decorator import (
-    # rename so that it is available as st.dialog
-    dialog_decorator as experimental_dialog,
-)
+
+from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
+    cache as _cache,
     experimental_singleton as _experimental_singleton,
     experimental_memo as _experimental_memo,
 )
@@ -98,16 +97,19 @@ from streamlit.commands.experimental_query_params import (
     set_query_params as _set_query_params,
 )
 
-# Modules that the user should have access to. These are imported with "as"
-# syntax pass mypy checking with implicit_reexport disabled.
-
 import streamlit.column_config as _column_config
+
+
+# Modules that the user should have access to. These are imported with the "as" syntax and the same name; note that renaming the import with "as" does not make it an explicit export.
+# In this case, you should import it with an underscore to make clear that it is internal and then assign it to a variable with the new intended name.
+# You can check the export behavior by running 'mypy --strict example_app.py', which disables implicit_reexport, where you use the respective command in the example_app.py Streamlit app.
+
 from streamlit.echo import echo as echo
-from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.commands.logo import logo as logo
 from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
 from streamlit.elements.spinner import spinner as spinner
+
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
@@ -115,10 +117,6 @@ from streamlit.commands.execution_control import (
     experimental_rerun as _experimental_rerun,
     switch_page as switch_page,
 )
-
-# We add the metrics tracking for caching here,
-# since the actual cache function calls itself recursively
-cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -230,6 +228,8 @@ query_params = _QueryParamsProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+# `st.cache` is deprecated and should be removed soon
+cache = _cache
 
 # Namespaces
 column_config = _column_config
@@ -238,10 +238,12 @@ column_config = _column_config
 connection = _connection
 
 # Experimental APIs
+experimental_dialog = _dialog_decorator
 experimental_fragment = _fragment
 experimental_memo = _experimental_memo
 experimental_singleton = _experimental_singleton
 experimental_user = _UserInfoProxy()
+
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
 

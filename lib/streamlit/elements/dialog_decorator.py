@@ -20,7 +20,7 @@ from typing import Callable, TypeVar, cast, overload
 from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
 from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
 
 
@@ -64,14 +64,16 @@ def _dialog_decorator(
         dialog = event_dg._dialog(title=title, dismissible=True, width=width)
         dialog.open()
 
-        @_fragment
         def dialog_content() -> None:
             # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
             return None
 
+        # the fragment decorator has multiple return types so that you can pass arguments to it. Here we know the return type, so we cast
+        fragmented_dialog_content = cast(Callable[[], None], _fragment(dialog_content))
         with dialog:
-            return dialog_content()
+            fragmented_dialog_content()
+            return None
 
     return cast(F, wrap)
 
@@ -86,13 +88,13 @@ def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F
 # The user is supposed to call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
 # this 'trick'. The overload is required to have a good type hint for the decorated function args.
 @overload
-def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
+def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F:
     ...
 
 
 @gather_metrics("experimental_dialog")
 def dialog_decorator(
-    title: F | None | str = "", *, width: DialogWidth = "small"
+    title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
     """Function decorator to create a modal dialog.
 
@@ -173,13 +175,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
-    if func_or_title is None:
-        # Support passing the params via function decorator
-        def wrapper(f: F) -> F:
-            return _dialog_decorator(non_optional_func=f, title="", width=width)
-
-        return wrapper
-    elif type(func_or_title) is str:
+    if type(func_or_title) is str:
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title

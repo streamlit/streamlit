@@ -1405,7 +1405,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1422,7 +1422,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
       expect(connectionManager.sendMessage).toBeCalledTimes(2)
 
@@ -1442,7 +1442,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1459,7 +1459,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1481,7 +1481,7 @@ describe("App", () => {
       })
 
       window.history.pushState({}, "", "/foo/bar/baz")
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
         // @ts-expect-error
