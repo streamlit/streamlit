@@ -56,7 +56,7 @@ class NavigationTest(DeltaGeneratorTestCase):
             )
 
     def test_same_url_paths_raises_APIException(self):
-        """Test that an error is thrown if multiple defaults are specified"""
+        """Test that an error is thrown if same url_paths are specified"""
         with pytest.raises(StreamlitAPIException):
             st.navigation(
                 [
@@ -66,7 +66,7 @@ class NavigationTest(DeltaGeneratorTestCase):
             )
 
     def test_same_inferred_url_paths_raises_APIException(self):
-        """Test that an error is thrown if multiple defaults are specified"""
+        """Test that an error is thrown if the same inferred url_paths are specified"""
         with pytest.raises(StreamlitAPIException):
             st.navigation(
                 [
