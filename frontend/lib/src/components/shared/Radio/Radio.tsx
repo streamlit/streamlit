@@ -121,6 +121,7 @@ class Radio extends React.PureComponent<Props, State> {
             RadioGroupRoot: {
               style: {
                 gap: hasCaptions ? "0.5rem" : "0",
+                minHeight: "2.5rem",
               },
             },
           }}
