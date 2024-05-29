@@ -30,6 +30,7 @@ from streamlit.runtime.caching.cache_resource_api import (
     CacheResourceAPI,
     _resource_caches,
 )
+from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 from streamlit.runtime.state.common import WidgetMetadata
 
 
@@ -92,6 +93,9 @@ from streamlit.runtime.caching.cache_resource_api import (
 # Create and export public API singletons.
 cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
+# TODO(lukasmasuch): This is the legacy cache API name which is deprecated
+# and it should be removed in the future.
+cache = _cache
 
 # Deprecated singletons
 _MEMO_WARNING = (
@@ -115,6 +119,7 @@ experimental_singleton = CacheResourceAPI(
 
 
 __all__ = [
+    "cache",
     "CACHE_DOCS_URL",
     "save_element_message",
     "save_block_message",

@@ -18,6 +18,7 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 default_tooltip = """
 This is a really long tooltip.
@@ -44,22 +45,6 @@ def _get_header_elements(app: Page) -> Locator:
 def _get_subheader_elements(app: Page) -> Locator:
     """Subheader elements are rendered as h3 elements"""
     return app.get_by_test_id("stHeading").locator("h3")
-
-
-def _expect_tooltip(app: Page, el_with_help_tooltip: Locator):
-    hover_target = el_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
-    expect(hover_target).to_be_visible()
-
-    tooltip_content = app.get_by_test_id("stTooltipContent")
-    expect(tooltip_content).not_to_be_attached()
-
-    hover_target.hover()
-
-    expect(tooltip_content).to_be_visible()
-    expect(tooltip_content).to_have_text(default_tooltip)
-
-    # reset the hovering in case _expect_tooltip is called multiple times in the same test
-    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
 
 
 _header_divider_filter_text = re.compile(r"[a-zA-Z]+ Header Divider:")
@@ -286,10 +271,12 @@ def test_subheader_divider_snapshot(
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
     header_with_help = _get_header_elements(app).nth(3)
-    _expect_tooltip(app, header_with_help)
+
+    tooltip_text = "Some help tooltip"
+    expect_help_tooltip(app, header_with_help, tooltip_text)
 
     subheader_with_help = _get_subheader_elements(app).nth(5)
-    _expect_tooltip(app, subheader_with_help)
+    expect_help_tooltip(app, subheader_with_help, tooltip_text)
 
     title_with_help = _get_title_elements(app).nth(1)
-    _expect_tooltip(app, title_with_help)
+    expect_help_tooltip(app, title_with_help, tooltip_text)

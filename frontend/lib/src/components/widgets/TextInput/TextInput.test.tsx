@@ -304,7 +304,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)

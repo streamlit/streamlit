@@ -36,7 +36,7 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
-from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime import caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
@@ -144,7 +144,8 @@ class AppSession:
         self._stop_config_listener: Callable[[], bool] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
-        self.register_file_watchers()
+        if config.get_option("server.fileWatcherType") != "none":
+            self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -779,7 +780,6 @@ class AppSession:
         Because this cache is global, it will be cleared for all users.
 
         """
-        legacy_caching.clear_cache()
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
