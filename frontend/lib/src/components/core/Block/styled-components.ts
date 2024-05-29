@@ -133,8 +133,9 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       },
       ...(verticalAlignment === "bottom" && {
         marginTop: "auto",
-        // Add margin to the last checkbox within te column to align it better
-        // with other input widgets.
+        // Add margin to the last checkbox within the column to align it
+        // better with other input widgets. This is a temporary (ugly) fix
+        // until we have a better solution for this.
         "& .element-container:last-of-type > .stCheckbox": {
           marginBottom: 9,
         },

@@ -48,7 +48,7 @@ message Block {
   message Column {
     double weight = 1;
     string gap = 2;
-    // Vertical alignment used by columns
+
     enum VerticalAlignment {
       TOP = 0;
       CENTER = 1;
