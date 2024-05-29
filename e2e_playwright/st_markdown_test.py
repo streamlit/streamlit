@@ -15,7 +15,7 @@
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import expect_help_tooltip, get_markdown
 
 
 def test_different_markdown_elements_in_one_block_displayed(
@@ -25,7 +25,7 @@ def test_different_markdown_elements_in_one_block_displayed(
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
-    expect(markdown_elements).to_have_count(53)
+    expect(markdown_elements).to_have_count(54)
 
     # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
     multi_markdown_format_container = markdown_elements.nth(14)
@@ -198,3 +198,12 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 
     for i in range(50, 53):
         assert_snapshot(latex_elements.nth(i), name=f"st_latex-{i}")
+
+
+def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that large images in markdown are displayed correctly with max width 100%."""
+    markdown_element = get_markdown(
+        app, "Images in markdown should keep inside the container width"
+    )
+    expect(markdown_element.locator("img")).to_have_css("max-width", "100%")
+    assert_snapshot(markdown_element, name="st_markdown-with_large_image")

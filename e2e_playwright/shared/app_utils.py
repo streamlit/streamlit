@@ -116,6 +116,34 @@ def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
     return element
 
 
+def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> Locator:
+    """Get a markdown element with the given text inside.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the expander.
+
+    text_inside_markdown : str or Pattern[str]
+        Some text to use to identify the markdown element. The text should be contained
+        in the markdown content.
+
+    Returns
+    -------
+    Locator
+        The expander content.
+    """
+    if isinstance(text_inside_markdown, str):
+        text_inside_markdown = re.compile(text_inside_markdown)
+
+    markdown_element = locator.get_by_test_id("stMarkdownContainer").filter(
+        has_text=text_inside_markdown
+    )
+    expect(markdown_element).to_be_visible()
+    return markdown_element
+
+
 def expect_prefixed_markdown(
     locator: Locator,
     expected_prefix: str,
