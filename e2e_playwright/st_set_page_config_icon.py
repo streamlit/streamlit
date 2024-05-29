@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
+import os
 
 import streamlit as st
 
-icon_path = Path(__file__).parent.parent.joinpath("assets/favicon.ico")
-if not icon_path.is_file():
-    print(f"Missing favicon at {str(icon_path)}")
-    exit(1)
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
+TEST_ASSETS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "test_assets"
+)
+ICON_PATH = os.path.join(TEST_ASSETS_DIR, "favicon.ico")
 
-st.set_page_config(page_icon=str(icon_path))
+st.set_page_config(page_icon=str(ICON_PATH))
