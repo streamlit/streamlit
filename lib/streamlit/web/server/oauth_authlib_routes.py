@@ -96,6 +96,5 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
             self.set_signed_cookie("_streamlit_uzer", json.dumps(user))
         if not user:
             access_token = token.get("access_token")
-            print("AAAAAAA BBBBBBBBBBBB")
             print(access_token)
         self.redirect("/")
