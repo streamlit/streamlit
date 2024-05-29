@@ -42,6 +42,7 @@ from streamlit.runtime.state import (
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.type_util import Key, to_key
+from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -689,10 +690,10 @@ class ButtonMixin:
                 page_link_proto.label = page.title
         else:
             # Handle external links:
-            if page.startswith("http://") or page.startswith("https://"):
+            if is_url(page):
                 if label is None or label == "":
                     raise StreamlitAPIException(
-                        f"The label param is required for external links used with st.page_link - please provide a label."
+                        "The label param is required for external links used with st.page_link - please provide a label."
                     )
                 else:
                     page_link_proto.page = page

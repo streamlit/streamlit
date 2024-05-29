@@ -361,21 +361,27 @@ describe("AppNavigation", () => {
         sections: ["section1", "section2"],
         appPages: [
           new AppPage({
-            pageName: "streamlit_app",
+            pageName: "streamlit app",
             pageScriptHash: "page_script_hash",
             isDefault: true,
+            urlPathname: "streamlit_app",
           }),
           new AppPage({
-            pageName: "streamlit_app2",
+            pageName: "streamlit app2",
             pageScriptHash: "page_script_hash2",
             isDefault: false,
+            urlPathname: "streamlit_app2",
           }),
         ],
         position: "hidden",
         pageScriptHash: "page_script_hash2",
       })
       appNavigation.handleNavigation(navigation)
-      expect(onUpdatePageUrl).toHaveBeenCalledWith("streamlit_app", "", true)
+      expect(onUpdatePageUrl).toHaveBeenCalledWith(
+        "streamlit_app",
+        "streamlit_app2",
+        false
+      )
     })
 
     it("finds url by path when path is valid", () => {
@@ -498,7 +504,7 @@ describe("AppNavigation", () => {
 
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_PAGE_TITLE",
-        title: "streamlit_app · Streamlit",
+        title: "streamlit_app",
       })
 
       expect(onPageIconChange).toBeCalled()

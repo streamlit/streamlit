@@ -154,7 +154,12 @@ interface State {
   hideSidebarNav: boolean
   appPages: IAppPage[]
   navSections: string[]
+  // The hash of the current page executing
   currentPageScriptHash: string
+  // In MPAv2, the main page is executed before and after the current
+  // page. The main page is the script the app is started with, and the current
+  // page is the dynamically loaded page-script. In MPAv1, the main page holds
+  // no relevance as only one page loads at a time.
   mainScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
@@ -1034,7 +1039,7 @@ export class App extends PureComponent<Props, State> {
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
-    const isSamePage = targetAppPage.pageScriptHash === currentPageScriptHash
+    const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
     if (targetAppPage == null || (hasAnchor && isSamePage)) {
       return
@@ -1187,6 +1192,8 @@ export class App extends PureComponent<Props, State> {
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
+        // Tell the WidgetManager which widgets still exist. It will remove
+        // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
             .map(element => getElementWidgetID(element))

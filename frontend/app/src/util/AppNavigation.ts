@@ -150,7 +150,11 @@ export class StrategyV1 {
     return undefined
   }
 
-  findPageByUrlPath(pathname: string): IAppPage {
+  findPageByUrlPath(pathname: string): IAppPage | null {
+    if (this.appPages.length === 0) {
+      return null
+    }
+
     return (
       this.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
@@ -234,16 +238,14 @@ export class StrategyV2 {
     ) as IAppPage
     const mainPage = appPages.find(p => p.isDefault) as IAppPage
     this.mainPage = mainPage
-    const currentPageName = currentPage.isDefault
-      ? ""
-      : (currentPage.urlPathname as string)
+    const currentPageName = currentPage.urlPathname as string
 
     if (!this.appNav.isPageTitleSet) {
       const title = getTitle(currentPage.pageName as string)
       document.title = title
       this.appNav.hostCommunicationMgr.sendMessageToHost({
         type: "SET_PAGE_TITLE",
-        title,
+        title: currentPage.pageName ?? "",
       })
     }
 
@@ -252,7 +254,7 @@ export class StrategyV2 {
     }
 
     this.appNav.onUpdatePageUrl(
-      mainPage.pageName as string,
+      mainPage.urlPathname ?? "",
       currentPageName,
       currentPage.isDefault ?? false
     )
@@ -279,13 +281,13 @@ export class StrategyV2 {
     ]
   }
 
-  findPageByUrlPath(pathname: string): IAppPage {
+  findPageByUrlPath(pathname: string): IAppPage | null {
     return (
       this.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
         pathname.endsWith("/" + appPage.urlPathname)
-      ) ?? (this.mainPage as IAppPage)
+      ) ?? this.mainPage
     )
   }
 
@@ -355,7 +357,7 @@ export class AppNavigation {
     return this.strategy.handlePageNotFound(pageNotFound)
   }
 
-  findPageByUrlPath(pathname: string): IAppPage {
+  findPageByUrlPath(pathname: string): IAppPage | null {
     return this.strategy.findPageByUrlPath(pathname)
   }
 

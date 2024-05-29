@@ -112,20 +112,20 @@ def test_main_script_widgets_persist_across_page_changes(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_contain_text("x is 1")
 
 
-def test_supports_navigating_to_page_directly_via_url(page: Page, app_port: int):
+def test_supports_navigating_to_page_directly_via_url(app: Page, app_port: int):
     """Test that we can navigate to a page directly via URL."""
-    page.goto(f"http://localhost:{app_port}/page_5")
-    wait_for_app_loaded(page)
+    app.goto(f"http://localhost:{app_port}/page_5")
+    wait_for_app_loaded(app)
 
-    expect(page_heading(page)).to_contain_text("Page 5")
+    expect(page_heading(app)).to_contain_text("Page 5")
 
 
-def test_supports_navigating_to_page_directly_via_url_title(page: Page, app_port: int):
+def test_supports_navigating_to_page_directly_via_url_title(app: Page, app_port: int):
     """Test that we can navigate to a page directly via URL. using the title."""
-    page.goto(f"http://localhost:{app_port}/Different_Title")
-    wait_for_app_loaded(page)
+    app.goto(f"http://localhost:{app_port}/Different_Title")
+    wait_for_app_loaded(app)
 
-    expect(page_heading(page)).to_contain_text("Page 3")
+    expect(page_heading(app)).to_contain_text("Page 3")
 
 
 def test_can_switch_between_pages_and_edit_widgets(app: Page):
@@ -164,12 +164,12 @@ def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(nav, name="dynamic-pages")
 
 
-def test_show_not_found_dialog(page: Page, app_port: int):
+def test_show_not_found_dialog(app: Page, app_port: int):
     """Test that we show a not found dialog if the page doesn't exist."""
-    page.goto(f"http://localhost:{app_port}/not_a_page")
-    wait_for_app_loaded(page)
+    app.goto(f"http://localhost:{app_port}/not_a_page")
+    wait_for_app_loaded(app)
 
-    expect(page.locator('[role="dialog"]')).to_contain_text("Page not found")
+    expect(app.locator('[role="dialog"]')).to_contain_text("Page not found")
 
 
 def test_handles_expand_collapse_of_mpa_nav_correctly(
@@ -186,8 +186,6 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
 
     # Expand the nav
     view_button.click(force=True)
-    # We apply a quick timeout here so that the UI has some time to
-    # adjust for the screenshot after the click
     expect(view_button).to_have_text("View less")
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
@@ -226,43 +224,48 @@ def test_switch_page_by_st_page(app: Page):
     expect(page_heading(app)).to_contain_text("Page 9")
 
 
-def test_removes_query_params_with_st_switch_page(page: Page, app_port: int):
+def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
     """Test that query params are removed when navigating via st.switch_page"""
 
     # Start at main page with query params
-    page.goto(f"http://localhost:{app_port}/?foo=bar")
-    wait_for_app_loaded(page)
+    app.goto(f"http://localhost:{app_port}/?foo=bar")
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/?foo=bar")
 
     # Trigger st.switch_page
-    page.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
-    wait_for_app_loaded(page)
+    app.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
+    wait_for_app_loaded(app)
     # Check that query params don't persist
-    expect(page).to_have_url(f"http://localhost:{app_port}/page_5")
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_5")
 
 
-def test_removes_query_params_when_clicking_link(page: Page, app_port: int):
+def test_removes_query_params_when_clicking_link(app: Page, app_port: int):
     """Test that query params are removed when swapping pages by clicking on a link"""
 
-    page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
-    wait_for_app_loaded(page)
+    app.goto(f"http://localhost:{app_port}/page_7?foo=bar")
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_7?foo=bar")
 
-    get_page_link(page, "page 4").click()
-    wait_for_app_loaded(page)
-    expect(page).to_have_url(f"http://localhost:{app_port}/page_4")
+    get_page_link(app, "page 4").click()
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(f"http://localhost:{app_port}/page_4")
 
 
-def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):
+def test_removes_non_embed_query_params_when_swapping_pages(app: Page, app_port: int):
     """Test that non-embed query params are removed when swapping pages"""
 
-    page.goto(
+    app.goto(
         f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
     )
-    wait_for_app_loaded(page)
+    wait_for_app_loaded(app)
+    expect(app).to_have_url(
+        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
+    )
 
-    get_page_link(page, "page 4").click()
-    wait_for_app_loaded(page)
+    get_page_link(app, "page 4").click()
+    wait_for_app_loaded(app)
 
-    expect(page).to_have_url(
+    expect(app).to_have_url(
         f"http://localhost:{app_port}/page_4?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
     )
 

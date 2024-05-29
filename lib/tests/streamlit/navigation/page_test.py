@@ -32,7 +32,7 @@ from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class PagesManagerTest(DeltaGeneratorTestCase):
+class StPagesTest(DeltaGeneratorTestCase):
     """Test st.Page"""
 
     def test_cannot_infer_title_raises_exception(self):
@@ -52,7 +52,7 @@ class PagesManagerTest(DeltaGeneratorTestCase):
             st.Page("page.py", icon="hello world")
 
     def test_valid_icon(self):
-        """Test that passing an valid icon does not raise an exception."""
+        """Test that passing a valid icon does not raise an exception."""
 
         st.Page("page.py", icon="😱")
         # Provide an assertion to ensure no error
@@ -65,12 +65,12 @@ class PagesManagerTest(DeltaGeneratorTestCase):
             != st.Page(lambda: True, title="Title 2")._script_hash
         )
 
-    def test_page_run_cannot_be_run_automatically(self):
-        """Test that a page cannot be run automatically."""
+    def test_page_run_cannot_run_standalone(self):
+        """Test that a page cannot run standalone."""
         with pytest.raises(StreamlitAPIException):
             st.Page("page.py").run()
 
-    def test_page_run_cannot_be_run_if_ordained(self):
+    def test_page_run_can_be_run_if_ordained(self):
         """Test that a page can be run if ordained."""
 
         # Indicates we are in V2

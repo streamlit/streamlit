@@ -30,7 +30,7 @@ message AppPage {
   string page_name = 2;
   string icon = 3;
 
-  // A feature for MPA v2 and inform the frontend what's the default page
+  // A feature for MPA v2 to inform the frontend what's the default page
   bool is_default = 4;
   string section_header = 5;
   string url_pathname = 6;

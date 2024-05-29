@@ -123,15 +123,23 @@ class StreamlitPage:
                 )
 
         self._page: Path | Callable[[], None] = page
-        self.title: str = title or inferred_name
-        self.icon: str = icon or inferred_icon
+        self._title: str = title or inferred_name.replace("_", " ")
+        self._icon: str = icon or inferred_icon
 
-        if self.icon:
-            validate_icon_or_emoji(self.icon)
+        if self._icon:
+            validate_icon_or_emoji(self._icon)
 
-        self.default: bool = default
+        self._default: bool = default
         # used by st.navigation to ordain a page as runnable
         self._can_be_called: bool = False
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def icon(self) -> str:
+        return self._icon
 
     def run(self) -> None:
         if not self._can_be_called:
@@ -164,5 +172,5 @@ class StreamlitPage:
         if isinstance(self._page, Path):
             h = calc_md5(str(self._page))
         else:
-            h = calc_md5(self.title)
+            h = calc_md5(self._title)
         return h

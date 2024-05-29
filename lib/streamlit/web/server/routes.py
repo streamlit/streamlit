@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Final, Optional
+from typing import Final
 
 import tornado.web
 
@@ -44,7 +44,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
     def initialize(
         self,
         path: str,
-        default_filename: Optional[str] = None,
+        default_filename: str | None = None,
         reserved_paths: list[str] = [],
     ):
         self._reserved_paths = reserved_paths
@@ -64,7 +64,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         else:
             self.set_header("Cache-Control", "public")
 
-    def validate_absolute_path(self, root: str, absolute_path: str) -> Optional[str]:
+    def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         try:
             return super().validate_absolute_path(root, absolute_path)
         except tornado.web.HTTPError as e:
