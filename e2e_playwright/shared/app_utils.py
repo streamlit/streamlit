@@ -92,6 +92,30 @@ def get_form_submit_button(locator: Locator, label: str | Pattern[str]) -> Locat
     return element
 
 
+def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
+    """Get a expander container with the given label.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the expander.
+
+    label : str or Pattern[str]
+        The label of the expander to get.
+
+    Returns
+    -------
+    Locator
+        The expander container.
+    """
+    element = locator.get_by_test_id("stExpander").filter(
+        has=locator.locator("summary").filter(has_text=label)
+    )
+    expect(element).to_be_visible()
+    return element
+
+
 def expect_prefixed_markdown(
     locator: Locator,
     expected_prefix: str,
