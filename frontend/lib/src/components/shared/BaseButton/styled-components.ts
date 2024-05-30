@@ -87,8 +87,8 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       justifyContent: "center",
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-      borderRadius: theme.radii.lg,
-      minHeight: "2.5rem",
+      borderRadius: theme.radii.default,
+      minHeight: theme.sizes.minElementHeight,
       margin: 0,
       lineHeight: theme.lineHeights.base,
       color: "inherit",
@@ -110,7 +110,7 @@ export const StyledPrimaryButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
-  border: `1px solid ${theme.colors.primary}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
   "&:hover": {
     backgroundColor: darken(theme.colors.primary, 0.05),
   },
@@ -130,7 +130,7 @@ export const StyledSecondaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
-  border: `1px solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
   "&:hover": {
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
@@ -156,7 +156,7 @@ export const StyledTertiaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
-  border: `1px solid ${theme.colors.transparent}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
   "&:hover": {
     borderColor: theme.colors.transparent,
     color: theme.colors.primary,
@@ -229,7 +229,7 @@ export const StyledIconButton = styled(
   }
   return {
     backgroundColor: theme.colors.transparent,
-    border: `1px solid ${theme.colors.transparent}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
     padding: iconPadding[size],
 
     "&:hover": {
@@ -262,7 +262,8 @@ export const StyledHeaderButton = styled(
     fontSize: theme.fontSizes.sm,
     marginLeft: theme.spacing.threeXS,
     marginRight: theme.spacing.threeXS,
-    lineHeight: 1,
+
+    lineHeight: theme.lineHeights.none,
 
     // Override buttons min width and height, to ensure the hover state for icon buttons on the header is square
     minWidth: theme.spacing.threeXL,
@@ -306,7 +307,7 @@ export const StyledBorderlessIconButton = styled(
 
   return {
     backgroundColor: theme.colors.transparent,
-    border: `1px solid ${theme.colors.transparent}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
     padding: iconPadding[size],
 
     "&:focus": {

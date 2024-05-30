@@ -25,15 +25,15 @@ export const StyledColorPicker = styled.div(({ theme }) => ({
 
 // We need this to override the default font-family: 'Menlo' rule,
 // Which causes the font to change to a serif one in Windows
-export const StyledChromePicker = styled.div(() => ({
+export const StyledChromePicker = styled.div(({ theme }) => ({
   div: {
-    fontFamily: '"Source Sans Pro", sans-serif !important',
+    fontFamily: `${theme.genericFonts.bodyFont} !important`,
   },
 }))
 
 export const StyledColorPreview = styled.div(({ theme }) => ({
-  height: "2.5rem",
-  borderRadius: theme.radii.md,
+  height: theme.sizes.minElementHeight,
+  borderRadius: theme.radii.default,
   borderColor: theme.colors.fadedText10,
   cursor: "pointer",
   boxShadow: "none",
@@ -45,11 +45,11 @@ export const StyledColorPreview = styled.div(({ theme }) => ({
 }))
 
 export const StyledColorBlock = styled.div(({ theme }) => ({
-  height: "2.5rem",
-  width: "2.5rem",
-  borderRadius: theme.radii.lg,
+  width: theme.sizes.minElementHeight,
+  height: theme.sizes.minElementHeight,
+  borderRadius: theme.radii.default,
   borderColor: theme.colors.fadedText10,
-  borderWidth: "1px",
+  borderWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   padding: "2px 0.8rem",
   cursor: "pointer",

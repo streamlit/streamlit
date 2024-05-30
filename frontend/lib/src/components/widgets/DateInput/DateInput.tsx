@@ -250,7 +250,7 @@ class DateInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stDateInput" style={style} data-testid="stDateInput">
+      <div className="stDateInput" data-testid="stDateInput" style={style}>
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -284,7 +284,7 @@ class DateInput extends React.PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: {
-                      border: `1px solid ${colors.fadedText10}`,
+                      border: `${theme.sizes.borderWidth} solid ${colors.fadedText10}`,
                     },
                   },
                 },
@@ -376,10 +376,10 @@ class DateInput extends React.PureComponent<Props, State> {
                   Root: {
                     style: {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      borderLeftWidth: "1px",
-                      borderRightWidth: "1px",
-                      borderTopWidth: "1px",
-                      borderBottomWidth: "1px",
+                      borderLeftWidth: theme.sizes.borderWidth,
+                      borderRightWidth: theme.sizes.borderWidth,
+                      borderTopWidth: theme.sizes.borderWidth,
+                      borderBottomWidth: theme.sizes.borderWidth,
                     },
                   },
                   ClearIcon: {
@@ -405,11 +405,11 @@ class DateInput extends React.PureComponent<Props, State> {
                   Input: {
                     style: {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      paddingRight: ".5rem",
-                      paddingLeft: ".5rem",
-                      paddingBottom: ".5rem",
-                      paddingTop: ".5rem",
-                      lineHeight: 1.4,
+                      paddingRight: theme.spacing.sm,
+                      paddingLeft: theme.spacing.sm,
+                      paddingBottom: theme.spacing.sm,
+                      paddingTop: theme.spacing.sm,
+                      lineHeight: theme.lineHeights.inputWidget,
                     },
                     props: {
                       "data-testid": "stDateInput-Input",

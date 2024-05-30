@@ -146,7 +146,6 @@ class Checkbox extends React.PureComponent<Props, State> {
       this.onFormCleared
     )
 
-    // TODO Check the Widget usage
     return (
       <div
         className="row-widget stCheckbox"
@@ -252,14 +251,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                   // use the long-hand version, which means we can't use the
                   // shorthand names here as if we do we'll end up with warn
                   // logs spamming us every time a checkbox is rendered.
-                  borderBottomLeftRadius: theme.radii.md,
-                  borderTopLeftRadius: theme.radii.md,
-                  borderBottomRightRadius: theme.radii.md,
-                  borderTopRightRadius: theme.radii.md,
-                  borderLeftWidth: "1px",
-                  borderRightWidth: "1px",
-                  borderTopWidth: "1px",
-                  borderBottomWidth: "1px",
+                  borderLeftWidth: theme.sizes.borderWidth,
+                  borderRightWidth: theme.sizes.borderWidth,
+                  borderTopWidth: theme.sizes.borderWidth,
+                  borderBottomWidth: theme.sizes.borderWidth,
                   borderLeftColor: borderColor,
                   borderRightColor: borderColor,
                   borderTopColor: borderColor,
