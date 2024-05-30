@@ -74,7 +74,8 @@ def Page(
 
     url_path: str or None
         The URL pathname associated with a page. If None, the URL pathname will be
-        inferred from the file name, callable name, or the title (in that order).
+        inferred from the file name, callable name. The default page will have
+        a url_path of "" to indicate the root url and ignore the value of url_path
 
     default: bool
         Whether this page is the default page to be shown when the app is
@@ -125,6 +126,11 @@ class StreamlitPage:
         elif hasattr(page, "__name__"):
             inferred_name = str(page.__name__)
         elif title is None:
+            # At this point, we know the page is not a string or a path, so it
+            # must be a callable. We expect it to have a __name__ attribute,
+            # but in special cases (e.g. a callable class instance), one may
+            # not exist. In that case, we should inform the user the title is
+            # mandatory.
             raise StreamlitAPIException(
                 "Cannot infer page title for Callable. Set the `title=` keyword argument."
             )
@@ -137,11 +143,9 @@ class StreamlitPage:
                 "The URL path cannot be an empty string unless the page is the default page."
             )
 
-        self._url_path: str = (
-            (url_path and url_path.lstrip("/"))
-            or inferred_name
-            or self.title.replace(" ", "_")
-        )
+        self._url_path: str = inferred_name
+        if url_path is not None:
+            self._url_path = url_path.lstrip("/")
 
         if self._icon:
             validate_icon_or_emoji(self._icon)
