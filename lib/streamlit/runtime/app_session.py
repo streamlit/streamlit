@@ -369,13 +369,9 @@ class AppSession:
             rerun_data = RerunData()
 
         if self._scriptrunner is not None:
-            if (
-                bool(config.get_option("runner.fastReruns"))
-                and not rerun_data.fragment_id_queue
-            ):
-                # If fastReruns is enabled and this is *not* a rerun of a fragment,
-                # we don't send rerun requests to our existing ScriptRunner. Instead, we
-                # tell it to shut down. We'll then spin up a new ScriptRunner, below, to
+            if bool(config.get_option("runner.fastReruns")):
+                # If fastReruns is enabled we don't send rerun requests to our existing ScriptRunner.
+                # Instead, we tell it to shut down. We'll then spin up a new ScriptRunner, below, to
                 # handle the rerun immediately.
                 self._scriptrunner.request_stop()
                 self._scriptrunner = None
