@@ -474,19 +474,6 @@ _create_option(
 _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
-    "client.caching",
-    description="""
-        Whether to enable st.cache. This does not affect st.cache_data or
-        st.cache_resource.""",
-    default_val=True,
-    type_=bool,
-    scriptable=True,
-    deprecated=True,
-    deprecation_text="client.caching has been deprecated and is not required anymore for our new caching commands.",
-    expiration_date="2024-01-20",
-)
-
-_create_option(
     "client.displayEnabled",
     description="""If false, makes your Streamlit script not draw to a
         Streamlit app.""",
@@ -647,8 +634,7 @@ _create_section("server", "Settings for the Streamlit server")
 
 _create_option(
     "server.folderWatchBlacklist",
-    description="""List of folders that should not be watched for changes. This
-    impacts both "Run on Save" and @st.cache.
+    description="""List of folders that should not be watched for changes.
 
     Relative paths will be taken as relative to the current working directory.
 

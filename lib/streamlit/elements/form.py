@@ -194,7 +194,7 @@ class FormMixin:
 
         """
         # Import this here to avoid circular imports.
-        from streamlit.elements.utils import (
+        from streamlit.elements.lib.policies import (
             check_cache_replay_rules,
             check_session_state_rules,
         )

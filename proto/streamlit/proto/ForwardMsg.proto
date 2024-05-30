@@ -121,9 +121,9 @@ message ForwardMsgMetadata {
 // DEPRECATED: This is not used anymore.
 // Specifies the dimensions for the element
 message ElementDimensionSpec {
-  // width in CSS points
+  // width in pixels
   uint32 width = 1;
 
-  // height in CSS points
+  // height in pixels
   uint32 height = 2;
 }

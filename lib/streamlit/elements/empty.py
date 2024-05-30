@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 
 class EmptyMixin:
+    @gather_metrics("empty")
     def empty(self) -> DeltaGenerator:
         """Insert a single-element container.
 

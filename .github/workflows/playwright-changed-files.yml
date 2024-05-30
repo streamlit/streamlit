@@ -61,14 +61,8 @@ jobs:
         name: Setup virtual env
         uses: ./.github/actions/make_init
       - if: steps.check_changed_files.outputs.run_tests == 'true'
-        name: Run make develop
-        run: make develop
-      - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Install playwright
         run: python -m playwright install --with-deps
-      - if: steps.check_changed_files.outputs.run_tests == 'true'
-        name: Run make protobuf
-        run: make protobuf
       - if: steps.check_changed_files.outputs.run_tests == 'true'
         name: Run make frontend-fast
         run: make frontend-fast
