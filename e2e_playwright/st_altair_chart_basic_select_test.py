@@ -195,7 +195,7 @@ def test_double_click_interval_shows_no_selection_text(app: Page):
 
     expected_prefix = "Scatter chart with selection_interval:"
     expected_selection = re.compile(
-        "\\{'selection': \\{'param_1': \\{'Horsepower': \\[.+, .+\\], 'Miles_per_Gallon': \\[.+ , .+\\]\\}\\}\\}"
+        "\\{'selection': \\{'param_1': \\{'Horsepower': \\[.+, .+\\], 'Miles_per_Gallon': \\[.+, .+\\]\\}\\}\\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
 
