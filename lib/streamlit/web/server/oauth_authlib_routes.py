@@ -54,15 +54,17 @@ if secrets_singleton.load_if_toml_exists():
     for key in auth_section.keys():
         if key == "redirect_uri":
             continue
-        print("KEY")
-        print(key)
-        oauth.register(
-            key,
-            client_kwargs={
-                "scope": "openid email profile",
-                "prompt": "select_account",  # force to select account
-            },
-        )
+
+        if auth_section.get(key, {}).get("client_kwargs", {}).get("scope", None):
+            oauth.register(key)
+        else:
+            oauth.register(
+                key,
+                client_kwargs={
+                    "scope": "openid email profile",
+                    "prompt": "select_account",  # force to select account
+                },
+            )
 
 
 class AuthlibLoginHandler(tornado.web.RequestHandler):
@@ -75,19 +77,13 @@ class AuthlibLoginHandler(tornado.web.RequestHandler):
 class AuthlibCallbackHandler(tornado.web.RequestHandler):
     async def get(self):
         state_code_from_url = self.get_argument("state")
-        print("MMMMMMMMMM")
-        print(state_code_from_url)
 
         current_cache_keys = [x for x in my_cache.get_dict().keys()]
         state_provider_mapping = dict()
-        print("CURRENT KEYS")
-        print(current_cache_keys)
         for key in current_cache_keys:
             _, _, provider, code = key.split("_")
             state_provider_mapping[code] = provider
         provider = state_provider_mapping.get(state_code_from_url, None)
-        print("PROVIDER")
-        print(provider)
 
         client = oauth.create_client(provider)
         token = client.authorize_access_token(self)
@@ -96,5 +92,9 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
             self.set_signed_cookie("_streamlit_uzer", json.dumps(user))
         if not user:
             access_token = token.get("access_token")
-            print(access_token)
+            dict_for_cookie = {
+                "access_token": access_token,
+                "provider": provider,
+            }
+            self.set_signed_cookie("_streamlit_uzer", json.dumps(dict_for_cookie))
         self.redirect("/")

@@ -116,6 +116,13 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         if self.get_signed_cookie("_streamlit_uzer", None):
             if cookie_value:
                 user_info["email"] = json.loads(cookie_value).get("email", email)
+                if not json.loads(cookie_value).get("email", None) and json.loads(
+                    cookie_value
+                ).get("access_token"):
+                    user_info["access_token"] = json.loads(cookie_value).get(
+                        "access_token"
+                    )
+                    user_info["provider"] = json.loads(cookie_value).get("provider")
 
         existing_session_id = None
         try:
