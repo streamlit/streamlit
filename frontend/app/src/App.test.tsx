@@ -1522,6 +1522,56 @@ describe("App", () => {
     })
   })
 
+  describe("App.handleScriptFinished", () => {
+    it("will not increment cache count if session info is not set", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is not set and the script finished early", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is set and the script finished early", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will increment cache count if session info is set", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
+    })
+  })
+
   //   * handlePageNotFound has branching error messages depending on pageName
   describe("App.handlePageNotFound", () => {
     it("includes the missing page name in error modal message if available", () => {
