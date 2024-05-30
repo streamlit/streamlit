@@ -54,11 +54,11 @@ def page_9():
 
 
 page7 = st.Page(page_7)
-page8 = st.Page(page_8)
+page8 = st.Page(page_8, url_path="my_url_path")
 page9 = st.Page(page_9)
-page10 = st.Page(page_7, title="page 10")
-page11 = st.Page(page_8, title="page 11")
-page12 = st.Page(page_9, title="page 12")
+page10 = st.Page(page_7, title="page 10", url_path="page_10")
+page11 = st.Page(page_8, title="page 11", url_path="page_11")
+page12 = st.Page(page_9, title="page 12", url_path="page_12")
 
 hide_sidebar = st.checkbox("Hide sidebar")
 dynamic_nav = st.checkbox("Change navigation dynamically")

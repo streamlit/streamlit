@@ -45,6 +45,11 @@ class StPagesTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.Page(Foo())
 
+        try:
+            st.Page(Foo(), title="Hello")
+        except Exception:
+            pytest.fail("Should not raise exception")
+
     def test_invalid_icon_raises_exception(self):
         """Test that passing an invalid icon raises an exception."""
 
@@ -59,11 +64,63 @@ class StPagesTest(DeltaGeneratorTestCase):
         assert True
 
     def test_script_hash_for_paths_are_different(self):
+        """Tests that script hashes are different when url path (inferred or not) is unique"""
         assert st.Page("page1.py")._script_hash != st.Page("page2.py")._script_hash
         assert (
-            st.Page(lambda: True, title="Title 1")._script_hash
-            != st.Page(lambda: True, title="Title 2")._script_hash
+            st.Page(lambda: True, url_path="path_1")._script_hash
+            != st.Page(lambda: True, url_path="path_2")._script_hash
         )
+
+    def test_url_path_is_inferred_from_filename(self):
+        """Tests that url path is inferred from filename if not provided"""
+        page = st.Page("page_8.py")
+        assert page.url_path == "page_8"
+
+    def test_url_path_is_inferred_from_function_name(self):
+        """Tests that url path is inferred from function name if not provided"""
+
+        def page_9():
+            pass
+
+        page = st.Page(page_9)
+        assert page.url_path == "page_9"
+
+    def test_url_path_overrides_if_specified(self):
+        """Tests that url path specified directly overrides inferred path"""
+        page = st.Page("page_8.py", url_path="my_url_path")
+        assert page.url_path == "my_url_path"
+
+    def test_url_path_strips_leading_slash(self):
+        """Tests that url path strips leading slash if provided"""
+        page = st.Page("page_8.py", url_path="/my_url_path")
+        assert page.url_path == "my_url_path"
+
+    def test_url_path_is_empty_string_if_default(self):
+        """Tests that url path is "" if the page is the default page"""
+
+        def page_9():
+            pass
+
+        page = st.Page(page_9, default=True)
+        assert page.url_path == ""
+
+    def test_url_path_is_empty_string_if_default(self):
+        """Tests that url path is "" if the page is the default page"""
+
+        def page_9():
+            pass
+
+        page = st.Page(page_9, default=True)
+        assert page.url_path == ""
+
+    def test_non_default_pages_cannot_have_empty_url_path(self):
+        """Tests that an error is raised if the empty url path is provided for a non-default page"""
+
+        def page_9():
+            pass
+
+        with pytest.raises(StreamlitAPIException):
+            page = st.Page(page_9, url_path="")
 
     def test_page_run_cannot_run_standalone(self):
         """Test that a page cannot run standalone."""

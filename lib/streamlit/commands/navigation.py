@@ -126,10 +126,12 @@ def navigation(
 
             script_hash = page._script_hash
             if script_hash in pagehash_to_pageinfo:
+                # The page script hash is soley based on the url path
+                # So duplicate page script hashes are due to duplicate url paths
                 raise StreamlitAPIException(
-                    f"Multiple Pages specified with title {page.title}. "
-                    "Page titles should be unique. If not specified, the "
-                    "title is inferred from the file path or callable name."
+                    f"Multiple Pages specified with URL pathname {page.url_path}. "
+                    "URL pathnames must be unique. The url pathname may be "
+                    "inferred from the filename, callable name, or title."
                 )
 
             pagehash_to_pageinfo[script_hash] = {
@@ -137,7 +139,7 @@ def navigation(
                 "page_name": page.title,
                 "icon": page.icon,
                 "script_path": script_path,
-                "url_pathname": page.title.replace(" ", "_"),
+                "url_pathname": page.url_path,
             }
 
     if default_page is None:
@@ -158,7 +160,7 @@ def navigation(
             p.icon = page.icon
             p.is_default = page._default
             p.section_header = section_header
-            p.url_pathname = page.title.replace(" ", "_")
+            p.url_pathname = page.url_path
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)

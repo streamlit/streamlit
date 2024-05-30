@@ -683,7 +683,7 @@ class ButtonMixin:
 
         if isinstance(page, StreamlitPage):
             page_link_proto.page_script_hash = page._script_hash
-            page_link_proto.page = page.title.replace(" ", "_")
+            page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
         else:

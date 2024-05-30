@@ -115,7 +115,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.page_link
         assert c.label == "Foo Test"
         assert c.page_script_hash == page._script_hash
-        assert c.page == "Bar_Test"
+        assert c.page == "foo"
         assert not c.external
         assert not c.disabled
         assert c.icon == ""
@@ -129,7 +129,21 @@ class PageLinkTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.page_link
         assert c.label == "Bar Test"
         assert c.page_script_hash == page._script_hash
-        assert c.page == "Bar_Test"
+        assert c.page == "foo"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == ""
+        assert c.help == ""
+
+    def test_st_page_with_url_path(self):
+        """Test that st.page_link accepts an st.Page, but will use the url_path if necessary"""
+        page = st.Page("foo.py", title="Bar Test", url_path="bar")
+        st.page_link(page=page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Bar Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "bar"
         assert not c.external
         assert not c.disabled
         assert c.icon == ""

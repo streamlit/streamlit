@@ -32,6 +32,7 @@ def Page(
     *,
     title: str | None = None,
     icon: str | None = None,
+    url_path: str | None = None,
     default: bool = False,
 ):
     """Configure a page in `st.navigation` in a multipage app.
@@ -71,6 +72,11 @@ def Page(
             <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
             font library.
 
+    url_path: str or None
+        The URL pathname associated with a page. If None, the URL pathname will be
+        inferred from the file name, callable name. The default page will have
+        a url_path of "" to indicate the root url and ignore the value of url_path
+
     default: bool
         Whether this page is the default page to be shown when the app is
         loaded. Only one page can be marked default. If no default page is
@@ -88,7 +94,9 @@ def Page(
     >>> ])
     >>> pg.run()
     """
-    return StreamlitPage(page, title=title, icon=icon, default=default)
+    return StreamlitPage(
+        page, title=title, icon=icon, url_path=url_path, default=default
+    )
 
 
 class StreamlitPage:
@@ -98,6 +106,7 @@ class StreamlitPage:
         *,
         title: str | None = None,
         icon: str | None = None,
+        url_path: str | None = None,
         default: bool = False,
     ):
         ctx = get_script_run_ctx()
@@ -114,17 +123,29 @@ class StreamlitPage:
         inferred_icon = ""
         if isinstance(page, Path):
             inferred_icon, inferred_name = page_icon_and_name(page)
+        elif hasattr(page, "__name__"):
+            inferred_name = str(page.__name__)
         elif title is None:
-            if hasattr(page, "__name__"):
-                inferred_name = str(page.__name__)
-            else:
-                raise StreamlitAPIException(
-                    "Cannot infer page title for Callable. Set the `title=` keyword argument."
-                )
+            # At this point, we know the page is not a string or a path, so it
+            # must be a callable. We expect it to have a __name__ attribute,
+            # but in special cases (e.g. a callable class instance), one may
+            # not exist. In that case, we should inform the user the title is
+            # mandatory.
+            raise StreamlitAPIException(
+                "Cannot infer page title for Callable. Set the `title=` keyword argument."
+            )
 
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
         self._icon: str = icon or inferred_icon
+        if url_path is not None and url_path.strip() == "" and not default:
+            raise StreamlitAPIException(
+                "The URL path cannot be an empty string unless the page is the default page."
+            )
+
+        self._url_path: str = inferred_name
+        if url_path is not None:
+            self._url_path = url_path.lstrip("/")
 
         if self._icon:
             validate_icon_or_emoji(self._icon)
@@ -140,6 +161,10 @@ class StreamlitPage:
     @property
     def icon(self) -> str:
         return self._icon
+
+    @property
+    def url_path(self) -> str:
+        return "" if self._default else self._url_path
 
     def run(self) -> None:
         if not self._can_be_called:
@@ -169,8 +194,4 @@ class StreamlitPage:
 
     @property
     def _script_hash(self) -> str:
-        if isinstance(self._page, Path):
-            h = calc_md5(str(self._page))
-        else:
-            h = calc_md5(self._title)
-        return h
+        return calc_md5(self._url_path)

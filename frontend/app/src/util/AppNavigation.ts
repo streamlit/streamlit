@@ -274,7 +274,10 @@ export class StrategyV2 {
 
         this.appNav.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
-          currentPageName: currentPageName,
+          // Make sure we don't send the official page name for the main page
+          // This command is used to update the URL in the url bar, so the main page
+          // should not have a page name in the URL.
+          currentPageName: currentPage.isDefault ? "" : currentPageName,
           currentPageScriptHash,
         })
       },
