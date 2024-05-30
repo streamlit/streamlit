@@ -1172,11 +1172,6 @@ export class App extends PureComponent<Props, State> {
       // but we have observed race conditions tied to a rerun occurring
       // before a NewSession message is processed. This issue should not
       // disrupt users and is not a critical need for the message cache
-      console.log(this.connectionManager !== null)
-      console.log(
-        status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
-      )
-      console.log(this.sessionInfo.isSet)
       if (
         this.connectionManager !== null &&
         status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
