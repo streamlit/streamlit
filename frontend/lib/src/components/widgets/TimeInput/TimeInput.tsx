@@ -39,7 +39,6 @@ import {
 } from "@streamlit/lib/src/util/utils"
 
 import { StyledClearIconContainer } from "./styled-components"
-import { Height } from "@emotion-icons/material-outlined"
 
 export interface Props {
   disabled: boolean
@@ -183,6 +182,7 @@ class TimeInput extends PureComponent<Props, State> {
 
             ValueContainer: {
               style: () => ({
+                lineHeight: 1.4,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: ".5rem",
                 paddingLeft: ".5rem",
