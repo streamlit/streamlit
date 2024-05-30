@@ -239,6 +239,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
             },
             ControlContainer: {
               style: () => ({
+                height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: theme.sizes.borderWidth,
                 borderRightWidth: theme.sizes.borderWidth,

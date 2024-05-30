@@ -23,7 +23,7 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   flexDirection: "row",
   flexWrap: "nowrap",
   alignItems: "center",
-
+  height: theme.sizes.minElementHeight,
   // Mimic the baseweb's borders here, so we can apply the focus style
   // to the entire container and not only the input itself
   borderWidth: theme.sizes.borderWidth,

@@ -470,7 +470,6 @@ export class NumberInput extends React.PureComponent<Props, State> {
               },
               Root: {
                 style: () => ({
-                  height: theme.sizes.minElementHeight,
                   borderTopRightRadius: 0,
                   borderBottomRightRadius: 0,
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
