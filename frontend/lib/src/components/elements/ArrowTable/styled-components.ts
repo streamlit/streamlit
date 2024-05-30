@@ -20,7 +20,6 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
   fontFamily: theme.genericFonts.bodyFont,
-  padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   lineHeight: theme.lineHeights.table,
   overflow: ["auto", "overlay"],
 }))

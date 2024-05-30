@@ -212,7 +212,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
                 return {
                   marginRight: 0,
-                  marginLeft: "2px",
+                  marginLeft: 0,
                   paddingLeft: "2px",
                   paddingRight: "2px",
                   width: "32px",
@@ -243,6 +243,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                   width: "1rem",
                   height: "1rem",
                   marginTop: "0.30rem",
+                  marginLeft: 0,
                   boxShadow:
                     $isFocusVisible && $checked
                       ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
