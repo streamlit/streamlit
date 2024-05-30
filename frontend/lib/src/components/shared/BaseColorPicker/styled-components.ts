@@ -47,7 +47,7 @@ export const StyledColorPreview = styled.div(({ theme }) => ({
 export const StyledColorBlock = styled.div(({ theme }) => ({
   height: "2.5rem",
   width: "2.5rem",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.lg,
   borderColor: theme.colors.fadedText10,
   borderWidth: "1px",
   borderStyle: "solid",
