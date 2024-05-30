@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any, Callable
+from typing import Any, Callable, List, Tuple
 from unittest.mock import MagicMock, patch
 
 import altair as alt
@@ -424,19 +424,19 @@ def _run_fragment_writes_to_nested_inside_container_app(
     _some_method()
 
 
-outside_container_writing_apps: list[APP_FUNCTION] = [
+outside_container_writing_apps: List[APP_FUNCTION] = [
     _run_fragment_writes_to_outside_container_app,
     _run_fragment_writes_to_nested_outside_container_app,
     _run_fragment_writes_to_nested_outside_container_app2,
     _run_fragment_writes_to_nested_outside_container_app3,
 ]
 
-inside_container_writing_apps: list[APP_FUNCTION] = [
+inside_container_writing_apps: List[APP_FUNCTION] = [
     _run_fragment_writes_to_inside_container_app,
     _run_fragment_writes_to_nested_inside_container_app,
 ]
 
-widgets: list[tuple[str, ELEMENT_PRODUCER]] = [
+widgets: List[Tuple[str, ELEMENT_PRODUCER]] = [
     ("button", lambda: st.button("Click me")),
     ("camera_input", lambda: st.camera_input("Take a picture")),
     ("chat_input", lambda: st.chat_input("Chat with me")),
@@ -500,7 +500,7 @@ widgets: list[tuple[str, ELEMENT_PRODUCER]] = [
     ),
 ]
 
-non_widgets: list[tuple[str, ELEMENT_PRODUCER]] = [
+non_widgets: List[Tuple[str, ELEMENT_PRODUCER]] = [
     # alerts
     ("error", lambda: st.error("Hello")),
     ("info", lambda: st.info("Hello")),
@@ -555,13 +555,13 @@ non_widgets: list[tuple[str, ELEMENT_PRODUCER]] = [
     ),
 ]
 
-TEST_TUPLE = tuple[str, APP_FUNCTION, ELEMENT_PRODUCER]
+TEST_TUPLE = Tuple[str, APP_FUNCTION, ELEMENT_PRODUCER]
 
 
 def get_test_tuples(
-    app_functions: list[APP_FUNCTION],
-    elements: list[tuple[str, Callable[[], DeltaGenerator]]],
-) -> list[TEST_TUPLE]:
+    app_functions: List[APP_FUNCTION],
+    elements: List[Tuple[str, Callable[[], DeltaGenerator]]],
+) -> List[TEST_TUPLE]:
     """Create a tuple of (name, app-to-run, element-producer), so that each passed app runs with every passed element.
 
     Parameters
