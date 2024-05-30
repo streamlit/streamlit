@@ -196,7 +196,7 @@ function ChatInput({
           overrides={{
             Root: {
               style: {
-                height: theme.sizes.minElementHeight,
+                minHeight: theme.sizes.minElementHeight,
                 outline: "none",
                 backgroundColor: theme.colors.transparent,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
