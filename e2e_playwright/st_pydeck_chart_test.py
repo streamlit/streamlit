@@ -41,7 +41,7 @@ def test_pydeck_chart_has_consistent_visuals(
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(1).locator("canvas").nth(0),
-        name="st_pydeck_chart-san_francisco",
+        name="st_pydeck_chart-san_francisco_overridden_light_theme",
         pixel_threshold=1.0,
     )
 
@@ -56,5 +56,12 @@ def test_pydeck_chart_has_consistent_visuals(
     assert_snapshot(
         pydeck_charts.nth(3).locator("canvas").nth(1),
         name="st_pydeck_chart-geo_layers",
+        pixel_threshold=1.0,
+    )
+
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+    assert_snapshot(
+        pydeck_charts.nth(4).locator("canvas").nth(1),
+        name="st_pydeck_chart-no_overridden_theme",
         pixel_threshold=1.0,
     )
