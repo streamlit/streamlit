@@ -15,7 +15,6 @@
  */
 import styled from "@emotion/styled"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import { th } from "date-fns/locale"
 
 export interface StyledChatInputContainerProps {
   width: number
