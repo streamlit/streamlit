@@ -161,6 +161,7 @@ class Radio extends React.PureComponent<Props, State> {
                     height: "1rem",
                     marginTop: "0.35rem",
                     marginRight: "0",
+                    marginLeft: "0",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
