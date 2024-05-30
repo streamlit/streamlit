@@ -28,7 +28,7 @@ def test_pydeck_chart_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(4)
+    expect(pydeck_charts).to_have_count(5)
 
     wait_for_app_run(themed_app, 15000)
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
