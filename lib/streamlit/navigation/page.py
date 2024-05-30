@@ -132,6 +132,11 @@ class StreamlitPage:
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
         self._icon: str = icon or inferred_icon
+        if url_path is not None and url_path.strip() == "" and not default:
+            raise StreamlitAPIException(
+                "The URL path cannot be an empty string unless the page is the default page."
+            )
+
         self._url_path: str = (
             (url_path and url_path.lstrip("/"))
             or inferred_name
@@ -155,7 +160,7 @@ class StreamlitPage:
 
     @property
     def url_path(self) -> str:
-        return self._url_path
+        return "" if self._default else self._url_path
 
     def run(self) -> None:
         if not self._can_be_called:

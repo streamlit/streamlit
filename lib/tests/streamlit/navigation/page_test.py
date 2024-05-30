@@ -95,6 +95,33 @@ class StPagesTest(DeltaGeneratorTestCase):
         page = st.Page("page_8.py", url_path="/my_url_path")
         assert page.url_path == "my_url_path"
 
+    def test_url_path_is_empty_string_if_default(self):
+        """Tests that url path is "" if the page is the default page"""
+
+        def page_9():
+            pass
+
+        page = st.Page(page_9, default=True)
+        assert page.url_path == ""
+
+    def test_url_path_is_empty_string_if_default(self):
+        """Tests that url path is "" if the page is the default page"""
+
+        def page_9():
+            pass
+
+        page = st.Page(page_9, default=True)
+        assert page.url_path == ""
+
+    def test_non_default_pages_cannot_have_empty_url_path(self):
+        """Tests that an error is raised if the empty url path is provided for a non-default page"""
+
+        def page_9():
+            pass
+
+        with pytest.raises(StreamlitAPIException):
+            page = st.Page(page_9, url_path="")
+
     def test_page_run_cannot_run_standalone(self):
         """Test that a page cannot run standalone."""
         with pytest.raises(StreamlitAPIException):
