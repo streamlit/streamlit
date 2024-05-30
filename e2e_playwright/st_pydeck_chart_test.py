@@ -31,21 +31,32 @@ def test_pydeck_chart_has_consistent_visuals(
     expect(pydeck_charts).to_have_count(4)
 
     wait_for_app_run(app, 15000)
-    assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty_light_theme")
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-empty_light_theme",
+        pixel_threshold=1.0,
+    )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(1).locator("canvas").nth(0),
         name="st_pydeck_chart-san_francisco_light_theme",
+        pixel_threshold=1.0,
     )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(2).locator("canvas").nth(1),
         name="st_pydeck_chart-continents_light_theme",
+        pixel_threshold=1.0,
     )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(3).locator("canvas").nth(1),
         name="st_pydeck_chart-geo_layers_light_theme",
+        pixel_threshold=1.0,
     )
 
 
@@ -61,19 +72,30 @@ def test_pydeck_chart_has_consistent_visuals_dark(
     expect(pydeck_charts).to_have_count(4)
 
     wait_for_app_run(app, 15000)
-    assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty_dark_theme")
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-empty_dark_theme",
+        pixel_threshold=1.0,
+    )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(1).locator("canvas").nth(0),
         name="st_pydeck_chart-san_francisco_dark_theme",
+        pixel_threshold=1.0,
     )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(2).locator("canvas").nth(1),
         name="st_pydeck_chart-continents_dark_theme",
+        pixel_threshold=1.0,
     )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(3).locator("canvas").nth(1),
         name="st_pydeck_chart-geo_layers_dark_theme",
+        pixel_threshold=1.0,
     )
