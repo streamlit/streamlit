@@ -53,10 +53,22 @@ def page_9():
     st.header("Page 9")
 
 
+def page_10():
+    st.header("Page 10")
+
+    @st.experimental_fragment
+    def get_input():
+        st.text_input("Some input")
+        if st.button("Submit"):
+            st.rerun()
+
+    get_input()
+
+
 page7 = st.Page(page_7)
 page8 = st.Page(page_8, url_path="my_url_path")
 page9 = st.Page(page_9)
-page10 = st.Page(page_7, title="page 10", url_path="page_10")
+page10 = st.Page(page_10)
 page11 = st.Page(page_8, title="page 11", url_path="page_11")
 page12 = st.Page(page_9, title="page 12", url_path="page_12")
 

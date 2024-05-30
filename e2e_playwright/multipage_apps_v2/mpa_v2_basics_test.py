@@ -347,3 +347,15 @@ def test_page_url_path_appears_in_url(app: Page, app_port: int):
     link.click()
     wait_for_app_loaded(app)
     expect(app).to_have_url(f"http://localhost:{app_port}/my_url_path")
+
+
+def test_widgets_maintain_state_in_fragment(app: Page):
+    """Test that widgets maintain state in a fragment"""
+    get_page_link(app, "page 10").click()
+
+    input = app.get_by_test_id("stTextInput").locator("input").first
+    input.fill("Hello")
+    input.blur()
+    wait_for_app_run(app)
+
+    expect(input).to_have_value("Hello")
