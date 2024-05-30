@@ -27,6 +27,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},
@@ -41,6 +42,7 @@ const getProps = (
   }),
   width: 300,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
