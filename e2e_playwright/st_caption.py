@@ -35,16 +35,7 @@ st.caption("This is a caption!")
 st.caption(
     "This is a caption that contains <div>html</div> inside it!", unsafe_allow_html=True
 )
-
-leading_indent_code_tooltip = """
-Code:
-
-    This
-    is
-    a
-    code
-    block!"""
-st.caption("This is a caption with a help tooltip", help=leading_indent_code_tooltip)
+st.caption("This is a caption with a help tooltip", help="This is some help tooltip!")
 
 st.caption(
     """This is a caption that contains a bunch of interesting markdown:

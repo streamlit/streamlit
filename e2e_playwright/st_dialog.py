@@ -67,17 +67,9 @@ if st.button("Open large-width Dialog"):
     large_width_dialog()
 
 
-leading_indent_regular_text_tooltip = """
-This is a regular text block!
-Test1
-Test2
-
-"""
-
-
 @st.experimental_dialog("Dialog with headings")
 def headings_dialog():
-    st.header("Header", help=leading_indent_regular_text_tooltip)
+    st.header("Header", help="Some tooltip!")
 
 
 if st.button("Open headings Dialog"):

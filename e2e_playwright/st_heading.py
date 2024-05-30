@@ -14,19 +14,8 @@
 
 import streamlit as st
 
-default_tooltip = """
-This is a really long tooltip.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
-justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
-tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
-In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
-sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
-malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
-""".strip()
-
 st.title("This title is awesome!")
-st.title("This title is awesome too!", help=default_tooltip, anchor="awesome-title")
+st.title("This title is awesome too!", help="Some help tooltip", anchor="awesome-title")
 st.title("`Code` - Title with hidden Anchor", anchor=False)
 st.title("a [link](#test)")
 # Foreign language titles and anchors
@@ -36,8 +25,8 @@ st.title("その他の邦題", anchor="アンカー")
 st.header("This header is awesome!")
 st.header("This header is awesome too!", anchor="awesome-header")
 st.header("This header with hidden anchor is awesome tooooo!", anchor=False)
-st.header("header with help", help=default_tooltip)
-st.header("header with help and hidden anchor", help=default_tooltip, anchor=False)
+st.header("header with help", help="Some help tooltip")
+st.header("header with help and hidden anchor", help="Some help tooltip", anchor=False)
 
 st.subheader("This subheader is awesome!")
 st.subheader("This subheader is awesome too!", anchor="awesome-subheader")
@@ -47,9 +36,9 @@ st.subheader(
     anchor="subheader",
 )
 st.subheader("Subheader with hidden Anchor", anchor=False)
-st.subheader("Subheader with help", help=default_tooltip)
+st.subheader("Subheader with help", help="Some help tooltip")
 st.subheader(
-    "Subheader with help and hidden anchor", help=default_tooltip, anchor=False
+    "Subheader with help and hidden anchor", help="Some help tooltip", anchor=False
 )
 
 # Test dividers

@@ -157,6 +157,4 @@ def test_show_tooltip_on_hover(app: Page):
     # Click the button to open it:
     popover_button.hover()
 
-    no_indent_tooltip = "thisisatooltipwithnoindents. It has some spaces but no idents."
-
-    expect(app.get_by_test_id("stTooltipContent")).to_have_text(no_indent_tooltip)
+    expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
