@@ -86,7 +86,7 @@ df = pd.DataFrame(H3_HEX_DATA)
 
 st.pydeck_chart(
     pdk.Deck(
-        map_style="mapbox://styles/mapbox/light-v9",
+        map_style="mapbox://styles/mapbox/outdoors-v12",
         tooltip={"text": "Count: {count}"},
         initial_view_state=pdk.ViewState(
             latitude=37.7749295, longitude=-122.4194155, zoom=12, bearing=0, pitch=30
