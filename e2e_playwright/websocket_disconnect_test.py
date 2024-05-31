@@ -24,7 +24,6 @@ def test_disconnecting_disables_widgets_correctly(app: Page):
 
     expect(app.get_by_test_id("stConnectionStatus")).not_to_be_visible()
     app.evaluate("window.streamlitDebug.shutdownRuntime()")
-    expect(app.get_by_test_id("stConnectionStatus")).not_to_be_visible()
     expect(app.get_by_test_id("stConnectionStatus")).to_contain_text("Connecting")
 
     expect(app.get_by_test_id("stButton").locator("button")).to_have_attribute(
