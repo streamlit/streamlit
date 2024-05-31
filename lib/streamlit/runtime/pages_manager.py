@@ -80,7 +80,9 @@ class PagesStrategyV1:
         return self.pages_manager.current_page_hash
 
     def set_active_script_hash(self, _page_hash: "PageHash"):
-        raise NotImplementedError("Unable to set the active script hash in V1 strategy")
+        # Intentionally do nothing as MPA v1 active_script_hash does not
+        # differentiate the active_script_hash and the page_script_hash
+        pass
 
     def get_initial_active_script(
         self, page_script_hash: "PageHash", page_name: "PageName"

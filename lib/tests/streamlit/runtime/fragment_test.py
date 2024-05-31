@@ -21,6 +21,7 @@ from parameterized import parameterized
 from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
+from streamlit.runtime.pages_manager import PagesManager
 
 
 class MemoryFragmentStorageTest(unittest.TestCase):
@@ -258,3 +259,38 @@ class FragmentTest(unittest.TestCase):
             )
         else:
             ctx.enqueue.assert_not_called()
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_sets_active_script_hash_if_needed(self, patched_get_script_run_ctx):
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.pages_manager = PagesManager("")
+        ctx.pages_manager.set_pages({})  # Migrate to MPAv2
+        ctx.pages_manager.set_active_script_hash("some_hash")
+        ctx.active_script_hash = ctx.pages_manager.get_active_script_hash()
+        patched_get_script_run_ctx.return_value = ctx
+
+        with patch.object(
+            ctx.pages_manager, "run_with_active_hash"
+        ) as patched_run_with_active_hash:
+
+            @fragment
+            def my_fragment():
+                pass
+
+            my_fragment()
+
+            # Reach inside our MemoryFragmentStorage internals to pull out our saved
+            # fragment.
+            saved_fragment = list(ctx.fragment_storage._fragments.values())[0]
+
+            # set the hash to something different for subsequent calls
+            ctx.pages_manager.set_active_script_hash("a_different_hash")
+            ctx.active_script_hash = ctx.pages_manager.get_active_script_hash()
+
+            # Verify subsequent calls will run with the original active script hash
+            saved_fragment()
+            patched_run_with_active_hash.assert_called_with("some_hash")
+            patched_run_with_active_hash.reset_mock()
+            saved_fragment()
+            patched_run_with_active_hash.assert_called_with("some_hash")
