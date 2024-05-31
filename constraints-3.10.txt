@@ -25,7 +25,7 @@ docutils==0.21.2
 exceptiongroup==1.2.1
 execnet==2.1.1
 filelock==3.14.0
-fonttools==4.52.4
+fonttools==4.53.0
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -51,7 +51,7 @@ langchain==0.1.20
 langchain-community==0.0.38
 langchain-core==0.1.52
 langchain-text-splitters==0.0.2
-langsmith==0.1.65
+langsmith==0.1.67
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -145,4 +145,4 @@ vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.1
 yarl==1.9.4
-zipp==3.19.0
+zipp==3.19.1
