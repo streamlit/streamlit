@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { MutableRefObject, useRef, useEffect, useState } from "react"
+import {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 export const usePrevious = (value: any): any => {
   const ref = useRef()
@@ -32,14 +38,31 @@ export const useIsOverflowing = (
 ): boolean => {
   const { current } = ref
   const [isOverflowing, setIsOverflowing] = useState(false)
-
-  useEffect(() => {
+  const checkOverflowing = useCallback(() => {
     if (current) {
       const { scrollHeight, clientHeight } = current
 
       setIsOverflowing(scrollHeight > clientHeight)
     }
-  }, [setIsOverflowing, expanded, current, current?.clientHeight])
+  }, [current])
+
+  // We want to double check if the element is overflowing
+  // when the expanded state changes or the height of the
+  // element changes
+  useEffect(() => {
+    checkOverflowing()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, current?.clientHeight])
+
+  // Window resizing can also affect the overflow state
+  // so we need to check it as well
+  useEffect(() => {
+    window.addEventListener("resize", checkOverflowing)
+
+    return () => {
+      window.removeEventListener("resize", checkOverflowing)
+    }
+  }, [checkOverflowing])
 
   return isOverflowing
 }

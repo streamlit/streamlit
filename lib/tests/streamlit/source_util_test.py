@@ -178,7 +178,3 @@ def test_get_pages(tmpdir):
             "icon": "",
         },
     }
-
-    # Assert address-equality to verify the cache is used the second time
-    # get_pages is called.
-    assert source_util.get_pages(main_script_path) is received_pages

@@ -163,7 +163,9 @@ jest.mock("@streamlit/app/src/SegmentMetricsManager", () => {
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    return new actualModule.SegmentMetricsManager(...props)
+    const metricsMgr = new actualModule.SegmentMetricsManager(...props)
+    jest.spyOn(metricsMgr, "enqueue")
+    return metricsMgr
   })
 
   return {
@@ -397,6 +399,18 @@ describe("App", () => {
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
     expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
+  })
+
+  it("sends updateReport to our metrics manager", () => {
+    renderApp(getProps())
+
+    const metricsManager = getStoredValue<SegmentMetricsManager>(
+      SegmentMetricsManager
+    )
+
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
   describe("App.handleNewSession", () => {
@@ -2243,6 +2257,7 @@ describe("App", () => {
           pageName: "",
           pageScriptHash: "hash1",
           queryString: "",
+          widgetStates: {},
         },
       })
     })

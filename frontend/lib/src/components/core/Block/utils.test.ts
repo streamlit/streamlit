@@ -20,8 +20,14 @@ import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { isElementStale } from "./utils"
 
 describe("isElementStale", () => {
-  // @ts-expect-error
-  const node = new ElementNode(null, null, "myScriptRunId", "myFragmentId")
+  const node = new ElementNode(
+    // @ts-expect-error
+    null,
+    null,
+    "myScriptRunId",
+    "activeScriptHash",
+    "myFragmentId"
+  )
 
   it("returns true if scriptRunState is RERUN_REQUESTED", () => {
     expect(

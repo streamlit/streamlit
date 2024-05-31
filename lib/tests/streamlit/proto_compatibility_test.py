@@ -45,6 +45,9 @@ FD = FieldDescriptor
                 ("page_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("page_name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("icon", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("is_default", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("section_header", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("url_pathname", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
@@ -59,6 +62,7 @@ FD = FieldDescriptor
                 ("app_pages", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("page_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("fragment_ids_this_run", FD.LABEL_REPEATED, FD.TYPE_STRING),
+                ("main_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
