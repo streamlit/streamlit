@@ -87,11 +87,11 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   /** Construct a URL for an app page in a multi-page app. */
   public buildAppPageURL(
     pageLinkBaseURL: string | undefined,
-    page: IAppPage,
-    pageIndex: number
+    page: IAppPage
   ): string {
     const pageName = page.pageName as string
-    const navigateTo = pageIndex === 0 ? "" : pageName
+    const urlPath = page.urlPathname || pageName
+    const navigateTo = page.isDefault ? "" : urlPath
 
     if (pageLinkBaseURL != null && pageLinkBaseURL.length > 0) {
       return `${pageLinkBaseURL}/${navigateTo}`

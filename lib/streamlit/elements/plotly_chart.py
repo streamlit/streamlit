@@ -509,7 +509,7 @@ class PlotlyMixin:
             theme=theme,
             form_id=plotly_chart_proto.form_id,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_selection_activated:
