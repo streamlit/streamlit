@@ -144,7 +144,7 @@ class LayoutsMixin:
 
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: str | None = "small"
+        self, spec: SpecType, *, gap: str | None = "small", inline: bool = False
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -260,11 +260,13 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
+            col_proto.column.inline = inline
             col_proto.allow_empty = True
             return col_proto
 
         block_proto = BlockProto()
         block_proto.horizontal.gap = gap_size
+        # block_proto.horizontal.inline = inline
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]

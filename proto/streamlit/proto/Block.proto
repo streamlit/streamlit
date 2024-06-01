@@ -48,6 +48,7 @@ message Block {
   message Column {
     double weight = 1;
     string gap = 2;
+    bool inline = 3;
   }
 
   message Expandable {

@@ -113,10 +113,11 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 interface StyledColumnProps {
   weight: number
   gap: string
+  inline: boolean
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, gap, theme }) => {
+  ({ weight, gap, inline, theme }) => {
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width = `calc(${percentage}% - ${gapWidth})`
@@ -124,8 +125,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     return {
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
-      width,
-      flex: `1 1 ${width}`,
+      ...(!inline && {
+        width,
+        flex: `1 1 ${width}`,
+      }),
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
