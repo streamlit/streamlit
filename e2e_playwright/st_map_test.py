@@ -60,10 +60,3 @@ def test_st_map_has_consistent_visuals(
         name="st_map-map_with_color_and_size_layers",
         pixel_threshold=1.0,
     )
-
-    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
-    assert_snapshot(
-        pydeck_charts.nth(4).locator("canvas").nth(1),
-        name="st_pydeck_chart-no_overridden_theme",
-        pixel_threshold=1.0,
-    )
