@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,16 +14,27 @@
  * limitations under the License.
  */
 
-describe("st.pydeck_chart", () => {
-  before(() => {
-    cy.loadApp("http://localhost:3000/");
-  });
+syntax = "proto3";
 
-  it("displays 3 maps", () => {
-    const els = cy.get(".element-container .stDeckGlJsonChart");
+option java_package = "com.snowflake.apps.streamlit";
 
-    els.should("have.length", 3);
 
-    els.find("canvas").should("have.css", "height", "500px");
-  });
-});
+import "streamlit/proto/AppPage.proto";
+
+message Navigation {
+  repeated string sections = 1;
+  repeated AppPage app_pages = 2;
+  Position position = 3;
+
+  // The script hash for the page identified by st.navigation
+  string page_script_hash = 4;
+
+  // Position of the Navigation
+  enum Position {
+    // do not display the navigation
+    HIDDEN = 0;
+
+    // display navigation in the sidebar
+    SIDEBAR = 1;
+  }
+}

@@ -76,3 +76,63 @@ deck = pdk.Deck(
     tooltip={"text": "weight: {weight}"},
 )
 st.pydeck_chart(deck, use_container_width=True)
+
+H3_HEX_DATA = [
+    {"hex": "88283082b9fffff", "count": 10},
+    {"hex": "88283082d7fffff", "count": 50},
+    {"hex": "88283082a9fffff", "count": 100},
+]
+df = pd.DataFrame(H3_HEX_DATA)
+
+st.pydeck_chart(
+    pdk.Deck(
+        map_style="mapbox://styles/mapbox/outdoors-v12",
+        tooltip={"text": "Count: {count}"},
+        initial_view_state=pdk.ViewState(
+            latitude=37.7749295, longitude=-122.4194155, zoom=12, bearing=0, pitch=30
+        ),
+        layers=[
+            pdk.Layer(
+                "H3HexagonLayer",
+                df,
+                pickable=True,
+                stroked=True,
+                filled=True,
+                get_hexagon="hex",
+                get_fill_color="[0, 255, 0]",
+                get_line_color=[255, 255, 255],
+                line_width_min_pixels=2,
+            ),
+        ],
+    )
+)
+
+st.pydeck_chart(
+    pdk.Deck(
+        initial_view_state=pdk.ViewState(
+            latitude=37.76,
+            longitude=-122.4,
+            zoom=11,
+            pitch=50,
+        ),
+        layers=[
+            pdk.Layer(
+                "HexagonLayer",
+                data=df,
+                get_position="[lon, lat]",
+                radius=200,
+                elevation_scale=4,
+                elevation_range=[0, 1000],
+                pickable=True,
+                extruded=True,
+            ),
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=df,
+                get_position="[lon, lat]",
+                get_color="[200, 30, 0, 160]",
+                get_radius=200,
+            ),
+        ],
+    )
+)

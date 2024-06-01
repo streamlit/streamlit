@@ -53,11 +53,7 @@ export interface StreamlitEndpoints {
    * @param page the page's AppPage protobuf properties
    * @param pageIndex the page's zero-based index
    */
-  buildAppPageURL(
-    pageLinkBaseURL: string | undefined,
-    page: IAppPage,
-    pageIndex: number
-  ): string
+  buildAppPageURL(pageLinkBaseURL: string | undefined, page: IAppPage): string
 
   /**
    * Upload a file to the FileUploader endpoint.
