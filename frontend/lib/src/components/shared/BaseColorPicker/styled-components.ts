@@ -16,12 +16,21 @@
 
 import styled from "@emotion/styled"
 
-export const StyledColorPicker = styled.div(({ theme }) => ({
-  fontFamily: theme.genericFonts.bodyFont,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-start",
-}))
+export interface StyledColorPickerProps {
+  disabled: boolean
+  width: number | undefined
+}
+
+export const StyledColorPicker = styled.div<StyledColorPickerProps>(
+  ({ disabled, width, theme }) => ({
+    fontFamily: theme.genericFonts.bodyFont,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    cursor: disabled ? "not-allowed" : "default",
+    width,
+  })
+)
 
 // We need this to override the default font-family: 'Menlo' rule,
 // Which causes the font to change to a serif one in Windows
@@ -31,33 +40,49 @@ export const StyledChromePicker = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledColorPreview = styled.div(({ theme }) => ({
-  height: theme.sizes.minElementHeight,
-  borderRadius: theme.radii.default,
-  borderColor: theme.colors.fadedText10,
-  cursor: "pointer",
-  boxShadow: "none",
-  lineHeight: theme.lineHeights.base,
-  "&:focus": {
-    outline: "none",
-  },
-  display: "flex",
-}))
+export interface StyledColorPreviewProps {
+  disabled: boolean
+}
 
-export const StyledColorBlock = styled.div(({ theme }) => ({
-  width: theme.sizes.minElementHeight,
-  height: theme.sizes.minElementHeight,
-  borderRadius: theme.radii.default,
-  borderColor: theme.colors.fadedText10,
-  borderWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  padding: "2px 0.8rem",
-  cursor: "pointer",
-  lineHeight: theme.lineHeights.base,
-  "&:focus": {
-    outline: "none",
-  },
-}))
+export const StyledColorPreview = styled.div<StyledColorPreviewProps>(
+  ({ disabled, theme }) => ({
+    height: theme.sizes.minElementHeight,
+    borderRadius: theme.radii.default,
+    borderColor: theme.colors.fadedText10,
+    cursor: disabled ? "not-allowed" : "pointer",
+    pointerEvents: disabled ? "none" : "auto",
+    boxShadow: "none",
+    lineHeight: theme.lineHeights.base,
+    "&:focus": {
+      outline: "none",
+    },
+    display: "flex",
+  })
+)
+
+export interface StyledColorBlockProps {
+  disabled: boolean
+  backgroundColor: string
+}
+
+export const StyledColorBlock = styled.div<StyledColorBlockProps>(
+  ({ backgroundColor, disabled, theme }) => ({
+    width: theme.sizes.minElementHeight,
+    height: theme.sizes.minElementHeight,
+    borderRadius: theme.radii.default,
+    borderColor: theme.colors.fadedText10,
+    borderWidth: theme.sizes.borderWidth,
+    opacity: disabled ? "0.4" : "",
+    backgroundColor,
+    borderStyle: "solid",
+    padding: "2px 0.8rem",
+    cursor: "pointer",
+    lineHeight: theme.lineHeights.base,
+    "&:focus": {
+      outline: "none",
+    },
+  })
+)
 
 export const StyledColorValue = styled.div(() => ({
   display: "flex",

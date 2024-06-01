@@ -223,7 +223,7 @@ class DateInput extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { width, element, disabled, theme, widgetMgr } = this.props
     const { values, isRange } = this.state
-    const { colors, fontSizes, lineHeights } = theme
+    const { colors, fontSizes, lineHeights, spacing } = theme
 
     const style = { width }
     const minDate = moment(element.min, DATE_FORMAT).toDate()
@@ -405,11 +405,11 @@ class DateInput extends React.PureComponent<Props, State> {
                   Input: {
                     style: {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      paddingRight: theme.spacing.sm,
-                      paddingLeft: theme.spacing.sm,
-                      paddingBottom: theme.spacing.sm,
-                      paddingTop: theme.spacing.sm,
-                      lineHeight: theme.lineHeights.inputWidget,
+                      paddingRight: spacing.sm,
+                      paddingLeft: spacing.sm,
+                      paddingBottom: spacing.sm,
+                      paddingTop: spacing.sm,
+                      lineHeight: lineHeights.inputWidget,
                     },
                     props: {
                       "data-testid": "stDateInput-Input",

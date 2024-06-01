@@ -133,7 +133,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { theme, width, element, disabled, widgetMgr } = this.props
-    const { colors, spacing } = theme
+    const { colors, spacing, sizes } = theme
     const lightTheme = hasLightBackgroundColor(theme)
 
     const style = { width }
@@ -252,10 +252,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                   // use the long-hand version, which means we can't use the
                   // shorthand names here as if we do we'll end up with warn
                   // logs spamming us every time a checkbox is rendered.
-                  borderLeftWidth: theme.sizes.borderWidth,
-                  borderRightWidth: theme.sizes.borderWidth,
-                  borderTopWidth: theme.sizes.borderWidth,
-                  borderBottomWidth: theme.sizes.borderWidth,
+                  borderLeftWidth: sizes.borderWidth,
+                  borderRightWidth: sizes.borderWidth,
+                  borderTopWidth: sizes.borderWidth,
+                  borderBottomWidth: sizes.borderWidth,
                   borderLeftColor: borderColor,
                   borderRightColor: borderColor,
                   borderTopColor: borderColor,

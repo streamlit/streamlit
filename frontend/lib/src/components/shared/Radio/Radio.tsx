@@ -120,7 +120,7 @@ class Radio extends React.PureComponent<Props, State> {
           overrides={{
             RadioGroupRoot: {
               style: {
-                gap: hasCaptions ? theme.spacing.sm : "0",
+                gap: hasCaptions ? theme.spacing.sm : theme.spacing.none,
                 minHeight: theme.sizes.minElementHeight,
               },
             },
