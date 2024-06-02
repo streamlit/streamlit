@@ -9,7 +9,7 @@ black==22.6.0
 blinker==1.8.2
 bokeh==2.4.3
 cachetools==5.3.3
-certifi==2024.2.2
+certifi==2024.6.2
 cffi==1.16.0
 cfgv==3.4.0
 charset-normalizer==3.3.2
@@ -139,7 +139,7 @@ types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.14
 typing-inspect==0.9.0
-typing_extensions==4.12.0
+typing_extensions==4.12.1
 tzdata==2024.1
 urllib3==1.26.18
 uv==0.2.5
