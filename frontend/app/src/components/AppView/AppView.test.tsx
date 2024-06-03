@@ -52,6 +52,8 @@ class ResizeObserver {
 }
 window.ResizeObserver = ResizeObserver
 
+const FAKE_SCRIPT_HASH = "fake_script_hash"
+
 function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
   return {
     wideMode: false,
@@ -76,7 +78,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: mockEndpointProp,
-    elements: AppRoot.empty(true),
+    elements: AppRoot.empty(FAKE_SCRIPT_HASH, true),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
@@ -96,6 +98,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     formsData,
     appLogo: null,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
+    navSections: [],
     onPageChange: jest.fn(),
     currentPageScriptHash: "main_page_script_hash",
     hideSidebarNav: false,
@@ -125,20 +128,37 @@ describe("AppView element", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
       ForwardMsgMetadata.create({}),
-      "no script run id"
+      "no script run id",
+      FAKE_SCRIPT_HASH
     )
 
     const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
       [sidebarElement],
       new BlockProto({ allowEmpty: true })
     )
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
     })
     render(<AppView {...props} />)
 
@@ -172,24 +192,41 @@ describe("AppView element", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
       ForwardMsgMetadata.create({}),
-      "no script run id"
+      "no script run id",
+      FAKE_SCRIPT_HASH
     )
 
     const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
       [sidebarElement],
       new BlockProto({ allowEmpty: true })
     )
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
 
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
       appPages,
     })
     render(<AppView {...props} />)
@@ -223,13 +260,32 @@ describe("AppView element", () => {
       return realUseContext(input)
     })
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
     })
     render(<AppView {...props} />)
 
@@ -354,19 +410,36 @@ describe("AppView element", () => {
         },
       }),
       ForwardMsgMetadata.create({}),
-      "no script run id"
+      "no script run id",
+      FAKE_SCRIPT_HASH
     )
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
     const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
       [chatInputElement],
       new BlockProto({ allowEmpty: true })
     )
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
     })
 
     render(<AppView {...props} />)

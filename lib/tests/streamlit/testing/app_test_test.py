@@ -227,7 +227,6 @@ def test_trigger_recursion():
         import streamlit as st
 
         if st.button(label="Submit"):
-            print("CLICKED!")
             time.sleep(1)
             st.rerun()
 

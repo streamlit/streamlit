@@ -17,15 +17,29 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Final, cast
+from typing import Any, Callable, Final, TypedDict, cast
 
 from blinker import Signal
+from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.logger import get_logger
 from streamlit.string_util import extract_leading_emoji
 from streamlit.util import calc_md5
 
 _LOGGER: Final = get_logger(__name__)
+
+PageHash: TypeAlias = str
+PageName: TypeAlias = str
+ScriptPath: TypeAlias = str
+Icon: TypeAlias = str
+
+
+class PageInfo(TypedDict):
+    script_path: ScriptPath
+    page_script_hash: PageHash
+    icon: NotRequired[Icon]
+    page_name: NotRequired[PageName]
+    url_pathname: NotRequired[str]
 
 
 def open_python_file(filename: str):
@@ -91,7 +105,7 @@ def page_icon_and_name(script_path: Path) -> tuple[str, str]:
 
 
 _pages_cache_lock = threading.RLock()
-_cached_pages: dict[str, dict[str, str]] | None = None
+_cached_pages: dict[PageHash, PageInfo] | None = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
 
@@ -105,13 +119,13 @@ def invalidate_pages_cache() -> None:
     _on_pages_changed.send()
 
 
-def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
+def get_pages(main_script_path_str: ScriptPath) -> dict[PageHash, PageInfo]:
     global _cached_pages
 
     # Avoid taking the lock if the pages cache hasn't been invalidated.
-    pages = _cached_pages
-    if pages is not None:
-        return pages
+    precached_pages = _cached_pages
+    if precached_pages is not None:
+        return precached_pages
 
     with _pages_cache_lock:
         # The cache may have been repopulated while we were waiting to grab
@@ -121,14 +135,14 @@ def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
 
         main_script_path = Path(main_script_path_str)
         main_page_icon, main_page_name = page_icon_and_name(main_script_path)
-        main_page_script_hash = calc_md5(main_script_path_str)
+        main_script_hash = calc_md5(main_script_path_str)
 
-        # NOTE: We include the page_script_hash in the dict even though it is
+        # NOTE: We include the script_hash in the dict even though it is
         #       already used as the key because that occasionally makes things
         #       easier for us when we need to iterate over pages.
-        pages = {
-            main_page_script_hash: {
-                "page_script_hash": main_page_script_hash,
+        pages: dict[PageHash, PageInfo] = {
+            main_script_hash: {
+                "page_script_hash": main_script_hash,
                 "page_name": main_page_name,
                 "icon": main_page_icon,
                 "script_path": str(main_script_path.resolve()),

@@ -21,10 +21,12 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 from typing_extensions import TypeGuard
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
+)
+from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -301,7 +303,7 @@ class SelectSliderMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         slider_proto = SliderProto()

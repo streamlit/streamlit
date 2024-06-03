@@ -20,6 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
 
@@ -36,9 +37,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
 
         msg = ForwardMsg()
@@ -60,9 +61,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
 
         ctx.on_script_start()
@@ -88,9 +89,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
 
         ctx.on_script_start()
@@ -115,9 +116,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
 
         ctx.on_script_start()
@@ -132,6 +133,43 @@ class ScriptRunContextTest(unittest.TestCase):
             ctx.enqueue(msg)
         except StreamlitAPIException:
             self.fail("set_page_config should have succeeded after reset!")
+
+    def test_active_script_hash(self):
+        """ensures active script hash is set correctly when enqueueing messages"""
+
+        fake_path = "my/custom/script/path"
+        pg_mgr = PagesManager(fake_path)
+
+        fake_enqueue = lambda msg: None
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+            pages_manager=pg_mgr,
+        )
+
+        ctx.on_script_start()
+
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+
+        ctx.enqueue(msg)
+        self.assertEqual(
+            msg.metadata.active_script_hash, pg_mgr.get_active_script_hash()
+        )
+
+        pg_mgr.set_current_page_script_hash("new_hash")
+
+        new_msg = ForwardMsg()
+        new_msg.delta.new_element.markdown.body = "bar"
+
+        ctx.enqueue(new_msg)
+        self.assertEqual(new_msg.metadata.active_script_hash, "new_hash")
 
     @parameterized.expand(
         [
@@ -152,9 +190,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
         ctx._experimental_query_params_used = experimental_used
         ctx._production_query_params_used = production_used
@@ -174,9 +212,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
         ctx.mark_experimental_query_params_used()
         assert ctx._experimental_query_params_used == True
@@ -190,9 +228,9 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
         ctx.mark_production_query_params_used()
         assert ctx._production_query_params_used == True

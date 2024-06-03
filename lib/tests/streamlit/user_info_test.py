@@ -18,6 +18,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -104,9 +105,9 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     session_state=SafeSessionState(SessionState(), lambda: None),
                     uploaded_file_mgr=None,
                     main_script_path="",
-                    page_script_hash="",
                     user_info={"email": "something@else.com"},
                     fragment_storage=MemoryFragmentStorage(),
+                    pages_manager=PagesManager(""),
                 ),
             )
 
