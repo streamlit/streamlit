@@ -42,7 +42,7 @@ def test_st_map_has_consistent_visuals(
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
-        maps.nth(1).locator("canvas").nth(0),
+        maps.nth(1).locator("canvas").nth(1),
         name="st_map-simple_map",
         pixel_threshold=1.0,
     )

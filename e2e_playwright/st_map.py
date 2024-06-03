@@ -68,4 +68,5 @@ st.map(
     longitude="xlon",
     color="color",
     size="size",
+    use_container_width=False,
 )
