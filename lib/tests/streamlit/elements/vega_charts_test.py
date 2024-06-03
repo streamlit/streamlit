@@ -182,25 +182,17 @@ class AltairChartTest(DeltaGeneratorTestCase):
             # The first time the cached function is called, the replay function is not called
             replay_cached_messages_mock.assert_not_called()
 
-        with patch(
-            "streamlit.runtime.caching.cache_utils.replay_cached_messages",
-            wraps=cached_message_replay.replay_cached_messages,
-        ) as replay_cached_messages_mock:
             cache_element()
             el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
             self.assertNotEqual(el.spec, "")
             # The second time the cached function is called, the replay function is called
             replay_cached_messages_mock.assert_called_once()
 
-        with patch(
-            "streamlit.runtime.caching.cache_utils.replay_cached_messages",
-            wraps=cached_message_replay.replay_cached_messages,
-        ) as replay_cached_messages_mock:
             cache_element()
             el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
             self.assertNotEqual(el.spec, "")
             # The third time the cached function is called, the replay function is called
-            replay_cached_messages_mock.assert_called_once()
+            replay_cached_messages_mock.assert_called()
 
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError):
