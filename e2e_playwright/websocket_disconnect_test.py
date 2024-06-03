@@ -23,6 +23,8 @@ def test_disconnecting_disables_widgets_correctly(app: Page):
     expect(app.get_by_test_id("stMarkdown").first).to_contain_text("Value 1: 25")
 
     expect(app.get_by_test_id("stConnectionStatus")).not_to_be_visible()
+
+    # activating this will disable all elements and simulate runtime shutdown
     app.evaluate("window.streamlitDebug.shutdownRuntime()")
     expect(app.get_by_test_id("stConnectionStatus")).to_contain_text("Connecting")
 
