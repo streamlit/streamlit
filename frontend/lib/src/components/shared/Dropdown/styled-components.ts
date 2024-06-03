@@ -33,7 +33,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
     // Override the default itemSize set on the component's JSX
     // on mobile, so we can make list items taller and scrollable
     [`@media (max-width: 768px)`]: {
-      minHeight: "40px",
+      minHeight: theme.sizes.minElementHeight,
       height: "auto !important",
     },
     "&:hover, &:active, &:focus-visible": {

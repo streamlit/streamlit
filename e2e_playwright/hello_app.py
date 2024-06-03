@@ -21,7 +21,6 @@ from streamlit.hello import Hello
 np.random.seed(0)
 
 # This is a trick to setup the MPA hello app programmatically
-
 source_util._cached_pages = None
 source_util._cached_pages = source_util.get_pages(Hello.__file__)
 source_util._on_pages_changed.send()

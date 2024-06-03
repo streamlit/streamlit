@@ -302,11 +302,12 @@ class Multiselect extends React.PureComponent<Props, State> {
               },
               ControlContainer: {
                 style: {
+                  minHeight: theme.sizes.minElementHeight,
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: "1px",
-                  borderRightWidth: "1px",
-                  borderTopWidth: "1px",
-                  borderBottomWidth: "1px",
+                  borderLeftWidth: theme.sizes.borderWidth,
+                  borderRightWidth: theme.sizes.borderWidth,
+                  borderTopWidth: theme.sizes.borderWidth,
+                  borderBottomWidth: theme.sizes.borderWidth,
                 },
               },
               Placeholder: {
@@ -316,16 +317,6 @@ class Multiselect extends React.PureComponent<Props, State> {
               },
               ValueContainer: {
                 style: () => ({
-                  /*
-                    This minHeight is needed to fix a bug from BaseWeb in which the
-                    div that contains the options changes their height from 40px to 44px.
-
-                    You could check this behavior in their documentation as well:
-                    https://v8-17-1.baseweb.design/components/select/#select-as-multi-pick-search
-
-                    Issue related: https://github.com/streamlit/streamlit/issues/590
-                  */
-                  minHeight: "38.4px",
                   paddingLeft: theme.spacing.sm,
                   paddingTop: 0,
                   paddingBottom: 0,

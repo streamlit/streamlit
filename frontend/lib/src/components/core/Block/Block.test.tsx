@@ -26,6 +26,7 @@ import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
 import VerticalBlock from "./Block"
 
+const FAKE_SCRIPT_HASH = "fake_script_hash"
 class ResizeObserver {
   observe(): void {}
 
@@ -36,6 +37,7 @@ class ResizeObserver {
 
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     children,
     new BlockProto({ allowEmpty: true, column: { weight } })
   )
@@ -45,6 +47,7 @@ function makeHorizontalBlock(numColumns: number): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     Array.from({ length: numColumns }, () => makeColumn(weight)),
     new BlockProto({ allowEmpty: true, horizontal: { gap: "small" } })
   )
@@ -55,6 +58,7 @@ function makeVerticalBlock(
   additionalProps: Partial<BlockProto> = {}
 ): BlockNode {
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     children,
     new BlockProto({ allowEmpty: true, ...additionalProps })
   )

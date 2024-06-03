@@ -31,6 +31,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -321,6 +322,7 @@ class AppTest:
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
+        pages_manager = PagesManager(self._script_path, setup_watcher=False)
         with source_util._pages_cache_lock:
             saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
@@ -333,7 +335,11 @@ class AppTest:
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
-            self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
+            self._script_path,
+            self.session_state,
+            pages_manager,
+            args=self.args,
+            kwargs=self.kwargs,
         )
         with patch_config_options({"global.appTest": True}):
             self._tree = script_runner.run(

@@ -37,13 +37,16 @@ import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
 
+const FAKE_SCRIPT_HASH = "fake_script_hash"
+
 function createBalloonNode(scriptRunId: string): ElementNode {
   const node = new ElementNode(
     new BalloonsProto({
       show: true,
     }),
     ForwardMsgMetadata.create({}),
-    scriptRunId
+    scriptRunId,
+    FAKE_SCRIPT_HASH
   )
   node.element.type = "balloons"
   return node
@@ -55,7 +58,8 @@ function createSnowNode(scriptRunId: string): ElementNode {
       show: true,
     }),
     ForwardMsgMetadata.create({}),
-    scriptRunId
+    scriptRunId,
+    FAKE_SCRIPT_HASH
   )
   node.element.type = "snow"
   return node

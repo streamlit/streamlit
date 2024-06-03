@@ -148,7 +148,7 @@ const WebcamComponent = ({
             // The aspect ration of video stream may be different depending on a camera.
             height={(debouncedWidth * 9) / 16}
             style={{
-              borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
+              borderRadius: `${theme.radii.default} ${theme.radii.default} 0 0`,
             }}
             onUserMediaError={() => {
               setWebcamPermissionState(WebcamPermission.ERROR)
