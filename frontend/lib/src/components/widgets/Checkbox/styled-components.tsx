@@ -18,6 +18,14 @@ import styled from "@emotion/styled"
 
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
+export interface StyledCheckboxProps {
+  width: number
+}
+
+export const StyledCheckbox = styled.div<StyledCheckboxProps>(({ width }) => ({
+  width,
+}))
+
 export interface StyledContentProps {
   visibility?: LabelVisibilityOptions
 }
