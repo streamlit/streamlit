@@ -23,10 +23,10 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   flexDirection: "row",
   flexWrap: "nowrap",
   alignItems: "center",
-
+  height: theme.sizes.minElementHeight,
   // Mimic the baseweb's borders here, so we can apply the focus style
   // to the entire container and not only the input itself
-  borderWidth: "1px",
+  borderWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   // Mimic the logic from createThemeOverrides.
   borderColor:
@@ -36,7 +36,7 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   transitionDuration: "200ms",
   transitionProperty: "border",
   transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
-  borderRadius: theme.radii.lg,
+  borderRadius: theme.radii.default,
   overflow: "hidden", // Fix rounded corner being overlayed with corner of internal input.
 
   "&.focused": {
@@ -82,8 +82,8 @@ export const StyledInputControl = styled.button(({ theme }) => ({
     border: "none",
   },
   "&:last-of-type": {
-    borderTopRightRadius: theme.radii.lg,
-    borderBottomRightRadius: theme.radii.lg,
+    borderTopRightRadius: theme.radii.default,
+    borderBottomRightRadius: theme.radii.default,
   },
   "&:disabled": {
     cursor: "not-allowed",

@@ -40,8 +40,8 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
   ({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    borderRadius: theme.radii.lg,
-    border: `1px solid ${theme.colors.fadedText05}`,
+    borderRadius: theme.radii.default,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
     fontFamily: theme.genericFonts.codeFont,
     fontSize: theme.fontSizes.sm,
   })
@@ -50,7 +50,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
 export const StyledDocHeader = styled.div(({ theme }) => ({
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
   backgroundColor: theme.colors.docStringContainerBackground,
-  borderBottom: `1px solid ${theme.colors.fadedText05}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
   fontSize: theme.fontSizes.sm,
   overflow: ["auto", "overlay"],
 }))
@@ -63,7 +63,7 @@ export const StyledDocString = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 
   "&:not(:last-child)": {
-    borderBottom: `1px solid ${theme.colors.fadedText05}`,
+    borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
   },
 }))
 
@@ -77,7 +77,7 @@ export const StyledMembersTable = styled.table(({ theme }) => ({
 
 export const StyledMembersRow = styled.tr(({ theme }) => ({
   "&:not(:last-child)": {
-    borderBottom: `1px dotted ${theme.colors.fadedText05}`,
+    borderBottom: `${theme.sizes.borderWidth} dotted ${theme.colors.fadedText05}`,
   },
 }))
 

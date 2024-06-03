@@ -76,6 +76,11 @@ export const StyledStreamlitMarkdown =
           fontSize: theme.fontSizes.md,
         },
 
+        table: {
+          // Add some space below the markdown tables
+          marginBottom: theme.spacing.lg,
+        },
+
         tr: {
           borderTop: `1px solid ${theme.colors.fadedText10}`,
         },
