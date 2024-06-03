@@ -231,11 +231,11 @@ class FormMixin:
     def form_submit_button(
         self,
         label: str = "Submit",
+        *,  # keyword-only arguments:
         help: str | None = None,
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,

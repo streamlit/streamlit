@@ -28,6 +28,7 @@ class IframeMixin:
     def _iframe(
         self,
         src: str,
+        *,  # keyword-only arguments:
         width: int | None = None,
         height: int | None = None,
         scrolling: bool = False,
@@ -62,6 +63,7 @@ class IframeMixin:
     def _html(
         self,
         html: str,
+        *,  # keyword-only arguments:
         width: int | None = None,
         height: int | None = None,
         scrolling: bool = False,

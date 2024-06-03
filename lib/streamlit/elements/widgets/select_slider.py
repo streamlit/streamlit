@@ -111,13 +111,13 @@ class SelectSliderMixin:
         label: str,
         options: OptionSequence[T] = (),
         value: object = None,
+        *,  # keyword-only arguments:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> T | tuple[T, T]:

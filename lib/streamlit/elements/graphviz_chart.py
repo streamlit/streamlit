@@ -40,6 +40,7 @@ class GraphvizMixin:
     def graphviz_chart(
         self,
         figure_or_dot: FigureOrDot,
+        *,  # keyword-only arguments:
         use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display a graph using the dagre-d3 library.

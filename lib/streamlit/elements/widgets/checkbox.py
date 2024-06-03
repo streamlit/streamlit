@@ -58,12 +58,12 @@ class CheckboxMixin:
         self,
         label: str,
         value: bool = False,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> bool:
@@ -164,12 +164,12 @@ class CheckboxMixin:
         self,
         label: str,
         value: bool = False,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> bool:
@@ -274,7 +274,6 @@ class CheckboxMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,

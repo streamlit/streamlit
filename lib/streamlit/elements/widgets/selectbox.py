@@ -83,13 +83,13 @@ class SelectboxMixin:
         label: str,
         options: OptionSequence[T],
         index: int | None = 0,
+        *,  # keyword-only arguments:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -229,7 +229,6 @@ class SelectboxMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",

@@ -30,7 +30,7 @@ class AlertMixin:
     def error(
         self,
         body: SupportsStr,
-        *,  # keyword-only args:
+        *,  # keyword-only arguments:
         icon: str | None = None,
     ) -> DeltaGenerator:
         """Display error message.
@@ -117,7 +117,7 @@ class AlertMixin:
     def info(
         self,
         body: SupportsStr,
-        *,  # keyword-only args:
+        *,  # keyword-only arguments:
         icon: str | None = None,
     ) -> DeltaGenerator:
         """Display an informational message.
@@ -161,7 +161,7 @@ class AlertMixin:
     def success(
         self,
         body: SupportsStr,
-        *,  # keyword-only args:
+        *,  # keyword-only arguments:
         icon: str | None = None,
     ) -> DeltaGenerator:
         """Display a success message.

@@ -85,7 +85,7 @@ class MapMixin:
     def map(
         self,
         data: Data = None,
-        *,
+        *,  # keyword-only arguments:
         latitude: str | None = None,
         longitude: str | None = None,
         color: None | str | Color = None,

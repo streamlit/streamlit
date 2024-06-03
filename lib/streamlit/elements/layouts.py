@@ -486,7 +486,7 @@ class LayoutsMixin:
     def popover(
         self,
         label: str,
-        *,
+        *,  # keyword-only arguments:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
@@ -602,7 +602,7 @@ class LayoutsMixin:
     def status(
         self,
         label: str,
-        *,
+        *,  # keyword-only arguments:
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
     ) -> StatusContainer:
@@ -726,7 +726,7 @@ class LayoutsMixin:
     def _dialog(
         self,
         title: str,
-        *,
+        *,  # keyword-only arguments:
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
     ) -> "Dialog":

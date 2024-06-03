@@ -52,6 +52,7 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
+        *,
         help: str | None = None,
         label_visibility: LabelVisibility = "visible",
     ) -> DeltaGenerator:

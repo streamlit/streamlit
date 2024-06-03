@@ -79,6 +79,7 @@ class TextWidgetsMixin:
         label: str,
         value: str = "",
         max_chars: int | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         type: Literal["default", "password"] = "default",
         help: str | None = None,
@@ -86,7 +87,6 @@ class TextWidgetsMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -99,6 +99,7 @@ class TextWidgetsMixin:
         label: str,
         value: SupportsStr | None = None,
         max_chars: int | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         type: Literal["default", "password"] = "default",
         help: str | None = None,
@@ -106,7 +107,6 @@ class TextWidgetsMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -119,6 +119,7 @@ class TextWidgetsMixin:
         label: str,
         value: str | SupportsStr | None = "",
         max_chars: int | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         type: Literal["default", "password"] = "default",
         help: str | None = None,
@@ -126,7 +127,6 @@ class TextWidgetsMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -245,6 +245,7 @@ class TextWidgetsMixin:
         label: str,
         value: SupportsStr | None = "",
         max_chars: int | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         type: str = "default",
         help: str | None = None,
@@ -252,7 +253,6 @@ class TextWidgetsMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -350,13 +350,13 @@ class TextWidgetsMixin:
         label: str,
         value: str = "",
         height: int | None = None,
+        *,  # keyword-only arguments:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -369,13 +369,13 @@ class TextWidgetsMixin:
         label: str,
         value: SupportsStr | None = None,
         height: int | None = None,
+        *,  # keyword-only arguments:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -388,13 +388,13 @@ class TextWidgetsMixin:
         label: str,
         value: str | SupportsStr | None = "",
         height: int | None = None,
+        *,  # keyword-only arguments:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -514,13 +514,13 @@ class TextWidgetsMixin:
         label: str,
         value: SupportsStr | None = "",
         height: int | None = None,
+        *,  # keyword-only arguments:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
