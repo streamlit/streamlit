@@ -76,7 +76,7 @@ pillow==10.3.0
 pixelmatch==0.3.0
 pkginfo==1.11.0
 platformdirs==4.2.2
-playwright==1.42.0
+playwright==1.44.0
 plotly==5.22.0
 pluggy==1.5.0
 pre-commit==3.7.1
@@ -86,7 +86,7 @@ pycparser==2.22
 pydantic==1.10.15
 pydeck==0.9.1
 pydot==2.0.0
-pyee==11.0.1
+pyee==11.1.0
 Pygments==2.18.0
 PyJWT==2.8.0
 pyOpenSSL==24.1.0
