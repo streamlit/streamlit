@@ -27,6 +27,7 @@ function getProps(
   return {
     endpoints: mockEndpoints(),
     appPages: [],
+    navSections: [],
     onPageChange: jest.fn(),
     currentPageScriptHash: "page_hash",
     hasElements: true,

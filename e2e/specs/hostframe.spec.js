@@ -123,6 +123,8 @@ describe("Host communication", () => {
         cy.get("#toolbar").contains("Sidebar Chevron Downshift").click();
         cy.get("iframe")
             .iframe(() => {
+                // Hover over sidebar to reveal the button
+                cy.get("[data-testid='stSidebarContent']").trigger("mouseover");
                 // Close sidebar
                 cy.get("[data-testid='stSidebar'] button").click()
                 // Check chevron positioning

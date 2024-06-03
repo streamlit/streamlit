@@ -41,10 +41,15 @@ def allow_cross_origin_requests() -> bool:
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(self, path, default_filename, get_pages):
-        self._pages = get_pages()
+    def initialize(
+        self,
+        path: str,
+        default_filename: str | None = None,
+        reserved_paths: list[str] = [],
+    ):
+        self._reserved_paths = reserved_paths
 
-        super().initialize(path=path, default_filename=default_filename)
+        super().initialize(path, default_filename)
 
     def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
@@ -59,28 +64,21 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         else:
             self.set_header("Cache-Control", "public")
 
-    def parse_url_path(self, url_path: str) -> str:
-        url_parts = url_path.split("/")
+    def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
+        try:
+            return super().validate_absolute_path(root, absolute_path)
+        except tornado.web.HTTPError as e:
+            # If the file is not found, and there are no reserved paths,
+            # we try to serve the default file and allow the frontend to handle the issue.
+            if e.status_code == 404:
+                if any([self.path.endswith(x) for x in self._reserved_paths]):
+                    raise e
 
-        maybe_page_name = url_parts[0]
-        if maybe_page_name in self._pages:
-            # If we're trying to navigate to a page, we return "index.html"
-            # directly here instead of deferring to the superclass below after
-            # modifying the url_path. The reason why is that tornado handles
-            # requests to "directories" (which is what navigating to a page
-            # looks like) by appending a trailing '/' if there is none and
-            # redirecting.
-            #
-            # This would work, but it
-            #   * adds an unnecessary redirect+roundtrip
-            #   * adds a trailing '/' to the URL appearing in the browser, which
-            #     looks bad
-            if len(url_parts) == 1:
-                return "index.html"
+                self.path = self.parse_url_path(self.default_filename or "index.html")
+                absolute_path = self.get_absolute_path(self.root, self.path)
+                return super().validate_absolute_path(root, absolute_path)
 
-            url_path = "/".join(url_parts[1:])
-
-        return super().parse_url_path(url_path)
+            raise e
 
     def write_error(self, status_code: int, **kwargs) -> None:
         if status_code == 404:

@@ -182,9 +182,9 @@ export const StyledVerticalBlockBorderWrapper =
   styled.div<StyledVerticalBlockBorderWrapperProps>(
     ({ theme, border, height }) => ({
       ...(border && {
-        border: `1px solid ${theme.colors.fadedText10}`,
-        borderRadius: theme.radii.lg,
-        padding: "calc(1em - 1px)", // 1px to account for border.
+        border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+        borderRadius: theme.radii.default,
+        padding: `calc(${theme.spacing.lg} - 1px)`, // 1px to account for border.
       }),
       ...(height && {
         height: `${height}px`,

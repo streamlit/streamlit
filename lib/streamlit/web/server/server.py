@@ -28,7 +28,7 @@ import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
 
-from streamlit import cli_util, config, file_util, source_util, util
+from streamlit import cli_util, config, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -86,7 +86,8 @@ UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
 MESSAGE_ENDPOINT: Final = r"_stcore/message"
-HEALTH_ENDPOINT: Final = r"(?:healthz|_stcore/health)"
+NEW_HEALTH_ENDPOINT: Final = "_stcore/health"
+HEALTH_ENDPOINT: Final = rf"(?:healthz|{NEW_HEALTH_ENDPOINT})"
 HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
     r"(?:script-health-check|_stcore/script-health-check)"
@@ -368,12 +369,12 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: {
-                                page_info["page_name"]
-                                for page_info in source_util.get_pages(
-                                    self.main_script_path
-                                ).values()
-                            },
+                            "reserved_paths": [
+                                # These paths are required for identifying
+                                # the base url path.
+                                NEW_HEALTH_ENDPOINT,
+                                HOST_CONFIG_ENDPOINT,
+                            ],
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
