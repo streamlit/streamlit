@@ -75,8 +75,8 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
       justifyContent: "center",
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-      borderRadius: theme.radii.lg,
-      minHeight: "38.4px",
+      borderRadius: theme.radii.default,
+      minHeight: theme.sizes.minElementHeight,
       margin: 0,
       lineHeight: theme.lineHeights.base,
       color: theme.colors.primary,
@@ -108,7 +108,7 @@ export const StyledPrimaryLinkButton = styled(
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
-  border: `1px solid ${theme.colors.primary}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
   "&:hover": {
     backgroundColor: darken(theme.colors.primary, 0.05),
     color: theme.colors.white,
@@ -133,7 +133,7 @@ export const StyledSecondaryLinkButton = styled(
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   color: theme.colors.bodyText,
-  border: `1px solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
   "&:visited": {
     color: theme.colors.bodyText,
   },

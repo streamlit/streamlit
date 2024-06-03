@@ -214,7 +214,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
           overrides={{
             Root: {
               style: () => ({
-                lineHeight: 1.4,
+                lineHeight: theme.lineHeights.inputWidget,
               }),
             },
             Dropdown: { component: VirtualDropdown },
@@ -239,27 +239,28 @@ export class Selectbox extends React.PureComponent<Props, State> {
             },
             ControlContainer: {
               style: () => ({
+                height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
               }),
             },
 
             IconsContainer: {
               style: () => ({
-                paddingRight: ".5rem",
+                paddingRight: theme.spacing.sm,
               }),
             },
 
             ValueContainer: {
               style: () => ({
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: ".5rem",
-                paddingLeft: ".5rem",
-                paddingBottom: ".5rem",
-                paddingTop: ".5rem",
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
               }),
             },
 
@@ -272,7 +273,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
                     : null,
               },
               style: () => ({
-                lineHeight: 1.4,
+                lineHeight: theme.lineHeights.inputWidget,
               }),
             },
 

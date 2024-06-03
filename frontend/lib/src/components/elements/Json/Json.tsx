@@ -50,7 +50,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.
       const pos = parseInt(error.message.replace(/[^0-9]/g, ""), 10)
-      error.message += `\n${element.body.substr(0, pos + 1)} ← here`
+      error.message += `\n${element.body.substring(0, pos + 1)} ← here`
       return <ErrorElement name={"Json Parse Error"} message={error.message} />
     }
   }
