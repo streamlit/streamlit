@@ -37,6 +37,7 @@ class PyplotMixin:
         self,
         fig: Figure | None = None,
         clear_figure: bool | None = None,
+        *,
         use_container_width: bool = True,
         **kwargs: Any,
     ) -> DeltaGenerator:
@@ -61,11 +62,11 @@ class PyplotMixin:
 
         use_container_width : bool
             Whether to override the figure's native width with the width of
-            the parent container. If ``use_container_width`` is ``False``
-            (default), Streamlit sets the width of the chart to fit its contents
+            the parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the width of the chart to fit its contents
             according to the plotting library, up to the width of the parent
-            container. If ``use_container_width`` is ``True``, Streamlit sets
-            the width of the figure to match the width of the parent container.
+            container. If ``use_container_width`` is ``True`` (default), Streamlit
+            sets the width of the figure to match the width of the parent container.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.

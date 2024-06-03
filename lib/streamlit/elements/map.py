@@ -167,11 +167,11 @@ class MapMixin:
 
         use_container_width: bool
             Whether to override the map's native width with the width of
-            the parent container. If ``use_container_width`` is ``False``
-            (default), Streamlit sets the width of the chart to fit its contents
+            the parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the width of the chart to fit its contents
             according to the plotting library, up to the width of the parent
-            container. If ``use_container_width`` is ``True``, Streamlit sets
-            the width of the map to match the width of the parent container.
+            container. If ``use_container_width`` is ``True`` (default), Streamlit
+            sets the width of the map to match the width of the parent container.
 
         Examples
         --------
