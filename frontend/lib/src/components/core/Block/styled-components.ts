@@ -121,6 +121,7 @@ interface StyledColumnProps {
 
 export const StyledColumn = styled.div<StyledColumnProps>(
   ({ weight, gap, theme, verticalAlignment }) => {
+    const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width = `calc(${percentage}% - ${gapWidth})`
@@ -134,7 +135,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
-      ...(verticalAlignment === BlockProto.Column.VerticalAlignment.BOTTOM && {
+      ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
         // Add margin to the last checkbox within the column to align it
         // better with other input widgets. This is a temporary (ugly) fix
@@ -143,7 +144,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
           marginBottom: theme.spacing.sm,
         },
       }),
-      ...(verticalAlignment === BlockProto.Column.VerticalAlignment.CENTER && {
+      ...(verticalAlignment === VerticalAlignment.CENTER && {
         marginTop: "auto",
         marginBottom: "auto",
       }),
