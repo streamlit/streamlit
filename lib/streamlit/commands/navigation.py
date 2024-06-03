@@ -55,7 +55,7 @@ def navigation(
     pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
     position: Literal["sidebar", "hidden"] = "sidebar",
-) -> StreamlitPage | None:
+) -> StreamlitPage:
     """
     Configure the available pages in a multipage app.
 
@@ -91,10 +91,6 @@ def navigation(
     >>>	st.title("My Awesome App")
     >>> pg.run()
     """
-    ctx = get_script_run_ctx()
-    if not ctx:
-        return None
-
     nav_sections = {"": pages} if isinstance(pages, list) else pages
     page_list = pages_from_nav_sections(nav_sections)
 
@@ -161,6 +157,13 @@ def navigation(
             p.is_default = page._default
             p.section_header = section_header
             p.url_pathname = page.url_path
+
+    ctx = get_script_run_ctx()
+    if not ctx:
+        # This should never run in Streamlit, but we want to make sure that
+        # the function always returns a page
+        default_page._can_be_called = True
+        return default_page
 
     # Inform our page manager about the set of pages we have
     ctx.pages_manager.set_pages(pagehash_to_pageinfo)
