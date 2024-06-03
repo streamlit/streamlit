@@ -343,3 +343,9 @@ def test_tabs_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFun
             tabs.nth(index),
             name=f"st_tab-{case[0]}_{case[1]}",
         )
+
+
+def test_empty_labels(app: Page, assert_snapshot: ImageCompareFunction):
+    empty_label_selectbox = app.get_by_test_id("stSelectbox").last
+    expect(empty_label_selectbox).to_have_text("No options to select.")
+    assert_snapshot(empty_label_selectbox, name="st_selectbox-empty_label")
