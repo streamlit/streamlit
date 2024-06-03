@@ -231,6 +231,8 @@ def app_server(
             "false",
             "--server.fileWatcherType",
             "none",
+            "--server.enableStaticServing",
+            "true",
         ],
         cwd=".",
     )

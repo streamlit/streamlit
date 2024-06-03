@@ -180,10 +180,10 @@ def main_docs():
 @configurator_options
 def main_hello(**kwargs):
     """Runs the Hello World script."""
-    from streamlit.hello import Hello
+    from streamlit.hello import streamlit_app
 
     bootstrap.load_config_options(flag_options=kwargs)
-    filename = Hello.__file__
+    filename = streamlit_app.__file__
     _main_run(filename, flag_options=kwargs)
 
 

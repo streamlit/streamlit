@@ -13,26 +13,16 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import runtime
-
-st.header("Main Page with static files")
 
 if not st.get_option("server.enableStaticServing"):
     st.error(
-        """
-        **ERROR**. This test needs to be run with `--server.enableStaticServing`, like
-        this:
+        "**ERROR**. This test needs to be run with `--server.enableStaticServing`."
+    )
 
-        ```
-        streamlit run
-            e2e/scripts/staticfiles_apps/streamlit_static_app.py
-            --server.enableStaticServing=true
-        ```
+st.markdown(
     """
-    )
+Images served via static serving:
 
-elif runtime.exists():
-    """Static files serving works only when runtime exists"""
-    st.markdown(
-        "![Streamlit](http://localhost:8501/app/static/streamlit-mark-color.png)"
-    )
+![Streamlit](./app/static/streamlit-logo.png)
+"""
+)
