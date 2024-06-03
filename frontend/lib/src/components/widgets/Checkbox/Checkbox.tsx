@@ -181,7 +181,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                   : colors.bodyText
 
                 if (disabled) {
-                  backgroundColor = lightTheme ? colors.gray60 : colors.gray90
+                  backgroundColor = lightTheme ? colors.gray70 : colors.gray90
                 }
                 return {
                   width: "12px",
