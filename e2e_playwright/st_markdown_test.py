@@ -210,5 +210,5 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
     expect(image_element).to_be_visible()
     expect(image_element).to_have_css("max-width", "100%")
     # Wait for the image to load:
-    app.expect_response("**/streamlit-logo-primary-colormark-darktext.png")
+    app.expect_response("**/streamlit-logo.png")
     assert_snapshot(markdown_element, name="st_markdown-with_large_image")

@@ -202,5 +202,5 @@ st.latex(
 )
 
 st.markdown(
-    "Images in markdown should keep inside the container width:\n\n![image](https://streamlit.io/images/brand/streamlit-logo-primary-colormark-darktext.png)"
+    "Images in markdown should keep inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
 )
