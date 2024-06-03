@@ -311,7 +311,7 @@ class ChatMixin:
         default = ""
         key = to_key(key)
 
-        from streamlit.elements.utils import (
+        from streamlit.elements.lib.policies import (
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
@@ -328,7 +328,7 @@ class ChatMixin:
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a chat input inside a form.

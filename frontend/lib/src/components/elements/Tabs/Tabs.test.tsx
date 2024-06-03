@@ -24,8 +24,11 @@ import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 import Tabs, { TabProps } from "./Tabs"
 
+const FAKE_SCRIPT_HASH = "fake_script_hash"
+
 function makeTab(label: string, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     children,
     new BlockProto({ allowEmpty: true, tab: { label } })
   )
@@ -33,6 +36,7 @@ function makeTab(label: string, children: BlockNode[] = []): BlockNode {
 
 function makeTabsNode(tabs: number): BlockNode {
   return new BlockNode(
+    FAKE_SCRIPT_HASH,
     Array.from({ length: tabs }, (_element, index) => makeTab(`Tab ${index}`)),
     new BlockProto({ allowEmpty: true })
   )

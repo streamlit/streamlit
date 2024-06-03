@@ -387,7 +387,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stNumberInput" style={style} data-testid="stNumberInput">
+      <div className="stNumberInput" data-testid="stNumberInput" style={style}>
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -454,12 +454,12 @@ export class NumberInput extends React.PureComponent<Props, State> {
                   max: this.getMax(),
                 },
                 style: {
-                  lineHeight: "1.4",
+                  lineHeight: theme.lineHeights.inputWidget,
                   // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  paddingRight: ".5rem",
-                  paddingLeft: ".5rem",
-                  paddingBottom: ".5rem",
-                  paddingTop: ".5rem",
+                  paddingRight: theme.spacing.sm,
+                  paddingLeft: theme.spacing.sm,
+                  paddingBottom: theme.spacing.sm,
+                  paddingTop: theme.spacing.sm,
                 },
               },
               InputContainer: {
@@ -520,7 +520,6 @@ export class NumberInput extends React.PureComponent<Props, State> {
             <InputInstructions
               dirty={dirty}
               value={formattedValue ?? ""}
-              className="input-instructions"
               inForm={isInForm({ formId: element.formId })}
             />
           </StyledInstructionsContainer>

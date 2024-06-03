@@ -93,7 +93,7 @@ function useCustomTheme(): CustomThemeReturn {
 
   return {
     theme: glideTheme,
-    tableBorderRadius: theme.radii.lg,
+    tableBorderRadius: theme.radii.default,
     // Configure custom SVG icons used in the column header:
     headerIcons,
   }

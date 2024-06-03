@@ -92,6 +92,54 @@ def get_form_submit_button(locator: Locator, label: str | Pattern[str]) -> Locat
     return element
 
 
+def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
+    """Get a expander container with the given label.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the expander.
+
+    label : str or Pattern[str]
+        The label of the expander to get.
+
+    Returns
+    -------
+    Locator
+        The expander container.
+    """
+    element = locator.get_by_test_id("stExpander").filter(
+        has=locator.locator("summary").filter(has_text=label)
+    )
+    expect(element).to_be_visible()
+    return element
+
+
+def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> Locator:
+    """Get a markdown element with the given text inside.
+    Parameters
+    ----------
+    locator : Locator
+        The locator to search for the expander.
+    text_inside_markdown : str or Pattern[str]
+        Some text to use to identify the markdown element. The text should be contained
+        in the markdown content.
+    Returns
+    -------
+    Locator
+        The expander content.
+    """
+    if isinstance(text_inside_markdown, str):
+        text_inside_markdown = re.compile(text_inside_markdown)
+
+    markdown_element = locator.get_by_test_id("stMarkdownContainer").filter(
+        has_text=text_inside_markdown
+    )
+    expect(markdown_element).to_be_visible()
+    return markdown_element
+
+
 def expect_prefixed_markdown(
     locator: Locator,
     expected_prefix: str,
@@ -222,3 +270,42 @@ def click_checkbox(
     checkbox_element = get_checkbox(page, label)
     checkbox_element.click()
     wait_for_app_run(page)
+
+
+def expect_help_tooltip(
+    app: Page, element_with_help_tooltip: Locator, tooltip_text: str | Pattern[str]
+):
+    """Expect a tooltip to be displayed when hovering over the help symbol of an element.
+
+    This only works for elements that have our shared help tooltip implemented.
+    It doesn't work for elements with a custom tooltip implementation, e.g. st.button.
+
+    The element gets unhovered after the tooltip is checked.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the tooltip.
+
+    element_with_help_tooltip : Locator
+        The locator of the element with the help tooltip.
+
+    tooltip_text : str or Pattern[str]
+        The text of the tooltip to expect.
+    """
+    hover_target = element_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).not_to_be_attached()
+
+    hover_target.hover()
+
+    expect(tooltip_content).to_be_visible()
+    expect(tooltip_content).to_have_text(tooltip_text)
+
+    # reset the hovering in case this method is called multiple times in the same test
+    app.get_by_test_id("stApp").hover(
+        position={"x": 0, "y": 0}, no_wait_after=True, force=True
+    )
+    expect(tooltip_content).not_to_be_attached()

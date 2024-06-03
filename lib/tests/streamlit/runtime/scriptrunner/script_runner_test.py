@@ -35,6 +35,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -1012,6 +1013,7 @@ class TestScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(main_script_path),
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
