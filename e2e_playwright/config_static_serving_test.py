@@ -19,16 +19,22 @@ from e2e_playwright.shared.app_utils import get_markdown
 
 def test_should_serve_existing_asset(app: Page, app_port: int):
     """Test that the static serving feature serves an existing asset."""
-    issues = app.request.get(
+    response = app.request.get(
         f"http://localhost:{app_port}/app/static/streamlit-logo.png"
     )
-    expect(issues).to_be_ok()
+    expect(response).to_be_ok()
+    # Assert is safe here since we don't need to wait for something here:
+    assert response.status == 200
 
 
 def test_should_return_error_on_non_existing_asset(app: Page, app_port: int):
     """Test that the static serving feature returns error code for non-existing asset."""
-    issues = app.request.get(f"http://localhost:{app_port}/app/static/notexisting.jpeg")
-    expect(issues).not_to_be_ok()
+    response = app.request.get(
+        f"http://localhost:{app_port}/app/static/notexisting.jpeg"
+    )
+    expect(response).not_to_be_ok()
+    # Assert is safe here since we don't need to wait for something here:
+    assert response.status == 404
 
 
 def test_static_served_image_embedded_in_markdown(app: Page):
