@@ -133,7 +133,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { theme, width, element, disabled, widgetMgr } = this.props
-    const { colors, spacing } = theme
+    const { colors, spacing, sizes } = theme
     const lightTheme = hasLightBackgroundColor(theme)
 
     const style = { width }
@@ -146,7 +146,6 @@ class Checkbox extends React.PureComponent<Props, State> {
       this.onFormCleared
     )
 
-    // TODO Check the Widget usage
     return (
       <div
         className="row-widget stCheckbox"
@@ -182,7 +181,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                   : colors.bodyText
 
                 if (disabled) {
-                  backgroundColor = lightTheme ? colors.gray60 : colors.gray90
+                  backgroundColor = lightTheme ? colors.gray70 : colors.gray90
                 }
                 return {
                   width: "12px",
@@ -213,7 +212,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
                 return {
                   marginRight: 0,
-                  marginLeft: "2px",
+                  marginLeft: 0,
                   paddingLeft: "2px",
                   paddingRight: "2px",
                   width: "32px",
@@ -244,6 +243,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                   width: "1rem",
                   height: "1rem",
                   marginTop: "0.30rem",
+                  marginLeft: 0,
                   boxShadow:
                     $isFocusVisible && $checked
                       ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
@@ -252,10 +252,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                   // use the long-hand version, which means we can't use the
                   // shorthand names here as if we do we'll end up with warn
                   // logs spamming us every time a checkbox is rendered.
-                  borderLeftWidth: "1px",
-                  borderRightWidth: "1px",
-                  borderTopWidth: "1px",
-                  borderBottomWidth: "1px",
+                  borderLeftWidth: sizes.borderWidth,
+                  borderRightWidth: sizes.borderWidth,
+                  borderTopWidth: sizes.borderWidth,
+                  borderBottomWidth: sizes.borderWidth,
                   borderLeftColor: borderColor,
                   borderRightColor: borderColor,
                   borderTopColor: borderColor,

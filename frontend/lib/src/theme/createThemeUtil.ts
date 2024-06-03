@@ -15,10 +15,11 @@
  */
 
 import {
+  Primitives as ThemePrimitives,
   createTheme as createBaseTheme,
   lightThemePrimitives as lightBaseThemePrimitives,
 } from "baseui"
-import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
+import { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
 import { EmotionTheme } from "./types"
 
@@ -94,28 +95,29 @@ export const createThemeOverrides = (
 
   return {
     borders: {
-      radius100: radii.md,
-      radius200: radii.md,
-      radius300: radii.md,
-      radius400: radii.md,
-
       // Override borders that are declared from literals in
       // https://github.com/uber/baseweb/blob/master/src/themes/shared/borders.ts
+
+      radius100: radii.default,
+      radius200: radii.default,
+      radius300: radii.default,
+      radius400: radii.default,
+      radius500: radii.default,
 
       /** Datepicker (Range), Progress Bar, Slider, Tag */
       useRoundedCorners: true,
       /** Button, ButtonGroup */
       buttonBorderRadiusMini: radii.md, // Unused today.
-      buttonBorderRadius: radii.lg,
+      buttonBorderRadius: radii.default,
       /** Checkbox */
-      checkboxBorderRadius: radii.sm,
+      checkboxBorderRadius: radii.md,
       /** Input, Select, Textarea */
       inputBorderRadiusMini: radii.md, // Unused today.
-      inputBorderRadius: radii.lg,
+      inputBorderRadius: radii.default,
       /** Popover, Menu, Tooltip */
-      popoverBorderRadius: radii.lg,
+      popoverBorderRadius: radii.default,
       /** Card, Datepicker, Modal, Toast, Notification */
-      surfaceBorderRadius: radii.lg,
+      surfaceBorderRadius: radii.default,
       /** Tag */
       tagBorderRadius: radii.md,
     },
@@ -206,9 +208,7 @@ export const createThemeOverrides = (
       toggleTrackFillDisabled: widgetBackgroundColor,
       tickFillActive: widgetBackgroundColor,
       sliderTrackFillDisabled: widgetBackgroundColor,
-      inputBorder: colors.widgetBorderColor
-        ? colors.widgetBorderColor
-        : widgetBackgroundColor,
+      inputBorder: colors.widgetBorderColor || widgetBackgroundColor,
       inputFill: widgetBackgroundColor,
       inputEnhanceFill: widgetBackgroundColor,
       inputEnhancerFillDisabled: widgetBackgroundColor,
