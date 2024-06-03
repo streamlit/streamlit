@@ -37,7 +37,6 @@ class PyplotMixin:
         self,
         fig: Figure | None = None,
         clear_figure: bool | None = None,
-        *,
         use_container_width: bool = True,
         **kwargs: Any,
     ) -> DeltaGenerator:
