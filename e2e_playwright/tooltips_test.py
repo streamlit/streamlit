@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
-from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 default_tooltip = """
@@ -55,7 +54,7 @@ Code:
 no_indent_tooltip = "thisisatooltipwithnoindents. It has some spaces but no idents."
 
 
-def test_tooltips_render_properly(app: Page, assert_snapshot: ImageCompareFunction):
+def test_tooltips_render_properly(app: Page):
     default_tooltip_test_ids = ["stTextInput", "stSelectbox", "stFileUploader"]
     leading_indent_code_tooltip_test_ids = [
         "stNumberInput",
