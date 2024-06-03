@@ -641,6 +641,8 @@ class VegaChartsMixin:
             parent container, Streamlit sets the chart width to match the width
             of the parent container.
 
+            To use ``width``, you must set ``use_container_width=False``.
+
         height : int or None
             Desired height of the chart expressed in pixels. If ``height`` is
             ``None`` (default), Streamlit sets the height of the chart to fit
@@ -648,10 +650,10 @@ class VegaChartsMixin:
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets
-            the chart's width according to ``width``. If ``use_container_width``
-            is ``True`` (default), Streamlit sets the width of
-            the chart to match the width of the parent container.
+            container. If ``use_container_width`` is ``True`` (default),
+            Streamlit sets the width of the chart to match the width of the
+            parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the chart's width according to ``width``.
 
         Examples
         --------
@@ -813,6 +815,8 @@ class VegaChartsMixin:
             parent container, Streamlit sets the chart width to match the width
             of the parent container.
 
+            To use ``width``, you must set ``use_container_width=False``.
+
         height : int or None
             Desired height of the chart expressed in pixels. If ``height`` is
             ``None`` (default), Streamlit sets the height of the chart to fit
@@ -820,10 +824,10 @@ class VegaChartsMixin:
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets
-            the chart's width according to ``width``. If ``use_container_width``
-            is ``True`` (default), Streamlit sets the width of
-            the chart to match the width of the parent container.
+            container. If ``use_container_width`` is ``True`` (default),
+            Streamlit sets the width of the chart to match the width of the
+            parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the chart's width according to ``width``.
 
         Examples
         --------
@@ -985,6 +989,8 @@ class VegaChartsMixin:
             parent container, Streamlit sets the chart width to match the width
             of the parent container.
 
+            To use ``width``, you must set ``use_container_width=False``.
+
         height : int or None
             Desired height of the chart expressed in pixels. If ``height`` is
             ``None`` (default), Streamlit sets the height of the chart to fit
@@ -992,10 +998,10 @@ class VegaChartsMixin:
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets
-            the chart's width according to ``width``. If ``use_container_width``
-            is ``True`` (default), Streamlit sets the width of
-            the chart to match the width of the parent container.
+            container. If ``use_container_width`` is ``True`` (default),
+            Streamlit sets the width of the chart to match the width of the
+            parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the chart's width according to ``width``.
 
         Examples
         --------
@@ -1169,6 +1175,8 @@ class VegaChartsMixin:
             parent container, Streamlit sets the chart width to match the width
             of the parent container.
 
+            To use ``width``, you must set ``use_container_width=False``.
+
         height : int or None
             Desired height of the chart expressed in pixels. If ``height`` is
             ``None`` (default), Streamlit sets the height of the chart to fit
@@ -1176,10 +1184,10 @@ class VegaChartsMixin:
 
         use_container_width : bool
             Whether to override ``width`` with the width of the parent
-            container. If ``use_container_width`` is ``False``, Streamlit sets
-            the chart's width according to ``width``. If ``use_container_width``
-            is ``True`` (default), Streamlit sets the width of
-            the chart to match the width of the parent container.
+            container. If ``use_container_width`` is ``True`` (default),
+            Streamlit sets the width of the chart to match the width of the
+            parent container. If ``use_container_width`` is ``False``,
+            Streamlit sets the chart's width according to ``width``.
 
         Examples
         --------
