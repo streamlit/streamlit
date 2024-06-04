@@ -34,6 +34,7 @@ def test_home_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Test that the home page of the hello app is displayed correctly."""
     check_page_title(app, "Welcome to Streamlit!")
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(app.get_by_test_id("stSidebarNav")).to_be_visible()
 
     assert_snapshot(app, name="hello_app-home_page")
 
