@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React, { CSSProperties, ReactElement } from "react"
 
 import { IFrame as IFrameProto } from "@streamlit/lib/src/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "@streamlit/lib/src/util/IFrameUtil"
-import React, { CSSProperties, ReactElement } from "react"
 
 export interface IFrameProps {
   element: IFrameProto

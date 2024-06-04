@@ -120,7 +120,8 @@ class Radio extends React.PureComponent<Props, State> {
           overrides={{
             RadioGroupRoot: {
               style: {
-                gap: hasCaptions ? "0.5rem" : "0",
+                gap: hasCaptions ? theme.spacing.sm : theme.spacing.none,
+                minHeight: theme.sizes.minElementHeight,
               },
             },
           }}
@@ -138,7 +139,9 @@ class Radio extends React.PureComponent<Props, State> {
                   }) => ({
                     marginBottom: 0,
                     marginTop: 0,
-                    marginRight: hasCaptions ? "0.5rem" : "1rem",
+                    marginRight: hasCaptions
+                      ? theme.spacing.sm
+                      : theme.spacing.lg,
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
                     alignItems: "start",
@@ -158,6 +161,7 @@ class Radio extends React.PureComponent<Props, State> {
                     height: "1rem",
                     marginTop: "0.35rem",
                     marginRight: "0",
+                    marginLeft: "0",
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary

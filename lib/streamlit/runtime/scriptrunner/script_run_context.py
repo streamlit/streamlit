@@ -33,6 +33,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -60,9 +61,9 @@ class ScriptRunContext:
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
-    page_script_hash: str
     user_info: UserInfo
     fragment_storage: "FragmentStorage"
+    pages_manager: "PagesManager"
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
@@ -87,6 +88,14 @@ class ScriptRunContext:
     _experimental_query_params_used = False
     _production_query_params_used = False
 
+    @property
+    def page_script_hash(self):
+        return self.pages_manager.get_current_page_script_hash()
+
+    @property
+    def active_script_hash(self):
+        return self.pages_manager.get_active_script_hash()
+
     def reset(
         self,
         query_string: str = "",
@@ -98,7 +107,7 @@ class ScriptRunContext:
         self.widget_user_keys_this_run = set()
         self.form_ids_this_run = set()
         self.query_string = query_string
-        self.page_script_hash = page_script_hash
+        self.pages_manager.set_current_page_script_hash(page_script_hash)
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False
@@ -106,6 +115,7 @@ class ScriptRunContext:
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
         self.current_fragment_id = None
+        self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
         self.has_dialog_opened = False
         self.disallow_cached_widget_usage = False
@@ -141,6 +151,8 @@ class ScriptRunContext:
             msg.HasField("delta") and self._has_script_started
         ):
             self._set_page_config_allowed = False
+
+        msg.metadata.active_script_hash = self.active_script_hash
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)

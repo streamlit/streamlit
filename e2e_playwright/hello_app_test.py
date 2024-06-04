@@ -34,6 +34,7 @@ def test_home_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Test that the home page of the hello app is displayed correctly."""
     check_page_title(app, "Welcome to Streamlit!")
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(app.get_by_test_id("stSidebarNav")).to_be_visible()
 
     assert_snapshot(app, name="hello_app-home_page")
 
@@ -146,8 +147,9 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     app = themed_app
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-header").click()
+    sidebar_element.get_by_test_id("baseButton-headerNoPadding").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
@@ -180,8 +182,9 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     app = themed_app
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-header").click()
+    sidebar_element.get_by_test_id("baseButton-headerNoPadding").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")

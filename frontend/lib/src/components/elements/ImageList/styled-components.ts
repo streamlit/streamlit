@@ -39,5 +39,5 @@ export const StyledCaption = styled.div(({ theme }) => ({
   textAlign: "center",
   marginTop: theme.spacing.xs,
   wordWrap: "break-word",
-  padding: "0.125rem",
+  padding: theme.spacing.threeXS,
 }))

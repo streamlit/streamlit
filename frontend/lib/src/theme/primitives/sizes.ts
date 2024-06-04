@@ -20,4 +20,6 @@ export const sizes = {
   sidebarTopSpace: "6rem",
   sidebar: "21rem",
   contentMaxWidth: "46rem",
+  borderWidth: "1px",
+  minElementHeight: "2.5rem",
 }

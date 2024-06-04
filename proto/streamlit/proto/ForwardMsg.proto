@@ -24,6 +24,7 @@ import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";
 import "streamlit/proto/Logo.proto";
+import "streamlit/proto/Navigation.proto";
 import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
@@ -73,6 +74,7 @@ message ForwardMsg {
     SessionEvent session_event = 10;
 
     // Other messages.
+    Navigation navigation = 23;
     PageNotFound page_not_found = 15;
     PagesChanged pages_changed = 16;
     FileURLsResponse file_urls_response = 19;
@@ -97,7 +99,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 23
+  // Next: 24
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
@@ -116,14 +118,19 @@ message ForwardMsgMetadata {
 
   // DEPRECATED: This is not used anymore.
   ElementDimensionSpec element_dimension_spec = 3;
+
+  // active_script_hash the forward message is associated from.
+  // For multipage apps v1, this will always be the page file running
+  // For multipage apps v2, this can be the main script or the page script
+  string active_script_hash = 4;
 }
 
 // DEPRECATED: This is not used anymore.
 // Specifies the dimensions for the element
 message ElementDimensionSpec {
-  // width in CSS points
+  // width in pixels
   uint32 width = 1;
 
-  // height in CSS points
+  // height in pixels
   uint32 height = 2;
 }
