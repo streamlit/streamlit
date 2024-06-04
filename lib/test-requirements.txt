@@ -26,7 +26,7 @@ testfixtures
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as
 # new playwright versions are released.
-playwright==1.42.*
+playwright==1.44.*
 pytest-playwright>=0.3.3
 pixelmatch>=0.3.0
 pytest-xdist
@@ -35,14 +35,8 @@ pytest-github-actions-annotate-failures
 
 mypy-protobuf>=3.2, <3.4
 
-# SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
-# choosing not to support it.)
-sqlalchemy[mypy]>=1.4.25, <2.0
-
-# Dependencies used in cache hashing tests:
-python-dateutil>=2.7.3
-tzlocal>=1.1
-cffi>=1.14
+# Used for testing of st.connection
+sqlalchemy[mypy]>=1.4.25, <2
 
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.

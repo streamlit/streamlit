@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import Clipboard from "clipboard"
 import React, { PureComponent, ReactNode, createRef } from "react"
+import Clipboard from "clipboard"
 import { Copy as CopyIcon } from "react-feather"
+
 import { StyledCopyButton } from "./styled-components"
 
 interface Props {

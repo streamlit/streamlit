@@ -80,7 +80,7 @@ export const StyledLabel = styled.label(({ theme }) => ({
   paddingTop: 0,
   marginBottom: 0,
   marginTop: 0,
-  lineHeight: 1.25,
+  lineHeight: theme.lineHeights.tight,
   fontSize: theme.fontSizes.sm,
 }))
 
@@ -108,10 +108,10 @@ export const StyledButtonContainer = styled.div(({ theme }) => ({
 export const StyledCheckbox = styled.input(({ theme }) => ({
   marginRight: theme.spacing.xs,
   appearance: "none",
-  border: `1px solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
   width: theme.fontSizes.md,
   height: theme.fontSizes.md,
-  borderRadius: theme.radii.sm,
+  borderRadius: theme.radii.md,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -131,7 +131,7 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
       fontFamily: theme.fonts.monospace,
       fontSize: theme.fontSizes.md,
       color: theme.colors.white,
-      lineHeight: 1,
+      lineHeight: theme.lineHeights.none,
     },
   },
 

@@ -20,7 +20,6 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
   fontFamily: theme.genericFonts.bodyFont,
-  padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   lineHeight: theme.lineHeights.table,
   overflow: ["auto", "overlay"],
 }))
@@ -30,12 +29,12 @@ export const StyledTable = styled.table(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   color: theme.colors.bodyText,
   borderCollapse: "collapse",
-  border: `1px solid ${theme.colors.fadedText05}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
 }))
 
 const styleCellFunction = (theme: EmotionTheme): CSSObject => ({
-  borderBottom: `1px solid ${theme.colors.fadedText05}`,
-  borderRight: `1px solid ${theme.colors.fadedText05}`,
+  borderBottom: `${theme.sizes.borderWidth}  solid ${theme.colors.fadedText05}`,
+  borderRight: `${theme.sizes.borderWidth}  solid ${theme.colors.fadedText05}`,
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   fontWeight: theme.fontWeights.normal,

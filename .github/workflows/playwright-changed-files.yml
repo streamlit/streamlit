@@ -1,0 +1,80 @@
+name: Playwright E2E Tests - Changed Files
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-playwright-changed-files
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest-8-cores
+
+    defaults:
+      run:
+        shell: bash --login -eo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          path: e2e_playwright
+          files: "**/*_test.py"
+      - name: Check changed files
+        id: check_changed_files
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
+          CHANGED_FILES_COUNT: ${{ steps.changed-files.outputs.all_changed_and_modified_files_count }}
+        run: |
+          echo "Changed files count: ${CHANGED_FILES_COUNT}"
+          echo "$CHANGED_FILES"
+          if [[ "${CHANGED_FILES_COUNT}" -gt 5 || "${CHANGED_FILES_COUNT}" -lt 1 ]]; then
+            # We limit the workflow to a max of 5 changed files, since otherwise it would
+            # take too long and would not provide any benefit compared to the main playwright
+            # workflow.
+            echo "This workflow only supports between 1-5 changed files. Otherwise its skipping running the tests.";
+            echo "run_tests=false" >> $GITHUB_OUTPUT
+          else
+            echo "run_tests=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Use output
+        run: |
+          echo "The output value is: ${{ steps.check_changed_files.outputs.run_tests }}"
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - if: steps.check_changed_files.outputs.run_tests == 'true'
+        name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - if: steps.check_changed_files.outputs.run_tests == 'true'
+        name: Install playwright
+        run: python -m playwright install --with-deps
+      - if: steps.check_changed_files.outputs.run_tests == 'true'
+        name: Run make frontend-fast
+        run: make frontend-fast
+      - if: steps.check_changed_files.outputs.run_tests == 'true'
+        name: Run changed playwright tests
+        run: |
+          cd e2e_playwright;
+          rm -rf ./test-results;
+          pytest ${{ steps.changed-files.outputs.all_changed_and_modified_files }} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --full-page-screenshot --tracing retain-on-failure --output ./test-results/ -n auto --durations=5 -r aR -v
+      - name: Upload failed test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright_test_results
+          path: e2e_playwright/test-results

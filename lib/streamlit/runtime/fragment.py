@@ -93,6 +93,112 @@ class MemoryFragmentStorage(FragmentStorage):
         self._fragments.clear()
 
 
+def _fragment(
+    func: F | None = None, *, run_every: int | float | timedelta | str | None = None
+) -> Callable[[F], F] | F:
+    """Contains the actual fragment logic.
+
+    This function should be used by our internal functions that use fragments under-the-hood,
+    so that fragment metrics are not tracked for those elements (note that the @gather_metrics annotation is only on the publicly exposed function)
+    """
+
+    if func is None:
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            return fragment(
+                func=f,
+                run_every=run_every,
+            )
+
+        return wrapper
+    else:
+        non_optional_func = func
+
+    @wraps(non_optional_func)
+    def wrap(*args, **kwargs):
+        from streamlit.delta_generator import dg_stack
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+
+        cursors_snapshot = deepcopy(ctx.cursors)
+        dg_stack_snapshot = deepcopy(dg_stack.get())
+        active_dg = dg_stack_snapshot[-1]
+        h = hashlib.new("md5")
+        h.update(
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
+                "utf-8"
+            )
+        )
+        fragment_id = h.hexdigest()
+
+        # We intentionally want to capture the active script hash here to ensure
+        # that the fragment is associated with the correct script running.
+        initialized_active_script_hash = ctx.active_script_hash
+
+        def wrapped_fragment():
+            import streamlit as st
+
+            # NOTE: We need to call get_script_run_ctx here again and can't just use the
+            # value of ctx from above captured by the closure because subsequent
+            # fragment runs will generally run in a new script run, thus we'll have a
+            # new ctx.
+            ctx = get_script_run_ctx(suppress_warning=True)
+            assert ctx is not None
+
+            if ctx.fragment_ids_this_run:
+                # This script run is a run of one or more fragments. We restore the
+                # state of ctx.cursors and dg_stack to the snapshots we took when this
+                # fragment was declared.
+                ctx.cursors = deepcopy(cursors_snapshot)
+                dg_stack.set(deepcopy(dg_stack_snapshot))
+            else:
+                # Otherwise, we must be in a full script run. We need to temporarily set
+                # ctx.current_fragment_id so that elements corresponding to this
+                # fragment get tagged with the appropriate ID. ctx.current_fragment_id
+                # gets reset after the fragment function finishes running.
+                ctx.current_fragment_id = fragment_id
+
+            try:
+                # Make sure we set the active script hash to the same value
+                # for the fragment run as when defined upon initialization
+                # This ensures that elements (especially widgets) are tied
+                # to a consistent active script hash
+                active_hash_context = (
+                    ctx.pages_manager.run_with_active_hash(
+                        initialized_active_script_hash
+                    )
+                    if initialized_active_script_hash != ctx.active_script_hash
+                    else contextlib.nullcontext()
+                )
+                with active_hash_context:
+                    with st.container():
+                        result = non_optional_func(*args, **kwargs)
+            finally:
+                ctx.current_fragment_id = None
+
+            return result
+
+        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+
+        if run_every:
+            msg = ForwardMsg()
+            msg.auto_rerun.interval = time_to_seconds(run_every)
+            msg.auto_rerun.fragment_id = fragment_id
+            ctx.enqueue(msg)
+
+        return wrapped_fragment()
+
+    with contextlib.suppress(AttributeError):
+        # Make this a well-behaved decorator by preserving important function
+        # attributes.
+        wrap.__dict__.update(non_optional_func.__dict__)
+        wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
+
+    return wrap
+
+
 @overload
 def fragment(
     func: F,
@@ -228,83 +334,4 @@ def fragment(
         height: 400px
 
     """
-
-    if func is None:
-        # Support passing the params via function decorator
-        def wrapper(f: F) -> F:
-            return fragment(
-                func=f,
-                run_every=run_every,
-            )
-
-        return wrapper
-    else:
-        non_optional_func = func
-
-    @wraps(non_optional_func)
-    def wrap(*args, **kwargs):
-        from streamlit.delta_generator import dg_stack
-
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return
-
-        cursors_snapshot = deepcopy(ctx.cursors)
-        dg_stack_snapshot = deepcopy(dg_stack.get())
-        active_dg = dg_stack_snapshot[-1]
-        h = hashlib.new("md5")
-        h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
-                "utf-8"
-            )
-        )
-        fragment_id = h.hexdigest()
-
-        def wrapped_fragment():
-            import streamlit as st
-
-            # NOTE: We need to call get_script_run_ctx here again and can't just use the
-            # value of ctx from above captured by the closure because subsequent
-            # fragment runs will generally run in a new script run, thus we'll have a
-            # new ctx.
-            ctx = get_script_run_ctx(suppress_warning=True)
-            assert ctx is not None
-
-            if ctx.fragment_ids_this_run:
-                # This script run is a run of one or more fragments. We restore the
-                # state of ctx.cursors and dg_stack to the snapshots we took when this
-                # fragment was declared.
-                ctx.cursors = deepcopy(cursors_snapshot)
-                dg_stack.set(deepcopy(dg_stack_snapshot))
-            else:
-                # Otherwise, we must be in a full script run. We need to temporarily set
-                # ctx.current_fragment_id so that elements corresponding to this
-                # fragment get tagged with the appropriate ID. ctx.current_fragment_id
-                # gets reset after the fragment function finishes running.
-                ctx.current_fragment_id = fragment_id
-
-            try:
-                with st.container():
-                    result = non_optional_func(*args, **kwargs)
-            finally:
-                ctx.current_fragment_id = None
-
-            return result
-
-        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
-
-        if run_every:
-            msg = ForwardMsg()
-            msg.auto_rerun.interval = time_to_seconds(run_every)
-            msg.auto_rerun.fragment_id = fragment_id
-            ctx.enqueue(msg)
-
-        return wrapped_fragment()
-
-    with contextlib.suppress(AttributeError):
-        # Make this a well-behaved decorator by preserving important function
-        # attributes.
-        wrap.__dict__.update(non_optional_func.__dict__)
-        wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
-
-    return wrap
+    return _fragment(func, run_every=run_every)

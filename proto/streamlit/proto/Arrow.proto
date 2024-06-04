@@ -24,9 +24,9 @@ message Arrow {
   bytes data = 1;
   // Pandas styler information
   Styler styler = 2;
-  // Width in CSS points
+  // Width in pixels
   uint32 width = 3;
-  // Height in CSS points
+  // Height in pixels
   uint32 height = 4;
   // If True, will overwrite the dataframe width to fit to container.
   bool use_container_width = 5;

@@ -179,7 +179,7 @@ describe("Checkbox widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByRole("checkbox")).not.toBeChecked()
