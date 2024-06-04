@@ -12,16 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
+from typing import Any, Callable, List, Tuple
 from unittest.mock import MagicMock, patch
 
+import altair as alt
+import pandas as pd
+import plotly.express as px
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.type_util import is_altair_version_less_than
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class MemoryFragmentStorageTest(unittest.TestCase):
@@ -69,7 +79,15 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 class FragmentTest(unittest.TestCase):
     def setUp(self):
         self.original_dg_stack = dg_stack.get()
-        dg_stack.set((DeltaGenerator(),))
+        root_container = MagicMock()
+        dg_stack.set(
+            (
+                DeltaGenerator(
+                    root_container=root_container,
+                    cursor=MagicMock(root_container=root_container),
+                ),
+            )
+        )
 
     def tearDown(self):
         dg_stack.set(self.original_dg_stack)
@@ -294,3 +312,302 @@ class FragmentTest(unittest.TestCase):
             patched_run_with_active_hash.reset_mock()
             saved_fragment()
             patched_run_with_active_hash.assert_called_with("some_hash")
+
+
+# TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
+
+ELEMENT_PRODUCER = Callable[[], Any]
+APP_FUNCTION = Callable[[ELEMENT_PRODUCER], None]
+
+
+def _run_fragment_writes_to_outside_container_app(
+    element_producer: ELEMENT_PRODUCER,
+) -> None:
+    """App with container outside of fragment."""
+
+    outside_container = st.container()
+
+    @st.experimental_fragment
+    def _some_method():
+        st.write("Hello")
+        # this is forbidden
+        with outside_container:
+            element_producer()
+
+    _some_method()
+
+
+def _run_fragment_writes_to_nested_outside_container_app(
+    element_producer: ELEMENT_PRODUCER,
+) -> None:
+    """App with nested container outside of fragment."""
+    with st.container():
+        outside_container = st.container()
+
+    @st.experimental_fragment
+    def _some_method():
+        st.write("Hello")
+        # this is forbidden
+        with outside_container:
+            element_producer()
+
+    _some_method()
+
+
+def _run_fragment_writes_to_nested_outside_container_app2(
+    element_producer: ELEMENT_PRODUCER,
+) -> None:
+    """App with nested container outside of fragment writing from nested container."""
+    with st.container():
+        outside_container = st.container()
+
+    @st.experimental_fragment
+    def _some_method():
+        st.write("Hello")
+        # this is forbidden
+        with outside_container:
+            with st.container():
+                element_producer()
+
+    _some_method()
+
+
+def _run_fragment_writes_to_nested_outside_container_app3(
+    element_producer: ELEMENT_PRODUCER,
+) -> None:
+    """App with nested container outside of fragment writing from nested container."""
+    with st.container():
+        outside_container = st.container()
+
+    @st.experimental_fragment
+    def _some_method():
+        st.write("Hello")
+        with st.container():
+            # this is forbidden
+            with outside_container:
+                element_producer()
+
+    _some_method()
+
+
+def _run_fragment_writes_to_inside_container_app(
+    element_producer: ELEMENT_PRODUCER,
+) -> None:
+    """App with container inside of fragment."""
+
+    @st.experimental_fragment
+    def _some_method():
+        inside_container = st.container()
+
+        st.write("Hello")
+        with inside_container:
+            element_producer()
+
+    _some_method()
+
+
+def _run_fragment_writes_to_nested_inside_container_app(
+    element_producer: ELEMENT_PRODUCER,
+) -> None:
+    """App with container inside of fragment."""
+
+    @st.experimental_fragment
+    def _some_method():
+        inside_container = st.container()
+
+        st.write("Hello")
+        with st.container():
+            with inside_container:
+                element_producer()
+
+    _some_method()
+
+
+outside_container_writing_apps: List[APP_FUNCTION] = [
+    _run_fragment_writes_to_outside_container_app,
+    _run_fragment_writes_to_nested_outside_container_app,
+    _run_fragment_writes_to_nested_outside_container_app2,
+    _run_fragment_writes_to_nested_outside_container_app3,
+]
+
+inside_container_writing_apps: List[APP_FUNCTION] = [
+    _run_fragment_writes_to_inside_container_app,
+    _run_fragment_writes_to_nested_inside_container_app,
+]
+
+widgets: List[Tuple[str, ELEMENT_PRODUCER]] = [
+    ("button", lambda: st.button("Click me")),
+    ("camera_input", lambda: st.camera_input("Take a picture")),
+    ("chat_input", lambda: st.chat_input("Chat with me")),
+    # checkboxes
+    ("checkbox", lambda: st.checkbox("Check me")),
+    ("toggle", lambda: st.toggle("Toggle me")),
+    # end checkboxes
+    ("color_picker", lambda: st.color_picker("Pick a color")),
+    ("data_editor", lambda: st.data_editor(pd.DataFrame())),
+    ("file_uploader", lambda: st.file_uploader("Upload me")),
+    ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
+    ("number_input", lambda: st.number_input("Enter a number")),
+    ("radio", lambda: st.radio("Choose me", ["a", "b", "c"])),
+    ("slider", lambda: st.slider("Slide me")),
+    ("selectbox", lambda: st.selectbox("Select me", ["a", "b", "c"])),
+    # text_widgets
+    ("text_area", lambda: st.text_area("Write me")),
+    ("text_input", lambda: st.text_input("Write me")),
+    # time_widgets
+    ("date_input", lambda: st.date_input("Pick a date")),
+    ("time_input", lambda: st.time_input("Pick a time")),
+    # hybrid-widgets
+    (
+        "altair_chart",
+        lambda: (
+            st.altair_chart(
+                alt.Chart(pd.DataFrame({"a": ["A"], "b": [1]}))
+                .mark_bar()
+                .encode(x="a", y="b")
+                .add_params(alt.selection_point()),
+                on_select="rerun",
+            )
+            # altair with 'on_select' only works for versions >= 5.0.0
+            if is_altair_version_less_than("5.0.0") is False
+            else st.text_input("Write me")  # some other widget that raises an exception
+        ),
+    ),
+    (
+        "vega_lite_chart",
+        lambda: (
+            st.vega_lite_chart(
+                {
+                    "data": {"values": [{"a": "A", "b": "B"}]},
+                    "mark": "rect",
+                    "params": [{"name": "select", "select": "point"}],
+                    "encoding": {
+                        "x": {"field": "a", "type": "ordinal"},
+                        "y": {"field": "b", "type": "quantitative"},
+                    },
+                },
+                on_select="rerun",
+            )
+            # altair with 'on_select' only works for versions >= 5.0.0
+            if is_altair_version_less_than("5.0.0") is False
+            else st.text_input("Write me")  # some other widget that raises an exception
+        ),
+    ),
+    (
+        "plotly_chart",
+        lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="rerun"),
+    ),
+]
+
+non_widgets: List[Tuple[str, ELEMENT_PRODUCER]] = [
+    # alerts
+    ("error", lambda: st.error("Hello")),
+    ("info", lambda: st.info("Hello")),
+    ("success", lambda: st.success("Hello")),
+    ("warning", lambda: st.warning("Hello")),
+    # arrows
+    ("dataframe", lambda: st.dataframe(None)),
+    # balloons
+    ("balloons", lambda: st.balloons()),
+    ("snow", lambda: st.snow()),
+    # docstrings
+    ("help", lambda: st.help("Hello")),
+    # headings
+    ("header", lambda: st.header("Header")),
+    ("title", lambda: st.title("Title")),
+    ("subheader", lambda: st.subheader("Subheader")),
+    # html, markdown
+    ("code", lambda: st.code("Hello")),
+    ("html", lambda: st.html("Hello")),
+    ("latex", lambda: st.latex("Hello")),
+    ("markdown", lambda: st.markdown("Hello")),
+    ("write", lambda: st.write("Hello")),
+    ("toast", lambda: st.toast("Hello")),
+    # progress
+    ("spinner", lambda: st.spinner("Hello")),
+    ("progress", lambda: st.progress(0.5)),
+    # media
+    ("audio", lambda: st.audio(b"")),
+    ("video", lambda: st.video(b"")),
+    # hybrid-widgets
+    (
+        "altair_chart",
+        lambda: (
+            st.altair_chart(alt.Chart().mark_bar(), on_select="ignore")
+            # altair with 'on_select' only works for versions >= 5.0.0
+            if is_altair_version_less_than("5.0.0") is False
+            else st.write("")
+        ),
+    ),
+    (
+        "vega_lite_chart",
+        lambda: (
+            st.vega_lite_chart({"mark": "rect"}, on_select="ignore")
+            # altair with 'on_select' only works for versions >= 5.0.0
+            if is_altair_version_less_than("5.0.0") is False
+            else st.write("")
+        ),
+    ),
+    (
+        "plotly_chart",
+        lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="ignore"),
+    ),
+]
+
+TEST_TUPLE = Tuple[str, APP_FUNCTION, ELEMENT_PRODUCER]
+
+
+def get_test_tuples(
+    app_functions: List[APP_FUNCTION],
+    elements: List[Tuple[str, Callable[[], DeltaGenerator]]],
+) -> List[TEST_TUPLE]:
+    """Create a tuple of (name, app-to-run, element-producer), so that each passed app runs with every passed element.
+
+    Parameters
+    ----------
+    app_functions : list[APP_FUNCTION]
+        Functions that run Streamlit elements like they are an app.
+    elements : list[tuple[str, Callable[[], DeltaGenerator]]]
+        Tuples of (name, element-producer) where name describes the produced element and element_producer is a function that executes a Streamlit element.
+    """
+    return [
+        (_element_producer[0], _app, _element_producer[1])
+        for _app in app_functions
+        for _element_producer in elements
+    ]
+
+
+class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+    @parameterized.expand(get_test_tuples(outside_container_writing_apps, widgets))
+    def test_write_element_outside_container_raises_exception_for_widgets(
+        self,
+        _: str,  # the test name argument used by pytest
+        _app: Callable[[Callable[[], DeltaGenerator]], None],
+        _element_producer: ELEMENT_PRODUCER,
+    ):
+        with self.assertRaises(StreamlitAPIException) as e:
+            _app(_element_producer)
+        assert (
+            e.exception.args[0]
+            == "Fragments cannot write to elements outside of their container."
+        )
+
+    @parameterized.expand(get_test_tuples(outside_container_writing_apps, non_widgets))
+    def test_write_element_outside_container_succeeds_for_nonwidgets(
+        self,
+        _: str,  # the test name argument used by pytest
+        _app: Callable[[Callable[[], DeltaGenerator]], None],
+        element_producer: ELEMENT_PRODUCER,
+    ):
+        _app(element_producer)
+
+    @parameterized.expand(
+        get_test_tuples(inside_container_writing_apps, widgets + non_widgets)
+    )
+    def test_write_elements_inside_container_succeeds_for_all(
+        self,
+        _: str,  # the test name argument used by pytest
+        _app: Callable[[Callable[[], DeltaGenerator]], None],
+        element_producer: ELEMENT_PRODUCER,
+    ):
+        _app(element_producer)

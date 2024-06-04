@@ -41,6 +41,7 @@ from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.elements.lib.streamlit_plotly_theme import (
@@ -467,6 +468,8 @@ class PlotlyMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
+
+            check_fragment_path_policy(self.dg)
             check_cache_replay_rules()
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
