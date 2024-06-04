@@ -47,7 +47,7 @@ runs:
     # of protoc in its package repository. To work around this, we
     # install the latest version from the protobuf release page.
     - name: Install `protoc` binary
-      run: |:
+      run: |
         PROTOC_VERSION=27.0
         # Download the protoc zip file:
         curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
