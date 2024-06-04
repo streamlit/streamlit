@@ -545,9 +545,17 @@ class LayoutsMixin:
             True. The default is False.
 
         use_container_width : bool
-            An optional boolean, which makes the popover button stretch its width
-            to match the parent container. This only affects the button and not
-            the width of the popover container.
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
+
+            The popover containter's minimimun width matches the width of its
+            button. The popover container may be wider than its button to fit
+            the container's contents.
 
         Examples
         --------
