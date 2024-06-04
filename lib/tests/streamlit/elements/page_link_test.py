@@ -29,22 +29,22 @@ class PageLinkTest(DeltaGeneratorTestCase):
         st.page_link(page="http://example.com", label="HTTP Test")
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "HTTP Test")
-        self.assertEqual(c.page, "http://example.com")
-        self.assertTrue(c.external)
-        self.assertFalse(c.disabled)
-        self.assertEqual(c.icon, "")
-        self.assertEqual(c.help, "")
+        assert c.label == "HTTP Test"
+        assert c.page == "http://example.com"
+        assert c.external
+        assert not c.disabled
+        assert c.icon == ""
+        assert c.help == ""
 
     def test_external_https_page(self):
         """Test that it can be called with an external https page link."""
         st.page_link(page="https://example.com", label="HTTPS Test")
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "HTTPS Test")
-        self.assertEqual(c.page, "https://example.com")
-        self.assertTrue(c.external)
-        self.assertFalse(c.disabled)
+        assert c.label == "HTTPS Test"
+        assert c.page == "https://example.com"
+        assert c.external
+        assert not c.disabled
 
     def test_external_no_label(self):
         """Test that page_link throws an StreamlitAPIException on external link, no label."""
@@ -56,20 +56,20 @@ class PageLinkTest(DeltaGeneratorTestCase):
         st.page_link(page="https://streamlit.io", label="the label", icon="🐶")
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.page, "https://streamlit.io")
-        self.assertTrue(c.external)
-        self.assertEqual(c.icon, "🐶")
+        assert c.label == "the label"
+        assert c.page == "https://streamlit.io"
+        assert c.external
+        assert c.icon == "🐶"
 
     def test_disabled(self):
         """Test that it can be called with disabled param."""
         st.page_link(page="https://streamlit.io", label="the label", disabled=True)
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.page, "https://streamlit.io")
-        self.assertTrue(c.external)
-        self.assertTrue(c.disabled)
+        assert c.label == "the label"
+        assert c.page == "https://streamlit.io"
+        assert c.external
+        assert c.disabled
 
     def test_help(self):
         """Test that it can be called with help param."""
@@ -78,10 +78,10 @@ class PageLinkTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.page, "https://streamlit.io")
-        self.assertTrue(c.external)
-        self.assertEqual(c.help, "Some help text")
+        assert c.label == "the label"
+        assert c.page == "https://streamlit.io"
+        assert c.external
+        assert c.help == "Some help text"
 
     def test_use_container_width_can_be_set_to_true(self):
         """Test use_container_width can be set to true."""
@@ -90,10 +90,10 @@ class PageLinkTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.page, "https://streamlit.io")
-        self.assertTrue(c.external)
-        self.assertEqual(c.use_container_width, True)
+        assert c.label == "the label"
+        assert c.page == "https://streamlit.io"
+        assert c.external
+        assert c.use_container_width == True
 
     def test_use_container_width_can_be_set_to_false(self):
         """Test use_container_width can be set to false."""
@@ -102,7 +102,49 @@ class PageLinkTest(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.page, "https://streamlit.io")
-        self.assertTrue(c.external)
-        self.assertEqual(c.use_container_width, False)
+        assert c.label == "the label"
+        assert c.page == "https://streamlit.io"
+        assert c.external
+        assert c.use_container_width == False
+
+    def test_st_page_with_label(self):
+        """Test that st.page_link accepts an st.Page, but does not uses its title"""
+        page = st.Page("foo.py", title="Bar Test")
+        st.page_link(page=page, label="Foo Test")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Foo Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "foo"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == ""
+        assert c.help == ""
+
+    def test_st_page_without_label(self):
+        """Test that st.page_link accepts an st.Page, but will use its title if necessary"""
+        page = st.Page("foo.py", title="Bar Test")
+        st.page_link(page=page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Bar Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "foo"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == ""
+        assert c.help == ""
+
+    def test_st_page_with_url_path(self):
+        """Test that st.page_link accepts an st.Page, but will use the url_path if necessary"""
+        page = st.Page("foo.py", title="Bar Test", url_path="bar")
+        st.page_link(page=page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Bar Test"
+        assert c.page_script_hash == page._script_hash
+        assert c.page == "bar"
+        assert not c.external
+        assert not c.disabled
+        assert c.icon == ""
+        assert c.help == ""

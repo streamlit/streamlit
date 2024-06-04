@@ -39,6 +39,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -254,9 +255,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 main_script_path="",
-                page_script_hash="",
                 user_info={"email": "test@test.com"},
                 fragment_storage=MemoryFragmentStorage(),
+                pages_manager=PagesManager(""),
             ),
         )
 
