@@ -13,7 +13,7 @@ runs:
   steps:
     - name: Restore pre-commit cache
       id: cache-pre-commit
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pre-commit
         key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
@@ -23,7 +23,7 @@ runs:
         pre-commit install-hooks
       shell: bash --login -eo pipefail {0}
     - name: Setup Node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version-file: ".nvmrc"
         cache: "yarn"
@@ -43,14 +43,18 @@ runs:
             libgvc6
       shell: bash --login -eo pipefail {0}
     # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
-    # Actions are running as of 2023.05.03 - doesn't have recent versions
-    # of protoc in its package repository. To work around this, we vendor in
-    # protoc 3.20.3.
-    # We can remove the vendored protoc binary and this run step once Github
-    # Actions moves to a newer version of Ubunutu.
-    - name: Add vendored `protoc` to $PATH
+    # Actions are running as of 2024.06.04 - doesn't have recent versions
+    # of protoc in its package repository. To work around this, we
+    # install the latest version from the protobuf release page.
+    - name: Install `protoc` binary
       run: |
-        echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
+        PROTOC_VERSION=26.1
+        curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
+        sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc
+        sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
+        sudo ln -s /usr/local/bin/protoc /usr/bin/protoc
+        # Print out your System's protoc version:
+        protoc --version
       shell: bash --login -eo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
@@ -75,7 +79,7 @@ runs:
     - if: inputs.use_cached_venv == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: venv
         key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
@@ -91,6 +95,14 @@ runs:
       shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
       run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
+      shell: bash --login -eo pipefail {0}
+    - name: Show environment info
+      run: |
+        echo "Show environment info"
+        echo "Python version:"
+        python --version
+        echo "Installed dependencies:"
+        python -m pip list
       shell: bash --login -eo pipefail {0}
     - name: Generate Protobufs
       run: make protobuf
