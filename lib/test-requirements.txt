@@ -44,4 +44,5 @@ pydantic>=1.0, <2.0
 
 
 # Required for testing the langchain integration
-langchain>=0.0.216
+langchain>=0.2.0
+langchain-community>=0.2.0

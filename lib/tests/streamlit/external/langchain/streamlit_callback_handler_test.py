@@ -55,13 +55,13 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
         )
 
     @pytest.mark.skipif(
-        not is_version_less_than(langchain.__version__, "0.2"),
-        reason="Skip test if langchain version >= 0.2, "
+        is_version_less_than(langchain.__version__, "0.2"),
+        reason="Skip test if langchain version < 0.2, "
         "since the langchain structure had been changed.",
     )
     def test_import_from_langchain(self):
         """We can import and use the callback handler from LangChain itself."""
-        from langchain.callbacks import (
+        from langchain_community.callbacks import (
             StreamlitCallbackHandler as LangChainStreamlitCallbackHandler,
         )
 
