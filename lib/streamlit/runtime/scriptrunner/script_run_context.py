@@ -115,6 +115,7 @@ class ScriptRunContext:
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
         self.current_fragment_id = None
+        self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
         self.has_dialog_opened = False
         self.disallow_cached_widget_usage = False

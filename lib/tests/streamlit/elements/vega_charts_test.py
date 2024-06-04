@@ -35,6 +35,7 @@ from streamlit.elements.vega_charts import (
     _stabilize_vega_json_spec,
 )
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import (
     bytes_to_data_frame,
     is_altair_version_less_than,
@@ -161,6 +162,37 @@ class AltairChartTest(DeltaGeneratorTestCase):
             f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
             str(exc.exception),
         )
+
+    def test_works_with_element_replay(self):
+        """Test that element replay works for vega if used as non-widget element."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        @st.cache_data
+        def cache_element():
+            st.altair_chart(chart)
+
+        with patch(
+            "streamlit.runtime.caching.cache_utils.replay_cached_messages",
+            wraps=cached_message_replay.replay_cached_messages,
+        ) as replay_cached_messages_mock:
+            cache_element()
+            el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            self.assertNotEqual(el.spec, "")
+            # The first time the cached function is called, the replay function is not called
+            replay_cached_messages_mock.assert_not_called()
+
+            cache_element()
+            el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            self.assertNotEqual(el.spec, "")
+            # The second time the cached function is called, the replay function is called
+            replay_cached_messages_mock.assert_called_once()
+
+            cache_element()
+            el = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+            self.assertNotEqual(el.spec, "")
+            # The third time the cached function is called, the replay function is called
+            replay_cached_messages_mock.assert_called()
 
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError):

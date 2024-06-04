@@ -36,6 +36,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import get_label_visibility_proto_value
@@ -427,6 +428,8 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
         check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
@@ -691,6 +694,7 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
 
+        check_fragment_path_policy(self.dg)
         check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(

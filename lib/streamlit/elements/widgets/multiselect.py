@@ -22,6 +22,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import (
@@ -292,6 +293,7 @@ class MultiSelectMixin:
     ) -> list[T]:
         key = to_key(key)
 
+        check_fragment_path_policy(self.dg)
         check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
