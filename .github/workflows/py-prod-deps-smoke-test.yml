@@ -1,5 +1,4 @@
-name: Python Prod Deps Smoke
-
+name: Python CLI Smoke Test
 on:
   push:
     branches:
@@ -19,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  smoke_test:
+  python-smoke-tests:
     runs-on: ubuntu-latest
 
     defaults:
