@@ -237,8 +237,6 @@ MIN_PROTOC_VERSION = 3.20
 .PHONY: check-protoc
 # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 check-protoc:
-	@# We support Python protobuf 4.21, which is incompatible with code generated from
-	@# protoc < 3.20
 	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
 		exit 1; \
