@@ -33,7 +33,7 @@ jobs:
         # Be aware that specs should be sequential integers starting from 1 without gaps
         # based on logic in "Cypress Tests" step.
         # prettier-ignore
-        specs: [ 1, 2, 3, 4, ]
+        specs: [ 1, 2, ]
 
     steps:
       - name: Checkout Streamlit code
@@ -75,7 +75,7 @@ jobs:
         env:
           CURRENT_RUN: ${{matrix.specs}}
           CYPRESS_VERIFY_TIMEOUT: 90000
-          TOTAL_WORKERS: 4
+          TOTAL_WORKERS: 2
         run: |
           js_specs=(e2e/specs/*)
 
