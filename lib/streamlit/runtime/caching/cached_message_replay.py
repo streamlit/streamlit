@@ -286,8 +286,9 @@ class CachedMessageReplayContext(threading.local):
         if len(self._cached_message_stack) >= 1:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
 
-            # Widget replay is deprecated and will be removed soon. Therefore,
-            # its fine to keep this part a bit messy for now.
+            # Widget replay is deprecated and will be removed soon:
+            # https://github.com/streamlit/streamlit/pull/8817.
+            # Therefore, its fine to keep this part a bit messy for now.
 
             if (
                 hasattr(element_proto, "id")
