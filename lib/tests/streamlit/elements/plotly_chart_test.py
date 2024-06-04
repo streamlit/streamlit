@@ -18,6 +18,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -93,6 +94,39 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertNotEqual(el.plotly_chart.spec, "")
         self.assertNotEqual(el.plotly_chart.config, "")
         self.assertEqual(el.plotly_chart.use_container_width, True)
+
+    def test_works_with_element_replay(self):
+        """Test that element replay works for plotly if used as non-widget element."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        @st.cache_data
+        def cache_element():
+            st.plotly_chart(data)
+
+        with patch(
+            "streamlit.runtime.caching.cache_utils.replay_cached_messages",
+            wraps=cached_message_replay.replay_cached_messages,
+        ) as replay_cached_messages_mock:
+            cache_element()
+            el = self.get_delta_from_queue().new_element.plotly_chart
+            self.assertNotEqual(el.spec, "")
+            # The first time the cached function is called, the replay function is not called
+            replay_cached_messages_mock.assert_not_called()
+
+            cache_element()
+            el = self.get_delta_from_queue().new_element.plotly_chart
+            self.assertNotEqual(el.spec, "")
+            # The second time the cached function is called, the replay function is called
+            replay_cached_messages_mock.assert_called_once()
+
+            cache_element()
+            el = self.get_delta_from_queue().new_element.plotly_chart
+            self.assertNotEqual(el.spec, "")
+            # The third time the cached function is called, the replay function is called
+            replay_cached_messages_mock.assert_called()
 
     @parameterized.expand(
         [
