@@ -95,6 +95,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     style: props.isIndex ? "faded" : "normal",
     allowNegative,
     fixedDecimals,
+    // We don't want to show any thousand separators
+    // in the cell overlay/editor:
+    thousandSeparator: "",
   } as NumberCell
 
   const validateInput = (data?: any): boolean | number => {
@@ -207,6 +210,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
+        // We want to enforce the raw number without formatting when its copied:
+        copyData: isNullOrUndefined(cellData) ? "" : toSafeString(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {

@@ -113,7 +113,8 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename.txt",
         }),
       ]),
-      { fromUi: false }
+      { fromUi: false },
+      undefined
     )
 
     render(<FileUploader {...props} />)
@@ -667,7 +668,7 @@ describe("FileUploader widget tests", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
     rerender(<FileUploader {...props} />)
 
     // Our widget should be reset, and the widgetMgr should be updated

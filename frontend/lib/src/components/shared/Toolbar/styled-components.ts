@@ -18,6 +18,8 @@ import styled, { StyledComponent } from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
+const TOP_DISTANCE = "-2.4rem"
+
 export interface StyledToolbarWrapperProps {
   locked?: boolean
   target?: StyledComponent<any, any, any>
@@ -25,9 +27,9 @@ export interface StyledToolbarWrapperProps {
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
   ({ theme, locked, target }) => ({
-    padding: "0.5rem 0 0.5rem 0.5rem",
+    padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
     position: "absolute",
-    top: locked ? "-2.4rem" : "-1rem",
+    top: locked ? TOP_DISTANCE : "-1rem",
     right: theme.spacing.none,
     transition: "none",
     ...(!locked && {
@@ -35,13 +37,13 @@ export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
       "&:active, &:focus-visible, &:hover": {
         transition: "opacity 150ms 100ms, top 100ms 100ms",
         opacity: 1,
-        top: "-2.4rem",
+        top: TOP_DISTANCE,
       },
       ...(target && {
         [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]: {
           transition: "opacity 150ms 100ms, top 100ms 100ms",
           opacity: 1,
-          top: "-2.4rem",
+          top: TOP_DISTANCE,
         },
       }),
     }),
@@ -57,7 +59,7 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   alignItems: "center",
   justifyContent: "flex-end",
   boxShadow: "1px 2px 8px rgba(0, 0, 0, 0.08)",
-  borderRadius: theme.radii.lg,
+  borderRadius: theme.radii.default,
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",
   zIndex: theme.zIndices.sidebar + 1,

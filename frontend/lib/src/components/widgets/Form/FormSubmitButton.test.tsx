@@ -104,8 +104,8 @@ describe("FormSubmitButton", () => {
     fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
-      props.element,
-      undefined
+      undefined,
+      props.element
     )
   })
 
@@ -119,8 +119,8 @@ describe("FormSubmitButton", () => {
     fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
-      props.element,
-      "myFragmentId"
+      "myFragmentId",
+      props.element
     )
   })
 

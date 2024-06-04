@@ -169,9 +169,9 @@ export const createEmotionTheme = (
     }
 
     if (radii.checkboxRadius)
-      conditionalOverrides.radii.sm = addPxUnit(radii.checkboxRadius)
+      conditionalOverrides.radii.md = addPxUnit(radii.checkboxRadius)
     if (radii.baseWidgetRadius)
-      conditionalOverrides.radii.md = addPxUnit(radii.baseWidgetRadius)
+      conditionalOverrides.radii.lg = addPxUnit(radii.baseWidgetRadius)
   }
 
   if (fontSizes) {

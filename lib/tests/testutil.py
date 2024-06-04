@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 from streamlit import config
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
 from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
@@ -53,9 +54,9 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         session_state=SafeSessionState(SessionState(), lambda: None),
         uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
         main_script_path="",
-        page_script_hash="mock_page_script_hash",
         user_info={"email": "mock@test.com"},
         fragment_storage=MemoryFragmentStorage(),
+        pages_manager=PagesManager(""),
     )
 
 

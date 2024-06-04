@@ -19,7 +19,7 @@ import unittest
 from asyncio import AbstractEventLoop
 from typing import Any, Callable, List, Optional, cast
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import MagicMock, patch
+from unittest.mock import DEFAULT, MagicMock, patch
 
 import pytest
 
@@ -39,6 +39,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
@@ -193,17 +194,13 @@ class AppSessionTest(unittest.TestCase):
         session._handle_clear_cache_request()
         assert "foo" not in session._session_state
 
-    @patch("streamlit.runtime.legacy_caching.clear_cache")
     @patch("streamlit.runtime.caching.cache_data.clear")
     @patch("streamlit.runtime.caching.cache_resource.clear")
-    def test_clear_cache_all_caches(
-        self, clear_resource_caches, clear_data_caches, clear_legacy_cache
-    ):
+    def test_clear_cache_all_caches(self, clear_resource_caches, clear_data_caches):
         session = _create_test_session()
         session._handle_clear_cache_request()
         clear_resource_caches.assert_called_once()
         clear_data_caches.assert_called_once()
-        clear_legacy_cache.assert_called_once()
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
@@ -316,6 +313,7 @@ class AppSessionTest(unittest.TestCase):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
             fragment_storage=session._fragment_storage,
+            pages_manager=session._pages_manager,
         )
 
         assert session._scriptrunner is not None
@@ -421,8 +419,9 @@ class AppSessionTest(unittest.TestCase):
 
         assert not session.request_rerun.called
 
-    @patch(
-        "streamlit.runtime.app_session.source_util.get_pages",
+    @patch.object(
+        PagesManager,
+        "get_pages",
         MagicMock(
             return_value={
                 "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
@@ -445,21 +444,22 @@ class AppSessionTest(unittest.TestCase):
 
         mock_enqueue.assert_called_once_with(expected_msg)
 
-    @patch(
-        "streamlit.runtime.app_session.source_util.register_pages_changed_callback",
-    )
+    @patch.object(PagesManager, "register_pages_changed_callback")
     def test_installs_pages_watcher_on_init(self, patched_register_callback):
         session = _create_test_session()
         patched_register_callback.assert_called_once_with(session._on_pages_changed)
 
-    @patch("streamlit.runtime.app_session.source_util._on_pages_changed")
-    def test_deregisters_pages_watcher_on_shutdown(self, patched_on_pages_changed):
-        session = _create_test_session()
-        session.shutdown()
+    def test_deregisters_pages_watcher_on_shutdown(self):
+        disconnect_mock = MagicMock()
+        with patch.object(
+            PagesManager,
+            "register_pages_changed_callback",
+            return_value=disconnect_mock,
+        ):
+            session = _create_test_session()
+            session.shutdown()
 
-        patched_on_pages_changed.disconnect.assert_called_once_with(
-            session._on_pages_changed
-        )
+            disconnect_mock.assert_called_once()
 
     def test_tags_fwd_msgs_with_last_backmsg_id_if_set(self):
         session = _create_test_session()
@@ -471,15 +471,19 @@ class AppSessionTest(unittest.TestCase):
         assert msg.debug_last_backmsg_id == "some backmsg id"
 
     @patch("streamlit.runtime.app_session.config.on_config_parsed")
-    @patch("streamlit.runtime.app_session.source_util.register_pages_changed_callback")
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
+    )
+    @patch.multiple(
+        PagesManager,
+        register_pages_changed_callback=DEFAULT,
+        get_pages=MagicMock(return_value={}),
     )
     def test_registers_file_watchers(
         self,
         patched_secrets_connect,
-        patched_register_pages_changed_callback,
         patched_on_config_parsed,
+        register_pages_changed_callback,
     ):
         session = _create_test_session()
 
@@ -489,13 +493,18 @@ class AppSessionTest(unittest.TestCase):
         patched_on_config_parsed.assert_called_once_with(
             session._on_source_file_changed, force_connect=True
         )
-        patched_register_pages_changed_callback.assert_called_once_with(
+        register_pages_changed_callback.assert_called_once_with(
             session._on_pages_changed
         )
         patched_secrets_connect.assert_called_once_with(
             session._on_secrets_file_changed
         )
 
+    @patch.object(
+        PagesManager,
+        "get_pages",
+        MagicMock(return_value={}),
+    )
     def test_recreates_local_sources_watcher_if_none(self):
         session = _create_test_session()
         session._local_sources_watcher = None
@@ -642,8 +651,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         "streamlit.runtime.app_session.config.get_options_for_section",
         MagicMock(side_effect=_mock_get_options_for_section()),
     )
-    @patch(
-        "streamlit.runtime.app_session.source_util.get_pages",
+    @patch.object(
+        PagesManager,
+        "get_pages",
         MagicMock(
             return_value={
                 "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
@@ -667,9 +677,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
         add_script_run_ctx(ctx=ctx)
 
@@ -720,6 +730,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         "streamlit.runtime.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
+    @patch.object(
+        PagesManager,
+        "register_pages_changed_callback",
+        MagicMock(return_value=lambda: None),
+    )
     async def test_new_session_message_includes_fragment_ids(self):
         session = _create_test_session(asyncio.get_running_loop())
 
@@ -731,9 +746,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
         add_script_run_ctx(ctx=ctx)
 
@@ -813,6 +828,11 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
     @patch(
         "streamlit.runtime.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
+    )
+    @patch.object(
+        PagesManager,
+        "register_pages_changed_callback",
+        MagicMock(return_value=lambda: None),
     )
     async def test_handle_backmsg_exception(self):
         """handle_backmsg_exception is a bit of a hack. Test that it does
@@ -1015,8 +1035,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
 
-@patch(
-    "streamlit.runtime.app_session.source_util.get_pages",
+@patch.object(
+    PagesManager,
+    "get_pages",
     MagicMock(
         return_value={
             "hash1": {"page_name": "page1", "script_path": "page1.py"},

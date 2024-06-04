@@ -163,7 +163,9 @@ jest.mock("@streamlit/app/src/SegmentMetricsManager", () => {
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    return new actualModule.SegmentMetricsManager(...props)
+    const metricsMgr = new actualModule.SegmentMetricsManager(...props)
+    jest.spyOn(metricsMgr, "enqueue")
+    return metricsMgr
   })
 
   return {
@@ -397,6 +399,18 @@ describe("App", () => {
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
     expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
+  })
+
+  it("sends updateReport to our metrics manager", () => {
+    renderApp(getProps())
+
+    const metricsManager = getStoredValue<SegmentMetricsManager>(
+      SegmentMetricsManager
+    )
+
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
   describe("App.handleNewSession", () => {
@@ -1391,7 +1405,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1408,7 +1422,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
       expect(connectionManager.sendMessage).toBeCalledTimes(2)
 
@@ -1428,7 +1442,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1445,7 +1459,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1467,7 +1481,7 @@ describe("App", () => {
       })
 
       window.history.pushState({}, "", "/foo/bar/baz")
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
         // @ts-expect-error
@@ -1519,6 +1533,56 @@ describe("App", () => {
         type: "SET_QUERY_PARAM",
         queryParams: "",
       })
+    })
+  })
+
+  describe("App.handleScriptFinished", () => {
+    it("will not increment cache count if session info is not set", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is not set and the script finished early", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is set and the script finished early", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will increment cache count if session info is set", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
     })
   })
 
@@ -2193,6 +2257,7 @@ describe("App", () => {
           pageName: "",
           pageScriptHash: "hash1",
           queryString: "",
+          widgetStates: {},
         },
       })
     })

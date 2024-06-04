@@ -17,6 +17,8 @@
 import React from "react"
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
+import { withTheme } from "@emotion/react"
+
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
@@ -35,6 +37,8 @@ import {
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -42,6 +46,7 @@ export interface Props {
   element: TextInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
   fragmentId?: string
 }
 
@@ -184,7 +189,10 @@ class TextInput extends React.PureComponent<Props, State> {
         this.commitWidgetValue({ fromUi: true })
       }
       if (isInForm(this.props.element)) {
-        this.props.widgetMgr.submitForm(this.props.element.formId)
+        this.props.widgetMgr.submitForm(
+          this.props.element.formId,
+          this.props.fragmentId
+        )
       }
     }
   }
@@ -197,7 +205,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { dirty, value } = this.state
-    const { element, width, disabled, widgetMgr } = this.props
+    const { element, width, disabled, widgetMgr, theme } = this.props
     const { placeholder } = element
 
     // Manage our form-clear event handler.
@@ -252,24 +260,25 @@ class TextInput extends React.PureComponent<Props, State> {
                 "::placeholder": {
                   opacity: "0.7",
                 },
-                lineHeight: "1.4",
+                lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: ".5rem",
-                paddingLeft: ".5rem",
-                paddingBottom: ".5rem",
-                paddingTop: ".5rem",
+                paddingRight: theme.spacing.sm,
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
               },
             },
             Root: {
               props: {
-                "data-testid": "textInputRootElement",
+                "data-testid": "stTextInput-RootElement",
               },
               style: {
+                height: theme.sizes.minElementHeight,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
               },
             },
           }}
@@ -288,4 +297,4 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 }
 
-export default TextInput
+export default withTheme(TextInput)

@@ -21,7 +21,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
-from streamlit import config, runtime, source_util
+from streamlit import config, runtime
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -36,15 +36,17 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
-from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime import caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.source_util import PageHash, PageInfo
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
@@ -127,6 +129,9 @@ class AppSession:
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
+        self._pages_manager = PagesManager(
+            script_data.main_script_path, self._script_cache
+        )
 
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
@@ -182,9 +187,7 @@ class AppSession:
         to.
         """
         if self._local_sources_watcher is None:
-            self._local_sources_watcher = LocalSourcesWatcher(
-                self._script_data.main_script_path
-            )
+            self._local_sources_watcher = LocalSourcesWatcher(self._pages_manager)
 
         self._local_sources_watcher.register_file_change_callback(
             self._on_source_file_changed
@@ -192,7 +195,7 @@ class AppSession:
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
-        self._stop_pages_listener = source_util.register_pages_changed_callback(
+        self._stop_pages_listener = self._pages_manager.register_pages_changed_callback(
             self._on_pages_changed
         )
         secrets_singleton.file_change_listener.connect(self._on_secrets_file_changed)
@@ -408,6 +411,7 @@ class AppSession:
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -417,8 +421,7 @@ class AppSession:
         return self._session_state
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
-        main_script_path = self._script_data.main_script_path
-        pages = source_util.get_pages(main_script_path)
+        pages = self._pages_manager.get_pages()
 
         changed_page_script_hash = next(
             filter(lambda k: pages[k]["script_path"] == filepath, pages),
@@ -455,7 +458,7 @@ class AppSession:
 
     def _on_pages_changed(self, _) -> None:
         msg = ForwardMsg()
-        _populate_app_pages(msg.pages_changed, self._script_data.main_script_path)
+        self._populate_app_pages(msg.pages_changed, self._pages_manager.get_pages())
         self._enqueue_forward_msg(msg)
 
         if self._local_sources_watcher is not None:
@@ -473,6 +476,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
+        pages: dict[PageHash, PageInfo] | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -489,6 +493,7 @@ class AppSession:
                 client_state,
                 page_script_hash,
                 fragment_ids_this_run,
+                pages,
             )
         )
 
@@ -501,6 +506,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
+        pages: dict[PageHash, PageInfo] | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -572,7 +578,7 @@ class AppSession:
 
             self._enqueue_forward_msg(
                 self._create_new_session_message(
-                    page_script_hash, fragment_ids_this_run
+                    page_script_hash, fragment_ids_this_run, pages
                 )
             )
 
@@ -603,6 +609,7 @@ class AppSession:
                 # that change which modules should be watched.
                 if self._local_sources_watcher:
                     self._local_sources_watcher.update_watched_modules()
+                    self._local_sources_watcher.update_watched_pages()
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
@@ -666,20 +673,26 @@ class AppSession:
         return msg
 
     def _create_new_session_message(
-        self, page_script_hash: str, fragment_ids_this_run: set[str] | None = None
+        self,
+        page_script_hash: str,
+        fragment_ids_this_run: set[str] | None = None,
+        pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._script_data.name
-        msg.new_session.main_script_path = self._script_data.main_script_path
+        msg.new_session.main_script_path = self._pages_manager.main_script_path
+        msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
 
         if fragment_ids_this_run:
             msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
-        _populate_app_pages(msg.new_session, self._script_data.main_script_path)
+        self._populate_app_pages(
+            msg.new_session, pages or self._pages_manager.get_pages()
+        )
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -780,7 +793,6 @@ class AppSession:
         Because this cache is global, it will be cleared for all users.
 
         """
-        legacy_caching.clear_cache()
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
@@ -829,6 +841,16 @@ class AppSession:
             )
 
         self._enqueue_forward_msg(msg)
+
+    def _populate_app_pages(
+        self, msg: NewSession | PagesChanged, pages: dict[PageHash, PageInfo]
+    ) -> None:
+        for page_script_hash, page_info in pages.items():
+            page_proto = msg.app_pages.add()
+
+            page_proto.page_script_hash = page_script_hash
+            page_proto.page_name = page_info["page_name"]
+            page_proto.icon = page_info["icon"]
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so
@@ -914,12 +936,3 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
 def _populate_user_info_msg(msg: UserInfo) -> None:
     msg.installation_id = Installation.instance().installation_id
     msg.installation_id_v3 = Installation.instance().installation_id_v3
-
-
-def _populate_app_pages(msg: NewSession | PagesChanged, main_script_path: str) -> None:
-    for page_script_hash, page_info in source_util.get_pages(main_script_path).items():
-        page_proto = msg.app_pages.add()
-
-        page_proto.page_script_hash = page_script_hash
-        page_proto.page_name = page_info["page_name"]
-        page_proto.icon = page_info["icon"]

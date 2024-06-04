@@ -115,7 +115,7 @@ jobs:
           sudo apt install rsync
           make package
       - name: Store Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Release
           path: lib/dist
@@ -138,10 +138,11 @@ jobs:
           # later git commands can work.
           persist-credentials: true
           path: constraints
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: constraints
           path: constraints
+          pattern: constraints-*
+          merge-multiple: true
       - name: Commit and push constraint files as tag
         run: |
           cd constraints;

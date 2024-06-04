@@ -217,7 +217,7 @@ describe("TimeInput widget", () => {
 
     // "Submit" the form
     act(() => {
-      props.widgetMgr.submitForm("form")
+      props.widgetMgr.submitForm("form", undefined)
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
