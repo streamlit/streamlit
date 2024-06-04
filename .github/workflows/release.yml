@@ -6,7 +6,7 @@ on:
 
 jobs:
   run-python-tests:
-    uses: ./.github/workflows/python-versions.yml
+    uses: ./.github/workflows/python-tests.yml
     with:
       ref: ${{ github.ref_name }}
     secrets:
@@ -17,16 +17,6 @@ jobs:
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
-    with:
-      ref: ${{ github.ref_name }}
-
-  run-py-prod-deps-smoke-test:
-    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
-    with:
-      ref: ${{ github.ref_name }}
-
-  run-cypress-tests:
-    uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{ github.ref_name }}
 
@@ -41,8 +31,6 @@ jobs:
     needs:
       - run-python-tests
       - run-javascript-tests
-      - run-py-prod-deps-smoke-test
-      - run-cypress-tests
       - run-playwright-tests
 
     defaults:
