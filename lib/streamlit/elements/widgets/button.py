@@ -27,6 +27,7 @@ from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.errors import StreamlitAPIException
@@ -760,6 +761,7 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
+        check_fragment_path_policy(self.dg)
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
         check_cache_replay_rules()
