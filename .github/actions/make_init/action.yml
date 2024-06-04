@@ -13,7 +13,7 @@ runs:
   steps:
     - name: Restore pre-commit cache
       id: cache-pre-commit
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pre-commit
         key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
@@ -23,7 +23,7 @@ runs:
         pre-commit install-hooks
       shell: bash --login -eo pipefail {0}
     - name: Setup Node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version-file: ".nvmrc"
         cache: "yarn"
@@ -75,7 +75,7 @@ runs:
     - if: inputs.use_cached_venv == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: venv
         key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
