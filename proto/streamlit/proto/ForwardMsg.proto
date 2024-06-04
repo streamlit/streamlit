@@ -84,7 +84,7 @@ message ForwardMsg {
     // App logo message
     Logo logo = 22;
 
-    AuthRedirect auth_redirect = 23;
+    AuthRedirect auth_redirect = 24;
 
     // Platform - message to host
     ParentMessage parent_message = 20;
@@ -102,7 +102,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 24
+  // Next: 25
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
