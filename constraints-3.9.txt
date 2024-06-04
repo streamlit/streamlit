@@ -52,7 +52,7 @@ langchain==0.1.20
 langchain-community==0.0.38
 langchain-core==0.1.52
 langchain-text-splitters==0.0.2
-langsmith==0.1.67
+langsmith==0.1.69
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -66,7 +66,7 @@ mypy-protobuf==3.3.0
 nh3==0.2.17
 nodeenv==1.9.0
 numpy==1.26.4
-opencv-python==4.9.0.80
+opencv-python==4.10.0.82
 orjson==3.10.3
 packaging==23.2
 pandas==2.2.2
@@ -142,7 +142,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.1
 tzdata==2024.1
 urllib3==1.26.18
-uv==0.2.5
+uv==0.2.6
 vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.1
