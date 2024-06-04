@@ -42,6 +42,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+    show_widget_replay_deprecation,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
@@ -418,6 +419,9 @@ class CacheResourceAPI:
         ...     return person.name
         """
         self._maybe_show_deprecation_warning()
+
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_resource")
 
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)

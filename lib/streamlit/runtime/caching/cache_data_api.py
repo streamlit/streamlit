@@ -42,6 +42,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+    show_widget_replay_deprecation,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
@@ -558,6 +559,9 @@ class CacheDataAPI:
             )
 
         self._maybe_show_deprecation_warning()
+
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_data")
 
         def wrapper(f):
             return make_cached_func_wrapper(

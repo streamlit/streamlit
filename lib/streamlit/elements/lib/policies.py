@@ -94,10 +94,7 @@ Your script uses a widget command in a cached function
 This code will only be called when we detect a cache "miss",
 which can lead to unexpected results.
 
-How to fix this:
-* Move all widget commands outside the cached function.
-* Or, if you know what you're doing, use `experimental_allow_widgets=True`
-in the cache decorator to enable widget replay and suppress this warning.
+To fix this, move all widget commands outside the cached function.
 """
         )
 
