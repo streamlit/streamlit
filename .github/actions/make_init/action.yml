@@ -92,6 +92,14 @@ runs:
     - name: Activate virtualenv
       run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
       shell: bash --login -eo pipefail {0}
+    - name: Show environment info
+      run: |
+        echo "Show environment info"
+        echo "Python version:"
+        python --version
+        echo "Installed dependencies:"
+        python -m pip list
+      shell: bash --login -eo pipefail {0}
     - name: Generate Protobufs
       run: make protobuf
       shell: bash --login -eo pipefail {0}
