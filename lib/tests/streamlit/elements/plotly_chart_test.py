@@ -96,7 +96,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.use_container_width, True)
 
     def test_works_with_element_replay(self):
-        """Test that it works with element replay if used as non-widget element."""
+        """Test that element replay works for plotly if used as non-widget element."""
         import plotly.graph_objs as go
 
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])

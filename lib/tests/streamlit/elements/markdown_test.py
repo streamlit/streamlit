@@ -43,7 +43,7 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         self.assertEqual(el.markdown.help, "help text")
 
     def test_works_with_element_replay(self):
-        """Test that it works with element replay if used as non-widget element."""
+        """Test that element replay works for a markdown element."""
 
         @st.cache_data
         def cache_element():

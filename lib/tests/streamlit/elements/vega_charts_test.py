@@ -164,7 +164,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         )
 
     def test_works_with_element_replay(self):
-        """Test that it works with element replay if used as non-widget element."""
+        """Test that element replay works for vega if used as non-widget element."""
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
