@@ -38,11 +38,8 @@ INSTALL_REQUIRES = [
     # Lowest version with available wheel for 3.7 + amd64 + linux
     "pandas>=1.3.0, <3",
     "pillow>=7.1.0, <11",
-    # Python protobuf 4.21 (the first 4.x version) is compatible with protobufs
-    # generated from `protoc` >= 3.20. (`protoc` is installed separately from the Python
-    # protobuf package, so this pin doesn't actually enforce a `protoc` minimum version.
-    # Instead, the `protoc` min version is enforced in our Makefile.)
-    "protobuf>=3.20, <5",
+    # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
+    "protobuf>=3.20, <6",
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
