@@ -53,7 +53,7 @@ runs:
         curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
-        ln -s /usr/local/bin/protoc /usr/bin/protoc
+        sudo ln -s /usr/local/bin/protoc /usr/bin/protoc
         # Print out your System's protoc version:
         protoc --version
       shell: bash --login -eo pipefail {0}
