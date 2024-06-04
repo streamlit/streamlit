@@ -288,6 +288,7 @@ class CachedMessageReplayContext(threading.local):
 
             # Widget replay is deprecated and will be removed soon. Therefore,
             # its fine to keep this part a bit messy for now.
+
             if (
                 hasattr(element_proto, "id")
                 and element_proto.id
