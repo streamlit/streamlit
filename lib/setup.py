@@ -54,7 +54,7 @@ INSTALL_REQUIRES = [
     "typing-extensions>=4.3.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
-    "watchdog>=2.1.5; platform_system != 'Darwin'",
+    "watchdog>=2.1.5, <5; platform_system != 'Darwin'",
 ]
 
 # We want to exclude some dependencies in our internal Snowpark conda distribution of
