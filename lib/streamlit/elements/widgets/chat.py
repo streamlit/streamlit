@@ -429,7 +429,7 @@ class ChatMixin:
 
         columns = self.dg.columns(len(options), inline=True)
         for index, option in enumerate(options):
-            feedback_button_key = f"{key}_{index}_action"
+            feedback_button_key = f"{key}_action"  # f"{key}_{index}_action"
             icon = option.icon
             key_prefix = option.label
             if render_feedback_button(

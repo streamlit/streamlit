@@ -60,7 +60,7 @@ def render_feedback_button(
     dg: DeltaGenerator, icon: str, key_prefix: str, feedback_key: str
 ) -> bool:
     session_state = _SessionStateProxy()
-    return dg.button(
+    clicked = dg.button(
         icon,
         key=f"{key_prefix}_{feedback_key}",
         type=(
@@ -70,6 +70,11 @@ def render_feedback_button(
             else "secondary"
         ),
     )
+    if clicked:
+        if feedback_key not in session_state:
+            session_state[feedback_key] = {}
+        session_state[feedback_key]["option"] = key_prefix
+    return clicked
 
 
 class LayoutsMixin:
@@ -226,7 +231,7 @@ class LayoutsMixin:
             ) -> Literal[False]:
                 columns = self._main_dg.columns(len(actions), inline=True)
                 for index, action in enumerate(actions):
-                    feedback_button_key = f"{key}_{index}_action"
+                    feedback_button_key = f"{key}_action"  # f"{key}_{index}_action"
                     # using columns as context-manager via `with columns[index]` does not work for some reason. Probably because we are in the exit of another context manager?!
                     res = render_feedback_button(
                         columns[index], action.icon, action.label, feedback_button_key
