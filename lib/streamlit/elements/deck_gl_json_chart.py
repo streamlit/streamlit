@@ -72,7 +72,7 @@ class PydeckMixin:
         ----------
         pydeck_obj: pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
-        use_container_width: bool
+        use_container_width : bool
             Whether to override the figure's native width with the width of
             the parent container. If ``use_container_width`` is ``False``
             (default), Streamlit sets the width of the chart to fit its contents

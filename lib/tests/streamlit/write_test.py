@@ -19,7 +19,7 @@ import time
 import unittest
 from collections import namedtuple
 from typing import Any
-from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
 import numpy as np
 import pandas as pd
@@ -35,6 +35,7 @@ from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.runtime.secrets_test import MOCK_TOML
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
@@ -247,6 +248,14 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with st.query_params."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write(QueryParamsProxy())
+
+            p.assert_called_once()
+
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_streamlit_secrets(self, *mocks):
+        """Test st.write with st.secrets."""
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
+            st.write(st.secrets)
 
             p.assert_called_once()
 
