@@ -25,6 +25,7 @@ from typing import (
     KeysView,
     Mapping,
     NoReturn,
+    Union,
     ValuesView,
 )
 
@@ -42,6 +43,14 @@ SECRETS_FILE_LOCS: Final[list[str]] = [
     # secrets.
     file_util.get_project_streamlit_file_path("secrets.toml"),
 ]
+
+
+def _convert_to_dict(obj: Union[Mapping[str, Any], AttrDict]) -> dict[str, Any]:
+    """Recursively convert Mapping or AttrDict objects to dictionaries."""
+    if isinstance(obj, AttrDict):
+        return obj.to_dict()
+    elif isinstance(obj, Mapping):
+        return {k: _convert_to_dict(v) for k, v in obj.items()}
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
@@ -226,6 +235,11 @@ class Secrets(Mapping[str, Any]):
             self._maybe_install_file_watchers()
 
             return self._secrets
+
+    def to_dict(self) -> dict[str, Any]:
+        """Converts the secrets store into a nested dictionary, where nested AttrDict objects are also converted into dictionaries."""
+        secrets = self._parse(True)
+        return _convert_to_dict(secrets)
 
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:
