@@ -326,7 +326,9 @@ class CacheResourceAPI:
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
+
+            .. note::
+                This parameter is deprecated and will be removed in a future release.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
