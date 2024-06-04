@@ -479,6 +479,7 @@ describe("getCellFromArrow", () => {
       allowNegative: true,
       allowOverlay: true,
       contentAlign: "right",
+      copyData: "1.1",
       data: 1.1,
       displayData: "1.1",
       isMissingValue: false,
@@ -486,6 +487,7 @@ describe("getCellFromArrow", () => {
       kind: "number",
       readonly: true,
       style: "normal",
+      thousandSeparator: "",
     })
   })
 
@@ -633,12 +635,14 @@ describe("getCellFromArrow", () => {
     expect(cell).toEqual({
       allowOverlay: true,
       contentAlign: "right",
+      copyData: "1",
       data: 1,
       displayData: "1",
       isMissingValue: false,
       kind: "number",
       readonly: true,
       style: "normal",
+      thousandSeparator: "",
       allowNegative: true,
       fixedDecimals: 0,
     })
@@ -666,6 +670,7 @@ describe("getCellFromArrow", () => {
     expect(cell).toEqual({
       allowOverlay: true,
       contentAlign: "right",
+      copyData: "1",
       data: 1,
       displayData: "1",
       isMissingValue: false,
@@ -678,6 +683,7 @@ describe("getCellFromArrow", () => {
         bgCell: "pink",
         textDark: "white",
       },
+      thousandSeparator: "",
     })
   })
 })
@@ -704,12 +710,14 @@ it("doesn't apply Pandas Styler CSS for editable columns", () => {
   expect(cell).toEqual({
     allowOverlay: true,
     contentAlign: "right",
+    copyData: "1",
     data: 1,
     displayData: "1",
     isMissingValue: false,
     kind: "number",
     readonly: true,
     style: "normal",
+    thousandSeparator: "",
     allowNegative: true,
     fixedDecimals: 0,
   })

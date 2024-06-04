@@ -57,6 +57,7 @@ export const lineHeights = {
   normal: "normal",
   none: 1,
   tight: 1.25,
+  inputWidget: 1.4,
   table: 1.5,
   base: 1.6,
   menuItem: 2,

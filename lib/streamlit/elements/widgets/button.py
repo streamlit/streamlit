@@ -22,10 +22,17 @@ from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit import runtime, source_util
+from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_fragment_path_policy,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
+from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
@@ -41,6 +48,7 @@ from streamlit.runtime.state import (
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.type_util import Key, to_key
+from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -128,8 +136,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -262,10 +276,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
 
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -404,9 +422,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Example
         -------
@@ -438,7 +461,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str,
+        page: str | StreamlitPage,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -458,10 +481,10 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str
-            The file path (relative to the main script) of the page to switch to.
-            Alternatively, this can be the URL to an external page (must start
-            with "http://" or "https://").
+        page : str or st.Page
+            The file path (relative to the main script) or an st.Page indicating
+            the page to switch to. Alternatively, this can be the URL to an
+            external page (must start with "http://" or "https://").
         label : str
             The label for the page link. Labels are required for external pages.
             Labels can optionally contain Markdown and supports the following
@@ -510,9 +533,9 @@ class ButtonMixin:
             An optional boolean, which disables the page link if set to
             ``True``. The default is ``False``.
         use_container_width : bool
-            An optional boolean, which makes the link stretch its width to
-            match the parent container. The default is ``True`` for page links
-            in the sidebar, and ``False`` for those in the main app.
+            Whether to expand the link's width to fill its parent container.
+            The default is ``True`` for page links in the sidebar and ``False``
+            for those in the main app.
 
         Example
         -------
@@ -574,13 +597,6 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
-
         check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         check_callback_rules(self.dg, on_click)
@@ -595,7 +611,7 @@ class ButtonMixin:
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -658,7 +674,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page: str,
+        page: str | StreamlitPage,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -681,38 +697,45 @@ class ButtonMixin:
         if use_container_width is not None:
             page_link_proto.use_container_width = use_container_width
 
-        # Handle external links:
-        if page.startswith("http://") or page.startswith("https://"):
-            if label is None or label == "":
-                raise StreamlitAPIException(
-                    f"The label param is required for external links used with st.page_link - please provide a label."
-                )
-            else:
-                page_link_proto.page = page
-                page_link_proto.external = True
-                return self.dg._enqueue("page_link", page_link_proto)
+        if isinstance(page, StreamlitPage):
+            page_link_proto.page_script_hash = page._script_hash
+            page_link_proto.page = page.url_path
+            if label is None:
+                page_link_proto.label = page.title
+        else:
+            # Handle external links:
+            if is_url(page):
+                if label is None or label == "":
+                    raise StreamlitAPIException(
+                        "The label param is required for external links used with st.page_link - please provide a label."
+                    )
+                else:
+                    page_link_proto.page = page
+                    page_link_proto.external = True
+                    return self.dg._enqueue("page_link", page_link_proto)
 
-        ctx = get_script_run_ctx()
-        ctx_main_script = ""
-        if ctx:
-            ctx_main_script = ctx.main_script_path
+            ctx = get_script_run_ctx()
+            ctx_main_script = ""
+            all_app_pages = {}
+            if ctx:
+                ctx_main_script = ctx.main_script_path
+                all_app_pages = ctx.pages_manager.get_pages()
 
-        main_script_directory = get_main_script_directory(ctx_main_script)
-        requested_page = os.path.realpath(
-            normalize_path_join(main_script_directory, page)
-        )
-        all_app_pages = source_util.get_pages(ctx_main_script).values()
+            main_script_directory = get_main_script_directory(ctx_main_script)
+            requested_page = os.path.realpath(
+                normalize_path_join(main_script_directory, page)
+            )
 
-        # Handle retrieving the page_script_hash & page
-        for page_data in all_app_pages:
-            full_path = page_data["script_path"]
-            page_name = page_data["page_name"]
-            if requested_page == full_path:
-                if label is None:
-                    page_link_proto.label = page_name.replace("_", " ")
-                page_link_proto.page_script_hash = page_data["page_script_hash"]
-                page_link_proto.page = page_name
-                break
+            # Handle retrieving the page_script_hash & page
+            for page_data in all_app_pages.values():
+                full_path = page_data["script_path"]
+                page_name = page_data["page_name"]
+                if requested_page == full_path:
+                    if label is None:
+                        page_link_proto.label = page_name.replace("_", " ")
+                    page_link_proto.page_script_hash = page_data["page_script_hash"]
+                    page_link_proto.page = page_name
+                    break
 
         if page_link_proto.page_script_hash == "":
             raise StreamlitAPIException(
@@ -738,13 +761,7 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        # Importing these functions here to avoid circular imports
-        from streamlit.elements.utils import (
-            check_cache_replay_rules,
-            check_callback_rules,
-            check_session_state_rules,
-        )
-
+        check_fragment_path_policy(self.dg)
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
         check_cache_replay_rules()
@@ -759,7 +776,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except

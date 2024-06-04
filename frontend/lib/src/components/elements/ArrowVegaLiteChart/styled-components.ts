@@ -39,7 +39,7 @@ export const StyledVegaLiteChartContainer =
           // Customize menu UI to look like the Streamlit menu:
           backgroundColor: theme.colors.bgColor,
           boxShadow: "rgb(0 0 0 / 16%) 0px 4px 16px",
-          border: `1px solid ${theme.colors.fadedText10}`,
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
           a: {
             fontFamily: theme.genericFonts.bodyFont,
             fontWeight: theme.fontWeights.normal,
@@ -67,7 +67,7 @@ export const StyledVegaLiteChartContainer =
           zIndex: theme.zIndices.menuButton,
           border: "none",
           boxShadow: "none",
-          borderRadius: theme.radii.lg,
+          borderRadius: theme.radii.default,
           color: theme.colors.fadedText10,
           backgroundColor: "transparent",
           transition: "opacity 300ms 150ms,transform 300ms 150ms",

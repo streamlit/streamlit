@@ -133,6 +133,10 @@ def _fragment(
         )
         fragment_id = h.hexdigest()
 
+        # We intentionally want to capture the active script hash here to ensure
+        # that the fragment is associated with the correct script running.
+        initialized_active_script_hash = ctx.active_script_hash
+
         def wrapped_fragment():
             import streamlit as st
 
@@ -157,8 +161,23 @@ def _fragment(
                 ctx.current_fragment_id = fragment_id
 
             try:
-                with st.container():
-                    result = non_optional_func(*args, **kwargs)
+                # Make sure we set the active script hash to the same value
+                # for the fragment run as when defined upon initialization
+                # This ensures that elements (especially widgets) are tied
+                # to a consistent active script hash
+                active_hash_context = (
+                    ctx.pages_manager.run_with_active_hash(
+                        initialized_active_script_hash
+                    )
+                    if initialized_active_script_hash != ctx.active_script_hash
+                    else contextlib.nullcontext()
+                )
+                with active_hash_context:
+                    with st.container():
+                        ctx.current_fragment_delta_path = (
+                            active_dg._cursor.delta_path if active_dg._cursor else []
+                        )
+                        result = non_optional_func(*args, **kwargs)
             finally:
                 ctx.current_fragment_id = None
 

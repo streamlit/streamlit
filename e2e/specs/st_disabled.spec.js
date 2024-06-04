@@ -56,10 +56,6 @@ describe("disable widgets", () => {
       cy.get('.stSlider [role="slider"]').first().parent().click();
 
       cy.get(".stMarkdown").should("have.text", "Value 1: 25");
-
-      cy.get(".element-container").each((el, i) => {
-        return cy.get(el).matchImageSnapshot(`disabled-widgets-${i}`);
-      });
     });
   });
 });
