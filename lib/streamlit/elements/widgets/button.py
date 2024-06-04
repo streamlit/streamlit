@@ -135,8 +135,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -269,10 +275,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
 
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -411,9 +421,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Example
         -------
@@ -517,9 +532,9 @@ class ButtonMixin:
             An optional boolean, which disables the page link if set to
             ``True``. The default is ``False``.
         use_container_width : bool
-            An optional boolean, which makes the link stretch its width to
-            match the parent container. The default is ``True`` for page links
-            in the sidebar, and ``False`` for those in the main app.
+            Whether to expand the link's width to fill its parent container.
+            The default is ``True`` for page links in the sidebar and ``False``
+            for those in the main app.
 
         Example
         -------
