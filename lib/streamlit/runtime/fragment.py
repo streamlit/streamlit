@@ -207,7 +207,8 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
-) -> F: ...
+) -> F:
+    ...
 
 
 # Support being able to pass parameters to this decorator (that is, being able to write
@@ -217,7 +218,8 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
-) -> Callable[[F], F]: ...
+) -> Callable[[F], F]:
+    ...
 
 
 @gather_metrics("experimental_fragment")

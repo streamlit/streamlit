@@ -313,6 +313,7 @@ class FragmentTest(unittest.TestCase):
             saved_fragment()
             patched_run_with_active_hash.assert_called_with("some_hash")
 
+
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
 
 ELEMENT_PRODUCER = Callable[[], Any]
@@ -381,8 +382,8 @@ def _run_fragment_writes_to_nested_outside_container_app3(
     @st.experimental_fragment
     def _some_method():
         st.write("Hello")
-        # this is forbidden
         with st.container():
+            # this is forbidden
             with outside_container:
                 element_producer()
 
@@ -399,7 +400,6 @@ def _run_fragment_writes_to_inside_container_app(
         inside_container = st.container()
 
         st.write("Hello")
-        # this is forbidden
         with inside_container:
             element_producer()
 
@@ -416,7 +416,6 @@ def _run_fragment_writes_to_nested_inside_container_app(
         inside_container = st.container()
 
         st.write("Hello")
-        # this is forbidden
         with st.container():
             with inside_container:
                 element_producer()
