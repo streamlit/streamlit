@@ -16,11 +16,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Callable, Literal, cast
 
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
+from streamlit.elements.layouts import Feedback, render_feedback_button
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
@@ -400,3 +401,39 @@ class ChatMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+    def reaction(
+        self, *, key: Key | None = None, options: Feedback, on_action: Callable
+    ) -> None:
+        """Display a reaction widget.
+
+        Parameters
+        ----------
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget based on
+            its content. Multiple widgets of the same type may not share the same key.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
+        >>> st.reaction()
+
+        .. output ::
+            https://doc-reaction.streamlit.app/
+            height: 350px
+        """
+        # We default to an empty string here and disallow user choice intentionally
+        key = to_key(key)
+
+        columns = self.dg.columns(len(options), inline=True)
+        for index, option in enumerate(options):
+            feedback_button_key = f"{key}_{index}_action"
+            icon = option.icon
+            key_prefix = option.label
+            if render_feedback_button(
+                columns[index], icon, key_prefix, feedback_button_key
+            ):
+                # _submit_feedback(key_prefix, feedback_key)
+                on_action(key_prefix)

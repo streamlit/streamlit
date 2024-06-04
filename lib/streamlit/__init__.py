@@ -150,6 +150,7 @@ caption = _main.caption
 camera_input = _main.camera_input
 chat_message = _main.chat_message
 chat_input = _main.chat_input
+chat_reaction = _main.reaction
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns

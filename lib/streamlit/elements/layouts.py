@@ -14,15 +14,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Callable, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
 
 if TYPE_CHECKING:
+    from google.protobuf.message import Message
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -30,7 +34,62 @@ if TYPE_CHECKING:
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 
 
+@dataclass
+class FeedbackOption:
+    icon: str
+    label: str
+
+
+Feedback = list[FeedbackOption]
+
+feedback_faces: Feedback = [
+    FeedbackOption(icon="😞", label="sad"),
+    FeedbackOption(icon="😔", label="disappointed"),
+    FeedbackOption(icon="😐", label="neutral"),
+    FeedbackOption(icon="😊", label="happy"),
+    FeedbackOption(icon="😄", label="very_happy"),
+]
+
+feedback_thumbs: Feedback = [
+    FeedbackOption("👍", "positive"),
+    FeedbackOption("👎", "negative"),
+]
+
+
+def render_feedback_button(
+    dg: DeltaGenerator, icon: str, key_prefix: str, feedback_key: str
+) -> bool:
+    session_state = _SessionStateProxy()
+    return dg.button(
+        icon,
+        key=f"{key_prefix}_{feedback_key}",
+        type=(
+            "primary"
+            if feedback_key in session_state
+            and session_state[feedback_key].get("option") == key_prefix
+            else "secondary"
+        ),
+    )
+
+
 class LayoutsMixin:
+    def _container(
+        self, *, height: int | None = None, border: bool | None = None
+    ) -> BlockProto:
+        block_proto = BlockProto()
+        block_proto.allow_empty = False
+        block_proto.vertical.border = border or False
+        if height:
+            # Activate scrolling container behavior:
+            block_proto.allow_empty = True
+            block_proto.vertical.height = height
+            if border is None:
+                # If border is None, we activated the
+                # border as default setting for scrolling
+                # containers.
+                block_proto.vertical.border = True
+        return block_proto
+
     @gather_metrics("container")
     def container(
         self, *, height: int | None = None, border: bool | None = None
@@ -127,20 +186,58 @@ class LayoutsMixin:
             height: 400px
 
         """
-        block_proto = BlockProto()
-        block_proto.allow_empty = False
-        block_proto.vertical.border = border or False
-        if height:
-            # Activate scrolling container behavior:
-            block_proto.allow_empty = True
-            block_proto.vertical.height = height
-            if border is None:
-                # If border is None, we activated the
-                # border as default setting for scrolling
-                # containers.
-                block_proto.vertical.border = True
-
+        block_proto = self._container(height=height, border=border)
         return self.dg._block(block_proto)
+
+    def actionable_container(
+        self,
+        *,
+        key: str = "",
+        height: int | None = None,
+        border: bool | None = None,
+        actions: Feedback,
+        on_action=Callable,
+    ) -> DeltaGenerator:
+        from streamlit.delta_generator import DeltaGenerator
+
+        class ActionableContainer(DeltaGenerator):
+            def create(
+                dg: DeltaGenerator, container_proto: BlockProto
+            ) -> ActionableContainer:
+                return cast(
+                    ActionableContainer,
+                    self.dg._block(
+                        block_proto=container_proto, dg_type=ActionableContainer
+                    ),
+                )
+
+            def __enter__(self) -> ActionableContainer:  # type: ignore[override]
+                # This is a little dubious: we're returning a different type than
+                # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
+                # should always return `self`?
+                super().__enter__()
+                return self
+
+            def __exit__(
+                self,
+                exc_type: type[BaseException] | None,
+                exc_val: BaseException | None,
+                exc_tb: "TracebackType" | None,
+            ) -> Literal[False]:
+                columns = self._main_dg.columns(len(actions), inline=True)
+                for index, action in enumerate(actions):
+                    feedback_button_key = f"{key}_{index}_action"
+                    # using columns as context-manager via `with columns[index]` does not work for some reason. Probably because we are in the exit of another context manager?!
+                    res = render_feedback_button(
+                        columns[index], action.icon, action.label, feedback_button_key
+                    )
+                    if res:
+                        on_action(action.label)
+
+                return super().__exit__(exc_type, exc_val, exc_tb)
+
+        container = self._container(height=height, border=border)
+        return ActionableContainer.create(self.dg, container)
 
     @gather_metrics("columns")
     def columns(
@@ -260,7 +357,7 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
-            col_proto.column.inline = inline
+            col_proto.column.inline = True
             col_proto.allow_empty = True
             return col_proto
 
