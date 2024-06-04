@@ -453,6 +453,8 @@ def show_widget_replay_deprecation(
         "The `experimental_allow_widgets` parameter is deprecated and will be removed "
         "in a future release. Please remove the `experimental_allow_widgets` parameter "
         f"from the `@st.{decorator}` decorator and move all widget commands outside of "
-        "cached functions. To speed up your app, we recommend moving your widgets into fragments. "
-        "Find out more in [our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment)."
+        "cached functions.\n\nTo speed up your app, we recommend moving your widgets into fragments. "
+        "Find out more about fragments in [our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
+        "\n\nIf you have a specific use-case that requires the `experimental_allow_widgets` functionality, "
+        "please tell us via an [issue on Github](https://github.com/streamlit/streamlit/issues)."
     )
