@@ -4,7 +4,6 @@ hypothesis>=6.17.4
 mypy>=1.4, <1.7
 mypy-protobuf>=3.2
 parameterized
-protobuf>=3.20
 pytest
 pytest-cov
 requests-mock
