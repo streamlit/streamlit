@@ -146,6 +146,13 @@ def use_folium():
 def use_option_menu():
     from streamlit_option_menu import option_menu
 
+    key = "my_option_menu"
+
+    # TODO: uncomment the on_change callback as soon as streamlit-option-menu is updated and uses the new on_change callback
+    # def on_change():
+    #     selection = st.session_state[key]
+    #     st.write(f"Selection changed to {selection}")
+
     with st.sidebar:
         selected = option_menu(
             "Main Menu",
@@ -153,6 +160,8 @@ def use_option_menu():
             icons=["house", "gear"],
             menu_icon="cast",
             default_index=1,
+            key=key,
+            # on_change=on_change,
         )
         st.write(selected)
 

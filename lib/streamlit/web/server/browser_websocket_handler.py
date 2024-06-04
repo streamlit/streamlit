@@ -191,18 +191,22 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         # developmentMode-only messages used in e2e tests to test reconnect handling and
         # disabling widgets.
         if msg.WhichOneof("type") == "debug_disconnect_websocket":
-            if config.get_option("global.developmentMode"):
+            if config.get_option("global.developmentMode") or config.get_option(
+                "global.e2eTest"
+            ):
                 self.close()
             else:
                 _LOGGER.warning(
-                    "Client tried to disconnect websocket when not in development mode."
+                    "Client tried to disconnect websocket when not in development mode or e2e testing."
                 )
         elif msg.WhichOneof("type") == "debug_shutdown_runtime":
-            if config.get_option("global.developmentMode"):
+            if config.get_option("global.developmentMode") or config.get_option(
+                "global.e2eTest"
+            ):
                 self._runtime.stop()
             else:
                 _LOGGER.warning(
-                    "Client tried to shut down runtime when not in development mode."
+                    "Client tried to shut down runtime when not in development mode or e2e testing."
                 )
         else:
             # AppSession handles all other BackMsg types.

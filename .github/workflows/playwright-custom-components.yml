@@ -41,29 +41,14 @@ jobs:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
       - name: Install playwright
         run: python -m playwright install --with-deps
-      - name: Run make protobuf
-        run: make protobuf
       - name: Run make frontend-fast
         run: make frontend-fast
       - name: Run make playwright-custom-components
         run: make playwright-custom-components
-      - name: Check that all screenshot have been committed
-        run: |
-          set -x;
-
-          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | grep snapshots | wc -l | bc -l || echo '0')
-          echo "Untracked files count: ${UNTRACKED_FILE_COUNT}"
-          if [[ "${UNTRACKED_FILE_COUNT}" -gt 0 ]]; then
-            echo "Untracked files:";
-            git ls-files --others --exclude-standard | grep snapshots;
-            exit 1;
-          fi
       - name: Upload failed test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright_test_results

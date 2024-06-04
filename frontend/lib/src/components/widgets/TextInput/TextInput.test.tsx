@@ -27,6 +27,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},
@@ -41,6 +42,7 @@ const getProps = (
   }),
   width: 300,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -102,7 +104,7 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     expect(textInput).toHaveAttribute("type", "text")
     // Check that no show/hide button renders
-    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const textInputContainer = screen.getByTestId("stTextInput-RootElement")
     const showButton = within(textInputContainer).queryByRole("button")
     expect(showButton).not.toBeInTheDocument()
   })
@@ -113,7 +115,7 @@ describe("TextInput widget", () => {
     const passwordTextInput = screen.getByPlaceholderText("Placeholder")
     expect(passwordTextInput).toHaveAttribute("type", "password")
     // Check for the show/hide button
-    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const textInputContainer = screen.getByTestId("stTextInput-RootElement")
     const showButton = within(textInputContainer).getByRole("button")
     expect(showButton).toBeInTheDocument()
   })
@@ -304,7 +306,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    props.widgetMgr.submitForm("form", undefined)
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)
