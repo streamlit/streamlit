@@ -33,8 +33,6 @@ pytest-xdist
 pytest-rerunfailures
 pytest-github-actions-annotate-failures
 
-mypy-protobuf>=3.2, <3.4
-
 # Used for testing of st.connection
 sqlalchemy[mypy]>=1.4.25, <2
 
