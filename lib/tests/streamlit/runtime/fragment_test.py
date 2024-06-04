@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any, Callable, List, Tuple
+from typing import Callable, List, Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
