@@ -151,8 +151,12 @@ class DataframeState(TypedDict, total=False):
 
     Attributes
     ----------
-    selection : DataframeSelectionState
-        The state of the ``on_select`` event.
+    selection : dict
+        The state of the ``on_select`` event. This attribure returns a
+            dictionary-like object that supports both key and attribute
+            notation. The attributes are described by the
+            ``DataframeSelectionState`` dictionary schema.
+
 
     """
 
