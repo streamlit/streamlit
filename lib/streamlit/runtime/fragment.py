@@ -248,14 +248,18 @@ def fragment(
     fragment rerun. In this case, elements will accumulate in those containers
     with each fragment rerun, until the next full-script rerun.
 
-    Calling `st.sidebar` in a fragment is not supported. To write elements to
+    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
     the sidebar with a fragment, call your fragment function inside a
-    `with st.sidebar` context manager.
+    ``with st.sidebar`` context manager.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
     interactions are additive across multiple fragment reruns. You are
     responsible for handling any side effects of that behavior.
+
+    .. warning::
+        Fragments can't contain other fragments. Additionally, using fragments
+        in widget callback functions is not supported.
 
     Parameters
     ----------
