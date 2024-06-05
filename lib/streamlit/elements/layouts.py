@@ -62,11 +62,17 @@ class ToolbarContainerSerde:
 class FeedbackOption:
     icon: str
     label: str
+    key: str = ""
 
 
-Feedback = list[FeedbackOption]
+@dataclass
+class Toolbar:
+    options: list[FeedbackOption]
+    key: str = ""
+    on_click: Callable[[str], None] | None = None
 
-feedback_faces: Feedback = [
+
+feedback_faces: list[FeedbackOption] = [
     FeedbackOption(icon="😞", label="sad"),
     FeedbackOption(icon="😔", label="disappointed"),
     FeedbackOption(icon="😐", label="neutral"),
@@ -74,10 +80,17 @@ feedback_faces: Feedback = [
     FeedbackOption(icon="😄", label="very_happy"),
 ]
 
-feedback_thumbs: Feedback = [
+feedback_thumbs: list[FeedbackOption] = [
     FeedbackOption("👍", "positive"),
     FeedbackOption("👎", "negative"),
 ]
+
+get_feedback_faces: Callable[
+    [str, Callable[[str], None] | None], Toolbar
+] = lambda key, on_click: Toolbar(key=key, options=feedback_faces, on_click=on_click)
+get_feedback_thumbs: Callable[
+    [str, Callable[[str], None] | None], Toolbar
+] = lambda key, on_click: Toolbar(key=key, options=feedback_thumbs, on_click=on_click)
 
 
 def render_feedback_button(
@@ -125,8 +138,7 @@ class LayoutsMixin:
         *,
         height: int | None = None,
         border: bool | None = None,
-        key: str = "",
-        toolbar_elements: list | None = None,
+        toolbar: Toolbar | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -222,21 +234,21 @@ class LayoutsMixin:
         """
         block_proto = self._container(height=height, border=border)
         toolbar_container_state = None
-        if toolbar_elements:
-            toolbar = block_proto.vertical.toolbar
-            for t in toolbar_elements:
-                toolbar.append(
+        if toolbar:
+            toolbar_proto = block_proto.vertical.toolbar
+            for t in toolbar.options:
+                toolbar_proto.append(
                     BlockProto.Vertical.ToolbarElement(
-                        icon=t["icon"].encode("utf-8"), label=t["label"].encode("utf-8")
+                        icon=t.icon.encode("utf-8"), label=t.label.encode("utf-8")
                     )
                 )
-            block_proto.vertical.id = key
+            block_proto.vertical.id = toolbar.key
             ctx = get_script_run_ctx()
             serde = ToolbarContainerSerde(None)
             toolbar_container_state = register_widget(
                 "toolbar_container",
                 block_proto.vertical,
-                user_key=key,
+                user_key=toolbar.key,
                 ctx=ctx,
                 serializer=serde.serialize,
                 deserializer=serde.deserialize,
@@ -254,55 +266,55 @@ class LayoutsMixin:
         )
         return block
 
-    def actionable_container(
-        self,
-        *,
-        key: str = "",
-        height: int | None = None,
-        border: bool | None = None,
-        actions: Feedback,
-        on_action=Callable,
-    ) -> DeltaGenerator:
-        from streamlit.delta_generator import DeltaGenerator
+    # def actionable_container(
+    #     self,
+    #     *,
+    #     height: int | None = None,
+    #     border: bool | None = None,
+    #     toolbar: Toolbar,
+    # ) -> DeltaGenerator:
+    #     from streamlit.delta_generator import DeltaGenerator
 
-        class ActionableContainer(DeltaGenerator):
-            def create(
-                dg: DeltaGenerator, container_proto: BlockProto
-            ) -> ActionableContainer:
-                return cast(
-                    ActionableContainer,
-                    self.dg._block(
-                        block_proto=container_proto, dg_type=ActionableContainer
-                    ),
-                )
+    #     class ActionableContainer(DeltaGenerator):
+    #         def create(
+    #             dg: DeltaGenerator, container_proto: BlockProto
+    #         ) -> ActionableContainer:
+    #             return cast(
+    #                 ActionableContainer,
+    #                 self.dg._block(
+    #                     block_proto=container_proto, dg_type=ActionableContainer
+    #                 ),
+    #             )
 
-            def __enter__(self) -> ActionableContainer:  # type: ignore[override]
-                # This is a little dubious: we're returning a different type than
-                # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
-                # should always return `self`?
-                super().__enter__()
-                return self
+    #         def __enter__(self) -> ActionableContainer:  # type: ignore[override]
+    #             # This is a little dubious: we're returning a different type than
+    #             # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
+    #             # should always return `self`?
+    #             super().__enter__()
+    #             return self
 
-            def __exit__(
-                self,
-                exc_type: type[BaseException] | None,
-                exc_val: BaseException | None,
-                exc_tb: "TracebackType" | None,
-            ) -> Literal[False]:
-                columns = self._main_dg.columns(len(actions), inline=True)
-                for index, action in enumerate(actions):
-                    feedback_button_key = f"{key}_action"  # f"{key}_{index}_action"
-                    # using columns as context-manager via `with columns[index]` does not work for some reason. Probably because we are in the exit of another context manager?!
-                    res = render_feedback_button(
-                        columns[index], action.icon, action.label, feedback_button_key
-                    )
-                    if res:
-                        on_action(action.label)
+    #         def __exit__(
+    #             self,
+    #             exc_type: type[BaseException] | None,
+    #             exc_val: BaseException | None,
+    #             exc_tb: "TracebackType" | None,
+    #         ) -> Literal[False]:
+    #             columns = self._main_dg.columns(len(toolbar.options), inline=True)
+    #             for index, action in enumerate(toolbar.options):
+    #                 feedback_button_key = (
+    #                     f"{toolbar.key}_action"  # f"{key}_{index}_action"
+    #                 )
+    #                 # using columns as context-manager via `with columns[index]` does not work for some reason. Probably because we are in the exit of another context manager?!
+    #                 res = render_feedback_button(
+    #                     columns[index], action.icon, action.label, feedback_button_key
+    #                 )
+    #                 if res:
+    #                     toolbar.on_click(action.label)
 
-                return super().__exit__(exc_type, exc_val, exc_tb)
+    #             return super().__exit__(exc_type, exc_val, exc_tb)
 
-        container = self._container(height=height, border=border)
-        return ActionableContainer.create(self.dg, container)
+    #     container = self._container(height=height, border=border)
+    #     return ActionableContainer.create(self.dg, container)
 
     @gather_metrics("columns")
     def columns(

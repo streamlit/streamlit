@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
-from streamlit.elements.layouts import Feedback, render_feedback_button
+from streamlit.elements.layouts import Toolbar, render_feedback_button
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
@@ -130,9 +130,7 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
-        key: Key | None = None,
-        feedback_options: Feedback = None,
-        on_action: Callable = None,
+        toolbar: Toolbar | None = None,
     ) -> DeltaGenerator:
         """Insert a chat message container.
 
@@ -238,8 +236,8 @@ class ChatMixin:
 
         chat_message_dg = self.dg._block(block_proto=block_proto)
 
-        if feedback_options and name in ["assistant", "ai"]:
-            self.reaction(key=key, options=feedback_options, on_action=on_action)
+        if toolbar and name in ["assistant", "ai"]:
+            self.reaction(toolbar=toolbar)
 
         return chat_message_dg
 
@@ -405,14 +403,7 @@ class ChatMixin:
 
         return widget_state.value if not widget_state.value_changed else None
 
-    @property
-    def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
-
-    def reaction(
-        self, *, key: Key | None = None, options: Feedback, on_action: Callable
-    ) -> None:
+    def reaction(self, *, toolbar: Toolbar) -> None:
         """Display a reaction widget.
 
         Parameters
@@ -432,9 +423,12 @@ class ChatMixin:
             https://doc-reaction.streamlit.app/
             height: 350px
         """
-        # We default to an empty string here and disallow user choice intentionally
-        key = to_key(key)
+        if toolbar is None:
+            raise StreamlitAPIException("Toolbar must be defined")
 
+        # We default to an empty string here and disallow user choice intentionally
+        key = to_key(toolbar.key)
+        options = toolbar.options
         columns = self.dg.columns(len(options), inline=True)
         for index, option in enumerate(options):
             feedback_button_key = f"{key}_action"  # f"{key}_{index}_action"
@@ -444,4 +438,9 @@ class ChatMixin:
                 columns[index], icon, key_prefix, feedback_button_key
             ):
                 # _submit_feedback(key_prefix, feedback_key)
-                on_action(key_prefix)
+                toolbar.on_click(key_prefix)
+
+    @property
+    def dg(self) -> DeltaGenerator:
+        """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)
