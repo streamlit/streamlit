@@ -31,6 +31,9 @@ import {
   FileDownload,
   Search,
   Close,
+  ThumbUp,
+  ThumbDown,
+  DoNotDisturb,
 } from "@emotion-icons/material-outlined"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -45,6 +48,7 @@ import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
+import ToolbarContext from "@streamlit/lib/src/components/core/ToolbarContext"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import EditingState, { getColumnName } from "./EditingState"
@@ -613,6 +617,9 @@ function DataFrame({
     }, 1)
   }, [resizableSize, numRows, glideColumns])
 
+  const toolbar = React.useContext(ToolbarContext)
+  const textDecoder = new TextDecoder("utf-8")
+
   return (
     <StyledResizableContainer
       data-testid="stDataFrame"
@@ -738,6 +745,29 @@ function DataFrame({
             }}
           />
         )}
+        {toolbar &&
+          toolbar.elements.map(toolbarElement => {
+            const label =
+              (toolbarElement.label &&
+                textDecoder.decode(toolbarElement.label)) ??
+              ""
+            const icon =
+              toolbarElement.icon && textDecoder.decode(toolbarElement.icon)
+            let emotionIcon = DoNotDisturb
+            if (icon === "👍") {
+              emotionIcon = ThumbUp
+            } else if (icon === "👎") {
+              emotionIcon = ThumbDown
+            }
+            return (
+              <ToolbarAction
+                key={label}
+                label={label}
+                icon={emotionIcon}
+                onClick={() => toolbar.onElementClick(label)}
+              />
+            )
+          })}
       </Toolbar>
       <Resizable
         data-testid="stDataFrameResizable"

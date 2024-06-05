@@ -216,6 +216,11 @@ const StreamlitSyntaxHighlighter = React.lazy(
     )
 )
 
+export interface ToolbarElement {
+  icon: Uint8Array
+  label: Uint8Array
+}
+
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width: number
@@ -242,6 +247,7 @@ const RawElementNodeRenderer = (
   const elementProps = {
     width: props.width,
     disableFullscreenMode: props.disableFullscreenMode,
+    // toolbar: props.toolbar,
   }
 
   const widgetProps = {

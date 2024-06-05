@@ -54,6 +54,7 @@ import {
   StyledVerticalBlockBorderWrapper,
   StyledVerticalBlockBorderWrapperProps,
 } from "./styled-components"
+import ToolbarContext from "../ToolbarContext"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
@@ -327,7 +328,33 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
 
   // To apply a border, we need to wrap the StyledVerticalBlockWrapper again, otherwise the width
   // calculation would not take the padding into consideration.
-  return (
+
+  const withToolbarElementContext = (element: ReactElement): ReactElement => {
+    const toolbarElements = props.node.deltaBlock.vertical?.toolbar
+
+    if (toolbarElements) {
+      return (
+        <ToolbarContext.Provider
+          value={{
+            elements: toolbarElements,
+            onElementClick: (label: string) => {
+              props.widgetMgr.setStringValue(
+                props.node.deltaBlock.vertical as BlockProto.Vertical,
+                label,
+                { fromUi: true },
+                ""
+              )
+            },
+          }}
+        >
+          {element}
+        </ToolbarContext.Provider>
+      )
+    }
+    return element
+  }
+
+  const vertialBlockBorderWraper = (
     <VerticalBlockBorderWrapper
       border={border}
       height={height}
@@ -341,6 +368,8 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       </StyledVerticalBlockWrapper>
     </VerticalBlockBorderWrapper>
   )
+
+  return withToolbarElementContext(vertialBlockBorderWraper)
 }
 
 const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {

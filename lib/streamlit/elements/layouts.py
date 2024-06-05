@@ -22,7 +22,14 @@ from typing_extensions import TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    register_widget,
+)
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -32,6 +39,17 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
+
+
+@dataclass
+class ToolbarContainerSerde:
+    value: str | None
+
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
+        return ui_value if ui_value is not None else self.value
+
+    def serialize(self, v: str | None) -> str | None:
+        return v
 
 
 @dataclass
@@ -97,7 +115,12 @@ class LayoutsMixin:
 
     @gather_metrics("container")
     def container(
-        self, *, height: int | None = None, border: bool | None = None
+        self,
+        *,
+        height: int | None = None,
+        border: bool | None = None,
+        key: str = "",
+        toolbar_elements: list | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -192,6 +215,31 @@ class LayoutsMixin:
 
         """
         block_proto = self._container(height=height, border=border)
+        if toolbar_elements:
+            toolbar = block_proto.vertical.toolbar
+            for t in toolbar_elements:
+                toolbar.append(
+                    BlockProto.Vertical.ToolbarElement(
+                        icon=t["icon"].encode("utf-8"), label=t["label"].encode("utf-8")
+                    )
+                )
+            block_proto.vertical.id = key
+            ctx = get_script_run_ctx()
+            serde = ToolbarContainerSerde(None)
+            toolbar_container_state = register_widget(
+                "toolbar_container",
+                block_proto.vertical,
+                user_key=key,
+                ctx=ctx,
+                serializer=serde.serialize,
+                deserializer=serde.deserialize,
+            )
+            # self.dg._enqueue("toolbar_container", block_proto)
+            # self.dg._block(block_proto)
+            # return toolbar_container_state
+            print("toolbar_container_state", toolbar_container_state)
+            self.dg._value = toolbar_container_state
+
         return self.dg._block(block_proto)
 
     def actionable_container(
@@ -857,3 +905,7 @@ class LayoutsMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+    @property
+    def value(self) -> str:
+        return self.dg._parent._value.value

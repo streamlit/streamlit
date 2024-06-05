@@ -274,6 +274,8 @@ class DeltaGenerator(
                 if callable(func):
                     func.__module__ = self.__module__
 
+        self._value = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

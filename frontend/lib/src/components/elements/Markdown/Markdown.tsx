@@ -17,6 +17,7 @@
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
+import ToolbarContext from "@streamlit/lib/src/components/core/ToolbarContext"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
@@ -36,6 +37,10 @@ export default function Markdown({
   element,
 }: MarkdownProps): ReactElement {
   const styleProp = { width }
+
+  const toolbar = React.useContext(ToolbarContext)
+  const textDecoder = new TextDecoder("utf-8")
+
   return (
     <div className="stMarkdown" style={styleProp} data-testid="stMarkdown">
       {element.help ? (
@@ -56,6 +61,27 @@ export default function Markdown({
           source={element.body}
           allowHTML={element.allowHtml}
         />
+      )}
+      {toolbar && (
+        <div>
+          {toolbar.elements.map(toolbarElement => {
+            const label =
+              (toolbarElement.label &&
+                textDecoder.decode(toolbarElement.label)) ??
+              ""
+            const icon =
+              toolbarElement.icon && textDecoder.decode(toolbarElement.icon)
+            return (
+              <button
+                key={label}
+                title={label}
+                onClick={() => toolbar.onElementClick(label)}
+              >
+                {icon}
+              </button>
+            )
+          })}
+        </div>
       )}
     </div>
   )

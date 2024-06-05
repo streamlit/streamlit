@@ -39,6 +39,7 @@ from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
+from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -89,6 +90,7 @@ WidgetProto: TypeAlias = Union[
     TextArea,
     TextInput,
     TimeInput,
+    Block.Vertical,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"

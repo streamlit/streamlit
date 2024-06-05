@@ -39,6 +39,14 @@ message Block {
     bool border = 1;
     // Height of the container, activates scrolling
     uint32 height = 2;
+
+    // id is required for commiting toolbar value
+    string id = 3;
+    message ToolbarElement {
+      bytes icon = 1;
+      bytes label = 2;
+    }
+    repeated ToolbarElement toolbar = 4;
   }
 
   message Horizontal {
