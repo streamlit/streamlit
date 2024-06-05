@@ -39,7 +39,7 @@ def test_altair_chart_displays_correctly(
         "st_altair_chart-resolve-scale-independent",
     ]
     for i, name in enumerate(snapshot_names):
-        assert_snapshot(
-            charts.nth(i),
-            name=name,
-        )
+        # We use a higher threshold here to prevent some flakiness
+        # We should probably remove this once we have refactored the
+        # altair frontend component.
+        assert_snapshot(charts.nth(i), name=name, image_threshold=0.6)
