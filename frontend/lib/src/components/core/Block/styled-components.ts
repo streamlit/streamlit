@@ -88,12 +88,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       marginTop: "-0.375rem",
       marginBottom: "-0.375rem",
     },
-    // Lower the min height of stacked/grouped checkboxes since we want to have
-    // them closer to each other visually.
+    // Lower the min height of stacked/grouped checkboxes to have them appear visually
+    // closer together to each other.
     // To detect & cover all grouped/stacked checkboxes, we apply a complex CSS selector
-    // that selects all checkboxes that are directly followed by another checkbox
-    // + the next direct sibling if its also a checkbox since the last one
-    // in a group is not followed by another checkbox.
+    // that selects all checkboxes that are directly followed by another checkbox.
+    // Since the last checkbox in a group isn't followed by another checkbox, we also
+    // need to target the direct sibling (if it is a checkbox) of any of the targeted checkboxes.
     [`&:has(+ & > ${StyledCheckbox}) > ${StyledCheckbox}, &:has(> ${StyledCheckbox}):has(+ & > ${StyledCheckbox}) + & > ${StyledCheckbox}`]:
       {
         minHeight: "1.5rem",
