@@ -338,7 +338,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
           value={{
             elements: toolbarElements,
             onElementClick: (label: string) => {
-              props.widgetMgr.setStringValue(
+              props.widgetMgr.setStringTriggerValue(
                 props.node.deltaBlock.vertical as BlockProto.Vertical,
                 label,
                 { fromUi: true },

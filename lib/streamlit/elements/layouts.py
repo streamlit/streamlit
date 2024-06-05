@@ -21,6 +21,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
@@ -45,11 +46,16 @@ SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 class ToolbarContainerSerde:
     value: str | None
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
-        return ui_value if ui_value is not None else self.value
+    def deserialize(
+        self, ui_value: StringTriggerValueProto | None, widget_id: str = ""
+    ) -> str | None:
+        if ui_value is None or not ui_value.HasField("data"):
+            return None
 
-    def serialize(self, v: str | None) -> str | None:
-        return v
+        return ui_value.data
+
+    def serialize(self, v: str | None) -> StringTriggerValueProto:
+        return StringTriggerValueProto(data=v)
 
 
 @dataclass
@@ -215,6 +221,7 @@ class LayoutsMixin:
 
         """
         block_proto = self._container(height=height, border=border)
+        toolbar_container_state = None
         if toolbar_elements:
             toolbar = block_proto.vertical.toolbar
             for t in toolbar_elements:
@@ -238,9 +245,14 @@ class LayoutsMixin:
             # self.dg._block(block_proto)
             # return toolbar_container_state
             print("toolbar_container_state", toolbar_container_state)
-            self.dg._value = toolbar_container_state
-
-        return self.dg._block(block_proto)
+            # self.dg._value = toolbar_container_state
+        block = self.dg._block(block_proto)
+        block._value = (
+            toolbar_container_state.value
+            if toolbar_container_state is not None
+            else None
+        )
+        return block
 
     def actionable_container(
         self,
@@ -908,4 +920,4 @@ class LayoutsMixin:
 
     @property
     def value(self) -> str:
-        return self.dg._parent._value.value
+        return self.dg._parent._value
