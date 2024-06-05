@@ -203,7 +203,7 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(
-        app, "Images in markdown should keep inside the container width"
+        app, "Images in markdown should stay inside the container width"
     )
     image_element = markdown_element.locator("img")
 
