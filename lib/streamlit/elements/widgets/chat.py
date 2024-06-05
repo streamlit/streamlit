@@ -130,6 +130,9 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
+        key: Key | None = None,
+        feedback_options: Feedback = None,
+        on_action: Callable = None,
     ) -> DeltaGenerator:
         """Insert a chat message container.
 
@@ -233,7 +236,12 @@ class ChatMixin:
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
 
-        return self.dg._block(block_proto=block_proto)
+        chat_message_dg = self.dg._block(block_proto=block_proto)
+
+        if feedback_options and name in ["assistant", "ai"]:
+            self.reaction(key=key, options=feedback_options, on_action=on_action)
+
+        return chat_message_dg
 
     @gather_metrics("chat_input")
     def chat_input(
