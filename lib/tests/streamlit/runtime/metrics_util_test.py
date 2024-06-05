@@ -198,6 +198,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         def test_function(param1: int, param2: str, param3: float = 0.1) -> str:
             st.markdown("This command should not be tracked")
             st.text_input("This command should also not be tracked")
+            st.text("This command should also not be tracked")
             return "foo"
 
         test_function(param1=10, param2="foobar")
