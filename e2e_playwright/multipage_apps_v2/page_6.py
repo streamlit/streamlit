@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
 
 st.header("Page 6")
@@ -22,3 +24,6 @@ with st.sidebar:
     st.write("You picked:", color)
     st.divider()
     st.text_area("Some random text:", height=500)
+
+time.sleep(5)
+st.write("Finished sleeping for 5 seconds.")
