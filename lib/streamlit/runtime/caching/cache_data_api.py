@@ -402,7 +402,7 @@ class CacheDataAPI:
         cache with ``st.cache_data.clear()``.
 
         To cache global resources, use ``st.cache_resource`` instead. Learn more
-        about caching at https://docs.streamlit.io/library/advanced-features/caching.
+        about caching at https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------

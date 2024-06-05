@@ -355,7 +355,7 @@ class ArrowMixin:
               to change the displayed name of the column to "Dollar values"
               and add a "$" prefix in each cell. For more info on the
               available column types and config options, see
-              `Column configuration <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+              `Column configuration <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 

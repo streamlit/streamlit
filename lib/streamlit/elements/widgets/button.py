@@ -56,7 +56,7 @@ if TYPE_CHECKING:
 FORM_DOCS_INFO: Final = """
 
 For more information, refer to the
-[documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).
+[documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
 DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
@@ -560,8 +560,7 @@ class ButtonMixin:
         navigation menus for your apps!
 
         .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
-        .. _client.showSidebarNavigation: https://docs.streamlit.io/library\
-            /advanced-features/configuration#client
+        .. _client.showSidebarNavigation: https://docs.streamlit.io/develop/api-reference/configuration/config.toml#client
 
         .. output ::
             https://doc-page-link.streamlit.app/

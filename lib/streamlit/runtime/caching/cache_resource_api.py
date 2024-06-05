@@ -282,7 +282,7 @@ class CacheResourceAPI:
         cache with ``st.cache_resource.clear()``.
 
         To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/library/advanced-features/caching.
+        https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------

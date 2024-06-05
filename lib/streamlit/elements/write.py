@@ -86,7 +86,7 @@ class WriteMixin:
         Example
         -------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
-        basic LLM chat app <https://docs.streamlit.io/knowledge-base/tutorials\
+        basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
         you can pass a generic generator function as input:
 

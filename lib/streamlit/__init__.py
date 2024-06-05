@@ -245,7 +245,7 @@ experimental_singleton = _experimental_singleton
 experimental_user = _UserInfoProxy()
 
 
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
