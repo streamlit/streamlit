@@ -99,9 +99,11 @@ class DataframeSelectionState(TypedDict, total=False):
     Attributes
     ----------
     rows : list[int]
-        The selected rows, identified by their positional index. The positional
-        indices match the original dataframe, even if the user sorts the
-        dataframe in their browser.
+        The selected rows, identified by their integer position. The integer
+        positions match the original dataframe, even if the user sorts the
+        dataframe in their browser. For a ``pandas.DataFrame``, you can
+        retrieve data from its interger position using methods like ``.iloc[]``
+        or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
 
