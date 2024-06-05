@@ -37,6 +37,7 @@ from streamlit.proto.NewSession_pb2 import (
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching
+from streamlit.runtime.file_secrets import FileSecrets
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
@@ -44,7 +45,7 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-from streamlit.runtime.secrets import secrets_singleton
+from streamlit.runtime.secrets import SecretsProvider
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.source_util import PageHash, PageInfo
 from streamlit.version import STREAMLIT_VERSION_STRING
@@ -166,6 +167,8 @@ class AppSession:
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
+        self._secrets: SecretsProvider = FileSecrets()
+
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def __del__(self) -> None:
@@ -198,7 +201,7 @@ class AppSession:
         self._stop_pages_listener = self._pages_manager.register_pages_changed_callback(
             self._on_pages_changed
         )
-        secrets_singleton.file_change_listener.connect(self._on_secrets_file_changed)
+        self._secrets.change_listener.connect(self._on_secrets_file_changed)
 
     def disconnect_file_watchers(self) -> None:
         """Disconnect the file watcher handlers registered by register_file_watchers."""
@@ -209,7 +212,7 @@ class AppSession:
         if self._stop_pages_listener is not None:
             self._stop_pages_listener()
 
-        secrets_singleton.file_change_listener.disconnect(self._on_secrets_file_changed)
+        self._secrets.change_listener.disconnect(self._on_secrets_file_changed)
 
         self._local_sources_watcher = None
         self._stop_config_listener = None
@@ -412,6 +415,7 @@ class AppSession:
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
+            secrets=self._secrets,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

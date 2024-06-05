@@ -29,7 +29,6 @@ from streamlit.deprecation_util import deprecate_obj_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.secrets import secrets_singleton
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
@@ -293,8 +292,11 @@ def connection_factory(
             # exploding with a KeyError since, if type isn't explicitly specified here,
             # it must be the case that it's defined in secrets.toml and should raise an
             # Exception otherwise.
-            secrets_singleton.load_if_toml_exists()
-            type = secrets_singleton["connections"][name]["type"]
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+            secrets = get_script_run_ctx().secrets
+            secrets.load_secrets()
+            type = secrets["connections"][name]["type"]
 
     # type is a nice kwarg name for the st.connection user but is annoying to work with
     # since it conflicts with the builtin function name and thus gets syntax

@@ -18,7 +18,7 @@ import json
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
-from streamlit.runtime.secrets import AttrDict, secrets_singleton
+from streamlit.runtime.secrets import AttrDict
 from streamlit.util import calc_md5
 
 RawConnectionT = TypeVar("RawConnectionT")
@@ -64,16 +64,24 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         -------
         None
         """
+
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
         self._connection_name = connection_name
         self._kwargs = kwargs
 
         self._config_section_hash = calc_md5(json.dumps(self._secrets.to_dict()))
-        secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
+
+        get_script_run_ctx().secrets.change_listener.connect(self._on_secrets_changed)
 
         self._raw_instance: RawConnectionT | None = self._connect(**kwargs)
 
     def __del__(self) -> None:
-        secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        get_script_run_ctx().secrets.change_listener.disconnect(
+            self._on_secrets_changed
+        )
 
     def __getattribute__(self, name: str) -> Any:
         try:

@@ -28,6 +28,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
+from streamlit.runtime.secrets import SecretsProvider
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
@@ -64,6 +65,7 @@ class ScriptRunContext:
     user_info: UserInfo
     fragment_storage: "FragmentStorage"
     pages_manager: "PagesManager"
+    secrets: SecretsProvider
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False

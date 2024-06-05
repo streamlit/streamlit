@@ -953,6 +953,36 @@ _create_option(
     sensitive=True,
 )
 
+# Config Section: Secrets #
+
+_create_section("secrets", "Settings for Streamlit Secrets")
+
+_create_option(
+    "secrets.root",
+    description="""
+        Configure streamlit folders to look for secrets
+    """,
+    visibility="hidden",
+    default_val=[
+        file_util.get_streamlit_file_path("secrets.toml"),
+        # NOTE: The order here is important! Project-level secrets should overwrite global
+        # secrets.
+        file_util.get_project_streamlit_file_path("secrets.toml"),
+    ],
+    type_=list,
+)
+
+_create_option(
+    "secrets.multipleFilesMode",
+    description="""
+        Configure streamlit to look for secrets in a multi-file structure instead of toml file.
+        Compatible with Snowpark Container Services.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
 
 # Config Section: Magic #
 

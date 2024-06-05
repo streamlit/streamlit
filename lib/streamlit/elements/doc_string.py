@@ -30,7 +30,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_runner import (
     __file__ as SCRIPTRUNNER_FILENAME,
 )
-from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.secrets import SecretsProvider
 from streamlit.string_util import is_mem_address_str
 
 if TYPE_CHECKING:
@@ -459,7 +459,7 @@ def _get_value(obj, var_name):
 
 
 def _get_human_readable_value(value):
-    if isinstance(value, Secrets):
+    if isinstance(value, SecretsProvider):
         # Don't want to read secrets.toml because that will show a warning if there's no
         # secrets.toml file.
         return None

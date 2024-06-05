@@ -86,7 +86,6 @@ from streamlit.runtime.connection_factory import (
 )
 from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
-from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import (
     SessionStateProxy as _SessionStateProxy,
     QueryParamsProxy as _QueryParamsProxy,
@@ -130,8 +129,6 @@ def _update_logger() -> None:
 # in an alternative config.
 _config.on_config_parsed(_update_logger, True)
 
-
-secrets = _secrets_singleton
 
 # DeltaGenerator methods:
 _main = _main_dg

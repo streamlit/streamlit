@@ -15,6 +15,7 @@
 import threading
 from typing import Any, Callable, Optional
 
+from streamlit.runtime.file_secrets import FileSecrets
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -70,6 +71,7 @@ def call_on_threads(
                 user_info={"email": "test@test.com"},
                 fragment_storage=MemoryFragmentStorage(),
                 pages_manager=PagesManager(""),
+                secrets=FileSecrets(),
             )
             thread = threads[ii]
             add_script_run_ctx(thread, ctx)

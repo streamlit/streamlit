@@ -41,6 +41,7 @@ from streamlit.runtime.scriptrunner.script_run_context import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.secrets import SecretsProvider
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
@@ -117,6 +118,7 @@ class ScriptRunner:
         user_info: dict[str, str | None],
         fragment_storage: "FragmentStorage",
         pages_manager: "PagesManager",
+        secrets: SecretsProvider,
     ):
         """Initialize the ScriptRunner.
 
@@ -165,6 +167,7 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
         self._fragment_storage = fragment_storage
+        self._secrets = secrets
 
         self._pages_manager = pages_manager
         self._requests = ScriptRequests()
@@ -298,6 +301,7 @@ class ScriptRunner:
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
+            secrets=self._secrets,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 

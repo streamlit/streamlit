@@ -20,13 +20,15 @@ import tempfile
 import unittest
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
-from typing import Mapping, MutableMapping
+from typing import Dict, Mapping, MutableMapping
 from unittest.mock import MagicMock, mock_open, patch
 
 from parameterized import parameterized
 from toml import TomlDecodeError
 
-from streamlit.runtime.secrets import SECRETS_FILE_LOCS, AttrDict, Secrets
+from streamlit import config
+from streamlit.runtime.file_secrets import FileSecrets
+from streamlit.runtime.secrets import AttrDict
 from tests.exception_capturing_thread import call_on_threads
 
 MOCK_TOML = """
@@ -42,6 +44,14 @@ email="eng@streamlit.io"
 MOCK_SECRETS_FILE_LOC = "/mock/secrets.toml"
 
 
+class FakeFileSystem:
+    def __init__(self, paths: Dict[str, str]):
+        self.paths = paths
+
+    def open(self, file_name, **args):
+        pass
+
+
 class SecretsTest(unittest.TestCase):
     """Tests for st.secrets with a single secrets.toml file"""
 
@@ -51,7 +61,11 @@ class SecretsTest(unittest.TestCase):
         self._prev_environ = dict(os.environ)
         # Run tests on our own Secrets instance to reduce global state
         # mutations.
-        self.secrets = Secrets([MOCK_SECRETS_FILE_LOC])
+        self.secrets = FileSecrets()
+
+        config._set_option("secrets.root", [MOCK_SECRETS_FILE_LOC], "test")
+        config._set_option("secrets.multiple_files_mode", True, "test")
+        self.multiple_file_secrets = FileSecrets()
 
     def tearDown(self) -> None:
         os.environ.clear()
@@ -260,7 +274,7 @@ class MultipleSecretsFilesTest(unittest.TestCase):
             "/mock1/secrets.toml",
             "/mock2/secrets.toml",
         ]
-        secrets = Secrets(secrets_file_locations)
+        secrets = FileSecrets()
 
         with self.assertRaises(FileNotFoundError):
             secrets.get("no_such_secret", None)
@@ -278,12 +292,12 @@ class MultipleSecretsFilesTest(unittest.TestCase):
             self._path1,
             "/mock2/secrets.toml",
         ]
-        secrets = Secrets(secrets_file_locations)
+        secrets = FileSecrets()
 
         self.assertEqual(secrets.db_username, "Jane")
         patched_logger.info.assert_not_called()
 
-    @patch("streamlit.runtime.secrets._LOGGER")
+    @patch("streamlit.runtime.file_secrets._LOGGER")
     def test_secret_overwriting(self, patched_logger):
         """Test that if both global and project-level secrets.toml files exist, secrets
         from both are present in st.secrets, and secrets from the project-level file
@@ -307,7 +321,8 @@ email2="eng2@streamlit.io"
             self._path1,
             self._path2,
         ]
-        secrets = Secrets(secrets_file_locations)
+        config.set_option("secrets.root", secrets_file_locations)
+        secrets = FileSecrets()
 
         # secrets.db_username is only defined in the first secrets.toml file, so it
         # remains unchanged.
@@ -337,7 +352,7 @@ class SecretsThreadingTests(unittest.TestCase):
         # st.secrets modifies os.environ, so we save it here and
         # restore in tearDown.
         self._prev_environ = dict(os.environ)
-        self.secrets = Secrets(MOCK_SECRETS_FILE_LOC)
+        self.secrets = FileSecrets()
 
     def tearDown(self) -> None:
         os.environ.clear()
@@ -368,10 +383,18 @@ class SecretsThreadingTests(unittest.TestCase):
         call_on_threads(reload_secrets, num_threads=self.NUM_THREADS)
 
 
+def key_error():
+    pass
+
+
+def attr_error():
+    pass
+
+
 class AttrDictTest(unittest.TestCase):
     def test_attr_dict_is_mapping_but_not_built_in_dict(self):
         """Verify that AttrDict implements Mapping, but not built-in Dict"""
-        attr_dict = AttrDict({"x": {"y": "z"}})
+        attr_dict = AttrDict({"x": {"y": "z"}}, attr_error, key_error)
         self.assertIsInstance(attr_dict.x, Mapping)
         self.assertIsInstance(attr_dict.x, MappingABC)
         self.assertNotIsInstance(attr_dict.x, MutableMapping)
@@ -380,7 +403,7 @@ class AttrDictTest(unittest.TestCase):
 
     def test_attr_dict_to_dict(self):
         d = {"x": {"y": "z"}}
-        attr_dict = AttrDict(d)
+        attr_dict = AttrDict(d, attr_error, key_error)
 
         assert attr_dict.to_dict() == d
 
