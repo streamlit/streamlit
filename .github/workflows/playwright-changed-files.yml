@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  playwright-e2e-tests-changed-files:
     runs-on: ubuntu-latest-8-cores
 
     defaults:

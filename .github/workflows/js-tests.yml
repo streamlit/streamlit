@@ -1,4 +1,4 @@
-name: Javascript
+name: Javascript Unit Tests
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  js_test:
+  js-unit-tests:
     runs-on: ubuntu-latest
 
     defaults:
@@ -75,7 +75,7 @@ jobs:
       - name: Run frontend tests
         run: make jstest
 
-  components_lib_tests:
+  components-lib-tests:
     runs-on: ubuntu-latest
 
     defaults:

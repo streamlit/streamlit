@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  playwright-e2e-tests-custom-components:
     runs-on: ubuntu-latest
     defaults:
       run:

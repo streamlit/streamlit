@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build_snowpark_conda_package:
+  build-snowpark-conda-package:
     runs-on: ubuntu-latest
 
     defaults:
