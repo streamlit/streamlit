@@ -25,5 +25,7 @@ with st.sidebar:
     st.divider()
     st.text_area("Some random text:", height=500)
 
+# add a sleep timer to simulate a slow loading page. This allows us for example
+# to simulate navigating away from a partially loaded page
 time.sleep(5)
 st.write("Finished sleeping for 5 seconds.")

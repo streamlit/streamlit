@@ -449,14 +449,14 @@ class ScriptRunner:
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
-            try:
-                old_hash = ctx.page_script_hash
-            except KeyError:
-                old_hash = None
-
-            if old_hash != page_script_hash:
-                # Page changed, reset widget state where possible. Use the
-                # widget ids from the rerun data to maintain some widget state
+            previous_page_script_hash = ctx.page_script_hash
+            if previous_page_script_hash != page_script_hash:
+                # Page changed, enforce reset widget state where possible.
+                # This enforcement matters when a new script thread is started
+                # before the previous script run is completed (from user
+                # interaction). Use the widget ids from the rerun data to
+                # maintain some widget state, as the rerun data should
+                # contain the latest widget ids from the frontend.
                 widget_ids: set[str] = set()
 
                 if (

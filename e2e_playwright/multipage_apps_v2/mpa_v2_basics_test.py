@@ -49,7 +49,7 @@ expected_page_order = [
     "Different Title",
     "page 4",
     "page 5",
-    "page 6",
+    "slow page",
     "page 7",
     "page 8",
     "page 9",
@@ -370,8 +370,7 @@ def test_widget_state_reset_on_page_switch(app: Page):
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_text("x is 1")).to_be_attached()
 
-    # Switch to the slow page
-    get_page_link(app, "page 6").click()
+    get_page_link(app, "slow page").click()
 
     # Wait for the view container and main menu to appear (like in wait_for_app_loaded),
     # but don't wait for the script to finish running.
