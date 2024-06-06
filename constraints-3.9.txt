@@ -48,10 +48,10 @@ jsonschema==4.22.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.1
 kiwisolver==1.4.5
-langchain==0.1.20
-langchain-community==0.0.38
-langchain-core==0.1.52
-langchain-text-splitters==0.0.2
+langchain==0.2.2
+langchain-community==0.2.3
+langchain-core==0.2.4
+langchain-text-splitters==0.2.1
 langsmith==0.1.74
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
