@@ -1,4 +1,4 @@
-name: "Close Stale PRs"
+name: Close Stale PRs
 on:
   workflow_dispatch:
   schedule:
