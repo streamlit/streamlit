@@ -200,3 +200,7 @@ st.latex(
     """,
     help="This is example tooltip displayed on latex.",
 )
+
+st.markdown(
+    "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
+)
