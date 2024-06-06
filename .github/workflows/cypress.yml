@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  cypress-e2e-tests:
     runs-on: ubuntu-latest-8-cores
 
     defaults:
@@ -127,12 +127,12 @@ jobs:
           name: cypress_snapshots
           path: frontend/cypress/snapshots
 
-  cypress_summary:
+  cypress-summary:
     runs-on: ubuntu-latest
 
     # Consolidates cypress test matrix results for a single pass/fail status check
     if: ${{ always() }}
-    needs: test
+    needs: cypress-e2e-tests
 
     defaults:
       run:
