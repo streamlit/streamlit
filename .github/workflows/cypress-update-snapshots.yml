@@ -1,4 +1,4 @@
-name: Cypress update snapshots
+name: Cypress Update Snapshots
 
 on:
   # Allows you to run this workflow manually from the Actions tab
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  cypress-update-snapshots:
     runs-on: ubuntu-latest
 
     defaults:
