@@ -20,6 +20,11 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
 
+  run-cypress-tests:
+    uses: ./.github/workflows/cypress.yml
+    with:
+      ref: ${{ github.ref_name }}
+
   run-playwright-tests:
     uses: ./.github/workflows/playwright.yml
     with:
@@ -31,6 +36,7 @@ jobs:
     needs:
       - run-python-tests
       - run-javascript-tests
+      - run-cypress-tests
       - run-playwright-tests
 
     defaults:
