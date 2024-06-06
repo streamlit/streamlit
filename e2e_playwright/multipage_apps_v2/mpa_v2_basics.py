@@ -36,7 +36,7 @@ page2 = st.Page("page_2.py")
 page3 = st.Page("page_3.py", title="Different Title")
 page4 = st.Page("🦒_page_4.py")
 page5 = st.Page("page_5.py", icon=":material/settings:")
-page6 = st.Page("page_6_slow_page.py", title="Slow Page")
+page6 = st.Page("page_6_slow_page.py", title="slow page")
 
 
 def page_7():
