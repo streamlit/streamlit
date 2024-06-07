@@ -50,6 +50,8 @@ jobs:
         run: make frontend-lib
       - name: Audit frontend licenses
         run: ./scripts/audit_frontend_licenses.py
+      - name: Ensure only relative imports exist in the frontend/lib/dist folder
+        run: make ensure-relative-imports
       - name: Run linters
         run: |
           # Run eslint as a standalone command to generate the test report.
