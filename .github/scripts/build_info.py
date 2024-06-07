@@ -33,13 +33,15 @@ Variables are saved in 3 places to handle 3 use cases:
 - The standard output, which means the values will be available in the GitHub logs,
   making troubleshooting easier.
 """
+
+from __future__ import annotations
+
 import enum
 import fnmatch
 import json
 import os
 import subprocess
 import sys
-from typing import Dict, List, Optional
 
 if __name__ not in ("__main__", "__mp_main__"):
     raise SystemExit(
@@ -98,7 +100,7 @@ class GithubEvent(enum.Enum):
     SCHEDULE = "schedule"
 
 
-def get_changed_files() -> List[str]:
+def get_changed_files() -> list[str]:
     """
     Checks the modified files in the last commit.
 
@@ -124,14 +126,14 @@ def get_changed_files() -> List[str]:
             "--no-commit-id",
             "--name-only",
             "-r",
-            f"HEAD^",
+            "HEAD^",
             "HEAD",
         ]
     )
     return [line for line in git_output.decode().splitlines() if line]
 
 
-def get_current_pr_labels() -> List[str]:
+def get_current_pr_labels() -> list[str]:
     """
     Returns a list of all tags associated with the current PR.
 
@@ -146,7 +148,7 @@ def get_current_pr_labels() -> List[str]:
     return [label["name"] for label in GITHUB_EVENT["pull_request"].get("labels", [])]
 
 
-def get_changed_python_dependencies_files() -> List[str]:
+def get_changed_python_dependencies_files() -> list[str]:
     """
     Gets a list of files that contain Python dependency definitions and have
     been modified.
@@ -176,7 +178,7 @@ def check_if_pr_has_label(label: str, action: str) -> bool:
     return False
 
 
-def get_github_input(input_key: str) -> Optional[str]:
+def get_github_input(input_key: str) -> str | None:
     """
     Get additional data that the script expects to use during runtime.
 
@@ -254,7 +256,7 @@ def is_canary_build() -> bool:
     return False
 
 
-def get_output_variables() -> Dict[str, str]:
+def get_output_variables() -> dict[str, str]:
     """
     Compute build variables.
     """
