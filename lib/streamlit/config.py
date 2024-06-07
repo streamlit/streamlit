@@ -831,6 +831,24 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.enableSession",
+    description="""
+        Enable user session by creating a cookie named `ST_SESSION_ID` when first connecting to the app.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    'server.sessionMaxAge',
+    description="""
+        The maximum age of the session in seconds. Default 0 (for browsers to decide).
+        """,
+    default_val=0,
+    type_=int,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")

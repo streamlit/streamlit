@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from typing import Final
 
 import tornado.web
@@ -52,7 +53,8 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         super().initialize(path, default_filename)
 
     def set_extra_headers(self, path: str) -> None:
-        """Disable cache for HTML files.
+        """Disable cache for HTML files,
+        and set a cookie for session tracking if needed.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
         be cached indefinitely.
@@ -61,8 +63,16 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
         if is_index_url or path.endswith(".html"):
             self.set_header("Cache-Control", "no-cache")
+            if config.get_option("server.enableSession"):
+                if self.get_cookie("ST_SESSION_ID") is None:
+                    max_age = config.get_option("server.sessionMaxAge")
+                    if max_age <= 0:
+                        max_age = None
+                    self.set_cookie("ST_SESSION_ID", uuid.uuid4().hex,
+                                    max_age=max_age, httponly=True)
         else:
             self.set_header("Cache-Control", "public")
+
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         try:
