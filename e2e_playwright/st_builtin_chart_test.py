@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-TOTAL_CHARTS = 42
+TOTAL_CHARTS = 46
 
 
 def test_built_in_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -43,8 +43,23 @@ def test_themed_chart_rendering(
 
     # Only test a single selected chart per built-in chart type:
     assert_snapshot(chart_elements.nth(1), name=f"st_builtin_chart-area_chart_themed")
-    assert_snapshot(chart_elements.nth(11), name=f"st_builtin_chart-bar_chart_themed")
-    assert_snapshot(chart_elements.nth(21), name=f"st_builtin_chart-line_chart_themed")
+    assert_snapshot(chart_elements.nth(12), name=f"st_builtin_chart-bar_chart_themed")
+    assert_snapshot(chart_elements.nth(23), name=f"st_builtin_chart-line_chart_themed")
     assert_snapshot(
-        chart_elements.nth(31), name=f"st_builtin_chart-scatter_chart_themed"
+        chart_elements.nth(34), name=f"st_builtin_chart-scatter_chart_themed"
     )
+
+
+def test_built_in_chart_axis_labels(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.<>_chart renders correctly with axis labels."""
+    chart_elements = app.get_by_test_id("stArrowVegaLiteChart")
+    expect(chart_elements).to_have_count(TOTAL_CHARTS)
+
+    # Also make sure that all canvas objects are rendered:
+    expect(chart_elements.locator("canvas")).to_have_count(TOTAL_CHARTS)
+
+    # Test each chart type with axis labels:
+    assert_snapshot(chart_elements.nth(10), name=f"st_area_chart_axis_labels")
+    assert_snapshot(chart_elements.nth(21), name=f"st_bar_chart_axis_labels")
+    assert_snapshot(chart_elements.nth(32), name=f"st_line_chart_axis_labels")
+    assert_snapshot(chart_elements.nth(45), name=f"st_scatter_chart_axis_labels")

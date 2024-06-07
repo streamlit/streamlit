@@ -116,6 +116,8 @@ def generate_chart(
     data: Data | None,
     x_from_user: str | None = None,
     y_from_user: str | Sequence[str] | None = None,
+    x_axis_label: str | None = None,
+    y_axis_label: str | None = None,
     color_from_user: str | Color | list[Color] | None = None,
     size_from_user: str | float | None = None,
     width: int | None = None,
@@ -170,8 +172,8 @@ def generate_chart(
         width=width or 0,
         height=height or 0,
     ).encode(
-        x=_get_x_encoding(df, x_column, x_from_user, chart_type),
-        y=_get_y_encoding(df, y_column, y_from_user),
+        x=_get_x_encoding(df, x_column, x_from_user, x_axis_label, chart_type),
+        y=_get_y_encoding(df, y_column, y_from_user, y_axis_label),
     )
 
     # Set up opacity encoding.
@@ -619,6 +621,7 @@ def _get_x_encoding(
     df: pd.DataFrame,
     x_column: str | None,
     x_from_user: str | None,
+    x_axis_label: str | None,
     chart_type: ChartType,
 ) -> alt.X:
     import altair as alt
@@ -646,6 +649,10 @@ def _get_x_encoding(
         else:
             x_title = x_column
 
+    # User specified x-axis label takes precedence
+    if x_axis_label:
+        x_title = x_axis_label
+
     return alt.X(
         x_field,
         title=x_title,
@@ -659,6 +666,7 @@ def _get_y_encoding(
     df: pd.DataFrame,
     y_column: str | None,
     y_from_user: str | Sequence[str] | None,
+    y_axis_label: str | None,
 ) -> alt.Y:
     import altair as alt
 
@@ -684,6 +692,10 @@ def _get_y_encoding(
             y_title = ""
         else:
             y_title = y_column
+
+    # User specified y-axis label takes precedence
+    if y_axis_label:
+        y_title = y_axis_label
 
     return alt.Y(
         field=y_field,
