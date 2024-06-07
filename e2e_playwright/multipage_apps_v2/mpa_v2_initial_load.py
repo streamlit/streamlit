@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from importlib.metadata import version as _version
-from typing import Final
+import streamlit as st
 
-STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit")
+page = st.navigation([st.Page("page_5.py")])
+page.run()

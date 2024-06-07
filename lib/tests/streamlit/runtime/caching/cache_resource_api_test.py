@@ -79,6 +79,19 @@ class CacheResourceTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [1, 1])
 
+    @patch(
+        "streamlit.runtime.caching.cache_resource_api.show_widget_replay_deprecation"
+    )
+    def test_widget_replay_deprecation(self, show_warning_mock: Mock):
+        """We show deprecation warnings when using the `experimental_allow_widgets` parameter."""
+
+        # We show the deprecation warning at declaration time:
+        @st.cache_resource(experimental_allow_widgets=True)
+        def foo():
+            return 42
+
+        show_warning_mock.assert_called_once()
+
     def test_multiple_api_names(self):
         """`st.experimental_singleton` is effectively an alias for `st.cache_resource`, and we
         support both APIs while experimental_singleton is being deprecated.

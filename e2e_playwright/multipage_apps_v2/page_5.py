@@ -15,3 +15,16 @@
 import streamlit as st
 
 st.header("Page 5")
+
+if "test_value" not in st.session_state:
+    st.session_state.test_value = False
+
+
+def handle_change():
+    st.session_state.test_value = True
+
+
+st.checkbox("Checkbox 1", on_change=handle_change)
+st.checkbox("Checkbox 2")
+
+st.write("test_value: ", st.session_state.test_value)

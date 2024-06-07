@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  cli_test:
+  cli-regression:
     runs-on: ubuntu-latest
 
     defaults:
