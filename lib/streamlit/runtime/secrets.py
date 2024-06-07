@@ -25,7 +25,6 @@ from typing import (
     KeysView,
     Mapping,
     NoReturn,
-    Union,
     ValuesView,
 )
 
@@ -45,7 +44,7 @@ SECRETS_FILE_LOCS: Final[list[str]] = [
 ]
 
 
-def _convert_to_dict(obj: Union[Mapping[str, Any], AttrDict]) -> dict[str, Any]:
+def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
     """Recursively convert Mapping or AttrDict objects to dictionaries."""
     if isinstance(obj, AttrDict):
         return obj.to_dict()

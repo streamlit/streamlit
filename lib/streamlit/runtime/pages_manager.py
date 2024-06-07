@@ -18,7 +18,7 @@ import contextlib
 import os
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Final, Type
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import source_util
 from streamlit.logger import get_logger
@@ -233,7 +233,7 @@ class PagesManager:
     NOTE: Each strategy handles its own thread safety when accessing the pages
     """
 
-    DefaultStrategy: Type[PagesStrategyV1 | PagesStrategyV2] = PagesStrategyV1
+    DefaultStrategy: type[PagesStrategyV1 | PagesStrategyV2] = PagesStrategyV1
 
     def __init__(
         self,

@@ -233,4 +233,4 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
 
 
 # Needed to avoid circular dependencies while running tests.
-import streamlit  # noqa: E402
+import streamlit  # noqa: E402, F401

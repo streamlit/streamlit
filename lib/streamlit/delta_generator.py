@@ -26,7 +26,6 @@ from typing import (
     Final,
     Hashable,
     Iterable,
-    List,
     Literal,
     NoReturn,
     TypeVar,
@@ -735,7 +734,7 @@ def _writes_directly_to_sidebar(dg: DG) -> bool:
 
 
 def _check_nested_element_violation(
-    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: List[BlockType]
+    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: list[BlockType]
 ) -> None:
     """Check if elements are nested in a forbidden way.
 

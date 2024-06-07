@@ -24,7 +24,6 @@ from typing import (
     Iterable,
     List,
     Literal,
-    Set,
     TypedDict,
     Union,
     cast,
@@ -185,7 +184,7 @@ class DataframeSelectionSerde:
 
 def parse_selection_mode(
     selection_mode: SelectionMode | Iterable[SelectionMode],
-) -> Set[ArrowProto.SelectionMode.ValueType]:
+) -> set[ArrowProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
     if isinstance(selection_mode, str):
         # Only a single selection mode was passed
@@ -238,7 +237,8 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-    ) -> DeltaGenerator: ...
+    ) -> DeltaGenerator:
+        ...
 
     @overload
     def dataframe(
@@ -254,7 +254,8 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-    ) -> DataframeState: ...
+    ) -> DataframeState:
+        ...
 
     @gather_metrics("dataframe")
     def dataframe(
