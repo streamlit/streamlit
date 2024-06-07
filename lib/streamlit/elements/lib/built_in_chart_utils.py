@@ -88,8 +88,8 @@ class ChartType(Enum):
 # NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
 # ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
 # (See https://github.com/streamlit/streamlit/pull/7164#discussion_r1307707345)
-_COLOR_LEGEND_SETTINGS: Final = dict(titlePadding=5, offset=5, orient="bottom")
-_SIZE_LEGEND_SETTINGS: Final = dict(titlePadding=0.5, offset=5, orient="bottom")
+_COLOR_LEGEND_SETTINGS: Final = {"titlePadding": 5, "offset": 5, "orient": "bottom"}
+_SIZE_LEGEND_SETTINGS: Final = {"titlePadding": 0.5, "offset": 5, "orient": "bottom"}
 
 # User-readable names to give the index and melted columns.
 _SEPARATED_INDEX_COLUMN_TITLE: Final = "index"

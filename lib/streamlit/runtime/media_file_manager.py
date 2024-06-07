@@ -82,7 +82,7 @@ class MediaFileManager:
         self._storage = storage
 
         # Dict of [file_id -> MediaFileMetadata]
-        self._file_metadata: dict[str, MediaFileMetadata] = dict()
+        self._file_metadata: dict[str, MediaFileMetadata] = {}
 
         # Dict[session ID][coordinates] -> file_id.
         self._files_by_session_and_coord: dict[str, dict[str, str]] = (

@@ -1293,7 +1293,7 @@ def convert_df_to_data_format(
         df = _unify_missing_values(df)
         # The key is expected to be the index -> this will return the first column
         # as a dict with index as key.
-        return dict() if df.empty else df.iloc[:, 0].to_dict()
+        return {} if df.empty else df.iloc[:, 0].to_dict()
 
     raise ValueError(f"Unsupported input data format: {data_format}")
 
