@@ -16,6 +16,7 @@
 Global pytest fixtures for e2e tests.
 This file is automatically run by pytest before tests are executed.
 """
+
 from __future__ import annotations
 
 import hashlib
