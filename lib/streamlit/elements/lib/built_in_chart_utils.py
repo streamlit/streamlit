@@ -703,7 +703,7 @@ def _get_color_encoding(
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
-    has_color_value = color_value not in [None, [], ()]
+    has_color_value = color_value not in [None, [], ()]  # type: ignore[comparison-overlap]
 
     # If user passed a color value, that should win over colors coming from the
     # color column (be they manual or auto-assigned due to melting)
