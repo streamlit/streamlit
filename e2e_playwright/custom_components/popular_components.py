@@ -171,7 +171,7 @@ def use_url_fragment():
     from streamlit_url_fragment import get_fragment
 
     current_value = get_fragment()
-    st.write("Current value: {!r}".format(current_value))
+    st.write(f"Current value: {current_value!r}")
 
 
 # ---

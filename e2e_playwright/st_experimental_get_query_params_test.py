@@ -27,11 +27,11 @@ test_dicts = [
 def test_app_with_experimental_get_query_params(app_with_query_params: Page):
     page, test_dict = app_with_query_params
     expect(page.get_by_test_id("stMarkdownContainer").nth(0)).to_contain_text(
-        (
+
             "Please replace st.experimental_get_query_params with st.query_params. "
             "st.experimental_get_query_params will be removed after 2024-04-11. "
             "Refer to our docs page for more information."
-        )
+
     )
     expect(page.get_by_test_id("stMarkdownContainer").nth(1)).to_contain_text(
         str(test_dict)

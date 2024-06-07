@@ -297,7 +297,7 @@ def _test_csv_download(
 
     download = download_info.value
     download_path = download.path()
-    with open(download_path, "r", encoding="UTF-8") as f:
+    with open(download_path, encoding="UTF-8") as f:
         content = f.read()
         # the app uses a fixed seed, so the data is always the same. This is the reason why we can check it here.
         some_row = "1,-0.977277879876411,0.9500884175255894,-0.1513572082976979,-0.10321885179355784,0.41059850193837233"
@@ -365,7 +365,7 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
     with page.expect_event(
         "response",
         lambda response: response.url.endswith("_stcore/host-config")
-        and response.json()["enforceDownloadInNewTab"] == True,
+        and response.json()["enforceDownloadInNewTab"] is True,
         timeout=10000,
     ):
         frame_locator: FrameLocator = iframed_app.open_app()

@@ -21,11 +21,11 @@ def test_query_params_set(app: Page):
     app.get_by_test_id("stButton").locator("button").first.click()
 
     expect(app.get_by_test_id("stMarkdownContainer").nth(1)).to_contain_text(
-        (
+
             "Please replace st.experimental_set_query_params with st.query_params. "
             "st.experimental_set_query_params will be removed after 2024-04-11. "
             "Refer to our docs page for more information."
-        )
+
     )
     expect(app).to_have_url(
         re.compile(
