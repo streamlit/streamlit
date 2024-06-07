@@ -45,11 +45,11 @@ ignore = [
     "NPY002", # Checks for the use of legacy np.random function calls.
 ]
 # Do not lint files in tests and vendor directory:
-exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**", "e2e_playwright/**"]
+exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**"]
 
 [lint.per-file-ignores]
 "lib/streamlit/__init__.py" = ["E402"]
-"e2e_playwright/**" = ["NPY", "B", "T20"]
+"e2e_playwright/**" = [ "B", "T20"]
 
 [lint.isort]
 known-first-party = ["streamlit", "shared"]
