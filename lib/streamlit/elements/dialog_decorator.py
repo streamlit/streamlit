@@ -183,5 +183,5 @@ def dialog_decorator(
 
         return wrapper
 
-    func: F = cast(F, func_or_title)
+    func: F = func_or_title
     return _dialog_decorator(func, "", width=width)

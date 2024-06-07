@@ -1010,7 +1010,7 @@ class SelectSlider(Widget, Generic[T]):
         except (ValueError, TypeError):
             try:
                 v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except Exception:
+            except:  # noqa: E722
                 raise ValueError(f"Could not find index for {self.value}")
 
         ws = WidgetState()
