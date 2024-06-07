@@ -14,12 +14,11 @@
 
 from __future__ import annotations
 
-import collections
 import os
 import sys
 import types
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
@@ -34,7 +33,11 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
+
+class WatchedModule(NamedTuple):
+    watcher: Any
+    module_name: Any
+
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.

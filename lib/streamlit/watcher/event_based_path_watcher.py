@@ -42,6 +42,7 @@ import threading
 from typing import Callable, Final, cast
 
 from blinker import ANY, Signal
+from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
@@ -127,7 +128,7 @@ class _MultiPathWatcher:
         return cast("_MultiPathWatcher", _MultiPathWatcher._singleton)
 
     # Don't allow constructor to be called more than once.
-    def __new__(cls) -> _MultiPathWatcher:
+    def __new__(cls) -> Self:
         """Constructor."""
         if _MultiPathWatcher._singleton is not None:
             raise RuntimeError("Use .get_singleton() instead")
