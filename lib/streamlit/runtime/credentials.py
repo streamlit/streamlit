@@ -20,9 +20,8 @@ import json
 import os
 import sys
 import textwrap
-from collections import namedtuple
 from datetime import datetime
-from typing import Final, NoReturn
+from typing import Final, NamedTuple, NoReturn
 from uuid import uuid4
 
 from streamlit import cli_util, env_util, file_util, util
@@ -36,13 +35,10 @@ if env_util.IS_WINDOWS:
 else:
     _CONFIG_FILE_PATH = "~/.streamlit/config.toml"
 
-_Activation = namedtuple(
-    "_Activation",
-    [
-        "email",  # str : the user's email.
-        "is_valid",  # boolean : whether the email is valid.
-    ],
-)
+
+class _Activation(NamedTuple):
+    email: str  # the user's email.
+    is_valid: bool  # whether the email is valid.
 
 
 def email_prompt() -> str:

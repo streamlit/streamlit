@@ -139,9 +139,9 @@ class ScriptRunContext:
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
                 "`set_page_config()` can only be called once per app page, "
-                + "and must be called as the first Streamlit command in your script.\n\n"
-                + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
+                "and must be called as the first Streamlit command in your script.\n\n"
+                "For more information refer to the [docs]"
+                "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
             )
 
         # We want to disallow set_page config if one of the following occurs:
@@ -161,8 +161,8 @@ class ScriptRunContext:
         if self._experimental_query_params_used and self._production_query_params_used:
             raise StreamlitAPIException(
                 "Using `st.query_params` together with either `st.experimental_get_query_params` "
-                + "or `st.experimental_set_query_params` is not supported. Please convert your app "
-                + "to only use `st.query_params`"
+                "or `st.experimental_set_query_params` is not supported. Please convert your app "
+                "to only use `st.query_params`"
             )
 
     def mark_experimental_query_params_used(self):

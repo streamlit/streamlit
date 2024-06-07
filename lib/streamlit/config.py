@@ -1355,9 +1355,9 @@ def _check_conflicts() -> None:
             "server.port"
         ), "server.port does not work when global.developmentMode is true."
 
-        assert _is_unset("browser.serverPort"), (
-            "browser.serverPort does not work when global.developmentMode is " "true."
-        )
+        assert _is_unset(
+            "browser.serverPort"
+        ), "browser.serverPort does not work when global.developmentMode is true."
 
     # XSRF conflicts
     if get_option("server.enableXsrfProtection"):
