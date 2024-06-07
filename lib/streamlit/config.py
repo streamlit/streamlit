@@ -1412,7 +1412,7 @@ def on_config_parsed(
     # leading to a memory leak because the Signal will keep a reference of the
     # callable argument. When the callable argument is an object method, then
     # the reference to that object won't be released.
-    def receiver():
+    def receiver(_):
         return func_with_lock()
 
     def disconnect():
