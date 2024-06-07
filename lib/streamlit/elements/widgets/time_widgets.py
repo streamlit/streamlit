@@ -87,7 +87,7 @@ def _parse_date_value(
     elif isinstance(value, date):
         parsed_dates = [value]
     elif isinstance(value, (list, tuple)):
-        if not len(value) in (0, 1, 2):
+        if len(value) not in {0, 1, 2}:
             raise StreamlitAPIException(
                 "DateInput value should either be an date/datetime or a list/tuple of "
                 "0 - 2 date/datetime values"

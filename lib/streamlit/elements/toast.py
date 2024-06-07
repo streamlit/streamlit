@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 def validate_text(toast_text: SupportsStr) -> SupportsStr:
     if str(toast_text) == "":
         raise StreamlitAPIException(
-            f"Toast body cannot be blank - please provide a message."
+            "Toast body cannot be blank - please provide a message."
         )
     else:
         return toast_text

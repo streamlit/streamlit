@@ -150,7 +150,7 @@ class ImageMixin:
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
             width = WidthBehaviour.AUTO
-        elif use_column_width == "always" or use_column_width == True:
+        elif use_column_width == "always" or use_column_width is True:
             width = WidthBehaviour.COLUMN
         elif width is None:
             width = WidthBehaviour.ORIGINAL
@@ -513,7 +513,7 @@ def marshall_images(
     else:
         images = [image]
 
-    if type(caption) is list:
+    if isinstance(caption, list):
         captions: Sequence[str | None] = caption
     else:
         if isinstance(caption, str):
@@ -528,7 +528,9 @@ def marshall_images(
         else:
             captions = [str(caption)]
 
-    assert type(captions) == list, "If image is a list then caption should be as well"
+    assert isinstance(
+        captions, list
+    ), "If image is a list then caption should be as well"
     assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
         len(captions),
         len(images),

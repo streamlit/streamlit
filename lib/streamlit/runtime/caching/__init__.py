@@ -22,13 +22,13 @@ from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_MESSAGE_REPLAY_CTX,
     CacheDataAPI,
-    _data_caches,
+    get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
-    _resource_caches,
+    get_resource_cache_stats_provider,
 )
 from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 from streamlit.runtime.state.common import WidgetMetadata
@@ -83,12 +83,6 @@ def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> No
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 
-
-# Explicitly export public symbols
-from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
-from streamlit.runtime.caching.cache_resource_api import (
-    get_resource_cache_stats_provider,
-)
 
 # Create and export public API singletons.
 cache_data = CacheDataAPI(decorator_metric_name="cache_data")

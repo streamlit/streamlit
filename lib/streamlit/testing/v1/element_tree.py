@@ -1014,7 +1014,7 @@ class SelectSlider(Widget, Generic[T]):
         except (ValueError, TypeError):
             try:
                 v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except:
+            except Exception:
                 raise ValueError(f"Could not find index for {self.value}")
 
         ws = WidgetState()
@@ -1600,11 +1600,11 @@ def repr_(self) -> str:
         fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
 
     reprs = []
-    for field, value in fields_vals:
+    for field_name, value in fields_vals:
         if isinstance(value, dict):
-            line = f"{field}={format_dict(value)}"
+            line = f"{field_name}={format_dict(value)}"
         else:
-            line = f"{field}={value!r}"
+            line = f"{field_name}={value!r}"
         reprs.append(line)
 
     reprs[0] = "\n" + reprs[0]

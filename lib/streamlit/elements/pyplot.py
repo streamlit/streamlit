@@ -134,7 +134,6 @@ def marshall(
     **kwargs: Any,
 ) -> None:
     try:
-        import matplotlib
         import matplotlib.pyplot as plt
 
         plt.ioff()

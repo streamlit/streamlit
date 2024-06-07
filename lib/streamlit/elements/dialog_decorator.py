@@ -175,7 +175,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
-    if type(func_or_title) is str:
+    if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title

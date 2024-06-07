@@ -1,0 +1,5 @@
+# In addition to the standard set of exclusions, omit all tests:
+extend-exclude = ["tests", "streamlit/vendor", "streamlit/proto"]
+
+[lint.per-file-ignores]
+"streamlit/__init__.py" = ["E402"]

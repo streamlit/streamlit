@@ -84,7 +84,7 @@ def convert_dict_keys(
     for k, v in in_dict.items():
         converted_key = func(k)
 
-        if type(v) is dict:
+        if isinstance(v, dict):
             out_dict[converted_key] = convert_dict_keys(func, v)
         else:
             out_dict[converted_key] = v

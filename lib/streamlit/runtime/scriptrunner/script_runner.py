@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Callable, Final
 
 from blinker import Signal
 
-from streamlit import config, runtime, source_util, util
+from streamlit import config, runtime, util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState

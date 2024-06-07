@@ -16,17 +16,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from streamlit import url_util
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-if TYPE_CHECKING:
-    from PIL import Image
 
 
 def _invalid_logo_text(field_name: str):
