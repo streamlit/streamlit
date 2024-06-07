@@ -8,6 +8,7 @@ semver<3
 setuptools>=65.5.1
 twine
 wheel
+pytz
 # mypy types
 types-click
 types-protobuf
@@ -16,4 +17,4 @@ types-requests
 types-setuptools
 types-toml
 types-typed-ast
-
+types-cachetools

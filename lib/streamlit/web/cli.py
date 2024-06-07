@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
 import click
@@ -73,7 +73,10 @@ def _make_sensitive_option_callback(config_option: ConfigOption):
     return callback
 
 
-def configurator_options(func):
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def configurator_options(func: F) -> F:
     """Decorator that adds config param keys to click dynamically."""
     for _, value in reversed(_config._config_options_template.items()):
         parsed_parameter = _convert_config_option_to_click_option(value)
