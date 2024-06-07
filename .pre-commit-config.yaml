@@ -19,14 +19,12 @@
 # the second commit should pass,
 # because the files were linted after trying to do the first commit.
 repos:
-  - repo: https://github.com/psf/black
-    rev: 22.6.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.4.8
     hooks:
-      - id: black
-        args:
-          # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
-          - --target-version=py37
-        files: \.py$|\.pyi$
+      # Run the formatter.
+      - id: ruff-format
   - repo: https://github.com/PyCQA/isort
     rev: 5.11.5
     hooks:
