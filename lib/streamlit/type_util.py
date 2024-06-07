@@ -42,8 +42,7 @@ from typing import (
 from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
-from streamlit import config, errors, string_util
-from streamlit import logger as _logger
+from streamlit import config, errors, logger, string_util
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
@@ -64,7 +63,7 @@ if TYPE_CHECKING:
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
 
-_LOGGER = _logger.get_logger(__name__)
+_LOGGER = logger.get_logger(__name__)
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
@@ -504,7 +503,7 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     t = type(x)
     b = t.__bases__
-    if len(b) != 1 or b[0] != tuple:
+    if len(b) != 1 or b[0] is not tuple:
         return False
     f = getattr(t, "_fields", None)
     if not isinstance(f, tuple):
