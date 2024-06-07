@@ -30,7 +30,7 @@ ignore = [
     "PYI036", # Checks for incorrect function signatures on __exit__ and __aexit__ methods.
 ]
 # Do not lint files in tests and vendor directory:
-exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**"]
+exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**", "e2e_playwright/**"]
 
 [lint.per-file-ignores]
 "lib/streamlit/__init__.py" = ["E402"]

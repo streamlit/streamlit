@@ -16,6 +16,9 @@
 
 """Process Mypy line precision report into useful statistics."""
 
+from __future__ import annotations
+
+
 import glob
 import itertools
 import os

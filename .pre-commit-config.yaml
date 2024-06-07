@@ -26,8 +26,10 @@ repos:
       # Run the linter.
       - id: ruff
         args: [--fix]
+        files: \.py$|\.pyi$
       # Run the formatter.
       - id: ruff-format
+        files: \.py$|\.pyi$
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a

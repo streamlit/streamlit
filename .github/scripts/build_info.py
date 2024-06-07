@@ -288,7 +288,7 @@ def get_output_variables() -> dict[str, str]:
     return variables
 
 
-def save_output_variables(variables: Dict[str, str]) -> None:
+def save_output_variables(variables: dict[str, str]) -> None:
     """
     Saves build variables
     """
