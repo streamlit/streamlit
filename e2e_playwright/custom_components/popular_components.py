@@ -34,6 +34,7 @@ Following actions/components are tested:
 - streamlit-option-menu
 - streamlit-url-fragment
 """
+
 from __future__ import annotations
 
 from typing import Callable
