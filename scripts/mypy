@@ -23,7 +23,7 @@ import os.path
 import shlex
 import sys
 import tempfile
-from typing import Iterable, List
+from typing import Iterable
 
 import click
 import mypy.main as mypy_main
@@ -41,7 +41,7 @@ def shlex_join(split_command: Iterable[str]):
 
     This function is backported from Python 3.8 - shlex.join
     """
-    return ' '.join(shlex.quote(arg) for arg in split_command)
+    return " ".join(shlex.quote(arg) for arg in split_command)
 
 
 class Module:
@@ -77,7 +77,7 @@ class Module:
 
 
 def process_report(path: str) -> None:
-    modules: List[Module] = []
+    modules: list[Module] = []
     totals = Module("Total")
 
     with open(path) as f:
@@ -105,15 +105,13 @@ def process_report(path: str) -> None:
 @click.command()
 @click.option("--report", is_flag=True, help="Emit line coverage report for all files")
 @click.option(
-  "--verbose",
-  '-v',
-  is_flag=True,
-  help=(
-    "Verbose mode. Causes this command to print mypy command being executed."
-  )
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help=("Verbose mode. Causes this command to print mypy command being executed."),
 )
 def main(report: bool = False, verbose: bool = False) -> None:
-    paths: List[str] = []
+    paths: list[str] = []
     for path in PATHS:
         if "*" in path:
             for filename in glob.glob(path):
@@ -130,7 +128,7 @@ def main(report: bool = False, verbose: bool = False) -> None:
     args.extend(paths)
 
     if verbose:
-        shell_command = shlex_join(itertools.chain(['mypy'], args))
+        shell_command = shlex_join(itertools.chain(["mypy"], args))
         print("Executing command:", shell_command)
     mypy_main.main(stdout=sys.stdout, stderr=sys.stderr, args=args)
     if report:
