@@ -49,7 +49,7 @@ exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**"
 
 [lint.per-file-ignores]
 "lib/streamlit/__init__.py" = ["E402"]
-"e2e_playwright/**" = [ "B", "T20"]
+"e2e_playwright/**" = [ "T20", "B018"]
 
 [lint.isort]
 known-first-party = ["streamlit", "shared"]

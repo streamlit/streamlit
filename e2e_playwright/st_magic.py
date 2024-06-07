@@ -41,7 +41,7 @@ else:
     "ELSE"
 
 
-for ii in range(1):
+for _ in range(1):
     "FOR"
 
 while True:
