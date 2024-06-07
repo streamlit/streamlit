@@ -125,7 +125,8 @@ class Element(ABC):
     key: str | None
 
     @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree): ...
+    def __init__(self, proto: ElementProto, root: ElementTree):
+        ...
 
     def __iter__(self):
         yield self
@@ -198,7 +199,8 @@ class Widget(Element, ABC):
 
     @property
     @abstractmethod
-    def _widget_state(self) -> WidgetState: ...
+    def _widget_state(self) -> WidgetState:
+        ...
 
 
 El = TypeVar("El", bound=Element, covariant=True)
@@ -216,10 +218,12 @@ class ElementList(Generic[El]):
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> El: ...
+    def __getitem__(self, idx: int) -> El:
+        ...
 
     @overload
-    def __getitem__(self, idx: slice) -> ElementList[El]: ...
+    def __getitem__(self, idx: slice) -> ElementList[El]:
+        ...
 
     def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
         if isinstance(idx, slice):
@@ -247,7 +251,7 @@ class ElementList(Generic[El]):
 W = TypeVar("W", bound=Widget, covariant=True)
 
 
-class WidgetList(Generic[W], ElementList[W]):
+class WidgetList(ElementList[W], Generic[W]):
     def __call__(self, key: str) -> W:
         for e in self._list:
             if e.key == key:
