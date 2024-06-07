@@ -23,26 +23,11 @@ repos:
     # Ruff version.
     rev: v0.4.8
     hooks:
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
       # Run the formatter.
       - id: ruff-format
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.11.5
-    hooks:
-      - id: isort
-        args:
-          - --filter-files
-        exclude: ^lib/streamlit/__init__\.py$
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v1.7.7
-    hooks:
-      - id: autoflake
-        args:
-          - "--in-place"
-          - "--ignore-init-module-imports"
-          - "--ignore-pass-after-docstring"
-          - "--remove-unused-variables"
-        additional_dependencies:
-          - pyflakes==3.0.1
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
