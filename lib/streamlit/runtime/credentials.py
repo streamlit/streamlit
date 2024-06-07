@@ -120,10 +120,10 @@ def _send_email(email: str) -> None:
     response.raise_for_status()
 
 
-class Credentials(object):
+class Credentials:
     """Credentials class."""
 
-    _singleton: "Credentials" | None = None
+    _singleton: Credentials | None = None
 
     @classmethod
     def get_current(cls):
@@ -157,7 +157,7 @@ class Credentials(object):
         import toml
 
         try:
-            with open(self._conf_file, "r") as f:
+            with open(self._conf_file) as f:
                 data = toml.load(f).get("general")
             if data is None:
                 raise Exception

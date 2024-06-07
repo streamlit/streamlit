@@ -127,9 +127,7 @@ def _fragment(
         active_dg = dg_stack_snapshot[-1]
         h = hashlib.new("md5")
         h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
-                "utf-8"
-            )
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode()
         )
         fragment_id = h.hexdigest()
 

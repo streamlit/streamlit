@@ -32,9 +32,9 @@ from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 if TYPE_CHECKING:
+    from streamlit.cursor import RunningCursor
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
-
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
@@ -62,8 +62,8 @@ class ScriptRunContext:
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
     user_info: UserInfo
-    fragment_storage: "FragmentStorage"
-    pages_manager: "PagesManager"
+    fragment_storage: FragmentStorage
+    pages_manager: PagesManager
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
@@ -74,7 +74,7 @@ class ScriptRunContext:
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
     form_ids_this_run: set[str] = field(default_factory=set)
-    cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
+    cursors: dict[RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: set[str] | None = None

@@ -114,8 +114,8 @@ class ScriptRunner:
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: dict[str, str | None],
-        fragment_storage: "FragmentStorage",
-        pages_manager: "PagesManager",
+        fragment_storage: FragmentStorage,
+        pages_manager: PagesManager,
     ):
         """Initialize the ScriptRunner.
 

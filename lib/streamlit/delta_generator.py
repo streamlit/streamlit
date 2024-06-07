@@ -358,7 +358,7 @@ class DeltaGenerator(
         return dg
 
     @property
-    def _ancestors(self) -> Iterable["DeltaGenerator"]:
+    def _ancestors(self) -> Iterable[DeltaGenerator]:
         current_dg: DeltaGenerator | None = self
         while current_dg is not None:
             yield current_dg

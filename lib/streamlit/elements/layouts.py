@@ -490,7 +490,7 @@ class LayoutsMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
@@ -737,7 +737,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
-    ) -> "Dialog":
+    ) -> Dialog:
         """Inserts the dialog container.
 
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.

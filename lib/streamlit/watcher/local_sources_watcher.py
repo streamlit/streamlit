@@ -42,7 +42,7 @@ PathWatcher = None
 
 
 class LocalSourcesWatcher:
-    def __init__(self, pages_manager: "PagesManager"):
+    def __init__(self, pages_manager: PagesManager):
         self._pages_manager = pages_manager
         self._main_script_path = os.path.abspath(self._pages_manager.main_script_path)
         self._script_folder = os.path.dirname(self._main_script_path)

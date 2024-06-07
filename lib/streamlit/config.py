@@ -121,9 +121,7 @@ def set_user_option(key: str, value: Any) -> None:
         return
 
     raise StreamlitAPIException(
-        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
-            key=key
-        )
+        f"{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead."
     )
 
 

@@ -42,7 +42,7 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         session_state: SafeSessionState,
-        pages_manager: "PagesManager",
+        pages_manager: PagesManager,
         args=None,
         kwargs=None,
     ):
