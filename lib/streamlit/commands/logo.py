@@ -121,8 +121,8 @@ def logo(
             image_id="logo",
         )
         fwd_msg.logo.image = image_url
-    except Exception:
-        raise StreamlitAPIException(_invalid_logo_text("image"))
+    except Exception as ex:
+        raise StreamlitAPIException(_invalid_logo_text("image")) from ex
 
     if link:
         # Handle external links:
@@ -144,7 +144,7 @@ def logo(
                 image_id="icon-image",
             )
             fwd_msg.logo.icon_image = icon_image_url
-        except Exception:
-            raise StreamlitAPIException(_invalid_logo_text("icon_image"))
+        except Exception as ex:
+            raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
 
     ctx.enqueue(fwd_msg)

@@ -338,7 +338,7 @@ def is_pyspark_data_object(obj: object) -> bool:
     return (
         is_type(obj, _PYSPARK_DF_TYPE_STR)
         and hasattr(obj, "toPandas")
-        and callable(getattr(obj, "toPandas"))
+        and callable(obj.toPandas)
     )
 
 

@@ -80,7 +80,7 @@ def convert_dict_keys(
         converted by `func`.
 
     """
-    out_dict = dict()
+    out_dict = {}
     for k, v in in_dict.items():
         converted_key = func(k)
 

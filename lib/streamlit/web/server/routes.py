@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Final
+from typing import Final, Sequence
 
 import tornado.web
 
@@ -45,7 +45,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         self,
         path: str,
         default_filename: str | None = None,
-        reserved_paths: list[str] = [],
+        reserved_paths: Sequence[str] = (),
     ):
         self._reserved_paths = reserved_paths
 
