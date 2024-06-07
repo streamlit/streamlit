@@ -24,7 +24,10 @@ import React, {
 } from "react"
 import { useTheme } from "@emotion/react"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import {
+  Block as BlockProto,
+  Button as ButtonProto,
+} from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
   getElementWidgetID,
@@ -55,6 +58,8 @@ import {
   StyledVerticalBlockBorderWrapperProps,
 } from "./styled-components"
 import ToolbarContext from "../ToolbarContext"
+import Button from "@streamlit/lib/src/components/widgets/Button"
+import { WidgetInfo } from "@streamlit/lib/src/WidgetStateManager"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
@@ -67,8 +72,38 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 
 // Render BlockNodes (i.e. container nodes).
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  console.log("BlockNodeRenderer", props)
   const { node } = props
   const { fragmentIdsThisRun } = useContext(LibContext)
+
+  console.log("node", node)
+  if (node.deltaBlock.buttonGroup) {
+    console.log("buttonGroup!!!")
+    return (
+      <div>
+        {node.deltaBlock.buttonGroup.elements?.map((element, index) => {
+          const buttonElement = ButtonProto.decode(element)
+          return (
+            <Button
+              element={buttonElement}
+              key={index}
+              // widgetMgr={props.widgetMgr}
+              onClick={() =>
+                props.widgetMgr.setStringTriggerValue(
+                  node.deltaBlock.buttonGroup as WidgetInfo,
+                  String(index),
+                  { fromUi: true },
+                  ""
+                )
+              }
+              disabled={false}
+              width={props.width}
+            />
+          )
+        })}
+      </div>
+    )
+  }
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>

@@ -630,6 +630,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     try {
+      console.log("received message", msgProto)
       dispatchProto(msgProto, "type", {
         newSession: (newSessionMsg: NewSession) =>
           this.handleNewSession(newSessionMsg),

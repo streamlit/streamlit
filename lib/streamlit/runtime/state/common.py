@@ -91,6 +91,7 @@ WidgetProto: TypeAlias = Union[
     TextInput,
     TimeInput,
     Block.Vertical,
+    Block.ButtonGroup,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"

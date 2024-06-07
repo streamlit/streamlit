@@ -290,7 +290,7 @@ class DeltaGenerator(
         traceback: Any,
     ) -> Literal[False]:
         # with block ended
-
+        print("EXIT!!!!")
         dg_stack.set(dg_stack.get()[:-1])
 
         # Re-raise any exceptions

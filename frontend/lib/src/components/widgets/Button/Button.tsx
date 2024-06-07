@@ -27,13 +27,14 @@ import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMar
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  widgetMgr: WidgetStateManager
+  widgetMgr?: WidgetStateManager
   width: number
   fragmentId?: string
+  onClick?: () => void
 }
 
 function Button(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width, fragmentId } = props
+  const { disabled, element, widgetMgr, width, fragmentId, onClick } = props
   const style = { width }
 
   const kind =
@@ -45,6 +46,10 @@ function Button(props: Props): ReactElement {
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
 
+  const buttonOnClick =
+    onClick ||
+    (() => widgetMgr?.setTriggerValue(element, { fromUi: true }, fragmentId))
+
   return (
     <div className="row-widget stButton" data-testid="stButton" style={style}>
       <BaseButtonTooltip help={element.help}>
@@ -53,9 +58,7 @@ function Button(props: Props): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
-          onClick={() =>
-            widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
-          }
+          onClick={buttonOnClick}
         >
           <StreamlitMarkdown
             source={element.label}

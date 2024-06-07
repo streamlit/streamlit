@@ -31,6 +31,7 @@ message Block {
     ChatMessage chat_message = 9;
     Popover popover = 10;
     Dialog dialog = 11;
+    ButtonGroup button_group = 12;
   }
 
   bool allow_empty = 8;
@@ -110,5 +111,11 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 12
+  message ButtonGroup {
+    string id = 1;
+    int32 selected_index = 2;
+    repeated bytes elements = 3;
+  }
+
+  // Next ID: 13
 }

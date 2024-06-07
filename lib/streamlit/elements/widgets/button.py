@@ -52,6 +52,7 @@ from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.widgets.button_group import ButtonGroup
 
 FORM_DOCS_INFO: Final = """
 
@@ -578,6 +579,29 @@ class ButtonMixin:
             use_container_width=use_container_width,
         )
 
+    # @dataclass
+    # class Button_:
+    #     icon: str
+    #     label: str
+
+    @gather_metrics("button_group")
+    def button_group(
+        self,
+        key: str | None = None,
+        help: str | None = None,
+        # buttons: list[Button_] = [],
+        buttons: list[ButtonProto] = [],
+        # on_click: WidgetCallback | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+    ) -> ButtonGroup:
+        # ) -> int:
+        # return self.dg
+        from streamlit.elements.widgets.button_group import ButtonGroup
+
+        _key: str = key if key is not None else ""
+        return ButtonGroup._create(self.dg, key=_key)
+
     def _download_button(
         self,
         label: str,
@@ -806,6 +830,23 @@ class ButtonMixin:
 
         if help is not None:
             button_proto.help = dedent(help)
+
+        # we are in a button group
+        from streamlit.delta_generator import get_last_dg_added_to_context_stack
+
+        last_dg_stack = get_last_dg_added_to_context_stack()
+        print(f"IN BUTTON: {self.dg} | {last_dg_stack}")
+
+        dg_to_check = self.dg
+        if last_dg_stack is not None and "button_group" in set(
+            last_dg_stack._ancestor_block_types
+        ):
+            dg_to_check = last_dg_stack
+
+        if dg_to_check._surpress_button == True:
+            button_proto.id = f"{dg_to_check._key}_{id}"
+            dg_to_check._add(button_proto)
+            return False
 
         serde = ButtonSerde()
 
