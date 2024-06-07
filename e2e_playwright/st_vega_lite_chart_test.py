@@ -97,9 +97,7 @@ def test_vega_lite_chart_default_theme(
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
 
-    assert_snapshot(
-        vega_lite_charts.nth(11), name=f"st_vega_lite_chart-default_theming"
-    )
+    assert_snapshot(vega_lite_charts.nth(11), name="st_vega_lite_chart-default_theming")
 
 
 def test_vega_lite_chart_user_supplied_colors(

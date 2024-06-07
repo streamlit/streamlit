@@ -196,7 +196,7 @@ def random_date() -> datetime:
     ).replace(tzinfo=None)
 
 
-class TestObject(object):
+class TestObject:
     def __str__(self):
         return "TestObject"
 

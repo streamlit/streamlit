@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 import streamlit as st
 from streamlit import runtime
@@ -33,7 +33,7 @@ st.text(f"value 1: {i1}")
 i2 = st.multiselect("multiselect 2", options, format_func=lambda x: x.capitalize())
 st.text(f"value 2: {i2}")
 
-i3: List[Any] = st.multiselect("multiselect 3", [])
+i3: list[Any] = st.multiselect("multiselect 3", [])
 st.text(f"value 3: {i3}")
 
 i4 = st.multiselect("multiselect 4", ["coffee", "tea", "water"], ["tea", "water"])
