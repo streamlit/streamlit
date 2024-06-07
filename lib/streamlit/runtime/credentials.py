@@ -37,7 +37,7 @@ else:
 
 
 class _Activation(NamedTuple):
-    email: str  # the user's email.
+    email: str | None  # the user's email.
     is_valid: bool  # whether the email is valid.
 
 

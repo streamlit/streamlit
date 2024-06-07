@@ -74,7 +74,7 @@ class ScriptRunContext:
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
     form_ids_this_run: set[str] = field(default_factory=set)
-    cursors: dict[RunningCursor] = field(default_factory=dict)
+    cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: set[str] | None = None
