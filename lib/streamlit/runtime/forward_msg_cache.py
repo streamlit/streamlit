@@ -111,9 +111,9 @@ class ForwardMsgCache(CacheStatsProvider):
 
         def __init__(self, msg: ForwardMsg | None):
             self.msg = msg
-            self._session_script_run_counts: MutableMapping[
-                AppSession, int
-            ] = WeakKeyDictionary()
+            self._session_script_run_counts: MutableMapping[AppSession, int] = (
+                WeakKeyDictionary()
+            )
 
         def __repr__(self) -> str:
             return util.repr_(self)

@@ -1408,6 +1408,7 @@ def on_config_parsed(
     Callable[[], bool]
         A function that the caller can use to deregister func.
     """
+
     # We need to use the same receiver when we connect or disconnect on the
     # Signal. If we don't do this, then the registered receiver won't be released
     # leading to a memory leak because the Signal will keep a reference of the

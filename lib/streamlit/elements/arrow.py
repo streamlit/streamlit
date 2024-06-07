@@ -238,8 +238,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-    ) -> DeltaGenerator:
-        ...
+    ) -> DeltaGenerator: ...
 
     @overload
     def dataframe(
@@ -255,8 +254,7 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-    ) -> DataframeState:
-        ...
+    ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
     def dataframe(

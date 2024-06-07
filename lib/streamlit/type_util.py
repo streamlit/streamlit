@@ -129,8 +129,7 @@ class DataFrameGenericAlias(Protocol[V_co]):
     """
 
     @property
-    def iloc(self) -> _iLocIndexer:
-        ...
+    def iloc(self) -> _iLocIndexer: ...
 
 
 OptionSequence: TypeAlias = Union[
@@ -147,8 +146,7 @@ VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
 
 class SupportsStr(Protocol):
-    def __str__(self) -> str:
-        ...
+    def __str__(self) -> str: ...
 
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
@@ -158,20 +156,17 @@ def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["pydeck.bindings.deck.Deck"]
-) -> TypeGuard[Deck]:
-    ...
+) -> TypeGuard[Deck]: ...
 
 
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["plotly.graph_objs._figure.Figure"]
-) -> TypeGuard[Figure]:
-    ...
+) -> TypeGuard[Figure]: ...
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
-    ...
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool: ...
 
 
 def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
@@ -558,8 +553,7 @@ def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
-) -> DataFrame:
-    ...
+) -> DataFrame: ...
 
 
 @overload
@@ -568,8 +562,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> DataFrame | Styler:
-    ...
+) -> DataFrame | Styler: ...
 
 
 def convert_anything_to_df(
@@ -698,13 +691,11 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
-    ...
+def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]: ...
 
 
 @overload
-def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
-    ...
+def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]: ...
 
 
 def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]:
@@ -1310,13 +1301,11 @@ def convert_df_to_data_format(
 
 
 @overload
-def to_key(key: None) -> None:
-    ...
+def to_key(key: None) -> None: ...
 
 
 @overload
-def to_key(key: Key) -> str:
-    ...
+def to_key(key: Key) -> str: ...
 
 
 def to_key(key: Key | None) -> str | None:

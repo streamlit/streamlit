@@ -55,19 +55,20 @@ def email_prompt() -> str:
     )
 
     # IMPORTANT: Break the text below at 80 chars.
-    return """
+    return (
+        """
       {0}%(welcome)s
 
       If you’d like to receive helpful onboarding emails, news, offers, promotions,
       and the occasional swag, please enter your email address below. Otherwise,
       leave this field blank.
 
-      %(email)s""".format(
-        "👋 " if show_emoji else ""
-    ) % {
-        "welcome": cli_util.style_for_cli("Welcome to Streamlit!", bold=True),
-        "email": cli_util.style_for_cli("Email: ", fg="blue"),
-    }
+      %(email)s""".format("👋 " if show_emoji else "")
+        % {
+            "welcome": cli_util.style_for_cli("Welcome to Streamlit!", bold=True),
+            "email": cli_util.style_for_cli("Email: ", fg="blue"),
+        }
+    )
 
 
 _TELEMETRY_HEADLESS_TEXT = """

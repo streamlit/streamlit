@@ -402,11 +402,13 @@ class NumberInputMixin:
             if all_ints:
                 if min_value is not None:
                     JSNumber.validate_int_bounds(
-                        min_value, "`min_value`"  # type: ignore
+                        min_value,
+                        "`min_value`",  # type: ignore
                     )
                 if max_value is not None:
                     JSNumber.validate_int_bounds(
-                        max_value, "`max_value`"  # type: ignore
+                        max_value,
+                        "`max_value`",  # type: ignore
                     )
                 if step is not None:
                     JSNumber.validate_int_bounds(step, "`step`")  # type: ignore

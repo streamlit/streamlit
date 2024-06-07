@@ -60,15 +60,13 @@ if TYPE_CHECKING:
 @overload
 def _check_and_convert_to_indices(  # type: ignore[misc]
     opt: Sequence[Any], default_values: None
-) -> list[int] | None:
-    ...
+) -> list[int] | None: ...
 
 
 @overload
 def _check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any
-) -> list[int]:
-    ...
+) -> list[int]: ...
 
 
 def _check_and_convert_to_indices(

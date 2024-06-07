@@ -85,9 +85,9 @@ class MediaFileManager:
         self._file_metadata: dict[str, MediaFileMetadata] = dict()
 
         # Dict[session ID][coordinates] -> file_id.
-        self._files_by_session_and_coord: dict[
-            str, dict[str, str]
-        ] = collections.defaultdict(dict)
+        self._files_by_session_and_coord: dict[str, dict[str, str]] = (
+            collections.defaultdict(dict)
+        )
 
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which

@@ -79,8 +79,9 @@ def _dialog_decorator(
 
 
 @overload
-def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F], F]:
-    ...
+def dialog_decorator(
+    title: str, *, width: DialogWidth = "small"
+) -> Callable[[F], F]: ...
 
 
 # 'title' can be a function since `dialog_decorator` is a decorator. We just call it 'title' here though
@@ -88,8 +89,7 @@ def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F
 # The user is supposed to call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
 # this 'trick'. The overload is required to have a good type hint for the decorated function args.
 @overload
-def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F:
-    ...
+def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
 
 
 @gather_metrics("experimental_dialog")
