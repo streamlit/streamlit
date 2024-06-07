@@ -19,37 +19,38 @@ target-version = 'py38'
 
 [lint]
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort - Import sorting
-    "B",  # flake8-bugbear
-    "UP",  # pyupgrade
-    "FA", # Verifies files use from __future__ import annotations if a type is used in the module that can be rewritten using PEP 563.
-    "ISC", # Encourage correct string literal concatenation.
-    "LOG", # Checks for issues using the standard library logging module.
-    "T20", # Check for Print statements in python files.
-    "Q", # Linting rules for quites
-    "NPY", # Linting rules for numpy
-    "RUF100", # Unused noqa directive
+  "B", # flake8-bugbear
+  "C4", # Helps you write better list/set/dict comprehensions.
+  "E", # pycodestyle errors
+  "FA", # Verifies files use from __future__ import annotations if a type is used in the module that can be rewritten using PEP 563.
+  "F", # pyflakes
+  "I", # isort - Import sorting
+  "ISC", # Encourage correct string literal concatenation.
+  "LOG", # Checks for issues using the standard library logging module.
+  "NPY", # Linting rules for numpy
+  "Q", # Linting rules for quites
+  "RUF100", # Unused noqa directive
+  "T20", # Check for Print statements in python files.
+  "UP", # pyupgrade
+  "W", # pycodestyle warnings
 ]
 ignore = [
-    "ISC001", # Checks for implicitly concatenated strings on a single line.
-    "E501",  # Checks for lines that exceed the specified maximum character length.
-    "UP031", # Checks for printf-style string formatting, and offers to replace it with str.format calls.
-    "B904", # Checks for raise statements in exception handlers that lack a from clause.
-    "B008",  # Checks for function calls in default function arguments.
-    "PYI041", # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
-    "PYI051", # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
-    "PYI036", # Checks for incorrect function signatures on __exit__ and __aexit__ methods.
-    "NPY002", # Checks for the use of legacy np.random function calls.
+  "B008", # Checks for function calls in default function arguments.
+  "B904", # Checks for raise statements in exception handlers that lack a from clause.
+  "E501", # Checks for lines that exceed the specified maximum character length.
+  "ISC001", # Checks for implicitly concatenated strings on a single line.
+  "NPY002", # Checks for the use of legacy np.random function calls.
+  "PYI036", # Checks for incorrect function signatures on __exit__ and __aexit__ methods.
+  "PYI041", # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
+  "PYI051", # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "UP031", # Checks for printf-style string formatting, and offers to replace it with str.format calls.
 ]
 # Do not lint files in tests and vendor directory:
 exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**"]
 
 [lint.per-file-ignores]
+"e2e_playwright/**" = ["T20", "B018"]
 "lib/streamlit/__init__.py" = ["E402"]
-"e2e_playwright/**" = [ "T20", "B018"]
 
 [lint.isort]
 known-first-party = ["streamlit", "shared"]

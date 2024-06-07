@@ -146,12 +146,12 @@ def generate_chart(
         # The last index of df so we can adjust the input df in add_rows:
         last_index=_last_index_for_melted_dataframes(df),
         # This is the input to prep_data (except for the df):
-        columns=dict(
-            x_column=x_column,
-            y_column_list=y_column_list,
-            color_column=color_column,
-            size_column=size_column,
-        ),
+        columns={
+            "x_column": x_column,
+            "y_column_list": y_column_list,
+            "color_column": color_column,
+            "size_column": size_column,
+        },
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
@@ -539,7 +539,7 @@ def _parse_y_columns(
         y_column_list = [y_from_user]
 
     elif type_util.is_sequence(y_from_user):
-        y_column_list = list(str(col) for col in y_from_user)
+        y_column_list = [str(col) for col in y_from_user]
 
     else:
         raise StreamlitAPIException(
@@ -703,7 +703,7 @@ def _get_color_encoding(
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
-    has_color_value = color_value not in [None, [], tuple()]
+    has_color_value = color_value not in [None, [], ()]
 
     # If user passed a color value, that should win over colors coming from the
     # color column (be they manual or auto-assigned due to melting)

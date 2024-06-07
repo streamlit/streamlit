@@ -450,7 +450,7 @@ def _parse_selection_mode(
 
     if selection_mode is None:
         # Activate all selection parameters:
-        return sorted(list(all_selection_params))
+        return sorted(all_selection_params)
 
     if isinstance(selection_mode, str):
         # Convert single string to list:
@@ -463,7 +463,7 @@ def _parse_selection_mode(
                 f"Selection parameter '{selection_name}' is not defined in the chart spec. "
                 f"Available selection parameters are: {all_selection_params}."
             )
-    return sorted(list(selection_mode))
+    return sorted(selection_mode)
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:

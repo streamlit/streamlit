@@ -110,7 +110,7 @@ class GitRepo:
 
             return list(self.repo.iter_commits(f"{remote_branch}..{branch_name}"))
         except Exception:
-            return list()
+            return []
 
     def get_tracking_branch_remote(self):
         if not self.is_valid():

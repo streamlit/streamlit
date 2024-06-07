@@ -303,14 +303,14 @@ DATETIME_TYPES_DF = pd.DataFrame(
 LIST_TYPES_DF = pd.DataFrame(
     {
         "string_list": pd.Series(
-            [["a", "b", "c"], ["foo", "bar"], list(["lorem"]), [], None]
+            [["a", "b", "c"], ["foo", "bar"], ["lorem"], [], None]
         ),
         "number_set": pd.Series([{1, 2, 3}, {2, 3}, {4}, set(), None]),
         "boolean_tuple": [
             (True, False),
             (False, True, True),
             (True, True),
-            tuple(),
+            (),
             None,
         ],
         "dict_list": [

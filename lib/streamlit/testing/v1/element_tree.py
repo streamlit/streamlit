@@ -1582,7 +1582,7 @@ def repr_(self) -> str:
     """
     classname = self.__class__.__name__
 
-    defaults: list[Any] = [None, "", False, [], set(), dict()]
+    defaults: list[Any] = [None, "", False, [], set(), {}]
 
     if is_dataclass(self):
         fields_vals = (

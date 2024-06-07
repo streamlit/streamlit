@@ -126,9 +126,7 @@ fig = px.histogram(df, x="total_bill")
 def histogram_callback():
     if len(st.session_state.histogram_chart.selection["points"]) > 0:
         st.write("Callback triggered")
-        points = list(
-            point for point in st.session_state.histogram_chart.selection["points"]
-        )
+        points = list(st.session_state.histogram_chart.selection["points"])
         st.dataframe(points)
 
 

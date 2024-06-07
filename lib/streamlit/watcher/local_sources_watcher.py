@@ -206,7 +206,7 @@ def get_module_paths(module: types.ModuleType) -> set[str]:
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: [p for p in m.__path__._path],
+        lambda m: list(m.__path__._path),
     ]
 
     all_paths = set()
