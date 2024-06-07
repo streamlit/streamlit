@@ -34,8 +34,9 @@ Following actions/components are tested:
 - streamlit-option-menu
 - streamlit-url-fragment
 """
+from __future__ import annotations
 
-from typing import Callable, Dict
+from typing import Callable
 
 import streamlit as st
 
@@ -175,7 +176,7 @@ def use_url_fragment():
 
 # ---
 
-options: Dict[str, Callable] = {
+options: dict[str, Callable] = {
     "componentsHtml": use_components_html,
     "ace": use_streamlit_ace,
     "aggrid": use_aggrid,

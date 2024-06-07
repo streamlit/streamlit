@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import time
+
 import numpy as np
 import plotly.express as px
 
@@ -133,8 +135,6 @@ def histogram_callback():
 st.plotly_chart(
     fig, on_select=histogram_callback, key="histogram_chart", selection_mode="lasso"
 )
-
-import time
 
 if st.button("Create some elements to unmount component"):
     for _ in range(3):

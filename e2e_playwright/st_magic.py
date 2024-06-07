@@ -126,7 +126,7 @@ def docstrings():
         Should not be printed."""
         pass
 
-    class Foo(object):
+    class Foo:
         """Class docstring. Should not be printed."""
 
         pass

@@ -42,9 +42,9 @@ def test_themed_chart_rendering(
     expect(chart_elements.locator("canvas")).to_have_count(TOTAL_CHARTS)
 
     # Only test a single selected chart per built-in chart type:
-    assert_snapshot(chart_elements.nth(1), name=f"st_builtin_chart-area_chart_themed")
-    assert_snapshot(chart_elements.nth(11), name=f"st_builtin_chart-bar_chart_themed")
-    assert_snapshot(chart_elements.nth(21), name=f"st_builtin_chart-line_chart_themed")
+    assert_snapshot(chart_elements.nth(1), name="st_builtin_chart-area_chart_themed")
+    assert_snapshot(chart_elements.nth(11), name="st_builtin_chart-bar_chart_themed")
+    assert_snapshot(chart_elements.nth(21), name="st_builtin_chart-line_chart_themed")
     assert_snapshot(
-        chart_elements.nth(31), name=f"st_builtin_chart-scatter_chart_themed"
+        chart_elements.nth(31), name="st_builtin_chart-scatter_chart_themed"
     )
