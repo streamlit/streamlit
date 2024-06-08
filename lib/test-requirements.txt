@@ -44,3 +44,4 @@ pydantic>=1.0, <2.0
 # Required for testing the langchain integration
 langchain>=0.2.0
 langchain-community>=0.2.0
+tornado>=6.4.1 # not directly required, pinned by Snyk to avoid a vulnerability
