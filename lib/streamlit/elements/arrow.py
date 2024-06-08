@@ -96,6 +96,11 @@ class DataframeSelectionState(TypedDict, total=False):
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
+    .. warning::
+        If a user sorts a dataframe, row selections will be reset. If your
+        users need to sort and filter the dataframe to make selections, direct
+        them to use the search function in the dataframe toolbar instead.
+
     Attributes
     ----------
     rows : list[int]
