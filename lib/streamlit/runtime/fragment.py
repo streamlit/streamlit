@@ -284,10 +284,33 @@ def fragment(
 
     Examples
     --------
-    The following example demonstrates basic usage of ``@st.experimental_fragment``. In
-    this app, clicking "Rerun full script" will increment both counters and
-    update all values displayed in the app. In contrast, clicking "Rerun fragment"
-    will only increment the counter within the fragment. In this case, the
+    The following example demonstrates basic usage of
+    ``@st.experimental_fragment``. As an anology, "inflating balloons" is a
+    slow process that happens outside of the fragment. "Releasing balloons" is
+    a quick process that happens inside of the fragment.
+
+    >>> import streamlit as st
+    >>> import time
+    >>>
+    >>> @st.experimental_fragment
+    >>> def release_the_balloons():
+    >>>     st.button("Release the balloons", help="Fragment rerun")
+    >>>     st.balloons()
+    >>>
+    >>> with st.spinner("Inflating balloons..."):
+    >>>     time.sleep(5)
+    >>> release_the_balloons()
+    >>> st.button("Inflate more balloons", help="Full rerun")
+
+    .. output::
+        https://doc-fragment-balloons.streamlit.app/
+        height: 220px
+
+    This next example demonstrates how elements both inside and outside of a
+    fragement update with each full-script or fragment rerun. In this app,
+    clicking "Rerun full script" will increment both counters and update all
+    values displayed in the app. In contrast, clicking "Rerun fragment" will
+    only increment the counter within the fragment. In this case, the
     ``st.write`` command inside the fragment will update the app's frontend,
     but the two ``st.write`` commands outside the fragment will not update the
     frontend.
