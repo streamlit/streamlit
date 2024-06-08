@@ -216,6 +216,10 @@ class ButtonMixin:
         user is connected, so it's a good idea to keep file sizes under a
         couple hundred megabytes to conserve memory.
 
+        If you want to prevent your app from rerunning when a user clicks the
+        download button, wrap the download button in a `fragment
+        <https://docs.streamlit.io/develop/concepts/architecture/fragments>`_.
+
         Parameters
         ----------
         label : str
