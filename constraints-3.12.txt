@@ -68,7 +68,7 @@ parameterized==0.9.0
 pathspec==0.12.1
 pillow==10.3.0
 pixelmatch==0.3.0
-pkginfo==1.11.0
+pkginfo==1.11.1
 platformdirs==4.2.2
 playwright==1.44.0
 plotly==5.22.0
