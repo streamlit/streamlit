@@ -289,6 +289,10 @@ class PagesManager:
     def set_active_script_hash(self, page_hash: "PageHash"):
         return self.pages_strategy.set_active_script_hash(page_hash)
 
+    def reset_active_script_hash(self):
+        # This will only apply to the V2 strategy as V1 ignores the concept
+        self.set_active_script_hash(self.main_script_hash)
+
     def set_script_intent(
         self, page_script_hash: "PageHash", page_name: "PageName"
     ) -> None:

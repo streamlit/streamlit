@@ -118,13 +118,17 @@ def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
 
 def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> Locator:
     """Get a markdown element with the given text inside.
+
     Parameters
     ----------
+
     locator : Locator
         The locator to search for the expander.
+
     text_inside_markdown : str or Pattern[str]
         Some text to use to identify the markdown element. The text should be contained
         in the markdown content.
+
     Returns
     -------
     Locator

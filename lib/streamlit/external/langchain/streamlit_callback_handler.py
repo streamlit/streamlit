@@ -40,15 +40,16 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
     BaseCallbackHandler,
 )
-from langchain.schema import (  # type: ignore[import-not-found, unused-ignore]
-    AgentAction,
-    AgentFinish,
-    LLMResult,
-)
 
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from langchain.schema import (  # type: ignore[import-not-found, unused-ignore]
+        AgentAction,
+        AgentFinish,
+        LLMResult,
+    )
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
