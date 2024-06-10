@@ -667,17 +667,13 @@ export class App extends PureComponent<Props, State> {
         navigation: (navigation: Navigation) =>
           this.handleNavigation(navigation),
         authRedirect: (authRedirect: AuthRedirect) => {
-          if (authRedirect?.sendRedirectToHost) {
+          if (isInChildFrame()) {
             this.hostCommunicationMgr.sendMessageToHost({
               type: "REDIRECT_TO_URL",
               url: authRedirect.url,
             })
           } else {
-            if (authRedirect?.actionType == "logout") {
-              window.location.href = authRedirect.url
-            } else {
-              window.location.href = authRedirect.url
-            }
+            window.location.href = authRedirect.url
           }
         },
       })
