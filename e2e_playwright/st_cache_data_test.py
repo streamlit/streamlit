@@ -17,7 +17,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run, rerun_app
+from e2e_playwright.conftest import rerun_app, wait_for_app_run
 
 
 def test_runs_cached_function_with_new_widget_values(app: Page):
