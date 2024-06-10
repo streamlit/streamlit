@@ -40,8 +40,12 @@ my_cache = AuthCache()
 
 if secrets_singleton.load_if_toml_exists():
     auth_section = secrets_singleton.get("auth")
-    redirect_uri = auth_section.get("redirect_uri", None)
-    config = dict(auth_section)
+    if auth_section:
+        redirect_uri = auth_section.get("redirect_uri", None)
+        config = dict(auth_section)
+    else:
+        config = dict()
+        redirect_uri = "/"
 else:
     config = dict()
     redirect_uri = "/"
@@ -49,22 +53,23 @@ else:
 oauth = TornadoOAuth(config, cache=my_cache)
 
 if secrets_singleton.load_if_toml_exists():
-    auth_section = secrets_singleton.get("auth")
+    auth_section = secrets_singleton.get("auth", None)
 
-    for key in auth_section.keys():
-        if key == "redirect_uri":
-            continue
+    if auth_section is not None:
+        for key in auth_section.keys():
+            if key == "redirect_uri":
+                continue
 
-        if auth_section.get(key, {}).get("client_kwargs", {}).get("scope", None):
-            oauth.register(key)
-        else:
-            oauth.register(
-                key,
-                client_kwargs={
-                    "scope": "openid email profile",
-                    "prompt": "select_account",  # force to select account
-                },
-            )
+            if auth_section.get(key, {}).get("client_kwargs", {}).get("scope", None):
+                oauth.register(key)
+            else:
+                oauth.register(
+                    key,
+                    client_kwargs={
+                        "scope": "openid email profile",
+                        "prompt": "select_account",  # force to select account
+                    },
+                )
 
 
 class AuthlibLoginHandler(tornado.web.RequestHandler):
