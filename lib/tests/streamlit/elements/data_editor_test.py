@@ -26,9 +26,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from parameterized import parameterized
-
 import streamlit as st
+from parameterized import parameterized
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnDataKind,
@@ -50,6 +49,7 @@ from streamlit.type_util import (
     bytes_to_data_frame,
     is_pandas_version_less_than,
 )
+
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
 
@@ -265,6 +265,39 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col1": [123, 10, 11],
                 "col2": ["b", "foo", "bar"],
                 "col3": [False, False, True],
+            },
+        )
+
+    def test_apply_dataframe_edits_handles_index_changes(self):
+        """Test applying edits to a DataFrame correctly handles index changes.
+
+        See: https://github.com/streamlit/streamlit/issues/8854
+        """
+        df = pd.DataFrame(
+            {
+                "A": [1, 2, 3, 4, 5],
+                "B": [10, 20, 30, 40, 50],
+            }
+        ).set_index("A")
+
+        deleted_rows: List[int] = [4]
+        added_rows: List[Dict[str, Any]] = [{"_index": 5, "B": 123}]
+        edited_rows = {}
+
+        _apply_dataframe_edits(
+            df,
+            {
+                "deleted_rows": deleted_rows,
+                "added_rows": added_rows,
+                "edited_rows": edited_rows,
+            },
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
+        )
+
+        self.assertEqual(
+            df.to_dict(orient="list"),
+            {
+                "B": [10, 20, 30, 40, 123],
             },
         )
 
