@@ -18,7 +18,7 @@ contourpy==1.2.1
 coverage==7.5.3
 cryptography==42.0.8
 cycler==0.12.1
-dataclasses-json==0.6.6
+dataclasses-json==0.6.7
 distlib==0.3.8
 docutils==0.21.2
 execnet==2.1.1
