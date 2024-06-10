@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import wait_for_app_run
 
 
-def test_disabling_checkbox_disables_other(app: Page):
+def test_checking_checkbox_unchecks_other(app: Page):
     checkbox_elements = app.locator("[type='checkbox']")
     expect(checkbox_elements).to_have_count(2)
 
