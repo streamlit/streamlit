@@ -17,7 +17,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_run, rerun_app
 
 
 def test_runs_cached_function_with_new_widget_values(app: Page):
@@ -94,8 +94,7 @@ def test_st_audio_player_and_video_player(app: Page):
     )
     video_src = video_player.get_attribute("src")
 
-    app.keyboard.type("r")
-    wait_for_app_run(app)
+    rerun_app(app)
 
-    expect(audio).to_have_attribute("src", audio_src)
-    expect(video_player).to_have_attribute("src", video_src)
+    expect(audio).to_have_attribute("src", audio_src or "")
+    expect(video_player).to_have_attribute("src", video_src or "")
