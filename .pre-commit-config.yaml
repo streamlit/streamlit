@@ -155,7 +155,6 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
-          |^lib/tests/isolated_asyncio_test_case\.py$
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$
