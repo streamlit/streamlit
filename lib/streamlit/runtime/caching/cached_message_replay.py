@@ -19,21 +19,13 @@ import hashlib
 import threading
 import types
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    Iterator,
-    Protocol,
-    Union,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Any, Iterator, Literal, Union
 
 from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import runtime, util
-from streamlit.logger import get_logger
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_type import CacheType
@@ -47,13 +39,6 @@ from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-_LOGGER: Final = get_logger(__name__)
-
-
-@runtime_checkable
-class Widget(Protocol):
-    id: str
 
 
 @dataclass(frozen=True)
@@ -301,19 +286,20 @@ class CachedMessageReplayContext(threading.local):
             return
         if len(self._cached_message_stack) >= 1:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
-            # Arrow dataframes have an ID but only set it when used as data editor
-            # widgets, so we have to check that the ID has been actually set to
-            # know if an element is a widget.
-            if isinstance(element_proto, Widget) and element_proto.id:
-                wid = element_proto.id
-                # TODO replace `Message` with a more precise type
-                if not self._registered_metadata:
-                    _LOGGER.error(
-                        "Trying to save widget message that wasn't registered. This should not be possible."
-                    )
-                    raise AttributeError
+
+            # Widget replay is deprecated and will be removed soon:
+            # https://github.com/streamlit/streamlit/pull/8817.
+            # Therefore, its fine to keep this part a bit messy for now.
+
+            if (
+                hasattr(element_proto, "id")
+                and element_proto.id
+                and self._registered_metadata
+            ):
+                # The element has an ID and has associated widget metadata
+                # -> looks like a valid registered widget
                 widget_meta = WidgetMsgMetadata(
-                    wid, None, metadata=self._registered_metadata
+                    element_proto.id, None, metadata=self._registered_metadata
                 )
             else:
                 widget_meta = None
@@ -442,3 +428,17 @@ def _make_widget_key(widgets: list[tuple[str, Any]], cache_type: CacheType) -> s
         update_hash(widget_id_val, func_hasher, cache_type)
 
     return func_hasher.hexdigest()
+
+
+def show_widget_replay_deprecation(
+    decorator: Literal["cache_data", "cache_resource"]
+) -> None:
+    show_deprecation_warning(
+        "The `experimental_allow_widgets` parameter is deprecated and will be removed "
+        "in a future release. Please remove the `experimental_allow_widgets` parameter "
+        f"from the `@st.{decorator}` decorator and move all widget commands outside of "
+        "cached functions.\n\nTo speed up your app, we recommend moving your widgets into fragments. "
+        "Find out more about fragments in [our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
+        "\n\nIf you have a specific use-case that requires the `experimental_allow_widgets` functionality, "
+        "please tell us via an [issue on Github](https://github.com/streamlit/streamlit/issues)."
+    )

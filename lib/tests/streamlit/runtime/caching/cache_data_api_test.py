@@ -31,7 +31,7 @@ from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
-from streamlit.runtime.caching import cache_data_api
+from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
 from streamlit.runtime.caching.cache_errors import CacheError
 from streamlit.runtime.caching.cache_type import CacheType
@@ -61,6 +61,11 @@ from streamlit.runtime.caching.storage.local_disk_cache_storage import (
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.element_mocks import (
+    ELEMENT_PRODUCER,
+    NON_WIDGET_ELEMENTS,
+    WIDGET_ELEMENTS,
+)
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
@@ -221,6 +226,17 @@ class CacheDataTest(unittest.TestCase):
         # the value_key). It should only be used to compute the value_key!
         foo("ahoy")
         str_hash_func.assert_called_once_with("ahoy")
+
+    @patch("streamlit.runtime.caching.cache_data_api.show_widget_replay_deprecation")
+    def test_widget_replay_deprecation(self, show_warning_mock: Mock):
+        """We show deprecation warnings when using the `experimental_allow_widgets` parameter."""
+
+        # We show the deprecation warning at declaration time:
+        @st.cache_data(experimental_allow_widgets=True)
+        def foo():
+            return 42
+
+        show_warning_mock.assert_called_once()
 
     def test_user_hash_error(self):
         class MyObj:
@@ -640,6 +656,74 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         self.assertEqual(str(e.exception), "This CacheStorageManager always fails")
         output = "".join(logs.output)
         self.assertIn("This CacheStorageManager always fails", output)
+
+
+class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
+    def setUp(self):
+        super().setUp()
+        # Guard against external tests not properly cache-clearing
+        # in their teardowns.
+        st.cache_data.clear()
+
+    def tearDown(self):
+        st.cache_data.clear()
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_shows_cached_widget_replay_warning(
+        self, _widget_name: str, widget_producer: ELEMENT_PRODUCER
+    ):
+        """Test that a warning is shown when a widget is created inside a cached function."""
+
+        @st.cache_data(show_spinner=False)
+        def cache_widget():
+            widget_producer()
+
+        cache_widget()
+
+        # There should be only two elements in the queue:
+        assert len(self.get_all_deltas_from_queue()) == 2
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        assert el.type == "CachedWidgetWarning"
+        assert el.is_warning is True
+
+    @parameterized.expand(NON_WIDGET_ELEMENTS)
+    def test_works_with_element_replay(
+        self, element_name: str, element_producer: ELEMENT_PRODUCER
+    ):
+        """Test that it works with element replay if used as non-widget element."""
+
+        if element_name == "toast":
+            # The toast element is not supported in the cache_data API
+            # since elements on the event dg are not supported.
+            return
+
+        @st.cache_data
+        def cache_element():
+            element_producer()
+
+        with patch(
+            "streamlit.runtime.caching.cache_utils.replay_cached_messages",
+            wraps=cached_message_replay.replay_cached_messages,
+        ) as replay_cached_messages_mock:
+            # Call first time:
+            cache_element()
+            assert self.get_delta_from_queue().HasField("new_element") is True
+            # The first time the cached function is called, the replay function is not called
+            replay_cached_messages_mock.assert_not_called()
+
+            # Call second time:
+            cache_element()
+            assert self.get_delta_from_queue().HasField("new_element") is True
+            # The second time the cached function is called, the replay function is called
+            replay_cached_messages_mock.assert_called()
+
+            # Call third time:
+            cache_element()
+            assert self.get_delta_from_queue().HasField("new_element") is True
+            # The third time the cached function is called, the replay function is called
+            replay_cached_messages_mock.assert_called()
 
 
 def get_byte_length(value):

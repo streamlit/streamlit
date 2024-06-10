@@ -15,7 +15,7 @@
 import streamlit as st
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache_resource
 def rerun_record():
     return [0]
 

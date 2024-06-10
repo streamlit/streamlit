@@ -108,13 +108,6 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         self.assertIn("Welcome to Streamlit. Check out our demo in your browser.", out)
         self.assertIn("URL: http://the-address", out)
 
-    def test_print_new_version_message(self):
-        with patch(
-            "streamlit.version.should_show_new_version_notice", return_value=True
-        ), patch("click.secho") as mock_echo:
-            bootstrap._print_new_version_message()
-            mock_echo.assert_called_once()
-
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": True}
@@ -463,23 +456,3 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "server.port": 8502,
             },
         )
-
-    @patch("streamlit.web.bootstrap.invalidate_pages_cache")
-    @patch("streamlit.web.bootstrap.watch_dir")
-    def test_install_pages_watcher(
-        self, patched_watch_dir, patched_invalidate_pages_cache
-    ):
-        bootstrap._install_pages_watcher(os.path.normpath("/foo/bar/streamlit_app.py"))
-
-        args, _ = patched_watch_dir.call_args_list[0]
-        on_pages_changed = args[1]
-
-        patched_watch_dir.assert_called_once_with(
-            os.path.normpath("/foo/bar/pages"),
-            on_pages_changed,
-            glob_pattern="*.py",
-            allow_nonexistent=True,
-        )
-
-        on_pages_changed("/foo/bar/pages")
-        patched_invalidate_pages_cache.assert_called_once()

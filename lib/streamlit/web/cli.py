@@ -24,7 +24,6 @@ from typing import Any
 import click
 
 import streamlit.runtime.caching as caching
-import streamlit.runtime.legacy_caching as legacy_caching
 import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
 from streamlit.config_option import ConfigOption
@@ -181,10 +180,10 @@ def main_docs():
 @configurator_options
 def main_hello(**kwargs):
     """Runs the Hello World script."""
-    from streamlit.hello import Hello
+    from streamlit.hello import streamlit_app
 
     bootstrap.load_config_options(flag_options=kwargs)
-    filename = Hello.__file__
+    filename = streamlit_app.__file__
     _main_run(filename, flag_options=kwargs)
 
 
@@ -281,13 +280,7 @@ def cache():
 
 @cache.command("clear")
 def cache_clear():
-    """Clear st.cache, st.cache_data, and st.cache_resource caches."""
-    result = legacy_caching.clear_cache()
-    cache_path = legacy_caching.get_cache_path()
-    if result:
-        print(f"Cleared directory {cache_path}.")
-    else:
-        print(f"Nothing to clear at {cache_path}.")
+    """Clear st.cache_data and st.cache_resource caches."""
 
     # in this `streamlit cache clear` cli command we cannot use the
     # `cache_storage_manager from runtime (since runtime is not initialized)

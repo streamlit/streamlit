@@ -19,7 +19,7 @@ import streamlit as st
 img = np.repeat(0, 10000).reshape(100, 100)
 
 
-@st.experimental_memo
+@st.cache_data
 def image():
     st.image(img)
 

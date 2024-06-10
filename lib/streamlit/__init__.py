@@ -77,6 +77,7 @@ from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_deco
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
+    cache as _cache,
     experimental_singleton as _experimental_singleton,
     experimental_memo as _experimental_memo,
 )
@@ -104,8 +105,9 @@ import streamlit.column_config as _column_config
 # You can check the export behavior by running 'mypy --strict example_app.py', which disables implicit_reexport, where you use the respective command in the example_app.py Streamlit app.
 
 from streamlit.echo import echo as echo
-from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.commands.logo import logo as logo
+from streamlit.commands.navigation import navigation as navigation
+from streamlit.navigation.page import Page as Page
 from streamlit.elements.spinner import spinner as spinner
 
 from streamlit.commands.page_config import set_page_config as set_page_config
@@ -115,10 +117,6 @@ from streamlit.commands.execution_control import (
     experimental_rerun as _experimental_rerun,
     switch_page as switch_page,
 )
-
-# We add the metrics tracking for caching here,
-# since the actual cache function calls itself recursively
-cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -230,6 +228,8 @@ query_params = _QueryParamsProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+# `st.cache` is deprecated and should be removed soon
+cache = _cache
 
 # Namespaces
 column_config = _column_config
@@ -243,6 +243,7 @@ experimental_fragment = _fragment
 experimental_memo = _experimental_memo
 experimental_singleton = _experimental_singleton
 experimental_user = _UserInfoProxy()
+
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
 

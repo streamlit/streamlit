@@ -18,11 +18,11 @@ import os
 from typing import Final, NoReturn
 
 import streamlit as st
-from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.logger import get_logger
+from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
@@ -96,7 +96,7 @@ def experimental_rerun() -> NoReturn:
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
+def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
@@ -107,8 +107,10 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
 
     Parameters
     ----------
-    page: str
-        The file path (relative to the main script) of the page to switch to.
+    page: str or st.Page
+        The file path (relative to the main script) or an st.Page indicating
+        the page to switch to.
+
 
     Example
     -------
@@ -141,21 +143,29 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
         # This should never be the case
         raise NoSessionContext()
 
-    main_script_directory = get_main_script_directory(ctx.main_script_path)
-    requested_page = os.path.realpath(normalize_path_join(main_script_directory, page))
-    all_app_pages = source_util.get_pages(ctx.main_script_path).values()
-
-    matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
-
-    if len(matched_pages) == 0:
-        raise StreamlitAPIException(
-            f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
+    page_script_hash = ""
+    if isinstance(page, StreamlitPage):
+        page_script_hash = page._script_hash
+    else:
+        main_script_directory = get_main_script_directory(ctx.main_script_path)
+        requested_page = os.path.realpath(
+            normalize_path_join(main_script_directory, page)
         )
+        all_app_pages = ctx.pages_manager.get_pages().values()
+
+        matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
+
+        if len(matched_pages) == 0:
+            raise StreamlitAPIException(
+                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
+            )
+
+        page_script_hash = matched_pages[0]["page_script_hash"]
 
     ctx.script_requests.request_rerun(
         RerunData(
             query_string=ctx.query_string,
-            page_script_hash=matched_pages[0]["page_script_hash"],
+            page_script_hash=page_script_hash,
         )
     )
     # Force a yield point so the runner can do the rerun

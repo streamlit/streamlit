@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  cypress-e2e-tests:
     runs-on: ubuntu-latest-8-cores
 
     defaults:
@@ -33,7 +33,7 @@ jobs:
         # Be aware that specs should be sequential integers starting from 1 without gaps
         # based on logic in "Cypress Tests" step.
         # prettier-ignore
-        specs: [ 1, 2, 3, 4, ]
+        specs: [ 1, 2, ]
 
     steps:
       - name: Checkout Streamlit code
@@ -75,7 +75,7 @@ jobs:
         env:
           CURRENT_RUN: ${{matrix.specs}}
           CYPRESS_VERIFY_TIMEOUT: 90000
-          TOTAL_WORKERS: 4
+          TOTAL_WORKERS: 2
         run: |
           js_specs=(e2e/specs/*)
 
@@ -127,12 +127,12 @@ jobs:
           name: cypress_snapshots
           path: frontend/cypress/snapshots
 
-  cypress_summary:
+  cypress-summary:
     runs-on: ubuntu-latest
 
     # Consolidates cypress test matrix results for a single pass/fail status check
     if: ${{ always() }}
-    needs: test
+    needs: cypress-e2e-tests
 
     defaults:
       run:

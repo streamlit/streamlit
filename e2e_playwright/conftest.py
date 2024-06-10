@@ -223,12 +223,16 @@ def app_server(
             "true",
             "--global.developmentMode",
             "false",
+            "--global.e2eTest",
+            "true",
             "--server.port",
             str(app_port),
             "--browser.gatherUsageStats",
             "false",
             "--server.fileWatcherType",
             "none",
+            "--server.enableStaticServing",
+            "true",
         ],
         cwd=".",
     )
@@ -571,7 +575,8 @@ def assert_snapshot(
             snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
             snapshot_updates_file_path.write_bytes(img_bytes)
             pytest.fail(f"Snapshot matching for {snapshot_file_name} failed: {ex}")
-        max_diff_pixels = int(image_threshold * img_a.size[0] * img_a.size[1])
+        total_pixels = img_a.size[0] * img_a.size[1]
+        max_diff_pixels = int(image_threshold * total_pixels)
 
         if mismatch < max_diff_pixels:
             return
@@ -587,7 +592,7 @@ def assert_snapshot(
         img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
 
         pytest.fail(
-            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference)"
+            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference; {mismatch/total_pixels * 100:.2f}%)"
         )
 
     yield compare
