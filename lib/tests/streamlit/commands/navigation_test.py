@@ -86,6 +86,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         self.script_run_ctx.pages_manager.set_script_intent("", "page2")
         page = st.navigation([st.Page("page1.py"), found_page, st.Page("page3.py")])
         assert page == found_page
+        assert self.script_run_ctx.page_script_hash == found_page._script_hash
 
     def test_page_not_found_by_name(self):
         default_page = st.Page("page1.py")
@@ -95,12 +96,14 @@ class NavigationTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue(-2)
         assert c.HasField("page_not_found")
         assert page == default_page
+        assert self.script_run_ctx.page_script_hash == default_page._script_hash
 
     def test_page_not_found_by_hash_returns_default(self):
         default_page = st.Page("page1.py")
         self.script_run_ctx.pages_manager.set_script_intent("bad_hash", "")
         page = st.navigation([default_page, st.Page("page2.py"), st.Page("page3.py")])
         assert page == default_page
+        assert self.script_run_ctx.page_script_hash == default_page._script_hash
 
     def test_navigation_message(self):
         st.navigation(

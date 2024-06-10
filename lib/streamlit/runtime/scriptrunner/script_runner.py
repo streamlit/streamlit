@@ -46,7 +46,6 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
-from streamlit.runtime.state.session_state import SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
@@ -446,24 +445,33 @@ class ScriptRunner:
 
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
+            ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
-            try:
-                old_hash = self._session_state[SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY]
-            except KeyError:
-                old_hash = None
+            previous_page_script_hash = ctx.page_script_hash
+            if previous_page_script_hash != page_script_hash:
+                # Page changed, enforce reset widget state where possible.
+                # This enforcement matters when a new script thread is started
+                # before the previous script run is completed (from user
+                # interaction). Use the widget ids from the rerun data to
+                # maintain some widget state, as the rerun data should
+                # contain the latest widget ids from the frontend.
+                widget_ids: set[str] = set()
 
-            if old_hash != page_script_hash:
-                # Page changed, reset widget state
-                self._session_state.on_script_finished(set())
+                if (
+                    rerun_data.widget_states is not None
+                    and rerun_data.widget_states.widgets is not None
+                ):
+                    widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+                self._session_state.on_script_finished(widget_ids)
 
-            ctx = self._get_script_run_ctx()
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
             )
+            self._pages_manager.reset_active_script_hash()
 
             self.on_event.send(
                 self,
@@ -560,9 +568,6 @@ class ScriptRunner:
                             rerun_data.widget_states
                         )
 
-                    self._session_state[
-                        SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
-                    ] = page_script_hash
                     ctx.on_script_start()
                     prep_time = timer() - start_time
 
