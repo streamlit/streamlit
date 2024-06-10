@@ -26,8 +26,9 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import streamlit as st
 from parameterized import parameterized
+
+import streamlit as st
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnDataKind,
