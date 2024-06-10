@@ -56,6 +56,117 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 
+def _exec_code(
+    code_to_exec: Callable[[], None],
+    ctx: ScriptRunContext,
+    original_cursors: dict[int, Any],
+    original_dg_stack: tuple["DeltaGenerator", ...],
+) -> tuple[RerunData | None, Exception | None, bool, bool]:
+    # Avoid circular imports
+    from streamlit.delta_generator import dg_stack
+
+    # # Saving and restoring our original cursors/dg_stack is needed
+    # # specifically to handle the case where a RerunException is raised while
+    # # running a fragment. In this case, we need to restore both to their states
+    # # at the start of the script run to ensure that we write to the correct
+    # # places in the app during the rerun (without this, ctx.cursors and dg_stack
+    # # will still be set to the snapshots they were restored from when running
+    # # the fragment).
+    # original_cursors = ctx.cursors
+    # original_dg_stack = dg_stack.get()
+    # If the script stops early, we don't want to remove unseen widgets,
+    # so we track this to potentially skip session state cleanup later.
+    premature_stop: bool = False
+
+    # This will be set to a RerunData instance if our execution
+    # is interrupted by a RerunException.
+    rerun_exception_data: RerunData | None = None
+
+    uncaught_exception = None
+
+    run_without_errors = True
+
+    print(code_to_exec)
+    try:
+        code_to_exec()
+        # self._session_state.maybe_check_serializable()
+        # self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
+    # except TypeError as ex:
+    #     uncaught_exception = ex
+    #     handle_uncaught_app_exception(uncaught_exception)
+    except RerunException as e:
+        print(f"RerunExceptioN!!! {e}")
+        rerun_exception_data = e.rerun_data
+        ctx.cursors = original_cursors
+        dg_stack.set(original_dg_stack)
+        # Interruption due to a rerun is usually from `st.rerun()`, which
+        # we want to count as a script completion so triggers reset.
+        # It is also possible for this to happen if fast reruns is off,
+        # but this is very rare.
+        premature_stop = False
+
+    except StopException:
+        # This is thrown when the script executes `st.stop()`.
+        # We don't have to do anything here.
+        premature_stop = True
+
+    except Exception as ex:
+        # self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+        run_without_errors = False
+        uncaught_exception = ex
+        print(f"Uncaught exception: {uncaught_exception}")
+        handle_uncaught_app_exception(uncaught_exception)
+        premature_stop = True
+
+    # finally:
+    #     if rerun_exception_data:
+    #         # The handling for when a full script run or a fragment is stopped early
+    #         # is the same, so we only have one ScriptRunnerEvent for this scenario.
+    #         finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+    #     elif rerun_data.fragment_id_queue:
+    #         finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+    #     else:
+    #         finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+    #     if ctx.gather_usage_stats:
+    #         try:
+    #             # Prevent issues with circular import
+    #             from streamlit.runtime.metrics_util import (
+    #                 create_page_profile_message,
+    #                 to_microseconds,
+    #             )
+
+    #             # Create and send page profile information
+    #             ctx.enqueue(
+    #                 create_page_profile_message(
+    #                     ctx.tracked_commands,
+    #                     exec_time=to_microseconds(timer() - start_time),
+    #                     prep_time=to_microseconds(prep_time),
+    #                     uncaught_exception=(
+    #                         type(uncaught_exception).__name__
+    #                         if uncaught_exception
+    #                         else None
+    #                     ),
+    #                 )
+    #             )
+    #         except Exception as ex:
+    #             # Always capture all exceptions since we want to make sure that
+    #             # the telemetry never causes any issues.
+    #             _LOGGER.debug("Failed to create page profile", exc_info=ex)
+    #     self._on_script_finished(ctx, finished_event, premature_stop)
+    #     # Use _log_if_error() to make sure we never ever ever stop running the
+    #     # script without meaning to.
+    #     _log_if_error(_clean_problem_modules)
+
+    #     received_reruns = True
+    #     if rerun_exception_data is not None:
+    #         rerun_data = rerun_exception_data
+    #     else:
+    #         received_reruns = False
+
+    return rerun_exception_data, uncaught_exception, premature_stop, run_without_errors
+
+
 class ScriptRunnerEvent(Enum):
     ## "Control" events. These are emitted when the ScriptRunner's state changes.
 
@@ -168,7 +279,7 @@ class ScriptRunner:
         self._pages_manager = pages_manager
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
-        self._requests.register_exec_code(self._exec_code)
+        # self._requests.register_exec_code(self._exec_code)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -549,16 +660,19 @@ class ScriptRunner:
                             rerun_exception_data,
                             uncaught_exception,
                             premature_stop,
-                        ) = self._exec_code(
-                            rerun_data,
+                            run_without_errors,
+                        ) = _exec_code(
                             code_to_exec,
                             ctx,
                             original_cursors,
                             original_dg_stack,
-                            start_time,
-                            prep_time,
                         )
+                        self._session_state.maybe_check_serializable()
+                        self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
                     finally:
+                        self._session_state[
+                            SCRIPT_RUN_WITHOUT_ERRORS_KEY
+                        ] = run_without_errors
                         if rerun_exception_data:
                             # The handling for when a full script run or a fragment is stopped early
                             # is the same, so we only have one ScriptRunnerEvent for this scenario.
@@ -610,116 +724,116 @@ class ScriptRunner:
                         else:
                             received_reruns = False
 
-    def _exec_code(
-        self,
-        rerun_data: RerunData,
-        code_to_exec: Callable[[], None],
-        ctx: ScriptRunContext,
-        original_cursors: dict[int, Any],
-        original_dg_stack: tuple["DeltaGenerator", ...],
-        start_time: float,
-        prep_time: float,
-    ) -> tuple[RerunData | None, Exception | None, bool]:
-        # Avoid circular imports
-        from streamlit.delta_generator import dg_stack
+    # def _exec_code(
+    #     self,
+    #     code_to_exec: Callable[[], None],
+    #     ctx: ScriptRunContext,
+    #     original_cursors: dict[int, Any],
+    #     original_dg_stack: tuple["DeltaGenerator", ...],
+    # ) -> tuple[RerunData | None, Exception | None, bool, bool]:
+    #     # Avoid circular imports
+    #     from streamlit.delta_generator import dg_stack
 
-        # # Saving and restoring our original cursors/dg_stack is needed
-        # # specifically to handle the case where a RerunException is raised while
-        # # running a fragment. In this case, we need to restore both to their states
-        # # at the start of the script run to ensure that we write to the correct
-        # # places in the app during the rerun (without this, ctx.cursors and dg_stack
-        # # will still be set to the snapshots they were restored from when running
-        # # the fragment).
-        # original_cursors = ctx.cursors
-        # original_dg_stack = dg_stack.get()
-        # If the script stops early, we don't want to remove unseen widgets,
-        # so we track this to potentially skip session state cleanup later.
-        premature_stop: bool = False
+    #     # # Saving and restoring our original cursors/dg_stack is needed
+    #     # # specifically to handle the case where a RerunException is raised while
+    #     # # running a fragment. In this case, we need to restore both to their states
+    #     # # at the start of the script run to ensure that we write to the correct
+    #     # # places in the app during the rerun (without this, ctx.cursors and dg_stack
+    #     # # will still be set to the snapshots they were restored from when running
+    #     # # the fragment).
+    #     # original_cursors = ctx.cursors
+    #     # original_dg_stack = dg_stack.get()
+    #     # If the script stops early, we don't want to remove unseen widgets,
+    #     # so we track this to potentially skip session state cleanup later.
+    #     premature_stop: bool = False
 
-        # This will be set to a RerunData instance if our execution
-        # is interrupted by a RerunException.
-        rerun_exception_data: RerunData | None = None
+    #     # This will be set to a RerunData instance if our execution
+    #     # is interrupted by a RerunException.
+    #     rerun_exception_data: RerunData | None = None
 
-        uncaught_exception = None
+    #     uncaught_exception = None
 
-        print(code_to_exec)
-        try:
-            code_to_exec()
-            self._session_state.maybe_check_serializable()
-            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
-        # except TypeError as ex:
-        #     uncaught_exception = ex
-        #     handle_uncaught_app_exception(uncaught_exception)
-        except RerunException as e:
-            print(f"RerunExceptioN!!! {e}")
-            rerun_exception_data = e.rerun_data
-            ctx.cursors = original_cursors
-            dg_stack.set(original_dg_stack)
-            # Interruption due to a rerun is usually from `st.rerun()`, which
-            # we want to count as a script completion so triggers reset.
-            # It is also possible for this to happen if fast reruns is off,
-            # but this is very rare.
-            premature_stop = False
+    #     run_without_errors = True
 
-        except StopException:
-            # This is thrown when the script executes `st.stop()`.
-            # We don't have to do anything here.
-            premature_stop = True
+    #     print(code_to_exec)
+    #     try:
+    #         code_to_exec()
+    #         # self._session_state.maybe_check_serializable()
+    #         # self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
+    #     # except TypeError as ex:
+    #     #     uncaught_exception = ex
+    #     #     handle_uncaught_app_exception(uncaught_exception)
+    #     except RerunException as e:
+    #         print(f"RerunExceptioN!!! {e}")
+    #         rerun_exception_data = e.rerun_data
+    #         ctx.cursors = original_cursors
+    #         dg_stack.set(original_dg_stack)
+    #         # Interruption due to a rerun is usually from `st.rerun()`, which
+    #         # we want to count as a script completion so triggers reset.
+    #         # It is also possible for this to happen if fast reruns is off,
+    #         # but this is very rare.
+    #         premature_stop = False
 
-        except Exception as ex:
-            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-            uncaught_exception = ex
-            print(f"Uncaught exception: {uncaught_exception}")
-            handle_uncaught_app_exception(uncaught_exception)
-            premature_stop = True
+    #     except StopException:
+    #         # This is thrown when the script executes `st.stop()`.
+    #         # We don't have to do anything here.
+    #         premature_stop = True
 
-        # finally:
-        #     if rerun_exception_data:
-        #         # The handling for when a full script run or a fragment is stopped early
-        #         # is the same, so we only have one ScriptRunnerEvent for this scenario.
-        #         finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
-        #     elif rerun_data.fragment_id_queue:
-        #         finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
-        #     else:
-        #         finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+    #     except Exception as ex:
+    #         # self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+    #         run_without_errors = False
+    #         uncaught_exception = ex
+    #         print(f"Uncaught exception: {uncaught_exception}")
+    #         handle_uncaught_app_exception(uncaught_exception)
+    #         premature_stop = True
 
-        #     if ctx.gather_usage_stats:
-        #         try:
-        #             # Prevent issues with circular import
-        #             from streamlit.runtime.metrics_util import (
-        #                 create_page_profile_message,
-        #                 to_microseconds,
-        #             )
+    #     # finally:
+    #     #     if rerun_exception_data:
+    #     #         # The handling for when a full script run or a fragment is stopped early
+    #     #         # is the same, so we only have one ScriptRunnerEvent for this scenario.
+    #     #         finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+    #     #     elif rerun_data.fragment_id_queue:
+    #     #         finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+    #     #     else:
+    #     #         finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
-        #             # Create and send page profile information
-        #             ctx.enqueue(
-        #                 create_page_profile_message(
-        #                     ctx.tracked_commands,
-        #                     exec_time=to_microseconds(timer() - start_time),
-        #                     prep_time=to_microseconds(prep_time),
-        #                     uncaught_exception=(
-        #                         type(uncaught_exception).__name__
-        #                         if uncaught_exception
-        #                         else None
-        #                     ),
-        #                 )
-        #             )
-        #         except Exception as ex:
-        #             # Always capture all exceptions since we want to make sure that
-        #             # the telemetry never causes any issues.
-        #             _LOGGER.debug("Failed to create page profile", exc_info=ex)
-        #     self._on_script_finished(ctx, finished_event, premature_stop)
-        #     # Use _log_if_error() to make sure we never ever ever stop running the
-        #     # script without meaning to.
-        #     _log_if_error(_clean_problem_modules)
+    #     #     if ctx.gather_usage_stats:
+    #     #         try:
+    #     #             # Prevent issues with circular import
+    #     #             from streamlit.runtime.metrics_util import (
+    #     #                 create_page_profile_message,
+    #     #                 to_microseconds,
+    #     #             )
 
-        #     received_reruns = True
-        #     if rerun_exception_data is not None:
-        #         rerun_data = rerun_exception_data
-        #     else:
-        #         received_reruns = False
+    #     #             # Create and send page profile information
+    #     #             ctx.enqueue(
+    #     #                 create_page_profile_message(
+    #     #                     ctx.tracked_commands,
+    #     #                     exec_time=to_microseconds(timer() - start_time),
+    #     #                     prep_time=to_microseconds(prep_time),
+    #     #                     uncaught_exception=(
+    #     #                         type(uncaught_exception).__name__
+    #     #                         if uncaught_exception
+    #     #                         else None
+    #     #                     ),
+    #     #                 )
+    #     #             )
+    #     #         except Exception as ex:
+    #     #             # Always capture all exceptions since we want to make sure that
+    #     #             # the telemetry never causes any issues.
+    #     #             _LOGGER.debug("Failed to create page profile", exc_info=ex)
+    #     #     self._on_script_finished(ctx, finished_event, premature_stop)
+    #     #     # Use _log_if_error() to make sure we never ever ever stop running the
+    #     #     # script without meaning to.
+    #     #     _log_if_error(_clean_problem_modules)
 
-        return rerun_exception_data, uncaught_exception, premature_stop
+    #     #     received_reruns = True
+    #     #     if rerun_exception_data is not None:
+    #     #         rerun_data = rerun_exception_data
+    #     #     else:
+    #     #         received_reruns = False
+
+    #     return rerun_exception_data, uncaught_exception, premature_stop, run_without_errors
 
     def _get_main_code(
         self, script_path: source_util.ScriptPath, code: types.CodeType

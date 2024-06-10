@@ -23,7 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, UncaughtAppException
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -467,12 +467,13 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with patch("streamlit.exception") as mock_st_exception:
             _app(_element_producer)
-        assert (
-            e.exception.args[0]
-            == "Fragments cannot write to elements outside of their container."
-        )
+            mock_st_exception.assert_called_once()
+            assert (
+                str(mock_st_exception.call_args[0][0])
+                == "Fragments cannot write to elements outside of their container."
+            )
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)

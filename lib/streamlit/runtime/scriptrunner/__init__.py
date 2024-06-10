@@ -23,6 +23,7 @@ from streamlit.runtime.scriptrunner.script_runner import (
     ScriptRunner,
     ScriptRunnerEvent,
     StopException,
+    _exec_code,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "ScriptRunner",
     "ScriptRunnerEvent",
     "StopException",
+    "_exec_code",
 ]

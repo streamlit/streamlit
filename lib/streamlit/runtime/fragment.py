@@ -17,7 +17,6 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import inspect
-import time
 from abc import abstractmethod
 from copy import deepcopy
 from datetime import timedelta
@@ -27,7 +26,7 @@ from typing import Any, Callable, Protocol, TypeVar, overload
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, _exec_code, get_script_run_ctx
 from streamlit.time_util import time_to_seconds
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -198,18 +197,16 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        now = time.time()
         original_cursors = ctx.cursors
         original_dg_stack = dg_stack.get()
-        ctx.script_requests.exec_code_on_current_scriptrunner(
-            RerunData(),
-            wrapped_fragment,
-            ctx,
-            original_cursors,
-            original_dg_stack,
-            now,
-            now,
-        )
+        # ctx.script_requests.exec_code_on_current_scriptrunner(
+        #     RerunData(),
+        #     wrapped_fragment,
+        #     ctx,
+        #     original_cursors,
+        #     original_dg_stack,
+        # )
+        _exec_code(wrapped_fragment, ctx, original_cursors, original_dg_stack)
         # return wrapped_fragment()
 
     with contextlib.suppress(AttributeError):
