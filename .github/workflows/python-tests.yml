@@ -1,4 +1,4 @@
-name: Python Versions
+name: Python Unit Tests
 
 on:
   push:
@@ -65,7 +65,7 @@ jobs:
       PYTHON_MAX_VERSION: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
       USE_CONSTRAINTS_FILE: ${{ steps.build_info.outputs.USE_CONSTRAINTS_FILE }}
 
-  py_version:
+  py-unit-tests:
     needs:
       - build_info
 
@@ -75,9 +75,6 @@ jobs:
       fail-fast: false
       matrix:
         python_version: "${{ fromJson(needs.build_info.outputs.PYTHON_VERSIONS) }}"
-
-    # TODO: Should we add developer-friendly name for this job also?
-    #   This will unfortunately require a branch protection update.
 
     env:
       PYTHON_VERSION: >-
@@ -136,9 +133,9 @@ jobs:
           path: ${{ env.CONSTRAINTS_FILE }}
           if-no-files-found: error
 
-  py_constraint:
+  py-updated-constraints:
     needs:
-      - py_version
+      - py-unit-tests
     permissions:
       # Additional permission needed to upload constraints
       contents: write
@@ -191,7 +188,7 @@ jobs:
         env:
           TARGET_BRANCH: constraints-${{ github.ref_name }}
 
-  py_snowflake:
+  py-snowflake-integration-tests:
     needs:
       - build_info
 

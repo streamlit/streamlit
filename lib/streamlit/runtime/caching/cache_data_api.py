@@ -42,6 +42,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+    show_widget_replay_deprecation,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
@@ -443,7 +444,9 @@ class CacheDataAPI:
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
+
+            .. note::
+                This parameter is deprecated and will be removed in a future release.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -558,6 +561,9 @@ class CacheDataAPI:
             )
 
         self._maybe_show_deprecation_warning()
+
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_data")
 
         def wrapper(f):
             return make_cached_func_wrapper(

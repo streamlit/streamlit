@@ -1,5 +1,5 @@
 ---
-name: Run semgrep checks
+name: Run Semgrep Checks
 
 on:
   pull_request:

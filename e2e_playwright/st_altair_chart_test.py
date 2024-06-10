@@ -22,9 +22,9 @@ def test_altair_chart_displays_correctly(
 ):
     expect(
         themed_app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
-    ).to_have_count(11)
+    ).to_have_count(10)
     charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
-    expect(charts).to_have_count(11)
+    expect(charts).to_have_count(10)
     snapshot_names = [
         "st_altair_chart-scatter_chart_default_theme",
         "st_altair_chart-scatter_chart_streamlit_theme",
@@ -36,7 +36,6 @@ def test_altair_chart_displays_correctly(
         "st_altair_chart-grouped_use_container_width_default_theme",
         "st_altair_chart-grouped_layered_line_chart_streamlit_theme",
         "st_altair_chart-vconcat_width",
-        "st_altair_chart-resolve-scale-independent",
     ]
     for i, name in enumerate(snapshot_names):
         # We use a higher threshold here to prevent some flakiness

@@ -187,6 +187,8 @@ def navigation(
     # Ordain the page that can be called
     page_to_return._can_be_called = True
     msg.navigation.page_script_hash = page_to_return._script_hash
+    # Set the current page script hash to the page that is going to be executed
+    ctx.pages_manager.set_current_page_script_hash(page_to_return._script_hash)
 
     # This will either navigation or yield if the page is not found
     ctx.enqueue(msg)
