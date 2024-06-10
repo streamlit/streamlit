@@ -89,7 +89,6 @@ def _exec_code(
 
     run_without_errors = True
 
-    print(code_to_exec)
     try:
         if set_execing_flag is not None:
             with modified_sys_path(main_script_path), set_execing_flag():
@@ -920,18 +919,22 @@ class ScriptRunner:
             return
 
         # yield the fragment functions
-        def _fragment():
-            for fragment_id in rerun_data.fragment_id_queue:
-                wrapped_fragment = None
+        # def _fragment():
+        for fragment_id in rerun_data.fragment_id_queue:
+            # wrapped_fragment = None
+            def find_and_run_fragment():
                 try:
                     wrapped_fragment = self._fragment_storage.get(fragment_id)
                 except KeyError:
                     raise RuntimeError(f"Could not find fragment with id {fragment_id}")
                 ctx.current_fragment_id = fragment_id
-                # yield wrapped_fragment
                 wrapped_fragment()
 
-        yield _fragment
+            # yield wrapped_fragment
+            # wrapped_fragment()
+            yield find_and_run_fragment
+
+        # yield _fragment
 
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool

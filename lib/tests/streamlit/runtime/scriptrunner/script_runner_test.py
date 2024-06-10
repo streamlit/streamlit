@@ -347,6 +347,8 @@ class ScriptRunnerTest(AsyncTestCase):
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
                 ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
