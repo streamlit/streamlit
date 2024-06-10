@@ -85,9 +85,16 @@ def test_st_audio_player_and_video_player(app: Page):
     expect(audio).to_be_visible()
     expect(audio).to_have_attribute("controls", "")
     expect(audio).to_have_attribute("src", re.compile(r"^.*\.wav$", re.IGNORECASE))
+    audio_src = audio.get_attribute("src")
 
     video_player = app.get_by_test_id("stVideo")
     expect(video_player).to_be_visible()
     expect(video_player).to_have_attribute(
         "src", re.compile(r"^.*\.mp4$", re.IGNORECASE)
     )
+    video_src = video_player.get_attribute("src")
+
+    app.keyboard.type("r")
+
+    expect(audio).to_have_attribute("src", audio_src)
+    expect(video_player).to_have_attribute("src", video_src)
