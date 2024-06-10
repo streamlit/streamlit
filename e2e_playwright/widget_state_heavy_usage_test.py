@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 
+# test for https://github.com/streamlit/streamlit/issues/4836
 def test_clicking_a_lot_still_keeps_state(app: Page):
     number_input_down_button = app.get_by_test_id("stNumberInput").locator(
         "button.step-down"
