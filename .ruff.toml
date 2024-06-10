@@ -31,6 +31,7 @@ select = [
   "Q", # Linting rules for quites
   "RUF100", # Unused noqa directive
   "T20", # Check for Print statements in python files.
+  "TID", # Helps you write tidier imports.
   "UP", # pyupgrade
   "W", # pycodestyle warnings
 ]
@@ -51,6 +52,10 @@ exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**"
 [lint.per-file-ignores]
 "e2e_playwright/**" = ["T20", "B018"]
 "lib/streamlit/__init__.py" = ["E402"]
+
+[lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
 
 [lint.isort]
 known-first-party = ["streamlit", "shared"]
