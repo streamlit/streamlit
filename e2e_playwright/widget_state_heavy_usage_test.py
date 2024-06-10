@@ -12,24 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
-
-import streamlit as st
-
-
-@st.cache_data
-def audio():
-    url = "https://www.w3schools.com/html/horse.ogg"
-    file = requests.get(url).content
-    st.audio(file)
+import pytest
+from playwright.sync_api import Page, expect
 
 
-@st.cache_data
-def video():
-    url = "https://www.w3schools.com/html/mov_bbb.mp4"
-    file = requests.get(url).content
-    st.video(file)
+# test for https://github.com/streamlit/streamlit/issues/4836
+def test_clicking_a_lot_still_keeps_state(app: Page):
+    number_input_down_button = app.get_by_test_id("stNumberInput").locator(
+        "button.step-down"
+    )
+    for i in range(40):
+        number_input_down_button.click()
 
-
-audio()
-video()
+    expect(app.get_by_test_id("stMarkdown")).to_have_text("60")

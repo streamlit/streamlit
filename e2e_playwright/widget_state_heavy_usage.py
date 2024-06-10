@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
 
-a, b = st.columns(2)
-a.selectbox("With label", [])
-b.selectbox("", [])  # No label
+# test for https://github.com/streamlit/streamlit/issues/4836
+number = st.number_input("test", value=100)
+st.write(number)
+
+time.sleep(1)

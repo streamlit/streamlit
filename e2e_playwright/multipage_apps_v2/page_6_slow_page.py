@@ -16,7 +16,16 @@ import time
 
 import streamlit as st
 
-number = st.number_input("test", value=100)
-st.write(number)
+st.header("Page 6")
 
-time.sleep(1)
+with st.sidebar:
+    st.write("Sidebar")
+    color = st.color_picker("Pick a color")
+    st.write("You picked:", color)
+    st.divider()
+    st.text_area("Some random text:", height=500)
+
+# add a sleep timer to simulate a slow loading page. This allows us for example
+# to simulate navigating away from a partially loaded page
+time.sleep(5)
+st.write("Finished sleeping for 5 seconds.")
