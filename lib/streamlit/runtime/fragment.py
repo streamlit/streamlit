@@ -206,7 +206,9 @@ def _fragment(
         #     original_cursors,
         #     original_dg_stack,
         # )
-        _exec_code(wrapped_fragment, ctx, original_cursors, original_dg_stack)
+        _exec_code(
+            wrapped_fragment, ctx, original_cursors, original_dg_stack, None, "", None
+        )
         # return wrapped_fragment()
 
     with contextlib.suppress(AttributeError):

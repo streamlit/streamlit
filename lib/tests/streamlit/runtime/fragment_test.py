@@ -127,14 +127,21 @@ class FragmentTest(unittest.TestCase):
     def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
+        print(ctx)
+
+        exception_message = "oh no"
 
         @fragment
         def my_exploding_fragment():
-            raise Exception("oh no")
+            raise Exception(exception_message)
 
         ctx.current_fragment_id = "my_fragment_id"
-        with pytest.raises(Exception):
+        with patch("streamlit.exception") as mock_st_exception:
             my_exploding_fragment()
+            mock_st_exception.assert_called_once()
+            assert str(mock_st_exception.call_args[0][0]) == exception_message
+        # mock_st_exception.assert_called_once()
+        print(ctx)
         assert ctx.current_fragment_id is None
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")

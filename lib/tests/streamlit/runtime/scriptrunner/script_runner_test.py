@@ -495,7 +495,10 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         patched_call_callbacks.assert_called_once()
-
+        control_events = [
+            event for event in scriptrunner.events if _is_control_event(event)
+        ]
+        print(control_events)
         self._assert_control_events(
             scriptrunner,
             [

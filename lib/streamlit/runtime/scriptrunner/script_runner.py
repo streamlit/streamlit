@@ -61,6 +61,9 @@ def _exec_code(
     ctx: ScriptRunContext,
     original_cursors: dict[int, Any],
     original_dg_stack: tuple["DeltaGenerator", ...],
+    on_script_will_rerun: Callable[[], None] | None = None,
+    main_script_path: str = "",
+    set_execing_flag: Callable[[], Any] | None = None,
 ) -> tuple[RerunData | None, Exception | None, bool, bool]:
     # Avoid circular imports
     from streamlit.delta_generator import dg_stack
@@ -88,12 +91,18 @@ def _exec_code(
 
     print(code_to_exec)
     try:
-        code_to_exec()
-        # self._session_state.maybe_check_serializable()
-        # self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
-    # except TypeError as ex:
-    #     uncaught_exception = ex
-    #     handle_uncaught_app_exception(uncaught_exception)
+        if set_execing_flag is not None:
+            with modified_sys_path(main_script_path), set_execing_flag():
+                if on_script_will_rerun is not None:
+                    on_script_will_rerun()
+                code_to_exec()
+        else:
+            code_to_exec()
+            # self._session_state.maybe_check_serializable()
+            # self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
+        # except TypeError as ex:
+        #     uncaught_exception = ex
+        #     handle_uncaught_app_exception(uncaught_exception)
     except RerunException as e:
         print(f"RerunExceptioN!!! {e}")
         rerun_exception_data = e.rerun_data
@@ -108,6 +117,7 @@ def _exec_code(
     except StopException:
         # This is thrown when the script executes `st.stop()`.
         # We don't have to do anything here.
+        print("in stopexception")
         premature_stop = True
 
     except Exception as ex:
@@ -646,83 +656,121 @@ class ScriptRunner:
             original_cursors = ctx.cursors
             original_dg_stack = dg_stack.get()
 
-            # Run callbacks for widgets whose values have changed.
-            if rerun_data.widget_states is not None:
-                self._session_state.on_script_will_rerun(rerun_data.widget_states)
-
             ctx.on_script_start()
             prep_time = timer() - start_time
 
-            with modified_sys_path(self._main_script_path), self._set_execing_flag():
-                for code_to_exec in self._get_code_to_exec(ctx, code, rerun_data):
-                    try:
-                        (
-                            rerun_exception_data,
-                            uncaught_exception,
-                            premature_stop,
-                            run_without_errors,
-                        ) = _exec_code(
-                            code_to_exec,
-                            ctx,
-                            original_cursors,
-                            original_dg_stack,
+            premature_stop = False
+            run_without_errors = True
+
+            # # Run callbacks for widgets whose values have changed.
+            # if rerun_data.widget_states is not None:
+            #     self._session_state.on_script_will_rerun(rerun_data.widget_states)
+
+            # if rerun_data.widget_states is not None:
+            #     _exec_code(
+            #         lambda states=rerun_data.widget_states: (
+            #             self._session_state.on_script_will_rerun(states)
+            #             if states
+            #             else None
+            #         ),
+            #         ctx,
+            #         original_cursors,
+            #         original_dg_stack,
+            #     )
+
+            # Create fake module. This gives us a name global namespace to
+            # execute the code in.
+            module = self._new_module("__main__")
+
+            # Install the fake module as the __main__ module. This allows
+            # the pickle module to work inside the user's code, since it now
+            # can know the module where the pickled objects stem from.
+            # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+            # our code, as it will point to the wrong module!!!
+            sys.modules["__main__"] = module
+
+            # Add special variables to the module's globals dict.
+            # Note: The following is a requirement for the CodeHasher to
+            # work correctly. The CodeHasher is scoped to
+            # files contained in the directory of __main__.__file__, which we
+            # assume is the main script directory.
+            module.__dict__["__file__"] = script_path
+
+            # with modified_sys_path(self._main_script_path), self._set_execing_flag():
+            for code_to_exec in self._get_code_to_exec(ctx, code, rerun_data, module):
+                try:
+
+                    def _rerun():
+                        if rerun_data.widget_states is None:
+                            return
+                        self._session_state.on_script_will_rerun(
+                            rerun_data.widget_states
                         )
-                        self._session_state.maybe_check_serializable()
-                        self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
-                    finally:
-                        self._session_state[
-                            SCRIPT_RUN_WITHOUT_ERRORS_KEY
-                        ] = run_without_errors
-                        if rerun_exception_data:
-                            # The handling for when a full script run or a fragment is stopped early
-                            # is the same, so we only have one ScriptRunnerEvent for this scenario.
-                            finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
-                        elif rerun_data.fragment_id_queue:
-                            finished_event = (
-                                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+
+                    (
+                        rerun_exception_data,
+                        uncaught_exception,
+                        premature_stop,
+                        run_without_errors,
+                    ) = _exec_code(
+                        code_to_exec,
+                        ctx,
+                        original_cursors,
+                        original_dg_stack,
+                        _rerun,
+                        self._main_script_path,
+                        self._set_execing_flag,
+                    )
+                    self._session_state.maybe_check_serializable()
+                    self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
+                finally:
+                    self._session_state[
+                        SCRIPT_RUN_WITHOUT_ERRORS_KEY
+                    ] = run_without_errors
+                    if rerun_exception_data:
+                        # The handling for when a full script run or a fragment is stopped early
+                        # is the same, so we only have one ScriptRunnerEvent for this scenario.
+                        finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                    elif rerun_data.fragment_id_queue:
+                        finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+                    else:
+                        finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+                    print(f"finished_event {finished_event}")
+                    if ctx.gather_usage_stats:
+                        try:
+                            # Prevent issues with circular import
+                            from streamlit.runtime.metrics_util import (
+                                create_page_profile_message,
+                                to_microseconds,
                             )
-                        else:
-                            finished_event = (
-                                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+
+                            # Create and send page profile information
+                            ctx.enqueue(
+                                create_page_profile_message(
+                                    ctx.tracked_commands,
+                                    exec_time=to_microseconds(timer() - start_time),
+                                    prep_time=to_microseconds(prep_time),
+                                    uncaught_exception=(
+                                        type(uncaught_exception).__name__
+                                        if uncaught_exception
+                                        else None
+                                    ),
+                                )
                             )
+                        except Exception as ex:
+                            # Always capture all exceptions since we want to make sure that
+                            # the telemetry never causes any issues.
+                            _LOGGER.debug("Failed to create page profile", exc_info=ex)
+                    self._on_script_finished(ctx, finished_event, premature_stop)
+                    # Use _log_if_error() to make sure we never ever ever stop running the
+                    # script without meaning to.
+                    _log_if_error(_clean_problem_modules)
 
-                        if ctx.gather_usage_stats:
-                            try:
-                                # Prevent issues with circular import
-                                from streamlit.runtime.metrics_util import (
-                                    create_page_profile_message,
-                                    to_microseconds,
-                                )
-
-                                # Create and send page profile information
-                                ctx.enqueue(
-                                    create_page_profile_message(
-                                        ctx.tracked_commands,
-                                        exec_time=to_microseconds(timer() - start_time),
-                                        prep_time=to_microseconds(prep_time),
-                                        uncaught_exception=(
-                                            type(uncaught_exception).__name__
-                                            if uncaught_exception
-                                            else None
-                                        ),
-                                    )
-                                )
-                            except Exception as ex:
-                                # Always capture all exceptions since we want to make sure that
-                                # the telemetry never causes any issues.
-                                _LOGGER.debug(
-                                    "Failed to create page profile", exc_info=ex
-                                )
-                        self._on_script_finished(ctx, finished_event, premature_stop)
-                        # Use _log_if_error() to make sure we never ever ever stop running the
-                        # script without meaning to.
-                        _log_if_error(_clean_problem_modules)
-
-                        received_reruns = True
-                        if rerun_exception_data is not None:
-                            rerun_data = rerun_exception_data
-                        else:
-                            received_reruns = False
+                    # received_reruns = True
+                    if rerun_exception_data is not None:
+                        rerun_data = rerun_exception_data
+                    else:
+                        received_reruns = False
 
     # def _exec_code(
     #     self,
@@ -836,46 +884,54 @@ class ScriptRunner:
     #     return rerun_exception_data, uncaught_exception, premature_stop, run_without_errors
 
     def _get_main_code(
-        self, script_path: source_util.ScriptPath, code: types.CodeType
+        # self, script_path: source_util.ScriptPath, code: types.CodeType
+        self,
+        module,
+        code: types.CodeType,
     ) -> Callable[[], None]:
-        # Create fake module. This gives us a name global namespace to
-        # execute the code in.
-        module = self._new_module("__main__")
+        # # Create fake module. This gives us a name global namespace to
+        # # execute the code in.
+        # module = self._new_module("__main__")
 
-        # Install the fake module as the __main__ module. This allows
-        # the pickle module to work inside the user's code, since it now
-        # can know the module where the pickled objects stem from.
-        # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
-        # our code, as it will point to the wrong module!!!
-        sys.modules["__main__"] = module
+        # # Install the fake module as the __main__ module. This allows
+        # # the pickle module to work inside the user's code, since it now
+        # # can know the module where the pickled objects stem from.
+        # # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+        # # our code, as it will point to the wrong module!!!
+        # sys.modules["__main__"] = module
 
-        # Add special variables to the module's globals dict.
-        # Note: The following is a requirement for the CodeHasher to
-        # work correctly. The CodeHasher is scoped to
-        # files contained in the directory of __main__.__file__, which we
-        # assume is the main script directory.
-        module.__dict__["__file__"] = script_path
+        # # Add special variables to the module's globals dict.
+        # # Note: The following is a requirement for the CodeHasher to
+        # # work correctly. The CodeHasher is scoped to
+        # # files contained in the directory of __main__.__file__, which we
+        # # assume is the main script directory.
+        # module.__dict__["__file__"] = script_path
 
         return lambda: exec(code, module.__dict__)
 
     def _get_code_to_exec(
-        self, ctx: ScriptRunContext, code: types.CodeType, rerun_data: RerunData
+        self, ctx: ScriptRunContext, code: types.CodeType, rerun_data: RerunData, module
     ) -> types.Iterator[Callable[[], None]]:
         # yield the main script code
         if not rerun_data.fragment_id_queue:
             self._fragment_storage.clear()
-            yield self._get_main_code(ctx.main_script_path, code)
+            # yield self._get_main_code(ctx.main_script_path, code)
+            yield self._get_main_code(module, code)
             return
 
         # yield the fragment functions
-        for fragment_id in rerun_data.fragment_id_queue:
-            wrapped_fragment = None
-            try:
-                wrapped_fragment = self._fragment_storage.get(fragment_id)
-            except KeyError:
-                raise RuntimeError(f"Could not find fragment with id {fragment_id}")
-            ctx.current_fragment_id = fragment_id
-            yield wrapped_fragment
+        def _fragment():
+            for fragment_id in rerun_data.fragment_id_queue:
+                wrapped_fragment = None
+                try:
+                    wrapped_fragment = self._fragment_storage.get(fragment_id)
+                except KeyError:
+                    raise RuntimeError(f"Could not find fragment with id {fragment_id}")
+                ctx.current_fragment_id = fragment_id
+                # yield wrapped_fragment
+                wrapped_fragment()
+
+        yield _fragment
 
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
