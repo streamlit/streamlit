@@ -16,6 +16,7 @@
 extend-exclude = ["lib/streamlit/proto", "lib/streamlit/emojis.py"]
 include = ["lib/**/*.py", "lib/**/*.pyi", "e2e_playwright/**/*.py", "scripts/**/*.py"]
 target-version = 'py38'
+line-length = 88
 
 [lint]
 select = [
@@ -59,3 +60,7 @@ ban-relative-imports = "all"
 
 [lint.isort]
 known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
+
+[lint.flake8-comprehensions]
+# Allow dict calls that make use of keyword arguments (e.g., dict(a=1, b=2)).
+allow-dict-calls-with-keyword-arguments = true

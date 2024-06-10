@@ -122,20 +122,19 @@ python-init:
 # Verify that our Python files are properly formatted
 # and that there are no lint errors.
 pylint:
-	# Does not modify any files. Returns with a non-zero
-	# status if anything is not properly formatted
-	# or if there are lint errors
+	# Checks if the formatting is correct:
 	ruff format --check
-	# Run linter
+	# Run linter:
 	ruff check
 
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
+# https://docs.astral.sh/ruff/formatter/#sorting-imports
 pyformat:
-	# Sort imports: https://docs.astral.sh/ruff/formatter/#sorting-imports
-	ruff check --select I --fix;
+	# Sort imports:
+	ruff check --select I --fix
 	# Run code formatter
-	ruff format;
+	ruff format
 
 .PHONY: pytest
 # Run Python unit tests.
