@@ -674,8 +674,7 @@ export class App extends PureComponent<Props, State> {
             })
           } else {
             if (authRedirect?.actionType == "logout") {
-              setCookie("_streamlit_uzer", undefined)
-              document.location.reload()
+              window.location.href = authRedirect.url
             } else {
               window.location.href = authRedirect.url
             }

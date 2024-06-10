@@ -290,7 +290,7 @@ class Server:
 
         routes: list[Any] = [
             (
-                make_url_path_regex(base, "login"),
+                make_url_path_regex(base, "oauth2callback"),
                 AuthlibCallbackHandler,
             ),
             (
@@ -298,7 +298,7 @@ class Server:
                 AuthlibLoginHandler,
             ),
             (
-                make_url_path_regex(base, "logout"),
+                make_url_path_regex(base, "authliblogout"),
                 LogoutHandler,
             ),
             (

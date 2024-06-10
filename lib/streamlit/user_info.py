@@ -98,7 +98,7 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
                 ).session._user_info = {}
 
             fwd_msg = ForwardMsg()
-            fwd_msg.auth_redirect.url = ""
+            fwd_msg.auth_redirect.url = "/authliblogout"
             fwd_msg.auth_redirect.action_type = "logout"
             print("IN USER LOGOUT CALL!!!!")
             print(fwd_msg.auth_redirect)

@@ -80,18 +80,6 @@ class LoginHandler(tornado.auth.GoogleOAuth2Mixin, tornado.web.RequestHandler):
 
 class LogoutHandler(tornado.web.RequestHandler):
     def get(self):
-        text = f"""
-        <html>
-          <body>
-            <form action="/logout" method="post">
-            {self.xsrf_form_html()}
-             <input type="submit" value="Logout">
-            </form>
-          </body>
-        </html>
-        """
-        self.write(text)
-
-    def post(self):
-        self.clear_cookie("uzer")
+        print("IN LOGOUT HANDLER!!!")
+        self.clear_cookie("_streamlit_uzer")
         self.redirect("/")
