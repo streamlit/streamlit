@@ -17,7 +17,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import cast
+from typing import Any, Callable, cast
 
 from streamlit import util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -80,6 +80,19 @@ class ScriptRequests:
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
+
+        self._exec_code: Callable[
+            [
+                RerunData,
+                Callable[[], None],
+                "ScriptRunContext",
+                dict[int, Any],
+                tuple["DeltaGenerator", ...],
+                float,
+                float,
+            ],
+            tuple[bool, RerunData],
+        ] = lambda: None
 
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
@@ -203,3 +216,40 @@ class ScriptRequests:
             # state to STOP.
             self._state = ScriptRequestType.STOP
             return ScriptRequest(ScriptRequestType.STOP)
+
+    def register_exec_code(
+        self,
+        exec_code: Callable[
+            [
+                RerunData,
+                Callable[[], None],
+                "ScriptRunContext",
+                dict[int, Any],
+                tuple["DeltaGenerator", ...],
+                float,
+                float,
+            ],
+            tuple[bool, RerunData],
+        ],
+    ) -> None:
+        self._exec_code = exec_code
+
+    def exec_code_on_current_scriptrunner(
+        self,
+        rerun_data: RerunData,
+        code_to_exec: Callable[[], None],
+        ctx: "ScriptRunContext",
+        original_cursors: dict[int, Any],
+        original_dg_stack: tuple["DeltaGenerator", ...],
+        start_time: float,
+        prep_time: float,
+    ) -> tuple[bool, RerunData]:
+        return self._exec_code(
+            rerun_data,
+            code_to_exec,
+            ctx,
+            original_cursors,
+            original_dg_stack,
+            start_time,
+            prep_time,
+        )

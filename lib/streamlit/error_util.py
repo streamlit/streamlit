@@ -14,12 +14,15 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import streamlit as st
 from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -71,7 +74,9 @@ def _print_rich_exception(e: BaseException) -> None:
     )
 
 
-def handle_uncaught_app_exception(ex: BaseException) -> None:
+def handle_uncaught_app_exception(
+    ex: BaseException, dg: DeltaGenerator | None = None
+) -> None:
     """Handle an exception that originated from a user app.
 
     By default, we show exceptions directly in the browser. However,
@@ -79,6 +84,10 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     warning in the frontend instead.
     """
     error_logged = False
+
+    _dg = dg
+    if _dg is None:
+        _dg = st
 
     if config.get_option("logger.enableRich"):
         try:
@@ -97,10 +106,10 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
         if not error_logged:
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
             _LOGGER.warning("Uncaught app exception", exc_info=ex)
-        st.exception(ex)
+        _dg.exception(ex)
     else:
         if not error_logged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
             _LOGGER.error("Uncaught app exception", exc_info=ex)
-        st.exception(UncaughtAppException(ex))
+        _dg.exception(UncaughtAppException(ex))

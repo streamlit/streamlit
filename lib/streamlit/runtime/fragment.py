@@ -17,15 +17,17 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import inspect
+import time
 from abc import abstractmethod
 from copy import deepcopy
 from datetime import timedelta
 from functools import wraps
 from typing import Any, Callable, Protocol, TypeVar, overload
 
+from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 from streamlit.time_util import time_to_seconds
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -155,11 +157,12 @@ def _fragment(
                 dg_stack.set(deepcopy(dg_stack_snapshot))
             else:
                 # Otherwise, we must be in a full script run. We need to temporarily set
-                # ctx.current_fragment_id so that elements corresponding to this
+                # ctx.fragment_id so that elements corresponding to this
                 # fragment get tagged with the appropriate ID. ctx.current_fragment_id
                 # gets reset after the fragment function finishes running.
                 ctx.current_fragment_id = fragment_id
 
+            result = None
             try:
                 # Make sure we set the active script hash to the same value
                 # for the fragment run as when defined upon initialization
@@ -172,12 +175,16 @@ def _fragment(
                     if initialized_active_script_hash != ctx.active_script_hash
                     else contextlib.nullcontext()
                 )
+                # try:
                 with active_hash_context:
                     with st.container():
                         ctx.current_fragment_delta_path = (
                             active_dg._cursor.delta_path if active_dg._cursor else []
                         )
                         result = non_optional_func(*args, **kwargs)
+                # except Exception as e:
+                #     ctx.current_fragment_id = None
+                #     handle_uncaught_app_exception(e)
             finally:
                 ctx.current_fragment_id = None
 
@@ -191,7 +198,19 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        return wrapped_fragment()
+        now = time.time()
+        original_cursors = ctx.cursors
+        original_dg_stack = dg_stack.get()
+        ctx.script_requests.exec_code_on_current_scriptrunner(
+            RerunData(),
+            wrapped_fragment,
+            ctx,
+            original_cursors,
+            original_dg_stack,
+            now,
+            now,
+        )
+        # return wrapped_fragment()
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
