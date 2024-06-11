@@ -9,7 +9,6 @@ plotly>=5.3.1
 pydot>=1.4.2
 scipy>=1.7.3
 seaborn>=0.11.2
-setuptools>=65.5.1
 watchdog>=2.1.5
 urllib3>=1.9
 # Use by vega-lite / altair e2e tests:
