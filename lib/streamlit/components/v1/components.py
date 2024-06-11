@@ -29,8 +29,8 @@ from streamlit.components.v1.custom_component import (
 from streamlit.runtime.state import register_widget
 
 __all__ = [
-    "declare_component",
-    "register_widget",
     "CustomComponent",
+    "declare_component",
     "MarshallComponentException",
+    "register_widget",
 ]
