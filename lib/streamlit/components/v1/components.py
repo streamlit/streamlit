@@ -22,4 +22,6 @@
 from streamlit.components.v1.component_registry import (
     declare_component as declare_component,
 )
-from streamlit.components.v1.custom_component import *  # noqa: F403
+from streamlit.components.v1.custom_component import register_widget as register_widget
+
+__all__ = ["declare_component", "register_widget"]
