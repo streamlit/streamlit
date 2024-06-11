@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# PLEASE DO NOT ADD MORE IMPORTS HERE OR MOVE THE CODE TO ANOTHER FILE.
+# This file relies on a clean import to make sure the functionality is not made available transiently.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 import streamlit as st
 
 st.components.v1.html("<div>This import and usage worked!</div>")
