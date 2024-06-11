@@ -650,7 +650,7 @@ def _get_x_encoding(
             x_title = x_column
 
     # User specified x-axis label takes precedence
-    if x_axis_label:
+    if x_axis_label is not None:
         x_title = x_axis_label
 
     return alt.X(
@@ -694,7 +694,7 @@ def _get_y_encoding(
             y_title = y_column
 
     # User specified y-axis label takes precedence
-    if y_axis_label:
+    if y_axis_label is not None:
         y_title = y_axis_label
 
     return alt.Y(
