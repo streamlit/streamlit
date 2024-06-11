@@ -565,6 +565,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -593,6 +595,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different lines in this chart.
@@ -717,6 +725,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -739,6 +749,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -767,6 +779,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart.
@@ -891,6 +909,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -913,6 +933,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -941,6 +963,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart.
@@ -1067,6 +1095,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -1089,6 +1119,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
         width: int | None = None,
@@ -1118,6 +1150,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color of the circles representing each datapoint.
@@ -1256,6 +1294,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=size,
             width=width,
