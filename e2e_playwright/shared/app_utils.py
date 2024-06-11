@@ -118,13 +118,17 @@ def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
 
 def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> Locator:
     """Get a markdown element with the given text inside.
+
     Parameters
     ----------
+
     locator : Locator
         The locator to search for the expander.
+
     text_inside_markdown : str or Pattern[str]
         Some text to use to identify the markdown element. The text should be contained
         in the markdown content.
+
     Returns
     -------
     Locator
@@ -141,7 +145,7 @@ def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> 
 
 
 def expect_prefixed_markdown(
-    locator: Locator,
+    locator: Locator | Page,
     expected_prefix: str,
     expected_markdown: str | Pattern[str],
     exact_match: bool = False,
@@ -188,8 +192,29 @@ def expect_prefixed_markdown(
         expect(selection_text).to_contain_text(expected_markdown)
 
 
+def expect_markdown(
+    locator: Locator | Page,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect an exception to be displayed in the app.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the exception element.
+
+    expected_markdown : str or Pattern[str]
+        The expected message to be displayed in the exception.
+    """
+    markdown_el = locator.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected_message
+    )
+    expect(markdown_el).to_be_visible()
+
+
 def expect_exception(
-    locator: Locator,
+    locator: Locator | Page,
     expected_message: str | Pattern[str],
 ) -> None:
     """Expect an exception to be displayed in the app.

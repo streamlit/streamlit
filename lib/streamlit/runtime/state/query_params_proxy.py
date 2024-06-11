@@ -74,18 +74,15 @@ class QueryParamsProxy(MutableMapping[str, str]):
     @overload
     def update(
         self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]], /, **kwds: str
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def update(
         self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]], /, **kwds: str
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def update(self, **kwds: str | Iterable[str]) -> None:
-        ...
+    def update(self, **kwds: str | Iterable[str]) -> None: ...
 
     def update(self, other=(), /, **kwds):
         """
@@ -167,14 +164,12 @@ class QueryParamsProxy(MutableMapping[str, str]):
     @overload
     def from_dict(
         self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]]
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def from_dict(
         self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]]
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @gather_metrics("query_params.from_dict")
     def from_dict(self, params):

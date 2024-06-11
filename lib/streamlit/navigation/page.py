@@ -35,7 +35,7 @@ def Page(
     url_path: str | None = None,
     default: bool = False,
 ):
-    """Configure a page in `st.navigation` in a multipage app.
+    """Configure a page in `st.navigation` in a multipage app.
 
     The Page object is passed to `st.navigation` and returned when the user
     navigates to that page. Call `Page.run()` on the returned Page in your

@@ -19,8 +19,17 @@ from __future__ import annotations
 import pickle
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, Literal, TypeVar, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
@@ -42,8 +51,8 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+    show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
@@ -61,6 +70,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -343,8 +357,7 @@ class CacheDataAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -357,8 +370,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -443,7 +455,9 @@ class CacheDataAPI:
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
+
+            .. note::
+                This parameter is deprecated and will be removed in a future release.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -558,6 +572,9 @@ class CacheDataAPI:
             )
 
         self._maybe_show_deprecation_warning()
+
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_data")
 
         def wrapper(f):
             return make_cached_func_wrapper(

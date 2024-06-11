@@ -12,24 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# PLEASE DO NOT ADD MORE IMPORTS HERE OR MOVE THE CODE TO ANOTHER FILE.
+# This file relies on a clean import to make sure the functionality is not made available transiently.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-import streamlit as st
+from streamlit.components.v1 import components
 
-
-@st.cache_data
-def audio():
-    url = "https://www.w3schools.com/html/horse.ogg"
-    file = requests.get(url).content
-    st.audio(file)
-
-
-@st.cache_data
-def video():
-    url = "https://www.w3schools.com/html/mov_bbb.mp4"
-    file = requests.get(url).content
-    st.video(file)
-
-
-audio()
-video()
+components.declare_component
+components.CustomComponent

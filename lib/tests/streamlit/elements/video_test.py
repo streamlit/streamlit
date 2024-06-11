@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.video unit tests"""
+
 import hashlib
 from io import BytesIO
 from pathlib import Path

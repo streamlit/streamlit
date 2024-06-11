@@ -23,10 +23,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 class HeadingProtoTag(Enum):

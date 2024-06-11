@@ -1,4 +1,4 @@
-name: Javascript
+name: Javascript Unit Tests
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  js_test:
+  js-unit-tests:
     runs-on: ubuntu-latest
 
     defaults:
@@ -54,7 +54,7 @@ jobs:
         run: |
           # Run eslint as a standalone command to generate the test report.
           # We need to --hook-stage manual to trigger Typecheck too
-          PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pre-commit run --hook-stage manual --show-diff-on-failure --color=always --all-files
+          PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint,ruff,ruff-format pre-commit run --hook-stage manual --show-diff-on-failure --color=always --all-files
           # Run eslint using Makefile omitting the pre-commit
           make jslint
       - name: Validate NOTICES
@@ -75,7 +75,7 @@ jobs:
       - name: Run frontend tests
         run: make jstest
 
-  components_lib_tests:
+  components-lib-tests:
     runs-on: ubuntu-latest
 
     defaults:

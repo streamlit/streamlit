@@ -150,7 +150,6 @@ def process_subtitle_data(
     data: str | bytes | Path | io.BytesIO,
     label: str,
 ) -> str:
-
     # Determine the type of data and process accordingly
     if isinstance(data, (str, Path)):
         subtitle_data = _handle_string_or_path_data(data)

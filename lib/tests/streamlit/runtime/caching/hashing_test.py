@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.memo/singleton hashing tests."""
+
 import datetime
 import functools
 import hashlib

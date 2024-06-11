@@ -12,11 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
+import re
 
-import streamlit as st
+from playwright.sync_api import Page, expect
 
-number = st.number_input("test", value=100)
-st.write(number)
+from e2e_playwright.shared.app_utils import expect_markdown
 
-time.sleep(1)
+
+def test_components_v1_was_imported_successfully(app: Page):
+    expect(app.locator("iframe")).to_be_attached()
+    iframe = app.frame_locator("iframe")
+    div = iframe.locator("div")
+    expect(div).to_have_text("This import and usage worked!")
+
+    expect_markdown(app, "<bound method IframeMixin._iframe of DeltaGenerator()>")
+    expect_markdown(app, re.compile("<function declare_component at .*>"))

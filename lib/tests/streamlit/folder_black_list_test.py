@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """streamlit.black_list unit test."""
+
 import unittest
 
 from streamlit.folder_black_list import FolderBlackList

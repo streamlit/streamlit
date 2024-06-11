@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from playwright.sync_api import Page, expect
 
@@ -49,7 +50,7 @@ expected_page_order = [
     "Different Title",
     "page 4",
     "page 5",
-    "page 6",
+    "slow page",
     "page 7",
     "page 8",
     "page 9",
@@ -336,7 +337,7 @@ def test_set_default_navigation(app: Page, app_port: int):
     app.goto(f"http://localhost:{app_port}/?default=True")
     wait_for_app_loaded(app)
 
-    expect(page_heading(app)).to_contain_text("Page 6")
+    expect(page_heading(app)).to_contain_text("Page 7")
 
 
 def test_page_url_path_appears_in_url(app: Page, app_port: int):
@@ -359,3 +360,29 @@ def test_widgets_maintain_state_in_fragment(app: Page):
     wait_for_app_run(app)
 
     expect(input).to_have_value("Hello")
+
+
+def test_widget_state_reset_on_page_switch(app: Page):
+    # Regression test for GH issue 7338 for MPAv2
+
+    slider = app.locator('.stSlider [role="slider"]')
+    slider.click()
+    slider.press("ArrowRight")
+    wait_for_app_run(app, wait_delay=500)
+    expect(app.get_by_text("x is 1")).to_be_attached()
+
+    get_page_link(app, "slow page").click()
+
+    # Wait for the view container and main menu to appear (like in wait_for_app_loaded),
+    # but don't wait for the script to finish running.
+    app.wait_for_selector(
+        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
+    )
+    app.wait_for_selector("[data-testid='stMainMenu']", timeout=20000, state="attached")
+
+    # Back to page 2
+    get_page_link(app, "page 2").click()
+    wait_for_app_run(app, wait_delay=500)
+
+    # Slider reset
+    expect(app.get_by_text("x is 1")).to_be_attached()

@@ -17,27 +17,29 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import threading
-import types
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterator, Union
-
-from google.protobuf.message import Message
+from typing import TYPE_CHECKING, Any, Iterator, Literal, Union
 
 import streamlit as st
 from streamlit import runtime, util
-from streamlit.proto.Block_pb2 import Block
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import update_hash
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
 )
-from streamlit.runtime.state.common import WidgetMetadata
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
+    from types import FunctionType
+
+    from google.protobuf.message import Message
+
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.proto.Block_pb2 import Block
+    from streamlit.runtime.caching.cache_type import CacheType
+    from streamlit.runtime.state.common import WidgetMetadata
 
 
 @dataclass(frozen=True)
@@ -232,7 +234,7 @@ class CachedMessageReplayContext(threading.local):
 
     @contextlib.contextmanager
     def calling_cached_function(
-        self, func: types.FunctionType, allow_widgets: bool
+        self, func: FunctionType, allow_widgets: bool
     ) -> Iterator[None]:
         """Context manager that should wrap the invocation of a cached function.
         It allows us to track any `st.foo` messages that are generated from inside the function
@@ -363,7 +365,7 @@ class CachedMessageReplayContext(threading.local):
 
 
 def replay_cached_messages(
-    result: CachedResult, cache_type: CacheType, cached_func: types.FunctionType
+    result: CachedResult, cache_type: CacheType, cached_func: FunctionType
 ) -> None:
     """Replay the st element function calls that happened when executing a
     cache-decorated function.
@@ -427,3 +429,17 @@ def _make_widget_key(widgets: list[tuple[str, Any]], cache_type: CacheType) -> s
         update_hash(widget_id_val, func_hasher, cache_type)
 
     return func_hasher.hexdigest()
+
+
+def show_widget_replay_deprecation(
+    decorator: Literal["cache_data", "cache_resource"],
+) -> None:
+    show_deprecation_warning(
+        "The `experimental_allow_widgets` parameter is deprecated and will be removed "
+        "in a future release. Please remove the `experimental_allow_widgets` parameter "
+        f"from the `@st.{decorator}` decorator and move all widget commands outside of "
+        "cached functions.\n\nTo speed up your app, we recommend moving your widgets into fragments. "
+        "Find out more about fragments in [our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
+        "\n\nIf you have a specific use-case that requires the `experimental_allow_widgets` functionality, "
+        "please tell us via an [issue on Github](https://github.com/streamlit/streamlit/issues)."
+    )

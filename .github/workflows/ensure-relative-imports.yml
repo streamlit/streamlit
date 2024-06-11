@@ -1,4 +1,4 @@
-name: Ensure Relative Imports Exist in Prod @streamlit/lib
+name: Ensure Relative Imports in Frontend
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  ensure-relative-imports:
     runs-on: ubuntu-latest
 
     defaults:

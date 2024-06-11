@@ -1,4 +1,4 @@
-name: Python Dependency Minimum Versions
+name: Python Minimum Dependency Versions
 
 on:
   push:
@@ -26,7 +26,7 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
-  py_version:
+  py-min-deps-test:
     runs-on: ubuntu-latest
 
     strategy:
@@ -51,6 +51,8 @@ jobs:
           python-version: "${{ env.PYTHON_MIN_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          use_cached_venv: false
       - name: Install min dependencies (force reinstall)
         run: uv pip install -r lib/min-constraints-gen.txt --force-reinstall
       - name: Generate Protobufs

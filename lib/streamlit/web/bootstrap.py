@@ -20,16 +20,7 @@ import signal
 import sys
 from typing import Any, Final
 
-from streamlit import (
-    cli_util,
-    config,
-    env_util,
-    file_util,
-    net_util,
-    secrets,
-    util,
-    version,
-)
+from streamlit import cli_util, config, env_util, file_util, net_util, secrets, util
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
@@ -115,7 +106,6 @@ def _on_server_start(server: Server) -> None:
     _maybe_print_static_folder_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
-    _print_new_version_message()
 
     # Load secrets.toml if it exists. If the file doesn't exist, this
     # function will return without raising an exception. We catch any parse
@@ -123,7 +113,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        _LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
+        _LOGGER.error("Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -175,27 +165,6 @@ def _fix_pydantic_duplicate_validators_error():
         class_validators.in_ipython = lambda: True  # type: ignore[attr-defined]
     except ImportError:
         pass
-
-
-def _print_new_version_message() -> None:
-    if version.should_show_new_version_notice():
-        NEW_VERSION_TEXT: Final = """
-  %(new_version)s
-
-  See what's new at https://discuss.streamlit.io/c/announcements
-
-  Enter the following command to upgrade:
-  %(prompt)s %(command)s
-""" % {
-            "new_version": cli_util.style_for_cli(
-                "A new version of Streamlit is available.", fg="blue", bold=True
-            ),
-            "prompt": cli_util.style_for_cli("$", fg="blue"),
-            "command": cli_util.style_for_cli(
-                "pip install streamlit --upgrade", bold=True
-            ),
-        }
-        cli_util.print_to_cli(NEW_VERSION_TEXT)
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
