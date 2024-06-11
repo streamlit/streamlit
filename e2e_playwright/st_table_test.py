@@ -36,4 +36,4 @@ def test_themed_table_rendering(
     expect(table_elements).to_have_count(TOTAL_TABLE_ELEMENTS)
 
     # Only test a single table element to ensure theming is applied correctly:
-    assert_snapshot(table_elements.nth(30), name=f"st_table-themed")
+    assert_snapshot(table_elements.nth(30), name="st_table-themed")

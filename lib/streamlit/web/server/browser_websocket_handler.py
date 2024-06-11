@@ -101,12 +101,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
-        user_info: dict[str, str | None] = dict()
-
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
+        user_info: dict[str, str | None] = {
+            "email": None if is_public_cloud_app else email
+        }
 
         existing_session_id = None
         try:

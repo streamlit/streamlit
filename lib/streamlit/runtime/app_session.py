@@ -881,7 +881,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     # ui.hideSidebarNav is deprecated, will be removed in the future
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
-    if config.get_option("client.showSidebarNavigation") == False:
+    if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
 

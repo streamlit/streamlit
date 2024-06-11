@@ -223,8 +223,7 @@ class CacheResourceAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -237,8 +236,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -490,11 +488,11 @@ class ResourceCache(Cache):
 
     @property
     def max_entries(self) -> float:
-        return cast(float, self._mem_cache.maxsize)
+        return self._mem_cache.maxsize
 
     @property
     def ttl_seconds(self) -> float:
-        return cast(float, self._mem_cache.ttl)
+        return self._mem_cache.ttl
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.

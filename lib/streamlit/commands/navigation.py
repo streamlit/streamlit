@@ -34,7 +34,7 @@ SectionHeader: TypeAlias = str
 
 
 def pages_from_nav_sections(
-    nav_sections: dict[SectionHeader, list[StreamlitPage]]
+    nav_sections: dict[SectionHeader, list[StreamlitPage]],
 ) -> list[StreamlitPage]:
     page_list = []
     for pages in nav_sections.values():

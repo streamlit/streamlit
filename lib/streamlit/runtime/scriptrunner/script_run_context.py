@@ -32,9 +32,9 @@ from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 if TYPE_CHECKING:
+    from streamlit.cursor import RunningCursor
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
-
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
@@ -62,8 +62,8 @@ class ScriptRunContext:
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
     user_info: UserInfo
-    fragment_storage: "FragmentStorage"
-    pages_manager: "PagesManager"
+    fragment_storage: FragmentStorage
+    pages_manager: PagesManager
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
@@ -74,7 +74,7 @@ class ScriptRunContext:
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
     form_ids_this_run: set[str] = field(default_factory=set)
-    cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
+    cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: set[str] | None = None
@@ -139,9 +139,9 @@ class ScriptRunContext:
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
                 "`set_page_config()` can only be called once per app page, "
-                + "and must be called as the first Streamlit command in your script.\n\n"
-                + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
+                "and must be called as the first Streamlit command in your script.\n\n"
+                "For more information refer to the [docs]"
+                "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
             )
 
         # We want to disallow set_page config if one of the following occurs:
@@ -161,8 +161,8 @@ class ScriptRunContext:
         if self._experimental_query_params_used and self._production_query_params_used:
             raise StreamlitAPIException(
                 "Using `st.query_params` together with either `st.experimental_get_query_params` "
-                + "or `st.experimental_set_query_params` is not supported. Please convert your app "
-                + "to only use `st.query_params`"
+                "or `st.experimental_set_query_params` is not supported. Please convert your app "
+                "to only use `st.query_params`"
             )
 
     def mark_experimental_query_params_used(self):
@@ -233,4 +233,4 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
 
 
 # Needed to avoid circular dependencies while running tests.
-import streamlit
+import streamlit  # noqa: E402, F401

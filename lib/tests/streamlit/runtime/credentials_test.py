@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """streamlit.runtime.credentials unit test."""
+
 import os
 import textwrap
 import unittest
