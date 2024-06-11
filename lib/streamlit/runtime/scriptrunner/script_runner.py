@@ -522,25 +522,6 @@ class ScriptRunner:
             if config.get_option("runner.installTracer"):
                 self._install_tracer()
 
-            # # This will be set to a RerunData instance if our execution
-            # # is interrupted by a RerunException.
-            # rerun_exception_data: RerunData | None = None
-
-            # # Saving and restoring our original cursors/dg_stack is needed
-            # # specifically to handle the case where a RerunException is raised while
-            # # running a fragment. In this case, we need to restore both to their states
-            # # at the start of the script run to ensure that we write to the correct
-            # # places in the app during the rerun (without this, ctx.cursors and dg_stack
-            # # will still be set to the snapshots they were restored from when running
-            # # the fragment).
-            # original_cursors = ctx.cursors
-            # original_dg_stack = dg_stack.get()
-
-            # # If the script stops early, we don't want to remove unseen widgets,
-            # # so we track this to potentially skip session state cleanup later.
-            # premature_stop: bool = False
-
-            # try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
             module = self._new_module("__main__")
