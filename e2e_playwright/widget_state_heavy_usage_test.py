@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -21,7 +20,7 @@ def test_clicking_a_lot_still_keeps_state(app: Page):
     number_input_down_button = app.get_by_test_id("stNumberInput").locator(
         "button.step-down"
     )
-    for i in range(40):
+    for _ in range(40):
         number_input_down_button.click()
 
     expect(app.get_by_test_id("stMarkdown")).to_have_text("60")

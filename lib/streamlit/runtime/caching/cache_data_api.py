@@ -344,8 +344,7 @@ class CacheDataAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -358,8 +357,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,

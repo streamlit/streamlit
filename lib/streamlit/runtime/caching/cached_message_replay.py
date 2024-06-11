@@ -431,7 +431,7 @@ def _make_widget_key(widgets: list[tuple[str, Any]], cache_type: CacheType) -> s
 
 
 def show_widget_replay_deprecation(
-    decorator: Literal["cache_data", "cache_resource"]
+    decorator: Literal["cache_data", "cache_resource"],
 ) -> None:
     show_deprecation_warning(
         "The `experimental_allow_widgets` parameter is deprecated and will be removed "

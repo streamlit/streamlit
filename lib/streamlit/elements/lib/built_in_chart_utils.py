@@ -88,8 +88,8 @@ class ChartType(Enum):
 # NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
 # ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
 # (See https://github.com/streamlit/streamlit/pull/7164#discussion_r1307707345)
-_COLOR_LEGEND_SETTINGS: Final = dict(titlePadding=5, offset=5, orient="bottom")
-_SIZE_LEGEND_SETTINGS: Final = dict(titlePadding=0.5, offset=5, orient="bottom")
+_COLOR_LEGEND_SETTINGS: Final = {"titlePadding": 5, "offset": 5, "orient": "bottom"}
+_SIZE_LEGEND_SETTINGS: Final = {"titlePadding": 0.5, "offset": 5, "orient": "bottom"}
 
 # User-readable names to give the index and melted columns.
 _SEPARATED_INDEX_COLUMN_TITLE: Final = "index"
@@ -146,12 +146,12 @@ def generate_chart(
         # The last index of df so we can adjust the input df in add_rows:
         last_index=_last_index_for_melted_dataframes(df),
         # This is the input to prep_data (except for the df):
-        columns=dict(
-            x_column=x_column,
-            y_column_list=y_column_list,
-            color_column=color_column,
-            size_column=size_column,
-        ),
+        columns={
+            "x_column": x_column,
+            "y_column_list": y_column_list,
+            "color_column": color_column,
+            "size_column": size_column,
+        },
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
@@ -539,7 +539,7 @@ def _parse_y_columns(
         y_column_list = [y_from_user]
 
     elif type_util.is_sequence(y_from_user):
-        y_column_list = list(str(col) for col in y_from_user)
+        y_column_list = [str(col) for col in y_from_user]
 
     else:
         raise StreamlitAPIException(
@@ -703,7 +703,7 @@ def _get_color_encoding(
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
-    has_color_value = color_value not in [None, [], tuple()]
+    has_color_value = color_value not in [None, [], ()]  # type: ignore[comparison-overlap]
 
     # If user passed a color value, that should win over colors coming from the
     # color column (be they manual or auto-assigned due to melting)

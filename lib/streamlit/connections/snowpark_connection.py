@@ -65,9 +65,6 @@ class SnowparkConnection(BaseConnection["Session"]):
 
     def _connect(self, **kwargs) -> Session:
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
-        from snowflake.snowpark.exceptions import (  # type:ignore[import]
-            SnowparkSessionException,
-        )
         from snowflake.snowpark.session import Session
 
         # If we're running in SiS, just call get_active_session(). Otherwise, attempt to

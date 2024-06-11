@@ -968,13 +968,15 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_some_options(self, patched_config):
-        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
-            {
-                # Leave base, primaryColor, and font defined.
-                "backgroundColor": None,
-                "secondaryBackgroundColor": None,
-                "textColor": None,
-            }
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    # Leave base, primaryColor, and font defined.
+                    "backgroundColor": None,
+                    "secondaryBackgroundColor": None,
+                    "textColor": None,
+                }
+            )
         )
 
         msg = ForwardMsg()

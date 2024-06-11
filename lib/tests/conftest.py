@@ -16,6 +16,7 @@
 Global pytest fixtures. This file is automatically run by pytest before tests
 are executed.
 """
+
 import os
 import sys
 from unittest.mock import mock_open, patch

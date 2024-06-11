@@ -125,8 +125,7 @@ class Element(ABC):
     key: str | None
 
     @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree):
-        ...
+    def __init__(self, proto: ElementProto, root: ElementTree): ...
 
     def __iter__(self):
         yield self
@@ -199,8 +198,7 @@ class Widget(Element, ABC):
 
     @property
     @abstractmethod
-    def _widget_state(self) -> WidgetState:
-        ...
+    def _widget_state(self) -> WidgetState: ...
 
 
 El = TypeVar("El", bound=Element, covariant=True)
@@ -218,12 +216,10 @@ class ElementList(Generic[El]):
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> El:
-        ...
+    def __getitem__(self, idx: int) -> El: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> ElementList[El]:
-        ...
+    def __getitem__(self, idx: slice) -> ElementList[El]: ...
 
     def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
         if isinstance(idx, slice):
@@ -251,7 +247,7 @@ class ElementList(Generic[El]):
 W = TypeVar("W", bound=Widget, covariant=True)
 
 
-class WidgetList(Generic[W], ElementList[W]):
+class WidgetList(ElementList[W], Generic[W]):
     def __call__(self, key: str) -> W:
         for e in self._list:
             if e.key == key:
@@ -1014,7 +1010,7 @@ class SelectSlider(Widget, Generic[T]):
         except (ValueError, TypeError):
             try:
                 v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
-            except:
+            except:  # noqa: E722
                 raise ValueError(f"Could not find index for {self.value}")
 
         ws = WidgetState()
@@ -1586,7 +1582,7 @@ def repr_(self) -> str:
     """
     classname = self.__class__.__name__
 
-    defaults: list[Any] = [None, "", False, [], set(), dict()]
+    defaults: list[Any] = [None, "", False, [], set(), {}]
 
     if is_dataclass(self):
         fields_vals = (
@@ -1600,11 +1596,11 @@ def repr_(self) -> str:
         fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
 
     reprs = []
-    for field, value in fields_vals:
+    for field_name, value in fields_vals:
         if isinstance(value, dict):
-            line = f"{field}={format_dict(value)}"
+            line = f"{field_name}={format_dict(value)}"
         else:
-            line = f"{field}={value!r}"
+            line = f"{field_name}={value!r}"
         reprs.append(line)
 
     reprs[0] = "\n" + reprs[0]
