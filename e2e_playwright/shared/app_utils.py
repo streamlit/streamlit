@@ -92,7 +92,7 @@ def get_form_submit_button(locator: Locator, label: str | Pattern[str]) -> Locat
     return element
 
 
-def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
+def get_expander(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a expander container with the given label.
 
     Parameters

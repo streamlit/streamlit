@@ -16,15 +16,24 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_expander
+
+TOGGLE_ELEMENTS = 11
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.toggle renders correctly."""
     toggle_elements = themed_app.get_by_test_id("stCheckbox")
-    expect(toggle_elements).to_have_count(8)
+    expect(toggle_elements).to_have_count(TOGGLE_ELEMENTS)
 
-    for i, element in enumerate(toggle_elements.all()):
-        assert_snapshot(element, name=f"st_toggle-{i}")
+    assert_snapshot(toggle_elements.nth(0), name="st_toggle-true")
+    assert_snapshot(toggle_elements.nth(1), name="st_toggle-false")
+    assert_snapshot(toggle_elements.nth(2), name="st_toggle-long_label")
+    assert_snapshot(toggle_elements.nth(3), name="st_toggle-callback")
+    assert_snapshot(toggle_elements.nth(4), name="st_toggle-false_disabled")
+    assert_snapshot(toggle_elements.nth(5), name="st_toggle-true_disabled")
+    assert_snapshot(toggle_elements.nth(6), name="st_toggle-hidden_label")
+    assert_snapshot(toggle_elements.nth(7), name="st_toggle-collapsed_label")
 
 
 def test_toggle_initial_values(app: Page):
@@ -51,7 +60,7 @@ def test_toggle_initial_values(app: Page):
 def test_toggle_values_on_click(app: Page):
     """Test that st.toggle updates values correctly when user clicks."""
     toggle_elements = app.get_by_test_id("stCheckbox")
-    expect(toggle_elements).to_have_count(8)
+    expect(toggle_elements).to_have_count(TOGGLE_ELEMENTS)
 
     for toggle_element in toggle_elements.all():
         # Not sure if this is needed, but somehow it is slightly
@@ -79,3 +88,16 @@ def test_toggle_values_on_click(app: Page):
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+
+
+def test_grouped_toggles_height(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that grouped toggles have the correct height."""
+
+    expander_details = get_expander(app, "Grouped toggles").get_by_test_id(
+        "stExpanderDetails"
+    )
+    expect(expander_details.get_by_test_id("stCheckbox")).to_have_count(3)
+    assert_snapshot(expander_details, name="st_toggle-grouped_styling")
+    expect(expander_details.get_by_test_id("stCheckbox").nth(0)).to_have_css(
+        "height", "26px"
+    )
