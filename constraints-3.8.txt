@@ -5,7 +5,6 @@ asn1crypto==1.5.1
 async-timeout==4.0.3
 attrs==23.2.0
 backports.tarfile==1.2.0
-black==22.6.0
 blinker==1.8.2
 bokeh==2.4.3
 cachetools==5.3.3
@@ -22,6 +21,7 @@ cycler==0.12.1
 dataclasses-json==0.6.7
 distlib==0.3.8
 docutils==0.20.1
+emoji==2.12.1
 exceptiongroup==1.2.1
 execnet==2.1.1
 filelock==3.14.0
@@ -71,7 +71,6 @@ orjson==3.10.4
 packaging==23.2
 pandas==2.0.3
 parameterized==0.9.0
-pathspec==0.12.1
 pillow==10.3.0
 pixelmatch==0.3.0
 pkginfo==1.11.1
@@ -111,6 +110,7 @@ requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
 rpds-py==0.18.1
+ruff==0.4.8
 scipy==1.10.1
 seaborn==0.13.2
 SecretStorage==3.3.3
@@ -131,6 +131,7 @@ tomlkit==0.12.5
 toolz==0.12.1
 tornado==6.4.1
 twine==5.1.0
+types-cachetools==5.3.0.7
 types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
