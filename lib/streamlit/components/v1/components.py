@@ -19,9 +19,9 @@
 # Since we do not know what other internals are used out in the wild, let's try to
 # model the old behavior and not to break things.
 
-from streamlit.components.v1.component_registry import (
-    declare_component as declare_component,
-)
-from streamlit.components.v1.custom_component import register_widget as register_widget
+# This should be cleaned up in the future, e.g. as part of components v2.
+
+from streamlit.components.v1.component_registry import declare_component
+from streamlit.runtime.state import register_widget
 
 __all__ = ["declare_component", "register_widget"]
