@@ -22,6 +22,15 @@
 # This should be cleaned up in the future, e.g. as part of components v2.
 
 from streamlit.components.v1.component_registry import declare_component
+from streamlit.components.v1.custom_component import (
+    CustomComponent,
+    MarshallComponentException,
+)
 from streamlit.runtime.state import register_widget
 
-__all__ = ["declare_component", "register_widget"]
+__all__ = [
+    "declare_component",
+    "register_widget",
+    "CustomComponent",
+    "MarshallComponentException",
+]
