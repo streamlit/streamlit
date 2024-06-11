@@ -43,12 +43,16 @@ import streamlit as st
 
 
 def use_components_html():
+    # note that we import streamlit before and so this `components.html` working
+    # might be coincidental; this is the reason why we have dedicated tests for this kind of imports in the `st_components_v1_*` files
     import streamlit.components.v1 as components
 
     components.html("<div>Hello World!</div>")
 
 
 def use_components_iframe():
+    # note that we import streamlit before and so this `components.html` working
+    # might be coincidental; this is the reason why we have dedicated tests for this kind of imports in the `st_components_v1_*` files
     import streamlit.components.v1 as components
 
     st.write(str(components.iframe))
