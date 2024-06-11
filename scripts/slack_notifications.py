@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Send slack notifications"""
+
 import os
 import sys
 

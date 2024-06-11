@@ -25,12 +25,11 @@ from typing import TYPE_CHECKING, Callable, Final
 
 from blinker import Signal
 
-from streamlit import config, runtime, source_util, util
+from streamlit import config, runtime, util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
     ScriptRequests,
@@ -46,18 +45,19 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
-    ## "Control" events. These are emitted when the ScriptRunner's state changes.
+    # "Control" events. These are emitted when the ScriptRunner's state changes.
 
     # The script started running.
     SCRIPT_STARTED = "SCRIPT_STARTED"
@@ -80,8 +80,8 @@ class ScriptRunnerEvent(Enum):
     # is shut down.
     SHUTDOWN = "SHUTDOWN"
 
-    ## "Data" events. These are emitted when the ScriptRunner's script has
-    ## data to send to the frontend.
+    # "Data" events. These are emitted when the ScriptRunner's script has
+    # data to send to the frontend.
 
     # The script has a ForwardMsg to send to the frontend.
     ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
@@ -114,8 +114,8 @@ class ScriptRunner:
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: dict[str, str | None],
-        fragment_storage: "FragmentStorage",
-        pages_manager: "PagesManager",
+        fragment_storage: FragmentStorage,
+        pages_manager: PagesManager,
     ):
         """Initialize the ScriptRunner.
 

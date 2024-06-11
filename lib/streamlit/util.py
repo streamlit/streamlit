@@ -111,7 +111,7 @@ def repr_(self: Any) -> str:
     classname = self.__class__.__name__
     # Most of the falsey value, but excluding 0 and 0.0, since those often have
     # semantic meaning within streamlit.
-    defaults: list[Any] = [None, "", False, [], set(), dict()]
+    defaults: list[Any] = [None, "", False, [], set(), {}]
     if dataclasses.is_dataclass(self):
         fields_vals = (
             (f.name, getattr(self, f.name))

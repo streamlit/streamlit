@@ -17,8 +17,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from streamlit import _main, type_util
 from streamlit.components.types.base_custom_component import BaseCustomComponent
+from streamlit.delta_generator import main_dg
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.errors import StreamlitAPIException
@@ -29,7 +29,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import to_bytes
+from streamlit.type_util import is_bytes_like, is_dataframe_like, to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -100,7 +100,7 @@ class CustomComponent(BaseCustomComponent):
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
         try:
-            import pyarrow
+            import pyarrow  # noqa: F401
 
             from streamlit.components.v1 import component_arrow
         except ImportError:
@@ -122,12 +122,12 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         json_args = {}
         special_args = []
         for arg_name, arg_val in all_args.items():
-            if type_util.is_bytes_like(arg_val):
+            if is_bytes_like(arg_val):
                 bytes_arg = SpecialArg()
                 bytes_arg.key = arg_name
                 bytes_arg.bytes = to_bytes(arg_val)
                 special_args.append(bytes_arg)
-            elif type_util.is_dataframe_like(arg_val):
+            elif is_dataframe_like(arg_val):
                 dataframe_arg = SpecialArg()
                 dataframe_arg.key = arg_name
                 component_arrow.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
@@ -221,7 +221,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        dg = _main
+        dg = main_dg
 
         element = Element()
         return_value = marshall_component(dg, element)

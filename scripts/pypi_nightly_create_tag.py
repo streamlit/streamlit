@@ -18,6 +18,7 @@
 
 Increment the version number, add a dev suffix and add todays date
 """
+
 from datetime import datetime
 
 import packaging.version

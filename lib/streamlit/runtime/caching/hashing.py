@@ -202,9 +202,9 @@ class _HashStacks:
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
     def __init__(self):
-        self._stacks: weakref.WeakKeyDictionary[
-            threading.Thread, _HashStack
-        ] = weakref.WeakKeyDictionary()
+        self._stacks: weakref.WeakKeyDictionary[threading.Thread, _HashStack] = (
+            weakref.WeakKeyDictionary()
+        )
 
     def __repr__(self) -> str:
         return util.repr_(self)

@@ -20,19 +20,19 @@ from typing import TYPE_CHECKING, Any
 from urllib import parse
 
 from streamlit import runtime
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
-from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
 if TYPE_CHECKING:
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
+    from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 
 class LocalScriptRunner(ScriptRunner):
@@ -42,7 +42,7 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         session_state: SafeSessionState,
-        pages_manager: "PagesManager",
+        pages_manager: PagesManager,
         args=None,
         kwargs=None,
     ):
@@ -53,8 +53,8 @@ class LocalScriptRunner(ScriptRunner):
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         self.session_state = session_state
-        self.args = args if args is not None else tuple()
-        self.kwargs = kwargs if kwargs is not None else dict()
+        self.args = args if args is not None else ()
+        self.kwargs = kwargs if kwargs is not None else {}
 
         super().__init__(
             session_id="test session id",

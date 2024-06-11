@@ -14,17 +14,6 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
 
-
-def test_progress_renders_properly(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    progress_bars = themed_app.get_by_test_id("stProgress")
-    expect(progress_bars.get_by_role("progressbar").nth(0)).to_have_attribute(
-        "aria-valuenow", "50"
-    )
-    for i in range(len(progress_bars.all())):
-        assert_snapshot(
-            themed_app.get_by_test_id("stProgress").nth(i), name=f"st_progress-{i}"
-        )
+def test_imports_dont_throw(app: Page):
+    expect(app.get_by_test_id("stException")).not_to_be_visible()

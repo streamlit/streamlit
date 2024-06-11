@@ -15,12 +15,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -28,13 +27,16 @@ from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
 )
-from streamlit.source_util import PageHash, PageInfo
+
+if TYPE_CHECKING:
+    from streamlit.navigation.page import StreamlitPage
+    from streamlit.source_util import PageHash, PageInfo
 
 SectionHeader: TypeAlias = str
 
 
 def pages_from_nav_sections(
-    nav_sections: dict[SectionHeader, list[StreamlitPage]]
+    nav_sections: dict[SectionHeader, list[StreamlitPage]],
 ) -> list[StreamlitPage]:
     page_list = []
     for pages in nav_sections.values():

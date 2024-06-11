@@ -15,13 +15,15 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
 
 from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
-from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
+
+if TYPE_CHECKING:
+    from streamlit.elements.lib.dialog import DialogWidth
 
 
 def _assert_no_nested_dialogs() -> None:
@@ -79,8 +81,9 @@ def _dialog_decorator(
 
 
 @overload
-def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F], F]:
-    ...
+def dialog_decorator(
+    title: str, *, width: DialogWidth = "small"
+) -> Callable[[F], F]: ...
 
 
 # 'title' can be a function since `dialog_decorator` is a decorator. We just call it 'title' here though
@@ -88,8 +91,7 @@ def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F
 # The user is supposed to call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
 # this 'trick'. The overload is required to have a good type hint for the decorated function args.
 @overload
-def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F:
-    ...
+def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
 
 
 @gather_metrics("experimental_dialog")
@@ -175,7 +177,7 @@ def dialog_decorator(
     """
 
     func_or_title = title
-    if type(func_or_title) is str:
+    if isinstance(func_or_title, str):
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title
@@ -183,5 +185,5 @@ def dialog_decorator(
 
         return wrapper
 
-    func: F = cast(F, func_or_title)
+    func: F = func_or_title
     return _dialog_decorator(func, "", width=width)

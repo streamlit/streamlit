@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_markdown
 
 
-def test_progress_renders_properly(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    progress_bars = themed_app.get_by_test_id("stProgress")
-    expect(progress_bars.get_by_role("progressbar").nth(0)).to_have_attribute(
-        "aria-valuenow", "50"
-    )
-    for i in range(len(progress_bars.all())):
-        assert_snapshot(
-            themed_app.get_by_test_id("stProgress").nth(i), name=f"st_progress-{i}"
-        )
+def test_components_v1_was_imported_successfully(app: Page):
+    expect(app.locator("iframe")).to_be_attached()
+    iframe = app.frame_locator("iframe")
+    div = iframe.locator("div")
+    expect(div).to_have_text("This import and usage worked!")
+
+    expect_markdown(app, "<bound method IframeMixin._iframe of DeltaGenerator()>")
+    expect_markdown(app, re.compile("<function declare_component at .*>"))
