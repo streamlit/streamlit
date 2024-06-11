@@ -16,7 +16,6 @@ import streamlit as st
 from streamlit import runtime
 
 if runtime.exists():
-
     if st.checkbox("checkbox 1"):
         if st.checkbox("checkbox 2"):
             st.write("hello")

@@ -1,0 +1,66 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# In addition to the standard set of exclusions, omit all tests:
+extend-exclude = ["lib/streamlit/proto", "lib/streamlit/emojis.py"]
+include = ["lib/**/*.py", "lib/**/*.pyi", "e2e_playwright/**/*.py", "scripts/**/*.py"]
+target-version = 'py38'
+line-length = 88
+
+[lint]
+select = [
+  "B", # flake8-bugbear
+  "C4", # Helps you write better list/set/dict comprehensions.
+  "E", # pycodestyle errors
+  "FA", # Verifies files use from __future__ import annotations if a type is used in the module that can be rewritten using PEP 563.
+  "F", # pyflakes
+  "I", # isort - Import sorting
+  "ISC", # Encourage correct string literal concatenation.
+  "LOG", # Checks for issues using the standard library logging module.
+  "NPY", # Linting rules for numpy
+  "Q", # Linting rules for quites
+  "RUF100", # Unused noqa directive
+  "T20", # Check for Print statements in python files.
+  "TID", # Helps you write tidier imports.
+  "UP", # pyupgrade
+  "W", # pycodestyle warnings
+]
+ignore = [
+  "B008", # Checks for function calls in default function arguments.
+  "B904", # Checks for raise statements in exception handlers that lack a from clause.
+  "E501", # Checks for lines that exceed the specified maximum character length.
+  "ISC001", # Checks for implicitly concatenated strings on a single line.
+  "NPY002", # Checks for the use of legacy np.random function calls.
+  "PYI036", # Checks for incorrect function signatures on __exit__ and __aexit__ methods.
+  "PYI041", # Checks for parameter annotations that contain redundant unions between builtin numeric types (e.g., int | float).
+  "PYI051", # Checks for redundant unions between a Literal and a builtin supertype of that Literal.
+  "UP031", # Checks for printf-style string formatting, and offers to replace it with str.format calls.
+]
+# Do not lint files in tests, scripts, and vendor directory:
+exclude = ["lib/tests/**", "lib/streamlit/vendor/**", "scripts/**", ".github/**"]
+
+[lint.per-file-ignores]
+"e2e_playwright/**" = ["T20", "B018"]
+"lib/streamlit/__init__.py" = ["E402"]
+
+[lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
+
+[lint.isort]
+known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
+
+[lint.flake8-comprehensions]
+# Allow dict calls that make use of keyword arguments (e.g., dict(a=1, b=2)).
+allow-dict-calls-with-keyword-arguments = true

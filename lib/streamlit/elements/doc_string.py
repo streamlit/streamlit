@@ -375,7 +375,7 @@ def _is_stcommand(tree, command_name):
     """Checks whether the AST in tree is a call for command_name."""
     root_node = tree.body[0].value
 
-    if not type(root_node) is ast.Call:
+    if not isinstance(root_node, ast.Call):
         return False
 
     return (

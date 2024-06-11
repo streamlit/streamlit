@@ -48,32 +48,32 @@ ElementType: TypeAlias = str
 # not able to always rely on the proto as the type may be needed earlier.
 # Thankfully, in these cases (when value_type == "trigger_value"), the static
 # table here being slightly inaccurate should never pose a problem.
-ELEMENT_TYPE_TO_VALUE_TYPE: Final[
-    Mapping[ElementType, ValueFieldName]
-] = MappingProxyType(
-    {
-        "button": "trigger_value",
-        "camera_input": "file_uploader_state_value",
-        "checkbox": "bool_value",
-        "chat_input": "string_trigger_value",
-        "color_picker": "string_value",
-        "component_instance": "json_value",
-        "data_editor": "string_value",
-        "dataframe": "string_value",
-        "date_input": "string_array_value",
-        "download_button": "trigger_value",
-        "file_uploader": "file_uploader_state_value",
-        "multiselect": "int_array_value",
-        "number_input": "double_value",
-        "plotly_chart": "string_value",
-        "radio": "int_value",
-        "selectbox": "int_value",
-        "slider": "double_array_value",
-        "text_area": "string_value",
-        "text_input": "string_value",
-        "time_input": "string_value",
-        "vega_lite_chart": "string_value",
-    }
+ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
+    MappingProxyType(
+        {
+            "button": "trigger_value",
+            "camera_input": "file_uploader_state_value",
+            "checkbox": "bool_value",
+            "chat_input": "string_trigger_value",
+            "color_picker": "string_value",
+            "component_instance": "json_value",
+            "data_editor": "string_value",
+            "dataframe": "string_value",
+            "date_input": "string_array_value",
+            "download_button": "trigger_value",
+            "file_uploader": "file_uploader_state_value",
+            "multiselect": "int_array_value",
+            "number_input": "double_value",
+            "plotly_chart": "string_value",
+            "radio": "int_value",
+            "selectbox": "int_value",
+            "slider": "double_array_value",
+            "text_area": "string_value",
+            "text_input": "string_value",
+            "time_input": "string_value",
+            "vega_lite_chart": "string_value",
+        }
+    )
 )
 
 

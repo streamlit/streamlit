@@ -279,15 +279,13 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
-        selection_mode: SelectionMode
-        | Iterable[SelectionMode] = (
+        selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",
             "lasso",
         ),
         **kwargs: Any,
-    ) -> DeltaGenerator:
-        ...
+    ) -> DeltaGenerator: ...
 
     @overload
     def plotly_chart(
@@ -298,15 +296,13 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
-        selection_mode: SelectionMode
-        | Iterable[SelectionMode] = (
+        selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",
             "lasso",
         ),
         **kwargs: Any,
-    ) -> PlotlyState:
-        ...
+    ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
     def plotly_chart(
@@ -317,8 +313,7 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
-        selection_mode: SelectionMode
-        | Iterable[SelectionMode] = (
+        selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",
             "lasso",

@@ -14,12 +14,11 @@
 
 from __future__ import annotations
 
-import collections
 import os
 import sys
 import types
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
@@ -34,7 +33,11 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
+
+class WatchedModule(NamedTuple):
+    watcher: Any
+    module_name: Any
+
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
@@ -42,7 +45,7 @@ PathWatcher = None
 
 
 class LocalSourcesWatcher:
-    def __init__(self, pages_manager: "PagesManager"):
+    def __init__(self, pages_manager: PagesManager):
         self._pages_manager = pages_manager
         self._main_script_path = os.path.abspath(self._pages_manager.main_script_path)
         self._script_folder = os.path.dirname(self._main_script_path)
@@ -203,7 +206,7 @@ def get_module_paths(module: types.ModuleType) -> set[str]:
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: [p for p in m.__path__._path],
+        lambda m: list(m.__path__._path),
     ]
 
     all_paths = set()

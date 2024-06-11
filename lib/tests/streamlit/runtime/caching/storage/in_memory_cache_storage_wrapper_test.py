@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Unit tests for InMemoryCacheStorageWrapper"""
+
 import unittest
 from unittest.mock import patch
 

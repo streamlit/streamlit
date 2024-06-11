@@ -52,11 +52,8 @@ def get_external_ip() -> str | None:
         _external_ip = response
     else:
         _LOGGER.warning(
-            # fmt: off
-            "Did not auto detect external IP.\n"
-            "Please go to %s for debugging hints.",
-            # fmt: on
-            util.HELP_DOC
+            "Did not auto detect external IP.\nPlease go to %s for debugging hints.",
+            util.HELP_DOC,
         )
         _external_ip = None
 

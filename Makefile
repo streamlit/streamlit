@@ -119,22 +119,22 @@ python-init:
 	fi;\
 
 .PHONY: pylint
-# Verify that our Python files are properly formatted.
+# Verify that our Python files are properly formatted
+# and that there are no lint errors.
 pylint:
-	# Does not modify any files. Returns with a non-zero
-	# status if anything is not properly formatted. (This isn't really
-	# "linting"; we're not checking anything but code style.)
-	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
-		$(BLACK) --diff --check lib/tests/ && \
-		$(BLACK) --diff --check e2e/scripts/ ; \
-	fi
+	# Checks if the formatting is correct:
+	ruff format --check
+	# Run linter:
+	ruff check
 
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
+# https://docs.astral.sh/ruff/formatter/#sorting-imports
 pyformat:
-	pre-commit run black --all-files --hook-stage manual
-	pre-commit run isort --all-files --hook-stage manual
+	# Sort imports:
+	ruff check --select I --fix
+	# Run code formatter
+	ruff format
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -216,6 +216,7 @@ clean:
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	rm -rf .mypy_cache
+	rm -rf .ruff_cache
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock

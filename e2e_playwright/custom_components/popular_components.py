@@ -35,7 +35,9 @@ Following actions/components are tested:
 - streamlit-url-fragment
 """
 
-from typing import Callable, Dict
+from __future__ import annotations
+
+from typing import Callable
 
 import streamlit as st
 
@@ -170,12 +172,12 @@ def use_url_fragment():
     from streamlit_url_fragment import get_fragment
 
     current_value = get_fragment()
-    st.write("Current value: {!r}".format(current_value))
+    st.write(f"Current value: {current_value!r}")
 
 
 # ---
 
-options: Dict[str, Callable] = {
+options: dict[str, Callable] = {
     "componentsHtml": use_components_html,
     "ace": use_streamlit_ace,
     "aggrid": use_aggrid,

@@ -105,12 +105,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             if cookie_value:
                 email = json.loads(cookie_value).get("email", email)
 
-        user_info: dict[str, str | None] = dict()
-
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
+        user_info: dict[str, str | None] = {
+            "email": None if is_public_cloud_app else email
+        }
 
         cookie_value = self.get_signed_cookie("_streamlit_uzer")
         if self.get_signed_cookie("_streamlit_uzer", None):

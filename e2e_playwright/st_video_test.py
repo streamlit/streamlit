@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait
 
 VIDEO_ELEMENTS_COUNT = 11
 
+
 # Chromium miss codecs required to play that mp3 videos
 # https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
 @pytest.mark.skip_browser("chromium")

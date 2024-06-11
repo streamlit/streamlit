@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Unit tests for DummyCacheStorage and MemoryCacheStorageManager"""
+
 import unittest
 
 from streamlit.runtime.caching.storage import (

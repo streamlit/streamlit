@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Unit tests for st.map()."""
+
 import itertools
 import json
 from unittest import mock

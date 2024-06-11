@@ -304,22 +304,22 @@ class Server:
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
-                dict(runtime=self._runtime),
+                {"runtime": self._runtime},
             ),
             (
                 make_url_path_regex(base, HEALTH_ENDPOINT),
                 HealthHandler,
-                dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
+                {"callback": lambda: self._runtime.is_ready_for_browser_connection},
             ),
             (
                 make_url_path_regex(base, MESSAGE_ENDPOINT),
                 MessageCacheHandler,
-                dict(cache=self._runtime.message_cache),
+                {"cache": self._runtime.message_cache},
             ),
             (
                 make_url_path_regex(base, METRIC_ENDPOINT),
                 StatsRequestHandler,
-                dict(stats_manager=self._runtime.stats_mgr),
+                {"stats_manager": self._runtime.stats_mgr},
             ),
             (
                 make_url_path_regex(base, HOST_CONFIG_ENDPOINT),
@@ -331,10 +331,10 @@ class Server:
                     rf"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
                 ),
                 UploadFileRequestHandler,
-                dict(
-                    file_mgr=self._runtime.uploaded_file_mgr,
-                    is_active_session=self._runtime.is_active_session,
-                ),
+                {
+                    "file_mgr": self._runtime.uploaded_file_mgr,
+                    "is_active_session": self._runtime.is_active_session,
+                },
             ),
             (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
@@ -344,7 +344,7 @@ class Server:
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
-                dict(registry=self._runtime.component_registry),
+                {"registry": self._runtime.component_registry},
             ),
         ]
 
@@ -354,9 +354,9 @@ class Server:
                     (
                         make_url_path_regex(base, SCRIPT_HEALTH_CHECK_ENDPOINT),
                         HealthHandler,
-                        dict(
-                            callback=lambda: self._runtime.does_script_run_without_error()
-                        ),
+                        {
+                            "callback": lambda: self._runtime.does_script_run_without_error()
+                        },
                     )
                 ]
             )

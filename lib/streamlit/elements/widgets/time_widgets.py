@@ -72,7 +72,7 @@ ALLOWED_DATE_FORMATS: Final = re.compile(
 
 
 def _parse_date_value(
-    value: DateValue | Literal["today"] | Literal["default_value_today"],
+    value: Literal["today", "default_value_today"] | DateValue,
 ) -> tuple[list[date] | None, bool]:
     parsed_dates: list[date]
     range_value: bool = False
@@ -87,7 +87,7 @@ def _parse_date_value(
     elif isinstance(value, date):
         parsed_dates = [value]
     elif isinstance(value, (list, tuple)):
-        if not len(value) in (0, 1, 2):
+        if len(value) not in {0, 1, 2}:
             raise StreamlitAPIException(
                 "DateInput value should either be an date/datetime or a list/tuple of "
                 "0 - 2 date/datetime values"
@@ -155,7 +155,7 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue | Literal["today"] | Literal["default_value_today"],
+        value: Literal["today", "default_value_today"] | DateValue,
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> _DateInputValues:
@@ -677,7 +677,7 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: (
-            DateValue | Literal["today"] | Literal["default_value_today"]
+            Literal["today", "default_value_today"] | DateValue
         ) = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
@@ -703,7 +703,7 @@ class TimeWidgetsMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(
-            v: SingleDateValue | Literal["today"] | Literal["default_value_today"],
+            v: SingleDateValue | Literal["today", "default_value_today"],
         ) -> str | None:
             if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")

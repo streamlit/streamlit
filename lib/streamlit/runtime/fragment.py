@@ -127,9 +127,7 @@ def _fragment(
         active_dg = dg_stack_snapshot[-1]
         h = hashlib.new("md5")
         h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
-                "utf-8"
-            )
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode()
         )
         fragment_id = h.hexdigest()
 
@@ -207,8 +205,7 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
-) -> F:
-    ...
+) -> F: ...
 
 
 # Support being able to pass parameters to this decorator (that is, being able to write
@@ -218,8 +215,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
-) -> Callable[[F], F]:
-    ...
+) -> Callable[[F], F]: ...
 
 
 @gather_metrics("experimental_fragment")
