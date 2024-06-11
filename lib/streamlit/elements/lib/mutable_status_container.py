@@ -15,16 +15,19 @@
 from __future__ import annotations
 
 import time
-from types import TracebackType
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
 
-from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from streamlit.cursor import Cursor
 
 States: TypeAlias = Literal["running", "complete", "error"]
 

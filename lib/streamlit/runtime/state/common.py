@@ -57,7 +57,6 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
-from streamlit.type_util import ValueFieldName
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -65,6 +64,7 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
     from streamlit.runtime.state.widgets import NoValue
+    from streamlit.type_util import ValueFieldName
 
 
 # Protobuf types for all widgets.

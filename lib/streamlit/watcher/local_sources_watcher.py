@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import os
 import sys
-import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
 
@@ -29,6 +28,8 @@ from streamlit.watcher.path_watcher import (
 )
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = get_logger(__name__)
@@ -185,7 +186,7 @@ class LocalSourcesWatcher:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
-def get_module_paths(module: types.ModuleType) -> set[str]:
+def get_module_paths(module: ModuleType) -> set[str]:
     paths_extractors = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded

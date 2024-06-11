@@ -19,8 +19,17 @@ from __future__ import annotations
 import pickle
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, Literal, TypeVar, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
@@ -44,7 +53,6 @@ from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
@@ -62,6 +70,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 

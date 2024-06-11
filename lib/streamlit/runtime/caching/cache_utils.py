@@ -21,10 +21,9 @@ import hashlib
 import inspect
 import threading
 import time
-import types
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -38,7 +37,6 @@ from streamlit.runtime.caching.cache_errors import (
     UnserializableReturnValueError,
     get_cached_func_name_md,
 )
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
@@ -48,6 +46,11 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
 from streamlit.type_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.util import HASHLIB_KWARGS
+
+if TYPE_CHECKING:
+    from types import FunctionType
+
+    from streamlit.runtime.caching.cache_type import CacheType
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -120,7 +123,7 @@ class CachedFuncInfo:
 
     def __init__(
         self,
-        func: types.FunctionType,
+        func: FunctionType,
         show_spinner: bool | str,
         allow_widgets: bool,
         hash_funcs: HashFuncsDict | None,
@@ -354,7 +357,7 @@ class CachedFunc:
 
 def _make_value_key(
     cache_type: CacheType,
-    func: types.FunctionType,
+    func: FunctionType,
     func_args: tuple[Any, ...],
     func_kwargs: dict[str, Any],
     hash_funcs: HashFuncsDict | None,
@@ -419,7 +422,7 @@ def _make_value_key(
     return value_key
 
 
-def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
+def _make_function_key(cache_type: CacheType, func: FunctionType) -> str:
     """Create the unique key for a function's cache.
 
     A function's key is stable across reruns of the app, and changes when
@@ -458,7 +461,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     return cache_key
 
 
-def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> str | None:
+def _get_positional_arg_name(func: FunctionType, arg_index: int) -> str | None:
     """Return the name of a function's positional argument.
 
     If arg_index is out of range, or refers to a parameter that is not a
