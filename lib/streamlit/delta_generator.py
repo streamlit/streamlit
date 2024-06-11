@@ -44,7 +44,6 @@ from streamlit import (
     type_util,
     util,
 )
-from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
@@ -100,6 +99,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
     from pandas import DataFrame
 
+    from streamlit.cursor import Cursor
     from streamlit.elements.arrow import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 

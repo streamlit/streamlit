@@ -22,10 +22,11 @@ from typing import TYPE_CHECKING, Any
 
 from streamlit import type_util
 from streamlit.elements.lib import pandas_styler_utils
-from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 
 if TYPE_CHECKING:
     from pandas import DataFrame, Index, Series
+
+    from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 
 
 def marshall(

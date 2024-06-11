@@ -39,17 +39,19 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Callable, Final, cast
+from typing import TYPE_CHECKING, Callable, Final, cast
 
 from blinker import ANY, Signal
 from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
-from watchdog.observers.api import ObservedWatch
 
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
+
+if TYPE_CHECKING:
+    from watchdog.observers.api import ObservedWatch
 
 _LOGGER: Final = get_logger(__name__)
 
