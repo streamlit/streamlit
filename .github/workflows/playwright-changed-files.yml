@@ -30,7 +30,9 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           path: e2e_playwright
-          files: "**/*_test.py"
+          files: |
+            "**/*_test.py"
+            "!**/custom_components/**/*" # ignore custom_components check in the fast-workflow as it requires additional depdencies
       - name: Check changed files
         id: check_changed_files
         env:
