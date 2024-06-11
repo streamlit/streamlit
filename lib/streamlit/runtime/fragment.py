@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.exec_code import wrap_in_try_and_exec
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -191,7 +192,9 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        return wrapped_fragment()
+        # Wrap the fragment function in the same try-except block as in a normal script_run so that for a main-app run (this execution) and a fragment-rerun the same execution and error-handling logic is used.
+        # This makes errors in the fragment appear in the fragment path also for the first execution here in context of a full app run.
+        wrap_in_try_and_exec(wrapped_fragment, ctx)
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
