@@ -16,6 +16,8 @@ import re
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import expect_markdown
+
 
 def test_components_v1_was_imported_successfully(app: Page):
     expect(app.locator("iframe")).to_be_attached()
@@ -23,12 +25,5 @@ def test_components_v1_was_imported_successfully(app: Page):
     div = iframe.locator("div")
     expect(div).to_have_text("This import and usage worked!")
 
-    div = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text="<bound method IframeMixin._iframe of DeltaGenerator()>"
-    )
-    expect(div).to_be_attached()
-
-    div = app.get_by_test_id("stMarkdownContainer").filter(
-        has_text=re.compile("<function declare_component at .*>")
-    )
-    expect(div).to_be_attached()
+    expect_markdown(app, "<bound method IframeMixin._iframe of DeltaGenerator()>")
+    expect_markdown(app, re.compile("<function declare_component at .*>"))
