@@ -44,8 +44,6 @@ export interface ExpanderIconProps {
  * Renders an icon for the expander and optionally a user-defined icon.
  *
  * If the icon is "spinner", it will render a spinner icon.
- * If the icon is "check", it will render a check icon.
- * If the icon is "error", it will render an error icon.
  * If the icon is a valid, user-defined icon, it will render the user-defined icon.
  * Otherwise, it will render nothing.
  *
@@ -82,8 +80,7 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
     <DynamicIcon
       color="inherit"
       iconValue={icon}
-      aria-hidden={statusIconTestIds[icon] ? "true" : undefined}
-      data-testid={statusIconTestIds[icon] || "stExpanderIcon"}
+      testid={statusIconTestIds[icon] || "stExpanderIcon"}
       {...iconProps}
     />
   ) : (

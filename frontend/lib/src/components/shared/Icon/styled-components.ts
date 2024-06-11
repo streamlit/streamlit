@@ -91,10 +91,7 @@ export interface StyledDynamicIconProps {
   color?: ThemeColor
 }
 
-export const StyledDynamicIcon = styled("span", {
-  shouldForwardProp: (prop: string) =>
-    isPropValid(prop) && !["size"].includes(prop),
-})<StyledDynamicIconProps>(
+export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
   ({ size = "lg", margin = "", padding = "", theme }) => {
     return {
       fill: "currentColor",
