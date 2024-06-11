@@ -51,8 +51,7 @@ ACCEPTABLE_LICENSES = {
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
-    # Dual-licenses are acceptable if at least one of the two licenses is
-    # acceptable.
+    # Multi-licenses are acceptable if at least one of the licenses is acceptable.
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",
     "(MIT OR CC0-1.0)",
@@ -62,6 +61,7 @@ ACCEPTABLE_LICENSES = {
     "(MIT AND Zlib)",
     "(WTFPL OR MIT)",
     "(AFL-2.1 OR BSD-3-Clause)",
+    "(BSD-2-Clause OR MIT OR Apache-2.0)",
 }
 
 # Some of our dependencies have licenses that yarn fails to parse, but that
