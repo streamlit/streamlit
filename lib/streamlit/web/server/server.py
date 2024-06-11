@@ -45,8 +45,8 @@ from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.oauth_authlib_routes import (
     AuthlibCallbackHandler,
     AuthlibLoginHandler,
+    LogoutHandler,
 )
-from streamlit.web.server.oauth_routes import LogoutHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     HealthHandler,

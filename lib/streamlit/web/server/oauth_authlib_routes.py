@@ -79,6 +79,13 @@ class AuthlibLoginHandler(tornado.web.RequestHandler):
         return client.authorize_redirect(self, redirect_uri)
 
 
+class LogoutHandler(tornado.web.RequestHandler):
+    def get(self):
+        print("IN LOGOUT HANDLER!!!")
+        self.clear_cookie("_streamlit_uzer")
+        self.redirect("/")
+
+
 class AuthlibCallbackHandler(tornado.web.RequestHandler):
     async def get(self):
         state_code_from_url = self.get_argument("state")
