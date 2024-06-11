@@ -936,6 +936,7 @@ class VegaChartsMixin:
         x_label: str | None = None,
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
+        horizontal: bool = False,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -1009,6 +1010,11 @@ class VegaChartsMixin:
               the series in the chart. This list should have the same length
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
+
+        horizontal : bool
+            Determines the orientation of the chart:
+            * True: Displays the chart horizontally, with the x-axis and y-axis swapped.
+            * False: Displays the chart vertically (default).
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -1101,6 +1107,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            horizontal=horizontal,
         )
         return cast(
             "DeltaGenerator",

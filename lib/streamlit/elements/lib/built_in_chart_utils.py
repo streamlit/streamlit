@@ -122,6 +122,8 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: int | None = None,
     height: int | None = None,
+    # For bar charts only:
+    horizontal: bool = False,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -165,6 +167,18 @@ def generate_chart(
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
 
+    # Handle horizontal bar chart - switches x and y encodings:
+    if horizontal:
+        x_encoding = _get_y_encoding(df, y_column, y_from_user, x_axis_label)
+        y_encoding = _get_x_encoding(
+            df, x_column, x_from_user, y_axis_label, chart_type
+        )
+    else:
+        x_encoding = _get_x_encoding(
+            df, x_column, x_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(df, y_column, y_from_user, y_axis_label)
+
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
         data=df,
@@ -172,8 +186,8 @@ def generate_chart(
         width=width or 0,
         height=height or 0,
     ).encode(
-        x=_get_x_encoding(df, x_column, x_from_user, x_axis_label, chart_type),
-        y=_get_y_encoding(df, y_column, y_from_user, y_axis_label),
+        x=x_encoding,
+        y=y_encoding,
     )
 
     # Set up opacity encoding.
