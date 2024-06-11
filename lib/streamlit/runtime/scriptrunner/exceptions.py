@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# from typing import TYPE_CHECKING
-
 from streamlit.runtime.scriptrunner.script_requests import RerunData
 from streamlit.util import repr_
 
