@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
@@ -74,3 +76,26 @@ def test_that_replay_element_works_as_expected(app: Page):
     expect(app.get_by_test_id("stException")).to_have_count(0)
     expect(app.get_by_text("Cache executions: 1")).to_be_visible()
     expect(app.get_by_text("Cache return 1")).to_be_visible()
+
+
+# have 1 test so we don't have to reload the video
+def test_st_audio_player_and_video_player(app: Page):
+    audio = app.get_by_test_id("stAudio")
+
+    expect(audio).to_be_visible()
+    expect(audio).to_have_attribute("controls", "")
+    expect(audio).to_have_attribute("src", re.compile(r"^.*\.wav$", re.IGNORECASE))
+    audio_src = audio.get_attribute("src")
+
+    video_player = app.get_by_test_id("stVideo")
+    expect(video_player).to_be_visible()
+    expect(video_player).to_have_attribute(
+        "src", re.compile(r"^.*\.mp4$", re.IGNORECASE)
+    )
+    video_src = video_player.get_attribute("src")
+
+    app.keyboard.type("r")
+    wait_for_app_run(app)
+
+    expect(audio).to_have_attribute("src", audio_src)
+    expect(video_player).to_have_attribute("src", video_src)

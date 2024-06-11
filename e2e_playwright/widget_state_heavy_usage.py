@@ -16,6 +16,7 @@ import time
 
 import streamlit as st
 
+# test for https://github.com/streamlit/streamlit/issues/4836
 number = st.number_input("test", value=100)
 st.write(number)
 
