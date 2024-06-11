@@ -35,6 +35,7 @@ select = [
   "TID", # Helps you write tidier imports.
   "UP", # pyupgrade
   "W", # pycodestyle warnings
+  "PYI", # Linting rules for type annotations.
 ]
 ignore = [
   "B008", # Checks for function calls in default function arguments.
