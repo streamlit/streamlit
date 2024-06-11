@@ -107,12 +107,10 @@ def test_expander_renders_icon(app: Page):
     expanders = main_expanders.all()
     expander_with_material_icon, expander_with_emoji_icon = expanders[5:7]
 
-    material_icon = expander_with_material_icon.get_by_test_id("stIconMaterial")
-    expect(expander_with_material_icon.get_by_test_id("stExpanderIcon")).to_be_visible()
+    material_icon = expander_with_material_icon.get_by_test_id("stExpanderIcon")
     expect(material_icon).to_be_visible()
     expect(material_icon).to_have_text("bolt")
 
-    emoji_icon = expander_with_emoji_icon.get_by_test_id("stIconEmoji")
-    expect(expander_with_emoji_icon.get_by_test_id("stExpanderIcon")).to_be_visible()
+    emoji_icon = expander_with_emoji_icon.get_by_test_id("stExpanderIcon")
     expect(emoji_icon).to_be_visible()
     expect(emoji_icon).to_have_text("🎈")

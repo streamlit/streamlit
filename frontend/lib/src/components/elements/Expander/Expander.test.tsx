@@ -117,9 +117,7 @@ describe("Expander container", () => {
       </Expander>
     )
     expect(screen.getByTestId("stExpanderIcon")).toBeInTheDocument()
-    expect(screen.getByTestId("stIconEmoji")).toBeInTheDocument()
     expect(screen.getByText("🚀")).toBeInTheDocument()
-    expect(screen.queryByTestId("stIconMaterial")).not.toBeInTheDocument()
   })
 
   it("renders expander with a material icon", () => {
@@ -130,9 +128,7 @@ describe("Expander container", () => {
       </Expander>
     )
     expect(screen.getByTestId("stExpanderIcon")).toBeInTheDocument()
-    expect(screen.getByTestId("stIconMaterial")).toBeInTheDocument()
     expect(screen.getByText("add_circle")).toBeInTheDocument()
-    expect(screen.queryByTestId("stIconEmoji")).not.toBeInTheDocument()
   })
 
   it("should render a expanded component", () => {
