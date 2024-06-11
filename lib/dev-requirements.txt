@@ -9,6 +9,9 @@ setuptools>=65.5.1
 twine
 wheel
 pytz
+# Used for updating emojis via: scripts/update_emojis.py
+emoji
+
 # mypy types
 types-click
 types-protobuf
