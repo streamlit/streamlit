@@ -32,7 +32,7 @@ jobs:
           path: e2e_playwright
           files: |
             "**/*_test.py"
-            "!**/custom_components/**/*" # ignore custom_components check in the fast-workflow as it requires additional depdencies
+            "!**/custom_components/**/*" # ignore custom_components check in the fast-workflow as it requires additional dependencies
       - name: Check changed files
         id: check_changed_files
         env:
