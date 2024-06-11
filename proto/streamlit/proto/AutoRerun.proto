@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
- syntax = "proto3";
+syntax = "proto3";
 
- message AutoRerun {
-   // The interval of reruns in seconds
-   float interval = 1;
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "AutoRerunProto";
 
-   // The fragment ID to rerun
-   string fragment_id = 2;
- }
+message AutoRerun {
+  // The interval of reruns in seconds
+  float interval = 1;
+
+  // The fragment ID to rerun
+  string fragment_id = 2;
+}
