@@ -167,17 +167,17 @@ def generate_chart(
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
 
-    # Handle horizontal bar chart - switches x and y encodings:
-    if horizontal:
-        x_encoding = _get_y_encoding(df, y_column, y_from_user, x_axis_label)
-        y_encoding = _get_x_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type
-        )
-    else:
+    if not horizontal:
         x_encoding = _get_x_encoding(
             df, x_column, x_from_user, x_axis_label, chart_type
         )
         y_encoding = _get_y_encoding(df, y_column, y_from_user, y_axis_label)
+    else:
+        # Handle horizontal bar chart - switches x and y encodings:
+        x_encoding = _get_y_encoding(df, y_column, y_from_user, x_axis_label)  # type: ignore[assignment]
+        y_encoding = _get_x_encoding(
+            df, x_column, x_from_user, y_axis_label, chart_type
+        )  # type: ignore[assignment]
 
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
