@@ -23,7 +23,6 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
