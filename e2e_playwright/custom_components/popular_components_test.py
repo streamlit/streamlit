@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
@@ -42,7 +45,28 @@ def test_components_html(app: Page):
     _expect_no_exception(app)
     _expect_iframe_attached(app)
     iframe = app.frame_locator("iframe")
-    expect(iframe.locator("div", has_text="Hello World!")).to_be_attached()
+    div = iframe.locator("div")
+    expect(div).to_have_text("Hello World!")
+
+
+@pytest.mark.parametrize(
+    ("name", "expected_text"),
+    [
+        ("componentsIframe", "bound method IframeMixin._iframe of DeltaGenerator()"),
+        ("componentsDeclareComponent", "function declare_component at"),
+    ],
+)
+def test_components_import(app: Page, name: str, expected_text: str):
+    """Test that components.iframe and components.declare_component can be imported and used.
+
+    We only make sure that they are importable but do not call them, so we don't have an iframe element in the DOM.
+    """
+    _select_component(app, name)
+    _expect_no_exception(app)
+    div = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=re.compile(f"<{expected_text}.*>")
+    )
+    expect(div).to_be_attached()
 
 
 def test_ace(app: Page):
