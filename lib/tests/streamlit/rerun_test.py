@@ -18,7 +18,6 @@ import streamlit as st
 
 @patch("streamlit.commands.execution_control._LOGGER.warning")
 def test_deprecation_warnings(logger_mock: Mock):
-
     st.experimental_rerun()
     logger_mock.assert_called_once()
     msg = logger_mock.call_args.args[0]

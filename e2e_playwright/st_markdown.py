@@ -31,7 +31,7 @@ st.markdown("[link](href)")
 
 st.markdown("[][]")
 
-st.markdown("Inline math with $\KaTeX$")
+st.markdown(r"Inline math with $\KaTeX$")
 
 st.markdown(
     """
@@ -57,7 +57,7 @@ st.markdown(
 )
 
 st.markdown(
-    """
+    r"""
 Many different markdown formats in one block:
 
 Inline math with $\KaTeX$
@@ -187,7 +187,7 @@ try:
 
     a, b = sympy.symbols("a b")
     out = a + b
-except:
+except Exception:
     out = "a + b"
 
 st.latex(out)
@@ -199,4 +199,8 @@ st.latex(
     a \left(\frac{1-r^{n}}{1-r}\right)
     """,
     help="This is example tooltip displayed on latex.",
+)
+
+st.markdown(
+    "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
 )

@@ -242,9 +242,9 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise StreamlitAPIException(
                 "The input argument to st.columns must be either a "
-                + "positive integer or a list of positive numeric weights. "
-                + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
-                + "for more information."
+                "positive integer or a list of positive numeric weights. "
+                "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
+                "for more information."
             )
 
         vertical_alignment_mapping: dict[
@@ -391,7 +391,7 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
-        if any(isinstance(tab, str) == False for tab in tabs):
+        if any(not isinstance(tab, str) for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
@@ -513,7 +513,7 @@ class LayoutsMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
@@ -760,7 +760,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
-    ) -> "Dialog":
+    ) -> Dialog:
         """Inserts the dialog container.
 
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.

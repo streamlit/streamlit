@@ -16,7 +16,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.conftest import wait_for_app_run, wait_until
 
 
 def test_audio_has_correct_properties(app: Page):

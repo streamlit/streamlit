@@ -15,9 +15,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from streamlit.components.types.base_custom_component import BaseCustomComponent
+if TYPE_CHECKING:
+    from streamlit.components.types.base_custom_component import BaseCustomComponent
 
 
 class BaseComponentRegistry(Protocol):

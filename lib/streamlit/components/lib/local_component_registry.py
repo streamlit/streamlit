@@ -16,13 +16,15 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from streamlit import util
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
-from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from streamlit.components.types.base_custom_component import BaseCustomComponent
 
 _LOGGER: Final = get_logger(__name__)
 

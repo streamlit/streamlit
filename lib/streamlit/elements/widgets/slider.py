@@ -519,12 +519,9 @@ class SliderMixin:
 
         # Ensure that all arguments are of the same type.
         slider_args = [min_value, max_value, step]
-        int_args = all(map(lambda a: isinstance(a, Integral), slider_args))
+        int_args = all(isinstance(a, Integral) for a in slider_args)
         float_args = all(
-            map(
-                lambda a: isinstance(a, Real) and not isinstance(a, Integral),
-                slider_args,
-            )
+            isinstance(a, Real) and not isinstance(a, Integral) for a in slider_args
         )
         # When min and max_value are the same timelike, step should be a timedelta
         timelike_args = (

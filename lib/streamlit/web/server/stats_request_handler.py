@@ -18,11 +18,11 @@ from typing import TYPE_CHECKING
 
 import tornado.web
 
-from streamlit.runtime.stats import CacheStat, StatsManager
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
 if TYPE_CHECKING:
     from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
+    from streamlit.runtime.stats import CacheStat, StatsManager
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):

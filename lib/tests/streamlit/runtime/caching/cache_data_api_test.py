@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.cache_data unit tests."""
+
 from __future__ import annotations
 
 import logging
@@ -226,6 +227,17 @@ class CacheDataTest(unittest.TestCase):
         # the value_key). It should only be used to compute the value_key!
         foo("ahoy")
         str_hash_func.assert_called_once_with("ahoy")
+
+    @patch("streamlit.runtime.caching.cache_data_api.show_widget_replay_deprecation")
+    def test_widget_replay_deprecation(self, show_warning_mock: Mock):
+        """We show deprecation warnings when using the `experimental_allow_widgets` parameter."""
+
+        # We show the deprecation warning at declaration time:
+        @st.cache_data(experimental_allow_widgets=True)
+        def foo():
+            return 42
+
+        show_warning_mock.assert_called_once()
 
     def test_user_hash_error(self):
         class MyObj:

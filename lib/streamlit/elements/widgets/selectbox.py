@@ -267,7 +267,7 @@ class SelectboxMixin:
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
             raise StreamlitAPIException(
-                "Selectbox index must be between 0 and length of options"
+                "Selectbox index must be greater than or equal to 0 and less than the length of options."
             )
 
         session_state = get_session_state().filtered_state

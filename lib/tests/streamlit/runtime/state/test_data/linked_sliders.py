@@ -25,6 +25,7 @@ if "celsius" not in st.session_state:
     state.celsius = MIN_CELSIUS
     state.fahrenheit = to_fahrenheit(MIN_CELSIUS)
 
+
 # Callbacks if something changes
 def celsius_changed():
     state.fahrenheit = to_fahrenheit(state.celsius)

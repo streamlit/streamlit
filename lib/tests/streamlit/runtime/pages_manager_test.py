@@ -84,6 +84,16 @@ class PagesManagerV2Test(unittest.TestCase):
 
         assert self.pages_manager.get_active_script_hash() == main_script_hash
 
+    def test_reset_active_script_hash(self):
+        """Ensure the active script hash is reset correctly"""
+        main_script_hash = self.pages_manager.main_script_hash
+        assert self.pages_manager.get_active_script_hash() == main_script_hash
+
+        self.pages_manager.set_active_script_hash("new_hash")
+        self.pages_manager.reset_active_script_hash()
+
+        assert self.pages_manager.get_active_script_hash() == main_script_hash
+
     def test_get_page_script_valid_hash(self):
         """Ensure the page script is provided with valid page hash specified"""
 

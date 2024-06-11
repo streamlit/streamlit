@@ -1,4 +1,4 @@
-name: Python Bare Executions
+name: Python Bare Execution Tests
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  py-bare-executions:
     runs-on: ubuntu-latest
 
     defaults:

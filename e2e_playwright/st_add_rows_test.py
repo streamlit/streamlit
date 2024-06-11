@@ -41,7 +41,7 @@ def test_correctly_adds_rows_to_dataframe(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     dataframe = app.get_by_test_id("stDataFrame")
-    assert_snapshot(dataframe, name=f"st_dataframe-added_rows")
+    assert_snapshot(dataframe, name="st_dataframe-added_rows")
 
 
 def test_raises_an_exception_when_shapes_dont_match(themed_app: Page):

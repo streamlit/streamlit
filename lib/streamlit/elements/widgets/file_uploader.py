@@ -162,8 +162,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[UploadedFile] | None:
-        ...
+    ) -> list[UploadedFile] | None: ...
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = False or omitted
@@ -181,8 +180,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> UploadedFile | None:
-        ...
+    ) -> UploadedFile | None: ...
 
     # The following 2 overloads represent the cases where
     # the `type` argument is a keyword-only argument.
@@ -205,8 +203,7 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[UploadedFile] | None:
-        ...
+    ) -> list[UploadedFile] | None: ...
 
     # 1. type is skipped or a keyword argument
     # 2. accept_multiple_files = False or omitted
@@ -224,8 +221,7 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> UploadedFile | None:
-        ...
+    ) -> UploadedFile | None: ...
 
     @gather_metrics("file_uploader")
     def file_uploader(
