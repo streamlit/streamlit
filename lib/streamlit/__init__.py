@@ -269,4 +269,4 @@ experimental_connection = _deprecate_func_name(
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
-import streamlit.components.v1
+import streamlit.components.v1  # noqa: F401
