@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import config
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+
+if TYPE_CHECKING:
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 class MessageSizeError(MarkdownFormattedException):

@@ -17,11 +17,13 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit import util
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.state import coalesce_widget_states
+
+if TYPE_CHECKING:
+    from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
 
 class ScriptRequestType(Enum):

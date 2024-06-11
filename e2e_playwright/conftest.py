@@ -33,22 +33,25 @@ from io import BytesIO
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from types import ModuleType
-from typing import Any, Callable, Generator, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Generator, Literal, Protocol
 from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import (
-    ElementHandle,
-    FrameLocator,
-    Locator,
-    Page,
-    Response,
-    Route,
-)
 from pytest import FixtureRequest
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from playwright.sync_api import (
+        ElementHandle,
+        FrameLocator,
+        Locator,
+        Page,
+        Response,
+        Route,
+    )
 
 
 def reorder_early_fixtures(metafunc: pytest.Metafunc):

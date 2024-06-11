@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
 import click
@@ -26,11 +26,13 @@ import click
 import streamlit.runtime.caching as caching
 import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
-from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
+
+if TYPE_CHECKING:
+    from streamlit.config_option import ConfigOption
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
