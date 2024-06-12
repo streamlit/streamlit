@@ -72,7 +72,7 @@ def test_checkbox_values_on_click(app: Page):
         # So, maybe thats the reason why it fails to click it.
         # But this is just a guess.
         checkbox_element.scroll_into_view_if_needed()
-        checkbox_element.locator("label").click(delay=50)
+        checkbox_element.locator("label").click(delay=50, force=True)
         wait_for_app_run(app)
 
     markdown_elements = app.get_by_test_id("stMarkdown")
