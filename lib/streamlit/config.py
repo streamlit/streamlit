@@ -984,6 +984,20 @@ _create_option(
     type_=bool,
 )
 
+# Config Section: Secrets #
+
+_create_section("secrets", "Secrets configuration.")
+
+_create_option(
+    "secrets.files",
+    description="""List of locations where secrets are searched. Entries can be a path to toml file or directory path where Kubernetes style secrets will be scanned!""",
+    default_val=[
+        # NOTE: The order here is important! Project-level secrets should overwrite global
+        # secrets.
+        file_util.get_streamlit_file_path("secrets.toml"),
+        file_util.get_project_streamlit_file_path("secrets.toml"),
+    ],
+)
 
 # Config Section: deprecations
 

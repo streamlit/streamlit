@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import os
 import threading
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import (
     Any,
+    Callable,
     Final,
     ItemsView,
     Iterator,
@@ -32,16 +34,10 @@ from blinker import Signal
 
 import streamlit as st
 import streamlit.watcher.path_watcher
-from streamlit import file_util, runtime
+from streamlit import runtime
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
-SECRETS_FILE_LOCS: Final[list[str]] = [
-    file_util.get_streamlit_file_path("secrets.toml"),
-    # NOTE: The order here is important! Project-level secrets should overwrite global
-    # secrets.
-    file_util.get_project_streamlit_file_path("secrets.toml"),
-]
 
 
 def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
@@ -116,6 +112,85 @@ class AttrDict(Mapping[str, Any]):
         return deepcopy(self.__nested_secrets__)
 
 
+class SecretProvider(ABC):
+    @abstractmethod
+    def parse(self, print_exceptions: bool) -> Mapping[str, Any]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def watch_for_changes(self, callback: Callable):
+        raise NotImplementedError
+
+
+class KubernetesSecretsProvider:
+    def __init__(self, path: str):
+        self._path = path
+
+    def parse(self, print_exceptions: bool) -> Mapping[str, Any]:
+        secrets = {}
+
+        try:
+            for dirname in os.listdir(self._path):
+                sub_secrets = {}
+                for filename in os.listdir(os.path.join(self._path, dirname)):
+                    file_path = os.path.join(self._path, dirname, filename)
+                    with open(file_path) as f:
+                        sub_secrets[filename] = f.read().strip()
+
+                if len(sub_secrets) == 1:
+                    # if there's just one file, collapse it so it's directly under `dirname`
+                    secrets[dirname] = sub_secrets[list(sub_secrets.keys())[0]]
+                else:
+                    secrets[dirname] = sub_secrets
+        except FileNotFoundError:
+            if print_exceptions:
+                st.error(f"Secrets folder not found. Expected at: {self._path}")
+            raise
+
+        return secrets
+
+    def watch_for_changes(self, callback: Callable):
+        streamlit.watcher.path_watcher.watch_dir(
+            self._path,
+            callback,
+            watcher_type="poll",
+        )
+
+
+class TomlSecretsProvider:
+    def __init__(self, path: str):
+        self._path = path
+
+    def parse(self, print_exceptions: bool) -> Mapping[str, Any]:
+        secrets = {}
+        try:
+            with open(self._path, encoding="utf-8") as f:
+                secrets_file_str = f.read()
+        except FileNotFoundError:
+            return
+
+        try:
+            import toml
+
+            secrets = toml.loads(secrets_file_str)
+        except:
+            if print_exceptions:
+                st.error("Error parsing Secrets file.")
+            raise
+
+        return secrets
+
+    def watch_for_changes(self, callback: Callable):
+        # We force our watcher_type to 'poll' because Streamlit Cloud
+        # stores `secrets.toml` in a virtual filesystem that is
+        # incompatible with watchdog.
+        streamlit.watcher.path_watcher.watch_file(
+            self._path,
+            callback,
+            watcher_type="poll",
+        )
+
+
 class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
     Parses secrets.toml on-demand. Cannot be externally mutated.
@@ -127,12 +202,17 @@ class Secrets(Mapping[str, Any]):
         # Our secrets dict.
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
-        self._file_watchers_installed = False
+        self._file_watcher_installed = False
         self._file_paths = file_paths
-
-        self.file_change_listener = Signal(
-            doc="Emitted when a `secrets.toml` file has been changed."
+        self._file_change_listener = Signal(
+            doc="Emitted when the `secrets.toml` file has been changed."
         )
+        self._providers = []
+        for path in file_paths:
+            if path.endswith(".toml"):
+                self._providers.append(TomlSecretsProvider(path))
+            else:
+                self._providers.append(KubernetesSecretsProvider(path))
 
     def load_if_toml_exists(self) -> bool:
         """Load secrets.toml files from disk if they exists. If none exist,
@@ -149,6 +229,12 @@ class Secrets(Mapping[str, Any]):
         except FileNotFoundError:
             # No secrets.toml files exist. That's fine.
             return False
+
+    def _add_provider(self, provider: SecretProvider):
+        # to be used internally by runtime initializers
+        self._providers.append(provider)
+        if self._secrets is not None:
+            self._on_secrets_file_changed(None)
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -190,40 +276,24 @@ class Secrets(Mapping[str, Any]):
             if self._secrets is not None:
                 return self._secrets
 
-            # It's fine for a user to only have one secrets.toml file defined, so
-            # we ignore individual FileNotFoundErrors when attempting to read files
-            # below and only raise an exception if we weren't able read *any* secrets
-            # file.
-            found_secrets_file = False
             secrets = {}
+            providers_with_secrets = 0
+            for provider in self._providers:
+                provider_secrets = provider.parse(print_exceptions)
+                if len(provider_secrets) > 0:
+                    providers_with_secrets += 1
+                secrets.update(provider_secrets)
 
-            for path in self._file_paths:
-                try:
-                    with open(path, encoding="utf-8") as f:
-                        secrets_file_str = f.read()
-                    found_secrets_file = True
-                except FileNotFoundError:
-                    continue
-
-                try:
-                    import toml
-
-                    secrets.update(toml.loads(secrets_file_str))
-                except:
-                    if print_exceptions:
-                        st.error(f"Error parsing secrets file at {path}")
-                    raise
-
-            if not found_secrets_file:
-                err_msg = f"No secrets files found. Valid paths for a secrets.toml file are: {', '.join(self._file_paths)}"
+            if len(secrets) == 0:
+                err_msg = f"No secrets found. Valid paths for a secret files are: {', '.join(self._file_paths)}"
                 if print_exceptions:
                     st.error(err_msg)
                 raise FileNotFoundError(err_msg)
 
-            if len([p for p in self._file_paths if os.path.exists(p)]) > 1:
+            if providers_with_secrets > 1:
                 _LOGGER.info(
-                    f"Secrets found in multiple locations: {', '.join(self._file_paths)}. "
-                    "When multiple secret.toml files exist, local secrets will take precedence over global secrets."
+                    "Secrets found in multiple locations. "
+                    "When multiple secret sources exist, local secrets will take precedence over global secrets."
                 )
 
             for k, v in secrets.items():
@@ -262,26 +332,16 @@ class Secrets(Mapping[str, Any]):
             if self._file_watchers_installed:
                 return
 
-            for path in self._file_paths:
-                try:
-                    streamlit.watcher.path_watcher.watch_file(
-                        path,
-                        self._on_secrets_file_changed,
-                        watcher_type="poll",
-                    )
-                except FileNotFoundError:
-                    # A user may only have one secrets.toml file defined, so we'd expect
-                    # FileNotFoundErrors to be raised when attempting to install a
-                    # watcher on the nonexistent ones.
-                    pass
+            for provider in self._providers:
+                provider.watch_for_changes(self._on_secrets_file_changed)
 
             # We set file_watchers_installed to True even if the installation attempt
             # failed to avoid repeatedly trying to install it.
             self._file_watchers_installed = True
 
-    def _on_secrets_file_changed(self, changed_file_path) -> None:
+    def _on_secrets_file_changed(self, what_changed) -> None:
         with self._lock:
-            _LOGGER.debug("Secrets file %s changed, reloading", changed_file_path)
+            _LOGGER.debug("Secrets changed: %s, reloading", what_changed)
             self._reset()
             self._parse(print_exceptions=True)
 
@@ -329,7 +389,7 @@ class Secrets(Mapping[str, Any]):
         # the file must already exist.
         """A string representation of the contents of the dict. Thread-safe."""
         if not runtime.exists():
-            return f"{self.__class__.__name__}(file_paths={self._file_paths!r})"
+            return f"{self.__class__.__name__}(file_path={self._file_paths!r})"
         return repr(self._parse(True))
 
     def __len__(self) -> int:
@@ -361,4 +421,4 @@ class Secrets(Mapping[str, Any]):
         return iter(self._parse(True))
 
 
-secrets_singleton: Final = Secrets(SECRETS_FILE_LOCS)
+secrets_singleton: Final = Secrets(st.config.get_option("secrets.files"))
