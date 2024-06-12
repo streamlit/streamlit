@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import requests
 
 import streamlit as st
@@ -96,3 +97,13 @@ def video():
 
 audio()
 video()
+
+
+@st.cache_data
+def image():
+    img = np.repeat(0, 10000).reshape(100, 100)
+    st.image(img, caption="A black square", width=200)
+
+
+if st.checkbox("Show image", True):
+    image()

@@ -44,6 +44,31 @@ def get_checkbox(locator: Locator, label: str | Pattern[str]) -> Locator:
     return element
 
 
+def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
+    """Get an image element with the given caption.
+
+    Parameters
+    ----------
+
+    locator : Locator or Page
+        The locator to search for the element.
+
+    caption : str or Pattern[str]
+        The caption of the image element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stImage").filter(
+        has=locator.get_by_test_id("stImageCaption").filter(has_text=caption)
+    )
+    expect(element).to_be_visible()
+
+    return element
+
+
 def get_button(locator: Locator, label: str | Pattern[str]) -> Locator:
     """Get a button widget with the given label.
 
