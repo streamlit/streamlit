@@ -347,7 +347,9 @@ def click_form_button(
 
 
 def expect_help_tooltip(
-    app: Page, element_with_help_tooltip: Locator, tooltip_text: str | Pattern[str]
+    app: Locator | Page,
+    element_with_help_tooltip: Locator,
+    tooltip_text: str | Pattern[str],
 ):
     """Expect a tooltip to be displayed when hovering over the help symbol of an element.
 
