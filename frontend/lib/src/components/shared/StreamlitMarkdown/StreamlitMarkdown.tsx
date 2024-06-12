@@ -413,7 +413,7 @@ export function RenderedMarkdown({
       function replace(_full_match: string, icon_name: string): any {
         return {
           type: "text",
-          // value: full_match,
+          // value: full_match, // Is this needed?
           data: {
             hName: "span",
             hProperties: {
@@ -450,6 +450,10 @@ export function RenderedMarkdown({
     rehypeKatex,
     ...(allowHTML ? [rehypeRaw] : []),
   ]
+
+  // :material/ is detected as an directive (from remark_directive)
+  // However, the directive logic ignores emoji shortcodes. As a workaround,
+  // we can make it look like an emoji shortcode by replacing the / with _.
   const parsedString = source.replaceAll(":material/", ":material_")
   // Sets disallowed markdown for widget labels
   const disallowed = [
