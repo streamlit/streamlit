@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 
 
 def wrap_in_try_and_exec(
-    func: Callable[[], None], ctx: ScriptRunContext
+    func: Callable[[], None],
+    ctx: ScriptRunContext,
+    reraise_rerun_exception: bool = False,
 ) -> tuple[bool, RerunData | None, bool]:
     """Execute the passed function wrapped in a try/except block.
 
@@ -38,6 +40,8 @@ def wrap_in_try_and_exec(
         The function to execute wrapped in the try/except block.
     ctx : ScriptRunContext
         The context in which the script is being run.
+    reraise_rerun_exception : bool, default False
+        If True, an occuring RerunException will be raised instead of handled. This can be used if this function is called outside of the script_run context and we want the script_runner to react on the rerun exception.
 
     Returns
     -------
@@ -74,6 +78,9 @@ def wrap_in_try_and_exec(
     try:
         func()
     except RerunException as e:
+        if reraise_rerun_exception:
+            raise e
+
         rerun_exception_data = e.rerun_data
         ctx.cursors = original_cursors
         dg_stack.set(original_dg_stack)

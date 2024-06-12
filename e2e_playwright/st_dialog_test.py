@@ -42,6 +42,10 @@ def open_sidebar_dialog(app: Page):
     app.get_by_role("button").filter(has_text="Open Sidebar-Dialog").click()
 
 
+def open_dialog_with_internal_error(app: Page):
+    app.get_by_role("button").filter(has_text="Open Dialog with Key Error").click()
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -204,6 +208,20 @@ def test_largewidth_dialog_displays_correctly(
     expect(submit_button).to_be_visible()
     submit_button.get_by_test_id("baseButton-secondary").hover()
     assert_snapshot(dialog, name="st_dialog-with_large_width")
+
+
+# its enough to test this on one browser as showing the error inline is more a backend functionality than a frontend one
+@pytest.mark.skip_browser("webkit")
+@pytest.mark.skip_browser("firefox")
+def test_dialog_shows_error_inline(app: Page, assert_snapshot: ImageCompareFunction):
+    """Additional check to the unittests we have to ensure errors thrown during the main script execution (not a fragment-only rerun) are rendered within the dialog."""
+    open_dialog_with_internal_error(app)
+    wait_for_app_run(app)
+    dialog = app.get_by_role("dialog")
+    # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
+    dialog.locator("div", has_text="Dialog with error").click()
+    expect(dialog.get_by_text("TypeError")).to_be_visible()
+    assert_snapshot(dialog, name="st_dialog-with_inline_error")
 
 
 def test_sidebar_dialog_displays_correctly(

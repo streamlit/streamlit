@@ -194,7 +194,7 @@ def _fragment(
 
         # Wrap the fragment function in the same try-except block as in a normal script_run so that for a main-app run (this execution) and a fragment-rerun the same execution and error-handling logic is used.
         # This makes errors in the fragment appear in the fragment path also for the first execution here in context of a full app run.
-        wrap_in_try_and_exec(wrapped_fragment, ctx)
+        wrap_in_try_and_exec(wrapped_fragment, ctx, True)
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
