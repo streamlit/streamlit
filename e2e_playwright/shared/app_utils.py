@@ -321,27 +321,6 @@ def click_form_button(
     wait_for_app_run(page)
 
 
-def click_checkbox(
-    page: Page,
-    label: str | Pattern[str],
-) -> None:
-    """Click a checkbox with the given label
-    and wait for the app to run.
-
-    Parameters
-    ----------
-
-    page : Page
-        The page to click the checkbox on.
-
-    label : str or Pattern[str]
-        The label of the checkbox to click.
-    """
-    checkbox_element = get_checkbox(page, label)
-    checkbox_element.click()
-    wait_for_app_run(page)
-
-
 def expect_help_tooltip(
     app: Page, element_with_help_tooltip: Locator, tooltip_text: str | Pattern[str]
 ):
