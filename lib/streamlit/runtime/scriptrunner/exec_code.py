@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
@@ -28,7 +28,7 @@ def wrap_in_try_and_exec(
     func: Callable[[], None],
     ctx: ScriptRunContext,
     reraise_rerun_exception: bool = False,
-) -> tuple[bool, RerunData | None, bool]:
+) -> tuple[Any | None, bool, RerunData | None, bool]:
     """Execute the passed function wrapped in a try/except block.
 
     This function is called by the script runner to execute the user's script or fragment reruns, but also for the execution of fragment
@@ -47,6 +47,7 @@ def wrap_in_try_and_exec(
     -------
     tuple
         A tuple containing:
+        - The result of the passed function.
         - A boolean indicating whether the script ran without errors (RerunException and StopException don't count as errors).
         - The RerunData instance belonging to a RerunException if the script was interrupted by a RerunException.
         - A boolean indicating whether the script was stopped prematurely (False for RerunExceptions, True for all other exceptions).
@@ -75,8 +76,11 @@ def wrap_in_try_and_exec(
     # so we track this to potentially skip session state cleanup later.
     premature_stop: bool = False
 
+    # The result of the passed function
+    result: Any | None = None
+
     try:
-        func()
+        result = func()
     except RerunException as e:
         if reraise_rerun_exception:
             raise e
@@ -101,4 +105,4 @@ def wrap_in_try_and_exec(
         handle_uncaught_app_exception(uncaught_exception)
         premature_stop = True
 
-    return run_without_errors, rerun_exception_data, premature_stop
+    return result, run_without_errors, rerun_exception_data, premature_stop

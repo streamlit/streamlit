@@ -318,6 +318,55 @@ class FragmentTest(unittest.TestCase):
             saved_fragment()
             patched_run_with_active_hash.assert_called_with("some_hash")
 
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_fragment_code_returns_value(
+        self,
+        patched_get_script_run_ctx,
+    ):
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            return 42
+
+        assert my_fragment() == 42
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_fragment_raises_rerun_exception_in_main_execution_context(
+        self, patched_get_script_run_ctx
+    ):
+        """Ensure that a rerun exception raised in a fragment when executed in the main execution context (meaning first execution in the app flow, not via a fragment-only rerun) is raised in the main execution context."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            raise RerunException(rerun_data=None)
+
+        with pytest.raises(RerunException):
+            my_fragment()
+
+    @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
+    def test_fragment_handles_non_rerun_exceptions_in_fragment_execution_context(
+        self, exception_type: Exception
+    ):
+        """Ensures that all non-rerun exceptions are caught by the fragment code and not raised."""
+        with patch(
+            "streamlit.runtime.fragment.get_script_run_ctx"
+        ) as patched_get_script_run_ctx:
+            ctx = MagicMock()
+            ctx.fragment_storage = MemoryFragmentStorage()
+            patched_get_script_run_ctx.return_value = ctx
+
+            @fragment
+            def my_fragment():
+                raise exception_type()
+
+            my_fragment()
+
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
 
@@ -503,27 +552,3 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         element_producer: ELEMENT_PRODUCER,
     ):
         _app(element_producer)
-
-
-class FragmentCodeExecutionContext(DeltaGeneratorTestCase):
-    def test_fragment_raises_rerun_exception_in_main_execution_context(self):
-        """Ensure that a rerun exception raised in a fragment when executed in the main execution context (meaning first execution in the app flow, not via a fragment-only rerun) is raised in the main execution context."""
-
-        @fragment
-        def my_fragment():
-            raise RerunException(rerun_data=None)
-
-        with pytest.raises(RerunException):
-            my_fragment()
-
-    @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
-    def test_fragment_handles_non_rerun_exceptions_in_fragment_execution_context(
-        self, exception_type: Exception
-    ):
-        """Ensures that all non-rerun exceptions are caught by the fragment code and not raised."""
-
-        @fragment
-        def my_fragment():
-            raise exception_type()
-
-        my_fragment()

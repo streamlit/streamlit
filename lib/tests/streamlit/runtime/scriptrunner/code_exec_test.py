@@ -45,12 +45,13 @@ class TestWrapInTryAndExec(unittest.TestCase):
     def test_func_succeeds(self):
         def test_func():
             """Test function that does nothing and, thus, succeeds."""
-            pass
+            return 42
 
-        run_without_errors, rerun_exception_data, premature_stop = wrap_in_try_and_exec(
-            test_func, self.ctx
+        result, run_without_errors, rerun_exception_data, premature_stop = (
+            wrap_in_try_and_exec(test_func, self.ctx)
         )
 
+        assert result == 42
         assert run_without_errors is True
         assert rerun_exception_data is None
         assert premature_stop is False
@@ -62,8 +63,8 @@ class TestWrapInTryAndExec(unittest.TestCase):
             """Test function that raises a RerunException."""
             raise RerunException(rerun_data)
 
-        run_without_errors, rerun_exception_data, premature_stop = wrap_in_try_and_exec(
-            test_func, self.ctx
+        _, run_without_errors, rerun_exception_data, premature_stop = (
+            wrap_in_try_and_exec(test_func, self.ctx)
         )
 
         assert run_without_errors is True
@@ -87,8 +88,8 @@ class TestWrapInTryAndExec(unittest.TestCase):
             """Test function that raises a StopException."""
             raise StopException()
 
-        run_without_errors, rerun_exception_data, premature_stop = wrap_in_try_and_exec(
-            test_func, self.ctx
+        _, run_without_errors, rerun_exception_data, premature_stop = (
+            wrap_in_try_and_exec(test_func, self.ctx)
         )
 
         assert run_without_errors is True
@@ -101,8 +102,8 @@ class TestWrapInTryAndExec(unittest.TestCase):
             """Test function that raises a generic Exception."""
             raise exception_type()
 
-        run_without_errors, rerun_exception_data, premature_stop = wrap_in_try_and_exec(
-            test_func, self.ctx
+        _, run_without_errors, rerun_exception_data, premature_stop = (
+            wrap_in_try_and_exec(test_func, self.ctx)
         )
 
         assert run_without_errors is False

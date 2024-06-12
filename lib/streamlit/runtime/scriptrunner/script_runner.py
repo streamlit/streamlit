@@ -573,6 +573,7 @@ class ScriptRunner:
 
             prep_time = timer() - start_time
             (
+                _,
                 run_without_errors,
                 rerun_exception_data,
                 premature_stop,
