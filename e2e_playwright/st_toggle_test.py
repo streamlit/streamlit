@@ -99,5 +99,5 @@ def test_grouped_toggles_height(app: Page, assert_snapshot: ImageCompareFunction
     expect(expander_details.get_by_test_id("stCheckbox")).to_have_count(3)
     assert_snapshot(expander_details, name="st_toggle-grouped_styling")
     expect(expander_details.get_by_test_id("stCheckbox").nth(0)).to_have_css(
-        "height", "26px"
+        "height", "24px"
     )
