@@ -70,7 +70,7 @@ def test_toggle_values_on_click(app: Page):
         # So, maybe thats the reason why it fails to click it.
         # But this is just a guess.
         toggle_element.scroll_into_view_if_needed()
-        toggle_element.click(delay=50)
+        toggle_element.locator("input").click(delay=50)
         wait_for_app_run(app)
 
     markdown_elements = app.get_by_test_id("stMarkdown")
