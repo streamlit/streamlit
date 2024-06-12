@@ -30,7 +30,14 @@ with st.sidebar.expander("Expander", expanded=True):
     r2 = st.slider("Range B", 10000, 25000, [10000, 25000])
     st.write("Range Value B:", r2)
 
-w1 = st.slider("Label 1", 0, 100, 25, 1)
+w1 = st.slider(
+    "Label 1",
+    min_value=date(2019, 8, 1),
+    max_value=date(2021, 6, 4),
+    value=(date(2019, 8, 1), date(2019, 9, 1)),
+    format="ddd, hA",
+    help="This is some help tooltip!",
+)
 st.write("Value 1:", w1)
 
 w2 = st.slider("Label 2", 0.0, 100.0, (25.0, 75.0), 0.5)
@@ -78,3 +85,38 @@ if runtime.exists():
     )
     st.write("Value 8:", st.session_state.slider8)
     st.write("Slider changed:", "slider_changed" in st.session_state)
+
+with st.form(key="my_form", clear_on_submit=True):
+    selection = st.slider(
+        "Label 9",
+        min_value=0,
+        max_value=100,
+        value=25,
+        step=1,
+        key="slider9",
+    )
+    st.form_submit_button("Submit")
+
+st.write("slider-in-form selection:", str(selection))
+
+
+@st.experimental_fragment()
+def test_fragment():
+    selection = st.slider(
+        "Label 10",
+        min_value=0,
+        max_value=100,
+        value=25,
+        step=1,
+        key="slider10",
+        on_change=on_change,
+    )
+    st.write("slider-in-fragment selection:", str(selection))
+
+
+test_fragment()
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
