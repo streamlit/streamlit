@@ -17,7 +17,6 @@
 describe("st.image replay", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
-
   });
 
   it("shows a cached image that was not rendered in previous script run", () => {
@@ -27,18 +26,15 @@ describe("st.image replay", () => {
       .should("have.css", "width", "100px");
 
     // Uncheck checkbox to hide image
-    cy.get(".stCheckbox")
-      .first()
-      .click({ multiple: true });
-    cy.get(".element-container [data-testid='stImage'] img")
-      .should("not.exist");
+    cy.get(".stCheckbox input").first().click({ multiple: true });
+    cy.get(".element-container [data-testid='stImage'] img").should(
+      "not.exist"
+    );
 
     // Cached image renders again
-    cy.get(".stCheckbox")
-      .first()
-      .click({ multiple: true });
+    cy.get(".stCheckbox input").first().click({ multiple: true });
     cy.get(".element-container [data-testid='stImage'] img")
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px");
-  })
-})
+  });
+});
