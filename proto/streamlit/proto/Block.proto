@@ -48,6 +48,13 @@ message Block {
   message Column {
     double weight = 1;
     string gap = 2;
+
+    enum VerticalAlignment {
+      TOP = 0;
+      CENTER = 1;
+      BOTTOM = 2;
+    }
+    VerticalAlignment vertical_alignment = 3;
   }
 
   message Expandable {
