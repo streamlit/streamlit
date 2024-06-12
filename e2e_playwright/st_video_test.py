@@ -16,7 +16,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 VIDEO_ELEMENTS_COUNT = 11
