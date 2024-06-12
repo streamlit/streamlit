@@ -211,8 +211,7 @@ def test_largewidth_dialog_displays_correctly(
 
 
 # its enough to test this on one browser as showing the error inline is more a backend functionality than a frontend one
-@pytest.mark.skip_browser("webkit")
-@pytest.mark.skip_browser("firefox")
+@pytest.mark.only_browser("chromium")
 def test_dialog_shows_error_inline(app: Page, assert_snapshot: ImageCompareFunction):
     """Additional check to the unittests we have to ensure errors thrown during the main script execution (not a fragment-only rerun) are rendered within the dialog."""
     open_dialog_with_internal_error(app)
