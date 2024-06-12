@@ -204,3 +204,21 @@ st.latex(
 st.markdown(
     "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
 )
+
+st.markdown(
+    ":material/add: llo :material/foo: :material/chevron_right: world test/123 :red[foo :blue[bar] baz] :foo bar baz :bar:faz"
+)
+
+st.subheader(":material/home: Home")
+
+st.markdown(
+    ":material/chevron_right: This text can contain material icons :red[:material/local_fire_department:]"
+)
+
+
+col1, col2 = st.columns(2)
+with col1:
+    st.button(":material/search: Search")
+
+with col2:
+    st.button("Next :material/arrow_forward:")

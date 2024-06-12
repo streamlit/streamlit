@@ -39,6 +39,8 @@ import rehypeKatex from "rehype-katex"
 import { Link2 as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
+import { findAndReplace } from "mdast-util-find-and-replace"
+
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
@@ -379,30 +381,65 @@ export function RenderedMarkdown({
   )
   function remarkColoring() {
     return (tree: any) => {
-      visit(tree, node => {
-        if (node.type === "textDirective") {
-          const nodeName = String(node.name)
-          if (colorMapping.has(nodeName)) {
-            const data = node.data || (node.data = {})
-            const style = colorMapping.get(nodeName)
-            data.hName = "span"
-            data.hProperties = data.hProperties || {}
-            data.hProperties.style = style
-            // Add class for background color for custom styling
-            if (
-              style &&
-              (/background-color:/.test(style) || /background:/.test(style))
-            ) {
-              data.hProperties.className =
-                (data.hProperties.className || "") + " has-background-color"
-            }
+      visit(tree, "textDirective", (node, _index, _parent) => {
+        const nodeName = String(node.name)
+        if (colorMapping.has(nodeName)) {
+          const data = node.data || (node.data = {})
+          const style = colorMapping.get(nodeName)
+          data.hName = "span"
+          data.hProperties = data.hProperties || {}
+          data.hProperties.style = style
+          // Add class for background color for custom styling
+          if (
+            style &&
+            (/background-color:/.test(style) || /background:/.test(style))
+          ) {
+            data.hProperties.className =
+              (data.hProperties.className || "") + " has-background-color"
           }
+        } else {
+          // Convert unsupported text directives to plain text to avoid them being ignored/not rendered
+          // See https://github.com/streamlit/streamlit/issues/8726, https://github.com/streamlit/streamlit/issues/5968
+          node.type = "text"
+          node.value = `:${nodeName}`
+          node.data = {}
         }
       })
     }
   }
+
+  function remarkMaterialIcons() {
+    return (tree: any) => {
+      function replace(_full_match: string, icon_name: string): any {
+        return {
+          type: "text",
+          // value: full_match,
+          data: {
+            hName: "span",
+            hProperties: {
+              role: "img",
+              ariaLabel: icon_name + " icon",
+              style: {
+                "font-family": "Material Symbols Outlined",
+                "user-select": "none",
+                display: "inline-block",
+                "vertical-align": "bottom",
+              },
+            },
+
+            hChildren: [{ type: "text", value: icon_name }],
+          },
+        }
+      }
+
+      findAndReplace(tree, [[/:material_(\w+):/g, replace]])
+      return tree
+    }
+  }
+
   const plugins = [
     remarkMathPlugin,
+    remarkMaterialIcons,
     remarkEmoji,
     remarkGfm,
     remarkDirective,
@@ -413,7 +450,7 @@ export function RenderedMarkdown({
     rehypeKatex,
     ...(allowHTML ? [rehypeRaw] : []),
   ]
-
+  const parsedString = source.replaceAll(":material/", ":material_")
   // Sets disallowed markdown for widget labels
   const disallowed = [
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
@@ -448,7 +485,7 @@ export function RenderedMarkdown({
         // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
       >
-        {source}
+        {parsedString}
       </ReactMarkdown>
     </ErrorBoundary>
   )
