@@ -213,7 +213,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                   marginRight: 0,
                   marginLeft: 0,
                   marginBottom: 0,
-                  marginTop: "0.3rem",
+                  marginTop: "0.25rem",
                   paddingLeft: "2px",
                   paddingRight: "2px",
                   width: "32px",
@@ -243,7 +243,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                   outline: 0,
                   width: "1rem",
                   height: "1rem",
-                  marginTop: "0.3rem",
+                  marginTop: "0.25rem",
                   marginLeft: 0,
                   marginBottom: 0,
                   boxShadow:
