@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import click_checkbox
 
 
 def select_for_kth_multiselect(
@@ -200,7 +201,7 @@ def test_multiselect_deselect_option(app: Page):
 
 def test_multiselect_option_over_max_selections(app: Page):
     """Should show an error when more than max_selections got selected."""
-    app.get_by_test_id("stCheckbox").first.click()
+    click_checkbox(app, "set_multiselect_9")
     expect(app.get_by_test_id("stException")).to_contain_text(
         "Multiselect has 2 options selected but max_selections\nis set to 1"
     )

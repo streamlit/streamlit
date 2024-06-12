@@ -17,6 +17,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 VIDEO_ELEMENTS_COUNT = 11
 
@@ -160,9 +161,8 @@ def test_video_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", True)
     expect(video_element).to_have_js_property("autoplay", False)
 
-    checkbox_elements = app.get_by_test_id("stCheckbox")
-    autoplay_checkbox = checkbox_elements.nth(0)
-    autoplay_checkbox.click()
+    click_checkbox(app, "Autoplay")
+
     # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("autoplay", True)
@@ -197,22 +197,15 @@ def test_video_remount_no_autoplay(app: Page):
     expect(video_element).to_have_js_property("paused", True)
     expect(video_element).to_have_js_property("autoplay", False)
 
-    checkbox_elements = app.get_by_test_id("stCheckbox")
-    autoplay_checkbox = checkbox_elements.nth(0)
-    autoplay_checkbox.click()
+    click_checkbox(app, "Autoplay")
+
     # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("autoplay", True)
     expect(video_element).to_have_js_property("paused", False)
 
-    autoplay_checkbox.click()
-
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    expect(app.get_by_test_id("stMarkdownContainer").nth(2)).to_have_text(
-        "Create some elements to unmount component"
-    )
-    button_element.click()
-    wait_for_app_run(app)
+    click_checkbox(app, "Autoplay")
+    click_button(app, "Create some elements to unmount component")
 
     expect(video_element).to_have_js_property("autoplay", False)
     expect(video_element).to_have_js_property("paused", True)
