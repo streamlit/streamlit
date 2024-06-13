@@ -83,12 +83,9 @@ export const StyledIcon = styled("span", {
 })
 
 export interface StyledDynamicIconProps {
-  iconValue: string
   size?: IconSize
   margin?: string
   padding?: string
-  testid?: string
-  color?: ThemeColor
 }
 
 export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(

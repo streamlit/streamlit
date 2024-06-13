@@ -56,14 +56,14 @@ const DynamicIconDispatcher = ({
   switch (pack) {
     case "material":
       return (
-        <StyledDynamicIcon iconValue={icon} {...props}>
+        <StyledDynamicIcon {...props}>
           <MaterialFontIcon pack={pack} iconName={icon} {...props} />
         </StyledDynamicIcon>
       )
     case "emoji":
     default:
       return (
-        <StyledDynamicIcon iconValue={icon} {...props}>
+        <StyledDynamicIcon {...props}>
           <EmojiIcon {...props}>{icon}</EmojiIcon>
         </StyledDynamicIcon>
       )

@@ -23,7 +23,6 @@ export interface StyledMaterialIconProps {
   margin: string
   padding: string
   color: string
-  testid?: string
 }
 
 export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
