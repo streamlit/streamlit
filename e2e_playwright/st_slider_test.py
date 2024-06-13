@@ -43,8 +43,8 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
     # click in middle
     app.mouse.down()
 
-    # Move mouse to 500, 0 pixels on the screen to simulate dragging left
-    app.mouse.move(2000, 0)
+    # Move mouse to 2000, 200 pixels on the screen to simulate dragging right
+    app.mouse.move(2000, 200)
     app.mouse.up()
     wait_for_app_run(app)
 
