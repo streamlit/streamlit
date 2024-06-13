@@ -19,6 +19,7 @@ import React, { Suspense } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
+import { StyledDynamicIcon } from "./styled-components"
 
 interface IconPackEntry {
   pack: string
@@ -54,16 +55,28 @@ const DynamicIconDispatcher = ({
   const { pack, icon } = parseIconPackEntry(iconValue)
   switch (pack) {
     case "material":
-      return <MaterialFontIcon pack={pack} iconName={icon} {...props} />
+      return (
+        <StyledDynamicIcon {...props}>
+          <MaterialFontIcon pack={pack} iconName={icon} {...props} />
+        </StyledDynamicIcon>
+      )
     case "emoji":
     default:
-      return <EmojiIcon {...props}>{icon}</EmojiIcon>
+      return (
+        <StyledDynamicIcon {...props}>
+          <EmojiIcon {...props}>{icon}</EmojiIcon>
+        </StyledDynamicIcon>
+      )
   }
 }
 
 export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
   <Suspense
-    fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}
+    fallback={
+      <StyledDynamicIcon {...props}>
+        <EmojiIcon {...props}>&nbsp;</EmojiIcon>
+      </StyledDynamicIcon>
+    }
     key={props.iconValue}
   >
     <DynamicIconDispatcher {...props} />

@@ -192,6 +192,50 @@ class ExpanderTest(DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.label, "label")
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
+    def test_valid_emoji_icon(self):
+        """Test that it can be called with an emoji icon"""
+        expander = st.expander("label", icon="🦄")
+
+        with expander:
+            pass
+
+        expander_block = self.get_delta_from_queue()
+        self.assertEqual(expander_block.add_block.expandable.label, "label")
+        self.assertEqual(expander_block.add_block.expandable.icon, "🦄")
+
+    def test_valid_material_icon(self):
+        """Test that it can be called with a material icon"""
+        expander = st.expander("label", icon=":material/download:")
+
+        with expander:
+            pass
+
+        expander_block = self.get_delta_from_queue()
+        self.assertEqual(expander_block.add_block.expandable.label, "label")
+        self.assertEqual(
+            expander_block.add_block.expandable.icon, ":material/download:"
+        )
+
+    def test_invalid_emoji_icon(self):
+        """Test that it throws an error on invalid emoji icon"""
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.expander("label", icon="invalid")
+        self.assertEqual(
+            str(e.exception),
+            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.',
+        )
+
+    def test_invalid_material_icon(self):
+        """Test that it throws an error on invalid material icon"""
+        icon = ":material/invalid:"
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.expander("label", icon=icon)
+        self.assertEqual(
+            str(e.exception),
+            f'The value `"{icon}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode like **`:material/thumb_up:`**. ",
+        )
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
@@ -303,7 +347,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "label")
         self.assertEqual(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, "check")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/check:")
 
     def test_state_param_error(self):
         """Test that it correctly applies state param with `error`."""
@@ -312,7 +356,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "label")
         self.assertEqual(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, "error")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
     def test_usage_with_context_manager(self):
         """Test that it correctly switches to complete state when used as context manager."""
@@ -324,7 +368,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "label")
         self.assertEqual(status_block.add_block.expandable.expanded, False)
-        self.assertEqual(status_block.add_block.expandable.icon, "check")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/check:")
 
     def test_mutation_via_update(self):
         """Test that update can be used to change the label, state and expand."""
@@ -334,7 +378,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "new label")
         self.assertEqual(status_block.add_block.expandable.expanded, True)
-        self.assertEqual(status_block.add_block.expandable.icon, "error")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
     def test_mutation_via_update_in_cm(self):
         """Test that update can be used in context manager to change the label, state and expand."""
@@ -344,7 +388,7 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         self.assertEqual(status_block.add_block.expandable.label, "new label")
         self.assertEqual(status_block.add_block.expandable.expanded, True)
-        self.assertEqual(status_block.add_block.expandable.icon, "error")
+        self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
 
 class TabsTest(DeltaGeneratorTestCase):
