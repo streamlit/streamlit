@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 
 def test_button_widget_rendering(
@@ -84,14 +85,13 @@ def test_click_increment_count(app: Page):
 
 
 def test_reset_on_other_widget_change(app: Page):
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    checkbox_element = app.get_by_test_id("stCheckbox")
-    button_element.click()
+    click_button(app, "button 1")
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text("value: True")
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
         "value from state: True"
     )
-    checkbox_element.click()
+
+    click_checkbox(app, "reset button return value")
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text("value: False")
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
         "value from state: False"

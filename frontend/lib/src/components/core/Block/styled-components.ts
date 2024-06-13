@@ -88,6 +88,23 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       marginTop: "-0.375rem",
       marginBottom: "-0.375rem",
     },
+    // Lower the min height of stacked/grouped checkboxes to have them appear visually
+    // closer together to each other.
+    // To detect & cover all grouped/stacked checkboxes, we apply a complex CSS selector
+    // that selects all checkboxes that are directly followed by another checkbox.
+    // Since the last checkbox in a group isn't followed by another checkbox, we also
+    // need to target the direct sibling (if it is a checkbox) of any of the targeted checkboxes.
+    // Examples:
+    // Smaller width is not applied because single checkbox:
+    // <text-input><checkbox><number-input>
+    // Smaller width is applied to all checkboxes:
+    // <text-input><checkbox><checkbox><checkbox><number-input>
+    // Smaller width only applied to the first two checkboxes:
+    // <text-input><checkbox><checkbox><number-input><checkbox><selectbox>
+    [`&:has(+ & > ${StyledCheckbox}) > ${StyledCheckbox}, &:has(> ${StyledCheckbox}):has(+ & > ${StyledCheckbox}) + & > ${StyledCheckbox}`]:
+      {
+        minHeight: "1.5rem",
+      },
 
     ...(isStale && elementType !== "skeleton"
       ? {
@@ -137,12 +154,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       },
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
         marginTop: "auto",
-        // Add margin to the last checkbox within the column to align it
-        // better with other input widgets. This is a temporary fix
-        // until we have a better solution for this.
-        [`& ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]: {
-          marginBottom: theme.spacing.sm,
-        },
       }),
       ...(verticalAlignment === VerticalAlignment.CENTER && {
         marginTop: "auto",
