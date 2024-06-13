@@ -39,11 +39,11 @@ def stop() -> NoReturn:  # type: ignore[misc]
     -------
     >>> import streamlit as st
     >>>
-    >>> name = st.text_input('Name')
+    >>> name = st.text_input("Name")
     >>> if not name:
     >>>   st.warning('Please input a name.')
     >>>   st.stop()
-    >>> st.success('Thank you for inputting a name.')
+    >>> st.success("Thank you for inputting a name.")
 
     """
     ctx = get_script_run_ctx()

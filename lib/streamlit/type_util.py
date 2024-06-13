@@ -84,7 +84,7 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     To check whether something is a Matplotlib Figure without importing
     matplotlib, use:
 
-    >>> is_type(foo, 'matplotlib.figure.Figure')
+    >>> is_type(foo, "matplotlib.figure.Figure")
 
     """
     fqn_type = get_fqn_type(obj)

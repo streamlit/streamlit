@@ -73,11 +73,10 @@ class LayoutsMixin:
         >>> import streamlit as st
         >>>
         >>> with st.container():
-        ...    st.write("This is inside the container")
+        ...     st.write("This is inside the container")
         ...
-        ...    # You can call any Streamlit command, including custom components:
-        ...    st.bar_chart(np.random.randn(50, 3))
-        ...
+        ...     # You can call any Streamlit command, including custom components:
+        ...     st.bar_chart(np.random.randn(50, 3))
         >>> st.write("This is outside the container")
 
         .. output ::
@@ -201,16 +200,14 @@ class LayoutsMixin:
         >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg")
-        ...
+        ...     st.header("A cat")
+        ...     st.image("https://static.streamlit.io/examples/cat.jpg")
         >>> with col2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg")
-        ...
+        ...     st.header("A dog")
+        ...     st.image("https://static.streamlit.io/examples/dog.jpg")
         >>> with col3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg")
+        ...     st.header("An owl")
+        ...     st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
             https://doc-columns1.streamlit.app/
@@ -386,16 +383,14 @@ class LayoutsMixin:
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
         >>>
         >>> with tab1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        ...
+        ...     st.header("A cat")
+        ...     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
         >>> with tab2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        ...
+        ...     st.header("A dog")
+        ...     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
         >>> with tab3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        ...     st.header("An owl")
+        ...     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
             https://doc-tabs1.streamlit.app/
@@ -799,7 +794,9 @@ class LayoutsMixin:
         ...     time.sleep(1)
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
-        ...     status.update(label="Download complete!", state="complete", expanded=False)
+        ...     status.update(
+        ...         label="Download complete!", state="complete", expanded=False
+        ...     )
         >>>
         >>> st.button("Rerun")
 
