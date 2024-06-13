@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_expander
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
@@ -100,17 +101,14 @@ def test_expander_session_state_set(app: Page):
 
 def test_expander_renders_icon(app: Page):
     """Test that an expander renders a material icon and an emoji icon."""
-    main_container = app.get_by_test_id("stAppViewBlockContainer")
-    main_expanders = main_container.get_by_test_id("stExpander")
-    expect(main_expanders).to_have_count(7)
-
-    expanders = main_expanders.all()
-    expander_with_material_icon, expander_with_emoji_icon = expanders[5:7]
-
-    material_icon = expander_with_material_icon.get_by_test_id("stExpanderIcon")
+    material_icon = get_expander(app, "Expander with material icon!").get_by_test_id(
+        "stExpanderIcon"
+    )
     expect(material_icon).to_be_visible()
     expect(material_icon).to_have_text("bolt")
 
-    emoji_icon = expander_with_emoji_icon.get_by_test_id("stExpanderIcon")
+    emoji_icon = get_expander(app, "Expander with emoji icon!").get_by_test_id(
+        "stExpanderIcon"
+    )
     expect(emoji_icon).to_be_visible()
     expect(emoji_icon).to_have_text("🎈")

@@ -68,10 +68,10 @@ collapsed_long = st.expander(
 )
 collapsed_long.write("I am already collapsed")
 
-expander_material_icon = st.expander("Expand me!", icon=":material/bolt:").write(
-    "This is an expander with a material icon."
-)
+expander_material_icon = st.expander(
+    "Expander with material icon!", icon=":material/bolt:"
+).write("This is an expander with a material icon.")
 
-expander_emoji_icon = st.expander("Expand me!", icon="🎈").write(
+expander_emoji_icon = st.expander("Expander with emoji icon!", icon="🎈").write(
     "This is an expander with an emoji icon."
 )
