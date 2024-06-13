@@ -59,37 +59,101 @@ def navigation(
     """
     Configure the available pages in a multipage app.
 
-    Call `st.navigation` in your main script with one or more pages defined by
-    `st.Page`. `st.navigation` returns the current page which can be executed
-    using `Page.run()`.
+    Call ``st.navigation`` in your entrypoint file with one or more pages
+    defined by ``st.Page``. ``st.navigation`` returns the current page, which
+    can be executed using ``.run()`` method.
 
-    When using `st.navigation`, the main script is executed on every app rerun,
-    with the current page executed in-line using `Page.run()`. The set of
-    available pages can be updated with each rerun for dynamic navigation. In
-    this mode, the `pages/` folder is ignored.
+    When using ``st.navigation``, your entrypoint file (the file passed to
+    ``streamlit run``) acts like a router or frame of common elements around
+    each of your pages. Streamlit executes the entrypoint file with every app
+    rerun. To execute the current page, you must call the ``.run()`` method on
+    the page object returned by ``st.navigation``.
 
-    By default, `st.navigation` draws the available pages in the side
-    navigation. This behavior can be changed using the `position=` keyword
-    argument.
+    The set of available pages can be updated with each rerun for dynamic
+    navigation. By default, ``st.navigation`` draws the available pages in the
+    side navigation if there is more than one page. This behavior can be
+    changed using the ``position`` keyword argument.
+
+    As soon as any session of your app executes the ``st.navigation`` command,
+    your app will ignore the ``pages/`` directory (across all sessions).
 
     Parameters
     ----------
-    pages: list[st.Page] or dict[str, list[st.Page]]
-        A list of `st.Page` objects or a dictionary where the keys are section
-        headers and the values are lists of `st.Page` objects.
+    pages: list[StreamlitPage] or dict[str, list[StreamlitPage]]
+        The available pages for the app.
+
+        To create sections or page groupings within the navigation menu,
+        ``pages`` must be a dictionary. Each key is the name of a section and
+        each value is the list of ``StreamlitPage`` objects for that section.
+
+        To create a navigation menu with no sections or page groupings,
+        ``pages`` must be a list of ``StreamlitPage`` objects.
+
+        Use ``st.Page`` to create ``StreamlitPage`` objects.
 
     position: "sidebar" or "hidden"
-        The position of the navigation menu. Can be "sidebar" or "hidden".
+        The position of the navigation menu. If ``position`` is ``"sidebar"``
+        (default), the navigation widget appears at the top of the sidebar. If
+        ``position`` is ``"hidden"``, the navigation widget is not displayed.
 
-    Example
+        If there is only one page in ``pages``, the navigation will be hidden
+        for any value of ``postion``.
+
+    Returns
     -------
+    StreamlitPage
+        The current page selected by the user.
+
+    Examples
+    --------
+    The following examples show possible entrypoint files, which is the file
+    you pass to ``streamlit run``. Your entrypoint file manages your app's
+    navigation and servers as a router between pages.
+
+    You can declare pages from callables or file paths.
+
     >>> import streamlit as st
-    >>> from pages import page1, page2
+    >>> from page_functions import page1
     >>>
-    >>>	pg = st.navigation([st.Page(page1), st.Page(page2)])
-    >>>
-    >>>	st.title("My Awesome App")
+    >>> pg = st.navigation([page1, "page2.py"])
     >>> pg.run()
+
+    Use a dictionary to create sections within your navigation menu.
+
+    >>> import streamlit as st
+    >>>
+    >>> pages = {
+    ...     "Your account" : [
+    ...         st.Page("create_account.py", title="Create your account"),
+    ...         st.Page("manage_account.py", title="Manage your account")
+    ...     ],
+    ...     "Resources" : [
+    ...         st.Page("learn.py", title="Learn about us"),
+    ...         st.Page("trial.py", title="Try it out")
+    ...     ]
+    ... }
+    >>>
+    >>> pg = st.navigation(pages)
+    >>> pg.run()
+
+    Call widget functions in your entrypoint file when you want a widget to be
+    stateful across pages.
+
+    >>> import streamlit as st
+    >>>
+    >>> def page1():
+    >>>     st.write(st.session_state.foo)
+    >>>
+    >>> def page2():
+    >>>     st.write(st.session_state.bar)
+    >>>
+    >>> # Widgets shared by all the pages
+    >>> st.selectbox("Foo", ["A", "B", "C"], key="foo")
+    >>> st.checkbox("Bar", key="bar")
+    >>>
+    >>> pg = st.navigation(st.Page(page1), st.Page(page2))
+    >>> pg.run()
+
     """
     nav_sections = {"": pages} if isinstance(pages, list) else pages
     page_list = pages_from_nav_sections(nav_sections)
