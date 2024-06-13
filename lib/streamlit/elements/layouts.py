@@ -131,6 +131,7 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+
         if height:
             # Activate scrolling container behavior:
             block_proto.allow_empty = True
@@ -145,7 +146,11 @@ class LayoutsMixin:
 
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: str | None = "small"
+        self,
+        spec: SpecType,
+        *,
+        gap: Literal["small", "medium", "large"] = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -176,6 +181,9 @@ class LayoutsMixin:
 
         gap : "small", "medium", or "large"
             The size of the gap between the columns. Defaults to "small".
+
+        vertical_alignment : "top", "center", or "bottom"
+            The vertical alignment of the content inside the columns. Defaults to "top".
 
         Returns
         -------
@@ -226,13 +234,6 @@ class LayoutsMixin:
 
         """
         weights = spec
-        weights_exception = StreamlitAPIException(
-            "The input argument to st.columns must be either a "
-            + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
-            + "for more information."
-        )
-
         if isinstance(weights, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
@@ -240,10 +241,29 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise weights_exception
+            raise StreamlitAPIException(
+                "The input argument to st.columns must be either a "
+                "positive integer or a list of positive numeric weights. "
+                "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
+                "for more information."
+            )
+
+        vertical_alignment_mapping: dict[
+            str, BlockProto.Column.VerticalAlignment.ValueType
+        ] = {
+            "top": BlockProto.Column.VerticalAlignment.TOP,
+            "center": BlockProto.Column.VerticalAlignment.CENTER,
+            "bottom": BlockProto.Column.VerticalAlignment.BOTTOM,
+        }
+
+        if vertical_alignment not in vertical_alignment_mapping:
+            raise StreamlitAPIException(
+                'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
+                f"The argument passed was {vertical_alignment}."
+            )
 
         def column_gap(gap):
-            if type(gap) == str:
+            if isinstance(gap, str):
                 gap_size = gap.lower()
                 valid_sizes = ["small", "medium", "large"]
 
@@ -261,6 +281,9 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
+            col_proto.column.vertical_alignment = vertical_alignment_mapping[
+                vertical_alignment
+            ]
             col_proto.allow_empty = True
             return col_proto
 
@@ -369,7 +392,7 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
-        if any(isinstance(tab, str) == False for tab in tabs):
+        if any(not isinstance(tab, str) for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
@@ -515,7 +538,7 @@ class LayoutsMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
@@ -762,7 +785,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
-    ) -> "Dialog":
+    ) -> Dialog:
         """Inserts the dialog container.
 
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.

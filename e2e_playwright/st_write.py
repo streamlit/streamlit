@@ -58,7 +58,7 @@ st.write(datetime(2021, 1, 1))
 st.write(np.float64(1.0))
 
 
-class SomeObject1(object):
+class SomeObject1:
     def __str__(self):
         return "1 * 2 - 3 = 4 `ok` !"
 
@@ -66,7 +66,7 @@ class SomeObject1(object):
 st.write(SomeObject1())  # escaped single line string
 
 
-class SomeObject2(object):
+class SomeObject2:
     def __str__(self):
         return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
 

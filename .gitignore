@@ -23,6 +23,7 @@ eggs/
 test-reports
 htmlcov
 .hypothesis
+.ruff_cache
 
 # Test fixtures
 cffi_bin

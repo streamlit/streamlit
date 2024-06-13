@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Unit tests for the Streamlit CLI."""
+
 import contextlib
 import os
 import subprocess

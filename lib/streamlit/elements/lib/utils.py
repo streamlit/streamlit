@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import Any, Iterable, Sequence, overload
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, overload
 
 from streamlit import type_util
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.common import RegisterWidgetResult
-from streamlit.type_util import T
+
+if TYPE_CHECKING:
+    from streamlit.type_util import T
 
 
 def get_label_visibility_proto_value(
@@ -43,8 +45,7 @@ def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[Enum],
     options: type[Enum],
     opt_sequence: Sequence[Any],
-) -> RegisterWidgetResult[Enum]:
-    ...
+) -> RegisterWidgetResult[Enum]: ...
 
 
 @overload
@@ -52,8 +53,7 @@ def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[T],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[T]:
-    ...
+) -> RegisterWidgetResult[T]: ...
 
 
 def maybe_coerce_enum(register_widget_result, options, opt_sequence):
@@ -86,8 +86,7 @@ def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[list[T]],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[list[T]]:
-    ...
+) -> RegisterWidgetResult[list[T]]: ...
 
 
 @overload
@@ -95,8 +94,7 @@ def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[tuple[T, T]],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[tuple[T, T]]:
-    ...
+) -> RegisterWidgetResult[tuple[T, T]]: ...
 
 
 def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):

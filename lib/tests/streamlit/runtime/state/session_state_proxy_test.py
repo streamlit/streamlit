@@ -29,7 +29,7 @@ from streamlit.runtime.state.common import (
 
 
 def _create_mock_session_state(
-    initial_state_values: Dict[str, Any]
+    initial_state_values: Dict[str, Any],
 ) -> SafeSessionState:
     """Return a new SafeSessionState instance populated with the
     given state values.

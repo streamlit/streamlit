@@ -16,17 +16,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from streamlit import url_util
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-if TYPE_CHECKING:
-    from PIL import Image
 
 
 def _invalid_logo_text(field_name: str):
@@ -126,8 +121,8 @@ def logo(
             image_id="logo",
         )
         fwd_msg.logo.image = image_url
-    except Exception:
-        raise StreamlitAPIException(_invalid_logo_text("image"))
+    except Exception as ex:
+        raise StreamlitAPIException(_invalid_logo_text("image")) from ex
 
     if link:
         # Handle external links:
@@ -149,7 +144,7 @@ def logo(
                 image_id="icon-image",
             )
             fwd_msg.logo.icon_image = icon_image_url
-        except Exception:
-            raise StreamlitAPIException(_invalid_logo_text("icon_image"))
+        except Exception as ex:
+            raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
 
     ctx.enqueue(fwd_msg)

@@ -24,7 +24,6 @@ import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -35,23 +34,24 @@ from streamlit.proto.NewSession_pb2 import (
     NewSession,
     UserInfo,
 )
-from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import secrets_singleton
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.source_util import PageHash, PageInfo
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
+    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from streamlit.proto.PagesChanged_pb2 import PagesChanged
+    from streamlit.runtime.script_data import ScriptData
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+    from streamlit.source_util import PageHash, PageInfo
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -881,7 +881,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     # ui.hideSidebarNav is deprecated, will be removed in the future
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
-    if config.get_option("client.showSidebarNavigation") == False:
+    if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
 

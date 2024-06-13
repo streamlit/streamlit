@@ -16,12 +16,16 @@ from __future__ import annotations
 
 import inspect
 import os
-from types import FrameType
+from typing import TYPE_CHECKING
 
-from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+if TYPE_CHECKING:
+    from types import FrameType
+
+    from streamlit.components.types.base_component_registry import BaseComponentRegistry
 
 
 def _get_module_name(caller_frame: FrameType) -> str:

@@ -42,9 +42,7 @@ from typing import (
 from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
-from streamlit import config, errors
-from streamlit import logger as _logger
-from streamlit import string_util
+from streamlit import config, errors, logger, string_util
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
@@ -65,7 +63,7 @@ if TYPE_CHECKING:
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
 
-_LOGGER = _logger.get_logger(__name__)
+_LOGGER = logger.get_logger(__name__)
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
@@ -129,8 +127,7 @@ class DataFrameGenericAlias(Protocol[V_co]):
     """
 
     @property
-    def iloc(self) -> _iLocIndexer:
-        ...
+    def iloc(self) -> _iLocIndexer: ...
 
 
 OptionSequence: TypeAlias = Union[
@@ -147,8 +144,7 @@ VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
 
 class SupportsStr(Protocol):
-    def __str__(self) -> str:
-        ...
+    def __str__(self) -> str: ...
 
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
@@ -158,20 +154,17 @@ def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["pydeck.bindings.deck.Deck"]
-) -> TypeGuard[Deck]:
-    ...
+) -> TypeGuard[Deck]: ...
 
 
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["plotly.graph_objs._figure.Figure"]
-) -> TypeGuard[Figure]:
-    ...
+) -> TypeGuard[Figure]: ...
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
-    ...
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool: ...
 
 
 def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
@@ -344,7 +337,7 @@ def is_pyspark_data_object(obj: object) -> bool:
     return (
         is_type(obj, _PYSPARK_DF_TYPE_STR)
         and hasattr(obj, "toPandas")
-        and callable(getattr(obj, "toPandas"))
+        and callable(obj.toPandas)
     )
 
 
@@ -510,7 +503,7 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     t = type(x)
     b = t.__bases__
-    if len(b) != 1 or b[0] != tuple:
+    if len(b) != 1 or b[0] is not tuple:
         return False
     f = getattr(t, "_fields", None)
     if not isinstance(f, tuple):
@@ -558,8 +551,7 @@ def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
-) -> DataFrame:
-    ...
+) -> DataFrame: ...
 
 
 @overload
@@ -568,8 +560,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> DataFrame | Styler:
-    ...
+) -> DataFrame | Styler: ...
 
 
 def convert_anything_to_df(
@@ -698,13 +689,11 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
-    ...
+def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]: ...
 
 
 @overload
-def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
-    ...
+def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]: ...
 
 
 def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]:
@@ -1304,19 +1293,17 @@ def convert_df_to_data_format(
         df = _unify_missing_values(df)
         # The key is expected to be the index -> this will return the first column
         # as a dict with index as key.
-        return dict() if df.empty else df.iloc[:, 0].to_dict()
+        return {} if df.empty else df.iloc[:, 0].to_dict()
 
     raise ValueError(f"Unsupported input data format: {data_format}")
 
 
 @overload
-def to_key(key: None) -> None:
-    ...
+def to_key(key: None) -> None: ...
 
 
 @overload
-def to_key(key: Key) -> str:
-    ...
+def to_key(key: Key) -> str: ...
 
 
 def to_key(key: Key | None) -> str | None:

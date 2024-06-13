@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" Utilities related to the CLI."""
+"""Utilities related to the CLI."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def print_to_cli(message: str, **kwargs) -> None:
 
         click.secho(message, **kwargs)
     except ImportError:
-        print(message, flush=True)
+        print(message, flush=True)  # noqa: T201
 
 
 def style_for_cli(message: str, **kwargs) -> str:

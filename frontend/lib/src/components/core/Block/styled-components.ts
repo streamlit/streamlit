@@ -16,7 +16,10 @@
 
 import React from "react"
 import styled from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { StyledCheckbox } from "@streamlit/lib/src/components/widgets/Checkbox/styled-components"
+import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 function translateGapWidth(gap: string, theme: EmotionTheme): string {
   let gapWidth = theme.spacing.lg
@@ -113,10 +116,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 interface StyledColumnProps {
   weight: number
   gap: string
+  verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, gap, theme }) => {
+  ({ weight, gap, theme, verticalAlignment }) => {
+    const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width = `calc(${percentage}% - ${gapWidth})`
@@ -130,6 +135,19 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
+      ...(verticalAlignment === VerticalAlignment.BOTTOM && {
+        marginTop: "auto",
+        // Add margin to the last checkbox within the column to align it
+        // better with other input widgets. This is a temporary fix
+        // until we have a better solution for this.
+        [`& ${StyledElementContainer}:last-of-type > ${StyledCheckbox}`]: {
+          marginBottom: theme.spacing.sm,
+        },
+      }),
+      ...(verticalAlignment === VerticalAlignment.CENTER && {
+        marginTop: "auto",
+        marginBottom: "auto",
+      }),
     }
   }
 )

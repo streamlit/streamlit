@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from streamlit.proto.Delta_pb2 import Delta
 
 
 class ForwardMsgQueue:
@@ -38,7 +40,7 @@ class ForwardMsgQueue:
         # redundant outgoing Deltas (where a newer Delta supersedes
         # an older Delta, with the same delta_path, that's still in the
         # queue).
-        self._delta_index_map: dict[tuple[int, ...], int] = dict()
+        self._delta_index_map: dict[tuple[int, ...], int] = {}
 
     def get_debug(self) -> dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
@@ -102,7 +104,7 @@ class ForwardMsgQueue:
                 }
             ]
 
-        self._delta_index_map = dict()
+        self._delta_index_map = {}
 
     def flush(self) -> list[ForwardMsg]:
         """Clear the queue and return a list of the messages it contained

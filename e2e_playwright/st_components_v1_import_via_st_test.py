@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-from streamlit import runtime
+import re
 
-if runtime.exists():
+from playwright.sync_api import Page, expect
 
-    if st.checkbox("checkbox 1"):
-        if st.checkbox("checkbox 2"):
-            st.write("hello")
+from e2e_playwright.shared.app_utils import expect_markdown
 
-        if st.checkbox("checkbox 3", key="c3"):
-            st.write("goodbye")
+
+def test_components_v1_was_imported_successfully(app: Page):
+    expect(app.locator("iframe")).to_be_attached()
+    iframe = app.frame_locator("iframe")
+    div = iframe.locator("div")
+    expect(div).to_have_text("This import and usage worked!")
+
+    expect_markdown(app, "<bound method IframeMixin._iframe of DeltaGenerator()>")
+    expect_markdown(app, re.compile("<function declare_component at .*>"))

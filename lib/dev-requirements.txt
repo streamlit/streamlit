@@ -1,18 +1,17 @@
-black==22.6.0
 pre-commit
-hypothesis>=6.17.4
+# We fix ruff to a version to be in sync with the pre-commit hook:
+ruff==0.4.8
 mypy>=1.4, <1.7
 mypy-protobuf>=3.2
-parameterized
-pytest
-pytest-cov
-requests-mock
 # semver 3 renames VersionInfo so temporarily pin until we deal with it
 semver<3
 setuptools>=65.5.1
-testfixtures
 twine
 wheel
+pytz
+# Used for updating emojis via: scripts/update_emojis.py
+emoji
+
 # mypy types
 types-click
 types-protobuf
@@ -21,3 +20,4 @@ types-requests
 types-setuptools
 types-toml
 types-typed-ast
+types-cachetools
