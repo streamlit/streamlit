@@ -1096,8 +1096,12 @@ class VegaChartsMixin:
 
         """
 
+        bar_chart_type = (
+            ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
+        )
+
         chart, add_rows_metadata = generate_chart(
-            chart_type=ChartType.BAR,
+            chart_type=bar_chart_type,
             data=data,
             x_from_user=x,
             y_from_user=y,
@@ -1107,7 +1111,6 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
-            horizontal=horizontal,
         )
         return cast(
             "DeltaGenerator",
