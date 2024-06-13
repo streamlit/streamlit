@@ -79,7 +79,7 @@ class TestWrapInTryAndExec(unittest.TestCase):
             raise RerunException(rerun_data)
 
         with self.assertRaises(RerunException) as rerun_exception_data:
-            wrap_in_try_and_exec(test_func, self.ctx, True)
+            wrap_in_try_and_exec(test_func, self.ctx, reraise_rerun_exception=True)
 
         assert rerun_exception_data.exception.rerun_data == rerun_data
 

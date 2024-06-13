@@ -27,12 +27,15 @@ if TYPE_CHECKING:
 def wrap_in_try_and_exec(
     func: Callable[[], None],
     ctx: ScriptRunContext,
+    *,
     reraise_rerun_exception: bool = False,
 ) -> tuple[Any | None, bool, RerunData | None, bool]:
     """Execute the passed function wrapped in a try/except block.
 
-    This function is called by the script runner to execute the user's script or fragment reruns, but also for the execution of fragment
-    code in context of a normal app run. This wrapper ensures that handle_uncaught_exception messages show up in the correct context.
+    This function is called by the script runner to execute the user's script or
+    fragment reruns, but also for the execution of fragment code in context of a normal
+    app run. This wrapper ensures that handle_uncaught_exception messages show up in the
+    correct context.
 
     Parameters
     ----------
@@ -41,16 +44,21 @@ def wrap_in_try_and_exec(
     ctx : ScriptRunContext
         The context in which the script is being run.
     reraise_rerun_exception : bool, default False
-        If True, an occuring RerunException will be raised instead of handled. This can be used if this function is called outside of the script_run context and we want the script_runner to react on the rerun exception.
+        If True, an occuring RerunException will be raised instead of handled. This can
+        be used if this function is called outside of the script_run context and we want
+        the script_runner to react on the rerun exception.
 
     Returns
     -------
     tuple
         A tuple containing:
         - The result of the passed function.
-        - A boolean indicating whether the script ran without errors (RerunException and StopException don't count as errors).
-        - The RerunData instance belonging to a RerunException if the script was interrupted by a RerunException.
-        - A boolean indicating whether the script was stopped prematurely (False for RerunExceptions, True for all other exceptions).
+        - A boolean indicating whether the script ran without errors (RerunException and
+            StopException don't count as errors).
+        - The RerunData instance belonging to a RerunException if the script was
+            interrupted by a RerunException.
+        - A boolean indicating whether the script was stopped prematurely (False for
+            RerunExceptions, True for all other exceptions).
     """
 
     # Avoid circular imports

@@ -101,8 +101,9 @@ def _fragment(
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
-    This function should be used by our internal functions that use fragments under-the-hood,
-    so that fragment metrics are not tracked for those elements (note that the @gather_metrics annotation is only on the publicly exposed function)
+    This function should be used by our internal functions that use fragments
+    under-the-hood, so that fragment metrics are not tracked for those elements
+    (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
 
     if func is None:
@@ -192,9 +193,14 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        # Wrap the fragment function in the same try-except block as in a normal script_run so that for a main-app run (this execution) and a fragment-rerun the same execution and error-handling logic is used.
-        # This makes errors in the fragment appear in the fragment path also for the first execution here in context of a full app run.
-        result, _, _, _ = wrap_in_try_and_exec(wrapped_fragment, ctx, True)
+        # Wrap the fragment function in the same try-except block as in a normal
+        # script_run so that for a main-app run (this execution) and a fragment-rerun
+        # the same execution and error-handling logic is used. This makes errors in the
+        # fragment appear in the fragment path also for the first execution here in
+        # context of a full app run.
+        result, _, _, _ = wrap_in_try_and_exec(
+            wrapped_fragment, ctx, reraise_rerun_exception=True
+        )
         return result
 
     with contextlib.suppress(AttributeError):
