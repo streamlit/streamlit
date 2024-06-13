@@ -45,15 +45,17 @@ def Page(
     to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
-    A page's code can be saved in its own Python file or as a ``Callable``.
+    A page can be defined by a Python file or ``Callable``.
 
     Parameters
     ----------
 
     page: str, Path, or callable
-        The path to the script file or the callable that defines the page.
-        The path can be a string or ``pathlib.Path`` object, but must be
-        declared relative to the entrypoint file.
+        The page source as a ``Callable`` or path to a Python file. If the page
+        source is defined by a Python file, the path can be a string or
+        ``pathlib.Path`` object, but must be declared relative to the
+        entrypoint file. If the page source is defined by a ``Callable``, the
+        ``Callable`` can't accept arguments.
 
     title: str or None
         The title of the page. If this is ``None`` (default), the page title
@@ -102,7 +104,7 @@ def Page(
     Returns
     -------
     StreamlitPage
-        The page object assiciated to the given script.
+        The page object associated to the given script.
 
     Example
     -------

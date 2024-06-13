@@ -82,9 +82,10 @@ def navigation(
     pages: list[StreamlitPage] or dict[str, list[StreamlitPage]]
         The available pages for the app.
 
-        To create sections or page groupings within the navigation menu,
-        ``pages`` must be a dictionary. Each key is the name of a section and
-        each value is the list of ``StreamlitPage`` objects for that section.
+        To create labeled sections or page groupings within the navigation
+        menu, ``pages`` must be a dictionary. Each key is the label of a
+        section and each value is the list of ``StreamlitPage`` objects for
+        that section.
 
         To create a navigation menu with no sections or page groupings,
         ``pages`` must be a list of ``StreamlitPage`` objects.
@@ -97,7 +98,7 @@ def navigation(
         ``position`` is ``"hidden"``, the navigation widget is not displayed.
 
         If there is only one page in ``pages``, the navigation will be hidden
-        for any value of ``postion``.
+        for any value of ``position``.
 
     Returns
     -------
@@ -108,14 +109,14 @@ def navigation(
     --------
     The following examples show possible entrypoint files, which is the file
     you pass to ``streamlit run``. Your entrypoint file manages your app's
-    navigation and servers as a router between pages.
+    navigation and serves as a router between pages.
 
     You can declare pages from callables or file paths.
 
     >>> import streamlit as st
     >>> from page_functions import page1
     >>>
-    >>> pg = st.navigation([page1, "page2.py"])
+    >>> pg = st.navigation([st.Page(page1), st.Page("page2.py")])
     >>> pg.run()
 
     Use a dictionary to create sections within your navigation menu.
@@ -137,7 +138,8 @@ def navigation(
     >>> pg.run()
 
     Call widget functions in your entrypoint file when you want a widget to be
-    stateful across pages.
+    stateful across pages. Assign keys to your common widgets and access their
+    values through Session State within your pages.
 
     >>> import streamlit as st
     >>>
@@ -148,8 +150,8 @@ def navigation(
     >>>     st.write(st.session_state.bar)
     >>>
     >>> # Widgets shared by all the pages
-    >>> st.selectbox("Foo", ["A", "B", "C"], key="foo")
-    >>> st.checkbox("Bar", key="bar")
+    >>> st.sidebar.selectbox("Foo", ["A", "B", "C"], key="foo")
+    >>> st.sidebar.checkbox("Bar", key="bar")
     >>>
     >>> pg = st.navigation(st.Page(page1), st.Page(page2))
     >>> pg.run()
