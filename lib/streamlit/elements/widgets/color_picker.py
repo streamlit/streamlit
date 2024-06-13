@@ -17,9 +17,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-import streamlit
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
@@ -40,6 +39,9 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 @dataclass
@@ -253,6 +255,6 @@ class ColorPickerMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> streamlit.delta_generator.DeltaGenerator:
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

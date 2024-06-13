@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# PLEASE DO NOT ADD MORE IMPORTS HERE OR MOVE THE CODE TO ANOTHER FILE.
+# This file relies on a clean import to make sure the functionality is not made available transiently.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 import streamlit as st
 
-img = np.repeat(0, 10000).reshape(100, 100)
-
-
-@st.cache_data
-def image():
-    st.image(img)
-
-
-if st.checkbox("show image", True):
-    image()
+st.components.v1.html("<div>This import and usage worked!</div>")
+st.write(str(st.components.v1.iframe))
+st.write(str(st.components.v1.declare_component))

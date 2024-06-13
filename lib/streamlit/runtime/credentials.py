@@ -20,9 +20,8 @@ import json
 import os
 import sys
 import textwrap
-from collections import namedtuple
 from datetime import datetime
-from typing import Final, NoReturn
+from typing import Final, NamedTuple, NoReturn
 from uuid import uuid4
 
 from streamlit import cli_util, env_util, file_util, util
@@ -36,13 +35,10 @@ if env_util.IS_WINDOWS:
 else:
     _CONFIG_FILE_PATH = "~/.streamlit/config.toml"
 
-_Activation = namedtuple(
-    "_Activation",
-    [
-        "email",  # str : the user's email.
-        "is_valid",  # boolean : whether the email is valid.
-    ],
-)
+
+class _Activation(NamedTuple):
+    email: str | None  # the user's email.
+    is_valid: bool  # whether the email is valid.
 
 
 def email_prompt() -> str:
@@ -55,19 +51,14 @@ def email_prompt() -> str:
     )
 
     # IMPORTANT: Break the text below at 80 chars.
-    return """
-      {0}%(welcome)s
+    return f"""
+      {"👋 " if show_emoji else ""}{cli_util.style_for_cli("Welcome to Streamlit!", bold=True)}
 
       If you’d like to receive helpful onboarding emails, news, offers, promotions,
       and the occasional swag, please enter your email address below. Otherwise,
       leave this field blank.
 
-      %(email)s""".format(
-        "👋 " if show_emoji else ""
-    ) % {
-        "welcome": cli_util.style_for_cli("Welcome to Streamlit!", bold=True),
-        "email": cli_util.style_for_cli("Email: ", fg="blue"),
-    }
+      {cli_util.style_for_cli("Email: ", fg="blue")}"""
 
 
 _TELEMETRY_HEADLESS_TEXT = """
@@ -119,10 +110,10 @@ def _send_email(email: str) -> None:
     response.raise_for_status()
 
 
-class Credentials(object):
+class Credentials:
     """Credentials class."""
 
-    _singleton: "Credentials" | None = None
+    _singleton: Credentials | None = None
 
     @classmethod
     def get_current(cls):
@@ -156,7 +147,7 @@ class Credentials(object):
         import toml
 
         try:
-            with open(self._conf_file, "r") as f:
+            with open(self._conf_file) as f:
                 data = toml.load(f).get("general")
             if data is None:
                 raise Exception

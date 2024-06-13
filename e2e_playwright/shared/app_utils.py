@@ -44,7 +44,32 @@ def get_checkbox(locator: Locator, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_button(locator: Locator, label: str | Pattern[str]) -> Locator:
+def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
+    """Get an image element with the given caption.
+
+    Parameters
+    ----------
+
+    locator : Locator or Page
+        The locator to search for the element.
+
+    caption : str or Pattern[str]
+        The caption of the image element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stImage").filter(
+        has=locator.get_by_test_id("stImageCaption").filter(has_text=caption)
+    )
+    expect(element).to_be_visible()
+
+    return element
+
+
+def get_button(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a button widget with the given label.
 
     Parameters
@@ -145,7 +170,7 @@ def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> 
 
 
 def expect_prefixed_markdown(
-    locator: Locator,
+    locator: Locator | Page,
     expected_prefix: str,
     expected_markdown: str | Pattern[str],
     exact_match: bool = False,
@@ -192,8 +217,31 @@ def expect_prefixed_markdown(
         expect(selection_text).to_contain_text(expected_markdown)
 
 
+def expect_markdown(
+    locator: Locator | Page,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect an exception to be displayed in the app.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the exception element.
+
+    expected_markdown : str or Pattern[str]
+        The expected message to be displayed in the exception.
+    """
+    markdown_el = (
+        locator.get_by_test_id("stMarkdown")
+        .get_by_test_id("stMarkdownContainer")
+        .filter(has_text=expected_message)
+    )
+    expect(markdown_el).to_be_visible()
+
+
 def expect_exception(
-    locator: Locator,
+    locator: Locator | Page,
     expected_message: str | Pattern[str],
 ) -> None:
     """Expect an exception to be displayed in the app.

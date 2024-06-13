@@ -67,7 +67,7 @@ class HtmlMixin:
         html_proto = HtmlProto()
         # Check if the body is a file path
         if os.path.isfile(body):
-            with open(body, "r", encoding="utf-8") as f:
+            with open(body, encoding="utf-8") as f:
                 html_proto.body = f.read()
         else:
             html_proto.body = clean_text(body)

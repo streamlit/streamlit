@@ -38,7 +38,7 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
-import { StyledContent } from "./styled-components"
+import { StyledContent, StyledCheckbox } from "./styled-components"
 
 export interface OwnProps {
   disabled: boolean
@@ -136,7 +136,6 @@ class Checkbox extends React.PureComponent<Props, State> {
     const { colors, spacing, sizes } = theme
     const lightTheme = hasLightBackgroundColor(theme)
 
-    const style = { width }
     const color = disabled ? colors.fadedText40 : colors.bodyText
 
     // Manage our form-clear event handler.
@@ -147,10 +146,10 @@ class Checkbox extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div
+      <StyledCheckbox
         className="row-widget stCheckbox"
         data-testid="stCheckbox"
-        style={style}
+        width={width}
       >
         <UICheckbox
           checked={this.state.value}
@@ -294,7 +293,7 @@ class Checkbox extends React.PureComponent<Props, State> {
             )}
           </StyledContent>
         </UICheckbox>
-      </div>
+      </StyledCheckbox>
     )
   }
 }

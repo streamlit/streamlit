@@ -196,8 +196,8 @@ def _to_color_tuple(
 
         try:
             color = int(r, 16), int(g, 16), int(b, 16), int(a, 16)
-        except:
-            raise InvalidColorException(color)
+        except Exception as ex:
+            raise InvalidColorException(color) from ex
 
     if is_color_tuple_like(color):
         color_tuple = cast(ColorTuple, color)

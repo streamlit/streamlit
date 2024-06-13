@@ -35,15 +35,33 @@ Following actions/components are tested:
 - streamlit-url-fragment
 """
 
-from typing import Callable, Dict
+from __future__ import annotations
+
+from typing import Callable
 
 import streamlit as st
 
 
 def use_components_html():
+    # note that we import streamlit before and so this `components.html` working
+    # might be coincidental; this is the reason why we have dedicated tests for this kind of imports in the `st_components_v1_*` files
     import streamlit.components.v1 as components
 
     components.html("<div>Hello World!</div>")
+
+
+def use_components_iframe():
+    # note that we import streamlit before and so this `components.html` working
+    # might be coincidental; this is the reason why we have dedicated tests for this kind of imports in the `st_components_v1_*` files
+    import streamlit.components.v1 as components
+
+    st.write(str(components.iframe))
+
+
+def use_components_declare_component():
+    import streamlit.components.v1 as components
+
+    st.write(str(components.declare_component))
 
 
 # Different custom components:
@@ -170,13 +188,15 @@ def use_url_fragment():
     from streamlit_url_fragment import get_fragment
 
     current_value = get_fragment()
-    st.write("Current value: {!r}".format(current_value))
+    st.write(f"Current value: {current_value!r}")
 
 
 # ---
 
-options: Dict[str, Callable] = {
+options: dict[str, Callable] = {
     "componentsHtml": use_components_html,
+    "componentsIframe": use_components_iframe,
+    "componentsDeclareComponent": use_components_declare_component,
     "ace": use_streamlit_ace,
     "aggrid": use_aggrid,
     "antd": use_antd,

@@ -16,7 +16,21 @@ import time
 
 import streamlit as st
 
-number = st.number_input("test", value=100)
+st.header("Widget State - Heavy Usage Test")
+# Test for https://github.com/streamlit/streamlit/issues/4836
+
+number = st.number_input("test", value=0, step=1)
 st.write(number)
 
-time.sleep(1)
+if number:
+    time.sleep(1)
+
+st.header("Widget State - Redisplayed Widget Test")
+# Test for https://github.com/streamlit/streamlit/issues/3512
+
+if st.checkbox("Display widgets"):
+    if st.checkbox("Show hello"):
+        st.write("hello")
+
+    if st.checkbox("Show goodbye", key="c3"):
+        st.write("goodbye")

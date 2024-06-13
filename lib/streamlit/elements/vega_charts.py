@@ -452,7 +452,7 @@ def _parse_selection_mode(
 
     if selection_mode is None:
         # Activate all selection parameters:
-        return sorted(list(all_selection_params))
+        return sorted(all_selection_params)
 
     if isinstance(selection_mode, str):
         # Convert single string to list:
@@ -465,7 +465,7 @@ def _parse_selection_mode(
                 f"Selection parameter '{selection_name}' is not defined in the chart spec. "
                 f"Available selection parameters are: {all_selection_params}."
             )
-    return sorted(list(selection_mode))
+    return sorted(selection_mode)
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
@@ -567,6 +567,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -595,6 +597,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different lines in this chart.
@@ -719,6 +727,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -741,6 +751,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -769,6 +781,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart.
@@ -893,6 +911,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -915,6 +935,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -943,6 +965,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart.
@@ -1069,6 +1097,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -1091,6 +1121,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
         width: int | None = None,
@@ -1120,6 +1152,12 @@ class VegaChartsMixin:
             draws several series on the same chart by melting your wide-format
             table into a long-format table behind the scenes. If None, draws
             the data of all remaining columns as data series.
+
+        x_label : str or None
+            The label for the x-axis. If None, either the column name specified in x will be used, or no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If None, either the column name specified in y will be used, or no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color of the circles representing each datapoint.
@@ -1258,6 +1296,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=size,
             width=width,
@@ -1283,8 +1323,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: str | Iterable[str] | None = None,
-    ) -> DeltaGenerator:
-        ...
+    ) -> DeltaGenerator: ...
 
     @overload
     def altair_chart(
@@ -1296,8 +1335,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: str | Iterable[str] | None = None,
-    ) -> VegaLiteState:
-        ...
+    ) -> VegaLiteState: ...
 
     @gather_metrics("altair_chart")
     def altair_chart(
@@ -1437,8 +1475,7 @@ class VegaChartsMixin:
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator:
-        ...
+    ) -> DeltaGenerator: ...
 
     @overload
     def vega_lite_chart(
@@ -1452,8 +1489,7 @@ class VegaChartsMixin:
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: str | Iterable[str] | None = None,
         **kwargs: Any,
-    ) -> VegaLiteState:
-        ...
+    ) -> VegaLiteState: ...
 
     @gather_metrics("vega_lite_chart")
     def vega_lite_chart(
