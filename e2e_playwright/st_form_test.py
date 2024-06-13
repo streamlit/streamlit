@@ -15,14 +15,14 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import click_checkbox, click_toggle
 
 
 def change_widget_values(app: Page):
     """Change the checkbox value."""
     # Get the first form:
     form_1 = app.get_by_test_id("stForm").nth(0)
-
-    form_1.get_by_test_id("stCheckbox").nth(0).click()
+    click_checkbox(app, "Checkbox")
 
     # Change the date input value.
     form_1.get_by_test_id("stDateInput").locator("input").click()
@@ -63,7 +63,7 @@ def change_widget_values(app: Page):
     app.locator('[data-baseweb="popover"]').locator("li").nth(0).click()
 
     # Change the toggle value.
-    form_1.get_by_test_id("stCheckbox").nth(1).click()
+    click_toggle(app, "Toggle Input")
 
 
 def test_does_not_change_values_before_form_submitted(app: Page):
