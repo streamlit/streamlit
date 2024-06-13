@@ -424,6 +424,9 @@ export function RenderedMarkdown({
                 "user-select": "none",
                 display: "inline-block",
                 "vertical-align": "bottom",
+                "font-weight": "normal",
+                "white-space": "nowrap",
+                "word-wrap": "normal",
               },
             },
 
