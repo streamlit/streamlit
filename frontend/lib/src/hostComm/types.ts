@@ -115,6 +115,9 @@ export type IHostToGuestMessage = {
       type: "SET_CUSTOM_THEME_CONFIG"
       themeInfo: ICustomThemeConfig
     }
+  | {
+      type: "SEND_APP_HEARTBEAT"
+    }
 )
 
 export type IGuestToHostMessage =
