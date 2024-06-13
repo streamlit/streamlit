@@ -14,21 +14,18 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import click_checkbox, get_checkbox
 
 
 def test_checking_checkbox_unchecks_other(app: Page):
-    checkbox_elements = app.locator("[type='checkbox']")
-    expect(checkbox_elements).to_have_count(2)
+    """Test that checking one checkbox unchecks the other by using callbacks."""
+    first_checkbox = get_checkbox(app, "Checkbox1")
+    second_checkbox = get_checkbox(app, "Checkbox2")
 
-    first_checkbox = checkbox_elements.nth(0)
-    second_checkbox = checkbox_elements.nth(1)
+    expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
+    expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
 
-    expect(first_checkbox).to_have_attribute("aria-checked", "true")
-    expect(second_checkbox).to_have_attribute("aria-checked", "false")
+    click_checkbox(app, "Checkbox2")
 
-    app.locator("[data-baseweb='checkbox']").nth(1).click()
-    wait_for_app_run(app)
-
-    expect(first_checkbox).to_have_attribute("aria-checked", "false")
-    expect(second_checkbox).to_have_attribute("aria-checked", "true")
+    expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
+    expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
