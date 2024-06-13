@@ -43,14 +43,14 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
     # click in middle
     app.mouse.down()
 
-    # Move mouse to 2000, 200 pixels on the screen to simulate dragging right
-    app.mouse.move(2000, 200)
+    # Move mouse to 0, 0 pixels on the screen to simulate dragging left
+    app.mouse.move(0, 0)
     app.mouse.up()
     wait_for_app_run(app)
 
     expect(
         app.get_by_text(
-            "Value 1: (datetime.date(2019, 8, 1), datetime.date(2021, 6, 4))"
+            "Value 1: (datetime.date(2019, 8, 1), (datetime.date(2019, 8, 1))"
         )
     ).to_have_count(1)
 
