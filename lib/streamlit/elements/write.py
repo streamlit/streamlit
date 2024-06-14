@@ -279,8 +279,11 @@ class WriteMixin:
             HTML expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability. If you only want to insert HTML or CSS without
-            Markdown text, we recommend using ``st.html`` instead.
+            maintainability.
+
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         **kwargs : any
             Keyword arguments. Not used.

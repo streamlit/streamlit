@@ -70,8 +70,11 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability. If you only want to insert HTML or CSS without
-            Markdown text, we recommend using ``st.html`` instead.
+            maintainability.
+
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         help : str
             An optional tooltip that gets displayed next to the Markdown.
@@ -190,8 +193,11 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability. If you only want to insert HTML or CSS without
-            Markdown text, we recommend using ``st.html`` instead.
+            maintainability.
+
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         help : str
             An optional tooltip that gets displayed next to the caption.
