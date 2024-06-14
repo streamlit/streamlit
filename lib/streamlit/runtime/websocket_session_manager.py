@@ -73,9 +73,12 @@ class WebsocketSessionManager(SessionManager):
 
         if existing_session_id in self._active_session_info_by_id:
             _LOGGER.warning(
-                "Session with id %s is already connected! Connecting to a new session.",
+                "Session with id %s is already connected! Reconnecting!",
                 existing_session_id,
             )
+            # If the session is already active, disconnect it first so that we can
+            # reconnect to it with the new SessionClient.
+            self.disconnect_session(existing_session_id)
 
         session_info = (
             existing_session_id

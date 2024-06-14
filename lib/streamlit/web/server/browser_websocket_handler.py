@@ -133,6 +133,11 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def on_close(self) -> None:
         if not self._session_id:
             return
+
+        if not self.close_code or self.close_code not in [1000, 1001]:
+            # Unclean close. We may have already reconnected so do not disconnect.
+            return
+
         self._runtime.disconnect_session(self._session_id)
         self._session_id = None
 
