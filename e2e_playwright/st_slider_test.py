@@ -16,7 +16,6 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
-    assert_snapshot,
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import expect_help_tooltip
@@ -34,7 +33,7 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(st_sliders.nth(10), name="st_slider-labels_overlap_slider")
 
 
-def test_slider_in_expander(app: Page):
+def test_slider_in_expander(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_text("Value B: 10000")).to_have_count(1)
     expect(app.get_by_text("Range Value B: (10000, 25000)")).to_have_count(1)
     first_slider_in_expander = app.get_by_test_id("stSlider").nth(2)
