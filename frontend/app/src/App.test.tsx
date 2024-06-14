@@ -803,7 +803,7 @@ describe("App", () => {
       expect(navLinks[0]).toHaveStyle("font-weight: 600")
       expect(navLinks[1]).toHaveStyle("font-weight: 400")
 
-      expect(document.title).toBe("page1 · Streamlit")
+      expect(document.title).toBe("page1")
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages,
@@ -1097,7 +1097,7 @@ describe("App", () => {
         fragmentIdsThisRun: [],
       })
 
-      expect(document.title).toBe("streamlit_app · Streamlit")
+      expect(document.title).toBe("streamlit_app")
     })
 
     it("does *not* reset document title if fragment", () => {
