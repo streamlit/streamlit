@@ -14,7 +14,11 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    assert_snapshot,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
@@ -30,6 +34,27 @@ def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(st_sliders.nth(10), name="st_slider-labels_overlap_slider")
 
 
+def test_slider_in_expander(app: Page):
+    expect(app.get_by_text("Value B: 10000")).to_have_count(1)
+    expect(app.get_by_text("Range Value B: (10000, 25000)")).to_have_count(1)
+    first_slider_in_expander = app.get_by_test_id("stSlider").nth(2)
+    second_slider_in_expander = app.get_by_test_id("stSlider").nth(3)
+
+    first_slider_in_expander.hover()
+    # click in middle
+    app.mouse.down()
+
+    second_slider_in_expander.hover()
+    # click in middle
+    app.mouse.down()
+
+    expect(app.get_by_text("Value B: 17500")).to_have_count(1)
+    expect(app.get_by_text("Range Value B: (17500, 25000)")).to_have_count(1)
+
+    assert_snapshot(first_slider_in_expander, name="st_slider-in_expander_regular")
+    assert_snapshot(second_slider_in_expander, name="st_slider-in_expander_range")
+
+
 def test_slider_contains_correct_format_func_value_and_in_session_state(
     app: Page,
 ):
@@ -38,8 +63,8 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
             "Value 1: (datetime.date(2019, 8, 1), datetime.date(2019, 9, 1))"
         )
     ).to_have_count(1)
-    first_slider = app.get_by_test_id("stSlider").nth(4)
-    first_slider.hover()
+    slider = app.get_by_test_id("stSlider").nth(4)
+    slider.hover()
     # click in middle
     app.mouse.down()
 
@@ -50,7 +75,7 @@ def test_slider_contains_correct_format_func_value_and_in_session_state(
 
     expect(
         app.get_by_text(
-            "Value 1: (datetime.date(2019, 8, 1), (datetime.date(2019, 8, 1))"
+            "Value 1: (datetime.date(2019, 8, 1), datetime.date(2019, 8, 1))"
         )
     ).to_have_count(1)
 
@@ -61,8 +86,8 @@ def test_using_arrow_keys_on_slider_produces_correct_values(app: Page):
             "Value 1: (datetime.date(2019, 8, 1), datetime.date(2019, 9, 1))"
         )
     ).to_have_count(1)
-    first_slider = app.get_by_test_id("stSlider").nth(4)
-    first_slider.hover()
+    slider = app.get_by_test_id("stSlider").nth(4)
+    slider.hover()
     # click in middle
     app.mouse.down()
 
