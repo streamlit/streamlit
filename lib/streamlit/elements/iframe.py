@@ -34,9 +34,12 @@ class IframeMixin:
     ) -> DeltaGenerator:
         """Load a remote URL in an iframe.
 
-        To use this function, you must import its module
-        (``streamlit.components.v1``). You can't call it directly from the root
-        of the Streamlit library (``st.components.v1.iframe``).
+        To use this function, import it from the ``streamlit.components.v1``
+        module.
+
+        .. warning::
+            Using ``st.components.v1.iframe`` directly (instead of importing
+            its module) is deprecated and will be disallowd in a later version.
 
         Parameters
         ----------
@@ -84,12 +87,15 @@ class IframeMixin:
     ) -> DeltaGenerator:
         """Display an HTML string in an iframe.
 
-        To use this function, you must import its module
-        (``streamlit.components.v1``). You can't call it directly from the root
-        of the Streamlit library (``st.components.v1.html``).
+        To use this function, import it from the ``streamlit.components.v1``
+        module.
 
         If you want to insert HTML text into your app without an iframe, try
         ``st.html`` instead.
+
+        .. warning::
+            Using ``st.components.v1.html`` directly (instead of importing
+            its module) is deprecated and will be disallowd in a later version.
 
         Parameters
         ----------

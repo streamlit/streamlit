@@ -58,9 +58,13 @@ def declare_component(
     This can happen when a ``CustomComponent`` is executed as standalone
     command (e.g. for testing).
 
-    To use this function, you must import its module
-    (``streamlit.components.v1``). You can't call it directly from the root of
-    the Streamlit library (``st.components.v1.declare_component``).
+    To use this function, import it from the ``streamlit.components.v1``
+    module.
+
+    .. warning::
+        Using ``st.components.v1.declare_component`` directly (instead of
+        importing its module) is deprecated and will be disallowd in a later
+        version.
 
     Parameters
     ----------
