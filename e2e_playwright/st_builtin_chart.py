@@ -83,6 +83,8 @@ st.bar_chart(df, x="a", y=["b", "c"])
 st.bar_chart(utc_df)
 st.bar_chart(color_df, x="a", y="b", color="e")
 st.bar_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
+st.bar_chart(df, horizontal=True)
+st.bar_chart(df, horizontal=True, x_label="X Label", y_label="Y Label")
 
 st.header("Line Chart")
 
