@@ -284,7 +284,7 @@ class CacheResourceAPI:
         cache with ``st.cache_resource.clear()``.
 
         To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/library/advanced-features/caching.
+        https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -328,9 +328,6 @@ class CacheResourceAPI:
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
 
-            .. note::
-                This parameter is deprecated and will be removed in a future release.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -338,6 +335,10 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            ``experimental_allow_widgets`` is deprecated and will be removed in
+            a later version.
 
         Example
         -------

@@ -110,7 +110,7 @@ setup(
     project_urls={
         "Source Code": "https://github.com/streamlit/streamlit",
         "Bug Tracker": "https://github.com/streamlit/streamlit/issues",
-        "Release notes": "https://docs.streamlit.io/library/changelog",
+        "Release notes": "https://docs.streamlit.io/develop/quick-reference/changelog",
         "Documentation": "https://docs.streamlit.io/",
         "Community": "https://discuss.streamlit.io/",
         "Twitter": "https://twitter.com/streamlit",
