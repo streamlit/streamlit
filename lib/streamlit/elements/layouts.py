@@ -164,7 +164,8 @@ class LayoutsMixin:
         Columns can only be placed inside other columns up to one level of nesting.
 
         .. warning::
-            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
+            Columns cannot be placed inside other columns in the sidebar. This
+            is only possible in the main area of the app.
 
         Parameters
         ----------
@@ -183,7 +184,8 @@ class LayoutsMixin:
             The size of the gap between the columns. Defaults to "small".
 
         vertical_alignment : "top", "center", or "bottom"
-            The vertical alignment of the content inside the columns. Defaults to "top".
+            The vertical alignment of the content inside the columns. The
+            default is "top".
 
         Returns
         -------
@@ -231,6 +233,38 @@ class LayoutsMixin:
         .. output ::
             https://doc-columns2.streamlit.app/
             height: 550px
+
+        Use ``vertical_alignment="bottom"`` to align widgets.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, middle, right = st.columns(3, vertical_alignment="bottom")
+        >>>
+        >>> left.text_input("Write something")
+        >>> middle.button("Click me", use_container_width=True)
+        >>> right.checkbox("Check me")
+
+        .. output ::
+            https://doc-columns-bottom-widgets.streamlit.app/
+            height: 200px
+
+        Adjust vertical alignment to customize you grid layouts.
+
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
+        >>> vertical_alignment = st.selectbox(
+        >>>     "Vertical alignment", ["top", "center", "bottom"], index=2
+        >>> )
+        >>>
+        >>> left, middle, right = st.columns(3, vertical_alignment=vertical_alignment)
+        >>> left.image("https://static.streamlit.io/examples/cat.jpg")
+        >>> middle.image("https://static.streamlit.io/examples/dog.jpg")
+        >>> right.image("https://static.streamlit.io/examples/owl.jpg")
+
+        .. output ::
+            https://doc-columns-vertical-alignment.streamlit.app/
+            height: 600px
 
         """
         weights = spec
@@ -456,9 +490,11 @@ class LayoutsMixin:
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
+
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
