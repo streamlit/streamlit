@@ -95,12 +95,19 @@ class DataframeSelectionState(TypedDict, total=False):
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
+    .. warning::
+        If a user sorts a dataframe, row selections will be reset. If your
+        users need to sort and filter the dataframe to make selections, direct
+        them to use the search function in the dataframe toolbar instead.
+
     Attributes
     ----------
     rows : list[int]
-        The selected rows, identified by their positional index. The positional
-        indices match the original dataframe, even if the user sorts the
-        dataframe in their browser.
+        The selected rows, identified by their integer position. The integer
+        positions match the original dataframe, even if the user sorts the
+        dataframe in their browser. For a ``pandas.DataFrame``, you can
+        retrieve data from its interger position using methods like ``.iloc[]``
+        or ``.iat[]``.
     columns : list[str]
         The selected columns, identified by their names.
 
@@ -150,8 +157,12 @@ class DataframeState(TypedDict, total=False):
 
     Attributes
     ----------
-    selection : DataframeSelectionState
-        The state of the ``on_select`` event.
+    selection : dict
+        The state of the ``on_select`` event. This attribure returns a
+        dictionary-like object that supports both key and attribute notation.
+        The attributes are described by the ``DataframeSelectionState``
+        dictionary schema.
+
 
     """
 
@@ -346,7 +357,7 @@ class ArrowMixin:
               to change the displayed name of the column to "Dollar values"
               and add a "$" prefix in each cell. For more info on the
               available column types and config options, see
-              `Column configuration <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+              `Column configuration <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 
