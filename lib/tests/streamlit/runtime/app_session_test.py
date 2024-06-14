@@ -278,7 +278,7 @@ class AppSessionTest(unittest.TestCase):
 
     @patch_config_options({"runner.fastReruns": True})
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
-    def test_rerun_fragment_does_not_request_existing_scriptrunner(
+    def test_rerun_fragment_requests_existing_scriptrunner(
         self, mock_create_scriptrunner: MagicMock
     ):
         session = _create_test_session()
@@ -289,11 +289,11 @@ class AppSessionTest(unittest.TestCase):
         session.request_rerun(ClientState(fragment_id="my_fragment_id"))
 
         # The active ScriptRunner should *not* be shut down or stopped.
-        mock_active_scriptrunner.request_rerun.assert_not_called()
-        mock_active_scriptrunner.request_stop.assert_called()
+        mock_active_scriptrunner.request_rerun.assert_called_once()
+        mock_active_scriptrunner.request_stop.assert_not_called()
 
         # And a new ScriptRunner should *not* be created.
-        mock_create_scriptrunner.assert_called()
+        mock_create_scriptrunner.assert_not_called()
 
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
