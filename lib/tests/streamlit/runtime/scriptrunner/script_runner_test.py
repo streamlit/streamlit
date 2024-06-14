@@ -50,6 +50,7 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
+from streamlit.delta_generator import DeltaGenerator, dg_stack
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -756,6 +757,82 @@ class ScriptRunnerTest(AsyncTestCase):
         # culled it. Ensure widget cache no longer holds our widget ID.
         self.assertRaises(KeyError, lambda: scriptrunner._session_state[widget_id])
 
+    def test_dg_stack_preserved_for_fragment_rerun(self):
+        """Tests that the dg_stack and cursor are preserved for a fragment rerun.
+
+        Having a fragment rerun that is interrupted by a RerunException triggered by another fragment run
+        simulates what we have seen in the issue where the main app was rendered inside of a dialog when
+        two fragment-related reruns were handled in the same ScriptRunner thread.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        # set the dg_stack from the fragment to simulate a populated dg_stack of a real app
+        dg_stack_set_by_fragment = (
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+        )
+        scriptrunner._fragment_storage.set(
+            "my_fragment1",
+            lambda: dg_stack.set(dg_stack_set_by_fragment),
+        )
+
+        # trigger a run with fragment_id to avoid clearing the fragment_storage in the script runner
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+
+        # yielding a rerun request will raise a RerunException in the script runner with the provided RerunData
+        on_scriptrunner_yield_mock = MagicMock()
+        on_scriptrunner_yield_mock.side_effect = [
+            # the original_dg_stack will be set to the dg_stack populated by the first requested_rerun of the fragment
+            ScriptRequest(
+                ScriptRequestType.RERUN, RerunData(fragment_id_queue=["my_fragment1"])
+            ),
+            ScriptRequest(ScriptRequestType.STOP),
+        ]
+        scriptrunner._requests.on_scriptrunner_yield = on_scriptrunner_yield_mock
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.get_runner_thread_dg_stack()) == len(
+            dg_stack_set_by_fragment
+        )
+        assert scriptrunner.get_runner_thread_dg_stack() == dg_stack_set_by_fragment
+
+    def test_dg_stack_reset_for_full_app_rerun(self):
+        """Tests that the dg_stack and cursor are preserved for a fragment rerun."""
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        dg_stack_set_by_fragment = (
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+        )
+        scriptrunner._fragment_storage.set(
+            "my_fragment1",
+            lambda: dg_stack.set(dg_stack_set_by_fragment),
+        )
+
+        # trigger a run with fragment_id to avoid clearing the fragment_storage in the script runner
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+
+        # yielding a rerun request will raise a RerunException in the script runner with the provided RerunData
+        on_scriptrunner_yield_mock = MagicMock()
+        on_scriptrunner_yield_mock.side_effect = [
+            # raise RerunException for full app run
+            ScriptRequest(ScriptRequestType.RERUN, RerunData()),
+            ScriptRequest(ScriptRequestType.STOP),
+        ]
+        scriptrunner._requests.on_scriptrunner_yield = on_scriptrunner_yield_mock
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        # for full app run, the dg_stack should have been reset
+        assert len(scriptrunner.get_runner_thread_dg_stack()) == 1
+
     # TODO re-enable after flakiness is fixed
     def off_test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
@@ -1052,6 +1129,9 @@ class TestScriptRunner(ScriptRunner):
         self.forward_msg_queue.clear()
         super()._run_script(rerun_data)
 
+        # Set the _dg_stack here to the one belonging to the thread context
+        self._dg_stack = dg_stack.get()
+
     def join(self) -> None:
         """Join the script_thread if it's running."""
         if self._script_thread is not None:
@@ -1092,6 +1172,10 @@ class TestScriptRunner(ScriptRunner):
             if widget_label == label:
                 return widget.id
         return None
+
+    def get_runner_thread_dg_stack(self) -> tuple[DeltaGenerator, ...]:
+        """The returned stack was set by the ScriptRunner thread and, thus, has its context."""
+        return self._dg_stack
 
 
 def require_widgets_deltas(

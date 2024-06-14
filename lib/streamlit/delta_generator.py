@@ -677,16 +677,13 @@ bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
 # The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
 # a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
 # so that different threads or async tasks can have their own stacks.
-def get_default_dg_stack() -> ContextVar[tuple[DeltaGenerator, ...]]:
-    return ContextVar("dg_stack", default=(main_dg,))
+def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
+    return (main_dg,)
 
 
-dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = get_default_dg_stack()
-
-
-def reset_dg_stack():
-    global dg_stack
-    dg_stack = get_default_dg_stack()
+dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
+    "dg_stack", default=get_default_dg_stack()
+)
 
 
 def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
