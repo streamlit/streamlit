@@ -21,7 +21,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
-from streamlit.runtime.scriptrunner.exec_code import wrap_in_try_and_exec
+from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.runtime.scriptrunner.script_requests import RerunData
 from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
@@ -48,7 +48,7 @@ class TestWrapInTryAndExec(unittest.TestCase):
             return 42
 
         result, run_without_errors, rerun_exception_data, premature_stop = (
-            wrap_in_try_and_exec(test_func, self.ctx)
+            exec_func_with_error_handling(test_func, self.ctx)
         )
 
         assert result == 42
@@ -64,7 +64,7 @@ class TestWrapInTryAndExec(unittest.TestCase):
             raise RerunException(rerun_data)
 
         _, run_without_errors, rerun_exception_data, premature_stop = (
-            wrap_in_try_and_exec(test_func, self.ctx)
+            exec_func_with_error_handling(test_func, self.ctx)
         )
 
         assert run_without_errors is True
@@ -79,7 +79,9 @@ class TestWrapInTryAndExec(unittest.TestCase):
             raise RerunException(rerun_data)
 
         with self.assertRaises(RerunException) as rerun_exception_data:
-            wrap_in_try_and_exec(test_func, self.ctx, reraise_rerun_exception=True)
+            exec_func_with_error_handling(
+                test_func, self.ctx, reraise_rerun_exception=True
+            )
 
         assert rerun_exception_data.exception.rerun_data == rerun_data
 
@@ -89,7 +91,7 @@ class TestWrapInTryAndExec(unittest.TestCase):
             raise StopException()
 
         _, run_without_errors, rerun_exception_data, premature_stop = (
-            wrap_in_try_and_exec(test_func, self.ctx)
+            exec_func_with_error_handling(test_func, self.ctx)
         )
 
         assert run_without_errors is True
@@ -103,7 +105,7 @@ class TestWrapInTryAndExec(unittest.TestCase):
             raise exception_type()
 
         _, run_without_errors, rerun_exception_data, premature_stop = (
-            wrap_in_try_and_exec(test_func, self.ctx)
+            exec_func_with_error_handling(test_func, self.ctx)
         )
 
         assert run_without_errors is False

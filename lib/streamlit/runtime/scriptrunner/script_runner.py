@@ -30,7 +30,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
-from streamlit.runtime.scriptrunner.exec_code import wrap_in_try_and_exec
+from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
@@ -577,7 +577,7 @@ class ScriptRunner:
                 run_without_errors,
                 rerun_exception_data,
                 premature_stop,
-            ) = wrap_in_try_and_exec(code_to_exec, ctx)
+            ) = exec_func_with_error_handling(code_to_exec, ctx)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
 
             if rerun_exception_data:

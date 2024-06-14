@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner.exec_code import wrap_in_try_and_exec
+from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -198,7 +198,7 @@ def _fragment(
         # the same execution and error-handling logic is used. This makes errors in the
         # fragment appear in the fragment path also for the first execution here in
         # context of a full app run.
-        result, _, _, _ = wrap_in_try_and_exec(
+        result, _, _, _ = exec_func_with_error_handling(
             wrapped_fragment, ctx, reraise_rerun_exception=True
         )
         return result

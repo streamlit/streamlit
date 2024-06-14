@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
 
-def wrap_in_try_and_exec(
+def exec_func_with_error_handling(
     func: Callable[[], None],
     ctx: ScriptRunContext,
     *,
