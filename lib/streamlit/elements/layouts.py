@@ -181,11 +181,11 @@ class LayoutsMixin:
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
-            The size of the gap between the columns. Defaults to "small".
+            The size of the gap between the columns. The default is ``"small"``.
 
         vertical_alignment : "top", "center", or "bottom"
             The vertical alignment of the content inside the columns. The
-            default is "top".
+            default is ``"top"``.
 
         Returns
         -------
@@ -248,7 +248,7 @@ class LayoutsMixin:
             https://doc-columns-bottom-widgets.streamlit.app/
             height: 200px
 
-        Adjust vertical alignment to customize you grid layouts.
+        Adjust vertical alignment to customize your grid layouts.
 
         >>> import streamlit as st
         >>> import numpy as np
