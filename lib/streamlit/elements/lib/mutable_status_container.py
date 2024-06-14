@@ -47,9 +47,9 @@ class StatusContainer(DeltaGenerator):
         if state == "running":
             expandable_proto.icon = "spinner"
         elif state == "complete":
-            expandable_proto.icon = "check"
+            expandable_proto.icon = ":material/check:"
         elif state == "error":
-            expandable_proto.icon = "error"
+            expandable_proto.icon = ":material/error:"
         else:
             raise StreamlitAPIException(
                 f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
@@ -140,9 +140,9 @@ class StatusContainer(DeltaGenerator):
             if state == "running":
                 msg.delta.add_block.expandable.icon = "spinner"
             elif state == "complete":
-                msg.delta.add_block.expandable.icon = "check"
+                msg.delta.add_block.expandable.icon = ":material/check:"
             elif state == "error":
-                msg.delta.add_block.expandable.icon = "error"
+                msg.delta.add_block.expandable.icon = ":material/error:"
             else:
                 raise StreamlitAPIException(
                     f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."

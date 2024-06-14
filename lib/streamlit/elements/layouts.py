@@ -21,6 +21,7 @@ from typing_extensions import TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -408,7 +409,13 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(self, label: str, expanded: bool = False) -> DeltaGenerator:
+    def expander(
+        self,
+        label: str,
+        expanded: bool = False,
+        *,
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -452,6 +459,22 @@ class LayoutsMixin:
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
+        icon : str, None
+            An optional emoji or icon to display next to the expander label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Examples
         --------
@@ -498,6 +521,8 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
+        if icon is not None:
+            expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = False
