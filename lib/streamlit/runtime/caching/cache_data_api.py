@@ -456,9 +456,6 @@ class CacheDataAPI:
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
 
-            .. note::
-                This parameter is deprecated and will be removed in a future release.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -466,6 +463,10 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            ``experimental_allow_widgets`` is deprecated and will be removed in
+            a later version.
 
         Example
         -------
