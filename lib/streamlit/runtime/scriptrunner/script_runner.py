@@ -415,7 +415,7 @@ class ScriptRunner:
 
         """
         # Avoid circular imports
-        from streamlit.delta_generator import dg_stack
+        from streamlit.delta_generator import dg_stack, reset_dg_stack
 
         assert self._is_in_script_thread()
 
@@ -592,8 +592,20 @@ class ScriptRunner:
                     self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
             except RerunException as e:
                 rerun_exception_data = e.rerun_data
-                ctx.cursors = original_cursors
-                dg_stack.set(original_dg_stack)
+
+                if rerun_exception_data.fragment_id_queue:
+                    # This is a fragment-specific rerun, so we need to restore the stack
+                    ctx.cursors = original_cursors
+                    dg_stack.set(original_dg_stack)
+                else:
+                    # If it is a full-app rerun, the stack needs to be refreshed.
+                    # We should land here when `st.rerun` is called from within a
+                    # fragment. Since we re-use the same thread, we have to clear the
+                    # stack or otherwise we might render the main app in the old
+                    # fragment's dg_stack.
+                    reset_dg_stack()
+                    ctx.cursors.clear()
+
                 # Interruption due to a rerun is usually from `st.rerun()`, which
                 # we want to count as a script completion so triggers reset.
                 # It is also possible for this to happen if fast reruns is off,
