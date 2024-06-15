@@ -57,7 +57,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import ChartStackType, Key, to_key
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -957,6 +957,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
+        stack: bool | ChartStackType | None = True,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -1045,6 +1046,13 @@ class VegaChartsMixin:
             (default), the bars display vertically. If this is ``True``,
             Streamlit swaps the x-axis and y-axis and the bars display
             horizontally.
+
+        stack : bool, "normalize", "center", or "layered"
+            Whether to stack the bars. If this is ``True`` (default), the bars are
+            stacked on top of each other. If this is ``False``, the bars are displayed
+            side by side. If "normalize", the bars are stacked and normalized to 100%.
+            If "center", the bars are stacked around a central axis. If "layered", the
+            bars are stacked on top of one another.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -1154,6 +1162,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            stack=stack,
         )
         return cast(
             "DeltaGenerator",
