@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_time_input_widget_rendering(
@@ -36,6 +37,16 @@ def test_time_input_widget_rendering(
 
 
 def test_help_tooltip_works(app: Page):
+    default_tooltip = """
+        This is a really long tooltip.
+
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
+        justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
+        tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
+        In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
+        sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
+        malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
+        """.strip()
     expect_help_tooltip(app, app.get_by_test_id("stTimeInput").nth(1), default_tooltip)
 
 
