@@ -81,9 +81,11 @@ function syncValue(
 
 function ButtonGroup(props: Props): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
-  const { clickMode, options } = element
-
-  const [selected, setSelected] = useState<number[]>([])
+  const { clickMode, default: defaultValues, options } = element
+  console.log(defaultValues)
+  const [selected, setSelected] = useState<number[]>(
+    defaultValues ? defaultValues.filter(d => d).map((d, i) => i) : []
+  )
 
   const textDecoder = new TextDecoder("utf-8")
 
@@ -113,9 +115,10 @@ function ButtonGroup(props: Props): ReactElement {
       selected={
         clickMode === ButtonGroupProto.ClickMode.CHECKBOX
           ? selected
-          : clickMode === ButtonGroupProto.ClickMode.RADIO
-          ? getRadioSelection(selected)
-          : undefined
+          : getRadioSelection(selected)
+        //   : clickMode === ButtonGroupProto.ClickMode.RADIO
+        //   ? getRadioSelection(selected)
+        //   : undefined
       }
     >
       {options.map(option => {

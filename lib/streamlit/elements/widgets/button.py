@@ -78,6 +78,7 @@ class ButtonGroupSerde:
     """For button-mode acts as a trigger value, for radio button and checkbox mode acts as a persistent value serializer/deserializer."""
 
     options: list[str]
+    default_value: list[int]
     mode: ButtonGroupProto.ClickMode.ValueType
 
     def serialize(
@@ -102,7 +103,10 @@ class ButtonGroupSerde:
                 return None
             return ui_value.data
 
-        return [self.options[val] for val in ui_value]
+        current_value: list[int] = (
+            ui_value if ui_value is not None else self.default_value
+        )
+        return [self.options[val] for val in current_value]
 
 
 class ButtonMixin:
@@ -631,6 +635,11 @@ class ButtonMixin:
     ) -> str | list[str] | None:
         key = to_key(key)
 
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
+        check_callback_rules(self.dg, on_change=on_click)
+        check_session_state_rules(default_value=default, key=key)
+
         widget_name = "button_group"
         ctx = get_script_run_ctx()
 
@@ -665,7 +674,11 @@ class ButtonMixin:
         )
         button_group_proto.use_container_width = use_container_width
 
-        serde = ButtonGroupSerde(options, button_group_proto.click_mode)
+        if isinstance(default, list):
+            default_values = [int(default_val) for default_val in default]
+        else:
+            default_values = [int(default)]
+        serde = ButtonGroupSerde(options, default_values, button_group_proto.click_mode)
 
         button_group_state = register_widget(
             widget_name,
