@@ -32,6 +32,11 @@ def test_select_slider_rendering(
     assert_snapshot(st_select_sliders.nth(6), name="st_select_slider-label_collapsed")
 
 
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stSlider").nth(0)
+    expect_help_tooltip(app, element_with_help, "Help in a select slider")
+
+
 def test_select_slider_contains_correct_format_func_value_and_in_session_state(
     app: Page,
 ):

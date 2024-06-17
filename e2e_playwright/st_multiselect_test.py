@@ -68,6 +68,21 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
         assert_snapshot(el, name="st_multiselect-" + str(idx))
 
 
+def test_help_tooltip_works(app: Page):
+    default_tooltip = """
+        This is a really long tooltip.
+
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
+        justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
+        tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
+        In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
+        sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
+        malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
+        """.strip()
+    element_with_help = app.get_by_test_id("stMultiSelect").nth(0)
+    expect_help_tooltip(app, element_with_help, default_tooltip)
+
+
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")

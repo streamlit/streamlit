@@ -29,6 +29,19 @@ def test_checkbox_widget_display(
         assert_snapshot(element, name=f"st_checkbox-{i}")
 
 
+def test_help_tooltip_works(app: Page):
+    leading_indent_code_tooltip = """
+    Code:
+
+        This
+        is
+        a
+        code
+        block!"""
+    element_with_help = app.get_by_test_id("stCheckbox").nth(0)
+    expect_help_tooltip(app, element_with_help, leading_indent_code_tooltip)
+
+
 def test_checkbox_initial_values(app: Page):
     """Test that st.checkbox has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")

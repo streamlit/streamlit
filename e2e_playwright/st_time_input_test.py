@@ -35,6 +35,10 @@ def test_time_input_widget_rendering(
     assert_snapshot(time_input_widgets.nth(8), name="st_time_input-value_from_state")
 
 
+def test_help_tooltip_works(app: Page):
+    expect_help_tooltip(app, app.get_by_test_id("stTimeInput").nth(1), default_tooltip)
+
+
 def test_time_input_has_correct_initial_values(app: Page):
     """Test that st.time_input returns the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")

@@ -98,7 +98,9 @@ def test_label_visibility_set_to_collapse(
 def test_ellipses_and_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    metric_element = themed_app.get_by_test_id("stMetric").nth(8)
+    expect_help_tooltip(themed_app, metric_element, "Something should feel right")
     assert_snapshot(
-        themed_app.get_by_test_id("stMetric").nth(8),
+        metric_element,
         name="st_metric-help_and_ellipses",
     )

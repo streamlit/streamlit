@@ -25,7 +25,20 @@ def set_multiselect_9_to_have_bad_state():
 
 options = ("male", "female")
 
-i1 = st.multiselect("multiselect 1", options, placeholder="Please select")
+default_tooltip = """
+This is a really long tooltip.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
+justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
+tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
+In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
+sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
+malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
+""".strip()
+
+i1 = st.multiselect(
+    "multiselect 1", options, placeholder="Please select", help=default_tooltip
+)
 st.text(f"value 1: {i1}")
 
 i2 = st.multiselect("multiselect 2", options, format_func=lambda x: x.capitalize())

@@ -29,6 +29,11 @@ def test_color_picker_widget_display(
         assert_snapshot(color_pickers.nth(i), name=f"st_color_picker-{i}")
 
 
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stColorPicker").nth(1)
+    expect_help_tooltip(app, element_with_help, "help string")
+
+
 # The coordinates (0, 0) for the click action behaves differently across firefox.
 @pytest.mark.skip_browser("firefox")
 def test_clicking_color_on_color_picker_works(

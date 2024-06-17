@@ -38,6 +38,11 @@ def test_text_area_widget_rendering(
     assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
 
 
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stTextArea").nth(0)
+    expect_help_tooltip(app, element_with_help, "Help text")
+
+
 def test_text_area_has_correct_initial_values(app: Page):
     """Test that st.text_area has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")

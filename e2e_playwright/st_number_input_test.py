@@ -43,6 +43,12 @@ def test_number_input_widget_display(
     )
 
 
+def test_help_tooltip_works(app: Page):
+    expect_help_tooltip(
+        app, app.get_by_test_id("stNumberInput").nth(0), default_tooltip
+    )
+
+
 def test_number_input_has_correct_default_values(app: Page):
     """Test that st.number_input has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")

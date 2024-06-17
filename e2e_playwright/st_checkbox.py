@@ -15,7 +15,15 @@
 import streamlit as st
 from streamlit import runtime
 
-i1 = st.checkbox("checkbox 1 (True)", True)
+leading_indent_code_tooltip = """
+Code:
+
+    This
+    is
+    a
+    code
+    block!"""
+i1 = st.checkbox("checkbox 1 (True)", True, help=leading_indent_code_tooltip)
 st.write("checkbox 1 - value:", i1)
 
 i2 = st.checkbox("checkbox 2 (False)", False)

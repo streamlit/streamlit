@@ -38,6 +38,17 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     assert_snapshot(date_widgets.nth(13), name="st_date_input-value_from_state")
 
 
+def test_help_tooltip_works(app: Page):
+    leading_indent_regular_text_tooltip = """
+    This is a regular text block!
+    Test1
+    Test2
+
+    """
+    element_with_help = app.get_by_test_id("stDateInput").nth(0)
+    expect_help_tooltip(app, element_with_help, leading_indent_regular_text_tooltip)
+
+
 def test_date_input_has_correct_initial_values(app: Page):
     """Test that st.date_input has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
