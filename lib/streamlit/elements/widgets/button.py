@@ -18,7 +18,7 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
+from typing import TYPE_CHECKING, Any, BinaryIO, Final, Literal, TextIO, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -34,6 +34,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
@@ -69,6 +71,38 @@ class ButtonSerde:
 
     def deserialize(self, ui_value: bool | None, widget_id: str = "") -> bool:
         return ui_value or False
+
+
+@dataclass
+class ButtonGroupSerde:
+    """For button-mode acts as a trigger value, for radio button and checkbox mode acts as a persistent value serializer/deserializer."""
+
+    options: list[str]
+    mode: ButtonGroupProto.ClickMode.ValueType
+
+    def serialize(
+        self, value: str | list[str] | None
+    ) -> list[int] | StringTriggerValueProto:
+        if value is None:
+            return StringTriggerValueProto()
+
+        if isinstance(value, str):
+            return StringTriggerValueProto(data=value)
+
+        return [self.options.index(val) for val in value]
+
+    def deserialize(
+        self, ui_value: list[int] | StringTriggerValueProto, widget_id: str = ""
+    ) -> list[str] | str | None:
+        if ui_value is None:
+            return None
+
+        if isinstance(ui_value, StringTriggerValueProto):
+            if ui_value is None or not ui_value.HasField("data"):
+                return None
+            return ui_value.data
+
+        return [self.options[val] for val in ui_value]
 
 
 class ButtonMixin:
@@ -580,6 +614,75 @@ class ButtonMixin:
             disabled=disabled,
             use_container_width=use_container_width,
         )
+
+    @gather_metrics("button_group")
+    def button_group(
+        self,
+        options: str | list[str],
+        *,
+        key: Key | None = None,
+        default: bool | list[bool] = False,
+        click_mode: Literal["button", "checkbox", "radio"] = "button",
+        disabled: bool = False,
+        use_container_width: bool = False,
+        on_click: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> str | list[str] | None:
+        key = to_key(key)
+
+        widget_name = "button_group"
+        ctx = get_script_run_ctx()
+
+        # convert default to indices
+
+        widget_id = compute_widget_id(
+            widget_name,
+            user_key=key,
+            key=key,
+            options=options,
+            default=default,
+            use_container_width=use_container_width,
+            page=ctx.active_script_hash if ctx else None,
+        )
+
+        options = [options] if isinstance(options, str) else options
+
+        button_group_proto = ButtonGroupProto()
+        button_group_proto.id = widget_id
+        button_group_proto.options[:] = [o.encode("utf-8") for o in options]
+        button_group_proto.default[:] = (
+            [default] if isinstance(default, bool) else default
+        )
+
+        button_group_proto.disabled = disabled
+        button_group_proto.click_mode = (
+            ButtonGroupProto.BUTTON
+            if click_mode == "button"
+            else ButtonGroupProto.RADIO
+            if click_mode == "radio"
+            else ButtonGroupProto.CHECKBOX
+        )
+        button_group_proto.use_container_width = use_container_width
+
+        serde = ButtonGroupSerde(options, button_group_proto.click_mode)
+
+        button_group_state = register_widget(
+            widget_name,
+            button_group_proto,
+            # user_key=key,
+            on_change_handler=on_click,
+            args=args,
+            kwargs=kwargs,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+        )
+
+        # TODO: add app_testing call?
+        self.dg._enqueue(widget_name, button_group_proto)
+
+        return button_group_state.value
 
     def _download_button(
         self,

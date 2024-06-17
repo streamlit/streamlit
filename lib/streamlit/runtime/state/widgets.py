@@ -52,6 +52,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
     MappingProxyType(
         {
             "button": "trigger_value",
+            "button_group": "string_trigger_value",
             "camera_input": "file_uploader_state_value",
             "checkbox": "bool_value",
             "chat_input": "string_trigger_value",
