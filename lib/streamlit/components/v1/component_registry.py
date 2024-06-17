@@ -52,25 +52,40 @@ def declare_component(
     path: str | None = None,
     url: str | None = None,
 ) -> CustomComponent:
-    """Create a custom component and register it if there is a ScriptRun context.
+    """Create a custom component and register it if there is a ``ScriptRunContext``.
 
-    The component is not registered when there is no ScriptRun context; this can happen when CustomComponents are executed as standalone commands, e.g. for testing.
+    The component is not registered when there is no ``ScriptRunContext``.
+    This can happen when a ``CustomComponent`` is executed as standalone
+    command (e.g. for testing).
+
+    To use this function, import it from the ``streamlit.components.v1``
+    module.
+
+    .. warning::
+        Using ``st.components.v1.declare_component`` directly (instead of
+        importing its module) is deprecated and will be disallowd in a later
+        version.
 
     Parameters
     ----------
-    name: str
-        A short, descriptive name for the component. Like, "slider".
+    name : str
+        A short, descriptive name for the component, like "slider".
+
     path: str or None
-        The path to serve the component's frontend files from. Either
-        `path` or `url` must be specified, but not both.
+        The path to serve the component's frontend files from. If ``path`` is
+        ``None`` (default), Streamlit will server the component from the
+        location in ``url``. Either ``path`` or ``url`` must be specified, but
+        not both.
+
     url: str or None
-        The URL that the component is served from. Either `path` or `url`
-        must be specified, but not both.
+        The URL that the component is served from. If ``url`` is ``None``
+        (default), Streamlit will server the component from the location in
+        ``path``. Either ``path`` or ``url`` must be specified, but not both.
 
     Returns
     -------
     CustomComponent
-        A CustomComponent that can be called like a function.
+        A ``CustomComponent`` that can be called like a function.
         Calling the component will create a new instance of the component
         in the Streamlit app.
 
