@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -100,8 +101,9 @@ def _fragment(
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
-    This function should be used by our internal functions that use fragments under-the-hood,
-    so that fragment metrics are not tracked for those elements (note that the @gather_metrics annotation is only on the publicly exposed function)
+    This function should be used by our internal functions that use fragments
+    under-the-hood, so that fragment metrics are not tracked for those elements
+    (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
 
     if func is None:
@@ -191,7 +193,15 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        return wrapped_fragment()
+        # Wrap the fragment function in the same try-except block as in a normal
+        # script_run so that for a main-app run (this execution) and a fragment-rerun
+        # the same execution and error-handling logic is used. This makes errors in the
+        # fragment appear in the fragment path also for the first execution here in
+        # context of a full app run.
+        result, _, _, _ = exec_func_with_error_handling(
+            wrapped_fragment, ctx, reraise_rerun_exception=True
+        )
+        return result
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
