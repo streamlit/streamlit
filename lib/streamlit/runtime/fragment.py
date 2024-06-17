@@ -47,6 +47,14 @@ class FragmentStorage(Protocol):
     protocols.
     """
 
+    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
+    # with the `set` type of `new_fragments_ids`.
+    @abstractmethod
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+        """Remove all fragments saved in this FragmentStorage unless listed in
+        new_fragment_ids."""
+        raise NotImplementedError
+
     @abstractmethod
     def get(self, key: str) -> Fragment:
         """Returns the stored fragment for the given key."""
@@ -63,8 +71,8 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def clear(self) -> None:
-        """Remove all fragments saved in this FragmentStorage."""
+    def contains(self, key: str) -> bool:
+        """Return whether the given key is present in this FragmentStorage."""
         raise NotImplementedError
 
 
@@ -83,6 +91,18 @@ class MemoryFragmentStorage(FragmentStorage):
     def __init__(self):
         self._fragments: dict[str, Fragment] = {}
 
+    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
+    # with the `set` type of `new_fragments_ids`.
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+        if new_fragment_ids is None:
+            new_fragment_ids = set()
+
+        fragment_ids = list(self._fragments.keys())
+
+        for fid in fragment_ids:
+            if fid not in new_fragment_ids:
+                del self._fragments[fid]
+
     def get(self, key: str) -> Fragment:
         return self._fragments[key]
 
@@ -92,8 +112,8 @@ class MemoryFragmentStorage(FragmentStorage):
     def delete(self, key: str) -> None:
         del self._fragments[key]
 
-    def clear(self) -> None:
-        self._fragments.clear()
+    def contains(self, key: str) -> bool:
+        return key in self._fragments
 
 
 def _fragment(
@@ -161,6 +181,7 @@ def _fragment(
                 # fragment get tagged with the appropriate ID. ctx.current_fragment_id
                 # gets reset after the fragment function finishes running.
                 ctx.current_fragment_id = fragment_id
+                ctx.new_fragment_ids.add(fragment_id)
 
             try:
                 # Make sure we set the active script hash to the same value
@@ -185,7 +206,8 @@ def _fragment(
 
             return result
 
-        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        if not ctx.fragment_storage.contains(fragment_id):
+            ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()
