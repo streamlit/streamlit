@@ -15,17 +15,7 @@
 import streamlit as st
 from streamlit import runtime
 
-default_tooltip = """
-This is a really long tooltip.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
-justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
-tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
-In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
-sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
-malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
-""".strip()
-v1 = st.number_input("number input 1 (default)", help=default_tooltip)
+v1 = st.number_input("number input 1 (default)", help="Help Text")
 st.write("number input 1 (default) - value: ", v1)
 
 v2 = st.number_input("number input 2 (value=1)", value=1)
