@@ -40,7 +40,7 @@ def test_text_area_widget_rendering(
 
 
 def test_help_tooltip_works(app: Page):
-    element_with_help = app.get_by_test_id("stTextArea").nth(0)
+    element_with_help = app.get_by_test_id("stTextArea").nth(10)
     expect_help_tooltip(app, element_with_help, "Help text")
 
 
