@@ -146,10 +146,10 @@ function Modal(props: ModalProps): ReactElement {
     },
     Dialog: {
       style: {
-        borderBottomRadius: radii.xl,
-        borderTopRadius: radii.xl,
-        borderLeftRadius: radii.xl,
-        borderRightRadius: radii.xl,
+        borderBottomRightRadius: radii.xxl,
+        borderBottomLeftRadius: radii.xxl,
+        borderTopRightRadius: radii.xxl,
+        borderTopLeftRadius: radii.xxl,
         // make sure the modal is not too small on mobile
         minWidth: "20rem",
       },

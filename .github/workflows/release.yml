@@ -6,7 +6,7 @@ on:
 
 jobs:
   run-python-tests:
-    uses: ./.github/workflows/python-versions.yml
+    uses: ./.github/workflows/python-tests.yml
     with:
       ref: ${{ github.ref_name }}
     secrets:
@@ -17,11 +17,6 @@ jobs:
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
-    with:
-      ref: ${{ github.ref_name }}
-
-  run-py-prod-deps-smoke-test:
-    uses: ./.github/workflows/py-prod-deps-smoke-test.yml
     with:
       ref: ${{ github.ref_name }}
 
@@ -41,7 +36,6 @@ jobs:
     needs:
       - run-python-tests
       - run-javascript-tests
-      - run-py-prod-deps-smoke-test
       - run-cypress-tests
       - run-playwright-tests
 
@@ -115,7 +109,7 @@ jobs:
           sudo apt install rsync
           make package
       - name: Store Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Release
           path: lib/dist
@@ -138,10 +132,11 @@ jobs:
           # later git commands can work.
           persist-credentials: true
           path: constraints
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: constraints
           path: constraints
+          pattern: constraints-*
+          merge-multiple: true
       - name: Commit and push constraint files as tag
         run: |
           cd constraints;

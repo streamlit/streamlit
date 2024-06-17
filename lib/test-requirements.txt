@@ -26,14 +26,12 @@ testfixtures
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as
 # new playwright versions are released.
-playwright==1.42.*
+playwright==1.44.*
 pytest-playwright>=0.3.3
 pixelmatch>=0.3.0
 pytest-xdist
 pytest-rerunfailures
 pytest-github-actions-annotate-failures
-
-mypy-protobuf>=3.2, <3.4
 
 # Used for testing of st.connection
 sqlalchemy[mypy]>=1.4.25, <2
@@ -42,7 +40,7 @@ sqlalchemy[mypy]>=1.4.25, <2
 # to test the fix. Pydantic 2 should not have that issue.
 pydantic>=1.0, <2.0
 
-# semver 3 renames VersionInfo so temporarily pin until we deal with it
-semver<3
-# Langchain 0.2 migrated the Streamlit integration into a dedicated community package.
-langchain>=0.0.216, <0.2
+
+# Required for testing the langchain integration
+langchain>=0.2.0
+langchain-community>=0.2.0

@@ -78,7 +78,7 @@ function ToolbarActions({
           icon={icon}
           onClick={() => {
             metricsMgr.enqueue("menuClick", {
-              key,
+              label: key,
             })
             sendMessageToHost({
               type: "TOOLBAR_ITEM_CALLBACK",

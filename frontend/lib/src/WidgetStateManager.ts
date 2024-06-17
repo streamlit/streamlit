@@ -586,6 +586,16 @@ export class WidgetStateManager {
     )
   }
 
+  public getActiveWidgetStates(activeIds: Set<string>): WidgetStates {
+    const msg = new WidgetStates()
+    this.widgetStates.forEach(widgetState => {
+      if (activeIds.has(widgetState.id)) {
+        msg.widgets.push(widgetState)
+      }
+    })
+    return msg
+  }
+
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
    * This is called when a script finishes running, so that we don't retain

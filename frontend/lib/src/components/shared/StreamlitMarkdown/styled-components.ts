@@ -64,10 +64,21 @@ export const StyledStreamlitMarkdown =
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 
+        img: {
+          // Images in markdown should never be wider
+          // than the content area.
+          maxWidth: "100%",
+        },
+
         li: {
           margin: "0.2em 0 0.2em 1.2em",
           padding: "0 0 0 0.6em",
           fontSize: theme.fontSizes.md,
+        },
+
+        table: {
+          // Add some space below the markdown tables
+          marginBottom: theme.spacing.lg,
         },
 
         tr: {

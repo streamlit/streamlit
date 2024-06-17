@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+
+import CopyButton from "./CopyButton"
 import {
   StyledPre,
   StyledCopyButtonContainer,
   StyledCodeBlock,
 } from "./styled-components"
-import CopyButton from "./CopyButton"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
-import React, { ReactElement } from "react"
+
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
   language?: string | undefined

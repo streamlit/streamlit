@@ -26,6 +26,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import get_label_visibility_proto_value
@@ -369,6 +370,7 @@ class SliderMixin:
     ) -> SliderReturn:
         key = to_key(key)
 
+        check_fragment_path_policy(self.dg)
         check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -386,7 +388,7 @@ class SliderMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         SUPPORTED_TYPES = {

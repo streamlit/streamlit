@@ -24,6 +24,7 @@ import {
 } from "@streamlit/lib/src/proto"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import TextArea, { Props } from "./TextArea"
 import userEvent from "@testing-library/user-event"
@@ -41,10 +42,12 @@ const getProps = (
   }),
   width: 300,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+
   ...widgetProps,
 })
 
