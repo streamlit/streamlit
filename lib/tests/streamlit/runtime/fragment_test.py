@@ -75,6 +75,18 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage.clear()
         assert len(self._storage._fragments) == 0
 
+    def test_clear_with_new_fragment_ids(self):
+        self._storage._fragments["some_other_key"] = "some_other_fragment"
+        assert len(self._storage._fragments) == 2
+
+        self._storage.clear(new_fragment_ids={"some_key"})
+        assert len(self._storage._fragments) == 1
+        assert self._storage._fragments["some_key"] == "some_fragment"
+
+    def test_contains(self):
+        assert self._storage.contains("some_key")
+        assert not self._storage.contains("some_other_key")
+
 
 class FragmentTest(unittest.TestCase):
     def setUp(self):
@@ -147,14 +159,19 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage.set = MagicMock(wraps=ctx.fragment_storage.set)
+
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
         def my_fragment():
             pass
 
+        # Call the fragment-decorated function twice, and verify that we only save the
+        # fragment a single time.
         my_fragment()
-
+        my_fragment()
         ctx.fragment_storage.set.assert_called_once()
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
@@ -212,7 +229,8 @@ class FragmentTest(unittest.TestCase):
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_current_fragment_id_if_not_set(self, patched_get_script_run_ctx):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = {}
+        ctx.fragment_ids_this_run = set()
+        ctx.new_fragment_ids = set()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -228,7 +246,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
+        assert len(ctx.new_fragment_ids) == 0
         my_fragment()
+
+        # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
+        assert len(ctx.new_fragment_ids) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.

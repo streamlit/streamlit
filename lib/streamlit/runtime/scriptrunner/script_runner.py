@@ -566,8 +566,10 @@ class ScriptRunner:
                                     f"Could not find fragment with id {fragment_id}"
                                 )
                     else:
-                        self._fragment_storage.clear()
                         exec(code, module.__dict__)
+                        self._fragment_storage.clear(
+                            new_fragment_ids=ctx.new_fragment_ids
+                        )
 
                     self._session_state.maybe_check_serializable()
 
