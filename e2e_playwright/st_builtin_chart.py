@@ -68,6 +68,7 @@ st.area_chart(df, x="b", y="a")
 st.area_chart(df, x="a", y=["b", "c"])
 st.area_chart(utc_df)
 st.area_chart(color_df, x="a", y="b", color="e")
+st.area_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
 
 st.header("Bar Chart")
 
@@ -81,6 +82,9 @@ st.bar_chart(df, x="b", y="a")
 st.bar_chart(df, x="a", y=["b", "c"])
 st.bar_chart(utc_df)
 st.bar_chart(color_df, x="a", y="b", color="e")
+st.bar_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
+st.bar_chart(df, horizontal=True)
+st.bar_chart(df, horizontal=True, x_label="X Label", y_label="Y Label")
 
 st.header("Line Chart")
 
@@ -94,6 +98,7 @@ st.line_chart(df, x="b", y="a")
 st.line_chart(df, x="a", y=["b", "c"])
 st.line_chart(utc_df)
 st.line_chart(color_df, x="a", y="b", color="e")
+st.line_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
 
 st.header("Scatter Chart")
 
@@ -110,3 +115,4 @@ st.scatter_chart(color_df, x="a", y="b", color="e")
 # Additional tests for size parameter (only for scatter_chart)
 st.scatter_chart(color_df, x="a", y="b", size="d", color="e")
 st.scatter_chart(color_df, x="a", y="b", size="d", color="c")
+st.scatter_chart(df, x_label="X Axis Label", y_label="Y Axis Label")

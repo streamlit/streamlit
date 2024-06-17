@@ -21,10 +21,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 
 class FormData(NamedTuple):

@@ -16,13 +16,15 @@ from __future__ import annotations
 
 import mimetypes
 import os
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import tornado.web
 
 import streamlit.web.server.routes
-from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from streamlit.components.types.base_component_registry import BaseComponentRegistry
 
 _LOGGER: Final = get_logger(__name__)
 

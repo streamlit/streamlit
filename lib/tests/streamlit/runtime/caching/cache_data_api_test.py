@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.cache_data unit tests."""
+
 from __future__ import annotations
 
 import logging
@@ -159,7 +160,7 @@ class CacheDataTest(unittest.TestCase):
         """We show deprecation warnings when using `@st.experimental_memo`, but not `@st.cache_data`."""
         warning_str = (
             "`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
-            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
+            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/develop/concepts/architecture/caching)."
         )
 
         # We show the deprecation warning at declaration time:

@@ -115,6 +115,15 @@ export type IHostToGuestMessage = {
       type: "SET_CUSTOM_THEME_CONFIG"
       themeInfo: ICustomThemeConfig
     }
+  | {
+      type: "SEND_APP_HEARTBEAT"
+    }
+  | {
+      type: "RESTART_WEBSOCKET_CONNECTION"
+    }
+  | {
+      type: "TERMINATE_WEBSOCKET_CONNECTION"
+    }
 )
 
 export type IGuestToHostMessage =
@@ -165,6 +174,16 @@ export type IGuestToHostMessage =
   | {
       type: "CUSTOM_PARENT_MESSAGE"
       message: string
+    }
+  | {
+      type: "WEBSOCKET_DISCONNECTED"
+      attemptingToReconnect: boolean
+      // TODO(vdonato): Maybe provide a reason the disconnect happened. This
+      // could either be a WS disconnect code or a flag signifying the host
+      // requested this websocket disconnect.
+    }
+  | {
+      type: "WEBSOCKET_CONNECTED"
     }
 
 export type VersionedMessage<Message> = {

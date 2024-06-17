@@ -46,7 +46,7 @@ from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 class StreamlitWriteTest(unittest.TestCase):
     """Test st.write.
 
-    Unit tests for https://docs.streamlit.io/library/api-reference/write-magic/st.write
+    Unit tests for https://docs.streamlit.io/develop/api-reference/write-magic/st.write
 
     Because we're going to test st.markdown, st.pyplot, st.altair_chart
     later on, we don't have to test it in st.write In st.write, all we're

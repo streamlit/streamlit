@@ -26,7 +26,6 @@ from typing import (
     Final,
     Hashable,
     Iterable,
-    List,
     Literal,
     NoReturn,
     TypeVar,
@@ -45,7 +44,6 @@ from streamlit import (
     type_util,
     util,
 )
-from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
@@ -101,6 +99,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
     from pandas import DataFrame
 
+    from streamlit.cursor import Cursor
     from streamlit.elements.arrow import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
@@ -358,7 +357,7 @@ class DeltaGenerator(
         return dg
 
     @property
-    def _ancestors(self) -> Iterable["DeltaGenerator"]:
+    def _ancestors(self) -> Iterable[DeltaGenerator]:
         current_dg: DeltaGenerator | None = self
         while current_dg is not None:
             yield current_dg
@@ -735,7 +734,7 @@ def _writes_directly_to_sidebar(dg: DG) -> bool:
 
 
 def _check_nested_element_violation(
-    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: List[BlockType]
+    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: list[BlockType]
 ) -> None:
     """Check if elements are nested in a forbidden way.
 

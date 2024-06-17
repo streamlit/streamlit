@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Session state unit tests."""
+
 import unittest
 from copy import deepcopy
 from datetime import date, datetime, timedelta

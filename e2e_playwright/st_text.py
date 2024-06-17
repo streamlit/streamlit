@@ -16,7 +16,7 @@ import streamlit as st
 
 st.text("This text is awesome!")
 st.text(
-    """
+    r"""
 |\---/|
 | o_o |
  \_^_/

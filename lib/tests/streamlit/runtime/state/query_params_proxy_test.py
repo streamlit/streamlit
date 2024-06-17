@@ -25,7 +25,7 @@ from streamlit.runtime.state.session_state import SessionState
 
 
 def _create_mock_session_state(
-    initial_query_params_values: Dict[str, Union[List[str], str]]
+    initial_query_params_values: Dict[str, Union[List[str], str]],
 ) -> SafeSessionState:
     """Return a new SafeSessionState instance populated with the
     given query param values.

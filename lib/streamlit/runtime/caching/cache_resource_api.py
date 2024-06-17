@@ -19,8 +19,7 @@ from __future__ import annotations
 import math
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar, cast, overload
 
 from cachetools import TTLCache
 from typing_extensions import TypeAlias
@@ -44,11 +43,15 @@ from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -223,8 +226,7 @@ class CacheResourceAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -237,8 +239,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -283,7 +284,7 @@ class CacheResourceAPI:
         cache with ``st.cache_resource.clear()``.
 
         To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/library/advanced-features/caching.
+        https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -327,9 +328,6 @@ class CacheResourceAPI:
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
 
-            .. note::
-                This parameter is deprecated and will be removed in a future release.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -337,6 +335,10 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            ``experimental_allow_widgets`` is deprecated and will be removed in
+            a later version.
 
         Example
         -------
@@ -490,11 +492,11 @@ class ResourceCache(Cache):
 
     @property
     def max_entries(self) -> float:
-        return cast(float, self._mem_cache.maxsize)
+        return self._mem_cache.maxsize
 
     @property
     def ttl_seconds(self) -> float:
-        return cast(float, self._mem_cache.ttl)
+        return self._mem_cache.ttl
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.

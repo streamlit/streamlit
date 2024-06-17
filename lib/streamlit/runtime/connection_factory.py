@@ -16,8 +16,7 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import timedelta
-from typing import Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,
@@ -30,6 +29,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.secrets import secrets_singleton
+
+if TYPE_CHECKING:
+    from datetime import timedelta
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.

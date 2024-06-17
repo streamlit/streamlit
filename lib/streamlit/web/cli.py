@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
 import click
@@ -26,11 +26,13 @@ import click
 import streamlit.runtime.caching as caching
 import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
-from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
+
+if TYPE_CHECKING:
+    from streamlit.config_option import ConfigOption
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -73,7 +75,10 @@ def _make_sensitive_option_callback(config_option: ConfigOption):
     return callback
 
 
-def configurator_options(func):
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def configurator_options(func: F) -> F:
     """Decorator that adds config param keys to click dynamically."""
     for _, value in reversed(_config._config_options_template.items()):
         parsed_parameter = _convert_config_option_to_click_option(value)
@@ -170,7 +175,7 @@ def main_version():
 @main.command("docs")
 def main_docs():
     """Show help in browser."""
-    print("Showing help page in browser...")
+    click.echo("Showing help page in browser...")
     from streamlit import util
 
     util.open_browser("https://docs.streamlit.io")

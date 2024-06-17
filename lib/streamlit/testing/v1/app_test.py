@@ -19,12 +19,11 @@ import tempfile
 import textwrap
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
 
 from streamlit import source_util
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -86,6 +85,9 @@ from streamlit.testing.v1.element_tree import (
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import HASHLIB_KWARGS, calc_md5
+
+if TYPE_CHECKING:
+    from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -372,9 +374,10 @@ class AppTest:
 
         Parameters
         ----------
-        timeout
-            The maximum number of seconds to run the script. None means
-            use the default timeout set for the instance of ``AppTest``.
+        timeout : float or None
+            The maximum number of seconds to run the script. If ``timeout`` is
+            ``None`` (default), Streamlit uses the default timeout set for the
+            instance of ``AppTest``.
 
         Returns
         -------

@@ -25,7 +25,6 @@ from typing import (
     KeysView,
     Mapping,
     NoReturn,
-    Union,
     ValuesView,
 )
 
@@ -45,19 +44,18 @@ SECRETS_FILE_LOCS: Final[list[str]] = [
 ]
 
 
-def _convert_to_dict(obj: Union[Mapping[str, Any], AttrDict]) -> dict[str, Any]:
-    """Recursively convert Mapping or AttrDict objects to dictionaries."""
+def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
+    """Convert Mapping or AttrDict objects to dictionaries."""
     if isinstance(obj, AttrDict):
         return obj.to_dict()
-    elif isinstance(obj, Mapping):
-        return {k: _convert_to_dict(v) for k, v in obj.items()}
+    return {k: v.to_dict() if isinstance(v, AttrDict) else v for k, v in obj.items()}
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.secrets has no attribute "{attr_name}". '
         f"Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? "
-        f"More info: https://docs.streamlit.io/streamlit-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management"
+        f"More info: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
     )
 
 
@@ -65,7 +63,7 @@ def _missing_key_error_message(key: str) -> str:
     return (
         f'st.secrets has no key "{key}". '
         f"Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? "
-        f"More info: https://docs.streamlit.io/streamlit-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management"
+        f"More info: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
     )
 
 

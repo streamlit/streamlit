@@ -86,9 +86,7 @@ class VerifyVersionCommand(install):
         tag = os.getenv("TAG")
 
         if tag != VERSION:
-            info = "Git tag: {0} does not match the version of this app: {1}".format(
-                tag, VERSION
-            )
+            info = f"Git tag: {tag} does not match the version of this app: {VERSION}"
             sys.exit(info)
 
 
@@ -112,7 +110,7 @@ setup(
     project_urls={
         "Source Code": "https://github.com/streamlit/streamlit",
         "Bug Tracker": "https://github.com/streamlit/streamlit/issues",
-        "Release notes": "https://docs.streamlit.io/library/changelog",
+        "Release notes": "https://docs.streamlit.io/develop/quick-reference/changelog",
         "Documentation": "https://docs.streamlit.io/",
         "Community": "https://discuss.streamlit.io/",
         "Twitter": "https://twitter.com/streamlit",

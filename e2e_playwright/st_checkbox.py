@@ -54,3 +54,9 @@ st.write("checkbox 7 - value:", i7)
 
 i8 = st.checkbox("checkbox 8 (label collapsed)", label_visibility="collapsed")
 st.write("checkbox 8 - value:", i8)
+
+with st.expander("Grouped checkboxes", expanded=True):
+    st.checkbox("checkbox group - 1")
+    st.checkbox("checkbox group - 2")
+    st.checkbox("checkbox group - 3")
+    st.text("A non-checkbox element")
