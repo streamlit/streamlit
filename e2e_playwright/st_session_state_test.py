@@ -29,3 +29,34 @@ def test_checking_checkbox_unchecks_other(app: Page):
 
     expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
     expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
+
+
+def test_has_correct_starting_values(app: Page):
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("len(st.session_state): 3")).to_have_count(1)
+    expect(app.get_by_test_id("stJson")).to_be_visible()
+
+
+def test_can_do_CRUD_for_session_state(app: Page):
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    button_element = app.get_by_test_id("stButton").locator("button").first
+    button_element.click()
+
+    expect(app.get_by_text("item_counter: 1")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    button_element = app.get_by_test_id("stButton").locator("button").nth(1)
+    button_element.click()
+
+    expect(app.get_by_text("item_counter: 2")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    button_element = app.get_by_test_id("stButton").locator("button").nth(2)
+    button_element.click()
+
+    expect(app.get_by_text("item_counter: 2")).to_have_count(0)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("len(st.session_state): 2")).to_have_count(1)
