@@ -23,7 +23,7 @@ from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_sliders = themed_app.get_by_test_id("stSlider")
-    expect(st_sliders).to_have_count(14)
+    expect(st_sliders).to_have_count(16)
 
     assert_snapshot(st_sliders.nth(4), name="st_slider-regular_with_format")
     assert_snapshot(st_sliders.nth(7), name="st_slider-disabled")
