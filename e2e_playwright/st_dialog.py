@@ -103,3 +103,14 @@ def level1_dialog():
 
 if st.button("Open Nested Dialogs"):
     level1_dialog()
+
+
+@st.experimental_dialog("Dialog with error")
+def dialog_with_error():
+    with st.form(key="forecast_form"):
+        # key is an invalid argument, so this shows an error
+        st.form_submit_button("Submit", key="foo")
+
+
+if st.button("Open Dialog with Key Error"):
+    dialog_with_error()

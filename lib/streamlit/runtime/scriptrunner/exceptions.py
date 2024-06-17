@@ -12,22 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.runtime.scriptrunner.script_requests import RerunData
-from streamlit.runtime.scriptrunner.script_run_context import (
-    ScriptRunContext,
-    add_script_run_ctx,
-    get_script_run_ctx,
-)
-from streamlit.runtime.scriptrunner.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.util import repr_
 
-__all__ = [
-    "RerunData",
-    "ScriptRunContext",
-    "add_script_run_ctx",
-    "get_script_run_ctx",
-    "RerunException",
-    "ScriptRunner",
-    "ScriptRunnerEvent",
-    "StopException",
-]
+
+class ScriptControlException(Exception):
+    """Base exception for ScriptRunner."""
+
+    pass
+
+
+class StopException(ScriptControlException):
+    """Silently stop the execution of the user's script."""
+
+    pass
+
+
+class RerunException(ScriptControlException):
+    """Silently stop and rerun the user's script."""
+
+    def __init__(self, rerun_data: RerunData):
+        """Construct a RerunException
+
+        Parameters
+        ----------
+        rerun_data : RerunData
+            The RerunData that should be used to rerun the script
+        """
+        self.rerun_data = rerun_data
+
+    def __repr__(self) -> str:
+        return repr_(self)
