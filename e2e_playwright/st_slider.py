@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import date
+from datetime import date, time
 
 import streamlit as st
 from streamlit import runtime
@@ -120,3 +120,7 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+st.slider("Slider 11 (formatted float)", value=0.05, step=0.2, format="%d%%")
+
+st.slider("Slider 12 (time-value)", value=time(12, 0))
