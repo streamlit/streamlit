@@ -22,7 +22,7 @@ def test_download_button_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     st_download_buttons = themed_app.get_by_test_id("stDownloadButton")
-    expect(st_download_buttons).to_have_count(7)
+    expect(st_download_buttons).to_have_count(6)
 
     assert_snapshot(st_download_buttons.nth(0), name="st_download_button-regular")
     assert_snapshot(st_download_buttons.nth(1), name="st_download_button-disabled")
