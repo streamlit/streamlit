@@ -803,9 +803,10 @@ class ScriptRunnerTest(AsyncTestCase):
         assert scriptrunner.get_runner_thread_dg_stack() == dg_stack_set_by_fragment
 
     def test_dg_stack_reset_for_full_app_rerun(self):
-        """Tests that the dg_stack and cursor are preserved for a fragment rerun."""
+        """Tests that the dg_stack and cursor are reset for a full app rerun."""
 
         scriptrunner = TestScriptRunner("good_script.py")
+        # simulate a dg_stack populated by the fragment
         dg_stack_set_by_fragment = (
             DeltaGenerator(),
             DeltaGenerator(),

@@ -26,7 +26,7 @@ $ pip install streamlit
 $ streamlit hello
 ```
 
-If this opens our sweet _Streamlit Hello_ app in your browser, you're all set! If not, head over to [our docs](https://docs.streamlit.io/library/get-started) for specific installs.
+If this opens our sweet _Streamlit Hello_ app in your browser, you're all set! If not, head over to [our docs](https://docs.streamlit.io/get-started) for specific installs.
 
 The app features a bunch of examples of what you can do with Streamlit. Jump to the [quickstart](#quickstart) section to understand how that all works.
 
@@ -52,32 +52,32 @@ $ streamlit run streamlit_app.py
 
 ### Give me more!
 
-Streamlit comes in with [a ton of additional powerful elements](https://docs.streamlit.io/library/api-reference) to spice up your data apps and delight your viewers. Some examples:
+Streamlit comes in with [a ton of additional powerful elements](https://docs.streamlit.io/develop/api-reference) to spice up your data apps and delight your viewers. Some examples:
 
 <table border="0">
   <tr>
     <td>
-      <a target="_blank" href="https://docs.streamlit.io/library/api-reference/widgets">
+      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/widgets">
         <img src="https://user-images.githubusercontent.com/7164864/217936099-12c16f8c-7fe4-44b1-889a-1ac9ee6a1b44.png" style="max-height:150px; width:auto; display:block;">
       </a>
     </td>
     <td>
-      <a target="_blank" href="https://docs.streamlit.io/library/api-reference/data/st.dataframe">
+      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/data/st.dataframe">
         <img src="https://user-images.githubusercontent.com/7164864/215110064-5eb4e294-8f30-4933-9563-0275230e52b5.gif" style="max-height:150px; width:auto; display:block;">
       </a>
     </td>
     <td>
-      <a target="_blank" href="https://docs.streamlit.io/library/api-reference/charts">
+      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/charts">
         <img src="https://user-images.githubusercontent.com/7164864/215174472-bca8a0d7-cf4b-4268-9c3b-8c03dad50bcd.gif" style="max-height:150px; width:auto; display:block;">
       </a>
     </td>
     <td>
-      <a target="_blank" href="https://docs.streamlit.io/library/api-reference/layout">
+      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/layout">
         <img src="https://user-images.githubusercontent.com/7164864/217936149-a35c35be-0d96-4c63-8c6a-1c4b52aa8f60.png" style="max-height:150px; width:auto; display:block;">
       </a>
     </td>
     <td>
-      <a target="_blank" href="https://docs.streamlit.io/library/get-started/multipage-apps">
+      <a target="_blank" href="https://docs.streamlit.io/develop/concepts/multipage-apps">
         <img src="https://user-images.githubusercontent.com/7164864/215173883-eae0de69-7c1d-4d78-97d0-3bc1ab865e5b.gif" style="max-height:150px; width:auto; display:block;">
       </a>
     </td>

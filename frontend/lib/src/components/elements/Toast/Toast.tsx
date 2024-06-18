@@ -197,7 +197,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     <AlertElement
       kind={Kind.ERROR}
       body="Streamlit API Error: `st.toast` cannot be called directly on the sidebar with `st.sidebar.toast`.
-        See our `st.toast` API [docs](https://docs.streamlit.io/library/api-reference/status/st.toast) for more information."
+        See our `st.toast` API [docs](https://docs.streamlit.io/develop/api-reference/status/st.toast) for more information."
       width={width}
     />
   )

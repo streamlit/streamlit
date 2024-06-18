@@ -669,7 +669,7 @@ class DataEditorMixin:
             * One of the column types defined under ``st.column_config``, e.g.
               ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+              and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 

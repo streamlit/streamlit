@@ -1038,7 +1038,7 @@ def ImageColumn(
     The cell values need to be one of:
 
     * A URL to fetch the image from. This can also be a relative URL of an image
-      deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
+      deployed via `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
       Note that you can NOT use an arbitrary local image if it is not available through
       a public URL.
     * A data URL containing an SVG XML like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.

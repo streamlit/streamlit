@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from parameterized import parameterized
+from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -565,12 +566,13 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with self.assertRaises(StreamlitAPIException) as e:
+        with patch("streamlit.exception") as mock_st_exception:
             level1_dialog()
-
-        self.assertEqual(
-            e.exception.args[0], "Dialogs may not be nested inside other dialogs."
-        )
+            mock_st_exception.assert_called_once()
+            assert (
+                str(mock_st_exception.call_args[0][0])
+                == "Dialogs may not be nested inside other dialogs."
+            )
 
     def test_only_one_dialog_can_be_opened_at_same_time(self):
         @st.experimental_dialog("Dialog1")

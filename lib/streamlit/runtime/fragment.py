@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -100,8 +101,9 @@ def _fragment(
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
-    This function should be used by our internal functions that use fragments under-the-hood,
-    so that fragment metrics are not tracked for those elements (note that the @gather_metrics annotation is only on the publicly exposed function)
+    This function should be used by our internal functions that use fragments
+    under-the-hood, so that fragment metrics are not tracked for those elements
+    (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
 
     if func is None:
@@ -191,7 +193,15 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        return wrapped_fragment()
+        # Wrap the fragment function in the same try-except block as in a normal
+        # script_run so that for a main-app run (this execution) and a fragment-rerun
+        # the same execution and error-handling logic is used. This makes errors in the
+        # fragment appear in the fragment path also for the first execution here in
+        # context of a full app run.
+        result, _, _, _ = exec_func_with_error_handling(
+            wrapped_fragment, ctx, reraise_rerun_exception=True
+        )
+        return result
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function
@@ -227,33 +237,41 @@ def fragment(
     run_every: int | float | timedelta | str | None = None,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
-    of the full script.
+    of the full app.
 
-    When a user interacts with an input widget created by a fragment, Streamlit
-    only reruns the fragment instead of the full script. If ``run_every`` is set,
-    Streamlit will also rerun the fragment at the specified interval while the
-    session is active, even if the user is not interacting with your app.
+    When a user interacts with an input widget created inside a fragment,
+    Streamlit only reruns the fragment instead of the full app. If
+    ``run_every`` is set, Streamlit will also rerun the fragment at the
+    specified interval while the session is active, even if the user is not
+    interacting with your app.
 
-    To trigger a full script rerun from inside a fragment, call ``st.rerun()``
+    To trigger an app rerun from inside a fragment, call ``st.rerun()``
     directly. Any values from the fragment that need to be accessed from
     the wider app should generally be stored in Session State.
 
     When Streamlit element commands are called directly in a fragment, the
     elements are cleared and redrawn on each fragment rerun, just like all
-    elements are redrawn on each full-script rerun. The rest of the app is
-    persisted during a fragment rerun. When a fragment renders elements into
-    externally created containers, the elements will not be cleared with each
-    fragment rerun. In this case, elements will accumulate in those containers
-    with each fragment rerun, until the next full-script rerun.
+    elements are redrawn on each app rerun. The rest of the app is persisted
+    during a fragment rerun. When a fragment renders elements into externally
+    created containers, the elements will not be cleared with each fragment
+    rerun. Instead, elements will accumulate in those containers with each
+    fragment rerun, until the next app rerun.
 
-    Calling `st.sidebar` in a fragment is not supported. To write elements to
+    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
     the sidebar with a fragment, call your fragment function inside a
-    `with st.sidebar` context manager.
+    ``with st.sidebar`` context manager.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
     interactions are additive across multiple fragment reruns. You are
     responsible for handling any side effects of that behavior.
+
+    .. warning::
+        - Fragments can't contain other fragments. Additionally, using
+          fragments in widget callback functions is not supported.
+
+        - Fragments can only contain widgets in their main body. Fragments
+          can't render widgets to externally created containers.
 
     Parameters
     ----------
@@ -278,18 +296,40 @@ def fragment(
 
     Examples
     --------
-    The following example demonstrates basic usage of ``@st.experimental_fragment``. In
-    this app, clicking "Rerun full script" will increment both counters and
-    update all values displayed in the app. In contrast, clicking "Rerun fragment"
-    will only increment the counter within the fragment. In this case, the
-    ``st.write`` command inside the fragment will update the app's frontend,
-    but the two ``st.write`` commands outside the fragment will not update the
-    frontend.
+    The following example demonstrates basic usage of
+    ``@st.experimental_fragment``. As an anology, "inflating balloons" is a
+    slow process that happens outside of the fragment. "Releasing balloons" is
+    a quick process that happens inside of the fragment.
+
+    >>> import streamlit as st
+    >>> import time
+    >>>
+    >>> @st.experimental_fragment
+    >>> def release_the_balloons():
+    >>>     st.button("Release the balloons", help="Fragment rerun")
+    >>>     st.balloons()
+    >>>
+    >>> with st.spinner("Inflating balloons..."):
+    >>>     time.sleep(5)
+    >>> release_the_balloons()
+    >>> st.button("Inflate more balloons", help="Full rerun")
+
+    .. output::
+        https://doc-fragment-balloons.streamlit.app/
+        height: 220px
+
+    This next example demonstrates how elements both inside and outside of a
+    fragement update with each app or fragment rerun. In this app, clicking
+    "Rerun full app" will increment both counters and update all values
+    displayed in the app. In contrast, clicking "Rerun fragment" will only
+    increment the counter within the fragment. In this case, the ``st.write``
+    command inside the fragment will update the app's frontend, but the two
+    ``st.write`` commands outside the fragment will not update the frontend.
 
     >>> import streamlit as st
     >>>
-    >>> if "script_runs" not in st.session_state:
-    >>>     st.session_state.script_runs = 0
+    >>> if "app_runs" not in st.session_state:
+    >>>     st.session_state.app_runs = 0
     >>>     st.session_state.fragment_runs = 0
     >>>
     >>> @st.experimental_fragment
@@ -298,17 +338,17 @@ def fragment(
     >>>     st.button("Rerun fragment")
     >>>     st.write(f"Fragment says it ran {st.session_state.fragment_runs} times.")
     >>>
-    >>> st.session_state.script_runs += 1
+    >>> st.session_state.app_runs += 1
     >>> fragment()
-    >>> st.button("Rerun full script")
-    >>> st.write(f"Full script says it ran {st.session_state.script_runs} times.")
-    >>> st.write(f"Full script sees that fragment ran {st.session_state.fragment_runs} times.")
+    >>> st.button("Rerun full app")
+    >>> st.write(f"Full app says it ran {st.session_state.app_runs} times.")
+    >>> st.write(f"Full app sees that fragment ran {st.session_state.fragment_runs} times.")
 
     .. output::
         https://doc-fragment.streamlit.app/
         height: 400px
 
-    You can also trigger a full-script rerun from inside a fragment by calling
+    You can also trigger an app rerun from inside a fragment by calling
     ``st.rerun``.
 
     >>> import streamlit as st

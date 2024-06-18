@@ -48,7 +48,7 @@ class ToastMixin:
 
         .. warning::
             ``st.toast`` is not compatible with Streamlit's `caching \
-            <https://docs.streamlit.io/library/advanced-features/caching>`_ and
+            <https://docs.streamlit.io/develop/concepts/architecture/caching>`_ and
             cannot be called within a cached function.
 
         Parameters
