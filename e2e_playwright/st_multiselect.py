@@ -28,7 +28,7 @@ def set_multiselect_9_to_have_bad_state():
 options = ("male", "female")
 
 i1 = st.multiselect(
-    "multiselect 1", options, placeholder="Please select", help="Help Text"
+    "multiselect 1", options, placeholder="Please select", help="Help text"
 )
 st.text(f"value 1: {i1}")
 

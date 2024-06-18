@@ -15,7 +15,7 @@
 import streamlit as st
 from streamlit import runtime
 
-v1 = st.number_input("number input 1 (default)", help="Help Text")
+v1 = st.number_input("number input 1 (default)", help="Help text")
 st.write("number input 1 (default) - value: ", v1)
 
 v2 = st.number_input("number input 2 (value=1)", value=1)
