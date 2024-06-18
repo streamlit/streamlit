@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from random import random
 
 import streamlit as st
 
-st.download_button(
+clicked = st.download_button(
     "Download button label",
     data="Hello world!",
     file_name="hello.txt",
@@ -49,7 +48,7 @@ st.download_button(
     data="Hello world!",
     file_name="hello.txt",
     use_container_width=True,
-    help="Example help text",
+    help="Help text",
 )
 
 st.download_button(
@@ -58,8 +57,5 @@ st.download_button(
     file_name="hello.txt",
     type="primary",
 )
-
-random_str = str(random())
-clicked = st.download_button(label="Download random text", data=random_str)
 
 st.write(f"value: {clicked}")
