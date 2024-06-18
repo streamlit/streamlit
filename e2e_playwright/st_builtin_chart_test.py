@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-TOTAL_CHARTS = 42
+TOTAL_CHARTS = 48
 
 
 def test_built_in_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -43,8 +43,8 @@ def test_themed_chart_rendering(
 
     # Only test a single selected chart per built-in chart type:
     assert_snapshot(chart_elements.nth(1), name="st_builtin_chart-area_chart_themed")
-    assert_snapshot(chart_elements.nth(11), name="st_builtin_chart-bar_chart_themed")
-    assert_snapshot(chart_elements.nth(21), name="st_builtin_chart-line_chart_themed")
+    assert_snapshot(chart_elements.nth(12), name="st_builtin_chart-bar_chart_themed")
+    assert_snapshot(chart_elements.nth(25), name="st_builtin_chart-line_chart_themed")
     assert_snapshot(
-        chart_elements.nth(31), name="st_builtin_chart-scatter_chart_themed"
+        chart_elements.nth(36), name="st_builtin_chart-scatter_chart_themed"
     )

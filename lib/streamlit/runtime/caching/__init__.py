@@ -14,11 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from google.protobuf.message import Message
-
-from streamlit.proto.Block_pb2 import Block
 from streamlit.runtime.caching.cache_data_api import (
     CACHE_DATA_MESSAGE_REPLAY_CTX,
     CacheDataAPI,
@@ -31,7 +28,12 @@ from streamlit.runtime.caching.cache_resource_api import (
     get_resource_cache_stats_provider,
 )
 from streamlit.runtime.caching.legacy_cache_api import cache as _cache
-from streamlit.runtime.state.common import WidgetMetadata
+
+if TYPE_CHECKING:
+    from google.protobuf.message import Message
+
+    from streamlit.proto.Block_pb2 import Block
+    from streamlit.runtime.state.common import WidgetMetadata
 
 
 def save_element_message(

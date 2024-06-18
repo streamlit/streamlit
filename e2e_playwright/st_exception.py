@@ -48,7 +48,7 @@ Object of type builtins.dict: {'I am a ridiculously long string that will take u
 
 ```
 
-Please see the `hash_funcs` [documentation](https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
+Please see the `hash_funcs` [documentation](https://docs.streamlit.io/develop/concepts/architecture/caching#the-hash_funcs-parameter)
 for more details.
             """.strip("\n")
 )

@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import config
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+
+if TYPE_CHECKING:
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 class MessageSizeError(MarkdownFormattedException):
@@ -39,7 +41,7 @@ class MessageSizeError(MarkdownFormattedException):
 
 This is often caused by a large chart or dataframe. Please decrease the amount of data sent
 to the browser, or increase the limit by setting the config option `server.maxMessageSize`.
-[Click here to learn more about config options](https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options).
+[Click here to learn more about config options](https://docs.streamlit.io/develop/api-reference/configuration/config.toml).
 
 _Note that increasing the limit may lead to long loading times and large memory consumption
 of the client's browser and the Streamlit server._

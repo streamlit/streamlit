@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import Any, Iterable, Sequence, overload
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, overload
 
 from streamlit import type_util
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.common import RegisterWidgetResult
-from streamlit.type_util import T
+
+if TYPE_CHECKING:
+    from streamlit.type_util import T
 
 
 def get_label_visibility_proto_value(

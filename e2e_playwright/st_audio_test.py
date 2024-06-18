@@ -16,7 +16,8 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run, wait_until
+from e2e_playwright.conftest import wait_until
+from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 
 def test_audio_has_correct_properties(app: Page):
@@ -74,9 +75,8 @@ def test_audio_autoplay(app: Page):
     expect(audio_element).to_have_js_property("paused", True)
     expect(audio_element).to_have_js_property("autoplay", False)
 
-    checkbox_element = app.get_by_test_id("stCheckbox")
-    autoplay_checkbox = checkbox_element.nth(0)
-    autoplay_checkbox.click()
+    click_checkbox(app, "Autoplay")
+
     # To prevent flakiness, we wait for the audio to load and start playing
     wait_until(app, lambda: audio_element.evaluate("el => el.readyState") == 4)
     expect(audio_element).to_have_js_property("autoplay", True)
@@ -94,22 +94,15 @@ def test_audio_remount_no_autoplay(app: Page):
     expect(audio_element).to_have_js_property("paused", True)
     expect(audio_element).to_have_js_property("autoplay", False)
 
-    checkbox_element = app.get_by_test_id("stCheckbox")
-    autoplay_checkbox = checkbox_element.nth(0)
-    autoplay_checkbox.click()
+    click_checkbox(app, "Autoplay")
+
     # To prevent flakiness, we wait for the audio to load and start playing
     wait_until(app, lambda: audio_element.evaluate("el => el.readyState") == 4)
     expect(audio_element).to_have_js_property("autoplay", True)
     expect(audio_element).to_have_js_property("paused", False)
 
-    autoplay_checkbox.click()
-
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    expect(app.get_by_test_id("stMarkdownContainer").nth(1)).to_have_text(
-        "Create some elements to unmount component"
-    )
-    button_element.click()
-    wait_for_app_run(app)
+    click_checkbox(app, "Autoplay")
+    click_button(app, "Create some elements to unmount component")
 
     expect(audio_element).to_have_js_property("autoplay", False)
     expect(audio_element).to_have_js_property("paused", True)

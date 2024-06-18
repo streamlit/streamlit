@@ -32,16 +32,22 @@ describe("Dynamic icon", () => {
   it("renders without crashing with Material icon", () => {
     const props = getProps({ iconValue: ":material/add_circle:" })
     render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stIconMaterial")
     const icon = screen.getByText("add_circle")
 
+    expect(testId).toBeInTheDocument()
     expect(icon).toBeInTheDocument()
+    expect(testId.textContent).toEqual(icon.textContent)
   })
 
   it("renders without crashing with Emoji icon", () => {
     const props = getProps({ iconValue: "⛰️" })
     render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stIconEmoji")
     const icon = screen.getByText("⛰️")
 
+    expect(testId).toBeInTheDocument()
     expect(icon).toBeInTheDocument()
+    expect(testId.textContent).toEqual(icon.textContent)
   })
 })

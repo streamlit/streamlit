@@ -18,11 +18,12 @@ from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 if TYPE_CHECKING:
     from pandas import DataFrame
     from pandas.io.formats.style import Styler
+
+    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 
 def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:

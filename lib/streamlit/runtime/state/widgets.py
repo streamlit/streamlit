@@ -34,10 +34,10 @@ from streamlit.runtime.state.common import (
     WidgetSerializer,
     user_key_from_widget_id,
 )
-from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
+    from streamlit.type_util import ValueFieldName
 
 
 ElementType: TypeAlias = str

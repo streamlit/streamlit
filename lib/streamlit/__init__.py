@@ -244,7 +244,7 @@ experimental_singleton = _experimental_singleton
 experimental_user = _UserInfoProxy()
 
 
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
@@ -265,3 +265,8 @@ experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
     connection, "experimental_connection", "2024-04-01", name_override="connection"
 )
+
+# make it possible to call streamlit.components.v1.html etc. by importing it here
+# import in the very end to avoid partially-initialized module import errors, because
+# streamlit.components.v1 also uses some streamlit imports
+import streamlit.components.v1  # noqa: F401

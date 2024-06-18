@@ -14,14 +14,16 @@
 
 from __future__ import annotations
 
-import types
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import type_util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 
-CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
+if TYPE_CHECKING:
+    from types import FunctionType
+
+CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 
 
 def get_cached_func_name_md(func: Any) -> str:
@@ -47,7 +49,7 @@ class UnhashableParamError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        func: types.FunctionType,
+        func: FunctionType,
         arg_name: str | None,
         arg_value: Any,
         orig_exc: BaseException,
@@ -59,7 +61,7 @@ class UnhashableParamError(StreamlitAPIException):
     @staticmethod
     def _create_message(
         cache_type: CacheType,
-        func: types.FunctionType,
+        func: FunctionType,
         arg_name: str | None,
         arg_value: Any,
     ) -> str:
@@ -96,7 +98,7 @@ class CacheReplayClosureError(StreamlitAPIException):
     def __init__(
         self,
         cache_type: CacheType,
-        cached_func: types.FunctionType,
+        cached_func: FunctionType,
     ):
         func_name = get_cached_func_name_md(cached_func)
         decorator_name = get_decorator_api_name(cache_type)
@@ -118,7 +120,7 @@ How to fix this:
 
 
 class UnserializableReturnValueError(MarkdownFormattedException):
-    def __init__(self, func: types.FunctionType, return_value: types.FunctionType):
+    def __init__(self, func: FunctionType, return_value: FunctionType):
         MarkdownFormattedException.__init__(
             self,
             f"""

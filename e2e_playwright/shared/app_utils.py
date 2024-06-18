@@ -22,7 +22,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import wait_for_app_run
 
 
-def get_checkbox(locator: Locator, label: str | Pattern[str]) -> Locator:
+def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 
     Parameters
@@ -44,7 +44,32 @@ def get_checkbox(locator: Locator, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_button(locator: Locator, label: str | Pattern[str]) -> Locator:
+def get_image(locator: Locator | Page, caption: str | Pattern[str]) -> Locator:
+    """Get an image element with the given caption.
+
+    Parameters
+    ----------
+
+    locator : Locator or Page
+        The locator to search for the element.
+
+    caption : str or Pattern[str]
+        The caption of the image element to get.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    element = locator.get_by_test_id("stImage").filter(
+        has=locator.get_by_test_id("stImageCaption").filter(has_text=caption)
+    )
+    expect(element).to_be_visible()
+
+    return element
+
+
+def get_button(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a button widget with the given label.
 
     Parameters
@@ -68,7 +93,9 @@ def get_button(locator: Locator, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_form_submit_button(locator: Locator, label: str | Pattern[str]) -> Locator:
+def get_form_submit_button(
+    locator: Locator | Page, label: str | Pattern[str]
+) -> Locator:
     """Get a form submit button with the given label.
 
     Parameters
@@ -92,7 +119,7 @@ def get_form_submit_button(locator: Locator, label: str | Pattern[str]) -> Locat
     return element
 
 
-def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
+def get_expander(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a expander container with the given label.
 
     Parameters
@@ -116,7 +143,9 @@ def get_expander(locator: Locator, label: str | Pattern[str]) -> Locator:
     return element
 
 
-def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> Locator:
+def get_markdown(
+    locator: Locator | Page, text_inside_markdown: str | Pattern[str]
+) -> Locator:
     """Get a markdown element with the given text inside.
 
     Parameters
@@ -145,7 +174,7 @@ def get_markdown(locator: Locator, text_inside_markdown: str | Pattern[str]) -> 
 
 
 def expect_prefixed_markdown(
-    locator: Locator,
+    locator: Locator | Page,
     expected_prefix: str,
     expected_markdown: str | Pattern[str],
     exact_match: bool = False,
@@ -192,8 +221,31 @@ def expect_prefixed_markdown(
         expect(selection_text).to_contain_text(expected_markdown)
 
 
+def expect_markdown(
+    locator: Locator | Page,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect an exception to be displayed in the app.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the exception element.
+
+    expected_markdown : str or Pattern[str]
+        The expected message to be displayed in the exception.
+    """
+    markdown_el = (
+        locator.get_by_test_id("stMarkdown")
+        .get_by_test_id("stMarkdownContainer")
+        .filter(has_text=expected_message)
+    )
+    expect(markdown_el).to_be_visible()
+
+
 def expect_exception(
-    locator: Locator,
+    locator: Locator | Page,
     expected_message: str | Pattern[str],
 ) -> None:
     """Expect an exception to be displayed in the app.
@@ -211,6 +263,47 @@ def expect_exception(
         has_text=expected_message
     )
     expect(exception_el).to_be_visible()
+
+
+def click_checkbox(
+    page: Page,
+    label: str | Pattern[str],
+) -> None:
+    """Click a checkbox with the given label
+    and wait for the app to run.
+
+    Parameters
+    ----------
+
+    page : Page
+        The page to click the button on.
+
+    label : str or Pattern[str]
+        The label of the button to click.
+    """
+    checkbox_element = get_checkbox(page, label)
+    #  Click the checkbox label to be more reliable
+    checkbox_element.locator("label").click()
+    wait_for_app_run(page)
+
+
+def click_toggle(
+    page: Page,
+    label: str | Pattern[str],
+) -> None:
+    """Click a toggle with the given label
+    and wait for the app to run.
+
+    Parameters
+    ----------
+
+    page : Page
+        The page to click the toggle on.
+
+    label : str or Pattern[str]
+        The label of the toggle to click.
+    """
+    click_checkbox(page, label)
 
 
 def click_button(
@@ -255,29 +348,10 @@ def click_form_button(
     wait_for_app_run(page)
 
 
-def click_checkbox(
-    page: Page,
-    label: str | Pattern[str],
-) -> None:
-    """Click a checkbox with the given label
-    and wait for the app to run.
-
-    Parameters
-    ----------
-
-    page : Page
-        The page to click the checkbox on.
-
-    label : str or Pattern[str]
-        The label of the checkbox to click.
-    """
-    checkbox_element = get_checkbox(page, label)
-    checkbox_element.click()
-    wait_for_app_run(page)
-
-
 def expect_help_tooltip(
-    app: Page, element_with_help_tooltip: Locator, tooltip_text: str | Pattern[str]
+    app: Locator | Page,
+    element_with_help_tooltip: Locator,
+    tooltip_text: str | Pattern[str],
 ):
     """Expect a tooltip to be displayed when hovering over the help symbol of an element.
 

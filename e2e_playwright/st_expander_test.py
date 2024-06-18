@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_expander
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
@@ -24,7 +25,7 @@ def test_expander_displays_correctly(
 ):
     """Test that all expanders are displayed correctly via screenshot testing."""
     expander_elements = themed_app.get_by_test_id("stExpander")
-    expect(expander_elements).to_have_count(6)
+    expect(expander_elements).to_have_count(8)
 
     for expander in expander_elements.all():
         expect(expander.locator(EXPANDER_HEADER_IDENTIFIER)).to_be_visible()
@@ -35,13 +36,15 @@ def test_expander_displays_correctly(
     assert_snapshot(expander_elements.nth(3), name="st_expander-with_input")
     assert_snapshot(expander_elements.nth(4), name="st_expander-long_expanded")
     assert_snapshot(expander_elements.nth(5), name="st_expander-long_collapsed")
+    assert_snapshot(expander_elements.nth(6), name="st_expander-with_material_icon")
+    assert_snapshot(expander_elements.nth(7), name="st_expander-with_emoji_icon")
 
 
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
     main_container = app.get_by_test_id("stAppViewBlockContainer")
     main_expanders = main_container.get_by_test_id("stExpander")
-    expect(main_expanders).to_have_count(5)
+    expect(main_expanders).to_have_count(7)
 
     expanders = main_expanders.all()
     # Starts expanded
@@ -72,7 +75,7 @@ def test_expander_session_state_set(app: Page):
     """Test that session state updates are propagated to expander content"""
     main_container = app.get_by_test_id("stAppViewBlockContainer")
     main_expanders = main_container.get_by_test_id("stExpander")
-    expect(main_expanders).to_have_count(5)
+    expect(main_expanders).to_have_count(7)
 
     # Show the Number Input
     num_input = main_expanders.nth(2).get_by_test_id("stNumberInput").locator("input")
@@ -94,3 +97,18 @@ def test_expander_session_state_set(app: Page):
 
     expect(text_elements.nth(0)).to_have_text("0.0", use_inner_text=True)
     expect(text_elements.nth(1)).to_have_text("0.0", use_inner_text=True)
+
+
+def test_expander_renders_icon(app: Page):
+    """Test that an expander renders a material icon and an emoji icon."""
+    material_icon = get_expander(app, "Expander with material icon!").get_by_test_id(
+        "stExpanderIcon"
+    )
+    expect(material_icon).to_be_visible()
+    expect(material_icon).to_have_text("bolt")
+
+    emoji_icon = get_expander(app, "Expander with emoji icon!").get_by_test_id(
+        "stExpanderIcon"
+    )
+    expect(emoji_icon).to_be_visible()
+    expect(emoji_icon).to_have_text("🎈")

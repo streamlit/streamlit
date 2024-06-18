@@ -65,6 +65,12 @@ def rerun() -> NoReturn:  # type: ignore[misc]
 
     ctx = get_script_run_ctx()
 
+    # TODO: (rerun[scope] project): in order to make it a fragment-scoped rerun, pass
+    # the fragment_id_queue to the RerunData object and add the following line:
+    # fragment_id_queue=[ctx.current_fragment_id] if scope == "fragment" else []
+    # The script_runner RerunException is checking for the fragment_id_queue to decide
+    # whether or not to reset the dg_stack.
+
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash

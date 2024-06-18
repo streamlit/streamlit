@@ -25,16 +25,16 @@ from typing_extensions import TypeAlias
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.PageProfile_pb2 import Command
-from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
-from streamlit.runtime.state import SafeSessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 if TYPE_CHECKING:
     from streamlit.cursor import RunningCursor
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
+    from streamlit.runtime.state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
@@ -141,7 +141,7 @@ class ScriptRunContext:
                 "`set_page_config()` can only be called once per app page, "
                 "and must be called as the first Streamlit command in your script.\n\n"
                 "For more information refer to the [docs]"
-                "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
+                "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
             )
 
         # We want to disallow set_page config if one of the following occurs:
