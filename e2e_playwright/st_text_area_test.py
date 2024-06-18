@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_text_area_widget_rendering(
@@ -36,6 +37,11 @@ def test_text_area_widget_rendering(
     assert_snapshot(text_area_widgets.nth(8), name="st_text_area-callback_help")
     assert_snapshot(text_area_widgets.nth(9), name="st_text_area-max_chars_5")
     assert_snapshot(text_area_widgets.nth(10), name="st_text_area-height_250")
+
+
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stTextArea").nth(8)
+    expect_help_tooltip(app, element_with_help, "Help text")
 
 
 def test_text_area_has_correct_initial_values(app: Page):
