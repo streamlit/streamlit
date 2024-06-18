@@ -49,9 +49,9 @@ keyring==25.2.1
 kiwisolver==1.4.5
 langchain==0.2.5
 langchain-community==0.2.5
-langchain-core==0.2.7
+langchain-core==0.2.8
 langchain-text-splitters==0.2.1
-langsmith==0.1.77
+langsmith==0.1.79
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -141,7 +141,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.11
+uv==0.2.12
 vega-datasets==0.9.0
 virtualenv==20.26.2
 watchdog==4.0.1
