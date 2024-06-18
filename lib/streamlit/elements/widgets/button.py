@@ -18,7 +18,17 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, BinaryIO, Final, Literal, TextIO, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Callable,
+    Final,
+    Literal,
+    TextIO,
+    Union,
+    cast,
+)
 
 from typing_extensions import TypeAlias
 
@@ -35,7 +45,6 @@ from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
@@ -81,25 +90,12 @@ class ButtonGroupSerde:
     default_value: list[int]
     mode: ButtonGroupProto.ClickMode.ValueType
 
-    def serialize(
-        self, value: str | list[str] | None
-    ) -> list[int] | StringTriggerValueProto:
+    def serialize(self, value: list[str] | None) -> list[int]:
         if value is None:
-            return StringTriggerValueProto()
-
-        if isinstance(value, str):
-            return StringTriggerValueProto(data=value)
-
+            return []
         return [self.options.index(val) for val in value]
 
-    def deserialize(
-        self, ui_value: list[int] | StringTriggerValueProto, widget_id: str = ""
-    ) -> list[str] | str | None:
-        if ui_value is not None and isinstance(ui_value, StringTriggerValueProto):
-            if ui_value is None or not ui_value.HasField("data"):
-                return None
-            return ui_value.data
-
+    def deserialize(self, ui_value: list[int], widget_id: str = "") -> list[str] | None:
         current_value: list[int] = (
             ui_value if ui_value is not None else self.default_value
         )
@@ -626,10 +622,89 @@ class ButtonMixin:
         click_mode: Literal["button", "checkbox", "radio"] = "button",
         disabled: bool = False,
         use_container_width: bool = False,
+        format_func: Callable[[str], str] = lambda x: x,
         on_click: WidgetCallback | None = None,
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> str | list[str] | None:
+        return self._button_group(
+            options,
+            key=key,
+            default=default,
+            click_mode=click_mode,
+            disabled=disabled,
+            use_container_width=use_container_width,
+            format_func=format_func,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+        )
+
+    @gather_metrics("feedback")
+    def feedback(
+        self,
+        options: Literal["thumbs", "smiles"] = "thumbs",
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_click: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> list[str] | None:
+        def format_func_thumbs(option: str):
+            if option == "thumbs_up":
+                return "👍"
+            if option == "thumbs_down":
+                return "👎"
+            return ""
+
+        def format_func_smiles(option: str):
+            if option == "very_happy":
+                return "😄"
+            if option == "happy":
+                return "😊"
+            if option == "neutral":
+                return "😐"
+            if option == "disappointed":
+                return "😔"
+            if option == "sad":
+                return "😞"
+
+            return ""
+
+        format_func = format_func_thumbs if options == "thumbs" else format_func_smiles
+
+        actual_options = (
+            ["thumbs_up", "thumbs_down"]
+            if options == "thumbs"
+            else ["very_happy", "happy", "neutral", "disappointed", "sad"]
+        )
+
+        return self._button_group(
+            actual_options,
+            key=key,
+            click_mode="radio",
+            disabled=disabled,
+            format_func=format_func,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+        )
+
+    def _button_group(
+        self,
+        options: str | list[str],
+        *,
+        key: Key | None = None,
+        default: bool | list[bool] = False,
+        click_mode: Literal["button", "checkbox", "radio"] = "button",
+        disabled: bool = False,
+        use_container_width: bool = False,
+        format_func: Callable[[str], str] = lambda x: x,
+        on_click: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> list[str] | None:
         key = to_key(key)
 
         check_fragment_path_policy(self.dg)
@@ -640,19 +715,21 @@ class ButtonMixin:
         widget_name = "button_group"
         ctx = get_script_run_ctx()
 
-        # convert default to indices
+        # TODO: convert default to indices
+
+        options = [options] if isinstance(options, str) else options
+        formatted_options = [format_func(o).encode("utf-8") for o in options]
 
         widget_id = compute_widget_id(
             widget_name,
             user_key=key,
             key=key,
-            options=options,
+            options=formatted_options,
             default=default,
             use_container_width=use_container_width,
             page=ctx.active_script_hash if ctx else None,
         )
 
-        options = [options] if isinstance(options, str) else options
         if isinstance(default, list):
             default_values = [
                 index
@@ -664,7 +741,7 @@ class ButtonMixin:
 
         button_group_proto = ButtonGroupProto()
         button_group_proto.id = widget_id
-        button_group_proto.options[:] = [o.encode("utf-8") for o in options]
+        button_group_proto.options[:] = formatted_options
         button_group_proto.default[:] = default_values
 
         button_group_proto.disabled = disabled
