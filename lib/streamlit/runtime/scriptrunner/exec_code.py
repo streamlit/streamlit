@@ -62,7 +62,7 @@ def exec_func_with_error_handling(
     """
 
     # Avoid circular imports
-    from streamlit.delta_generator import dg_stack
+    from streamlit.delta_generator import dg_stack, get_default_dg_stack
 
     run_without_errors = True
 
@@ -94,8 +94,18 @@ def exec_func_with_error_handling(
             raise e
 
         rerun_exception_data = e.rerun_data
-        ctx.cursors = original_cursors
-        dg_stack.set(original_dg_stack)
+        if rerun_exception_data.fragment_id_queue:
+            # This is a fragment-specific rerun, so we need to restore the stack
+            ctx.cursors = original_cursors
+            dg_stack.set(original_dg_stack)
+        else:
+            # If it is a full-app rerun, the stack needs to be refreshed.
+            # We should land here when `st.rerun` is called from within a
+            # fragment. Since we re-use the same thread, we have to clear the
+            # stack or otherwise we might render the main app in the old
+            # fragment's dg_stack.
+            ctx.cursors.clear()
+            dg_stack.set(get_default_dg_stack())
         # Interruption due to a rerun is usually from `st.rerun()`, which
         # we want to count as a script completion so triggers reset.
         # It is also possible for this to happen if fast reruns is off,

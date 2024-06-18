@@ -269,7 +269,8 @@ class ScriptRunner:
         if ctx is None:
             # This should never be possible on the script_runner thread.
             raise RuntimeError(
-                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
+                "ScriptRunner thread has a null ScriptRunContext. "
+                "Something has gone very wrong!"
             )
         return ctx
 
@@ -570,6 +571,8 @@ class ScriptRunner:
                         exec(code, module.__dict__)
 
                     self._session_state.maybe_check_serializable()
+                    # check for control requests, e.g. rerun requests have arrived
+                    self._maybe_handle_execution_control_request()
 
             prep_time = timer() - start_time
             (
@@ -578,6 +581,8 @@ class ScriptRunner:
                 rerun_exception_data,
                 premature_stop,
             ) = exec_func_with_error_handling(code_to_exec, ctx)
+            # setting the session state here triggers a yield-callback call
+            # which reads self._requests and checks for rerun data
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
 
             if rerun_exception_data:
