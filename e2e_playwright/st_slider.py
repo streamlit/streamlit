@@ -121,6 +121,10 @@ if "runs" not in st.session_state:
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
 
-st.slider("Slider 11 (formatted float)", value=0.05, step=0.2, format="%f%%")
+slider_11_value = st.slider(
+    "Slider 11 (formatted float)", value=0.05, step=0.2, format="%f%%"
+)
+st.write("Slider 11:", slider_11_value)
 
-st.slider("Slider 12 (time-value)", value=time(12, 0))
+slider_12_value = st.slider("Slider 12 (time-value)", value=time(12, 0))
+st.write("Slider 12:", slider_12_value)
