@@ -28,7 +28,8 @@ message ButtonGroup {
 
   string id = 1;
   repeated bytes options = 2;
-  repeated bool default = 3;
+  // default is an array of indexes that are selected by default
+  repeated uint32 default = 3;
   bool disabled = 4;
   ClickMode click_mode = 5;
   bool use_container_width = 6;

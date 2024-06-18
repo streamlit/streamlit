@@ -95,10 +95,7 @@ class ButtonGroupSerde:
     def deserialize(
         self, ui_value: list[int] | StringTriggerValueProto, widget_id: str = ""
     ) -> list[str] | str | None:
-        if ui_value is None:
-            return None
-
-        if isinstance(ui_value, StringTriggerValueProto):
+        if ui_value is not None and isinstance(ui_value, StringTriggerValueProto):
             if ui_value is None or not ui_value.HasField("data"):
                 return None
             return ui_value.data
@@ -656,13 +653,19 @@ class ButtonMixin:
         )
 
         options = [options] if isinstance(options, str) else options
+        if isinstance(default, list):
+            default_values = [
+                index
+                for index, default_val in enumerate(default)
+                if default_val is True
+            ]
+        else:
+            default_values = [int(default)] if default is True else []
 
         button_group_proto = ButtonGroupProto()
         button_group_proto.id = widget_id
         button_group_proto.options[:] = [o.encode("utf-8") for o in options]
-        button_group_proto.default[:] = (
-            [default] if isinstance(default, bool) else default
-        )
+        button_group_proto.default[:] = default_values
 
         button_group_proto.disabled = disabled
         button_group_proto.click_mode = (
@@ -673,11 +676,6 @@ class ButtonMixin:
             else ButtonGroupProto.CHECKBOX
         )
         button_group_proto.use_container_width = use_container_width
-
-        if isinstance(default, list):
-            default_values = [int(default_val) for default_val in default]
-        else:
-            default_values = [int(default)]
         serde = ButtonGroupSerde(options, default_values, button_group_proto.click_mode)
 
         button_group_state = register_widget(

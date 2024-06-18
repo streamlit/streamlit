@@ -84,7 +84,7 @@ function ButtonGroup(props: Props): ReactElement {
   const { clickMode, default: defaultValues, options } = element
   console.log(defaultValues)
   const [selected, setSelected] = useState<number[]>(
-    defaultValues ? defaultValues.filter(d => d).map((d, i) => i) : []
+    defaultValues ? defaultValues : []
   )
 
   const textDecoder = new TextDecoder("utf-8")
