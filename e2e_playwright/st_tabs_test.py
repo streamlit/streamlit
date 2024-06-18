@@ -21,8 +21,8 @@ def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFu
     st_tabs = themed_app.get_by_test_id("stTabs")
     expect(st_tabs).to_have_count(3)
 
-    assert_snapshot(st_tabs.nth(0), name="st_tabs-text_input")
-    assert_snapshot(st_tabs.nth(1), name="st_tabs-number_input")
+    assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
+    assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
     assert_snapshot(st_tabs.nth(2), name="st_tabs-date_input")
 
 
