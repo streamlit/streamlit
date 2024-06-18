@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_select_slider_rendering(
@@ -30,6 +31,11 @@ def test_select_slider_rendering(
     assert_snapshot(st_select_sliders.nth(4), name="st_select_slider-disabled")
     assert_snapshot(st_select_sliders.nth(5), name="st_select_slider-hidden_label")
     assert_snapshot(st_select_sliders.nth(6), name="st_select_slider-label_collapsed")
+
+
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stSlider").nth(0)
+    expect_help_tooltip(app, element_with_help, "Help in a select slider")
 
 
 def test_select_slider_contains_correct_format_func_value_and_in_session_state(

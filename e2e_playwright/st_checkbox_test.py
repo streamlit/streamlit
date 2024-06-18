@@ -16,7 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_expander
+from e2e_playwright.shared.app_utils import expect_help_tooltip, get_expander
 
 CHECKBOX_ELEMENTS = 11
 
@@ -36,6 +36,19 @@ def test_checkbox_widget_display(
     assert_snapshot(checkbox_elements.nth(5), name="st_checkbox-true_disabled")
     assert_snapshot(checkbox_elements.nth(6), name="st_checkbox-hidden_label")
     assert_snapshot(checkbox_elements.nth(7), name="st_checkbox-collapsed_label")
+
+
+def test_help_tooltip_works(app: Page):
+    leading_indent_code_tooltip = """
+    Code:
+
+        This
+        is
+        a
+        code
+        block!"""
+    element_with_help = app.get_by_test_id("stCheckbox").nth(0)
+    expect_help_tooltip(app, element_with_help, leading_indent_code_tooltip)
 
 
 def test_checkbox_initial_values(app: Page):
@@ -72,7 +85,7 @@ def test_checkbox_values_on_click(app: Page):
         # So, maybe thats the reason why it fails to click it.
         # But this is just a guess.
         checkbox_element.scroll_into_view_if_needed()
-        checkbox_element.locator("label").click(delay=50, force=True)
+        checkbox_element.locator("label").first.click(delay=50, force=True)
         wait_for_app_run(app)
 
     markdown_elements = app.get_by_test_id("stMarkdown")
