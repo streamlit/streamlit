@@ -107,13 +107,15 @@ interface Types {
 
 /** Type information for single-index columns, and data columns. */
 export interface Type {
+  field: Field
+
   /** The type label returned by pandas.api.types.infer_dtype */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
-  pandas_type: IndexTypeName | string
+  pandas_type: IndexTypeName | string | undefined
 
   /** The numpy dtype that corresponds to the types returned in df.dtypes */
-  numpy_type: string
+  numpy_type: string | undefined
 
   /** Type metadata. */
   meta?: Record<string, any> | null
@@ -259,7 +261,7 @@ export enum IndexTypeName {
  * and we parse it into this typed object - so these member names come from
  * Arrow.)
  */
-interface Schema {
+interface PandasSchema {
   /**
    * The DataFrame's index names (either provided by user or generated,
    * guaranteed unique). It is used to fetch the index data. Each DataFrame has
@@ -436,15 +438,25 @@ export class Quiver {
 
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
-    const schema = Quiver.parseSchema(table)
-    const rawColumns = Quiver.getRawColumns(schema)
-    const fields = Quiver.parseFields(table.schema)
+    console.log(table)
+    const pandasSchema = Quiver.parsePandasSchema(table)
 
-    const index = Quiver.parseIndex(table, schema)
-    const columns = Quiver.parseColumns(schema)
-    const indexNames = Quiver.parseIndexNames(schema)
+    const rawColumns = Quiver.getRawColumns(table.schema, pandasSchema)
+    console.log(rawColumns)
+    const fields = Quiver.parseFields(table.schema)
+    const columns = Quiver.parseColumns(table.schema, pandasSchema)
+    console.log("columns", columns)
     const data = Quiver.parseData(table, columns, rawColumns)
-    const types = Quiver.parseTypes(table, schema)
+    console.log("data", data)
+
+    const index: Index = pandasSchema
+      ? Quiver.parseIndex(table, pandasSchema)
+      : []
+    const indexNames: string[] = pandasSchema
+      ? Quiver.parseIndexNames(pandasSchema)
+      : []
+
+    const types = Quiver.parseTypes(table.schema, pandasSchema)
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
       : undefined
@@ -460,29 +472,39 @@ export class Quiver {
     this._indexNames = indexNames
   }
 
-  /** Parse Arrow table's schema from a JSON string to an object. */
-  private static parseSchema(table: Table): Schema {
+  /** Parse Arrow table's Pandas schema from a JSON string to an object. */
+  private static parsePandasSchema(table: Table): PandasSchema | undefined {
     const schema = table.schema.metadata.get("pandas")
     if (schema == null) {
-      // This should never happen!
-      throw new Error("Table schema is missing.")
+      // No Pandas schema found. This happens if the dataset
+      // did not touched Pandas during serialization.
+      return undefined
     }
     return JSON.parse(schema)
   }
 
   /** Get unprocessed column names for data columns. Needed for selecting
    * data columns when there are multi-columns. */
-  private static getRawColumns(schema: Schema): string[] {
-    return (
-      schema.columns
-        .map(columnSchema => columnSchema.field_name)
-        // Filter out all index columns
-        .filter(columnName => !schema.index_columns.includes(columnName))
-    )
+  private static getRawColumns(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): string[] {
+    if (pandasSchema) {
+      return (
+        pandasSchema.columns
+          .map(columnSchema => columnSchema.field_name)
+          // Filter out all index columns
+          .filter(
+            columnName => !pandasSchema.index_columns.includes(columnName)
+          )
+      )
+    }
+
+    return (arrowSchema.fields || []).map(field => field.name)
   }
 
   /** Parse DataFrame's index header values. */
-  private static parseIndex(table: Table, schema: Schema): Index {
+  private static parseIndex(table: Table, schema: PandasSchema): Index {
     return schema.index_columns
       .map(indexName => {
         // Generate a range using the "range" index metadata.
@@ -504,7 +526,7 @@ export class Quiver {
   }
 
   /** Parse DataFrame's index header names. */
-  private static parseIndexNames(schema: Schema): string[] {
+  private static parseIndexNames(schema: PandasSchema): string[] {
     return schema.index_columns.map(indexName => {
       // Range indices are treated differently since they
       // contain additional metadata (e.g. start, stop, step).
@@ -522,29 +544,36 @@ export class Quiver {
   }
 
   /** Parse DataFrame's column header values. */
-  private static parseColumns(schema: Schema): Columns {
-    // If DataFrame `columns` has multi-level indexing, the length of
-    // `column_indexes` will show how many levels there are.
-    const isMultiIndex = schema.column_indexes.length > 1
+  private static parseColumns(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): Columns {
+    if (pandasSchema) {
+      // If DataFrame `columns` has multi-level indexing, the length of
+      // `column_indexes` will show how many levels there are.
+      const isMultiIndex = pandasSchema.column_indexes.length > 1
 
-    // Perform the following transformation:
-    // ["('1','foo')", "('2','bar')", "('3','baz')"] -> ... -> [["1", "2", "3"], ["foo", "bar", "baz"]]
-    return unzip(
-      schema.columns
-        .map(columnSchema => columnSchema.field_name)
-        // Filter out all index columns
-        .filter(fieldName => !schema.index_columns.includes(fieldName))
-        .map(fieldName =>
-          isMultiIndex
-            ? JSON.parse(
-                fieldName
-                  .replace(/\(/g, "[")
-                  .replace(/\)/g, "]")
-                  .replace(/'/g, '"')
-              )
-            : [fieldName]
-        )
-    )
+      // Perform the following transformation:
+      // ["('1','foo')", "('2','bar')", "('3','baz')"] -> ... -> [["1", "2", "3"], ["foo", "bar", "baz"]]
+      return unzip(
+        pandasSchema.columns
+          .map(columnSchema => columnSchema.field_name)
+          // Filter out all index columns
+          .filter(fieldName => !pandasSchema.index_columns.includes(fieldName))
+          .map(fieldName =>
+            isMultiIndex
+              ? JSON.parse(
+                  fieldName
+                    .replace(/\(/g, "[")
+                    .replace(/\)/g, "]")
+                    .replace(/'/g, '"')
+                )
+              : [fieldName]
+          )
+      )
+    }
+
+    return [(arrowSchema.fields || []).map(field => field.name)]
   }
 
   /** Parse DataFrame's data. */
@@ -563,17 +592,21 @@ export class Quiver {
   }
 
   /** Parse DataFrame's index and data types. */
-  private static parseTypes(table: Table, schema: Schema): Types {
-    const index = Quiver.parseIndexType(schema)
-    const data = Quiver.parseDataType(table, schema)
+  private static parseTypes(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): Types {
+    const index = pandasSchema ? Quiver.parseIndexType(pandasSchema) : []
+    const data = Quiver.parseDataType(arrowSchema, pandasSchema)
     return { index, data }
   }
 
   /** Parse types for each index column. */
-  private static parseIndexType(schema: Schema): Type[] {
+  private static parseIndexType(schema: PandasSchema): Type[] {
     return schema.index_columns.map(indexName => {
       if (Quiver.isRangeIndex(indexName)) {
         return {
+          field: undefined,
           pandas_type: IndexTypeName.RangeIndex,
           numpy_type: IndexTypeName.RangeIndex,
           meta: indexName as RangeIndex,
@@ -591,6 +624,7 @@ export class Quiver {
       }
 
       return {
+        field: undefined,
         pandas_type: indexColumn.pandas_type,
         numpy_type: indexColumn.numpy_type,
         meta: indexColumn.metadata,
@@ -632,15 +666,21 @@ export class Quiver {
   }
 
   /** Parse types for each non-index column. */
-  private static parseDataType(table: Table, schema: Schema): Type[] {
+  private static parseDataType(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): Type[] {
+    console.log(arrowSchema)
+    console.log(pandasSchema)
     return (
-      schema.columns
+      pandasSchema.columns
         // Filter out all index columns
         .filter(
           columnSchema =>
-            !schema.index_columns.includes(columnSchema.field_name)
+            !pandasSchema.index_columns.includes(columnSchema.field_name)
         )
-        .map(columnSchema => ({
+        .map((columnSchema, index) => ({
+          field: arrowSchema.fields[index],
           pandas_type: columnSchema.pandas_type,
           numpy_type: columnSchema.numpy_type,
           meta: columnSchema.metadata,
@@ -1356,9 +1396,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   public getIndexValue(rowIndex: number, columnIndex: number): any {
     const index = this._index[columnIndex]
-    const value =
-      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
-    return value
+    return index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
   }
 
   public getDataValue(rowIndex: number, columnIndex: number): any {
