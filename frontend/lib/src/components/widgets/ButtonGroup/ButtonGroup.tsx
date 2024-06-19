@@ -16,8 +16,16 @@
 
 import React, { ReactElement, useState } from "react"
 
-import { Button as BasewebButton } from "baseui/button"
+import { useTheme } from "@emotion/react"
+
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
+
+import BaseButton, {
+  BaseButtonKind,
+  BaseButtonSize,
+} from "@streamlit/lib/src/components/shared/BaseButton"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -79,13 +87,42 @@ function syncValue(
   widgetMgr.setIntArrayValue(element, selected, source, fragmentId)
 }
 
-function ButtonGroup(props: Props): ReactElement {
+function getContent(option: string): ReactElement {
+  if (option.startsWith(":material")) {
+    return (
+      <DynamicIcon
+        size="lg"
+        iconValue={option}
+        // color={theme.colors.bodyText}
+      />
+    )
+  }
+
+  return <StreamlitMarkdown source={option} allowHTML={false} />
+}
+
+function BaseButtonWithCustomKind(props: any): any {
+  return (
+    <BaseButton
+      {...props}
+      key={props.parsedOption}
+      size={BaseButtonSize.SMALL}
+      // we have to override kind here with a custom prop, because kind itself will
+      // be passed from ButtonGroup and the type is unfortunately narrow
+      kind={props._kind}
+    >
+      {props.content}
+    </BaseButton>
+  )
+}
+
+function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
   const { clickMode, default: defaultValues, options } = element
   console.log(defaultValues)
-  const [selected, setSelected] = useState<number[]>(
-    defaultValues ? defaultValues : []
-  )
+  const theme: EmotionTheme = useTheme()
+
+  const [selected, setSelected] = useState<number[]>(defaultValues || [])
 
   const textDecoder = new TextDecoder("utf-8")
 
@@ -120,16 +157,28 @@ function ButtonGroup(props: Props): ReactElement {
         //   ? getRadioSelection(selected)
         //   : undefined
       }
+      // kind={BaseButtonKind.LINK}
+      overrides={{
+        Root: {
+          style: {
+            flexWrap: "wrap",
+            gap: theme.spacing.threeXS,
+          },
+        },
+      }}
     >
       {options.map(option => {
         const parsedOption = textDecoder.decode(option)
+        const kind = BaseButtonKind.ELEMENT_TOOLBAR
+        const content = getContent(parsedOption)
+
         return (
-          <BasewebButton key={parsedOption}>
-            <StreamlitMarkdown
-              source={parsedOption}
-              allowHTML={false}
-            ></StreamlitMarkdown>
-          </BasewebButton>
+          <BaseButtonWithCustomKind
+            key={parsedOption}
+            parsedOption={parsedOption}
+            _kind={kind}
+            content={content}
+          />
         )
       })}
     </BasewebButtonGroup>

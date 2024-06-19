@@ -651,24 +651,30 @@ class ButtonMixin:
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> list[str] | None:
+        if options not in ["thumbs", "smiles"]:
+            raise StreamlitAPIException(
+                "The options argument to st.feedback must be 'thumbs' or 'smiles'. "
+                f"The argument passed was '{options}'."
+            )
+
         def format_func_thumbs(option: str):
             if option == "thumbs_up":
-                return "👍"
+                return ":material/thumb_up:"
             if option == "thumbs_down":
-                return "👎"
+                return ":material/thumb_down:"
             return ""
 
         def format_func_smiles(option: str):
             if option == "very_happy":
-                return "😄"
+                return ":material/sentiment_very_satisfied:"
             if option == "happy":
-                return "😊"
+                return ":material/sentiment_satisfied:"
             if option == "neutral":
-                return "😐"
+                return ":material/sentiment_neutral:"
             if option == "disappointed":
-                return "😔"
+                return ":material/sentiment_dissatisfied:"
             if option == "sad":
-                return "😞"
+                return ":material/sentiment_sad:"
 
             return ""
 
@@ -680,13 +686,28 @@ class ButtonMixin:
             else ["very_happy", "happy", "neutral", "disappointed", "sad"]
         )
 
+        def _on_click(*args, **kwargs):
+            if key is None:
+                on_click(*args, **kwargs)
+                return
+
+            # Problem: we don't have the widget id here, so the key has to be provided
+            ctx = get_script_run_ctx()
+            current_value = (
+                ctx.session_state[key]
+                if key is not None and key in ctx.session_state
+                else None
+            )
+            new_kwargs = dict(kwargs, _st_key=key, _st_value=current_value)
+            on_click(*args, **new_kwargs)
+
         return self._button_group(
             actual_options,
             key=key,
             click_mode="radio",
             disabled=disabled,
             format_func=format_func,
-            on_click=on_click,
+            on_click=_on_click if on_click else None,
             args=args,
             kwargs=kwargs,
         )

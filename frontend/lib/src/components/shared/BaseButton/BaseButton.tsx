@@ -41,8 +41,11 @@ function BaseButton({
   fluidWidth,
   children,
   autoFocus,
-}: BaseButtonPropsT): ReactElement {
+  isSelected,
+}: Readonly<BaseButtonPropsT>): ReactElement {
+  console.log("kind", kind)
   let ComponentType = StyledPrimaryButton
+  console.log("kind", kind)
 
   if (kind === BaseButtonKind.SECONDARY) {
     ComponentType = StyledSecondaryButton
@@ -68,15 +71,17 @@ function BaseButton({
     ComponentType = StyledElementToolbarButton
   }
 
+  console.log("kind", kind, "isSelected", isSelected)
   return (
     <ComponentType
       kind={kind}
-      size={size || BaseButtonSize.MEDIUM}
+      size={size ?? BaseButtonSize.MEDIUM}
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
       data-testid={`baseButton-${kind}`}
+      isSelected={isSelected || false}
     >
       {children}
     </ComponentType>
