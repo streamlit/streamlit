@@ -736,7 +736,7 @@ class ButtonMixin:
                 if key is not None and key in ctx.session_state
                 else None
             )
-            new_kwargs = dict(kwargs, _st_key=key, _st_value=current_value)
+            new_kwargs = dict(kwargs, _st_value=current_value)
             on_click(*args, **new_kwargs)
 
         return self._button_group(
