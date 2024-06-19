@@ -44,7 +44,7 @@ keyring==25.2.1
 kiwisolver==1.4.5
 langchain==0.2.5
 langchain-community==0.2.5
-langchain-core==0.2.9
+langchain-core==0.2.8
 langchain-text-splitters==0.2.1
 langsmith==0.1.80
 markdown-it-py==3.0.0
@@ -106,7 +106,7 @@ scipy==1.13.1
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
-setuptools==70.0.0
+setuptools==70.1.0
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
