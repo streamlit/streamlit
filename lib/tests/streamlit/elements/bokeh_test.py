@@ -29,7 +29,8 @@ class BokehTest(DeltaGeneratorTestCase):
 
     @unittest.skipIf(
         is_version_less_than(np.__version__, "2.0.0") is False,
-        "This test only runs if numpy is < 2.0.0",
+        "This test only runs if numpy is < 2.0.0. The bokeh version supported "
+        "by Streamlit is not compatible with numpy 2.x.",
     )
     def test_figure(self):
         """Test that it can be called with figure."""
@@ -45,7 +46,8 @@ class BokehTest(DeltaGeneratorTestCase):
 
     @unittest.skipIf(
         is_version_less_than(np.__version__, "2.0.0") is False,
-        "This test only runs if numpy is < 2.0.0",
+        "This test only runs if numpy is < 2.0.0. The bokeh version supported "
+        "by Streamlit is not compatible with numpy 2.x.",
     )
     def test_bokeh_version_failure(self):
         from bokeh.plotting import figure
