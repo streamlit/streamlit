@@ -74,6 +74,11 @@ def create_image(size, format="RGB", add_alpha=True):
         )
         image.putalpha(alpha)
 
+    if format == "BGR":
+        # Grab the indices of channel in last dimension
+        np_image = np.array(image)
+        return np_image[..., ["BGR".index(s) for s in "RGB"]]
+
     return image
 
 
@@ -116,6 +121,10 @@ IMAGES = {
         "pil": create_image(32, "RGBA"),
         "np": np.array(create_image(32, "RGBA")),
     },
+    "img_32_32_3_bgr": {
+        "pil": create_image(32, "BGR"),
+        "np": np.array(create_image(32, "BGR")),
+    },
     "img_64_64_rgb": {
         "pil": Image.new("RGB", (64, 64), color="red"),
         "np": np.array(Image.new("RGB", (64, 64), color="red")),
@@ -132,6 +141,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (IMAGES["img_32_32_3_rgb"]["np"], "png"),
+            (IMAGES["img_32_32_3_bgr"]["np"], "png"),
             (IMAGES["img_64_64_rgb"]["np"], "jpeg"),
             (IMAGES["img_32_32_3_rgba"]["np"], "jpeg"),
             (IMAGES["gif_64_64"]["gif"], "gif"),
@@ -172,9 +182,11 @@ class ImageProtoTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (IMAGES["img_32_32_3_rgb"]["np"], ".jpg"),
+            (IMAGES["img_32_32_3_bgr"]["np"], ".jpg"),
             (IMAGES["img_64_64_rgb"]["np"], ".jpg"),
             (IMAGES["img_32_32_3_rgba"]["np"], ".png"),
             (IMAGES["img_32_32_3_rgb"]["pil"], ".jpg"),
+            (IMAGES["img_32_32_3_bgr"]["pil"], ".jpg"),
             (IMAGES["img_64_64_rgb"]["pil"], ".jpg"),
             (IMAGES["img_32_32_3_rgba"]["pil"], ".png"),
             (IMAGES["gif_64_64"]["gif"], ".gif"),
