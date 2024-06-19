@@ -48,9 +48,9 @@ class BokehTest(DeltaGeneratorTestCase):
         "This test only runs if numpy is < 2.0.0",
     )
     def test_bokeh_version_failure(self):
-        with patch("bokeh.__version__", return_value="2.4.0"):
-            from bokeh.plotting import figure
+        from bokeh.plotting import figure
 
+        with patch("bokeh.__version__", return_value="2.4.0"):
             plot = figure()
             with self.assertRaises(StreamlitAPIException):
                 st.bokeh_chart(plot)
