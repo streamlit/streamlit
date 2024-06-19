@@ -9,7 +9,7 @@ pydot>=1.4.2
 scipy>=1.7.3
 seaborn>=0.11.2
 watchdog>=2.1.5
-urllib3>=1.9
+urllib3>=2.2.2
 # Use by vega-lite / altair e2e tests:
 vega_datasets
 # Testing infrastructure dependencies:
