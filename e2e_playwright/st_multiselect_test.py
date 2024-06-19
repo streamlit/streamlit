@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox
+from e2e_playwright.shared.app_utils import click_checkbox, expect_help_tooltip
 
 
 def select_for_kth_multiselect(
@@ -67,6 +67,11 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
     expect(multiselect_elements).to_have_count(11)
     for idx, el in enumerate(multiselect_elements.all()):
         assert_snapshot(el, name="st_multiselect-" + str(idx))
+
+
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stMultiSelect").nth(0)
+    expect_help_tooltip(app, element_with_help, "Help text")
 
 
 def test_multiselect_initial_value(app: Page):

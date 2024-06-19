@@ -708,14 +708,15 @@ describe("Quiver", () => {
         expect(q.columns).toEqual([
           ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
         ])
+
         expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
         ])
         expect(q.types).toEqual({
@@ -1234,20 +1235,20 @@ describe("Quiver", () => {
         ])
         expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
         ])
         expect(qq.types).toEqual({
