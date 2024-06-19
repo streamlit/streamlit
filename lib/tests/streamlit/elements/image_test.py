@@ -18,7 +18,6 @@ import io
 import random
 from unittest import mock
 
-import cv2
 import numpy as np
 import PIL.Image as Image
 import pytest
@@ -76,9 +75,12 @@ def create_image(size, format="RGB", add_alpha=True):
         image.putalpha(alpha)
 
     if format == "BGR":
-        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    else:
-        return image
+        # Grab the indices of channel in last dimension
+        np_image = np.array(image)
+        # Swap the channels to convert from RGB to BGR:
+        return np_image[..., ["BGR".index(s) for s in "RGB"]]
+
+    return image
 
 
 def create_gif(size):
