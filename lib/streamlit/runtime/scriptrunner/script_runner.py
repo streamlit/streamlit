@@ -559,7 +559,6 @@ class ScriptRunner:
                                 wrapped_fragment = self._fragment_storage.get(
                                     fragment_id
                                 )
-                                ctx.current_fragment_id = fragment_id
                                 wrapped_fragment()
 
                             except KeyError:
