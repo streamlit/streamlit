@@ -77,6 +77,7 @@ def create_image(size, format="RGB", add_alpha=True):
     if format == "BGR":
         # Grab the indices of channel in last dimension
         np_image = np.array(image)
+        # Swap the channels to convert from RGB to BGR:
         return np_image[..., ["BGR".index(s) for s in "RGB"]]
 
     return image
