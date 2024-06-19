@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 
 def get_uuids(app: Page):
@@ -41,8 +42,7 @@ def expect_only_fragment_uuid_changed(
 def test_button_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    app.get_by_test_id("stButton").locator("button").click()
-    wait_for_app_run(app)
+    click_button(app, "a button")
 
     expect_only_fragment_uuid_changed(
         app, old_text_in_fragment, old_text_outside_fragment
@@ -76,8 +76,7 @@ def test_chat_input_in_fragment(app: Page):
 def test_checkbox_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    app.get_by_test_id("stCheckbox").click()
-    wait_for_app_run(app)
+    click_checkbox(app, "a checkbox")
 
     expect_only_fragment_uuid_changed(
         app, old_text_in_fragment, old_text_outside_fragment

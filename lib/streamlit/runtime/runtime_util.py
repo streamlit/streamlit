@@ -41,7 +41,7 @@ class MessageSizeError(MarkdownFormattedException):
 
 This is often caused by a large chart or dataframe. Please decrease the amount of data sent
 to the browser, or increase the limit by setting the config option `server.maxMessageSize`.
-[Click here to learn more about config options](https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options).
+[Click here to learn more about config options](https://docs.streamlit.io/develop/api-reference/configuration/config.toml).
 
 _Note that increasing the limit may lead to long loading times and large memory consumption
 of the client's browser and the Streamlit server._

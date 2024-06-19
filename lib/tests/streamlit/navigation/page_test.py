@@ -25,6 +25,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
 import pytest
 
 import streamlit as st
@@ -32,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
 class StPagesTest(DeltaGeneratorTestCase):
     """Test st.Page"""
 
@@ -138,3 +142,23 @@ class StPagesTest(DeltaGeneratorTestCase):
         page.run()
         # Provide an assertion to ensure no error
         assert True
+
+
+# NOTE: This test needs to live outside of the StPagesTest class because the class-level
+# @patch mocking the return value of `is_file` takes precedence over the method level
+# patch.
+@patch("pathlib.Path.is_file", MagicMock(return_value=False))
+def test_st_Page_throws_error_if_path_is_invalid():
+    with pytest.raises(StreamlitAPIException) as e:
+        st.Page("nonexistent.py")
+    assert (
+        str(e.value)
+        == "Unable to create Page. The file `nonexistent.py` could not be found."
+    )
+
+    with pytest.raises(StreamlitAPIException) as e:
+        st.Page(Path("nonexistent2.py"))
+    assert (
+        str(e.value)
+        == "Unable to create Page. The file `nonexistent2.py` could not be found."
+    )

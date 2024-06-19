@@ -38,7 +38,7 @@ export const MISSING_SUBMIT_BUTTON_WARNING =
   "never be sent to your Streamlit app." +
   "\n\nTo create a submit button, use the `st.form_submit_button()` function." +
   "\n\nFor more information, refer to the " +
-  "[documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form)."
+  "[documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)."
 
 export function Form(props: Props): ReactElement {
   const {

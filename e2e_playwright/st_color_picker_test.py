@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_color_picker_widget_display(
@@ -27,6 +28,11 @@ def test_color_picker_widget_display(
 
     for i in range(5):
         assert_snapshot(color_pickers.nth(i), name=f"st_color_picker-{i}")
+
+
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stColorPicker").nth(1)
+    expect_help_tooltip(app, element_with_help, "help string")
 
 
 # The coordinates (0, 0) for the click action behaves differently across firefox.
