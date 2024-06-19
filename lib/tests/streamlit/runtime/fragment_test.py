@@ -175,12 +175,11 @@ class FragmentTest(unittest.TestCase):
         ctx.fragment_storage.set.assert_called_once()
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sets_dg_stack_and_cursor_to_snapshots_if_current_fragment_id_set(
+    def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
         ctx.fragment_ids_this_run = {"my_fragment_id"}
-        ctx.current_fragment_id = "my_fragment_id"
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -195,6 +194,8 @@ class FragmentTest(unittest.TestCase):
         @fragment
         def my_fragment():
             nonlocal call_count
+
+            assert ctx.current_fragment_id is not None
 
             curr_dg_stack = dg_stack.get()
             # Verify that mutations made in previous runs of my_fragment aren't
@@ -217,9 +218,7 @@ class FragmentTest(unittest.TestCase):
         # Verify that we can't mutate our dg_stack from within my_fragment. If a
         # mutation is persisted between fragment runs, the assert on `my_random_field`
         # will fail.
-        ctx.current_fragment_id = "my_fragment_id"
         saved_fragment()
-        ctx.current_fragment_id = "my_fragment_id"
         saved_fragment()
 
         # Called once when calling my_fragment and three times calling the saved
@@ -227,7 +226,9 @@ class FragmentTest(unittest.TestCase):
         assert call_count == 3
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sets_current_fragment_id_if_not_set(self, patched_get_script_run_ctx):
+    def test_sets_current_fragment_id_in_full_script_runs(
+        self, patched_get_script_run_ctx
+    ):
         ctx = MagicMock()
         ctx.fragment_ids_this_run = set()
         ctx.new_fragment_ids = set()
