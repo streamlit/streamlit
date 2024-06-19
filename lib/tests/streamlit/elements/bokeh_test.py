@@ -14,10 +14,11 @@
 
 """Bokeh unit test."""
 
+import numpy as np
+import unittest
 from unittest.mock import patch
 
-from bokeh.plotting import figure
-
+from streamlit.type_util import is_version_less_than
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -26,8 +27,15 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 class BokehTest(DeltaGeneratorTestCase):
     """Test ability to marshall bokeh_chart protos."""
 
+    @unittest.skipIf(
+        is_version_less_than(np.__version__, "2.0.0") is False,
+        "This test only runs if numpy is < 2.0.0",
+    )
     def test_figure(self):
         """Test that it can be called with figure."""
+
+        from bokeh.plotting import figure
+
         plot = figure()
         plot.line([1], [1])
         st.bokeh_chart(plot)
@@ -35,8 +43,14 @@ class BokehTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.bokeh_chart
         self.assertEqual(hasattr(c, "figure"), True)
 
+    @unittest.skipIf(
+        is_version_less_than(np.__version__, "2.0.0") is False,
+        "This test only runs if numpy is < 2.0.0",
+    )
     def test_bokeh_version_failure(self):
         with patch("bokeh.__version__", return_value="2.4.0"):
+            from bokeh.plotting import figure
+
             plot = figure()
             with self.assertRaises(StreamlitAPIException):
                 st.bokeh_chart(plot)
