@@ -57,20 +57,28 @@ def _get_single_row_and_column_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(5)
 
 
-def _get_in_form_df(app: Page) -> Locator:
+def _get_single_cell_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(6)
 
 
-def _get_callback_df(app: Page) -> Locator:
+def _get_multi_cell_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(7)
 
 
-def _get_fragment_df(app: Page) -> Locator:
+def _get_in_form_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(8)
 
 
-def _get_df_with_index(app: Page) -> Locator:
+def _get_callback_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(9)
+
+
+def _get_fragment_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(10)
+
+
+def _get_df_with_index(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(11)
 
 
 def test_single_row_select(app: Page):
@@ -283,6 +291,45 @@ def test_multi_row_and_multi_column_select(app: Page):
 
     _select_some_rows_and_columns(app, canvas)
     _expect_multi_row_multi_column_selection(app)
+
+
+def test_single_cell_select(app: Page):
+    canvas = _get_single_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    # Select a single cell
+    select_row(canvas, 1)
+    select_column(canvas, 2, has_row_marker_col=True)
+    wait_for_app_run(app)
+
+    # The cell selection should be returned
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-cell selection:",
+        "{'selection': {'rows': [0], 'columns': ['col_2']}}",
+        exact_match=True,
+    )
+
+
+def test_multi_cell_select(app: Page):
+    canvas = _get_multi_cell_select_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    # Select multiple cells
+    select_row(canvas, 1)
+    select_column(canvas, 2, has_row_marker_col=True)
+    app.keyboard.down(COMMAND_KEY)
+    select_column(canvas, 4, has_row_marker_col=True)
+    app.keyboard.up(COMMAND_KEY)
+    wait_for_app_run(app)
+
+    # The cell selection should be returned
+    expect_prefixed_markdown(
+        app,
+        "Dataframe multi-cell selection:",
+        "{'selection': {'rows': [0], 'columns': ['col_2', 'col_4']}}",
+        exact_match=True,
+    )
 
 
 def test_single_row_select_and_sort(app: Page):

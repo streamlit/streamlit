@@ -319,6 +319,8 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             (("multi-row", "single-column"), [1, 2]),
             ("single-row", [0]),
             ("multi-column", [3]),
+            ("single-cell", [4]),
+            ("multi-cell", [5]),
         ]
     )
     def test_selection_mode_parsing(self, input_modes, expected_modes):
@@ -347,6 +349,16 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.dataframe(
                 df, on_select="rerun", selection_mode=["single-column", "multi-column"]
+            )
+
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(
+                df, on_select="rerun", selection_mode=["single-cell", "multi-cell"]
+            )
+
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(
+                df, on_select="rerun", selection_mode=["single-cell", "single-row"]
             )
 
         # If selections are deactivated, the selection mode list should be empty

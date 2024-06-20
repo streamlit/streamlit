@@ -114,6 +114,28 @@ selection = st.dataframe(
 )
 st.write("Dataframe single-row-single-column selection:", str(selection))
 
+st.subheader("single-cell select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="single-cell",
+    column_config=column_config,
+    use_container_width=False,
+)
+st.write("Dataframe single-cell selection:", str(selection))
+
+st.subheader("multi-cell select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-cell",
+    column_config=column_config,
+    use_container_width=False,
+)
+st.write("Dataframe multi-cell selection:", str(selection))
+
 st.header("Selections in form:")
 
 with st.form(key="my_form", clear_on_submit=True):
