@@ -73,6 +73,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
 from streamlit.elements.widgets.button import ButtonMixin
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.elements.widgets.camera_input import CameraInputMixin
 from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
@@ -148,6 +149,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    ButtonGroupMixin,
     CameraInputMixin,
     ChatMixin,
     CheckboxMixin,

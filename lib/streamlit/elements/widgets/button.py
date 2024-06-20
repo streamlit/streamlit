@@ -20,9 +20,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
-    Any,
     BinaryIO,
-    Callable,
     Final,
     Literal,
     TextIO,
@@ -44,7 +42,6 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
@@ -80,16 +77,6 @@ class ButtonSerde:
 
     def deserialize(self, ui_value: bool | None, widget_id: str = "") -> bool:
         return ui_value or False
-
-
-class ButtonGroupSerde:
-    """T is the value type passed to serialize, V is the return type of the deserialize function."""
-
-    def serialize(self, value: list[int] | None) -> list[int]:
-        return value if value is not None else []
-
-    def deserialize(self, ui_value: list[int] | None, widget_id: str = "") -> list[int]:
-        return ui_value if ui_value is not None else []
 
 
 class ButtonMixin:
@@ -601,207 +588,6 @@ class ButtonMixin:
             disabled=disabled,
             use_container_width=use_container_width,
         )
-
-    @gather_metrics("button_group")
-    def button_group(
-        self,
-        options: list[str],
-        *,
-        key: Key | None = None,
-        default: list[bool] | None = None,
-        click_mode: Literal["button", "checkbox", "radio"] = "button",
-        disabled: bool = False,
-        use_container_width: bool = False,
-        format_func: Callable[[str], str] = lambda x: x,
-        on_click: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
-    ) -> str | list[str] | None:
-        default_values = (
-            [index for index, default_val in enumerate(default) if default_val is True]
-            if default is not None
-            else []
-        )
-        selected_indices = self._button_group(
-            options,
-            key=key,
-            default=default_values,
-            click_mode=click_mode,
-            disabled=disabled,
-            use_container_width=use_container_width,
-            format_func=format_func,
-            on_click=on_click,
-            args=args,
-            kwargs=kwargs,
-        )
-
-        current_values: list[int] = (
-            selected_indices if selected_indices is not None else default_values
-        )
-
-        if len(current_values) == 0:
-            return None
-        if len(current_values) == 1:
-            return options[current_values[0]]
-
-        return [options[val] for val in current_values]
-
-    @gather_metrics("feedback")
-    def feedback(
-        self,
-        options: Literal["thumbs", "smiles", "stars"] = "thumbs",
-        *,
-        key: str | None = None,
-        disabled: bool = False,
-        on_click: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
-    ) -> float | None:
-        def format_func_thumbs(option: str):
-            if option == "thumbs_up":
-                return ":material/thumb_up:"
-            if option == "thumbs_down":
-                return ":material/thumb_down:"
-            return ""
-
-        def format_func_smiles(option: str):
-            if option == "sad":
-                return ":material/sentiment_sad:"
-            if option == "disappointed":
-                return ":material/sentiment_dissatisfied:"
-            if option == "neutral":
-                return ":material/sentiment_neutral:"
-            if option == "happy":
-                return ":material/sentiment_satisfied:"
-            if option == "very_happy":
-                return ":material/sentiment_very_satisfied:"
-
-            return ""
-
-        actual_options = ["thumbs_up", "thumbs_down"]
-        if options == "smiles":
-            actual_options = ["sad", "disappointed", "neutral", "happy", "very_happy"]
-        elif options == "stars":
-            actual_options = [":material/star_rate:"] * 5
-
-        options_length = len(actual_options)
-        step_length = 1 / (options_length - 1) if options_length > 1 else 1
-        index_to_score_mapping = [i * step_length for i in range(options_length)]
-        format_func = None
-        if options == "thumbs":
-            format_func = format_func_thumbs
-            # thumbs_up is 1, thumbs_down is 0; but we want to show thumbs_up first,
-            # so its index is 0
-            index_to_score_mapping = [1, 0]
-        elif options == "smiles":
-            format_func = format_func_smiles
-            # generates steps from 0 to 1 like [0, 0.25, 0.5, 0.75, 1]
-        elif options != "stars":
-            raise StreamlitAPIException(
-                "The options argument to st.feedback must be one of "
-                "['thumbs', 'smiles', 'stars']. "
-                f"The argument passed was '{options}'."
-            )
-
-        def _on_click(*args, **kwargs):
-            if key is None:
-                on_click(*args, **kwargs)
-                return
-
-            # Problem: we don't have the widget id here, so the key has to be provided
-            ctx = get_script_run_ctx()
-            current_value = (
-                ctx.session_state[key]
-                if key is not None and key in ctx.session_state
-                else None
-            )
-            new_kwargs = dict(kwargs, _st_value=current_value)
-            on_click(*args, **new_kwargs)
-
-        index_value = self._button_group(
-            actual_options,
-            key=key,
-            click_mode="radio",
-            disabled=disabled,
-            format_func=format_func if format_func is not None else lambda x: x,
-            on_click=_on_click if on_click else None,
-            args=args,
-            kwargs=kwargs,
-        )
-        return index_to_score_mapping[index_value[0]] if len(index_value) > 0 else None
-
-    def _button_group(
-        self,
-        options: str | list[str],
-        *,
-        key: Key | None = None,
-        default: list[int] | None = None,
-        click_mode: Literal["button", "checkbox", "radio"] = "button",
-        disabled: bool = False,
-        use_container_width: bool = False,
-        format_func: Callable[[str], str] = lambda x: x,
-        on_click: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
-    ) -> list[int]:
-        if default is None:
-            default = []
-        key = to_key(key)
-
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change=on_click)
-        check_session_state_rules(default_value=default, key=key)
-
-        widget_name = "button_group"
-        ctx = get_script_run_ctx()
-
-        # TODO: convert default to indices
-
-        options = [options] if isinstance(options, str) else options
-        formatted_options = [format_func(o).encode("utf-8") for o in options]
-
-        widget_id = compute_widget_id(
-            widget_name,
-            user_key=key,
-            key=key,
-            options=formatted_options,
-            default=default,
-            use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
-        )
-
-        default_values = default if default is not None else []
-        button_group_proto = ButtonGroupProto()
-        button_group_proto.id = widget_id
-        button_group_proto.options[:] = formatted_options
-        button_group_proto.default[:] = default_values
-
-        button_group_proto.disabled = disabled
-        button_group_proto.click_mode = ButtonGroupProto.BUTTON
-        if click_mode == "radio":
-            button_group_proto.click_mode = ButtonGroupProto.RADIO
-        elif click_mode == "checkbox":
-            button_group_proto.click_mode = ButtonGroupProto.CHECKBOX
-
-        button_group_proto.use_container_width = use_container_width
-        serde = ButtonGroupSerde()
-        button_group_state = register_widget(
-            widget_name,
-            button_group_proto,
-            # user_key=key,
-            on_change_handler=on_click,
-            args=args,
-            kwargs=kwargs,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            ctx=ctx,
-        )
-
-        # TODO: add app_testing call?
-        self.dg._enqueue(widget_name, button_group_proto)
-
-        return button_group_state.value
 
     def _download_button(
         self,
