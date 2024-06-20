@@ -192,9 +192,10 @@ def generate_chart(
         y=y_encoding,
     )
 
-    # Set up offset encoding.
-    x_offset, y_offset = _get_offset_encoding(chart_type, stack, color_column)
-    chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
+    # Set up offset encoding (only for Altair >= 5.0.0)
+    if not type_util.is_altair_version_less_than("5.0.0"):
+        x_offset, y_offset = _get_offset_encoding(chart_type, stack, color_column)
+        chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
 
     # Set up opacity encoding.
     opacity_enc = _get_opacity_encoding(chart_type, stack, color_column)

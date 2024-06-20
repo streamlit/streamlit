@@ -1147,6 +1147,14 @@ class VegaChartsMixin:
 
         """
 
+        # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
+        if type_util.is_altair_version_less_than("5.0.0") and not stack:
+            raise StreamlitAPIException(
+                "Streamlit does not support non-stacked (grouped) bar charts with Altair 4.x. Please upgrade to Version 5. "
+                "If you would like to use Altair 4.x with this feature, please upvote "
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8954)."
+            )
+
         bar_chart_type = (
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
