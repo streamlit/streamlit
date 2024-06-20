@@ -58,6 +58,8 @@ message Arrow {
     MULTI_ROW = 1; // Multiple rows can be selected at a time.
     SINGLE_COLUMN = 2; // Only one column can be selected at a time.
     MULTI_COLUMN = 3; // Multiple columns can be selected at a time.
+    SINGLE_CELL = 4; // Only one cell can be selected at a time.
+    MULTI_CELL = 5; // Multiple cells can be selected at a time.
   }
 }
 
