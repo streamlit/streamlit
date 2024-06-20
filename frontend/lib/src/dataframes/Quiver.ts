@@ -107,7 +107,7 @@ interface Types {
 
 /** Type information for single-index columns, and data columns. */
 export interface Type {
-  field: Field
+  field: Field | undefined
 
   /** The type label returned by pandas.api.types.infer_dtype */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
@@ -672,20 +672,29 @@ export class Quiver {
   ): Type[] {
     console.log(arrowSchema)
     console.log(pandasSchema)
-    return (
-      pandasSchema.columns
-        // Filter out all index columns
-        .filter(
-          columnSchema =>
-            !pandasSchema.index_columns.includes(columnSchema.field_name)
-        )
-        .map((columnSchema, index) => ({
-          field: arrowSchema.fields[index],
-          pandas_type: columnSchema.pandas_type,
-          numpy_type: columnSchema.numpy_type,
-          meta: columnSchema.metadata,
-        }))
-    )
+    if (pandasSchema) {
+      return (
+        pandasSchema.columns
+          // Filter out all index columns
+          .filter(
+            columnSchema =>
+              !pandasSchema.index_columns.includes(columnSchema.field_name)
+          )
+          .map((columnSchema, index) => ({
+            field: arrowSchema.fields[index],
+            pandas_type: columnSchema.pandas_type,
+            numpy_type: columnSchema.numpy_type,
+            meta: columnSchema.metadata,
+          }))
+      )
+    }
+    {
+      return (arrowSchema.fields || []).map(field => ({
+        field,
+        pandas_type: undefined,
+        numpy_type: undefined,
+      }))
+    }
   }
 
   /** Parse styler information from proto. */
@@ -917,10 +926,12 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const leftBracket = closed === "both" || closed === "left" ? "[" : "("
     const rightBracket = closed === "both" || closed === "right" ? "]" : ")"
     const leftInterval = Quiver.format(interval.left, {
+      field: undefined,
       pandas_type: subtype,
       numpy_type: subtype,
     })
     const rightInterval = Quiver.format(interval.right, {
+      field: undefined,
       pandas_type: subtype,
       numpy_type: subtype,
     })
@@ -1089,6 +1100,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   public static getTypeName(type: Type): IndexTypeName | string {
     // For `PeriodType` and `IntervalType` types are kept in `numpy_type`,
     // for the rest of the indexes in `pandas_type`.
+    if (type.pandas_type === undefined || type.numpy_type === undefined) {
+      return String(type.field?.type)
+    }
+
     return type.pandas_type === "object" ? type.numpy_type : type.pandas_type
   }
 
@@ -1244,7 +1259,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    const headerColumns = this._index.length || this.types.index.length || 1
+    const headerColumns = this._index.length || this.types.index.length || 0
     const headerRows = this._columns.length || 1
     const dataRows = this._data.numRows || 0
     const dataColumns = this._data.numCols || this._columns?.[0]?.length || 0
@@ -1355,6 +1370,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         // ArrowJS automatically converts "columns" cells to strings.
         // Keep ArrowJS structure for consistency.
         contentType: {
+          field: undefined,
           pandas_type: IndexTypeName.UnicodeIndex,
           numpy_type: "object",
         },
