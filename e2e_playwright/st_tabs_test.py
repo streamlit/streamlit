@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_expander
 
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -35,4 +36,4 @@ def test_displays_correctly_in_sidebar(app: Page):
 
 
 def test_contains_all_tabs_when_overflowing(app: Page):
-    expect(app.get_by_test_id("stExpander").get_by_test_id("stTab")).to_have_count(25)
+    expect(get_expander(app, "Expander").get_by_test_id("stTab")).to_have_count(25)
