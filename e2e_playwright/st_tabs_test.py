@@ -27,9 +27,7 @@ def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFu
 
 
 def test_displays_correctly_in_sidebar(app: Page):
-    expect(
-        app.get_by_test_id("stSidebar").locator('.stTabs [data-baseweb="tab"]')
-    ).to_have_count(2)
+    expect(app.get_by_test_id("stSidebar").get_by_test_id("stTab")).to_have_count(2)
     expect(app.get_by_text("I am in the sidebar")).to_have_count(1)
     expect(app.get_by_text("I am in the sidebarI'm also in the sidebar")).to_have_count(
         1
@@ -37,6 +35,4 @@ def test_displays_correctly_in_sidebar(app: Page):
 
 
 def test_contains_all_tabs_when_overflowing(app: Page):
-    expect(
-        app.get_by_test_id("stExpander").locator('.stTabs [data-baseweb="tab"]')
-    ).to_have_count(25)
+    expect(app.get_by_test_id("stExpander").get_by_test_id("stTab")).to_have_count(25)
