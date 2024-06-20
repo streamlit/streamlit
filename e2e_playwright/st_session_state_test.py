@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.shared.app_utils import click_checkbox, get_checkbox
+from e2e_playwright.shared.app_utils import click_button, click_checkbox, get_checkbox
 
 
 def test_checking_checkbox_unchecks_other(app: Page):
@@ -42,20 +42,17 @@ def test_can_do_CRUD_for_session_state_items(app: Page):
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
 
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    button_element.click()
+    click_button(app, "inc_item_counter")
 
     expect(app.get_by_text("item_counter: 1")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
 
-    button_element = app.get_by_test_id("stButton").locator("button").first
-    button_element.click()
+    click_button(app, "inc_item_counter")
 
     expect(app.get_by_text("item_counter: 2")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
 
-    button_element = app.get_by_test_id("stButton").locator("button").nth(2)
-    button_element.click()
+    click_button(app, "del_item_counter")
 
     expect(app.get_by_text("item_counter: 2")).to_have_count(0)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
@@ -66,20 +63,17 @@ def test_can_do_CRUD_for_session_state_attributes(app: Page):
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
 
-    button_element = app.get_by_test_id("stButton").locator("button").nth(1)
-    button_element.click()
+    click_button(app, "inc_attr_counter")
 
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 1")).to_have_count(1)
 
-    button_element = app.get_by_test_id("stButton").locator("button").nth(1)
-    button_element.click()
+    click_button(app, "inc_attr_counter")
 
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 2")).to_have_count(1)
 
-    button_element = app.get_by_test_id("stButton").locator("button").nth(3)
-    button_element.click()
+    click_button(app, "del_attr_counter")
 
     expect(app.get_by_text("item_counter: 0")).to_have_count(1)
     expect(app.get_by_text("attr_counter: 2")).to_have_count(0)
