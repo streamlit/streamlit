@@ -586,17 +586,16 @@ def _get_offset_encoding(
     stack: bool | ChartStackType | None,
     color_column: str | None,
 ) -> tuple[alt.XOffset, alt.YOffset]:
-    x_offset = {}
-    y_offset = {}
+    import altair as alt
+
+    x_offset = alt.XOffset()
+    y_offset = alt.YOffset()
+
     if stack is False and color_column is not None:
-        x_offset = (
-            {} if chart_type is not ChartType.VERTICAL_BAR else {"field": color_column}
-        )
-        y_offset = (
-            {}
-            if chart_type is not ChartType.HORIZONTAL_BAR
-            else {"field": color_column}
-        )
+        if chart_type is ChartType.VERTICAL_BAR:
+            x_offset = alt.XOffset(field=color_column)
+        elif chart_type is ChartType.HORIZONTAL_BAR:
+            y_offset = alt.YOffset(field=color_column)
 
     return x_offset, y_offset
 
@@ -800,10 +799,11 @@ def _set_stack_encoding(
     x_encoding: alt.X,
     y_encoding: alt.Y,
 ) -> None:
-    if stack == "layered":
-        stack_encoding = False
-    elif stack == "normalize" or stack == "center" or stack is True:
+    stack_encoding: ChartStackType | bool
+    if stack == "normalize" or stack == "center" or stack is True:
         stack_encoding = stack
+    elif stack == "layered":
+        stack_encoding = False
 
     if chart_type == ChartType.VERTICAL_BAR:
         y_encoding["stack"] = stack_encoding
