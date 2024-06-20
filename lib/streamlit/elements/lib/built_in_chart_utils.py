@@ -168,32 +168,18 @@ def generate_chart(
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
 
-    # TODO: Clean up handling for X/Y encodings
-    if chart_type == ChartType.HORIZONTAL_BAR:
-        # Handle horizontal bar chart - switches x and y data:
-        x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, x_axis_label, chart_type
-        )
-        y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type
-        )
-
-        # Handle stack encoding for horizontal
-        x_stack_encoding = _get_stack_encoding(stack)
-        if x_stack_encoding is not None:
-            x_encoding["stack"] = x_stack_encoding
-    else:
-        x_encoding = _get_x_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type
-        )
-        y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
-        )
-
-        # Handle stack encoding
-        y_stack_encoding = _get_stack_encoding(stack)
-        if chart_type == ChartType.VERTICAL_BAR and y_stack_encoding is not None:
-            y_encoding["stack"] = y_stack_encoding
+    # Get x and y encodings
+    x_encoding, y_encoding = _get_axis_encodings(
+        df,
+        chart_type,
+        x_column,
+        y_column,
+        x_from_user,
+        y_from_user,
+        x_axis_label,
+        y_axis_label,
+        stack,
+    )
 
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
@@ -677,6 +663,40 @@ def _maybe_melt(
     return df, y_column, color_column
 
 
+def _get_axis_encodings(
+    df: pd.DataFrame,
+    chart_type: ChartType,
+    x_column: str | None,
+    y_column: str | None,
+    x_from_user: str | None,
+    y_from_user: str | Sequence[str] | None,
+    x_axis_label: str | None,
+    y_axis_label: str | None,
+    stack: bool | ChartStackType | None,
+) -> tuple[alt.X, alt.Y]:
+    if chart_type == ChartType.HORIZONTAL_BAR:
+        # Handle horizontal bar chart - switches x and y data:
+        x_encoding = _get_x_encoding(
+            df, y_column, y_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(
+            df, x_column, x_from_user, y_axis_label, chart_type
+        )
+    else:
+        x_encoding = _get_x_encoding(
+            df, x_column, x_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(
+            df, y_column, y_from_user, y_axis_label, chart_type
+        )
+
+    # Handle stacking for bar charts
+    if stack is not None:
+        _set_stack_encoding(chart_type, stack, x_encoding, y_encoding)
+
+    return x_encoding, y_encoding
+
+
 def _get_x_encoding(
     df: pd.DataFrame,
     x_column: str | None,
@@ -773,15 +793,21 @@ def _get_y_encoding(
     )
 
 
-def _get_stack_encoding(
+def _set_stack_encoding(
+    chart_type: ChartType,
     stack: bool | ChartStackType | None,
-) -> str | bool | None:
+    x_encoding: alt.X,
+    y_encoding: alt.Y,
+) -> None:
     if stack == "layered":
-        return False
+        stack_encoding = False
     elif stack == "normalize" or stack == "center" or stack is True:
-        return stack
-    else:
-        return None
+        stack_encoding = stack
+
+    if chart_type == ChartType.VERTICAL_BAR:
+        y_encoding["stack"] = stack_encoding
+    elif chart_type == ChartType.HORIZONTAL_BAR:
+        x_encoding["stack"] = stack_encoding
 
 
 def _get_color_encoding(
