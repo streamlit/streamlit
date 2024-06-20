@@ -16,7 +16,11 @@
 
 import React from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  GridSelection,
+  Slice,
+} from "@glideapps/glide-data-grid"
 import isEqual from "lodash/isEqual"
 
 import { BaseColumn } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
@@ -33,6 +37,10 @@ export type SelectionHandlerReturn = {
   isColumnSelectionActivated: boolean
   // True, if multi column selections is activated
   isMultiColumnSelectionActivated: boolean
+  // True, if cell selection is activated
+  isCellSelectionActivated: boolean
+  // True, if multi cell selections is activated
+  isMultiCellSelectionActivated: boolean
   // True, if at least one row is selected
   isRowSelected: boolean
   // True, if at least one column is selected
@@ -87,6 +95,15 @@ function useSelectionHandler(
     isColumnSelectionActivated &&
     element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
 
+  const isCellSelectionActivated =
+    !isEmptyTable &&
+    !isDisabled &&
+    (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_CELL) ||
+      element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_CELL))
+  const isMultiCellSelectionActivated =
+    isCellSelectionActivated &&
+    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_CELL)
+
   const isRowSelected = gridSelection.rows.length > 0
   const isColumnSelected = gridSelection.columns.length > 0
   const isCellSelected = gridSelection.current !== undefined
@@ -115,7 +132,8 @@ function useSelectionHandler(
       // A flag to determine if the selection should be synced with the widget state
       let syncSelection =
         (isRowSelectionActivated && rowSelectionChanged) ||
-        (isColumnSelectionActivated && columnSelectionChanged)
+        (isColumnSelectionActivated && columnSelectionChanged) ||
+        (isCellSelectionActivated && cellSelectionChanged)
 
       let updatedSelection = newSelection
       if (
@@ -164,7 +182,40 @@ function useSelectionHandler(
         syncSelection = true
       }
 
-      if (columnSelectionChanged && updatedSelection.columns.length >= 0) {
+      if (isCellSelectionActivated) {
+        const minRow = updatedSelection.current?.cell[1] ?? 0
+        const minCol = updatedSelection.current?.cell[0] ?? 0
+        if (isMultiCellSelectionActivated) {
+          const selectedRange = updatedSelection.current?.range ?? {
+            width: 0,
+            height: 0,
+          }
+          const nSelectedCells = selectedRange.width * selectedRange.height
+          if (nSelectedCells <= 1) {
+            // We don't process a single-cell selection when multi-select is turned on
+            syncSelection = false
+          } else {
+            const rows: Slice = [minRow, minRow + selectedRange.height]
+            const cols: Slice = [minCol, minCol + selectedRange.width]
+            updatedSelection = {
+              ...updatedSelection,
+              rows: CompactSelection.fromSingleSelection(rows),
+              columns: CompactSelection.fromSingleSelection(cols),
+            }
+          }
+        } else {
+          updatedSelection = {
+            ...updatedSelection,
+            rows: CompactSelection.fromSingleSelection(minRow),
+            columns: CompactSelection.fromSingleSelection(minCol),
+          }
+        }
+      }
+
+      if (
+        (columnSelectionChanged || cellSelectionChanged) &&
+        updatedSelection.columns.length >= 0
+      ) {
         // Remove all index columns from the column selection
         // We don't want to allow selection of index columns.
         let cleanedColumns = updatedSelection.columns
@@ -181,6 +232,14 @@ function useSelectionHandler(
         }
       }
 
+      if (
+        (isCellSelectionActivated || isColumnSelectionActivated) &&
+        updatedSelection.columns.length == 0
+      ) {
+        // If no (valid) cells are selected - do not sync.
+        syncSelection = false
+      }
+
       setGridSelection(updatedSelection)
 
       if (syncSelection) {
@@ -191,6 +250,8 @@ function useSelectionHandler(
       gridSelection,
       isRowSelectionActivated,
       isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated,
       syncSelectionState,
       columns,
     ]
@@ -235,6 +296,8 @@ function useSelectionHandler(
     isMultiRowSelectionActivated,
     isColumnSelectionActivated,
     isMultiColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
     isRowSelected,
     isColumnSelected,
     isCellSelected,
