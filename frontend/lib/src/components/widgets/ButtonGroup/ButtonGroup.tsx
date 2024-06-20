@@ -31,11 +31,17 @@ import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
+const materialIconRegexp = /^:material\/(.+):$/
+
 export interface Props {
   disabled: boolean
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+}
+
+function handleFillUpSelection(index: number): number[] {
+  return Array.from({ length: index + 1 }, (_, i) => i + 1)
 }
 
 function handleCheckboxSelection(
@@ -87,21 +93,33 @@ function syncValue(
   widgetMgr.setIntArrayValue(element, selected, source, fragmentId)
 }
 
-function getContent(option: string): ReactElement {
-  if (option.startsWith(":material")) {
-    return (
+function getContent(option: string): {
+  element: ReactElement
+  materialIcon: string
+} {
+  const materialIconMatch = materialIconRegexp.exec(option)
+  if (materialIconMatch === null) {
+    return {
+      element: <StreamlitMarkdown source={option} allowHTML={false} />,
+      materialIcon: "",
+    }
+  }
+
+  return {
+    element: (
       <DynamicIcon
         size="lg"
         iconValue={option}
         // color={theme.colors.bodyText}
       />
-    )
+    ),
+    materialIcon: materialIconMatch[1],
   }
-
-  return <StreamlitMarkdown source={option} allowHTML={false} />
 }
 
 function BaseButtonWithCustomKind(props: any): any {
+  console.log(props)
+
   return (
     <BaseButton
       {...props}
@@ -110,6 +128,7 @@ function BaseButtonWithCustomKind(props: any): any {
       // we have to override kind here with a custom prop, because kind itself will
       // be passed from ButtonGroup and the type is unfortunately narrow
       kind={props._kind}
+      additionalStyle={props.additionalStyle}
     >
       {props.content}
     </BaseButton>
@@ -167,17 +186,30 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         },
       }}
     >
-      {options.map(option => {
+      {options.map((option, index) => {
         const parsedOption = textDecoder.decode(option)
         const kind = BaseButtonKind.ELEMENT_TOOLBAR
-        const content = getContent(parsedOption)
+        const { element, materialIcon } = getContent(parsedOption)
 
+        const additionalStyle: any = {}
+
+        if (ButtonGroupProto.ClickMode.RADIO && materialIcon === "star_rate") {
+          if (selected.length > 0 && index <= selected[0]) {
+            // additionalStyle.color = "yellow"
+            additionalStyle.backgroundColor = theme.colors.lightGray
+          } else {
+            additionalStyle.color = theme.colors.lightGray
+          }
+        } else if (selected.indexOf(index) !== -1) {
+          additionalStyle.backgroundColor = theme.colors.lightGray
+        }
         return (
           <BaseButtonWithCustomKind
             key={parsedOption}
             parsedOption={parsedOption}
             _kind={kind}
-            content={content}
+            content={element}
+            additionalStyle={additionalStyle}
           />
         )
       })}

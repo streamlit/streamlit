@@ -41,7 +41,7 @@ function BaseButton({
   fluidWidth,
   children,
   autoFocus,
-  isSelected,
+  additionalStyle,
 }: Readonly<BaseButtonPropsT>): ReactElement {
   console.log("kind", kind)
   let ComponentType = StyledPrimaryButton
@@ -71,7 +71,7 @@ function BaseButton({
     ComponentType = StyledElementToolbarButton
   }
 
-  console.log("kind", kind, "isSelected", isSelected)
+  console.log("kind", kind, "isSelected", additionalStyle)
   return (
     <ComponentType
       kind={kind}
@@ -81,7 +81,7 @@ function BaseButton({
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
       data-testid={`baseButton-${kind}`}
-      isSelected={isSelected || false}
+      additionalStyle={additionalStyle || {}}
     >
       {children}
     </ComponentType>

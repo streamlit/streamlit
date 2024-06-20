@@ -50,8 +50,8 @@ export interface BaseButtonProps {
   fluidWidth?: boolean | number
   children: ReactNode
   autoFocus?: boolean
-  // Indicates that the button is selected
-  isSelected?: boolean
+  // Additional styles for the button
+  additionalStyle?: React.CSSProperties
 }
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
@@ -340,11 +340,9 @@ export const StyledTooltipMobile = styled.div(({ theme }) => ({
 
 export const StyledElementToolbarButton = styled(
   StyledBaseButton
-)<RequiredBaseButtonProps>(({ theme, isSelected }) => {
+)<RequiredBaseButtonProps>(({ theme, additionalStyle }) => {
   return {
-    backgroundColor: isSelected
-      ? theme.colors.lightGray
-      : theme.colors.transparent,
+    backgroundColor: theme.colors.transparent,
     border: "none",
     padding: theme.spacing.xs,
     fontSize: theme.fontSizes.twoSm,
@@ -376,5 +374,7 @@ export const StyledElementToolbarButton = styled(
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
     },
+
+    ...additionalStyle,
   }
 })
