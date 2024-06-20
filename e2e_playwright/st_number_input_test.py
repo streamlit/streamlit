@@ -16,6 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_number_input_widget_display(
@@ -41,6 +42,10 @@ def test_number_input_widget_display(
     assert_snapshot(
         number_input_elements.nth(11), name="st_number_input-value_none_min_1"
     )
+
+
+def test_help_tooltip_works(app: Page):
+    expect_help_tooltip(app, app.get_by_test_id("stNumberInput").nth(0), "Help text")
 
 
 def test_number_input_has_correct_default_values(app: Page):

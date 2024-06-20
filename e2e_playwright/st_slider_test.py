@@ -168,4 +168,5 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     # Move slider once to right
     app.keyboard.press("ArrowRight")
     wait_for_app_run(app)
+    expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
     assert_snapshot(slider, name="st_slider-float_formatting")

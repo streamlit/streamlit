@@ -610,6 +610,9 @@ def assert_snapshot(
 
 def wait_for_app_run(page: Page, wait_delay: int = 100):
     """Wait for the given page to finish running."""
+    # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+    page.wait_for_timeout(155)
+
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )

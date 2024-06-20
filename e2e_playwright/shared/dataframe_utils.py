@@ -36,7 +36,7 @@ HEADER_ROW_INDEX: Final = 0
 def calc_middle_cell_position(
     row_pos: int,
     col_pos: int,
-    column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
+    column_width: Literal["small", "medium", "large"] = "small",
     has_row_marker_col: bool = False,
 ) -> tuple[int, int]:
     """Calculate the middle position of a cell in the dataframe.
@@ -90,7 +90,7 @@ def click_on_cell(
     dataframe_element: Locator,
     row_pos: int,
     col_pos: int,
-    column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
+    column_width: Literal["small", "medium", "large"] = "small",
     has_row_marker_col: bool = False,
     double_click: bool = False,
 ) -> None:
@@ -132,7 +132,7 @@ def click_on_cell(
 def select_row(
     dataframe_element: Locator,
     row_pos: int,
-    column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
+    column_width: Literal["small", "medium", "large"] = "small",
 ) -> None:
     """Select the specified row in the dataframe.
 
@@ -157,7 +157,7 @@ def select_row(
 def sort_column(
     dataframe_element: Locator,
     col_pos: int,
-    column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
+    column_width: Literal["small", "medium", "large"] = "small",
     has_row_marker_col: bool = False,
 ) -> None:
     """Sort the specified column in the dataframe.
@@ -191,7 +191,7 @@ def sort_column(
 def select_column(
     dataframe_element: Locator,
     col_pos: int,
-    column_width: Literal["small"] | Literal["medium"] | Literal["large"] = "small",
+    column_width: Literal["small", "medium", "large"] = "small",
     has_row_marker_col: bool = False,
 ) -> None:
     """Select the specified column in the dataframe.
