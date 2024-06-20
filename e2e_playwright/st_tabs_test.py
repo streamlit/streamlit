@@ -23,7 +23,7 @@ def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFu
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
-    assert_snapshot(st_tabs.nth(2), name="st_tabs-date_input")
+    assert_snapshot(st_tabs.nth(2), name="st_tabs-many")
 
 
 def test_displays_correctly_in_sidebar(app: Page):
