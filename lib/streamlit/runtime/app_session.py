@@ -479,7 +479,7 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
@@ -509,7 +509,7 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
@@ -542,7 +542,7 @@ class AppSession:
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
 
-        fragment_ids_this_run : set[str] | None
+        fragment_ids_this_run : list[str] | None
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
@@ -679,7 +679,7 @@ class AppSession:
     def _create_new_session_message(
         self,
         page_script_hash: str,
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""

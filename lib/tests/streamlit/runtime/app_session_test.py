@@ -761,7 +761,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            fragment_ids_this_run={"my_fragment_id"},
+            fragment_ids_this_run=["my_fragment_id"],
         )
 
         # Yield to let the AppSession's callbacks run.

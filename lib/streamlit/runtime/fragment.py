@@ -169,7 +169,7 @@ def _fragment(
             ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
-            if ctx.fragment_ids_this_run:
+            if ctx.script_requests and ctx.script_requests.fragment_id_queue:
                 # This script run is a run of one or more fragments. We restore the
                 # state of ctx.cursors and dg_stack to the snapshots we took when this
                 # fragment was declared.
