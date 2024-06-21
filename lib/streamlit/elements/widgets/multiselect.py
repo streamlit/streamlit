@@ -14,61 +14,35 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
-from streamlit.elements.lib.utils import (
-    get_label_visibility_proto_value,
-    maybe_coerce_enum_sequence,
-)
 from streamlit.elements.widgets.multiselect_utils import (
-    MultiSelectSerde,
-    check_and_convert_to_indices,
-    get_default_count,
+    build_proto,
+    check_multiselect_policies,
+    register_widget_and_enqueue,
+    transform_options,
 )
-from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import (
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-    register_widget,
-)
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
     OptionSequence,
     T,
-    check_python_comparable,
-    ensure_indexable,
     maybe_raise_label_warnings,
     to_key,
 )
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-
-def _get_over_max_options_message(current_selections: int, max_selections: int):
-    curr_selections_noun = "option" if current_selections == 1 else "options"
-    max_selections_noun = "option" if max_selections == 1 else "options"
-    return f"""
-Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
-is set to {max_selections}. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most {max_selections} {max_selections_noun}.
-"""
+    from streamlit.runtime.state import (
+        WidgetArgs,
+        WidgetCallback,
+        WidgetKwargs,
+    )
 
 
 class MultiSelectMixin:
@@ -111,14 +85,15 @@ class MultiSelectMixin:
               at https://katex.org/docs/supported.html.
 
             * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
+              ``:color[text to be colored]`` and
+              ``:color-background[text to be colored]``, respectively.
+              ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
               For example, you can use ``:orange[your text here]`` or
               ``:blue-background[your text here]``.
 
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
@@ -152,7 +127,8 @@ class MultiSelectMixin:
         max_selections : int
             The max selections that can be selected at a time.
         placeholder : str
-            A string to display when no options are selected. Defaults to 'Choose an option'.
+            A string to display when no options are selected.
+            Defaults to 'Choose an option'.
         disabled : bool
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
@@ -222,23 +198,21 @@ class MultiSelectMixin:
     ) -> list[T]:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=default, key=key)
+        check_multiselect_policies(self.dg, key, on_change, default)
+
+        widget_name = "multiselect"
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
-        check_python_comparable(opt)
+        indexable_options, formatted_options, default_values = transform_options(
+            options, default, format_func
+        )
 
-        indices = check_and_convert_to_indices(opt, default)
-
-        id = compute_widget_id(
-            "multiselect",
+        widget_id = compute_widget_id(
+            widget_name,
             user_key=key,
             label=label,
-            options=[str(format_func(option)) for option in opt],
-            default=indices,
+            options=formatted_options,
+            default=default_values,
             key=key,
             help=help,
             max_selections=max_selections,
@@ -247,52 +221,35 @@ class MultiSelectMixin:
             page=ctx.active_script_hash if ctx else None,
         )
 
-        default_value: list[int] = [] if indices is None else indices
-
-        multiselect_proto = MultiSelectProto()
-        multiselect_proto.id = id
-        multiselect_proto.label = label
-        multiselect_proto.default[:] = default_value
-        multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
-        multiselect_proto.form_id = current_form_id(self.dg)
-        multiselect_proto.max_selections = max_selections or 0
-        multiselect_proto.placeholder = placeholder
-        multiselect_proto.disabled = disabled
-        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
+        multiselect_proto = build_proto(
+            MultiSelectProto,
+            widget_id,
+            formatted_options,
+            default_values,
+            disabled,
+            current_form_id(self.dg),
+            label=label,
+            label_visibility=label_visibility,
+            max_selections=max_selections or 0,
+            placeholder=placeholder,
+            help=help,
         )
 
-        if help is not None:
-            multiselect_proto.help = dedent(help)
-
-        serde = MultiSelectSerde(opt, default_value)
-
-        widget_state = register_widget(
-            "multiselect",
+        return register_widget_and_enqueue(
+            self.dg,
+            widget_name,
             multiselect_proto,
-            user_key=key,
-            on_change_handler=on_change,
-            args=args,
-            kwargs=kwargs,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            ctx=ctx,
+            widget_id,
+            formatted_options,
+            indexable_options,
+            default_values,
+            ctx,
+            on_change,
+            args,
+            kwargs,
+            max_selections=max_selections,
+            app_testing_value=format_func,
         )
-        default_count = get_default_count(widget_state.value)
-        if max_selections and default_count > max_selections:
-            raise StreamlitAPIException(
-                _get_over_max_options_message(default_count, max_selections)
-            )
-        widget_state = maybe_coerce_enum_sequence(widget_state, options, opt)
-
-        if widget_state.value_changed:
-            multiselect_proto.value[:] = serde.serialize(widget_state.value)
-            multiselect_proto.set_value = True
-
-        if ctx:
-            save_for_app_testing(ctx, id, format_func)
-        self.dg._enqueue("multiselect", multiselect_proto)
-        return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:

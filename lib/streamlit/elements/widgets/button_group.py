@@ -217,7 +217,7 @@ class ButtonGroupMixin:
             default_values,
             disabled,
             current_form_id(self.dg),
-            mapped_click_mode,
+            click_mode=mapped_click_mode,
         )
 
         # missing proto fields from MultiSelect:
