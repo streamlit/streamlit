@@ -439,9 +439,9 @@ class DeltaGenerator(
         ctx = get_script_run_ctx()
         if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
             raise StreamlitAPIException(
-                "Calling `st.sidebar` in a function wrapped with `st.experimental_fragment` "
-                "is not supported. To write elements to the sidebar with a fragment, "
-                "call your fragment function inside a `with st.sidebar` context manager."
+                "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
+                "supported. To write elements to the sidebar with a fragment, call your "
+                "fragment function inside a `with st.sidebar` context manager."
             )
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
