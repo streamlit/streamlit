@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, cast
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Sequence, cast
 
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
@@ -29,8 +30,16 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import (
     register_widget,
 )
-from streamlit.runtime.state.common import T, compute_widget_id
-from streamlit.type_util import Key, is_type, to_key
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.type_util import (
+    Key,
+    OptionSequence,
+    T,
+    check_python_comparable,
+    ensure_indexable,
+    is_type,
+    to_key,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -43,7 +52,7 @@ if TYPE_CHECKING:
 
 def _check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any | None
-) -> list[int] | None:
+) -> list[int]:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
         return None
@@ -74,13 +83,20 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-class ButtonGroupSerde:
-    def serialize(self, value: list[int] | None) -> list[int]:
-        return _check_and_convert_to_indices(value) if value is not None else []
+@dataclass
+class ButtonGroupSerde(Generic[T]):
+    options: Sequence[T]
 
-    def deserialize(self, ui_value: list[int] | None, widget_id: str = "") -> list[int]:
+    def serialize(self, value: list[T] | None) -> list[int]:
+        return (
+            _check_and_convert_to_indices(self.options, value)
+            if value is not None
+            else []
+        )
+
+    def deserialize(self, ui_value: list[int] | None, widget_id: str = "") -> list[T]:
         # print(f"ui value: {ui_value}")
-        return ui_value if ui_value is not None else []
+        return [self.options[val] for val in ui_value] if ui_value is not None else []
 
 
 class ButtonGroupMixin:
@@ -94,7 +110,7 @@ class ButtonGroupMixin:
         click_mode: Literal["button", "checkbox", "radio"] = "button",
         disabled: bool = False,
         use_container_width: bool = False,
-        format_func: Callable[[str], str] = lambda x: x,
+        format_func: Callable[[str], str] = lambda x: str(x),
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -104,7 +120,7 @@ class ButtonGroupMixin:
             if default is not None
             else []
         )
-        selected_indices = self._button_group(
+        return self._button_group(
             options,
             key=key,
             default=default_values,
@@ -117,16 +133,16 @@ class ButtonGroupMixin:
             kwargs=kwargs,
         )
 
-        current_values: list[int] = (
-            selected_indices if selected_indices is not None else default_values
-        )
+        # current_values: list[str] = (
+        #     selected_indices if selected_indices is not None else default_values
+        # )
 
-        if len(current_values) == 0:
-            return None
-        if len(current_values) == 1:
-            return options[current_values[0]]
+        # if len(current_values) == 0:
+        #     return None
+        # if len(current_values) == 1:
+        #     return options[current_values[0]]
 
-        return [options[val] for val in current_values]
+        # return [options[val] for val in current_values]
 
     @gather_metrics("feedback")
     def feedback(
@@ -139,46 +155,45 @@ class ButtonGroupMixin:
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> float | None:
-        def format_func_thumbs(option: str):
-            if option == "thumbs_up":
+        def format_func_thumbs(option: float):
+            if abs(option - 1.0) < 1e-6:
                 return ":material/thumb_up:"
-            if option == "thumbs_down":
+            if abs(option - 0.0) < 1e-6:
                 return ":material/thumb_down:"
             return ""
 
-        def format_func_smiles(option: str):
-            if option == "sad":
+        def format_func_smiles(option: float):
+            if abs(option - 0.0) < 1e-6:
                 return ":material/sentiment_sad:"
-            if option == "disappointed":
+            if abs(option - 0.25) < 1e-6:
                 return ":material/sentiment_dissatisfied:"
-            if option == "neutral":
+            if abs(option - 0.5) < 1e-6:
                 return ":material/sentiment_neutral:"
-            if option == "happy":
+            if abs(option - 0.75) < 1e-6:
                 return ":material/sentiment_satisfied:"
-            if option == "very_happy":
+            if abs(option - 1.0) < 1e-6:
                 return ":material/sentiment_very_satisfied:"
 
             return ""
 
-        actual_options = ["thumbs_up", "thumbs_down"]
-        if options == "smiles":
-            actual_options = ["sad", "disappointed", "neutral", "happy", "very_happy"]
-        elif options == "stars":
-            actual_options = [":material/star_rate:"] * 5
+        def format_func_stars(option: float):
+            return ":material/star_rate:"
 
-        options_length = len(actual_options)
-        step_length = 1 / (options_length - 1) if options_length > 1 else 1
-        index_to_score_mapping = [i * step_length for i in range(options_length)]
+        actual_options = [1.0, 0.0]
+        if options in ["smiles", "stars"]:
+            actual_options = [0, 0.25, 0.5, 0.75, 1]
+
         format_func = None
         if options == "thumbs":
             format_func = format_func_thumbs
             # thumbs_up is 1, thumbs_down is 0; but we want to show thumbs_up first,
             # so its index is 0
-            index_to_score_mapping = [1, 0]
         elif options == "smiles":
             format_func = format_func_smiles
             # generates steps from 0 to 1 like [0, 0.25, 0.5, 0.75, 1]
-        elif options != "stars":
+        elif options == "stars":
+            format_func = format_func_stars
+        else:
             raise StreamlitAPIException(
                 "The options argument to st.feedback must be one of "
                 "['thumbs', 'smiles', 'stars']. "
@@ -200,39 +215,32 @@ class ButtonGroupMixin:
             new_kwargs = dict(kwargs, _st_value=current_value)
             on_click(*args, **new_kwargs)
 
-        def index_mapper(value: list[int]) -> float | None:
-            # print(value, index_to_score_mapping[value[0]]) if len(value) > 0 else None
-            return index_to_score_mapping[value[0]] if len(value) > 0 else None
-
-        mapped_value = self._button_group(
+        sentiment = self._button_group(
             actual_options,
             key=key,
             click_mode="radio",
             disabled=disabled,
-            format_func=format_func if format_func is not None else lambda x: x,
+            format_func=format_func if format_func is not None else lambda x: str(x),
             on_click=_on_click if on_click else None,
             args=args,
             kwargs=kwargs,
-            index_mapper=index_mapper,
         )
-
-        return cast(float, mapped_value) if mapped_value is not None else None
+        return sentiment[0] if len(sentiment) > 0 else None
 
     def _button_group(
         self,
-        options: str | list[str],
+        options: OptionSequence[T],
         *,
         key: Key | None = None,
         default: list[int] | None = None,
         click_mode: Literal["button", "checkbox", "radio"] = "button",
         disabled: bool = False,
         use_container_width: bool = False,
-        format_func: Callable[[str], str] = lambda x: x,
+        format_func: Callable[[T], str] = lambda x: str(x),
         on_click: WidgetCallback | None = None,
         args: Any | None = None,
         kwargs: Any | None = None,
-        index_mapper: Callable[[list[int]], T] | None = None,
-    ) -> list[int] | T:
+    ) -> list[T]:
         if default is None:
             default = []
         key = to_key(key)
@@ -246,9 +254,9 @@ class ButtonGroupMixin:
         ctx = get_script_run_ctx()
 
         # TODO: convert default to indices
-
-        options = [options] if isinstance(options, str) else options
-        formatted_options = [format_func(o).encode("utf-8") for o in options]
+        indexable_options = ensure_indexable(options)
+        check_python_comparable(indexable_options)
+        formatted_options = [format_func(o).encode("utf-8") for o in indexable_options]
 
         widget_id = compute_widget_id(
             widget_name,
@@ -274,7 +282,7 @@ class ButtonGroupMixin:
             button_group_proto.click_mode = ButtonGroupProto.CHECKBOX
 
         button_group_proto.use_container_width = use_container_width
-        serde = ButtonGroupSerde()
+        serde = ButtonGroupSerde(indexable_options)
         widget_state = register_widget(
             widget_name,
             button_group_proto,
@@ -292,10 +300,12 @@ class ButtonGroupMixin:
             button_group_proto.value[:] = serde.serialize(value)
             button_group_proto.set_value = True
 
-        # TODO: add app_testing call?
+        if ctx:
+            save_for_app_testing(ctx, widget_id, format_func)
+
         self.dg._enqueue(widget_name, button_group_proto)
         # print(f"widget state: {widget_state}")
-        return value if index_mapper is None else index_mapper(value)
+        return value
 
     @property
     def dg(self) -> DeltaGenerator:
