@@ -25,7 +25,6 @@ from cachetools import TTLCache
 from typing_extensions import TypeAlias
 
 import streamlit as st
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -198,26 +197,18 @@ class CacheResourceAPI:
     and st.cache_resource.clear().
     """
 
-    def __init__(
-        self, decorator_metric_name: str, deprecation_warning: str | None = None
-    ):
+    def __init__(self, decorator_metric_name: str):
         """Create a CacheResourceAPI instance.
 
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_singleton` is
-            deprecated, but we're still supporting it and tracking its usage separately
-            from `@st.cache_resource`.
-
-        deprecation_warning
-            An optional deprecation warning to show when the API is accessed.
+            The metric name to record for decorator usage.
         """
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
-        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -422,8 +413,6 @@ class CacheResourceAPI:
         ... def get_person_name(person: Person):
         ...     return person.name
         """
-        self._maybe_show_deprecation_warning()
-
         if experimental_allow_widgets:
             show_widget_replay_deprecation("cache_resource")
 
@@ -457,15 +446,7 @@ class CacheResourceAPI:
     @gather_metrics("clear_resource_caches")
     def clear(self) -> None:
         """Clear all cache_resource caches."""
-        self._maybe_show_deprecation_warning()
         _resource_caches.clear_all()
-
-    def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_singleton` name,
-        show a deprecation warning.
-        """
-        if self._deprecation_warning is not None:
-            show_deprecation_warning(self._deprecation_warning)
 
 
 class ResourceCache(Cache):
