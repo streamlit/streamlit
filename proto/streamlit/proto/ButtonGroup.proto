@@ -21,9 +21,9 @@ option java_outer_classname = "ButtonGroupProto";
 
 message ButtonGroup {
     enum ClickMode {
-        BUTTON = 0;
-        RADIO = 1;
-        CHECKBOX = 2;
+        RADIO = 0;
+        CHECKBOX = 1;
+        // BUTTON = 2;
     }
 
   string id = 1;

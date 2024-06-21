@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
@@ -28,6 +27,11 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     maybe_coerce_enum_sequence,
+)
+from streamlit.elements.widgets.multiselect_utils import (
+    MultiSelectSerde,
+    check_and_convert_to_indices,
+    get_default_count,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -47,67 +51,12 @@ from streamlit.type_util import (
     T,
     check_python_comparable,
     ensure_indexable,
-    is_iterable,
-    is_type,
     maybe_raise_label_warnings,
     to_key,
 )
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-
-@overload
-def _check_and_convert_to_indices(  # type: ignore[misc]
-    opt: Sequence[Any], default_values: None
-) -> list[int] | None: ...
-
-
-@overload
-def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Sequence[Any] | Any
-) -> list[int]: ...
-
-
-def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Sequence[Any] | Any | None
-) -> list[int] | None:
-    """Perform validation checks and return indices based on the default values."""
-    if default_values is None and None not in opt:
-        return None
-
-    if not isinstance(default_values, list):
-        # This if is done before others because calling if not x (done
-        # right below) when x is of type pd.Series() or np.array() throws a
-        # ValueError exception.
-        if is_type(default_values, "numpy.ndarray") or is_type(
-            default_values, "pandas.core.series.Series"
-        ):
-            default_values = list(cast(Sequence[Any], default_values))
-        elif (
-            isinstance(default_values, (tuple, set))
-            or default_values
-            and default_values not in opt
-        ):
-            default_values = list(default_values)
-        else:
-            default_values = [default_values]
-    for value in default_values:
-        if value not in opt:
-            raise StreamlitAPIException(
-                f"The default value '{value}' is not part of the options. "
-                "Please make sure that every default values also exists in the options."
-            )
-
-    return [opt.index(value) for value in default_values]
-
-
-def _get_default_count(default: Sequence[Any] | Any | None) -> int:
-    if default is None:
-        return 0
-    if not is_iterable(default):
-        return 1
-    return len(cast(Sequence[Any], default))
 
 
 def _get_over_max_options_message(current_selections: int, max_selections: int):
@@ -120,25 +69,6 @@ or you manipulated the widget's state through `st.session_state`. Note that
 the latter can happen before the line indicated in the traceback.
 Please select at most {max_selections} {max_selections_noun}.
 """
-
-
-@dataclass
-class MultiSelectSerde(Generic[T]):
-    options: Sequence[T]
-    default_value: list[int]
-
-    def serialize(self, value: list[T]) -> list[int]:
-        return _check_and_convert_to_indices(self.options, value)
-
-    def deserialize(
-        self,
-        ui_value: list[int] | None,
-        widget_id: str = "",
-    ) -> list[T]:
-        current_value: list[int] = (
-            ui_value if ui_value is not None else self.default_value
-        )
-        return [self.options[i] for i in current_value]
 
 
 class MultiSelectMixin:
@@ -301,7 +231,7 @@ class MultiSelectMixin:
         opt = ensure_indexable(options)
         check_python_comparable(opt)
 
-        indices = _check_and_convert_to_indices(opt, default)
+        indices = check_and_convert_to_indices(opt, default)
 
         id = compute_widget_id(
             "multiselect",
@@ -348,7 +278,7 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        default_count = _get_default_count(widget_state.value)
+        default_count = get_default_count(widget_state.value)
         if max_selections and default_count > max_selections:
             raise StreamlitAPIException(
                 _get_over_max_options_message(default_count, max_selections)
