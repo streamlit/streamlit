@@ -957,7 +957,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
-        stack: bool | ChartStackType | None = True,
+        stack: bool | ChartStackType = True,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,

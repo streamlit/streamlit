@@ -691,8 +691,7 @@ def _get_axis_encodings(
         )
 
     # Handle stacking for bar charts
-    if stack is not None:
-        _set_stack_encoding(chart_type, stack, x_encoding, y_encoding)
+    _set_stack_encoding(chart_type, stack, x_encoding, y_encoding)
 
     return x_encoding, y_encoding
 
@@ -799,16 +798,17 @@ def _set_stack_encoding(
     x_encoding: alt.X,
     y_encoding: alt.Y,
 ) -> None:
-    stack_encoding: ChartStackType | bool
-    if stack == "normalize" or stack == "center" or stack is True:
-        stack_encoding = stack
+    # Stack only relevant for bar charts; None for other chart types
+    if stack is None:
+        return
+    # Our layered option maps to vega's stack=False option
     elif stack == "layered":
-        stack_encoding = False
+        stack = False
 
     if chart_type == ChartType.VERTICAL_BAR:
-        y_encoding["stack"] = stack_encoding
+        y_encoding["stack"] = stack
     elif chart_type == ChartType.HORIZONTAL_BAR:
-        x_encoding["stack"] = stack_encoding
+        x_encoding["stack"] = stack
 
 
 def _get_color_encoding(

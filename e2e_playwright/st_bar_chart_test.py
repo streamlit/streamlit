@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-TOTAL_BAR_CHARTS = 13
+TOTAL_BAR_CHARTS = 18
 
 
 def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):

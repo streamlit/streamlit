@@ -15,6 +15,7 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
+from vega_datasets import data as vega_data
 
 import streamlit as st
 
@@ -71,3 +72,11 @@ st.bar_chart(color_df, x="a", y="b", color="e")
 st.bar_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
 st.bar_chart(df, horizontal=True)
 st.bar_chart(df, horizontal=True, x_label="X Label", y_label="Y Label")
+
+# Additional tests for stacking options
+source = vega_data.barley()
+st.bar_chart(source, x="variety", y="yield", color="site", stack=True)
+st.bar_chart(source, x="variety", y="yield", color="site", stack=False)
+st.bar_chart(source, x="variety", y="yield", color="site", stack="normalize")
+st.bar_chart(source, x="variety", y="yield", color="site", stack="center")
+st.bar_chart(source, x="variety", y="yield", color="site", stack="layered")
