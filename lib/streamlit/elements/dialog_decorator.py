@@ -115,7 +115,7 @@ def dialog_decorator(
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
     dialog function.
 
-    ``st.experimental_dialog`` inherits behavior from |st.experimental_fragment|_.
+    ``st.experimental_dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
     Streamlit only reruns the dialog function instead of the full script.
 
@@ -133,8 +133,8 @@ def dialog_decorator(
         fragments, and fragments can't contain dialogs. Using dialogs in widget
         callback functions is not supported.
 
-    .. |st.experimental_fragment| replace:: ``st.experimental_fragment``
-    .. _st.experimental_fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
+    .. |st.fragment| replace:: ``st.fragment``
+    .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
 
     Parameters
     ----------
