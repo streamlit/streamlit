@@ -473,7 +473,7 @@ class ScriptRunner:
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
-                fragment_ids_this_run=fragment_ids_this_run,
+                fragment_ids_this_run=rerun_data.fragment_id_queue,
                 pages=self._pages_manager.get_pages(),
                 clear_forward_msg_queue=clear_forward_msg_queue,
             )
