@@ -17,7 +17,7 @@ from uuid import uuid4
 import streamlit as st
 
 
-@st.experimental_fragment(run_every=1.0)
+@st.fragment(run_every=1.0)
 def my_auto_updating_fragment():
     st.write(f"uuid in fragment: {uuid4()}")
 

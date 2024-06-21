@@ -17,7 +17,7 @@ from uuid import uuid4
 import streamlit as st
 
 
-@st.experimental_fragment
+@st.fragment
 def my_fragment(n):
     with st.container(border=True):
         st.button("rerun this fragment", key=n)

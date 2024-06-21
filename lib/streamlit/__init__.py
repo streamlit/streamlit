@@ -81,7 +81,10 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
-from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.fragment import (
+    experimental_fragment as _experimental_fragment,
+    fragment as _fragment,
+)
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import (
@@ -233,9 +236,17 @@ column_config = _column_config
 # Connection
 connection = _connection
 
+# Fragment and dialog
+fragment = _fragment
+
 # Experimental APIs
 experimental_dialog = _dialog_decorator
-experimental_fragment = _fragment
+experimental_fragment = _deprecate_func_name(
+    _experimental_fragment,
+    "experimental_fragment",
+    "2025-01-01",
+    name_override="fragment",
+)
 experimental_user = _UserInfoProxy()
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."

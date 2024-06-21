@@ -26,7 +26,7 @@ import streamlit as st
 # return values. We also don't test the camera_input, data_editor, and file_uploader
 # widgets as well as custom components here due to the disproportionate amount of work
 # required to do so.
-@st.experimental_fragment
+@st.fragment
 def my_big_fragment():
     st.button("a button")
     st.download_button("a download button", b"")
