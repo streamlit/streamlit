@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 
 import { useTheme } from "@emotion/react"
 
@@ -38,10 +38,6 @@ export interface Props {
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-}
-
-function handleFillUpSelection(index: number): number[] {
-  return Array.from({ length: index + 1 }, (_, i) => i + 1)
 }
 
 function handleCheckboxSelection(
@@ -81,40 +77,30 @@ function syncValue(
 ): void {
   const source = { fromUi: true }
   if (mode === ButtonGroupProto.ClickMode.BUTTON) {
-    widgetMgr.setStringTriggerValue(
-      element,
-      JSON.stringify(selected),
-      source,
-      fragmentId
-    )
+    widgetMgr.setIntArrayValue(element, selected, source, fragmentId)
     return
   }
-
+  console.log("selected", selected)
   widgetMgr.setIntArrayValue(element, selected, source, fragmentId)
 }
 
-function getContent(option: string): {
-  element: ReactElement
-  materialIcon: string
-} {
+function getMaterialIcon(option: string): string | undefined {
   const materialIconMatch = materialIconRegexp.exec(option)
-  if (materialIconMatch === null) {
-    return {
-      element: <StreamlitMarkdown source={option} allowHTML={false} />,
-      materialIcon: "",
-    }
-  }
+  return materialIconMatch ? materialIconMatch[1] : undefined
+}
 
-  return {
-    element: (
+function getContent(option: string, isMaterialIcon: boolean): ReactElement {
+  if (isMaterialIcon) {
+    return (
       <DynamicIcon
         size="lg"
         iconValue={option}
         // color={theme.colors.bodyText}
       />
-    ),
-    materialIcon: materialIconMatch[1],
+    )
   }
+
+  return <StreamlitMarkdown source={option} allowHTML={false} />
 }
 
 function BaseButtonWithCustomKind(props: any): any {
@@ -135,20 +121,33 @@ function BaseButtonWithCustomKind(props: any): any {
   )
 }
 
+const textDecoder = new TextDecoder("utf-8")
+
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
-  const { clickMode, default: defaultValues, options } = element
+  const {
+    clickMode,
+    default: defaultValues,
+    options,
+    setValue,
+    value,
+  } = element
   console.log(defaultValues)
   const theme: EmotionTheme = useTheme()
 
   const [selected, setSelected] = useState<number[]>(defaultValues || [])
 
-  const textDecoder = new TextDecoder("utf-8")
+  useEffect(() => {
+    if (setValue) {
+      setSelected(value)
+    }
+  }, [value, setValue])
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
     index: number
   ): void => {
+    console.log("onClick", index)
     const newSelected = handleSelection(clickMode, index, selected)
     setSelected(newSelected)
     syncValue(clickMode, newSelected, element, widgetMgr, fragmentId)
@@ -187,25 +186,27 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       }}
     >
       {options.map((option, index) => {
-        const parsedOption = textDecoder.decode(option)
+        let parsedOption = textDecoder.decode(option)
+        const key = parsedOption
         const kind = BaseButtonKind.ELEMENT_TOOLBAR
-        const { element, materialIcon } = getContent(parsedOption)
-
+        let matchedIconName = getMaterialIcon(parsedOption)
         const additionalStyle: any = {}
-
-        if (ButtonGroupProto.ClickMode.RADIO && materialIcon === "star_rate") {
+        if (
+          ButtonGroupProto.ClickMode.RADIO &&
+          matchedIconName === "star_rate"
+        ) {
           if (selected.length > 0 && index <= selected[0]) {
-            // additionalStyle.color = "yellow"
-            additionalStyle.backgroundColor = theme.colors.lightGray
-          } else {
-            additionalStyle.color = theme.colors.lightGray
+            parsedOption = "⭐"
+            matchedIconName = undefined
           }
         } else if (selected.indexOf(index) !== -1) {
           additionalStyle.backgroundColor = theme.colors.lightGray
         }
+
+        const element = getContent(parsedOption, !!matchedIconName)
         return (
           <BaseButtonWithCustomKind
-            key={parsedOption}
+            key={key}
             parsedOption={parsedOption}
             _kind={kind}
             content={element}

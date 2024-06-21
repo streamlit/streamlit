@@ -95,7 +95,7 @@ def _check_and_convert_to_indices(
     for value in default_values:
         if value not in opt:
             raise StreamlitAPIException(
-                f"The default value '{value}' is part of the options. "
+                f"The default value '{value}' is not part of the options. "
                 "Please make sure that every default values also exists in the options."
             )
 

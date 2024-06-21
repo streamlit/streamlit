@@ -34,4 +34,8 @@ message ButtonGroup {
   ClickMode click_mode = 5;
   bool use_container_width = 6;
   string form_id = 7;
+
+  // value passed by the backend
+  repeated uint32 value = 8;
+  bool set_value = 9;
 }
