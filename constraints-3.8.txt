@@ -34,7 +34,7 @@ greenlet==3.0.3
 hypothesis==6.103.2
 identify==2.5.36
 idna==3.7
-importlib_metadata==7.1.0
+importlib_metadata==7.2.0
 importlib_resources==6.4.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
@@ -82,7 +82,7 @@ pre-commit==3.5.0
 protobuf==5.27.1
 pyarrow==16.1.0
 pycparser==2.22
-pydantic==1.10.16
+pydantic==1.10.17
 pydeck==0.9.1
 pydot==2.0.0
 pyee==11.1.0
