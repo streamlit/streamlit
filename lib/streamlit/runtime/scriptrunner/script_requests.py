@@ -83,6 +83,13 @@ class ScriptRequests:
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
 
+    @property
+    def fragment_id_queue(self) -> list[str]:
+        if not self._rerun_data:
+            return []
+
+        return self._rerun_data.fragment_id_queue
+
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
         can't be used anymore. STOP requests succeed unconditionally.
