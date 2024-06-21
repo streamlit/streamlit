@@ -34,7 +34,7 @@ st.line_chart(app_df, x="day", y=y)
 """
 
 
-@st.experimental_fragment
+@st.fragment
 def parse_and_exec(response):
     code_match = re.search(r"```python\n(.*)\n```", response, re.DOTALL)
     if code_match:

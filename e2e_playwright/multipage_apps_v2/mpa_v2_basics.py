@@ -56,7 +56,7 @@ def page_9():
 def page_10():
     st.header("Page 10")
 
-    @st.experimental_fragment
+    @st.fragment
     def get_input():
         st.text_input("Some input")
         if st.button("Submit"):
