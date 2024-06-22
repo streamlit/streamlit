@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 from streamlit.elements.form import current_form_id
@@ -27,7 +28,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import (
+    WidgetDeserializer,
+    WidgetSerializer,
+    compute_widget_id,
+)
 from streamlit.type_util import (
     Key,
     OptionSequence,
@@ -42,6 +47,40 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+
+
+class SentimentScores(Enum):
+    SAD = 0.0
+    DISSAPOINTED = 0.25
+    NEUTRAL = 0.5
+    HAPPY = 0.75
+    VERY_HAPPY = 1.0
+
+
+# V = TypeVar("V")
+
+
+# class FeedbackSerde:
+#     def __init__(self, options) -> None:
+#         self.multiselect_serde: MultiSelectSerde[float | str] = MultiSelectSerde(
+#             options
+#         )
+
+#     def serialize(self, value: str) -> int:
+#         if isinstance(value, float):
+#             value = str(value)
+
+#         serialized = self.multiselect_serde.serialize([value])
+#         return serialized[0] if len(serialized) > 0 else -1
+
+#     def deserialize(self, ui_value: int, widget_id: str = "") -> str:
+#         _ui_value = [ui_value] if ui_value is not None else []
+#         deserialized = self.multiselect_serde.deserialize(_ui_value, widget_id)
+#         return str(deserialized[0]) if len(deserialized) > 0 else str(-1)
+
+
+def compare_float(a: float, b: float) -> bool:
+    return abs(a - b) < 1e-9
 
 
 class ButtonGroupMixin:
@@ -98,36 +137,45 @@ class ButtonGroupMixin:
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> float | None:
-        def format_func_thumbs(option: str) -> bytes:
+        def format_func_thumbs(option: float) -> bytes:
             mapped_option = ""
-            if option == "thumbs_up":
+            if compare_float(option, 1.0):
                 mapped_option = ":material/thumb_up:"
-            if option == "thumbs_down":
+            elif compare_float(option, 0.0):
                 mapped_option = ":material/thumb_down:"
 
             return mapped_option.encode("utf-8")
 
-        def format_func_smiles(option: str) -> bytes:
+        def format_func_smiles(option: float) -> bytes:
             mapped_option = ""
-            if option == "sad":
+            if compare_float(option, 0.0):
                 mapped_option = ":material/sentiment_sad:"
-            if option == "disappointed":
+            if compare_float(option, 0.25):
                 mapped_option = ":material/sentiment_dissatisfied:"
-            if option == "neutral":
+            if compare_float(option, 0.5):
                 mapped_option = ":material/sentiment_neutral:"
-            if option == "happy":
+            if compare_float(option, 0.75):
                 mapped_option = ":material/sentiment_satisfied:"
-            if option == "very_happy":
+            if compare_float(option, 1.0):
                 mapped_option = ":material/sentiment_very_satisfied:"
 
             return mapped_option.encode("utf-8")
 
-        def format_func_stars(option: str) -> bytes:
+        def format_func_stars(option: float) -> bytes:
             return b":material/star_rate:"
 
-        actual_options = ["thumbs_up", "thumbs_down"]
+        actual_options = [
+            SentimentScores.VERY_HAPPY,
+            SentimentScores.SAD,
+        ]
         if options in ["smiles", "stars"]:
-            actual_options = ["sad", "disappointed", "neutral", "happy", "very_happy"]
+            actual_options = [
+                SentimentScores.SAD,
+                SentimentScores.DISSAPOINTED,
+                SentimentScores.NEUTRAL,
+                SentimentScores.HAPPY,
+                SentimentScores.VERY_HAPPY,
+            ]
 
         if options == "thumbs":
             format_func = format_func_thumbs
@@ -145,46 +193,37 @@ class ButtonGroupMixin:
                 f"The argument passed was '{options}'."
             )
 
-        def _on_click(*args, **kwargs):
-            if key is None:
-                on_click(*args, **kwargs)
-                return
-
-            # Problem: we don't have the widget id here, so the key has to be provided
-            ctx = get_script_run_ctx()
-            current_value = (
-                ctx.session_state[key]
-                if key is not None and key in ctx.session_state
-                else None
-            )
-            new_kwargs = dict(kwargs, _st_value=current_value)
-            on_click(*args, **new_kwargs)
-
+        # serde = FeedbackSerde(actual_options)
         sentiment = self._button_group(
             actual_options,
             key=key,
             click_mode="radio",
             disabled=disabled,
             format_func=format_func,
-            on_click=_on_click if on_click else None,
+            on_click=on_click,
             args=args,
             kwargs=kwargs,
+            # deserializer=serde.deserialize,
+            # serializer=serde.serialize,
         )
 
-        def index_mapper(option: str) -> float:
-            if options == "thumbs":
-                return 1.0 if option == "thumbs_up" else 0.0
-            if options in ["smiles", "stars"]:
-                return {
-                    "sad": 0.0,
-                    "disappointed": 0.25,
-                    "neutral": 0.5,
-                    "happy": 0.75,
-                    "very_happy": 1.0,
-                }[option]
-            return -1.0
+        # def index_mapper(option: float | str) -> float:
+        #     if isinstance(option, float):
+        #         option = str(option)
+        #     if options == "thumbs":
+        #         return 1.0 if option == "thumbs_up" else 0.0
+        #     if options in ["smiles", "stars"]:
+        #         return {
+        #             "0": 0.0,
+        #             "0.25": 0.25,
+        #             "0.5": 0.5,
+        #             "0.75": 0.75,
+        #             "1": 1.0,
+        #         }[option]
+        #     return -1.0
 
-        return index_mapper(sentiment[0]) if len(sentiment) > 0 else None
+        # return index_mapper(sentiment[0]) if len(sentiment) > 0 else None
+        return sentiment[0] if len(sentiment) > 0 else None
 
     def _button_group(
         self,
@@ -198,6 +237,8 @@ class ButtonGroupMixin:
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        deserializer: WidgetDeserializer[T] | None = None,
+        serializer: WidgetSerializer[T] | None = None,
     ) -> list[T]:
         key = to_key(key)
 
@@ -252,6 +293,8 @@ class ButtonGroupMixin:
             kwargs,
             None,
             format_func,
+            deserializer=deserializer,
+            serializer=serializer,
         )
 
     @property

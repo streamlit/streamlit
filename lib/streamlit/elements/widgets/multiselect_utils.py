@@ -38,6 +38,8 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import (
+    WidgetDeserializer,
+    WidgetSerializer,
     save_for_app_testing,
 )
 from streamlit.type_util import (
@@ -212,8 +214,17 @@ def register_widget_and_enqueue(
     kwargs: WidgetKwargs | None = None,
     max_selections: int | None = None,
     app_testing_value: Any | None = None,
+    deserializer: WidgetDeserializer[T] | None = None,
+    serializer: WidgetSerializer[T] | None = None,
 ) -> list[T]:
-    serde = MultiSelectSerde(indexable_options, default_options)
+    serde: Any = MultiSelectSerde(indexable_options, default_options)
+    if deserializer is None or serializer is None:
+        _deserializer = serde.deserialize
+        _serializer = serde.serialize
+    else:
+        _deserializer = deserializer
+        _serializer = serializer
+
     widget_state = register_widget(
         widget_name,
         proto,
@@ -221,8 +232,8 @@ def register_widget_and_enqueue(
         on_change_handler=on_change_handler,
         args=args,
         kwargs=kwargs,
-        deserializer=serde.deserialize,
-        serializer=serde.serialize,
+        deserializer=_deserializer,
+        serializer=_serializer,
         ctx=ctx,
     )
     default_count = get_default_count(widget_state.value)
