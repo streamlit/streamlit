@@ -98,36 +98,36 @@ class ButtonGroupMixin:
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> float | None:
-        def format_func_thumbs(option: float) -> bytes:
+        def format_func_thumbs(option: str) -> bytes:
             mapped_option = ""
-            if abs(option - 1.0) < 1e-6:
+            if option == "thumbs_up":
                 mapped_option = ":material/thumb_up:"
-            if abs(option - 0.0) < 1e-6:
+            if option == "thumbs_down":
                 mapped_option = ":material/thumb_down:"
 
             return mapped_option.encode("utf-8")
 
-        def format_func_smiles(option: float) -> bytes:
+        def format_func_smiles(option: str) -> bytes:
             mapped_option = ""
-            if abs(option - 0.0) < 1e-6:
+            if option == "sad":
                 mapped_option = ":material/sentiment_sad:"
-            if abs(option - 0.25) < 1e-6:
+            if option == "disappointed":
                 mapped_option = ":material/sentiment_dissatisfied:"
-            if abs(option - 0.5) < 1e-6:
+            if option == "neutral":
                 mapped_option = ":material/sentiment_neutral:"
-            if abs(option - 0.75) < 1e-6:
+            if option == "happy":
                 mapped_option = ":material/sentiment_satisfied:"
-            if abs(option - 1.0) < 1e-6:
+            if option == "very_happy":
                 mapped_option = ":material/sentiment_very_satisfied:"
 
             return mapped_option.encode("utf-8")
 
-        def format_func_stars(option: float) -> bytes:
+        def format_func_stars(option: str) -> bytes:
             return b":material/star_rate:"
 
-        actual_options = [1.0, 0.0]
+        actual_options = ["thumbs_up", "thumbs_down"]
         if options in ["smiles", "stars"]:
-            actual_options = [0, 0.25, 0.5, 0.75, 1]
+            actual_options = ["sad", "disappointed", "neutral", "happy", "very_happy"]
 
         if options == "thumbs":
             format_func = format_func_thumbs
@@ -170,7 +170,21 @@ class ButtonGroupMixin:
             args=args,
             kwargs=kwargs,
         )
-        return sentiment[0] if len(sentiment) > 0 else None
+
+        def index_mapper(option: str) -> float:
+            if options == "thumbs":
+                return 1.0 if option == "thumbs_up" else 0.0
+            if options in ["smiles", "stars"]:
+                return {
+                    "sad": 0.0,
+                    "disappointed": 0.25,
+                    "neutral": 0.5,
+                    "happy": 0.75,
+                    "very_happy": 1.0,
+                }[option]
+            return -1.0
+
+        return index_mapper(sentiment[0]) if len(sentiment) > 0 else None
 
     def _button_group(
         self,

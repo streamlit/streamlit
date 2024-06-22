@@ -25,11 +25,12 @@ import BaseButton, {
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { EmotionTheme, IconSize } from "@streamlit/lib/src/theme"
 
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 
 const materialIconRegexp = /^:material\/(.+):$/
 
@@ -89,18 +90,28 @@ function getMaterialIcon(option: string): string | undefined {
   return materialIconMatch ? materialIconMatch[1] : undefined
 }
 
-function getContent(option: string, isMaterialIcon: boolean): ReactElement {
+function getContent(
+  option: string,
+  isMaterialIcon: boolean,
+  fontSize: IconSize
+): ReactElement {
   if (isMaterialIcon) {
     return (
       <DynamicIcon
-        size="lg"
+        size={fontSize}
         iconValue={option}
         // color={theme.colors.bodyText}
       />
     )
   }
 
-  return <StreamlitMarkdown source={option} allowHTML={false} />
+  return (
+    <StreamlitMarkdown
+      source={option}
+      allowHTML={true}
+      style={{ marginBottom: 0, width: iconSizes[fontSize] }}
+    />
+  )
 }
 
 function BaseButtonWithCustomKind(props: any): any {
@@ -196,14 +207,18 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           matchedIconName === "star_rate"
         ) {
           if (selected.length > 0 && index <= selected[0]) {
-            parsedOption = "⭐"
+            // parsedOption = "⭐"
+            // parsedOption =
+            //   '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M0 0h24v24H0z" fill="none"/><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'
+            parsedOption =
+              "<img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0Ij48cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0xMiAxNy4yN0wxOC4xOCAyMWwtMS42NC03LjAzTDIyIDkuMjRsLTcuMTktLjYxTDEyIDIgOS4xOSA4LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMXoiLz48L3N2Zz4='>"
             matchedIconName = undefined
           }
         } else if (selected.indexOf(index) !== -1) {
           additionalStyle.backgroundColor = theme.colors.lightGray
         }
 
-        const element = getContent(parsedOption, !!matchedIconName)
+        const element = getContent(parsedOption, !!matchedIconName, "lg")
         return (
           <BaseButtonWithCustomKind
             key={key}
