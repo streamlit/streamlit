@@ -122,7 +122,7 @@ types-cachetools==5.3.0.7
 types-click==7.1.8
 types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
-types-requests==2.32.0.20240602
+types-requests==2.32.0.20240622
 types-setuptools==70.0.0.20240524
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
@@ -132,7 +132,7 @@ tzdata==2024.1
 urllib3==2.2.2
 uv==0.2.13
 vega-datasets==0.9.0
-virtualenv==20.26.2
+virtualenv==20.26.3
 watchdog==4.0.1
 wheel==0.43.0
 yarl==1.9.4

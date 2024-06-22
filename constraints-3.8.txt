@@ -145,7 +145,7 @@ tzdata==2024.1
 urllib3==1.26.19
 uv==0.2.13
 vega-datasets==0.9.0
-virtualenv==20.26.2
+virtualenv==20.26.3
 watchdog==4.0.1
 yarl==1.9.4
 zipp==3.19.2
