@@ -26,6 +26,7 @@ from streamlit.elements.lib.policies import (
 )
 from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
     maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
@@ -46,6 +47,7 @@ from streamlit.type_util import (
     LabelVisibility,
     OptionSequence,
     T,
+    V,
     check_python_comparable,
     ensure_indexable,
     is_iterable,
@@ -205,8 +207,8 @@ def register_widget_and_enqueue(
     widget_name: str,
     proto: MultiSelectProto | ButtonGroupProto,
     widget_id: str,
-    options: OptionSequence[T],
-    indexable_options: Sequence[T],
+    options: OptionSequence[V],
+    indexable_options: Sequence[V],
     default_options: list[int],
     ctx: ScriptRunContext | None = None,
     on_change_handler: WidgetCallback | None = None,
@@ -216,9 +218,11 @@ def register_widget_and_enqueue(
     app_testing_value: Any | None = None,
     deserializer: WidgetDeserializer[T] | None = None,
     serializer: WidgetSerializer[T] | None = None,
-) -> list[T]:
-    serde: Any = MultiSelectSerde(indexable_options, default_options)
+) -> T:
+    _deserializer: WidgetDeserializer
+    _serializer: WidgetSerializer
     if deserializer is None or serializer is None:
+        serde = MultiSelectSerde(indexable_options, default_options)
         _deserializer = serde.deserialize
         _serializer = serde.serialize
     else:
@@ -241,10 +245,16 @@ def register_widget_and_enqueue(
         raise StreamlitAPIException(
             _get_over_max_options_message(default_count, max_selections)
         )
-    widget_state = maybe_coerce_enum_sequence(widget_state, options, indexable_options)
+
+    if isinstance(widget_state.value, list):
+        widget_state = maybe_coerce_enum_sequence(
+            widget_state, options, indexable_options
+        )
+    else:
+        widget_state = maybe_coerce_enum(widget_state, options, indexable_options)
 
     if widget_state.value_changed:
-        proto.value[:] = serde.serialize(widget_state.value)
+        proto.value[:] = _serializer(widget_state.value)
         proto.set_value = True
 
     if ctx:
