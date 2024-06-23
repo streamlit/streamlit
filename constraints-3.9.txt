@@ -15,7 +15,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==2.2.1
 contourpy==1.2.1
-coverage==7.5.3
+coverage==7.5.4
 cryptography==42.0.8
 cycler==0.12.1
 dataclasses-json==0.6.7
@@ -24,7 +24,7 @@ docutils==0.21.2
 emoji==2.12.1
 exceptiongroup==1.2.1
 execnet==2.1.1
-filelock==3.15.3
+filelock==3.15.4
 fonttools==4.53.0
 frozenlist==1.4.1
 gitdb==4.0.11
