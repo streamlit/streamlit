@@ -75,9 +75,11 @@ class JsonMixin:
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
-        expanded : bool
-            An optional boolean that allows the user to set whether the initial
-            state of this json element should be expanded. Defaults to True.
+        expanded : bool or int
+            Optionally controls the initial expansion state of the JSON. If boolean,
+            ``True`` expands all levels, ``False`` collapses all levels. If int,
+            specifies the depth to which the JSON should be expanded, collapsing
+            deeper levels. Defaults to ``True``.
 
         Example
         -------
