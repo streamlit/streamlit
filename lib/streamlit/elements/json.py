@@ -33,13 +33,38 @@ def _ensure_serialization(o: object) -> str | list[Any]:
     return repr(o)
 
 
+# def _get_max_json_depth(obj: Any, current_depth: int = 0) -> int:
+#     """Recursively calculate the maximum depth of an object."""
+#     if isinstance(obj, dict):
+#         return max((_get_max_json_depth(v, current_depth + 1) for v in obj.values()), default=current_depth)
+#     elif isinstance(obj, list):
+#         return max((calcu_get_max_json_depthlate_depth(item, current_depth + 1) for item in obj), default=current_depth)
+#     return current_depth
+
+
+def _get_max_json_depth(obj: Any) -> int:
+    """Iteratively calculate the maximum depth of an object."""
+    stack = [(obj, 0)]  # Start with the initial object at depth 0
+    max_depth = 0
+
+    while stack:
+        current_obj, depth = stack.pop()
+        max_depth = max(max_depth, depth)
+        if isinstance(current_obj, dict):
+            stack.extend((value, depth + 1) for value in current_obj.values())
+        elif isinstance(current_obj, list):
+            stack.extend((item, depth + 1) for item in current_obj)
+
+    return max_depth
+
+
 class JsonMixin:
     @gather_metrics("json")
     def json(
         self,
         body: object,
         *,  # keyword-only arguments:
-        expanded: bool = True,
+        expanded: bool | int = True,
     ) -> DeltaGenerator:
         """Display object or string as a pretty-printed JSON string.
 
@@ -79,6 +104,8 @@ class JsonMixin:
         if isinstance(body, (SessionStateProxy, UserInfoProxy, QueryParamsProxy)):
             body = body.to_dict()
 
+        max_depth = _get_max_json_depth(body)
+
         if not isinstance(body, str):
             try:
                 # Serialize body to string and try to interpret sets as lists
@@ -92,7 +119,18 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        json_proto.expanded = expanded
+
+        if isinstance(expanded, bool):
+            json_proto.expanded = expanded
+        if isinstance(expanded, int):
+            if expanded < 0 or expanded > max_depth:
+                raise ValueError(
+                    f"Expanded depth {expanded} is out of valid range (0 to {max_depth}) for this JSON object."
+                )
+            json_proto.depth = expanded
+        if not isinstance(expanded, (bool, int)):
+            raise TypeError(f"expanded must be a bool or int, not {type(expanded)}")
+
         return self.dg._enqueue("json", json_proto)
 
     @property

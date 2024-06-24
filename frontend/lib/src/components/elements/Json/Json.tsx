@@ -38,6 +38,8 @@ export interface JsonProps {
 export default function Json({ width, element }: JsonProps): ReactElement {
   const styleProp = { width }
   const theme: EmotionTheme = useTheme()
+  const expanded = element.expanded
+  const depth = element.depth
 
   let bodyObject
   try {
@@ -59,11 +61,19 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   // theme's background is light or dark.
   const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 
+  // Determine collapsed state based on depth and expanded properties
+  let collapsed
+  if (expanded === true) {
+    collapsed = false
+  } else if (depth >= 0) {
+    collapsed = depth
+  }
+
   return (
     <div data-testid="stJson" style={styleProp}>
       <ReactJson
         src={bodyObject}
-        collapsed={!element.expanded}
+        collapsed={collapsed}
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}

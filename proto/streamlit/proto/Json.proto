@@ -24,4 +24,6 @@ message Json {
   string body = 1;
 
   bool expanded = 2;
+  // Depth at which to collapse the JSON.
+  int32 depth = 3;
 }
