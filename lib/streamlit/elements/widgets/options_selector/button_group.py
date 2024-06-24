@@ -22,6 +22,7 @@ from streamlit.elements.widgets.options_selector.feedback_utils import (
     FeedbackOptions,
     FeedbackSerde,
     get_mapped_options_and_format_funcs,
+    selected_star_icon,
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     check_multiselect_policies,
@@ -52,7 +53,7 @@ ButtonGroupClickMode = Literal["checkbox", "radio"]
 
 def build_proto(
     widget_id: str,
-    formatted_options: list[ButtonGroupProto.Option],
+    formatted_options: list[str],
     default_values: list[int],
     disabled: bool,
     current_form_id: str,
@@ -60,6 +61,7 @@ def build_proto(
     selection_highlight: ButtonGroupProto.SelectionHighlight.ValueType = (
         ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
     ),
+    selected_options: list[str] | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -70,11 +72,9 @@ def build_proto(
 
     proto = cast(ButtonGroupProto, proto)
     proto.click_mode = click_mode
-    for _, opt in enumerate(formatted_options):
-        option = proto.options.add()
-        option.option = opt.option
-        option.selected_option = opt.selected_option
+    proto.options[:] = formatted_options
     proto.selection_highlight = selection_highlight
+    proto.selected_options[:] = selected_options or []
     return proto
 
 
@@ -158,6 +158,7 @@ class ButtonGroupMixin:
                 "['thumbs', 'smiles', 'stars']. "
                 f"The argument passed was '{options}'."
             )
+        selected_options = [selected_star_icon] * 5 if options == "stars" else None
         mapped_options, format_func = get_mapped_options_and_format_funcs(options)
         serde = FeedbackSerde(mapped_options)
 
@@ -177,6 +178,7 @@ class ButtonGroupMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             selection_highlight=selection_highlight,
+            selected_options=selected_options,
         )
         return sentiment
 
@@ -188,9 +190,7 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         click_mode: ButtonGroupProto.ClickMode.ValueType = ButtonGroupProto.RADIO,
         disabled: bool = False,
-        format_func: Callable[
-            [V], ButtonGroupProto.Option
-        ] = lambda opt: ButtonGroupProto.Option(),
+        format_func: Callable[[V], str] = lambda opt: str(opt),
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -199,6 +199,7 @@ class ButtonGroupMixin:
         selection_highlight: ButtonGroupProto.SelectionHighlight.ValueType = (
             ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
         ),
+        selected_options: list[str] | None = None,
     ) -> T:
         key = to_key(key)
 
@@ -227,6 +228,7 @@ class ButtonGroupMixin:
             current_form_id(self.dg),
             click_mode=click_mode,
             selection_highlight=selection_highlight,
+            selected_options=selected_options,
         )
 
         return register_widget_and_enqueue(

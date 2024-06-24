@@ -26,13 +26,8 @@ message ButtonGroup {
       // BUTTON = 2;
   }
 
-  message Option {
-    bytes option = 1;
-    bytes selected_option = 2;
-  }
-
   string id = 1;
-  repeated Option options = 2;
+  repeated string options = 2;
   // default is an array of indexes that are selected by default
   repeated uint32 default = 3;
   bool disabled = 4;
@@ -49,4 +44,6 @@ message ButtonGroup {
     ALL_UP_TO_SELECTED = 1;
   }
   SelectionHighlight selection_highlight = 9;
+  // index of options to string in case of selection
+  repeated string selected_options = 10;
 }

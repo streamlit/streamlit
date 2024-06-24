@@ -138,8 +138,6 @@ function BaseButtonWithCustomKind(props: any): any {
   )
 }
 
-const textDecoder = new TextDecoder("utf-8")
-
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
   const {
@@ -149,6 +147,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     setValue,
     value,
     selectionHighlight,
+    selectedOptions,
   } = element
   const theme: EmotionTheme = useTheme()
 
@@ -197,12 +196,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     >
       {options.map((option, index) => {
         console.log("option", option)
-        const parsedOption = textDecoder.decode(option.option as Uint8Array)
+        const parsedOption = option
         const key = parsedOption
-
-        const parsedSelectionOption = option.selectedOption
-          ? textDecoder.decode(option.selectedOption as Uint8Array)
-          : undefined
 
         const isShownAsSelected = showAsSelected(
           selectionHighlight,
@@ -210,14 +205,16 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           selected,
           index
         )
+
+        const mappedSelectionOption = selectedOptions?.[index]
         const shownOption =
-          parsedSelectionOption && isShownAsSelected
-            ? parsedSelectionOption
+          mappedSelectionOption && isShownAsSelected
+            ? mappedSelectionOption
             : parsedOption
         const kind = BaseButtonKind.ELEMENT_TOOLBAR
         const matchedIconName = getMaterialIcon(shownOption)
         const additionalStyle =
-          isShownAsSelected && !parsedSelectionOption
+          isShownAsSelected && !mappedSelectionOption
             ? { backgroundColor: theme.colors.lightGray }
             : undefined
 
