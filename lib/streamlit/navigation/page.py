@@ -45,7 +45,9 @@ def Page(
     object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
-    A page can be defined by a Python file or ``Callable``.
+    A page can be defined by a Python file or ``Callable``. Since a page is
+    executed from within the entrypoint file, page source code should not
+    include ``if __name__ == "__main__":`` blocks.
 
     Parameters
     ----------
