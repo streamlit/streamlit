@@ -32,10 +32,9 @@ message ButtonGroup {
   repeated uint32 default = 3;
   bool disabled = 4;
   ClickMode click_mode = 5;
-  bool use_container_width = 6;
-  string form_id = 7;
+  string form_id = 6;
 
   // value passed by the backend
-  repeated uint32 value = 8;
-  bool set_value = 9;
+  repeated uint32 value = 7;
+  bool set_value = 8;
 }

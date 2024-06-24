@@ -142,8 +142,7 @@ def check_multiselect_policies(
     check_fragment_path_policy(dg)
     check_cache_replay_rules()
     check_callback_rules(dg, on_change)
-    check_session_state_rules(default_value=default, key=key)
-    # maybe_raise_label_warnings(label, label_visibility)
+    check_session_state_rules(default_value=default, key=key, writes_allowed=True)
 
 
 def transform_options(

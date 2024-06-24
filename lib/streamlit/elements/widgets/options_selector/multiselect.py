@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.widgets.multiselect_utils import (
+from streamlit.elements.widgets.options_selector.options_selector_utils import (
     build_proto,
     check_multiselect_policies,
     register_widget_and_enqueue,

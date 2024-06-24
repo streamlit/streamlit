@@ -70,19 +70,12 @@ function getRadioSelection(currentSelection: number[]): number {
 }
 
 function syncValue(
-  mode: ButtonGroupProto.ClickMode,
   selected: number[],
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   fragmentId?: string
 ): void {
-  const source = { fromUi: true }
-  if (mode === ButtonGroupProto.ClickMode.BUTTON) {
-    widgetMgr.setIntArrayValue(element, selected, source, fragmentId)
-    return
-  }
-  console.log("selected", selected)
-  widgetMgr.setIntArrayValue(element, selected, source, fragmentId)
+  widgetMgr.setIntArrayValue(element, selected, { fromUi: true }, fragmentId)
 }
 
 function getMaterialIcon(option: string): string | undefined {
@@ -115,8 +108,6 @@ function getContent(
 }
 
 function BaseButtonWithCustomKind(props: any): any {
-  console.log(props)
-
   return (
     <BaseButton
       {...props}
@@ -143,7 +134,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     setValue,
     value,
   } = element
-  console.log(defaultValues)
   const theme: EmotionTheme = useTheme()
 
   const [selected, setSelected] = useState<number[]>(defaultValues || [])
@@ -158,10 +148,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     _event: React.SyntheticEvent<HTMLButtonElement>,
     index: number
   ): void => {
-    console.log("onClick", index)
     const newSelected = handleSelection(clickMode, index, selected)
     setSelected(newSelected)
-    syncValue(clickMode, newSelected, element, widgetMgr, fragmentId)
+    syncValue(newSelected, element, widgetMgr, fragmentId)
   }
 
   let mode = undefined
@@ -170,8 +159,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   } else if (clickMode === ButtonGroupProto.ClickMode.CHECKBOX) {
     mode = MODE.checkbox
   }
-
-  console.log("IN BUTTONGROUP", mode)
 
   return (
     <BasewebButtonGroup
@@ -203,7 +190,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         let matchedIconName = getMaterialIcon(parsedOption)
         const additionalStyle: any = {}
         if (
-          ButtonGroupProto.ClickMode.RADIO &&
+          clickMode === ButtonGroupProto.ClickMode.RADIO &&
           matchedIconName === "star_rate"
         ) {
           if (selected.length > 0 && index <= selected[0]) {
