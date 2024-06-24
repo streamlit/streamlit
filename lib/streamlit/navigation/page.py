@@ -41,8 +41,8 @@ def Page(
     ``st.navigation`` to declare a page in your app.
 
     When a user navigates to a page, ``st.navigation`` returns the selected
-    ``StreamlitPage`` object. Call ``StreamlitPage.run()`` on the returned page
-    to execute the page. You can only run the page returned by
+    ``StreamlitPage`` object. Call ``.run()`` on the returned ``StreamlitPage``
+    object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
     A page can be defined by a Python file or ``Callable``.
