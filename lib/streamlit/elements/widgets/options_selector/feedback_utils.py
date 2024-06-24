@@ -19,6 +19,7 @@ from typing import Callable, Literal
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
 )
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
 CustomIconList = list[str]
 FeedbackOptions = Literal["thumbs", "smiles", "stars"]
@@ -32,7 +33,14 @@ smile_icons = [
     ":material/sentiment_very_satisfied:",
 ]
 number_stars = 5
-star_icon = ":material/star_rate:"
+star_icon = (
+    ":material/star_rate:",
+    "<img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9"
+    "zdmciIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0Ij48cGF0aCBkPSJNMCAwaDI"
+    "0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXR"
+    "oIGQ9Ik0xMiAxNy4yN0wxOC4xOCAyMWwtMS42NC03LjAzTDIyIDkuMjRsLTcuMTktLjYxTDEyIDIgOS4xOSA4"
+    "LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMXoiLz48L3N2Zz4='>",
+)
 
 
 class FeedbackSerde:
@@ -52,24 +60,40 @@ class FeedbackSerde:
         return deserialized[0]
 
 
-def create_format_func(option_icons: str | list[str]) -> Callable[[int], bytes]:
-    def format_func(option_index: int) -> bytes:
-        if isinstance(option_icons, str):
-            return option_icons.encode("utf-8")
-        return option_icons[option_index].encode("utf-8")
+def create_format_func(
+    option_icons: tuple[str, str] | list[str] | list[tuple[str, str]] | None,
+) -> Callable[[int], ButtonGroupProto.Option]:
+    def format_func(option_index: int) -> ButtonGroupProto.Option:
+        if option_icons is None:
+            return ButtonGroupProto.Option(option=b"", selected_option=b"")
+        if isinstance(option_icons, tuple):
+            return ButtonGroupProto.Option(
+                option=option_icons[0].encode("utf-8"),
+                selected_option=option_icons[1].encode("utf-8"),
+            )
+
+        option_icon = option_icons[option_index]
+        if isinstance(option_icon, str):
+            return ButtonGroupProto.Option(
+                option=option_icon.encode("utf-8"), selected_option=b""
+            )
+        return ButtonGroupProto.Option(
+            option=option_icon[0].encode("utf-8"),
+            selected_option=option_icon[1].encode("utf-8"),
+        )
 
     return format_func
 
 
 def get_mapped_options_and_format_funcs(
     feedback_option: FeedbackOptions | CustomIconList,
-) -> tuple[list[int], Callable[[int], bytes]]:
+) -> tuple[list[int], Callable[[int], ButtonGroupProto.Option]]:
     # a custom provided list of icons
     if isinstance(feedback_option, list):
         return list(range(len(feedback_option))), create_format_func(feedback_option)
 
     mapped_options: list[int] = []
-    options: str | list[str] = []
+    options: tuple[str, str] | list[str] | list[tuple[str, str]] | None = None
     if feedback_option == "thumbs":
         mapped_options = list(range(len(thumb_icons)))
         options = thumb_icons

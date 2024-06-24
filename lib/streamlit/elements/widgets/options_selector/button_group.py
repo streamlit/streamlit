@@ -24,7 +24,6 @@ from streamlit.elements.widgets.options_selector.feedback_utils import (
     get_mapped_options_and_format_funcs,
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
-    build_proto,
     check_multiselect_policies,
     register_widget_and_enqueue,
     transform_options,
@@ -51,6 +50,34 @@ if TYPE_CHECKING:
 ButtonGroupClickMode = Literal["checkbox", "radio"]
 
 
+def build_proto(
+    widget_id: str,
+    formatted_options: list[ButtonGroupProto.Option],
+    default_values: list[int],
+    disabled: bool,
+    current_form_id: str,
+    click_mode: ButtonGroupProto.ClickMode.ValueType,
+    selection_highlight: ButtonGroupProto.SelectionHighlight.ValueType = (
+        ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
+    ),
+) -> ButtonGroupProto:
+    proto = ButtonGroupProto()
+
+    proto.id = widget_id
+    proto.default[:] = default_values
+    proto.form_id = current_form_id
+    proto.disabled = disabled
+
+    proto = cast(ButtonGroupProto, proto)
+    proto.click_mode = click_mode
+    for _, opt in enumerate(formatted_options):
+        option = proto.options.add()
+        option.option = opt.option
+        option.selected_option = opt.selected_option
+    proto.selection_highlight = selection_highlight
+    return proto
+
+
 class ButtonGroupMixin:
     # Disable this more generic widget for now
     # @gather_metrics("button_group")
@@ -60,7 +87,7 @@ class ButtonGroupMixin:
     #     *,
     #     key: Key | None = None,
     #     default: list[bool] | None = None,
-    #     click_mode: Literal["checkbox", "radio"] = "radio",
+    #     click_mode: ButtonGroupClickMode = "radio",
     #     disabled: bool = False,
     #     format_func: Callable[[str], bytes] = lambda x: str(x).encode("utf-8"),
     #     on_click: WidgetCallback | None = None,
@@ -133,10 +160,15 @@ class ButtonGroupMixin:
             )
         mapped_options, format_func = get_mapped_options_and_format_funcs(options)
         serde = FeedbackSerde(mapped_options)
+
+        selection_highlight = ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
+        if options == "stars":
+            selection_highlight = ButtonGroupProto.SelectionHighlight.ALL_UP_TO_SELECTED
+
         sentiment = self._button_group(
             mapped_options,
             key=key,
-            click_mode="radio",
+            click_mode=ButtonGroupProto.RADIO,
             disabled=disabled,
             format_func=format_func,
             on_click=on_click,
@@ -144,6 +176,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            selection_highlight=selection_highlight,
         )
         return sentiment
 
@@ -153,14 +186,19 @@ class ButtonGroupMixin:
         *,
         key: Key | None = None,
         default: list[int] | None = None,
-        click_mode: ButtonGroupClickMode = "radio",
+        click_mode: ButtonGroupProto.ClickMode.ValueType = ButtonGroupProto.RADIO,
         disabled: bool = False,
-        format_func: Callable[[V], bytes] = lambda opt: str(opt).encode("utf-8"),
+        format_func: Callable[
+            [V], ButtonGroupProto.Option
+        ] = lambda opt: ButtonGroupProto.Option(),
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         deserializer: WidgetDeserializer[T] | None = None,
         serializer: WidgetSerializer[T] | None = None,
+        selection_highlight: ButtonGroupProto.SelectionHighlight.ValueType = (
+            ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
+        ),
     ) -> T:
         key = to_key(key)
 
@@ -181,19 +219,14 @@ class ButtonGroupMixin:
             page=ctx.active_script_hash if ctx else None,
         )
 
-        if click_mode == "radio":
-            mapped_click_mode = ButtonGroupProto.RADIO
-        elif click_mode == "checkbox":
-            mapped_click_mode = ButtonGroupProto.CHECKBOX
-
         button_group_proto = build_proto(
-            ButtonGroupProto,
             widget_id,
             formatted_options,
             default_values,
             disabled,
             current_form_id(self.dg),
-            click_mode=mapped_click_mode,
+            click_mode=click_mode,
+            selection_highlight=selection_highlight,
         )
 
         return register_widget_and_enqueue(

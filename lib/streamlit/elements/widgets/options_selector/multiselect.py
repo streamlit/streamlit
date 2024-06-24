@@ -14,11 +14,12 @@
 
 from __future__ import annotations
 
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
-    build_proto,
     check_multiselect_policies,
     register_widget_and_enqueue,
     transform_options,
@@ -207,6 +208,7 @@ class MultiSelectMixin:
             options, default, format_func
         )
 
+        form_id = current_form_id(self.dg)
         widget_id = compute_widget_id(
             widget_name,
             user_key=key,
@@ -217,28 +219,29 @@ class MultiSelectMixin:
             help=help,
             max_selections=max_selections,
             placeholder=placeholder,
-            form_id=current_form_id(self.dg),
+            form_id=form_id,
             page=ctx.active_script_hash if ctx else None,
         )
 
-        multiselect_proto = build_proto(
-            MultiSelectProto,
-            widget_id,
-            formatted_options,
-            default_values,
-            disabled,
-            current_form_id(self.dg),
-            label=label,
-            label_visibility=label_visibility,
-            max_selections=max_selections or 0,
-            placeholder=placeholder,
-            help=help,
+        proto = MultiSelectProto()
+        proto.id = widget_id
+        proto.default[:] = default_values
+        proto.form_id = form_id
+        proto.disabled = disabled
+        proto.label = label
+        proto.max_selections = max_selections or 0
+        proto.placeholder = placeholder
+        proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
         )
+        proto.options[:] = formatted_options
+        if help is not None:
+            proto.help = dedent(help)
 
         return register_widget_and_enqueue(
             self.dg,
             widget_name,
-            multiselect_proto,
+            proto,
             widget_id,
             formatted_options,
             indexable_options,

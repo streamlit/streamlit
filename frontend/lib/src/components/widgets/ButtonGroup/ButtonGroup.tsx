@@ -101,6 +101,27 @@ function getContent(
   )
 }
 
+function showAsSelected(
+  selectionMode: ButtonGroupProto.SelectionHighlight,
+  clickMode: ButtonGroupProto.ClickMode,
+  selected: number[],
+  index: number
+): boolean {
+  if (selected.indexOf(index) > -1) {
+    return true
+  }
+
+  if (clickMode !== ButtonGroupProto.ClickMode.RADIO) {
+    return false
+  }
+
+  if (selectionMode === ButtonGroupProto.SelectionHighlight.ONLY_SELECTED) {
+    return false
+  }
+
+  return selected.length > 0 && index < selected[0]
+}
+
 function BaseButtonWithCustomKind(props: any): any {
   return (
     <BaseButton
@@ -127,6 +148,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     options,
     setValue,
     value,
+    selectionHighlight,
   } = element
   const theme: EmotionTheme = useTheme()
 
@@ -174,25 +196,34 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       }}
     >
       {options.map((option, index) => {
-        let parsedOption = textDecoder.decode(option)
+        console.log("option", option)
+        const parsedOption = textDecoder.decode(option.option as Uint8Array)
         const key = parsedOption
-        const kind = BaseButtonKind.ELEMENT_TOOLBAR
-        let matchedIconName = getMaterialIcon(parsedOption)
-        const additionalStyle: any = {}
-        if (
-          clickMode === ButtonGroupProto.ClickMode.RADIO &&
-          matchedIconName === "star_rate"
-        ) {
-          if (selected.length > 0 && index <= selected[0]) {
-            parsedOption =
-              "<img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0Ij48cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0xMiAxNy4yN0wxOC4xOCAyMWwtMS42NC03LjAzTDIyIDkuMjRsLTcuMTktLjYxTDEyIDIgOS4xOSA4LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMXoiLz48L3N2Zz4='>"
-            matchedIconName = undefined
-          }
-        } else if (selected.indexOf(index) !== -1) {
-          additionalStyle.backgroundColor = theme.colors.lightGray
-        }
 
-        const element = getContent(parsedOption, !!matchedIconName, "lg")
+        const parsedSelectionOption = option.selectedOption
+          ? textDecoder.decode(option.selectedOption as Uint8Array)
+          : undefined
+
+        const isShownAsSelected = showAsSelected(
+          selectionHighlight,
+          clickMode,
+          selected,
+          index
+        )
+        const shownOption =
+          parsedSelectionOption && isShownAsSelected
+            ? parsedSelectionOption
+            : parsedOption
+        const kind = BaseButtonKind.ELEMENT_TOOLBAR
+        const matchedIconName = getMaterialIcon(shownOption)
+        const additionalStyle =
+          isShownAsSelected && !parsedSelectionOption
+            ? { backgroundColor: theme.colors.lightGray }
+            : undefined
+
+        const isMaterialIcon = !!matchedIconName
+
+        const element = getContent(shownOption, isMaterialIcon, "lg")
         return (
           <BaseButtonWithCustomKind
             key={key}

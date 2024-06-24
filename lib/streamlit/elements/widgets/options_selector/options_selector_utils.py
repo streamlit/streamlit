@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.lib.policies import (
@@ -25,13 +24,10 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import (
-    get_label_visibility_proto_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
@@ -44,7 +40,6 @@ from streamlit.runtime.state.common import (
     save_for_app_testing,
 )
 from streamlit.type_util import (
-    LabelVisibility,
     OptionSequence,
     T,
     V,
@@ -56,6 +51,8 @@ from streamlit.type_util import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
+    from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
 
@@ -157,48 +154,6 @@ def transform_options(
     formatted_options = [format_func(option) for option in indexable_options]
 
     return indexable_options, formatted_options, indices
-
-
-def build_proto(
-    proto_class: type[MultiSelectProto | ButtonGroupProto],
-    widget_id: str,
-    formatted_options: list[str | bytes],
-    default_values: list[int],
-    disabled: bool,
-    current_form_id: str,
-    label: str = "",
-    label_visibility: LabelVisibility = "visible",
-    max_selections: int | None = None,
-    placeholder: str = "",
-    help: str | None = None,
-    click_mode: Any = None,  # ButtonGroup.ClickMode
-) -> MultiSelectProto | ButtonGroupProto:
-    proto = proto_class()
-
-    proto.id = widget_id
-    proto.default[:] = default_values
-    proto.form_id = current_form_id
-    proto.disabled = disabled
-
-    if proto_class == MultiSelectProto:
-        proto = cast(MultiSelectProto, proto)
-        proto.label = label
-        proto.max_selections = max_selections or 0
-        proto.placeholder = placeholder
-        proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
-
-        if help is not None:
-            proto.help = dedent(help)
-
-        proto.options[:] = cast(list[str], formatted_options)
-    else:
-        proto = cast(ButtonGroupProto, proto)
-        proto.click_mode = click_mode
-        proto.options[:] = cast(list[bytes], formatted_options)
-
-    return proto
 
 
 def register_widget_and_enqueue(

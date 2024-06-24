@@ -20,14 +20,19 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ButtonGroupProto";
 
 message ButtonGroup {
-    enum ClickMode {
-        RADIO = 0;
-        CHECKBOX = 1;
-        // BUTTON = 2;
-    }
+  enum ClickMode {
+      RADIO = 0;
+      CHECKBOX = 1;
+      // BUTTON = 2;
+  }
+
+  message Option {
+    bytes option = 1;
+    bytes selected_option = 2;
+  }
 
   string id = 1;
-  repeated bytes options = 2;
+  repeated Option options = 2;
   // default is an array of indexes that are selected by default
   repeated uint32 default = 3;
   bool disabled = 4;
@@ -37,4 +42,11 @@ message ButtonGroup {
   // value passed by the backend
   repeated uint32 value = 7;
   bool set_value = 8;
+
+  // styling
+  enum SelectionHighlight {
+    ONLY_SELECTED = 0;
+    ALL_UP_TO_SELECTED = 1;
+  }
+  SelectionHighlight selection_highlight = 9;
 }

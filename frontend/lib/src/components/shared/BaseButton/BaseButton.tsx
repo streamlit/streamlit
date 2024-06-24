@@ -71,7 +71,6 @@ function BaseButton({
     ComponentType = StyledElementToolbarButton
   }
 
-  console.log("kind", kind, "isSelected", additionalStyle)
   return (
     <ComponentType
       kind={kind}
