@@ -92,63 +92,6 @@ class CacheResourceTest(unittest.TestCase):
 
         show_warning_mock.assert_called_once()
 
-    def test_multiple_api_names(self):
-        """`st.experimental_singleton` is effectively an alias for `st.cache_resource`, and we
-        support both APIs while experimental_singleton is being deprecated.
-        """
-        num_calls = [0]
-
-        def foo():
-            num_calls[0] += 1
-            return 42
-
-        # Annotate a function with both `cache_resource` and `experimental_singleton`.
-        cache_resource_func = st.cache_resource(foo)
-        singleton_func = st.experimental_singleton(foo)
-
-        # Call both versions of the function and assert the results.
-        self.assertEqual(42, cache_resource_func())
-        self.assertEqual(42, singleton_func())
-
-        # Because these decorators share the same cache, calling both functions
-        # results in just a single call to the decorated function.
-        self.assertEqual(1, num_calls[0])
-
-    @parameterized.expand(
-        [
-            ("cache_resource", st.cache_resource, False),
-            ("experimental_singleton", st.experimental_singleton, True),
-        ]
-    )
-    @patch("streamlit.runtime.caching.cache_resource_api.show_deprecation_warning")
-    def test_deprecation_warnings(
-        self, _, decorator: Any, should_show_warning: bool, show_warning_mock: Mock
-    ):
-        """We show deprecation warnings when using `@st.experimental_singleton`, but not `@st.cache_resource`."""
-        warning_str = (
-            "`st.experimental_singleton` is deprecated. Please use the new command `st.cache_resource` instead, "
-            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
-        )
-
-        # We show the deprecation warning at declaration time:
-        @decorator
-        def foo():
-            return 42
-
-        if should_show_warning:
-            show_warning_mock.assert_called_once_with(warning_str)
-        else:
-            show_warning_mock.assert_not_called()
-
-        # And also when clearing the cache:
-        show_warning_mock.reset_mock()
-        decorator.clear()
-
-        if should_show_warning:
-            show_warning_mock.assert_called_once_with(warning_str)
-        else:
-            show_warning_mock.assert_not_called()
-
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_resource can be applied to class member functions
         with corresponding hash_func.

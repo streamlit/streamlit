@@ -38,7 +38,7 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
-import { StyledContent } from "./styled-components"
+import { StyledContent, StyledCheckbox } from "./styled-components"
 
 export interface OwnProps {
   disabled: boolean
@@ -136,7 +136,6 @@ class Checkbox extends React.PureComponent<Props, State> {
     const { colors, spacing, sizes } = theme
     const lightTheme = hasLightBackgroundColor(theme)
 
-    const style = { width }
     const color = disabled ? colors.fadedText40 : colors.bodyText
 
     // Manage our form-clear event handler.
@@ -147,10 +146,10 @@ class Checkbox extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div
+      <StyledCheckbox
         className="row-widget stCheckbox"
         data-testid="stCheckbox"
-        style={style}
+        width={width}
       >
         <UICheckbox
           checked={this.state.value}
@@ -213,6 +212,8 @@ class Checkbox extends React.PureComponent<Props, State> {
                 return {
                   marginRight: 0,
                   marginLeft: 0,
+                  marginBottom: 0,
+                  marginTop: "0.25rem",
                   paddingLeft: "2px",
                   paddingRight: "2px",
                   width: "32px",
@@ -242,8 +243,9 @@ class Checkbox extends React.PureComponent<Props, State> {
                   outline: 0,
                   width: "1rem",
                   height: "1rem",
-                  marginTop: "0.30rem",
+                  marginTop: "0.25rem",
                   marginLeft: 0,
+                  marginBottom: 0,
                   boxShadow:
                     $isFocusVisible && $checked
                       ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
@@ -266,7 +268,6 @@ class Checkbox extends React.PureComponent<Props, State> {
             Label: {
               style: {
                 position: "relative",
-                top: "1px",
                 color,
               },
             },
@@ -294,7 +295,7 @@ class Checkbox extends React.PureComponent<Props, State> {
             )}
           </StyledContent>
         </UICheckbox>
-      </div>
+      </StyledCheckbox>
     )
   }
 }

@@ -87,7 +87,7 @@ class SelectSliderSerde(Generic[T]):
         # The widget always returns floats, so convert to ints before indexing
         return_value: tuple[T, T] = cast(
             Tuple[T, T],
-            tuple(map(lambda x: self.options[int(x)], ui_value)),
+            tuple(self.options[int(x)] for x in ui_value),
         )
 
         # If the original value was a list/tuple, so will be the output (and vice versa)

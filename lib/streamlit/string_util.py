@@ -52,7 +52,7 @@ def is_emoji(text: str) -> bool:
 
     from streamlit.emojis import ALL_EMOJIS
 
-    return text.replace("\U0000FE0F", "") in ALL_EMOJIS
+    return text.replace("\U0000fe0f", "") in ALL_EMOJIS
 
 
 def is_material_icon(maybe_icon: str) -> bool:

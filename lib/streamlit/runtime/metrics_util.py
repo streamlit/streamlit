@@ -306,16 +306,14 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(
     name: str,
     func: F,
-) -> F:
-    ...
+) -> F: ...
 
 
 @overload
 def gather_metrics(
     name: str,
     func: None = None,
-) -> Callable[[F], F]:
-    ...
+) -> Callable[[F], F]: ...
 
 
 def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
@@ -364,7 +362,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         exec_start = timer()
         # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
-        from streamlit.runtime.scriptrunner.script_runner import RerunException
+        from streamlit.runtime.scriptrunner.exceptions import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
 

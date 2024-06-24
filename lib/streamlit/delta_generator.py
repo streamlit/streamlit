@@ -26,7 +26,6 @@ from typing import (
     Final,
     Hashable,
     Iterable,
-    List,
     Literal,
     NoReturn,
     TypeVar,
@@ -45,7 +44,6 @@ from streamlit import (
     type_util,
     util,
 )
-from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
@@ -101,6 +99,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
     from pandas import DataFrame
 
+    from streamlit.cursor import Cursor
     from streamlit.elements.arrow import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
@@ -358,7 +357,7 @@ class DeltaGenerator(
         return dg
 
     @property
-    def _ancestors(self) -> Iterable["DeltaGenerator"]:
+    def _ancestors(self) -> Iterable[DeltaGenerator]:
         current_dg: DeltaGenerator | None = self
         while current_dg is not None:
             yield current_dg
@@ -674,11 +673,16 @@ sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg
 event_dg = DeltaGenerator(root_container=RootContainer.EVENT, parent=main_dg)
 bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
 
+
 # The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
 # a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
 # so that different threads or async tasks can have their own stacks.
+def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
+    return (main_dg,)
+
+
 dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
-    "dg_stack", default=(main_dg,)
+    "dg_stack", default=get_default_dg_stack()
 )
 
 
@@ -735,7 +739,7 @@ def _writes_directly_to_sidebar(dg: DG) -> bool:
 
 
 def _check_nested_element_violation(
-    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: List[BlockType]
+    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: list[BlockType]
 ) -> None:
     """Check if elements are nested in a forbidden way.
 

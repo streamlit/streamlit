@@ -42,6 +42,7 @@ Someone finds a bug so you release a new internal version for testing.
 Then we can go to alpha, rc1, rc2, etc. but eventually its
 0.15.3
 """
+
 import fileinput
 import os
 import re

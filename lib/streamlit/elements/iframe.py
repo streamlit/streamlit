@@ -34,18 +34,37 @@ class IframeMixin:
     ) -> DeltaGenerator:
         """Load a remote URL in an iframe.
 
+        To use this function, import it from the ``streamlit.components.v1``
+        module.
+
+        .. warning::
+            Using ``st.components.v1.iframe`` directly (instead of importing
+            its module) is deprecated and will be disallowd in a later version.
+
         Parameters
         ----------
         src : str
             The URL of the page to embed.
+
         width : int
-            The width of the frame in CSS pixels. Defaults to the app's
-            default element width.
+            The width of the iframe in CSS pixels. By default, this is the
+            app's default element width.
+
         height : int
-            The height of the frame in CSS pixels. Defaults to 150.
+            The height of the frame in CSS pixels. By default, this is ``150``.
+
         scrolling : bool
-            If True, show a scrollbar when the content is larger than the iframe.
-            Otherwise, do not show a scrollbar. Defaults to False.
+            Whether to allow scrolling in the iframe. If this ``False``
+            (default), Streamlit crops any content larger than the iframe and
+            does not show a scrollbar. If this is ``True``, Streamlit shows a
+            scrollbar when the content is larger than the iframe.
+
+        Example
+        -------
+
+        >>> import streamlit.components.v1 as components
+        >>>
+        >>> components.iframe("https://example.com", height=500)
 
         """
         iframe_proto = IFrameProto()
@@ -68,18 +87,42 @@ class IframeMixin:
     ) -> DeltaGenerator:
         """Display an HTML string in an iframe.
 
+        To use this function, import it from the ``streamlit.components.v1``
+        module.
+
+        If you want to insert HTML text into your app without an iframe, try
+        ``st.html`` instead.
+
+        .. warning::
+            Using ``st.components.v1.html`` directly (instead of importing
+            its module) is deprecated and will be disallowd in a later version.
+
         Parameters
         ----------
         html : str
             The HTML string to embed in the iframe.
+
         width : int
-            The width of the frame in CSS pixels. Defaults to the app's
-            default element width.
+            The width of the iframe in CSS pixels. By default, this is the
+            app's default element width.
+
         height : int
-            The height of the frame in CSS pixels. Defaults to 150.
+            The height of the frame in CSS pixels. By default, this is ``150``.
+
         scrolling : bool
-            If True, show a scrollbar when the content is larger than the iframe.
-            Otherwise, do not show a scrollbar. Defaults to False.
+            Whether to allow scrolling in the iframe. If this ``False``
+            (default), Streamlit crops any content larger than the iframe and
+            does not show a scrollbar. If this is ``True``, Streamlit shows a
+            scrollbar when the content is larger than the iframe.
+
+        Example
+        -------
+
+        >>> import streamlit.components.v1 as components
+        >>>
+        >>> components.html(
+        >>>     "<p><span style='text-decoration: line-through double red;'>Oops</span>!</p>"
+        >>> )
 
         """
         iframe_proto = IFrameProto()

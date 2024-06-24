@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Config Util Unittest."""
+
 import copy
 import re
 import textwrap

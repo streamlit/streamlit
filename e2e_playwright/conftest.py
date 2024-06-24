@@ -16,6 +16,7 @@
 Global pytest fixtures for e2e tests.
 This file is automatically run by pytest before tests are executed.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -32,22 +33,25 @@ from io import BytesIO
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from types import ModuleType
-from typing import Any, Callable, Dict, Generator, List, Literal, Protocol, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Generator, Literal, Protocol
 from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import (
-    ElementHandle,
-    FrameLocator,
-    Locator,
-    Page,
-    Response,
-    Route,
-)
 from pytest import FixtureRequest
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from playwright.sync_api import (
+        ElementHandle,
+        FrameLocator,
+        Locator,
+        Page,
+        Response,
+        Route,
+    )
 
 
 def reorder_early_fixtures(metafunc: pytest.Metafunc):
@@ -257,7 +261,7 @@ def app(page: Page, app_port: int) -> Page:
 @pytest.fixture(scope="function")
 def app_with_query_params(
     page: Page, app_port: int, request: FixtureRequest
-) -> Tuple[Page, Dict]:
+) -> tuple[Page, dict]:
     """Fixture that opens the app with additional query parameters.
     The query parameters are passed as a dictionary in the 'param' key of the request.
     """
@@ -362,7 +366,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
 
 
 @pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
+def browser_type_launch_args(browser_type_launch_args: dict, browser_name: str):
     """Fixture that adds the fake device and ui args to the browser type launch args."""
     # The browser context fixture in pytest-playwright is defined in session scope, and
     # depends on the browser_type_launch_args fixture. This means that we can't
@@ -479,7 +483,7 @@ def assert_snapshot(
 
     snapshot_default_file_name: str = test_function_name + snapshot_file_suffix
 
-    test_failure_messages: List[str] = []
+    test_failure_messages: list[str] = []
 
     def compare(
         element: ElementHandle | Locator | Page,
@@ -606,6 +610,9 @@ def assert_snapshot(
 
 def wait_for_app_run(page: Page, wait_delay: int = 100):
     """Wait for the given page to finish running."""
+    # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+    page.wait_for_timeout(155)
+
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )

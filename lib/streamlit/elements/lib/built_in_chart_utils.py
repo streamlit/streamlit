@@ -71,7 +71,8 @@ class AddRowsMetadata:
 
 class ChartType(Enum):
     AREA = {"mark_type": "area", "command": "area_chart"}
-    BAR = {"mark_type": "bar", "command": "bar_chart"}
+    VERTICAL_BAR = {"mark_type": "bar", "command": "bar_chart", "horizontal": False}
+    HORIZONTAL_BAR = {"mark_type": "bar", "command": "bar_chart", "horizontal": True}
     LINE = {"mark_type": "line", "command": "line_chart"}
     SCATTER = {"mark_type": "circle", "command": "scatter_chart"}
 
@@ -88,8 +89,8 @@ class ChartType(Enum):
 # NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
 # ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
 # (See https://github.com/streamlit/streamlit/pull/7164#discussion_r1307707345)
-_COLOR_LEGEND_SETTINGS: Final = dict(titlePadding=5, offset=5, orient="bottom")
-_SIZE_LEGEND_SETTINGS: Final = dict(titlePadding=0.5, offset=5, orient="bottom")
+_COLOR_LEGEND_SETTINGS: Final = {"titlePadding": 5, "offset": 5, "orient": "bottom"}
+_SIZE_LEGEND_SETTINGS: Final = {"titlePadding": 0.5, "offset": 5, "orient": "bottom"}
 
 # User-readable names to give the index and melted columns.
 _SEPARATED_INDEX_COLUMN_TITLE: Final = "index"
@@ -116,6 +117,8 @@ def generate_chart(
     data: Data | None,
     x_from_user: str | None = None,
     y_from_user: str | Sequence[str] | None = None,
+    x_axis_label: str | None = None,
+    y_axis_label: str | None = None,
     color_from_user: str | Color | list[Color] | None = None,
     size_from_user: str | float | None = None,
     width: int | None = None,
@@ -146,12 +149,12 @@ def generate_chart(
         # The last index of df so we can adjust the input df in add_rows:
         last_index=_last_index_for_melted_dataframes(df),
         # This is the input to prep_data (except for the df):
-        columns=dict(
-            x_column=x_column,
-            y_column_list=y_column_list,
-            color_column=color_column,
-            size_column=size_column,
-        ),
+        columns={
+            "x_column": x_column,
+            "y_column_list": y_column_list,
+            "color_column": color_column,
+            "size_column": size_column,
+        },
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
@@ -163,6 +166,22 @@ def generate_chart(
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
 
+    if chart_type == ChartType.HORIZONTAL_BAR:
+        # Handle horizontal bar chart - switches x and y data:
+        x_encoding = _get_x_encoding(
+            df, y_column, y_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(
+            df, x_column, x_from_user, y_axis_label, chart_type
+        )
+    else:
+        x_encoding = _get_x_encoding(
+            df, x_column, x_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(
+            df, y_column, y_from_user, y_axis_label, chart_type
+        )
+
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
         data=df,
@@ -170,8 +189,8 @@ def generate_chart(
         width=width or 0,
         height=height or 0,
     ).encode(
-        x=_get_x_encoding(df, x_column, x_from_user, chart_type),
-        y=_get_y_encoding(df, y_column, y_from_user),
+        x=x_encoding,
+        y=y_encoding,
     )
 
     # Set up opacity encoding.
@@ -539,7 +558,7 @@ def _parse_y_columns(
         y_column_list = [y_from_user]
 
     elif type_util.is_sequence(y_from_user):
-        y_column_list = list(str(col) for col in y_from_user)
+        y_column_list = [str(col) for col in y_from_user]
 
     else:
         raise StreamlitAPIException(
@@ -618,7 +637,8 @@ def _maybe_melt(
 def _get_x_encoding(
     df: pd.DataFrame,
     x_column: str | None,
-    x_from_user: str | None,
+    x_from_user: str | Sequence[str] | None,
+    x_axis_label: str | None,
     chart_type: ChartType,
 ) -> alt.X:
     import altair as alt
@@ -646,12 +666,19 @@ def _get_x_encoding(
         else:
             x_title = x_column
 
+    # User specified x-axis label takes precedence
+    if x_axis_label is not None:
+        x_title = x_axis_label
+
+    # grid lines on x axis for horizontal bar charts only
+    grid = True if chart_type == ChartType.HORIZONTAL_BAR else False
+
     return alt.X(
         x_field,
         title=x_title,
         type=_get_x_encoding_type(df, chart_type, x_column),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, x_column, grid=False),
+        axis=_get_axis_config(df, x_column, grid=grid),
     )
 
 
@@ -659,6 +686,8 @@ def _get_y_encoding(
     df: pd.DataFrame,
     y_column: str | None,
     y_from_user: str | Sequence[str] | None,
+    y_axis_label: str | None,
+    chart_type: ChartType,
 ) -> alt.Y:
     import altair as alt
 
@@ -685,12 +714,19 @@ def _get_y_encoding(
         else:
             y_title = y_column
 
+    # User specified y-axis label takes precedence
+    if y_axis_label is not None:
+        y_title = y_axis_label
+
+    # grid lines on y axis for all charts except horizontal bar charts
+    grid = False if chart_type == ChartType.HORIZONTAL_BAR else True
+
     return alt.Y(
         field=y_field,
         title=y_title,
-        type=_get_y_encoding_type(df, y_column),
+        type=_get_y_encoding_type(df, chart_type, y_column),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, y_column, grid=True),
+        axis=_get_axis_config(df, y_column, grid=grid),
     )
 
 
@@ -703,7 +739,7 @@ def _get_color_encoding(
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
-    has_color_value = color_value not in [None, [], tuple()]
+    has_color_value = color_value not in [None, [], ()]  # type: ignore[comparison-overlap]
 
     # If user passed a color value, that should win over colors coming from the
     # color column (be they manual or auto-assigned due to melting)
@@ -865,17 +901,21 @@ def _get_x_encoding_type(
     if x_column is None:
         return "quantitative"  # Anything. If None, Vega-Lite may hide the axis.
 
-    # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
+    # Vertical bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
     # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
-    if chart_type == ChartType.BAR and not _is_date_column(df, x_column):
+    if chart_type == ChartType.VERTICAL_BAR and not _is_date_column(df, x_column):
         return "ordinal"
 
     return type_util.infer_vegalite_type(df[x_column])
 
 
 def _get_y_encoding_type(
-    df: pd.DataFrame, y_column: str | None
+    df: pd.DataFrame, chart_type: ChartType, y_column: str | None
 ) -> type_util.VegaLiteType:
+    # Horizontal bar charts should have a discrete (ordinal) y-axis, UNLESS type is date/time
+    if chart_type == ChartType.HORIZONTAL_BAR and not _is_date_column(df, y_column):
+        return "ordinal"
+
     if y_column:
         return type_util.infer_vegalite_type(df[y_column])
 

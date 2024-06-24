@@ -88,7 +88,7 @@ SHARED_TEST_CASES = [
     # Set does not have a stable order across different Python version.
     # Therefore, we are only testing this with one item.
     (
-        {"st.number_input", "st.number_input"},
+        {"st.number_input"},
         TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
     ),
     # Tuple of strings (Tuple[str]):
@@ -196,7 +196,7 @@ def random_date() -> datetime:
     ).replace(tzinfo=None)
 
 
-class TestObject(object):
+class TestObject:
     def __str__(self):
         return "TestObject"
 
@@ -303,14 +303,14 @@ DATETIME_TYPES_DF = pd.DataFrame(
 LIST_TYPES_DF = pd.DataFrame(
     {
         "string_list": pd.Series(
-            [["a", "b", "c"], ["foo", "bar"], list(["lorem"]), [], None]
+            [["a", "b", "c"], ["foo", "bar"], ["lorem"], [], None]
         ),
-        "number_set": pd.Series([{1, 2, 3}, {2, 3}, {4, 4}, set(), None]),
+        "number_set": pd.Series([{1, 2, 3}, {2, 3}, {4}, set(), None]),
         "boolean_tuple": [
             (True, False),
             (False, True, True),
             (True, True),
-            tuple(),
+            (),
             None,
         ],
         "dict_list": [

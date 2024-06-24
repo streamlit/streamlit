@@ -20,16 +20,16 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 def validate_text(toast_text: SupportsStr) -> SupportsStr:
     if str(toast_text) == "":
         raise StreamlitAPIException(
-            f"Toast body cannot be blank - please provide a message."
+            "Toast body cannot be blank - please provide a message."
         )
     else:
         return toast_text
@@ -48,7 +48,7 @@ class ToastMixin:
 
         .. warning::
             ``st.toast`` is not compatible with Streamlit's `caching \
-            <https://docs.streamlit.io/library/advanced-features/caching>`_ and
+            <https://docs.streamlit.io/develop/concepts/architecture/caching>`_ and
             cannot be called within a cached function.
 
         Parameters

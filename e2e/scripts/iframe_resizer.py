@@ -16,5 +16,5 @@ import streamlit as st
 
 x = st.slider("Enter a number", 0, 20, 0)
 
-for i in range(x):
+for _ in range(x):
     st.write("Hello example")

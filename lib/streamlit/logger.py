@@ -20,7 +20,7 @@ import logging
 import sys
 from typing import Final
 
-DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
+DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s %(name)s: %(message)s"
 
 # Loggers for each name are saved here.
 _loggers: dict[str, logging.Logger] = {}

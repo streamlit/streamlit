@@ -84,7 +84,7 @@ export const EmojiIcon = ({
   testid,
 }: EmojiIconProps): ReactElement => (
   <StyledEmojiIcon
-    data-testid={testid}
+    data-testid={testid || "stIconEmoji"}
     aria-hidden="true"
     {...getDefaultProps({ size, margin, padding })}
   >

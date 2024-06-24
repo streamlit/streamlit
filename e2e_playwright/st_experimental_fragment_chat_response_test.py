@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import click_checkbox
 
 
 # Only run tests on chromium as this can otherwise create a lot of screenshots, and
@@ -30,8 +31,7 @@ def test_chat_response(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
     # Click on the checkbox to edit the chart
-    app.get_by_test_id("stCheckbox").click()
-    wait_for_app_run(app)
+    click_checkbox(app, "Exclude internal apps")
 
     # Take a screenshot of the modified chart
     assert_snapshot(
