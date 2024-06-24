@@ -20,6 +20,7 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
 )
 
+CustomIconList = list[str]
 FeedbackOptions = Literal["thumbs", "smiles", "stars"]
 
 thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
@@ -61,8 +62,12 @@ def create_format_func(option_icons: str | list[str]) -> Callable[[int], bytes]:
 
 
 def get_mapped_options_and_format_funcs(
-    feedback_option: FeedbackOptions,
+    feedback_option: FeedbackOptions | CustomIconList,
 ) -> tuple[list[int], Callable[[int], bytes]]:
+    # a custom provided list of icons
+    if isinstance(feedback_option, list):
+        return list(range(len(feedback_option))), create_format_func(feedback_option)
+
     mapped_options: list[int] = []
     options: str | list[str] = []
     if feedback_option == "thumbs":

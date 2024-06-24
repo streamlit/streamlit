@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, cast, get_args
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.widgets.options_selector.feedback_utils import (
+    CustomIconList,
     FeedbackOptions,
     FeedbackSerde,
     get_mapped_options_and_format_funcs,
@@ -61,7 +62,7 @@ class ButtonGroupMixin:
     #     default: list[bool] | None = None,
     #     click_mode: Literal["checkbox", "radio"] = "radio",
     #     disabled: bool = False,
-    #     format_func: Callable[[str], str] = lambda x: str(x),
+    #     format_func: Callable[[str], bytes] = lambda x: str(x).encode("utf-8"),
     #     on_click: WidgetCallback | None = None,
     #     args: WidgetArgs | None = None,
     #     kwargs: WidgetKwargs | None = None,
@@ -86,7 +87,7 @@ class ButtonGroupMixin:
     @gather_metrics("feedback")
     def feedback(
         self,
-        options: FeedbackOptions = "thumbs",
+        options: FeedbackOptions | CustomIconList = "thumbs",
         *,
         key: str | None = None,
         disabled: bool = False,
@@ -104,6 +105,7 @@ class ButtonGroupMixin:
             for the five smiley faces.
         - stars: Renders a set of stars. Returned indices are `[0, 1, 2, 3, 4]` for the
             five stars.
+        - a list of material icon strings in the form of [":material/icon_name:", ...].
 
         Examples
         --------
@@ -123,7 +125,7 @@ class ButtonGroupMixin:
         ```
         """
 
-        if options not in get_args(FeedbackOptions):
+        if not isinstance(options, list) and options not in get_args(FeedbackOptions):
             raise StreamlitAPIException(
                 "The options argument to st.feedback must be one of "
                 "['thumbs', 'smiles', 'stars']. "
@@ -153,7 +155,7 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         click_mode: ButtonGroupClickMode = "radio",
         disabled: bool = False,
-        format_func: Callable[[V], Any] = str,
+        format_func: Callable[[V], bytes] = lambda opt: str(opt).encode("utf-8"),
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
