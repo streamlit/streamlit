@@ -1459,7 +1459,3 @@ def coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
     # (since user Enum subclasses can override the .name property in 3.11)
     _LOGGER.debug("Coerced %s to class %s", from_enum_value, to_enum_class)
     return to_enum_class[from_enum_value._name_]
-
-
-def compare_float(a: float, b: float) -> bool:
-    return abs(a - b) < 1e-9

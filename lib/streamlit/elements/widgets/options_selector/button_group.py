@@ -93,7 +93,36 @@ class ButtonGroupMixin:
         on_click: WidgetCallback | None = None,
         args: Any | None = None,
         kwargs: Any | None = None,
-    ) -> float | None:
+    ) -> int | None:
+        """Returns the index of the selected feedback option.
+
+        Options:
+        --------
+        - thumbs: Renders a thumbs up and thumbs down button. Returned indices are
+            `[0, 1]` for thumbs up and thumbs down, respectively.
+        - smiles: Renders a set of smiley faces. Returned indices are `[0, 1, 2, 3, 4]`
+            for the five smiley faces.
+        - stars: Renders a set of stars. Returned indices are `[0, 1, 2, 3, 4]` for the
+            five stars.
+
+        Examples
+        --------
+
+        Example 1: Display a feedback widget with stars and show the selected sentiment
+        ```python
+        sentiment_mapping: = [0.0, 0.25, 0.5, 0.75, 1.0]
+        selected = st.feedback("stars")
+        st.write(f"You selected: {sentiment_mapping[selected]}")
+        ```
+
+        Example 2: Display a feedback widget with thumbs and show the selected sentiment
+        ```python
+        sentiment_mapping: = [0.0, 1.0]
+        selected = st.feedback("thumbs")
+        st.write(f"You selected: {sentiment_mapping[selected]}")
+        ```
+        """
+
         if options not in get_args(FeedbackOptions):
             raise StreamlitAPIException(
                 "The options argument to st.feedback must be one of "

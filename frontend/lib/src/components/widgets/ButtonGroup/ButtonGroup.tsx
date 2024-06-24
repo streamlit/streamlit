@@ -89,13 +89,7 @@ function getContent(
   fontSize: IconSize
 ): ReactElement {
   if (isMaterialIcon) {
-    return (
-      <DynamicIcon
-        size={fontSize}
-        iconValue={option}
-        // color={theme.colors.bodyText}
-      />
-    )
+    return <DynamicIcon size={fontSize} iconValue={option} />
   }
 
   return (
@@ -169,11 +163,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         clickMode === ButtonGroupProto.ClickMode.CHECKBOX
           ? selected
           : getRadioSelection(selected)
-        //   : clickMode === ButtonGroupProto.ClickMode.RADIO
-        //   ? getRadioSelection(selected)
-        //   : undefined
       }
-      // kind={BaseButtonKind.LINK}
       overrides={{
         Root: {
           style: {

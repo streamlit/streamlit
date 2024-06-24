@@ -14,99 +14,66 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import Callable, Literal
 
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
 )
-from streamlit.type_util import compare_float
 
 FeedbackOptions = Literal["thumbs", "smiles", "stars"]
 
-
-class SentimentScores(Enum):
-    UNKNOWN = None
-    SAD = 0.0
-    DISSAPOINTED = 0.25
-    NEUTRAL = 0.5
-    HAPPY = 0.75
-    VERY_HAPPY = 1.0
+thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
+smile_icons = [
+    ":material/sentiment_sad:",
+    ":material/sentiment_dissatisfied:",
+    ":material/sentiment_neutral:",
+    ":material/sentiment_satisfied:",
+    ":material/sentiment_very_satisfied:",
+]
+number_stars = 5
+star_icon = ":material/star_rate:"
 
 
 class FeedbackSerde:
     def __init__(self, options) -> None:
-        self.multiselect_serde: MultiSelectSerde[float | str] = MultiSelectSerde(
-            options
-        )
+        self.multiselect_serde: MultiSelectSerde[int] = MultiSelectSerde(options)
 
-    def serialize(self, value: float | None) -> list[int]:
-        if value is None:
-            return []
-        return self.multiselect_serde.serialize([value])
+    def serialize(self, value: int | None) -> list[int]:
+        _value = [value] if value is not None else []
+        return self.multiselect_serde.serialize(_value)
 
-    def deserialize(self, ui_value: list[int], widget_id: str = "") -> float | None:
+    def deserialize(self, ui_value: list[int], widget_id: str = "") -> int | None:
         deserialized = self.multiselect_serde.deserialize(ui_value, widget_id)
 
         if len(deserialized) == 0:
-            return SentimentScores.UNKNOWN.value
+            return None
 
-        return float(deserialized[0])
-
-
-def format_func_thumbs(sentiment_score: float) -> bytes:
-    mapped_option = ""
-    if compare_float(sentiment_score, SentimentScores.VERY_HAPPY.value):
-        mapped_option = ":material/thumb_up:"
-    elif compare_float(sentiment_score, SentimentScores.SAD.value):
-        mapped_option = ":material/thumb_down:"
-
-    return mapped_option.encode("utf-8")
+        return deserialized[0]
 
 
-def format_func_smiles(sentiment_score: float) -> bytes:
-    mapped_option = ""
-    if compare_float(sentiment_score, SentimentScores.SAD.value):
-        mapped_option = ":material/sentiment_sad:"
-    elif compare_float(sentiment_score, SentimentScores.DISSAPOINTED.value):
-        mapped_option = ":material/sentiment_dissatisfied:"
-    elif compare_float(sentiment_score, SentimentScores.NEUTRAL.value):
-        mapped_option = ":material/sentiment_neutral:"
-    elif compare_float(sentiment_score, SentimentScores.HAPPY.value):
-        mapped_option = ":material/sentiment_satisfied:"
-    elif compare_float(sentiment_score, SentimentScores.VERY_HAPPY.value):
-        mapped_option = ":material/sentiment_very_satisfied:"
+def create_format_func(option_icons: str | list[str]) -> Callable[[int], bytes]:
+    def format_func(option_index: int) -> bytes:
+        if isinstance(option_icons, str):
+            return option_icons.encode("utf-8")
+        return option_icons[option_index].encode("utf-8")
 
-    return mapped_option.encode("utf-8")
-
-
-def format_func_stars(sentiment_score: float) -> bytes:
-    return b":material/star_rate:"
+    return format_func
 
 
 def get_mapped_options_and_format_funcs(
     feedback_option: FeedbackOptions,
-) -> tuple[list[float], Callable[[float], bytes]]:
-    mapped_options = [
-        SentimentScores.VERY_HAPPY.value,
-        SentimentScores.SAD.value,
-    ]
-    if feedback_option in ["smiles", "stars"]:
-        mapped_options = [
-            SentimentScores.SAD.value,
-            SentimentScores.DISSAPOINTED.value,
-            SentimentScores.NEUTRAL.value,
-            SentimentScores.HAPPY.value,
-            SentimentScores.VERY_HAPPY.value,
-        ]
-
-    format_func = format_func_thumbs
-    # thumbs_up is 1, thumbs_down is 0; but we want to show thumbs_up first,
-    # so its index is 0
-    if feedback_option == "smiles":
-        format_func = format_func_smiles
-        # generates steps from 0 to 1 like [0, 0.25, 0.5, 0.75, 1]
+) -> tuple[list[int], Callable[[int], bytes]]:
+    mapped_options: list[int] = []
+    options: str | list[str] = []
+    if feedback_option == "thumbs":
+        mapped_options = list(range(len(thumb_icons)))
+        options = thumb_icons
+    elif feedback_option == "smiles":
+        mapped_options = list(range(len(smile_icons)))
+        options = smile_icons
     elif feedback_option == "stars":
-        format_func = format_func_stars
+        options = star_icon
+        mapped_options = list(range(number_stars))
 
+    format_func = create_format_func(options)
     return mapped_options, format_func
