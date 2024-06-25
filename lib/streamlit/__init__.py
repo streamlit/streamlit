@@ -84,6 +84,7 @@ from streamlit.runtime.connection_factory import (
 from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
+from streamlit.runtime.context import ContextProxy
 from streamlit.runtime.state import (
     SessionStateProxy as _SessionStateProxy,
     QueryParamsProxy as _QueryParamsProxy,
@@ -95,7 +96,6 @@ from streamlit.commands.experimental_query_params import (
 )
 
 import streamlit.column_config as _column_config
-
 
 # Modules that the user should have access to. These are imported with the "as" syntax and the same name; note that renaming the import with "as" does not make it an explicit export.
 # In this case, you should import it with an underscore to make clear that it is internal and then assign it to a variable with the new intended name.
@@ -220,6 +220,8 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 session_state = _SessionStateProxy()
 
 query_params = _QueryParamsProxy()
+
+context = ContextProxy()
 
 # Caching
 cache_data = _cache_data
