@@ -32,6 +32,7 @@ export enum BaseButtonKind {
   HEADER_BUTTON = "header",
   HEADER_NO_PADDING = "headerNoPadding",
   ELEMENT_TOOLBAR = "elementToolbar",
+  BUTTON_GROUP = "buttonGroup",
 }
 
 export enum BaseButtonSize {
@@ -374,7 +375,17 @@ export const StyledElementToolbarButton = styled(
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
     },
-
-    ...additionalStyle,
   }
 })
+
+export const StyledButtonGroupButton = styled(
+  StyledElementToolbarButton
+)<RequiredBaseButtonProps>(() => ({ theme, additionalStyle }) => ({
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    backgroundColor: theme.colors.transparent,
+    borderColor: theme.colors.transparent,
+    color: theme.colors.gray,
+  },
+
+  ...additionalStyle,
+}))

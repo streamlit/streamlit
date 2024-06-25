@@ -32,7 +32,7 @@ smile_icons = [
     ":material/sentiment_very_satisfied:",
 ]
 number_stars = 5
-star_icon = ":material/star_rate:"
+star_icon = ":material/star:"
 selected_star_icon = (
     "<img src='data:image/svg+xml;base64,"
     "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9"

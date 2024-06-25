@@ -211,7 +211,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           mappedSelectionOption && isShownAsSelected
             ? mappedSelectionOption
             : parsedOption
-        const kind = BaseButtonKind.ELEMENT_TOOLBAR
+        const kind = BaseButtonKind.BUTTON_GROUP
         const matchedIconName = getMaterialIcon(shownOption)
         const additionalStyle =
           isShownAsSelected && !mappedSelectionOption
