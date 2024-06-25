@@ -957,7 +957,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
-        stack: bool | ChartStackType = True,
+        stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -1047,12 +1047,13 @@ class VegaChartsMixin:
             Streamlit swaps the x-axis and y-axis and the bars display
             horizontally.
 
-        stack : bool, "normalize", "center", or "layered"
-            Whether to stack the bars. If this is ``True`` (default), the bars are
-            stacked on top of each other. If this is ``False``, the bars are displayed
-            side by side. If "normalize", the bars are stacked and normalized to 100%.
-            If "center", the bars are stacked around a central axis. If "layered", the
-            bars are stacked on top of one another.
+        stack : bool, "normalize", "center", "layered", or None
+            Whether to stack the bars. If this is ``None`` (default), uses Vega's
+            default. If this is ``True``, the bars are stacked on top of each other.
+            If this is ``False``, the bars are displayed side by side. If "normalize",
+            the bars are stacked and normalized to 100%. If "center", the bars are
+            stacked around a central axis. If "layered", the bars are stacked on top
+            of one another.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is

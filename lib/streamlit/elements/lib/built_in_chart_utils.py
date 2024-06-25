@@ -193,7 +193,10 @@ def generate_chart(
     )
 
     # Set up offset encoding (only for Altair >= 5.0.0)
-    if not type_util.is_altair_version_less_than("5.0.0"):
+    altair_version_offset_compatible = not type_util.is_altair_version_less_than(
+        "5.0.0"
+    )
+    if altair_version_offset_compatible:
         x_offset, y_offset = _get_offset_encoding(chart_type, stack, color_column)
         chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
 
@@ -610,8 +613,8 @@ def _get_opacity_encoding(
     if color_column and chart_type == ChartType.AREA:
         return alt.OpacityValue(0.7)
 
+    # Layered bar chart
     if color_column and stack == "layered":
-        # Layered bar chart
         return alt.OpacityValue(0.7)
 
     return None
@@ -690,8 +693,9 @@ def _get_axis_encodings(
             df, y_column, y_from_user, y_axis_label, chart_type
         )
 
-    # Handle stacking for bar charts
-    _set_stack_encoding(chart_type, stack, x_encoding, y_encoding)
+    # Handle stacking - only relevant for bar charts
+    if stack is not None:
+        _set_stack_encoding(chart_type, stack, x_encoding, y_encoding)
 
     return x_encoding, y_encoding
 
@@ -794,15 +798,12 @@ def _get_y_encoding(
 
 def _set_stack_encoding(
     chart_type: ChartType,
-    stack: bool | ChartStackType | None,
+    stack: bool | ChartStackType,
     x_encoding: alt.X,
     y_encoding: alt.Y,
 ) -> None:
-    # Stack only relevant for bar charts; None for other chart types
-    if stack is None:
-        return
     # Our layered option maps to vega's stack=False option
-    elif stack == "layered":
+    if stack == "layered":
         stack = False
 
     if chart_type == ChartType.VERTICAL_BAR:
