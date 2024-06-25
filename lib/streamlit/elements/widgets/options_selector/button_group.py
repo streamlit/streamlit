@@ -217,6 +217,7 @@ class ButtonGroupMixin:
             key=key,
             options=formatted_options,
             default=default_values,
+            disabled=disabled,
             page=ctx.active_script_hash if ctx else None,
         )
 
