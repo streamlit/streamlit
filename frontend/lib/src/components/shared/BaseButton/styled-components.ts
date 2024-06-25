@@ -384,7 +384,7 @@ export const StyledButtonGroupButton = styled(
   "&:disabled, &:disabled:hover, &:disabled:active": {
     backgroundColor: theme.colors.transparent,
     borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
+    color: theme.colors.gray50,
   },
 
   ...additionalStyle,
