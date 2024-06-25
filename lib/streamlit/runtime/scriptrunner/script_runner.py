@@ -471,12 +471,22 @@ class ScriptRunner:
             )
             self._pages_manager.reset_active_script_hash()
 
+            # We want to clear the forward_msg_queue during full script runs and
+            # fragment-scoped fragment reruns. For normal fragment runs, clearing the
+            # forward_msg_queue may cause us to drop messages either corresponding to
+            # other, unrelated fragments or that this fragment run depends on.
+            fragment_ids_this_run = rerun_data.fragment_id_queue
+            clear_forward_msg_queue = (
+                not fragment_ids_this_run or rerun_data.is_fragment_scoped_rerun
+            )
+
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
-                fragment_ids_this_run=rerun_data.fragment_id_queue,
+                fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                clear_forward_msg_queue=clear_forward_msg_queue,
             )
 
             # Compile the script. Any errors thrown here will be surfaced

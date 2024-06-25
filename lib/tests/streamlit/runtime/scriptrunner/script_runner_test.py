@@ -337,11 +337,15 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner._fragment_storage.set("my_fragment2", fragment)
         scriptrunner._fragment_storage.set("my_fragment3", fragment)
 
-        # scriptrunner.request_rerun assumes that fragments will only ever be enqueued
-        # one at a time as that's what happens with real rerun requests.
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        scriptrunner.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
         scriptrunner.start()
         scriptrunner.join()
 
