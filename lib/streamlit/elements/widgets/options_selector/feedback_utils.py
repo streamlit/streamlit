@@ -79,7 +79,7 @@ def get_mapped_options_and_format_funcs(
     feedback_option: FeedbackOptions,
 ) -> tuple[list[int], Callable[[int], ButtonGroupProto.Option]]:
     mapped_options: list[int] = []
-    options: ButtonGroupProto.Option | list[ButtonGroupProto.Option]
+    options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
     if feedback_option == "thumbs":
         mapped_options = list(range(len(thumb_icons)))
         options = [ButtonGroupProto.Option(content=icon) for icon in thumb_icons]
