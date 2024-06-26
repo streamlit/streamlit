@@ -91,7 +91,7 @@ class ButtonGroupMixin:
     #     click_mode: ButtonGroupClickMode = "radio",
     #     disabled: bool = False,
     #     format_func: Callable[[str], bytes] = lambda x: str(x).encode("utf-8"),
-    #     on_click: WidgetCallback | None = None,
+    #     on_change: WidgetCallback | None = None,
     #     args: WidgetArgs | None = None,
     #     kwargs: WidgetKwargs | None = None,
     # ) -> str | list[str] | None:
@@ -107,7 +107,7 @@ class ButtonGroupMixin:
     #         click_mode=click_mode,
     #         disabled=disabled,
     #         format_func=format_func,
-    #         on_click=on_click,
+    #         on_change=on_change,
     #         args=args,
     #         kwargs=kwargs,
     #     )
@@ -119,7 +119,7 @@ class ButtonGroupMixin:
         *,
         key: str | None = None,
         disabled: bool = False,
-        on_click: WidgetCallback | None = None,
+        on_change: WidgetCallback | None = None,
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> int | None:
@@ -172,7 +172,7 @@ class ButtonGroupMixin:
             click_mode=ButtonGroupProto.SINGLE_SELECT,
             disabled=disabled,
             format_func=format_func,
-            on_click=on_click,
+            on_change=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -192,7 +192,7 @@ class ButtonGroupMixin:
         ),
         disabled: bool = False,
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
-        on_click: WidgetCallback | None = None,
+        on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         deserializer: WidgetDeserializer[T] | None = None,
@@ -203,7 +203,7 @@ class ButtonGroupMixin:
     ) -> T:
         key = to_key(key)
 
-        check_multiselect_policies(self.dg, key, on_click, default)
+        check_multiselect_policies(self.dg, key, on_change, default)
 
         widget_name = "button_group"
         indexable_options, formatted_options, default_values = transform_options(
@@ -240,7 +240,7 @@ class ButtonGroupMixin:
             indexable_options,
             default_values,
             ctx,
-            on_click,
+            on_change,
             args,
             kwargs,
             None,
