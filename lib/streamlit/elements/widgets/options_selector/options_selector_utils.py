@@ -28,6 +28,7 @@ from streamlit.elements.lib.utils import (
     maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
@@ -51,7 +52,6 @@ from streamlit.type_util import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
@@ -151,8 +151,11 @@ def transform_options(
     check_python_comparable(indexable_options)
     indices = check_and_convert_to_indices(indexable_options, default)
     indices = indices if indices is not None else []
-    if format_func is not None:
-        formatted_options = [format_func(option) for option in indexable_options]
+    formatted_options = (
+        [format_func(option) for option in indexable_options]
+        if format_func
+        else [ButtonGroupProto.Option(content=str(c)) for c in indexable_options]
+    )
 
     return indexable_options, formatted_options, indices
 

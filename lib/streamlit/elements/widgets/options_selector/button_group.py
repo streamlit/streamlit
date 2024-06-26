@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, get_args
+from typing import TYPE_CHECKING, Any, Callable, cast, get_args
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.widgets.options_selector.feedback_utils import (
@@ -47,10 +47,8 @@ if TYPE_CHECKING:
         WidgetKwargs,
     )
 
-ButtonGroupClickMode = Literal["checkbox", "radio"]
 
-
-def build_proto(
+def _build_proto(
     widget_id: str,
     formatted_options: list[ButtonGroupProto.Option],
     default_values: list[int],
@@ -81,6 +79,7 @@ def build_proto(
 
 class ButtonGroupMixin:
     # Disable this more generic widget for now
+    # ButtonGroupClickMode = Literal["select", "multiselect"]
     # @gather_metrics("button_group")
     # def button_group(
     #     self,
@@ -88,9 +87,9 @@ class ButtonGroupMixin:
     #     *,
     #     key: Key | None = None,
     #     default: list[bool] | None = None,
-    #     click_mode: ButtonGroupClickMode = "radio",
+    #     click_mode: ButtonGroupClickMode = "multiselect",
     #     disabled: bool = False,
-    #     format_func: Callable[[str], bytes] = lambda x: str(x).encode("utf-8"),
+    #     format_func: Callable[[str], dict[str, str]] | None = None,
     #     on_change: WidgetCallback | None = None,
     #     args: WidgetArgs | None = None,
     #     kwargs: WidgetKwargs | None = None,
@@ -100,13 +99,26 @@ class ButtonGroupMixin:
     #         if default is not None
     #         else []
     #     )
+
+    #     def _transformed_format_func(x: str) -> ButtonGroupProto.Option:
+    #         if format_func is None:
+    #             return ButtonGroupProto.Option(content=x)
+
+    #         transformed = format_func(x)
+    #         return ButtonGroupProto.Option(
+    #             content=transformed["content"],
+    #             selected_content=transformed["selected_content"],
+    #         )
+
     #     return self._button_group(
     #         options,
     #         key=key,
     #         default=default_values,
-    #         click_mode=click_mode,
+    #         click_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
+    #         if click_mode == "multiselect"
+    #         else ButtonGroupProto.SINGLE_SELECT,
     #         disabled=disabled,
-    #         format_func=format_func,
+    #         format_func=_transformed_format_func if format_func is not None else None,
     #         on_change=on_change,
     #         args=args,
     #         kwargs=kwargs,
@@ -221,7 +233,7 @@ class ButtonGroupMixin:
             page=ctx.active_script_hash if ctx else None,
         )
 
-        button_group_proto = build_proto(
+        button_group_proto = _build_proto(
             widget_id,
             formatted_options,
             default_values,

@@ -62,7 +62,7 @@ function handleSelection(
   return [index]
 }
 
-function getRadioSelection(currentSelection: number[]): number {
+function getSingleSelection(currentSelection: number[]): number {
   if (currentSelection.length === 0) {
     return -1
   }
@@ -182,7 +182,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       selected={
         clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
           ? selected
-          : getRadioSelection(selected)
+          : getSingleSelection(selected)
       }
       overrides={{
         Root: {
@@ -209,7 +209,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         const shownOption =
           isShownAsSelected && parsedOption.selectedContent
             ? parsedOption.selectedContent
-            : parsedOption.content || ""
+            : parsedOption.content ?? ""
         const matchedIconName = getMaterialIcon(shownOption)
         const additionalStyle =
           isShownAsSelected && !parsedOption.selectedContent
