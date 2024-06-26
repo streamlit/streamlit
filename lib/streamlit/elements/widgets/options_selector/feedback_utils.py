@@ -21,7 +21,6 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
-CustomIconList = list[str]
 FeedbackOptions = Literal["thumbs", "smiles", "stars"]
 
 thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
@@ -77,14 +76,8 @@ def create_format_func(
 
 
 def get_mapped_options_and_format_funcs(
-    feedback_option: FeedbackOptions | CustomIconList,
+    feedback_option: FeedbackOptions,
 ) -> tuple[list[int], Callable[[int], ButtonGroupProto.Option]]:
-    # a custom provided list of icons
-    if isinstance(feedback_option, list):
-        return list(range(len(feedback_option))), create_format_func(
-            [ButtonGroupProto.Option(content=icon) for icon in feedback_option]
-        )
-
     mapped_options: list[int] = []
     options: ButtonGroupProto.Option | list[ButtonGroupProto.Option]
     if feedback_option == "thumbs":

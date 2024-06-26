@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any, Callable, cast, get_args
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.widgets.options_selector.feedback_utils import (
-    CustomIconList,
     FeedbackOptions,
     FeedbackSerde,
     get_mapped_options_and_format_funcs,
@@ -123,7 +122,7 @@ class ButtonGroupMixin:
     @gather_metrics("feedback")
     def feedback(
         self,
-        options: FeedbackOptions | CustomIconList = "thumbs",
+        options: FeedbackOptions = "thumbs",
         *,
         key: str | None = None,
         disabled: bool = False,

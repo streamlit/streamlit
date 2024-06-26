@@ -41,7 +41,7 @@ export interface Props {
   fragmentId?: string
 }
 
-function handleCheckboxSelection(
+function handleMultiSelection(
   index: number,
   currentSelection: number[]
 ): number[] {
@@ -57,7 +57,7 @@ function handleSelection(
   currentSelection?: number[]
 ): number[] {
   if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    return handleCheckboxSelection(index, currentSelection ?? [])
+    return handleMultiSelection(index, currentSelection ?? [])
   }
   return [index]
 }
@@ -179,13 +179,12 @@ function createOptionChild(
     option.content ?? "",
     option.selectedContent
   )
-  console.log("content", content, option)
   const style = getSelectedStyle(
     isVisuallySelected,
     option.disableSelectionHighlight || false,
     theme
   )
-  return function BaseButtonWithCustomKind(props: any): ReactElement {
+  return function BaseButtonGroup(props: any): ReactElement {
     return (
       <BaseButton
         {...props}
@@ -210,8 +209,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     value,
     selectionVisualization,
   } = element
-  console.log("options", options)
-
   const theme: EmotionTheme = useTheme()
 
   const [selected, setSelected] = useState<number[]>(defaultValues || [])
