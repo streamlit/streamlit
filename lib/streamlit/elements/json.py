@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, cast
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
@@ -39,7 +40,7 @@ class JsonMixin:
         self,
         body: object,
         *,  # keyword-only arguments:
-        expanded: bool = True,
+        expanded: bool | int = True,
     ) -> DeltaGenerator:
         """Display object or string as a pretty-printed JSON string.
 
@@ -50,9 +51,11 @@ class JsonMixin:
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
-        expanded : bool
+        expanded : bool or int
             An optional boolean that allows the user to set whether the initial
-            state of this json element should be expanded. Defaults to True.
+            state of this json element should be expanded. If integer,
+            specifies the depth to which the JSON should be expanded, collapsing
+            deeper levels. Defaults to True.
 
         Example
         -------
@@ -92,7 +95,17 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        json_proto.expanded = expanded
+
+        if isinstance(expanded, bool):
+            json_proto.expanded = expanded
+        elif isinstance(expanded, int):
+            json_proto.expanded = True
+            json_proto.max_expand_depth = expanded
+        else:
+            raise StreamlitAPIException(
+                f"The expanded parameter must be a bool or an int, but got {type(expanded)}"
+            )
+
         return self.dg._enqueue("json", json_proto)
 
     @property

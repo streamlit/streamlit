@@ -19,7 +19,7 @@ import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
-
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import {
   hasLightBackgroundColor,
@@ -63,7 +63,11 @@ export default function Json({ width, element }: JsonProps): ReactElement {
     <div data-testid="stJson" style={styleProp}>
       <ReactJson
         src={bodyObject}
-        collapsed={!element.expanded}
+        collapsed={
+          notNullOrUndefined(element.maxExpandDepth)
+            ? element.maxExpandDepth
+            : !element.expanded
+        }
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}
