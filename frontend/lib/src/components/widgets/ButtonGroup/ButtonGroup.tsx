@@ -56,7 +56,7 @@ function handleSelection(
   index: number,
   currentSelection?: number[]
 ): number[] {
-  if (mode == ButtonGroupProto.ClickMode.CHECKBOX) {
+  if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleCheckboxSelection(index, currentSelection ?? [])
   }
   return [index]
@@ -111,7 +111,7 @@ function showAsSelected(
     return true
   }
 
-  if (clickMode !== ButtonGroupProto.ClickMode.RADIO) {
+  if (clickMode !== ButtonGroupProto.ClickMode.SINGLE_SELECT) {
     return false
   }
 
@@ -147,7 +147,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     setValue,
     value,
     selectionHighlight,
-    selectedOptions,
   } = element
   const theme: EmotionTheme = useTheme()
 
@@ -169,9 +168,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   }
 
   let mode = undefined
-  if (clickMode === ButtonGroupProto.ClickMode.RADIO) {
+  if (clickMode === ButtonGroupProto.ClickMode.SINGLE_SELECT) {
     mode = MODE.radio
-  } else if (clickMode === ButtonGroupProto.ClickMode.CHECKBOX) {
+  } else if (clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
     mode = MODE.checkbox
   }
 
@@ -181,7 +180,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       mode={mode}
       onClick={onClick}
       selected={
-        clickMode === ButtonGroupProto.ClickMode.CHECKBOX
+        clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
           ? selected
           : getRadioSelection(selected)
       }
@@ -206,15 +205,14 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           index
         )
 
-        const mappedSelectionOption = selectedOptions?.[index]
-        const shownOption =
-          mappedSelectionOption && isShownAsSelected
-            ? mappedSelectionOption
-            : parsedOption
         const kind = BaseButtonKind.BUTTON_GROUP
+        const shownOption =
+          isShownAsSelected && parsedOption.selectedContent
+            ? parsedOption.selectedContent
+            : parsedOption.content || ""
         const matchedIconName = getMaterialIcon(shownOption)
         const additionalStyle =
-          isShownAsSelected && !mappedSelectionOption
+          isShownAsSelected && !parsedOption.selectedContent
             ? { backgroundColor: theme.colors.lightGray }
             : undefined
 

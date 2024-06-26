@@ -145,13 +145,14 @@ def check_multiselect_policies(
 def transform_options(
     options: OptionSequence[T],
     default: Sequence[Any] | Any | None = None,
-    format_func: Callable[[T], Any] = str,
-) -> tuple[Sequence[T], list[Any], list[int]]:
+    format_func: Callable[[T], ButtonGroupProto.Option] | None = None,
+) -> tuple[Sequence[T], list[ButtonGroupProto.Option], list[int]]:
     indexable_options = ensure_indexable(options)
     check_python_comparable(indexable_options)
     indices = check_and_convert_to_indices(indexable_options, default)
     indices = indices if indices is not None else []
-    formatted_options = [format_func(option) for option in indexable_options]
+    if format_func is not None:
+        formatted_options = [format_func(option) for option in indexable_options]
 
     return indexable_options, formatted_options, indices
 

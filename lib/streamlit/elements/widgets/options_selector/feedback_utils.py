@@ -19,6 +19,7 @@ from typing import Callable, Literal
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
 )
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
 CustomIconList = list[str]
 FeedbackOptions = Literal["thumbs", "smiles", "stars"]
@@ -60,12 +61,14 @@ class FeedbackSerde:
         return deserialized[0]
 
 
-def create_format_func(option_icons: str | list[str]) -> Callable[[int], str]:
-    def format_func(option_index: int) -> str:
+def create_format_func(
+    option_icons: ButtonGroupProto.Option | list[ButtonGroupProto.Option],
+) -> Callable[[int], ButtonGroupProto.Option]:
+    def format_func(option_index: int) -> ButtonGroupProto.Option:
         if option_icons is None:
             return ""
 
-        if isinstance(option_icons, str):
+        if isinstance(option_icons, ButtonGroupProto.Option):
             return option_icons
 
         return option_icons[option_index]
@@ -75,22 +78,26 @@ def create_format_func(option_icons: str | list[str]) -> Callable[[int], str]:
 
 def get_mapped_options_and_format_funcs(
     feedback_option: FeedbackOptions | CustomIconList,
-) -> tuple[list[int], Callable[[int], str]]:
+) -> tuple[list[int], Callable[[int], ButtonGroupProto.Option]]:
     # a custom provided list of icons
     if isinstance(feedback_option, list):
-        return list(range(len(feedback_option))), create_format_func(feedback_option)
+        return list(range(len(feedback_option))), create_format_func(
+            [ButtonGroupProto.Option(content=icon) for icon in feedback_option]
+        )
 
     mapped_options: list[int] = []
-    options: str | list[str]
+    options: ButtonGroupProto.Option | list[ButtonGroupProto.Option]
     if feedback_option == "thumbs":
         mapped_options = list(range(len(thumb_icons)))
-        options = thumb_icons
+        options = [ButtonGroupProto.Option(content=icon) for icon in thumb_icons]
     elif feedback_option == "smiles":
         mapped_options = list(range(len(smile_icons)))
-        options = smile_icons
+        options = [ButtonGroupProto.Option(content=icon) for icon in smile_icons]
     elif feedback_option == "stars":
-        options = star_icon
         mapped_options = list(range(number_stars))
+        options = ButtonGroupProto.Option(
+            content=star_icon, selected_content=selected_star_icon
+        )
 
     format_func = create_format_func(options)
     return mapped_options, format_func
