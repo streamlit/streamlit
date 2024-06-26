@@ -28,7 +28,6 @@ from streamlit.elements.lib.utils import (
     maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
@@ -52,6 +51,7 @@ from streamlit.type_util import (
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
@@ -142,20 +142,22 @@ def check_multiselect_policies(
     check_session_state_rules(default_value=default, key=key, writes_allowed=True)
 
 
+def default_format_func(option: T) -> str:
+    return str(option)
+
+
 def transform_options(
     options: OptionSequence[T],
     default: Sequence[Any] | Any | None = None,
-    format_func: Callable[[T], ButtonGroupProto.Option] | None = None,
-) -> tuple[Sequence[T], list[ButtonGroupProto.Option], list[int]]:
+    format_func: Callable[[T], Any] | None = None,
+) -> tuple[Sequence[T], list[Any], list[int]]:
     indexable_options = ensure_indexable(options)
     check_python_comparable(indexable_options)
     indices = check_and_convert_to_indices(indexable_options, default)
     indices = indices if indices is not None else []
-    formatted_options = (
-        [format_func(option) for option in indexable_options]
-        if format_func
-        else [ButtonGroupProto.Option(content=str(c)) for c in indexable_options]
-    )
+    if format_func is None:
+        format_func = default_format_func
+    formatted_options = [format_func(option) for option in indexable_options]
 
     return indexable_options, formatted_options, indices
 
