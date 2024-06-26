@@ -192,12 +192,17 @@ def generate_chart(
         y=y_encoding,
     )
 
-    # Set up offset encoding (only for Altair >= 5.0.0)
-    altair_version_offset_compatible = not type_util.is_altair_version_less_than(
+    # Offset encoding only works for Altair >= 5.0.0
+    is_altair_version_offset_compatible = not type_util.is_altair_version_less_than(
         "5.0.0"
     )
-    if altair_version_offset_compatible:
-        x_offset, y_offset = _get_offset_encoding(chart_type, stack, color_column)
+    # Set up offset encoding (creates grouped/non-stacked bar charts, so only applicable when stack=False).
+    if (
+        is_altair_version_offset_compatible
+        and stack is False
+        and color_column is not None
+    ):
+        x_offset, y_offset = _get_offset_encoding(chart_type, color_column)
         chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
 
     # Set up opacity encoding.
@@ -586,19 +591,18 @@ def _parse_y_columns(
 
 def _get_offset_encoding(
     chart_type: ChartType,
-    stack: bool | ChartStackType | None,
     color_column: str | None,
 ) -> tuple[alt.XOffset, alt.YOffset]:
+    # Vega's Offset encoding channel is used to create grouped/non-stacked bar charts
     import altair as alt
 
     x_offset = alt.XOffset()
     y_offset = alt.YOffset()
 
-    if stack is False and color_column is not None:
-        if chart_type is ChartType.VERTICAL_BAR:
-            x_offset = alt.XOffset(field=color_column)
-        elif chart_type is ChartType.HORIZONTAL_BAR:
-            y_offset = alt.YOffset(field=color_column)
+    if chart_type is ChartType.VERTICAL_BAR:
+        x_offset = alt.XOffset(field=color_column)
+    elif chart_type is ChartType.HORIZONTAL_BAR:
+        y_offset = alt.YOffset(field=color_column)
 
     return x_offset, y_offset
 
@@ -677,6 +681,7 @@ def _get_axis_encodings(
     y_axis_label: str | None,
     stack: bool | ChartStackType | None,
 ) -> tuple[alt.X, alt.Y]:
+    stack_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
         # Handle horizontal bar chart - switches x and y data:
         x_encoding = _get_x_encoding(
@@ -685,6 +690,7 @@ def _get_axis_encodings(
         y_encoding = _get_y_encoding(
             df, x_column, x_from_user, y_axis_label, chart_type
         )
+        stack_encoding = x_encoding
     else:
         x_encoding = _get_x_encoding(
             df, x_column, x_from_user, x_axis_label, chart_type
@@ -692,10 +698,10 @@ def _get_axis_encodings(
         y_encoding = _get_y_encoding(
             df, y_column, y_from_user, y_axis_label, chart_type
         )
+        stack_encoding = y_encoding
 
     # Handle stacking - only relevant for bar charts
-    if stack is not None:
-        _set_stack_encoding(chart_type, stack, x_encoding, y_encoding)
+    _update_encoding_with_stack(stack, stack_encoding)
 
     return x_encoding, y_encoding
 
@@ -796,20 +802,17 @@ def _get_y_encoding(
     )
 
 
-def _set_stack_encoding(
-    chart_type: ChartType,
-    stack: bool | ChartStackType,
-    x_encoding: alt.X,
-    y_encoding: alt.Y,
+def _update_encoding_with_stack(
+    stack: bool | ChartStackType | None,
+    encoding: alt.X | alt.Y,
 ) -> None:
+    if stack is None:
+        return None
     # Our layered option maps to vega's stack=False option
-    if stack == "layered":
+    elif stack == "layered":
         stack = False
 
-    if chart_type == ChartType.VERTICAL_BAR:
-        y_encoding["stack"] = stack
-    elif chart_type == ChartType.HORIZONTAL_BAR:
-        x_encoding["stack"] = stack
+    encoding["stack"] = stack
 
 
 def _get_color_encoding(
