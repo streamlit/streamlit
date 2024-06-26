@@ -52,7 +52,7 @@ export interface BaseButtonProps {
   children: ReactNode
   autoFocus?: boolean
   // Additional styles for the button
-  additionalStyle?: React.CSSProperties
+  style?: React.CSSProperties
 }
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
@@ -341,7 +341,7 @@ export const StyledTooltipMobile = styled.div(({ theme }) => ({
 
 export const StyledElementToolbarButton = styled(
   StyledBaseButton
-)<RequiredBaseButtonProps>(({ theme, additionalStyle }) => {
+)<RequiredBaseButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
@@ -380,12 +380,12 @@ export const StyledElementToolbarButton = styled(
 
 export const StyledButtonGroupButton = styled(
   StyledElementToolbarButton
-)<RequiredBaseButtonProps>(() => ({ theme, additionalStyle }) => ({
+)<RequiredBaseButtonProps>(() => ({ theme, style }) => ({
   "&:disabled, &:disabled:hover, &:disabled:active": {
     backgroundColor: theme.colors.transparent,
     borderColor: theme.colors.transparent,
     color: theme.colors.gray50,
   },
 
-  ...additionalStyle,
+  ...style,
 }))

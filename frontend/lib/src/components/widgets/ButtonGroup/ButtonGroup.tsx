@@ -94,7 +94,10 @@ function getContentElement(content: string): ReactElement {
     <StreamlitMarkdown
       source={content}
       allowHTML={true}
-      style={{ marginBottom: 0, width: iconSizes[fontSize] }}
+      style={{
+        marginBottom: 0,
+        width: iconSizes[fontSize],
+      }}
     />
   )
 }
@@ -108,10 +111,10 @@ function getContentElement(content: string): ReactElement {
  * @param clickMode
  * @param selected list of selected indices. Since only SINGLE_SELECT is considered, this list will always have a length of 1.
  * @param index of the current element
- * @returns false if the click mode is set to SINGLE_SELECT or if the selection mode is set to ONLY_SELECTED; true otherwise for elements whose index is less or equal than the selected element
+ * @returns false if the click mode is set to SINGLE_SELECT or if the button style is not set to MINIMAL_FILL_UP; true otherwise for elements whose index is less or equal than the selected element
  */
 function showAsSelected(
-  selectionMode: ButtonGroupProto.SelectionHighlight,
+  selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
   index: number
@@ -120,39 +123,68 @@ function showAsSelected(
     return true
   }
 
-  if (clickMode !== ButtonGroupProto.ClickMode.SINGLE_SELECT) {
-    return false
-  }
-
-  if (selectionMode === ButtonGroupProto.SelectionHighlight.ONLY_SELECTED) {
+  if (
+    clickMode !== ButtonGroupProto.ClickMode.SINGLE_SELECT ||
+    selectionVisualization !==
+      ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
+  ) {
     return false
   }
 
   return selected.length > 0 && index < selected[0]
 }
 
+function getContent(
+  isVisuallySelected: boolean,
+  fallbackContent: string,
+  selectionContent?: string | undefined | null
+): string {
+  if (isVisuallySelected && selectionContent) {
+    return selectionContent
+  }
+
+  return fallbackContent
+}
+
+function getSelectedStyle(
+  isVisuallySelected: boolean,
+  isSelectionHighlightDisabled: boolean,
+  theme: EmotionTheme
+): Record<string, string> | undefined {
+  if (!isVisuallySelected || isSelectionHighlightDisabled) {
+    return undefined
+  }
+
+  return {
+    backgroundColor: theme.colors.lightGray,
+  }
+}
+
 function createOptionChild(
   option: ButtonGroupProto.IOption,
   index: number,
-  selectionMode: ButtonGroupProto.SelectionHighlight,
+  selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
   theme: EmotionTheme
 ): React.FunctionComponent {
-  const isShownAsSelected = showAsSelected(
-    selectionMode,
+  const isVisuallySelected = showAsSelected(
+    selectionVisualization,
     clickMode,
     selected,
     index
   )
-  const content =
-    isShownAsSelected && option.selectedContent
-      ? option.selectedContent
-      : option.content ?? ""
-  const additionalStyle =
-    isShownAsSelected && !option.selectedContent
-      ? { backgroundColor: theme.colors.lightGray }
-      : undefined
+  const content = getContent(
+    isVisuallySelected,
+    option.content ?? "",
+    option.selectedContent
+  )
+  console.log("content", content, option)
+  const style = getSelectedStyle(
+    isVisuallySelected,
+    option.disableSelectionHighlight || false,
+    theme
+  )
   return function BaseButtonWithCustomKind(props: any): ReactElement {
     return (
       <BaseButton
@@ -160,7 +192,7 @@ function createOptionChild(
         key={content}
         size={BaseButtonSize.SMALL}
         kind={BaseButtonKind.BUTTON_GROUP}
-        additionalStyle={additionalStyle}
+        style={style}
       >
         {getContentElement(content)}
       </BaseButton>
@@ -176,8 +208,10 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     options,
     setValue,
     value,
-    selectionHighlight,
+    selectionVisualization,
   } = element
+  console.log("options", options)
+
   const theme: EmotionTheme = useTheme()
 
   const [selected, setSelected] = useState<number[]>(defaultValues || [])
@@ -208,7 +242,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     const Element = createOptionChild(
       option,
       index,
-      selectionHighlight,
+      selectionVisualization,
       clickMode,
       selected,
       theme

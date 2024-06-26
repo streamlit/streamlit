@@ -55,9 +55,7 @@ def _build_proto(
     disabled: bool,
     current_form_id: str,
     click_mode: ButtonGroupProto.ClickMode.ValueType,
-    selection_highlight: ButtonGroupProto.SelectionHighlight.ValueType = (
-        ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
-    ),
+    selection_visualization: ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -70,10 +68,8 @@ def _build_proto(
     proto.click_mode = click_mode
 
     for formatted_option in formatted_options:
-        proto_option = proto.options.add()
-        proto_option.content = formatted_option.content
-        proto_option.selected_content = formatted_option.selected_content
-    proto.selection_highlight = selection_highlight
+        proto.options.append(formatted_option)
+    proto.selection_visualization = selection_visualization
     return proto
 
 
@@ -174,10 +170,11 @@ class ButtonGroupMixin:
         mapped_options, format_func = get_mapped_options_and_format_funcs(options)
         serde = FeedbackSerde(mapped_options)
 
-        selection_highlight = ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
+        selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
-            selection_highlight = ButtonGroupProto.SelectionHighlight.ALL_UP_TO_SELECTED
-
+            selection_visualization = (
+                ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
+            )
         sentiment = self._button_group(
             mapped_options,
             key=key,
@@ -189,7 +186,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
-            selection_highlight=selection_highlight,
+            selection_visualization=selection_visualization,
         )
         return sentiment
 
@@ -209,8 +206,8 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         deserializer: WidgetDeserializer[T] | None = None,
         serializer: WidgetSerializer[T] | None = None,
-        selection_highlight: ButtonGroupProto.SelectionHighlight.ValueType = (
-            ButtonGroupProto.SelectionHighlight.ONLY_SELECTED
+        selection_visualization: ButtonGroupProto.ButtonStyle.ValueType = (
+            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         ),
     ) -> T:
         key = to_key(key)
@@ -221,7 +218,6 @@ class ButtonGroupMixin:
         indexable_options, formatted_options, default_values = transform_options(
             options, default, format_func
         )
-
         ctx = get_script_run_ctx()
         widget_id = compute_widget_id(
             widget_name,
@@ -230,6 +226,7 @@ class ButtonGroupMixin:
             options=formatted_options,
             default=default_values,
             disabled=disabled,
+            selection_visualization=selection_visualization,
             page=ctx.active_script_hash if ctx else None,
         )
 
@@ -240,7 +237,7 @@ class ButtonGroupMixin:
             disabled,
             current_form_id(self.dg),
             click_mode=click_mode,
-            selection_highlight=selection_highlight,
+            selection_visualization=selection_visualization,
         )
 
         return register_widget_and_enqueue(

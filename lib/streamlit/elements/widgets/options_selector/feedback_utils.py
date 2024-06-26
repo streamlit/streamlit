@@ -96,7 +96,9 @@ def get_mapped_options_and_format_funcs(
     elif feedback_option == "stars":
         mapped_options = list(range(number_stars))
         options = ButtonGroupProto.Option(
-            content=star_icon, selected_content=selected_star_icon
+            content=star_icon,
+            selected_content=selected_star_icon,
+            disable_selection_highlight=True,
         )
 
     format_func = create_format_func(options)

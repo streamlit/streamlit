@@ -42,7 +42,7 @@ function BaseButton({
   fluidWidth,
   children,
   autoFocus,
-  additionalStyle,
+  style,
 }: Readonly<BaseButtonPropsT>): ReactElement {
   console.log("kind", kind)
   let ComponentType = StyledPrimaryButton
@@ -83,7 +83,7 @@ function BaseButton({
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
       data-testid={`baseButton-${kind}`}
-      additionalStyle={additionalStyle || {}}
+      style={style || {}}
     >
       {children}
     </ComponentType>
