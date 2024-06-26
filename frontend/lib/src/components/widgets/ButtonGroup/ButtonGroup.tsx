@@ -25,7 +25,7 @@ import BaseButton, {
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionTheme, IconSize } from "@streamlit/lib/src/theme"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -83,24 +83,33 @@ function getMaterialIcon(option: string): string | undefined {
   return materialIconMatch ? materialIconMatch[1] : undefined
 }
 
-function getContent(
-  option: string,
-  isMaterialIcon: boolean,
-  fontSize: IconSize
-): ReactElement {
+function getContentElement(content: string): ReactElement {
+  const fontSize = "lg"
+  const isMaterialIcon = !!getMaterialIcon(content)
   if (isMaterialIcon) {
-    return <DynamicIcon size={fontSize} iconValue={option} />
+    return <DynamicIcon size={fontSize} iconValue={content} />
   }
 
   return (
     <StreamlitMarkdown
-      source={option}
+      source={content}
       allowHTML={true}
       style={{ marginBottom: 0, width: iconSizes[fontSize] }}
     />
   )
 }
 
+/**
+ * Returns true if the element should be shown as selected (even though its technically not).
+ * This is used, for example, to show all elements as selected that come before the actually selected element.
+ * This returns false if mode is not SINGLE_SELECT or if SELECTION_MODE is set
+ *
+ * @param selectionMode
+ * @param clickMode
+ * @param selected list of selected indices. Since only SINGLE_SELECT is considered, this list will always have a length of 1.
+ * @param index of the current element
+ * @returns false if the click mode is set to SINGLE_SELECT or if the selection mode is set to ONLY_SELECTED; true otherwise for elements whose index is less or equal than the selected element
+ */
 function showAsSelected(
   selectionMode: ButtonGroupProto.SelectionHighlight,
   clickMode: ButtonGroupProto.ClickMode,
@@ -122,20 +131,41 @@ function showAsSelected(
   return selected.length > 0 && index < selected[0]
 }
 
-function BaseButtonWithCustomKind(props: any): any {
-  return (
-    <BaseButton
-      {...props}
-      key={props.parsedOption}
-      size={BaseButtonSize.SMALL}
-      // we have to override kind here with a custom prop, because kind itself will
-      // be passed from ButtonGroup and the type is unfortunately narrow
-      kind={props._kind}
-      additionalStyle={props.additionalStyle}
-    >
-      {props.content}
-    </BaseButton>
+function createOptionChild(
+  option: ButtonGroupProto.IOption,
+  index: number,
+  selectionMode: ButtonGroupProto.SelectionHighlight,
+  clickMode: ButtonGroupProto.ClickMode,
+  selected: number[],
+  theme: EmotionTheme
+): React.FunctionComponent {
+  const isShownAsSelected = showAsSelected(
+    selectionMode,
+    clickMode,
+    selected,
+    index
   )
+  const content =
+    isShownAsSelected && option.selectedContent
+      ? option.selectedContent
+      : option.content ?? ""
+  const additionalStyle =
+    isShownAsSelected && !option.selectedContent
+      ? { backgroundColor: theme.colors.lightGray }
+      : undefined
+  return function BaseButtonWithCustomKind(props: any): ReactElement {
+    return (
+      <BaseButton
+        {...props}
+        key={content}
+        size={BaseButtonSize.SMALL}
+        kind={BaseButtonKind.BUTTON_GROUP}
+        additionalStyle={additionalStyle}
+      >
+        {getContentElement(content)}
+      </BaseButton>
+    )
+  }
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
@@ -174,6 +204,17 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     mode = MODE.checkbox
   }
 
+  const optionElements = options.map((option, index) => {
+    const Element = createOptionChild(
+      option,
+      index,
+      selectionHighlight,
+      clickMode,
+      selected,
+      theme
+    )
+    return <Element key={option.content} />
+  })
   return (
     <BasewebButtonGroup
       disabled={disabled}
@@ -193,42 +234,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         },
       }}
     >
-      {options.map((option, index) => {
-        console.log("option", option)
-        const parsedOption = option
-        const key = parsedOption
-
-        const isShownAsSelected = showAsSelected(
-          selectionHighlight,
-          clickMode,
-          selected,
-          index
-        )
-
-        const kind = BaseButtonKind.BUTTON_GROUP
-        const shownOption =
-          isShownAsSelected && parsedOption.selectedContent
-            ? parsedOption.selectedContent
-            : parsedOption.content ?? ""
-        const matchedIconName = getMaterialIcon(shownOption)
-        const additionalStyle =
-          isShownAsSelected && !parsedOption.selectedContent
-            ? { backgroundColor: theme.colors.lightGray }
-            : undefined
-
-        const isMaterialIcon = !!matchedIconName
-
-        const element = getContent(shownOption, isMaterialIcon, "lg")
-        return (
-          <BaseButtonWithCustomKind
-            key={key}
-            parsedOption={parsedOption}
-            _kind={kind}
-            content={element}
-            additionalStyle={additionalStyle}
-          />
-        )
-      })}
+      {optionElements}
     </BasewebButtonGroup>
   )
 }
