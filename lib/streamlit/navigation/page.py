@@ -45,9 +45,12 @@ def Page(
     object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
-    A page can be defined by a Python file or ``Callable``. Since a page is
-    executed from within the entrypoint file, page source code should not
-    include ``if __name__ == "__main__":`` blocks.
+    A page can be defined by a Python file or ``Callable``. Python files used
+    as a ``StreamlitPage`` source will have ``__name__ == "__page__"``.
+    Functions used as a ``StreamlitPage`` source will have ``__name__``
+    corresponding to the module they were imported from. Only the entrypoint
+    file and functions defined within the entrypoint file have
+    ``__name__ == "__main__"`` to adhere to Python convention.
 
     Parameters
     ----------
