@@ -23,19 +23,19 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
 FeedbackOptions = Literal["thumbs", "faces", "stars"]
 
-thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
-face_icons = [
+_thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
+_face_icons = [
     ":material/sentiment_sad:",
     ":material/sentiment_dissatisfied:",
     ":material/sentiment_neutral:",
     ":material/sentiment_satisfied:",
     ":material/sentiment_very_satisfied:",
 ]
-number_stars = 5
-star_icon = ":material/star:"
+_number_stars = 5
+_star_icon = ":material/star:"
 # we don't have the filled-material icon library as a dependency. Hence, we have it here
 # in base64 format and send it over the wire as an image.
-selected_star_icon = (
+_selected_star_icon = (
     "<img src='data:image/svg+xml;base64,"
     "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9"
     "zdmciIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0Ij48cGF0aCBkPSJNMCAwaDI"
@@ -100,24 +100,24 @@ def get_mapped_options(
     options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
     # we use the option index in the webapp communication to
     # indicate which option is selected
-    mapped_options: list[int] = []
+    options_indices: list[int] = []
     # used in case the sentiment is different to the option's index. For example,thumbs
     # up is index 0 as we want to show it first, but sentiment 1.
     sentiment_index_mapping: list[int] | None = None
 
     if feedback_option == "thumbs":
-        mapped_options = list(range(len(thumb_icons)))
-        sentiment_index_mapping = list(reversed(mapped_options))
-        options = [ButtonGroupProto.Option(content=icon) for icon in thumb_icons]
+        options_indices = list(range(len(_thumb_icons)))
+        sentiment_index_mapping = list(reversed(options_indices))
+        options = [ButtonGroupProto.Option(content=icon) for icon in _thumb_icons]
     elif feedback_option == "faces":
-        mapped_options = list(range(len(face_icons)))
-        options = [ButtonGroupProto.Option(content=icon) for icon in face_icons]
+        options_indices = list(range(len(_face_icons)))
+        options = [ButtonGroupProto.Option(content=icon) for icon in _face_icons]
     elif feedback_option == "stars":
-        mapped_options = list(range(number_stars))
+        options_indices = list(range(_number_stars))
         options = ButtonGroupProto.Option(
-            content=star_icon,
-            selected_content=selected_star_icon,
+            content=_star_icon,
+            selected_content=_selected_star_icon,
             disable_selection_highlight=True,
         )
 
-    return options, mapped_options, sentiment_index_mapping
+    return options, options_indices, sentiment_index_mapping
