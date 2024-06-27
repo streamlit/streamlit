@@ -20,7 +20,8 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.widgets.options_selector.feedback_utils import (
     FeedbackOptions,
     FeedbackSerde,
-    get_mapped_options_and_format_funcs,
+    create_format_func,
+    get_mapped_options,
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     check_multiselect_policies,
@@ -160,7 +161,7 @@ class ButtonGroupMixin:
 
         Returns
         -------
-        An integer indicating the user’s selection, where 0 is the lowest
+        An integer indicating the user's selection, where 0 is the lowest
         feedback and higher values indicate more positive feedback.
         If no option was selected, returns None.
             - For "thumbs": a return value of 0 is for thumbs-down and 1 for thumbs-up.
@@ -191,10 +192,12 @@ class ButtonGroupMixin:
                 "['thumbs', 'smiles', 'stars']. "
                 f"The argument passed was '{options}'."
             )
-        mapped_options, sentiment_mapping, format_func = (
-            get_mapped_options_and_format_funcs(options)
+        transformed_options, options_indices, sentiment_index_mapping = (
+            get_mapped_options(options)
         )
-        serde = FeedbackSerde(mapped_options, sentiment_mapping)
+        # format_func maps the option index to the corresponding icon
+        format_func = create_format_func(transformed_options)
+        serde = FeedbackSerde(options_indices, sentiment_index_mapping)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -202,7 +205,7 @@ class ButtonGroupMixin:
                 ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
             )
         sentiment = self._button_group(
-            mapped_options,
+            options_indices,
             key=key,
             click_mode=ButtonGroupProto.SINGLE_SELECT,
             disabled=disabled,

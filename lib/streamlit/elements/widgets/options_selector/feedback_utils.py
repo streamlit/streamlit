@@ -33,6 +33,8 @@ smile_icons = [
 ]
 number_stars = 5
 star_icon = ":material/star:"
+# we don't have the filled-material icon library as a dependency. Hence, we have it here
+# in base64 format and send it over the wire as an image.
 selected_star_icon = (
     "<img src='data:image/svg+xml;base64,"
     "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9"
@@ -44,6 +46,14 @@ selected_star_icon = (
 
 
 class FeedbackSerde:
+    """Uses the MultiSelectSerde under-the-hood, but accepts a single index value
+    and deserializes to a single index value. This is because for feedback, we always
+    allow just a single selection.
+
+    When a sentiment_mapping is provided, the sentiment corresponding to the index is
+    serialized/deserialized. Otherwise, the index is used as the sentiment.
+    """
+
     def __init__(self, options, sentiment_mapping: list[int] | None) -> None:
         self.multiselect_serde: MultiSelectSerde[int] = MultiSelectSerde(options)
         self.sentiment_mapping = sentiment_mapping
@@ -81,17 +91,23 @@ def create_format_func(
     return format_func
 
 
-def get_mapped_options_and_format_funcs(
+def get_mapped_options(
     feedback_option: FeedbackOptions,
-) -> tuple[list[int], list[int] | None, Callable[[int], ButtonGroupProto.Option]]:
-    mapped_options: list[int] = []
+) -> tuple[
+    ButtonGroupProto.Option | list[ButtonGroupProto.Option], list[int], list[int] | None
+]:
+    # options object understandable by the web app
     options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
+    # we use the option index in the webapp communication to
+    # indicate which option is selected
+    mapped_options: list[int] = []
     # used in case the sentiment is different to the option's index. For example,thumbs
     # up is index 0 as we want to show it first, but sentiment 1.
-    sentiment_mapping: list[int] | None = None
+    sentiment_index_mapping: list[int] | None = None
+
     if feedback_option == "thumbs":
         mapped_options = list(range(len(thumb_icons)))
-        sentiment_mapping = list(reversed(mapped_options))
+        sentiment_index_mapping = list(reversed(mapped_options))
         options = [ButtonGroupProto.Option(content=icon) for icon in thumb_icons]
     elif feedback_option == "smiles":
         mapped_options = list(range(len(smile_icons)))
@@ -104,5 +120,4 @@ def get_mapped_options_and_format_funcs(
             disable_selection_highlight=True,
         )
 
-    format_func = create_format_func(options)
-    return mapped_options, sentiment_mapping, format_func
+    return options, mapped_options, sentiment_index_mapping
