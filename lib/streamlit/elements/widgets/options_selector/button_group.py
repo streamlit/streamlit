@@ -130,21 +130,46 @@ class ButtonGroupMixin:
         args: Any | None = None,
         kwargs: Any | None = None,
     ) -> int | None:
-        """Returns the index of the selected feedback option.
+        """Display a feedback widget.
 
-        Options:
-        --------
-        - thumbs: Renders a thumbs up and thumbs down button. Returned indices are
-            `[0, 1]` for thumbs up and thumbs down, respectively.
-        - smiles: Renders a set of smiley faces. Returned indices are `[0, 1, 2, 3, 4]`
-            for the five smiley faces.
-        - stars: Renders a set of stars. Returned indices are `[0, 1, 2, 3, 4]` for the
-            five stars.
-        - a list of material icon strings in the form of [":material/icon_name:", ...].
+        This is useful to collect user feedback, especially in chat-based apps.
+
+        Parameters:
+        -----------
+        options: "thumbs", "faces", or "stars"
+            The feedback options displayed to the user. The options are:
+            - "thumbs" (default): displays a row of thumbs-up and thumbs-down buttons.
+            - "faces": displays a row of five buttons with facial expressions, each
+                depicting increasing satisfaction from left to right.
+            - "stars": displays a row of star icons typically used for ratings.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+        disabled : bool
+            An optional boolean, which disables the multiselect widget if set
+            to True. The default is False. This argument can only be supplied
+            by keyword.
+        on_change : callable
+            An optional callback invoked when this multiselect's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        Returns
+        -------
+        An integer indicating the user’s selection, where 0 is the lowest
+        feedback and higher values indicate more positive feedback.
+        If no option was selected, returns None.
+            - For "thumbs": a return value of 0 is for thumbs-down and 1 for thumbs-up.
+            - For "faces" and "stars":
+                values range from 0 (least satisfied) to 4 (most satisfied).
+
 
         Examples
         --------
-
         Example 1: Display a feedback widget with stars and show the selected sentiment
         ```python
         sentiment_mapping: = [0.0, 0.25, 0.5, 0.75, 1.0]

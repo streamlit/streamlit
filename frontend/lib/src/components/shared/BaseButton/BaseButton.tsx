@@ -44,9 +44,7 @@ function BaseButton({
   autoFocus,
   style,
 }: Readonly<BaseButtonPropsT>): ReactElement {
-  console.log("kind", kind)
   let ComponentType = StyledPrimaryButton
-  console.log("kind", kind)
 
   if (kind === BaseButtonKind.SECONDARY) {
     ComponentType = StyledSecondaryButton

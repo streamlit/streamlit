@@ -254,7 +254,7 @@ const RawElementNodeRenderer = (
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
   }
-  console.log("element!!!", node.element.type)
+
   switch (node.element.type) {
     case "alert": {
       const alertProto = node.element.alert as AlertProto
