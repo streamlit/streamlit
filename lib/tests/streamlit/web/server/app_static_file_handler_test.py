@@ -153,8 +153,8 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             )
 
     def test_staticfiles_403(self):
-        """Non-existent files, files outside static directory and symlinks pointing to
-        files outside static directory and directories should return 404.
+        """files outside static directory and symlinks pointing to
+        files outside static directory and directories should return 403.
         """
         responses = [
             # Access to directory with trailing slash
