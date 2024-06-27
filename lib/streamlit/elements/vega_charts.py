@@ -1156,6 +1156,14 @@ class VegaChartsMixin:
                 "this [Github issue](https://github.com/streamlit/streamlit/issues/8954)."
             )
 
+        # Check that the stack parameter is valid, raise more informative error message if not
+        VALID_STACK_TYPES = (None, True, False, "normalize", "center", "layered")
+        if stack not in VALID_STACK_TYPES:
+            raise StreamlitAPIException(
+                f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
+                "See documentation for `st.bar_chart` [here](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart) for more information."
+            )
+
         bar_chart_type = (
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
