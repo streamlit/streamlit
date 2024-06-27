@@ -57,7 +57,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import ChartStackType, Key, to_key
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -957,6 +957,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
+        stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -1045,6 +1046,14 @@ class VegaChartsMixin:
             (default), the bars display vertically. If this is ``True``,
             Streamlit swaps the x-axis and y-axis and the bars display
             horizontally.
+
+        stack : bool, "normalize", "center", "layered", or None
+            Whether to stack the bars. If this is ``None`` (default), uses Vega's
+            default. If this is ``True``, the bars are stacked on top of each other.
+            If this is ``False``, the bars are displayed side by side. If "normalize",
+            the bars are stacked and normalized to 100%. If "center", the bars are
+            stacked around a central axis. If "layered", the bars are stacked on top
+            of one another.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -1139,6 +1148,20 @@ class VegaChartsMixin:
 
         """
 
+        # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
+        if type_util.is_altair_version_less_than("5.0.0") and stack is False:
+            raise StreamlitAPIException(
+                "Streamlit does not support non-stacked (grouped) bar charts with Altair 4.x. Please upgrade to Version 5."
+            )
+
+        # Check that the stack parameter is valid, raise more informative error message if not
+        VALID_STACK_TYPES = (None, True, False, "normalize", "center", "layered")
+        if stack not in VALID_STACK_TYPES:
+            raise StreamlitAPIException(
+                f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
+                "See documentation for `st.bar_chart` [here](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart) for more information."
+            )
+
         bar_chart_type = (
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
@@ -1154,6 +1177,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            stack=stack,
         )
         return cast(
             "DeltaGenerator",

@@ -142,6 +142,8 @@ LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
 VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
+ChartStackType = Literal["normalize", "center", "layered"]
+
 
 class SupportsStr(Protocol):
     def __str__(self) -> str: ...
