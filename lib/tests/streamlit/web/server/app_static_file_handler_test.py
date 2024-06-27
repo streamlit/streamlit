@@ -46,6 +46,9 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmp_webp_image_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="image.webp", delete=False
         )
+        self._tmp_dir_inside_static_folder = tempfile.TemporaryDirectory(
+            dir=self._tmpdir.name
+        )
 
         self._symlink_outside_directory = "symlink_outside"
         self._symlink_inside_directory = "symlink_inside"
@@ -139,16 +142,6 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         responses = [
             # Access to directory without trailing slash
             self.fetch("/app/static"),
-            # Access to directory with trailing slash
-            self.fetch("/app/static/"),
-            # Access to file outside static directory
-            self.fetch("/app/static/../test_file_outside_directory.py"),
-            # Access to file outside static directory with same prefix
-            self.fetch(
-                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
-            ),
-            # Access to symlink outside static directory
-            self.fetch(f"/app/static/{self._symlink_outside_directory}"),
             # Access to non-existent file
             self.fetch("/app/static/nonexistent.jpg"),
         ]
@@ -157,4 +150,31 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert (
                 r.body == b"<html><title>404: Not Found</title>"
                 b"<body>404: Not Found</body></html>"
+            )
+
+    def test_staticfiles_403(self):
+        """Non-existent files, files outside static directory and symlinks pointing to
+        files outside static directory and directories should return 404.
+        """
+        responses = [
+            # Access to directory with trailing slash
+            self.fetch("/app/static/"),
+            # Access to directory inside static folder without trailing slash
+            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}"),
+            # Access to directory inside static folder with trailing slash
+            self.fetch(f"/app/static/{self._tmp_dir_inside_static_folder.name}/"),
+            # Access to file outside static directory
+            self.fetch("/app/static/../test_file_outside_directory.py"),
+            # Access to file outside static directory with same prefix
+            self.fetch(
+                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
+            ),
+            # Access to symlink outside static directory
+            self.fetch(f"/app/static/{self._symlink_outside_directory}"),
+        ]
+        for r in responses:
+            assert r.code == 403
+            assert (
+                r.body == b"<html><title>403: Forbidden</title>"
+                b"<body>403: Forbidden</body></html>"
             )
