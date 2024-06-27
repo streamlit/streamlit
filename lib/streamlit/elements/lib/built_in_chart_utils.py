@@ -484,7 +484,7 @@ def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: str | N
         pass
     elif is_color_tuple_like(first_color_datum):
         # Tuples need to be converted to CSS-valid.
-        df[color_column] = df[color_column].map(to_css_color)
+        df.loc[:, color_column] = df[color_column].map(to_css_color)
     else:
         # Other kinds of colors columns (i.e. pure numbers or nominal strings) shouldn't
         # be converted since they are treated by Vega-Lite as sequential or categorical colors.
