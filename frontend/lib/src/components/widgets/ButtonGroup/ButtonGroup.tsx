@@ -262,6 +262,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
             flexWrap: "wrap",
             gap: theme.spacing.threeXS,
           },
+          props: {
+            "data-testid": "stButtonGroup",
+          },
         },
       }}
     >

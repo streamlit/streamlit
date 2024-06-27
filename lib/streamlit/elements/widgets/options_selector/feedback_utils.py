@@ -21,10 +21,10 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
-FeedbackOptions = Literal["thumbs", "smiles", "stars"]
+FeedbackOptions = Literal["thumbs", "faces", "stars"]
 
 thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
-smile_icons = [
+face_icons = [
     ":material/sentiment_sad:",
     ":material/sentiment_dissatisfied:",
     ":material/sentiment_neutral:",
@@ -109,9 +109,9 @@ def get_mapped_options(
         mapped_options = list(range(len(thumb_icons)))
         sentiment_index_mapping = list(reversed(mapped_options))
         options = [ButtonGroupProto.Option(content=icon) for icon in thumb_icons]
-    elif feedback_option == "smiles":
-        mapped_options = list(range(len(smile_icons)))
-        options = [ButtonGroupProto.Option(content=icon) for icon in smile_icons]
+    elif feedback_option == "faces":
+        mapped_options = list(range(len(face_icons)))
+        options = [ButtonGroupProto.Option(content=icon) for icon in face_icons]
     elif feedback_option == "stars":
         mapped_options = list(range(number_stars))
         options = ButtonGroupProto.Option(

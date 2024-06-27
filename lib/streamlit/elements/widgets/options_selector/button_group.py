@@ -189,7 +189,7 @@ class ButtonGroupMixin:
         if not isinstance(options, list) and options not in get_args(FeedbackOptions):
             raise StreamlitAPIException(
                 "The options argument to st.feedback must be one of "
-                "['thumbs', 'smiles', 'stars']. "
+                "['thumbs', 'faces', 'stars']. "
                 f"The argument passed was '{options}'."
             )
         transformed_options, options_indices, sentiment_index_mapping = (
