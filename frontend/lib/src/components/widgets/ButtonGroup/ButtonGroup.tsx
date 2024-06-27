@@ -84,7 +84,7 @@ function getMaterialIcon(option: string): string | undefined {
 }
 
 function getContentElement(content: string): ReactElement {
-  const fontSize = "lg"
+  const fontSize = "md"
   const isMaterialIcon = !!getMaterialIcon(content)
   if (isMaterialIcon) {
     return <DynamicIcon size={fontSize} iconValue={content} />
