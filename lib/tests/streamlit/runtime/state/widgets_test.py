@@ -419,6 +419,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (st.feedback, "feedback"),
             (st.multiselect, "multiselect"),
             (st.radio, "radio"),
             (st.select_slider, "select_slider"),

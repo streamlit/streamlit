@@ -118,6 +118,7 @@ class RunWarningTest(unittest.TestCase):
                 "error",
                 "exception",
                 "expander",
+                "feedback",
                 "file_uploader",
                 "form",
                 "form_submit_button",
@@ -201,6 +202,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         widgets = {
             "button": lambda key=None: st.button("", key=key),
             "checkbox": lambda key=None: st.checkbox("", key=key),
+            "feedback": lambda key=None: st.feedback([1, 2], key=key),
             "multiselect": lambda key=None: st.multiselect("", options=[1, 2], key=key),
             "radio": lambda key=None: st.radio("", options=[1, 2], key=key),
             "selectbox": lambda key=None: st.selectbox("", options=[1, 2], key=key),
@@ -247,6 +249,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         widgets = {
             "button": lambda key=None, label="": st.button(label=label, key=key),
             "checkbox": lambda key=None, label="": st.checkbox(label=label, key=key),
+            "feedback": lambda key=None, label="": st.feedback(options=[1, 2], key=key),
             "multiselect": lambda key=None, label="": st.multiselect(
                 label=label, options=[1, 2], key=key
             ),
