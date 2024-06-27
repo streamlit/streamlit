@@ -42,7 +42,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
         full_path = os.path.realpath(absolute_path)
 
-        ret_val = super().validate_absolute_path(root, full_path)
+        ret_val = super().validate_absolute_path(root, absolute_path)
 
         if os.path.isdir(full_path):
             # we don't want to serve directories, and serve only files
