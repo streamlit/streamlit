@@ -72,6 +72,8 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             # we try to serve the default file and allow the frontend to handle the issue.
             if e.status_code == 404:
                 url_path = self.path
+                # self.path is OS specific file path, we convert it to a URL path
+                # for checking it against reserved paths.
                 if os.path.sep != "/":
                     url_path = url_path.replace(os.path.sep, "/")
                 if any(url_path.endswith(x) for x in self._reserved_paths):
