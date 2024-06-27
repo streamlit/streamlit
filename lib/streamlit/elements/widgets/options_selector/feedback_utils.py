@@ -44,10 +44,13 @@ selected_star_icon = (
 
 
 class FeedbackSerde:
-    def __init__(self, options) -> None:
+    def __init__(self, options, sentiment_mapping: list[int] | None) -> None:
         self.multiselect_serde: MultiSelectSerde[int] = MultiSelectSerde(options)
+        self.sentiment_mapping = sentiment_mapping
 
     def serialize(self, value: int | None) -> list[int]:
+        if self.sentiment_mapping is not None:
+            value = self.sentiment_mapping[value] if value is not None else None
         _value = [value] if value is not None else []
         return self.multiselect_serde.serialize(_value)
 
@@ -57,7 +60,10 @@ class FeedbackSerde:
         if len(deserialized) == 0:
             return None
 
-        return deserialized[0]
+        index = deserialized[0]
+        return (
+            index if self.sentiment_mapping is None else self.sentiment_mapping[index]
+        )
 
 
 def create_format_func(
@@ -77,11 +83,15 @@ def create_format_func(
 
 def get_mapped_options_and_format_funcs(
     feedback_option: FeedbackOptions,
-) -> tuple[list[int], Callable[[int], ButtonGroupProto.Option]]:
+) -> tuple[list[int], list[int] | None, Callable[[int], ButtonGroupProto.Option]]:
     mapped_options: list[int] = []
     options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
+    # used in case the sentiment is different to the option's index. For example,thumbs
+    # up is index 0 as we want to show it first, but sentiment 1.
+    sentiment_mapping: list[int] | None = None
     if feedback_option == "thumbs":
         mapped_options = list(range(len(thumb_icons)))
+        sentiment_mapping = list(reversed(mapped_options))
         options = [ButtonGroupProto.Option(content=icon) for icon in thumb_icons]
     elif feedback_option == "smiles":
         mapped_options = list(range(len(smile_icons)))
@@ -95,4 +105,4 @@ def get_mapped_options_and_format_funcs(
         )
 
     format_func = create_format_func(options)
-    return mapped_options, format_func
+    return mapped_options, sentiment_mapping, format_func

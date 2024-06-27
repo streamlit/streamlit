@@ -191,8 +191,10 @@ class ButtonGroupMixin:
                 "['thumbs', 'smiles', 'stars']. "
                 f"The argument passed was '{options}'."
             )
-        mapped_options, format_func = get_mapped_options_and_format_funcs(options)
-        serde = FeedbackSerde(mapped_options)
+        mapped_options, sentiment_mapping, format_func = (
+            get_mapped_options_and_format_funcs(options)
+        )
+        serde = FeedbackSerde(mapped_options, sentiment_mapping)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
