@@ -122,6 +122,7 @@ class AppSession:
             service that a Streamlit Runtime is running in wants to tie the lifecycle of
             a Streamlit session to some other session-like object that it manages.
         """
+
         # Each AppSession has a unique string ID.
         self.id = session_id_override or str(uuid.uuid4())
 
@@ -361,7 +362,7 @@ class AppSession:
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
-                fragment_id_queue=[fragment_id] if fragment_id else [],
+                fragment_id=fragment_id if fragment_id else None,
             )
         else:
             rerun_data = RerunData()
@@ -369,7 +370,7 @@ class AppSession:
         if self._scriptrunner is not None:
             if (
                 bool(config.get_option("runner.fastReruns"))
-                and not rerun_data.fragment_id_queue
+                and not rerun_data.fragment_id
             ):
                 # If fastReruns is enabled and this is *not* a rerun of a fragment,
                 # we don't send rerun requests to our existing ScriptRunner. Instead, we
@@ -479,6 +480,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -496,6 +498,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                clear_forward_msg_queue,
             )
         )
 
@@ -509,6 +512,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -544,6 +548,10 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
+
+        clear_forward_msg_queue : bool
+            If set (the default), clears the queue of forward messages to be sent to the
+            browser. Set only for the SCRIPT_STARTED event.
         """
 
         assert (
@@ -569,13 +577,7 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            # When running the full script, we clear the browser ForwardMsg queue since
-            # anything from a previous script run that has yet to be sent to the browser
-            # will be overwritten. For fragment runs, however, we don't want to do this
-            # as the ForwardMsgs in the queue may not correspond to the running
-            # fragment, so dropping the messages may result in the app missing
-            # information.
-            if not fragment_ids_this_run:
+            if clear_forward_msg_queue:
                 self._clear_queue()
 
             self._enqueue_forward_msg(
