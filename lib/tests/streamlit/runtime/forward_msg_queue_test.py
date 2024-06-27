@@ -226,6 +226,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         fmq.clear(retain_lifecycle_msgs=True)
         assert fmq._queue == [
+            NEW_SESSION_MSG,
             script_finished_msg,
             session_status_changed_msg,
             parent_msg,

@@ -762,6 +762,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
             fragment_ids_this_run=["my_fragment_id"],
+            clear_forward_msg_queue=False,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -775,6 +776,26 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         assert new_session_msg.fragment_ids_this_run == ["my_fragment_id"]
 
         add_script_run_ctx(ctx=orig_ctx)
+
+    async def test_clears_forward_msg_queue_by_default(self):
+        session = _create_test_session(asyncio.get_running_loop())
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run=["my_fragment_id"],
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        session._clear_queue.assert_called_once()
 
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
