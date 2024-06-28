@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { Check } from "@emotion-icons/material-outlined"
+import { Check } from "@emotion-icons/material-rounded"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"

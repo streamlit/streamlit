@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-rounded"
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"

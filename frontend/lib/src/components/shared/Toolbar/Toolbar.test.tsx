@@ -18,7 +18,7 @@ import React from "react"
 
 import "@testing-library/jest-dom"
 import { screen, fireEvent } from "@testing-library/react"
-import { Info } from "@emotion-icons/material-outlined"
+import { Info } from "@emotion-icons/material-rounded"
 
 import { render } from "@streamlit/lib/src/test_util"
 

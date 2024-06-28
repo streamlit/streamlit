@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-rounded"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"

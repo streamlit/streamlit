@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, ChevronLeft } from "@emotion-icons/material-outlined"
+import { ChevronRight, ChevronLeft } from "@emotion-icons/material-rounded"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 

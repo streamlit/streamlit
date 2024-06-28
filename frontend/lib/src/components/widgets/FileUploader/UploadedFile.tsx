@@ -15,11 +15,7 @@
  */
 
 import React from "react"
-import {
-  Clear,
-  Error,
-  InsertDriveFile,
-} from "@emotion-icons/material-outlined"
+import { Clear, Error, InsertDriveFile } from "@emotion-icons/material-rounded"
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"

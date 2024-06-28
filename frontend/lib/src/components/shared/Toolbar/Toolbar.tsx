@@ -19,7 +19,7 @@ import React, { ReactElement } from "react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { useTheme } from "@emotion/react"
 import { StyledComponent } from "@emotion/styled"
-import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
+import { Fullscreen, FullscreenExit } from "@emotion-icons/material-rounded"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import Tooltip, {

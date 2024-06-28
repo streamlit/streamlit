@@ -1449,14 +1449,6 @@
   dependencies:
     "@babel/runtime" "^7.14.0"
 
-"@emotion-icons/material-outlined@^3.14.0":
-  version "3.14.0"
-  resolved "https://registry.yarnpkg.com/@emotion-icons/material-outlined/-/material-outlined-3.14.0.tgz#2733656b1c38fb8a50fa5ac7ad76090fc78f7fe0"
-  integrity sha512-Y4YS4OLPbu5ytN9XjB+7duM5pkkofUhr6YqBlta1Fer6dMHTMKy9GnnDyqGPJ/jYxS+6keVmL8WcTzWYHzQktA==
-  dependencies:
-    "@babel/runtime" "^7.14.0"
-    "@emotion-icons/emotion-icon" "4.1.0"
-
 "@emotion-icons/material-rounded@^3.14.0":
   version "3.14.0"
   resolved "https://registry.yarnpkg.com/@emotion-icons/material-rounded/-/material-rounded-3.14.0.tgz#dfdb30c018241cf47eff7ae780c16bc899e4b836"

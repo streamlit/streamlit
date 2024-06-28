@@ -31,7 +31,7 @@ import {
   FileDownload,
   Search,
   Close,
-} from "@emotion-icons/material-outlined"
+} from "@emotion-icons/material-rounded"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
