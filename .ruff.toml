@@ -28,8 +28,8 @@ select = [
   "B",      # flake8-bugbear
   "C4",     # Helps you write better list/set/dict comprehensions.
   "E",      # pycodestyle errors
-  "F",      # pyflakes
   "FA",     # Verifies files use from __future__ import annotations if a type is used in the module that can be rewritten using PEP 563.
+  "F",      # pyflakes
   "I",      # isort - Import sorting
   "ISC",    # Encourage correct string literal concatenation.
   "LOG",    # Checks for issues using the standard library logging module.
