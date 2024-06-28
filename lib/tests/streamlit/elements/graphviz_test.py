@@ -73,3 +73,14 @@ class GraphvizTest(DeltaGeneratorTestCase):
             c = self.get_delta_from_queue().new_element.graphviz_chart
             self.assertEqual(hasattr(c, "engine"), True)
             self.assertEqual(c.engine, engine)
+
+    def test_source(self):
+        """Test that it can be called with graphviz.sources.Source object."""
+        graph = graphviz.Source(
+            'digraph "the holy hand grenade" { rankdir=LR; 1 -> 2 -> 3 -> lob }'
+        )
+
+        st.graphviz_chart(graph)
+
+        c = self.get_delta_from_queue().new_element.graphviz_chart
+        self.assertIn("grenade", getattr(c, "spec"))
