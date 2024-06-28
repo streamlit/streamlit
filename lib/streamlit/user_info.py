@@ -31,8 +31,6 @@ def _get_user_info() -> UserInfo:
     return ctx.user_info
 
 
-# Class attributes are listed as "Parameters" in the docstring as a workaround
-# for the docstring parser for docs.strreamlit.io
 class UserInfoProxy(Mapping[str, Union[str, None]]):
     """
     A read-only, dict-like object for accessing information about current user.
@@ -44,9 +42,9 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
     Properties can by accessed via key or attribute notation. For example,
     ``st.experimental_user["email"]`` or ``st.experimental_user.email``.
 
-    Parameters
+    Attributes
     ----------
-    email:str
+    email : str
         If running locally, this property returns the string literal
         ``"test@example.com"``.
 

@@ -18,7 +18,6 @@ import os
 from typing import Final, NoReturn
 
 import streamlit as st
-from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.logger import get_logger
@@ -65,6 +64,12 @@ def rerun() -> NoReturn:  # type: ignore[misc]
 
     ctx = get_script_run_ctx()
 
+    # TODO: (rerun[scope] project): in order to make it a fragment-scoped rerun, pass
+    # the fragment_id_queue to the RerunData object and add the following line:
+    # fragment_id_queue=[ctx.current_fragment_id] if scope == "fragment" else []
+    # The script_runner RerunException is checking for the fragment_id_queue to decide
+    # whether or not to reset the dg_stack.
+
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
@@ -77,22 +82,6 @@ def rerun() -> NoReturn:  # type: ignore[misc]
         )
         # Force a yield point so the runner can do the rerun
         st.empty()
-
-
-@gather_metrics("experimental_rerun")
-def experimental_rerun() -> NoReturn:
-    """Rerun the script immediately.
-
-    When ``st.experimental_rerun()`` is called, the script is halted - no
-    more statements will be run, and the script will be queued to re-run
-    from the top.
-    """
-    msg = make_deprecated_name_warning("experimental_rerun", "rerun", "2024-04-01")
-    # Log warning before the rerun, or else it would be interrupted
-    # by the rerun. We do not send a frontend warning because it wouldn't
-    # be seen.
-    _LOGGER.warning(msg)
-    rerun()
 
 
 @gather_metrics("switch_page")

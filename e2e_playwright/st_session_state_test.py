@@ -14,21 +14,67 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import click_button, click_checkbox, get_checkbox
 
 
 def test_checking_checkbox_unchecks_other(app: Page):
-    checkbox_elements = app.locator("[type='checkbox']")
-    expect(checkbox_elements).to_have_count(2)
+    """Test that checking one checkbox unchecks the other by using callbacks."""
+    first_checkbox = get_checkbox(app, "Checkbox1")
+    second_checkbox = get_checkbox(app, "Checkbox2")
 
-    first_checkbox = checkbox_elements.nth(0)
-    second_checkbox = checkbox_elements.nth(1)
+    expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
+    expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
 
-    expect(first_checkbox).to_have_attribute("aria-checked", "true")
-    expect(second_checkbox).to_have_attribute("aria-checked", "false")
+    click_checkbox(app, "Checkbox2")
 
-    app.locator("[data-baseweb='checkbox']").nth(1).click()
-    wait_for_app_run(app)
+    expect(first_checkbox.locator("input")).to_have_attribute("aria-checked", "false")
+    expect(second_checkbox.locator("input")).to_have_attribute("aria-checked", "true")
 
-    expect(first_checkbox).to_have_attribute("aria-checked", "false")
-    expect(second_checkbox).to_have_attribute("aria-checked", "true")
+
+def test_has_correct_starting_values(app: Page):
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("len(st.session_state): 5")).to_have_count(1)
+    expect(app.get_by_test_id("stJson")).to_be_visible()
+
+
+def test_can_do_CRUD_for_session_state_items(app: Page):
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    click_button(app, "inc_item_counter")
+
+    expect(app.get_by_text("item_counter: 1")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    click_button(app, "inc_item_counter")
+
+    expect(app.get_by_text("item_counter: 2")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    click_button(app, "del_item_counter")
+
+    expect(app.get_by_text("item_counter: 2")).to_have_count(0)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("len(st.session_state): 4")).to_have_count(1)
+
+
+def test_can_do_CRUD_for_session_state_attributes(app: Page):
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 0")).to_have_count(1)
+
+    click_button(app, "inc_attr_counter")
+
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 1")).to_have_count(1)
+
+    click_button(app, "inc_attr_counter")
+
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 2")).to_have_count(1)
+
+    click_button(app, "del_attr_counter")
+
+    expect(app.get_by_text("item_counter: 0")).to_have_count(1)
+    expect(app.get_by_text("attr_counter: 2")).to_have_count(0)
+    expect(app.get_by_text("len(st.session_state): 4")).to_have_count(1)

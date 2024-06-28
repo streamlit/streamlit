@@ -435,7 +435,9 @@ class AppSession:
         return True
 
     def _on_source_file_changed(self, filepath: str | None = None) -> None:
-        """One of our source files changed. Clear the cache and schedule a rerun if appropriate."""
+        """One of our source files changed. Clear the cache and schedule a rerun if
+        appropriate.
+        """
         self._script_cache.clear()
 
         if filepath is not None and not self._should_rerun_on_file_change(filepath):
@@ -449,11 +451,13 @@ class AppSession:
     def _on_secrets_file_changed(self, _) -> None:
         """Called when `secrets.file_change_listener` emits a Signal."""
 
-        # NOTE: At the time of writing, this function only calls `_on_source_file_changed`.
-        # The reason behind creating this function instead of just passing `_on_source_file_changed`
-        # to `connect` / `disconnect` directly is that every function that is passed to `connect` / `disconnect`
-        # must have at least one argument for `sender` (in this case we don't really care about it, thus `_`),
-        # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
+        # NOTE: At the time of writing, this function only calls
+        # `_on_source_file_changed`. The reason behind creating this function instead of
+        # just passing `_on_source_file_changed` to `connect` / `disconnect` directly is
+        # that every function that is passed to `connect` / `disconnect` must have at
+        # least one argument for `sender` (in this case we don't really care about it,
+        # thus `_`), and introducing an unnecessary argument to
+        # `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
 
     def _on_pages_changed(self, _) -> None:
