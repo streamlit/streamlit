@@ -38,9 +38,7 @@ def _get_session_client() -> BrowserWebSocketHandler | None:
         return None
 
     if not isinstance(session_client, BrowserWebSocketHandler):
-        raise RuntimeError(
-            f"SessionClient is not a BrowserWebSocketHandler! ({session_client})"
-        )
+        return None
     return session_client
 
 
@@ -111,10 +109,18 @@ class ContextProxy:
     @property
     def headers(self):
         session_client = _get_session_client()
+
+        if session_client is None:
+            return StreamlitHeaders({})
+
         return StreamlitHeaders.from_tornado_headers(session_client.request.headers)
 
     @property
     def cookies(self):
         session_client = _get_session_client()
+
+        if session_client is None:
+            return StreamlitCookies({})
+
         cookies = session_client.request.cookies
         return StreamlitCookies.from_tornado_cookies(cookies)
