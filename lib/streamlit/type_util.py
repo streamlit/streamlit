@@ -461,6 +461,7 @@ def is_graphviz_chart(
         # GraphViz >= 0.18
         or is_type(obj, "graphviz.graphs.Graph")
         or is_type(obj, "graphviz.graphs.Digraph")
+        or is_type(obj, "graphviz.sources.Source")
     )
 
 
