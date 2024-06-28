@@ -115,9 +115,11 @@ const generateNavLinkColors = (
   let color = isLightTheme ? theme.colors.gray80 : theme.colors.gray40
   let activeSvgColor = isLightTheme ? theme.colors.gray90 : theme.colors.gray10
   let svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
-  const activeBgColor = isLightTheme
-    ? theme.colors.darkenedBgMix15
-    : transparentize(theme.colors.gray100, 0.6)
+  // const activeBgColor = isLightTheme
+  //   ? theme.colors.darkenedBgMix15
+  //   : transparentize(theme.colors.gray100, 0.6)
+  // const activeBgColor = isLightTheme ? theme.colors.darkenedBgMix15 : theme.colors.darkenedBgMix25
+  let activeBgColor = theme.colors.darkenedBgMix25
 
   if (isCustomTheme) {
     color = theme.colors.bodyText
@@ -156,7 +158,8 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
-      borderRadius: theme.spacing.twoXS,
+      // borderRadius: theme.spacing.twoXS,
+      borderRadius: theme.radii.lg,
 
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
@@ -175,7 +178,8 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       },
 
       "&:hover": {
-        backgroundColor: activeBgColor,
+        // backgroundColor: activeBgColor,
+        backgroundColor: transparentize(activeBgColor, 0.1),
       },
 
       "&:active,&:visited,&:hover": {
@@ -435,9 +439,10 @@ export const StyledViewButton = styled.button(({ theme }) => {
       boxShadow: "none",
     },
     "&:hover": {
-      backgroundColor: isLightTheme
-        ? theme.colors.darkenedBgMix15
-        : transparentize(theme.colors.gray100, 0.6),
+      // backgroundColor: isLightTheme
+      //   ? theme.colors.darkenedBgMix15
+      //   : transparentize(theme.colors.gray100, 0.6),
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
   }
 })
