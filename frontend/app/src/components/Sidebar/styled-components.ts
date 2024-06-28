@@ -21,6 +21,17 @@ import {
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
 import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
+
+// Heuristic to check for custom theme & handle color in Sidebar/SidebarNav accordingly
+const isCustomTextColor = (theme: any): boolean => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  if (isLightTheme) {
+    return theme.colors.bodyText !== theme.colors.gray85
+  }
+  return theme.colors.bodyText !== theme.colors.gray10
+}
+
 export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
@@ -94,20 +105,45 @@ export const StyledSidebarNavLinkContainer = styled.div(() => ({
   flexDirection: "column",
 }))
 
+const generateNavLinkColors = (
+  theme: any,
+  isCustomTheme: boolean
+): string[] => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  // Theme defaults
+  let color = isLightTheme ? theme.colors.gray80 : theme.colors.gray40
+  let activeSvgColor = isLightTheme ? theme.colors.gray90 : theme.colors.gray10
+  let svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
+  const activeBgColor = isLightTheme
+    ? theme.colors.darkenedBgMix15
+    : transparentize(theme.colors.gray100, 0.6)
+
+  if (isCustomTheme) {
+    color = theme.colors.bodyText
+    activeSvgColor = theme.colors.bodyText
+    svgColor = theme.colors.fadedText60
+  }
+
+  return [color, svgColor, activeSvgColor, activeBgColor]
+}
 export interface StyledSidebarNavLinkProps {
   isActive: boolean
 }
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
-    const isLightTheme = hasLightBackgroundColor(theme)
-    const activeSvgColor = isLightTheme
-      ? theme.colors.gray90
-      : theme.colors.gray10
-    const svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
-    const activeBgColor = isLightTheme
-      ? theme.colors.darkenedBgMix15
-      : transparentize(theme.colors.gray100, 0.6)
+    const [color, svgColor, activeSvgColor, activeBgColor] =
+      generateNavLinkColors(theme, isCustomTextColor(theme))
+
+    // const isLightTheme = hasLightBackgroundColor(theme)
+    // const activeSvgColor = isLightTheme
+    //   ? theme.colors.gray90
+    //   : theme.colors.gray10
+    // const svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
+    // const activeBgColor = isLightTheme
+    //   ? theme.colors.darkenedBgMix15
+    //   : transparentize(theme.colors.gray100, 0.6)
 
     const defaultPageLinkStyles = {
       textDecoration: "none",
@@ -130,7 +166,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
-      color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
+      color: color,
       backgroundColor: isActive ? activeBgColor : "transparent",
 
       [StyledMaterialIcon as any]: {
@@ -161,15 +197,36 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   }
 )
 
+const generateNavLinkTextColors = (
+  theme: any,
+  isCustomTheme: boolean
+): string[] => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  // Streamlit Theme Defaults
+  let defaultColor = isLightTheme ? theme.colors.gray80 : theme.colors.gray50
+  let activeColor = isLightTheme ? theme.colors.gray90 : theme.colors.gray10
+  if (isCustomTheme) {
+    defaultColor = transparentize(theme.colors.bodyText, 0.2)
+    activeColor = theme.colors.bodyText
+  }
+
+  return [defaultColor, activeColor]
+}
+
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
-    const isLightTheme = hasLightBackgroundColor(theme)
-    const defaultColor = isLightTheme
-      ? theme.colors.gray80
-      : theme.colors.gray50
-    const activeColor = isLightTheme
-      ? theme.colors.gray90
-      : theme.colors.gray10
+    const [defaultColor, activeColor] = generateNavLinkTextColors(
+      theme,
+      isCustomTextColor(theme)
+    )
+
+    // const defaultColor = isLightTheme
+    //   ? theme.colors.gray80
+    //   : theme.colors.gray50
+    // const activeColor = isLightTheme
+    //   ? theme.colors.gray90
+    //   : theme.colors.gray10
 
     return {
       color: isActive ? activeColor : defaultColor,
@@ -265,10 +322,14 @@ export const StyledSidebarOpenContainer =
 
 export const StyledOpenSidebarButton = styled.div(({ theme }) => {
   const isLightTheme = hasLightBackgroundColor(theme)
+  const isCustomTheme = isCustomTextColor(theme)
 
   return {
     zIndex: theme.zIndices.header,
-    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+    color:
+      isLightTheme && !isCustomTheme
+        ? theme.colors.gray70
+        : theme.colors.bodyText,
 
     button: {
       "&:hover": {
@@ -290,12 +351,16 @@ export const StyledCollapseSidebarButton =
   styled.div<StyledCollapseSidebarButtonProps>(
     ({ showSidebarCollapse, theme }) => {
       const isLightTheme = hasLightBackgroundColor(theme)
+      const isCustomTheme = isCustomTextColor(theme)
 
       return {
         display: showSidebarCollapse ? "inline" : "none",
         transition: "left 300ms",
         transitionDelay: "left 300ms",
-        color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+        color:
+          isLightTheme && !isCustomTheme
+            ? theme.colors.gray70
+            : theme.colors.bodyText,
         lineHeight: "0",
 
         [`@media print`]: {
@@ -309,13 +374,31 @@ export const StyledCollapseSidebarButton =
     }
   )
 
-export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+const generateNavSectionHeaderColor = (
+  theme: any,
+  isCustomTheme: boolean
+): string => {
   const isLightTheme = hasLightBackgroundColor(theme)
+
+  // Streamlit theme defaults
+  let navHeaderColor = isLightTheme ? theme.colors.gray80 : theme.colors.gray60
+  if (isCustomTheme) {
+    navHeaderColor = transparentize(theme.colors.bodyText, 0.15)
+  }
+
+  return navHeaderColor
+}
+
+export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+  const navHeaderColor = generateNavSectionHeaderColor(
+    theme,
+    isCustomTextColor(theme)
+  )
 
   return {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
-    color: isLightTheme ? theme.colors.gray80 : theme.colors.gray60,
+    color: navHeaderColor,
     lineHeight: theme.lineHeights.table,
     paddingRight: theme.spacing.sm,
     marginLeft: theme.spacing.twoXL,
@@ -327,11 +410,19 @@ export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
 
 export const StyledViewButton = styled.button(({ theme }) => {
   const isLightTheme = hasLightBackgroundColor(theme)
+  const isCustomTheme = isCustomTextColor(theme)
+
+  let viewButtonColor = isLightTheme
+    ? theme.colors.gray90
+    : theme.colors.gray10
+  if (isCustomTheme) {
+    viewButtonColor = theme.colors.bodyText
+  }
 
   return {
     fontSize: theme.fontSizes.sm,
     lineHeight: "1.4rem",
-    color: isLightTheme ? theme.colors.gray90 : theme.colors.gray10,
+    color: viewButtonColor,
     backgroundColor: theme.colors.transparent,
     border: "none",
     borderRadius: theme.radii.lg,
