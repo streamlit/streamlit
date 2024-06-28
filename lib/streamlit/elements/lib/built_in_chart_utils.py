@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from streamlit.elements.arrow import Data
-    from streamlit.type_util import DataFrameCompatible
+    from streamlit.type_util import ChartStackType, DataFrameCompatible
 
 
 class PrepDataColumns(TypedDict):
@@ -123,6 +123,8 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: int | None = None,
     height: int | None = None,
+    # Bar charts only:
+    stack: bool | ChartStackType | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -166,21 +168,18 @@ def generate_chart(
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
 
-    if chart_type == ChartType.HORIZONTAL_BAR:
-        # Handle horizontal bar chart - switches x and y data:
-        x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, x_axis_label, chart_type
-        )
-        y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type
-        )
-    else:
-        x_encoding = _get_x_encoding(
-            df, x_column, x_from_user, x_axis_label, chart_type
-        )
-        y_encoding = _get_y_encoding(
-            df, y_column, y_from_user, y_axis_label, chart_type
-        )
+    # Get x and y encodings
+    x_encoding, y_encoding = _get_axis_encodings(
+        df,
+        chart_type,
+        x_column,
+        y_column,
+        x_from_user,
+        y_from_user,
+        x_axis_label,
+        y_axis_label,
+        stack,
+    )
 
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
@@ -193,8 +192,21 @@ def generate_chart(
         y=y_encoding,
     )
 
+    # Offset encoding only works for Altair >= 5.0.0
+    is_altair_version_offset_compatible = not type_util.is_altair_version_less_than(
+        "5.0.0"
+    )
+    # Set up offset encoding (creates grouped/non-stacked bar charts, so only applicable when stack=False).
+    if (
+        is_altair_version_offset_compatible
+        and stack is False
+        and color_column is not None
+    ):
+        x_offset, y_offset = _get_offset_encoding(chart_type, color_column)
+        chart = chart.encode(xOffset=x_offset, yOffset=y_offset)
+
     # Set up opacity encoding.
-    opacity_enc = _get_opacity_encoding(chart_type, color_column)
+    opacity_enc = _get_opacity_encoding(chart_type, stack, color_column)
     if opacity_enc is not None:
         chart = chart.encode(opacity=opacity_enc)
 
@@ -484,7 +496,7 @@ def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: str | N
         pass
     elif is_color_tuple_like(first_color_datum):
         # Tuples need to be converted to CSS-valid.
-        df[color_column] = df[color_column].map(to_css_color)
+        df.loc[:, color_column] = df[color_column].map(to_css_color)
     else:
         # Other kinds of colors columns (i.e. pure numbers or nominal strings) shouldn't
         # be converted since they are treated by Vega-Lite as sequential or categorical colors.
@@ -577,12 +589,36 @@ def _parse_y_columns(
     return y_column_list
 
 
+def _get_offset_encoding(
+    chart_type: ChartType,
+    color_column: str | None,
+) -> tuple[alt.XOffset, alt.YOffset]:
+    # Vega's Offset encoding channel is used to create grouped/non-stacked bar charts
+    import altair as alt
+
+    x_offset = alt.XOffset()
+    y_offset = alt.YOffset()
+
+    if chart_type is ChartType.VERTICAL_BAR:
+        x_offset = alt.XOffset(field=color_column)
+    elif chart_type is ChartType.HORIZONTAL_BAR:
+        y_offset = alt.YOffset(field=color_column)
+
+    return x_offset, y_offset
+
+
 def _get_opacity_encoding(
-    chart_type: ChartType, color_column: str | None
+    chart_type: ChartType,
+    stack: bool | ChartStackType | None,
+    color_column: str | None,
 ) -> alt.OpacityValue | None:
     import altair as alt
 
     if color_column and chart_type == ChartType.AREA:
+        return alt.OpacityValue(0.7)
+
+    # Layered bar chart
+    if color_column and stack == "layered":
         return alt.OpacityValue(0.7)
 
     return None
@@ -632,6 +668,42 @@ def _maybe_melt(
         )
 
     return df, y_column, color_column
+
+
+def _get_axis_encodings(
+    df: pd.DataFrame,
+    chart_type: ChartType,
+    x_column: str | None,
+    y_column: str | None,
+    x_from_user: str | None,
+    y_from_user: str | Sequence[str] | None,
+    x_axis_label: str | None,
+    y_axis_label: str | None,
+    stack: bool | ChartStackType | None,
+) -> tuple[alt.X, alt.Y]:
+    stack_encoding: alt.X | alt.Y
+    if chart_type == ChartType.HORIZONTAL_BAR:
+        # Handle horizontal bar chart - switches x and y data:
+        x_encoding = _get_x_encoding(
+            df, y_column, y_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(
+            df, x_column, x_from_user, y_axis_label, chart_type
+        )
+        stack_encoding = x_encoding
+    else:
+        x_encoding = _get_x_encoding(
+            df, x_column, x_from_user, x_axis_label, chart_type
+        )
+        y_encoding = _get_y_encoding(
+            df, y_column, y_from_user, y_axis_label, chart_type
+        )
+        stack_encoding = y_encoding
+
+    # Handle stacking - only relevant for bar charts
+    _update_encoding_with_stack(stack, stack_encoding)
+
+    return x_encoding, y_encoding
 
 
 def _get_x_encoding(
@@ -728,6 +800,19 @@ def _get_y_encoding(
         scale=alt.Scale(),
         axis=_get_axis_config(df, y_column, grid=grid),
     )
+
+
+def _update_encoding_with_stack(
+    stack: bool | ChartStackType | None,
+    encoding: alt.X | alt.Y,
+) -> None:
+    if stack is None:
+        return None
+    # Our layered option maps to vega's stack=False option
+    elif stack == "layered":
+        stack = False
+
+    encoding["stack"] = stack
 
 
 def _get_color_encoding(
