@@ -259,7 +259,7 @@ describe("SidebarNav", () => {
 
     // isActive prop used to style background color, so check that
     expect(links[0]).toHaveStyle("background-color: transparent")
-    expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.15)")
+    expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
   })
 
   it("changes the text color when the page is active", () => {
