@@ -141,7 +141,7 @@ class ScriptRunContext:
                 "`set_page_config()` can only be called once per app page, "
                 "and must be called as the first Streamlit command in your script.\n\n"
                 "For more information refer to the [docs]"
-                "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
+                "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
             )
 
         # We want to disallow set_page config if one of the following occurs:

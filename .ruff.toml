@@ -35,6 +35,7 @@ select = [
   "LOG",    # Checks for issues using the standard library logging module.
   "NPY",    # Linting rules for numpy
   "PLC",    # pycodestyle conventions
+  "PYI",    # Linting rules for type annotations.
   "Q",      # Linting rules for quites
   "RUF100", # Unused noqa directive
   "T20",    # Check for Print statements in python files.

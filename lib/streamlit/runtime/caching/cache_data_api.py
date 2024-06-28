@@ -35,7 +35,6 @@ from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -328,20 +327,13 @@ class CacheDataAPI:
     st.cache_data.clear().
     """
 
-    def __init__(
-        self, decorator_metric_name: str, deprecation_warning: str | None = None
-    ):
+    def __init__(self, decorator_metric_name: str):
         """Create a CacheDataAPI instance.
 
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_memo` is
-            deprecated, but we're still supporting it and tracking its usage separately
-            from `@st.cache_data`.
-
-        deprecation_warning
-            An optional deprecation warning to show when the API is accessed.
+            The metric name to record for decorator usage.
         """
 
         # Parameterize the decorator metric name.
@@ -349,7 +341,6 @@ class CacheDataAPI:
         self._decorator = gather_metrics(  # type: ignore
             decorator_metric_name, self._decorator
         )
-        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -414,7 +405,7 @@ class CacheDataAPI:
         cache with ``st.cache_data.clear()``.
 
         To cache global resources, use ``st.cache_resource`` instead. Learn more
-        about caching at https://docs.streamlit.io/library/advanced-features/caching.
+        about caching at https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -456,9 +447,6 @@ class CacheDataAPI:
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
 
-            .. note::
-                This parameter is deprecated and will be removed in a future release.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -466,6 +454,10 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            ``experimental_allow_widgets`` is deprecated and will be removed in
+            a later version.
 
         Example
         -------
@@ -571,8 +563,6 @@ class CacheDataAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        self._maybe_show_deprecation_warning()
-
         if experimental_allow_widgets:
             show_widget_replay_deprecation("cache_data")
 
@@ -607,15 +597,7 @@ class CacheDataAPI:
     @gather_metrics("clear_data_caches")
     def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
-        self._maybe_show_deprecation_warning()
         _data_caches.clear_all()
-
-    def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_memo` name,
-        show a deprecation warning.
-        """
-        if self._deprecation_warning is not None:
-            show_deprecation_warning(self._deprecation_warning)
 
 
 class DataCache(Cache):

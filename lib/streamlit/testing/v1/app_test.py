@@ -374,9 +374,10 @@ class AppTest:
 
         Parameters
         ----------
-        timeout
-            The maximum number of seconds to run the script. None means
-            use the default timeout set for the instance of ``AppTest``.
+        timeout : float or None
+            The maximum number of seconds to run the script. If ``timeout`` is
+            ``None`` (default), Streamlit uses the default timeout set for the
+            instance of ``AppTest``.
 
         Returns
         -------

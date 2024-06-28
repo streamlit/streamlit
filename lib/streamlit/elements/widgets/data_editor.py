@@ -39,7 +39,6 @@ from typing_extensions import TypeAlias
 
 from streamlit import logger as _logger
 from streamlit import type_util
-from streamlit.deprecation_util import deprecate_func_name
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
@@ -602,14 +601,6 @@ class DataEditorMixin:
 
         The data editor widget allows you to edit dataframes and many other data structures in a table-like UI.
 
-        .. warning::
-            When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
-            1.23.0, the data editor's representation in ``st.session_state`` was changed.
-            The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
-            different format (``{0: {"column name": "edited value"}}`` instead of
-            ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
-            ``st.experimental_data_editor`` in combination with ``st.session_state``.
-
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
@@ -669,7 +660,7 @@ class DataEditorMixin:
             * One of the column types defined under ``st.column_config``, e.g.
               ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+              and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 
@@ -951,17 +942,3 @@ class DataEditorMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    # TODO(lukasmasuch): Remove the deprecated function name after 2023-09-01:
-    # Also remove the warning message in the `st.data_editor` docstring.
-    experimental_data_editor = deprecate_func_name(
-        gather_metrics("experimental_data_editor", data_editor),
-        "experimental_data_editor",
-        "2023-09-01",
-        """
-**Breaking change:** The data editor's representation in `st.session_state` was changed. The `edited_cells` dictionary is now called `edited_rows` and uses a
-different format (`{0: {"column name": "edited value"}}` instead of
-`{"0:1": "edited value"}`). You may need to adjust the code if your app uses
-`st.experimental_data_editor` in combination with `st.session_state`."
-""",
-    )

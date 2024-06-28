@@ -23,7 +23,7 @@ from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_na
 if TYPE_CHECKING:
     from types import FunctionType
 
-CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
+CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/caching"
 
 
 def get_cached_func_name_md(func: Any) -> str:

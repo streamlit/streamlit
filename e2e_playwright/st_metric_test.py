@@ -14,6 +14,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_first_metric_in_first_row(app: Page):
@@ -98,7 +99,9 @@ def test_label_visibility_set_to_collapse(
 def test_ellipses_and_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    metric_element = themed_app.get_by_test_id("stMetric").nth(8)
+    expect_help_tooltip(themed_app, metric_element, "Something should feel right")
     assert_snapshot(
-        themed_app.get_by_test_id("stMetric").nth(8),
+        metric_element,
         name="st_metric-help_and_ellipses",
     )

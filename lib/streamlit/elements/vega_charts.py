@@ -57,7 +57,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import ChartStackType, Key, to_key
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -113,11 +113,13 @@ class VegaLiteState(TypedDict, total=False):
 
     Attributes
     ----------
-    selection : AttributeDictionary
-        The state of the ``on_select`` event. The name of each selection
-        parameter becomes an attribute in the ``selection`` attribute
-        dictionary. The format of the data within each attribute is determined
-        by the selection parameter definition within Vega-Lite.
+    selection : dict
+        The state of the ``on_select`` event. This attribure returns a
+        dictionary-like object that supports both key and attribute notation.
+        The name of each Vega-Lite selection parameter becomes an attribute in
+        the ``selection`` dictionary. The format of the data within each
+        attribute is determined by the selection parameter definition within
+        Vega-Lite.
 
     Examples
     --------
@@ -565,6 +567,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -582,17 +586,32 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
+            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
+            snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            Column name or key associated to the x-axis data. If ``x`` is
+            ``None`` (default), Streamlit uses the data index for the x-axis
+            values.
 
         y : str, Sequence of str, or None
-            Column name(s) to use for the y-axis. If a Sequence of strings,
-            draws several series on the same chart by melting your wide-format
-            table into a long-format table behind the scenes. If None, draws
-            the data of all remaining columns as data series.
+            Column name(s) or key(s) associated to the y-axis data. If this is
+            ``None`` (default), Streamlit draws the data of all remaining
+            columns as data series. If this is a ``Sequence`` of strings,
+            Streamlit draws several series on the same chart by melting your
+            wide-format table into a long-format table behind the scenes.
+
+        x_label : str or None
+            The label for the x-axis. If this is ``None`` (default), Streamlit
+            will use the column name specified in ``x`` if available, or else
+            no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If this is ``None`` (default), Streamlit
+            will use the column name(s) specified in ``y`` if available, or
+            else no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different lines in this chart.
@@ -717,6 +736,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -739,6 +760,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -756,17 +779,32 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
+            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
+            snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            Column name or key associated to the x-axis data. If ``x`` is
+            ``None`` (default), Streamlit uses the data index for the x-axis
+            values.
 
         y : str, Sequence of str, or None
-            Column name(s) to use for the y-axis. If a Sequence of strings,
-            draws several series on the same chart by melting your wide-format
-            table into a long-format table behind the scenes. If None, draws
-            the data of all remaining columns as data series.
+            Column name(s) or key(s) associated to the y-axis data. If this is
+            ``None`` (default), Streamlit draws the data of all remaining
+            columns as data series. If this is a ``Sequence`` of strings,
+            Streamlit draws several series on the same chart by melting your
+            wide-format table into a long-format table behind the scenes.
+
+        x_label : str or None
+            The label for the x-axis. If this is ``None`` (default), Streamlit
+            will use the column name specified in ``x`` if available, or else
+            no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If this is ``None`` (default), Streamlit
+            will use the column name(s) specified in ``y`` if available, or
+            else no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart.
@@ -891,6 +929,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
@@ -913,7 +953,11 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
+        horizontal: bool = False,
+        stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -930,17 +974,32 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
+            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
+            snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            Column name or key associated to the x-axis data. If ``x`` is
+            ``None`` (default), Streamlit uses the data index for the x-axis
+            values.
 
         y : str, Sequence of str, or None
-            Column name(s) to use for the y-axis. If a Sequence of strings,
-            draws several series on the same chart by melting your wide-format
-            table into a long-format table behind the scenes. If None, draws
-            the data of all remaining columns as data series.
+            Column name(s) or key(s) associated to the y-axis data. If this is
+            ``None`` (default), Streamlit draws the data of all remaining
+            columns as data series. If this is a ``Sequence`` of strings,
+            Streamlit draws several series on the same chart by melting your
+            wide-format table into a long-format table behind the scenes.
+
+        x_label : str or None
+            The label for the x-axis. If this is ``None`` (default), Streamlit
+            will use the column name specified in ``x`` if available, or else
+            no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If this is ``None`` (default), Streamlit
+            will use the column name(s) specified in ``y`` if available, or
+            else no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart.
@@ -981,6 +1040,20 @@ class VegaChartsMixin:
               the series in the chart. This list should have the same length
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
+
+        horizontal : bool
+            Whether to make the bars horizontal. If this is ``False``
+            (default), the bars display vertically. If this is ``True``,
+            Streamlit swaps the x-axis and y-axis and the bars display
+            horizontally.
+
+        stack : bool, "normalize", "center", "layered", or None
+            Whether to stack the bars. If this is ``None`` (default), uses Vega's
+            default. If this is ``True``, the bars are stacked on top of each other.
+            If this is ``False``, the bars are displayed side by side. If "normalize",
+            the bars are stacked and normalized to 100%. If "center", the bars are
+            stacked around a central axis. If "layered", the bars are stacked on top
+            of one another.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -1040,7 +1113,7 @@ class VegaChartsMixin:
            https://doc-bar-chart1.streamlit.app/
            height: 440px
 
-        Finally, if your dataframe is in wide format, you can group multiple
+        If your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
         colors:
 
@@ -1060,17 +1133,51 @@ class VegaChartsMixin:
            https://doc-bar-chart2.streamlit.app/
            height: 440px
 
+        You can rotate your bar charts to display horizontally.
+
+        >>> import streamlit as st
+        >>> from vega_datasets import data
+        >>>
+        >>> source = data.barley()
+        >>>
+        >>> st.bar_chart(source, x="variety", y="yield", color="site", horizontal=True)
+
+        .. output::
+           https://doc-bar-chart-horizontal.streamlit.app/
+           height: 440px
+
         """
 
+        # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
+        if type_util.is_altair_version_less_than("5.0.0") and stack is False:
+            raise StreamlitAPIException(
+                "Streamlit does not support non-stacked (grouped) bar charts with Altair 4.x. Please upgrade to Version 5."
+            )
+
+        # Check that the stack parameter is valid, raise more informative error message if not
+        VALID_STACK_TYPES = (None, True, False, "normalize", "center", "layered")
+        if stack not in VALID_STACK_TYPES:
+            raise StreamlitAPIException(
+                f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
+                "See documentation for `st.bar_chart` [here](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart) for more information."
+            )
+
+        bar_chart_type = (
+            ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
+        )
+
         chart, add_rows_metadata = generate_chart(
-            chart_type=ChartType.BAR,
+            chart_type=bar_chart_type,
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=None,
             width=width,
             height=height,
+            stack=stack,
         )
         return cast(
             "DeltaGenerator",
@@ -1089,6 +1196,8 @@ class VegaChartsMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
         width: int | None = None,
@@ -1107,17 +1216,32 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
+            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
+            snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
+            Column name or key associated to the x-axis data. If ``x`` is
+            ``None`` (default), Streamlit uses the data index for the x-axis
+            values.
 
         y : str, Sequence of str, or None
-            Column name(s) to use for the y-axis. If a Sequence of strings,
-            draws several series on the same chart by melting your wide-format
-            table into a long-format table behind the scenes. If None, draws
-            the data of all remaining columns as data series.
+            Column name(s) or key(s) associated to the y-axis data. If this is
+            ``None`` (default), Streamlit draws the data of all remaining
+            columns as data series. If this is a ``Sequence`` of strings,
+            Streamlit draws several series on the same chart by melting your
+            wide-format table into a long-format table behind the scenes.
+
+        x_label : str or None
+            The label for the x-axis. If this is ``None`` (default), Streamlit
+            will use the column name specified in ``x`` if available, or else
+            no label will be displayed.
+
+        y_label : str or None
+            The label for the y-axis. If this is ``None`` (default), Streamlit
+            will use the column name(s) specified in ``y`` if available, or
+            else no label will be displayed.
 
         color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color of the circles representing each datapoint.
@@ -1256,6 +1380,8 @@ class VegaChartsMixin:
             data=data,
             x_from_user=x,
             y_from_user=y,
+            x_axis_label=x_label,
+            y_axis_label=y_label,
             color_from_user=color,
             size_from_user=size,
             width=width,

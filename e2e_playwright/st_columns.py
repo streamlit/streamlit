@@ -81,6 +81,24 @@ with st.expander("Nested columns - one level", expanded=True):
         subcol1.write(LOREM_IPSUM)
         subcol2.write(LOREM_IPSUM)
 
+with st.expander("Vertical alignment - top", expanded=True):
+    col1, col2, col3 = st.columns(3, vertical_alignment="top")
+    col1.text_input("Text input (top)")
+    col2.button("Button (top)", use_container_width=True)
+    col3.checkbox("Checkbox (top)")
+
+with st.expander("Vertical alignment - center", expanded=True):
+    col1, col2, col3 = st.columns(3, vertical_alignment="center")
+    col1.text_input("Text input (center)")
+    col2.button("Button (center)", use_container_width=True)
+    col3.checkbox("Checkbox (center)")
+
+with st.expander("Vertical alignment - bottom", expanded=True):
+    col1, col2, col3 = st.columns(3, vertical_alignment="bottom")
+    col1.text_input("Text input (bottom)")
+    col2.button("Button (bottom)", use_container_width=True)
+    col3.checkbox("Checkbox (bottom)")
+
 if st.button("Nested columns - two levels (raises exception)"):
     col1, col2 = st.columns(2)
     with col1:

@@ -23,9 +23,9 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.scriptrunner.exceptions import RerunException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -128,13 +128,18 @@ class FragmentTest(unittest.TestCase):
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
+        exception_message = "oh no"
+
         @fragment
         def my_exploding_fragment():
-            raise Exception("oh no")
+            raise Exception(exception_message)
 
         ctx.current_fragment_id = "my_fragment_id"
-        with pytest.raises(Exception):
+        with patch("streamlit.exception") as mock_st_exception:
             my_exploding_fragment()
+            mock_st_exception.assert_called_once()
+            assert str(mock_st_exception.call_args[0][0]) == exception_message
+
         assert ctx.current_fragment_id is None
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
@@ -313,6 +318,55 @@ class FragmentTest(unittest.TestCase):
             saved_fragment()
             patched_run_with_active_hash.assert_called_with("some_hash")
 
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_fragment_code_returns_value(
+        self,
+        patched_get_script_run_ctx,
+    ):
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            return 42
+
+        assert my_fragment() == 42
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_fragment_raises_rerun_exception_in_main_execution_context(
+        self, patched_get_script_run_ctx
+    ):
+        """Ensure that a rerun exception raised in a fragment when executed in the main execution context (meaning first execution in the app flow, not via a fragment-only rerun) is raised in the main execution context."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            raise RerunException(rerun_data=None)
+
+        with pytest.raises(RerunException):
+            my_fragment()
+
+    @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
+    def test_fragment_handles_non_rerun_exceptions_in_fragment_execution_context(
+        self, exception_type: Exception
+    ):
+        """Ensures that all non-rerun exceptions are caught by the fragment code and not raised."""
+        with patch(
+            "streamlit.runtime.fragment.get_script_run_ctx"
+        ) as patched_get_script_run_ctx:
+            ctx = MagicMock()
+            ctx.fragment_storage = MemoryFragmentStorage()
+            patched_get_script_run_ctx.return_value = ctx
+
+            @fragment
+            def my_fragment():
+                raise exception_type()
+
+            my_fragment()
+
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
 
@@ -326,7 +380,7 @@ def _run_fragment_writes_to_outside_container_app(
 
     outside_container = st.container()
 
-    @st.experimental_fragment
+    @fragment
     def _some_method():
         st.write("Hello")
         # this is forbidden
@@ -343,7 +397,7 @@ def _run_fragment_writes_to_nested_outside_container_app(
     with st.container():
         outside_container = st.container()
 
-    @st.experimental_fragment
+    @fragment
     def _some_method():
         st.write("Hello")
         # this is forbidden
@@ -360,7 +414,7 @@ def _run_fragment_writes_to_nested_outside_container_app2(
     with st.container():
         outside_container = st.container()
 
-    @st.experimental_fragment
+    @fragment
     def _some_method():
         st.write("Hello")
         # this is forbidden
@@ -378,7 +432,7 @@ def _run_fragment_writes_to_nested_outside_container_app3(
     with st.container():
         outside_container = st.container()
 
-    @st.experimental_fragment
+    @fragment
     def _some_method():
         st.write("Hello")
         with st.container():
@@ -394,7 +448,7 @@ def _run_fragment_writes_to_inside_container_app(
 ) -> None:
     """App with container inside of fragment."""
 
-    @st.experimental_fragment
+    @fragment
     def _some_method():
         inside_container = st.container()
 
@@ -410,7 +464,7 @@ def _run_fragment_writes_to_nested_inside_container_app(
 ) -> None:
     """App with container inside of fragment."""
 
-    @st.experimental_fragment
+    @fragment
     def _some_method():
         inside_container = st.container()
 
@@ -467,12 +521,13 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with patch("streamlit.exception") as mock_st_exception:
             _app(_element_producer)
-        assert (
-            e.exception.args[0]
-            == "Fragments cannot write to elements outside of their container."
-        )
+            mock_st_exception.assert_called_once()
+            assert (
+                str(mock_st_exception.call_args[0][0])
+                == "Fragments cannot write to elements outside of their container."
+            )
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)
