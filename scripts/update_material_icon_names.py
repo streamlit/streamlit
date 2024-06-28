@@ -25,7 +25,7 @@ import urllib.request
 
 from streamlit.material_icon_names import ALL_MATERIAL_ICONS
 
-MATERIAL_ICONS_CODEPOINTS_URL = "https://raw.githubusercontent.com/google/material-design-icons/master/variablefont/MaterialSymbolsOutlined%5BFILL%2CGRAD%2Copsz%2Cwght%5D.codepoints"
+MATERIAL_ICONS_CODEPOINTS_URL = "https://raw.githubusercontent.com/google/material-design-icons/master/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.codepoints"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 NAMES_SET_REGEX = re.compile(
     r"### MATERIAL ICON NAMES START ###(.+?)### MATERIAL ICON NAMES END ###", re.DOTALL
