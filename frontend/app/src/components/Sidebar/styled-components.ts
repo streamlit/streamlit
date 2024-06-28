@@ -115,7 +115,7 @@ const generateNavLinkColors = (
   let color = isLightTheme ? theme.colors.gray80 : theme.colors.gray40
   let activeSvgColor = isLightTheme ? theme.colors.gray90 : theme.colors.gray10
   let svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
-  let activeBgColor = theme.colors.darkenedBgMix25
+  const activeBgColor = theme.colors.darkenedBgMix25
 
   if (isCustomTextColor) {
     color = theme.colors.bodyText
