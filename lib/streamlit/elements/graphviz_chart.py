@@ -32,7 +32,9 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
+FigureOrDot: TypeAlias = Union[
+    "graphviz.Graph", "graphviz.Digraph", "graphviz.Source", str
+]
 
 
 class GraphvizMixin:
@@ -46,7 +48,7 @@ class GraphvizMixin:
 
         Parameters
         ----------
-        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
+        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, graphviz.sources.Source, str
             The Graphlib graph object or dot string to display
 
         use_container_width : bool
