@@ -123,7 +123,7 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: int | None = None,
     height: int | None = None,
-    # Bar charts only:
+    # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
@@ -614,10 +614,7 @@ def _get_opacity_encoding(
 ) -> alt.OpacityValue | None:
     import altair as alt
 
-    if color_column and chart_type == ChartType.AREA:
-        return alt.OpacityValue(0.7)
-
-    # Layered bar chart
+    # Opacity applied for layered bar and area charts
     if color_column and stack == "layered":
         return alt.OpacityValue(0.7)
 
@@ -700,7 +697,7 @@ def _get_axis_encodings(
         )
         stack_encoding = y_encoding
 
-    # Handle stacking - only relevant for bar charts
+    # Handle stacking - only relevant for bar & area charts
     _update_encoding_with_stack(stack, stack_encoding)
 
     return x_encoding, y_encoding

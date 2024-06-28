@@ -54,9 +54,9 @@ if TYPE_CHECKING:
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from pandas.io.formats.style_renderer import StyleRenderer
-    from plotly.graph_objs import Figure
     from pydeck import Deck
 
+    from plotly.graph_objs import Figure
     from streamlit.runtime.secrets import Secrets
 
 
@@ -1332,6 +1332,15 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
         raise errors.StreamlitAPIException(
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."
+        )
+
+
+def maybe_raise_stack_warning(stack: str | None, command: str | None, docs_link: str):
+    # Check that the stack parameter is valid, raise more informative error message if not
+    if stack not in (None, True, False, "normalize", "center", "layered"):
+        raise StreamlitAPIException(
+            f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
+            f"See documentation for `{command}` [here]({docs_link}) for more information."
         )
 
 
