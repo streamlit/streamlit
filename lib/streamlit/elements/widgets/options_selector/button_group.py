@@ -24,6 +24,7 @@ from streamlit.elements.widgets.options_selector.feedback_utils import (
     get_mapped_options,
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
+    MultiSelectSerde,
     check_multiselect_policies,
     register_widget_and_enqueue,
     transform_options,
@@ -192,12 +193,10 @@ class ButtonGroupMixin:
                 "['thumbs', 'faces', 'stars']. "
                 f"The argument passed was '{options}'."
             )
-        transformed_options, options_indices, sentiment_index_mapping = (
-            get_mapped_options(options)
-        )
+        transformed_options, options_indices = get_mapped_options(options)
         # format_func maps the option index to the corresponding icon
         format_func = create_format_func(transformed_options)
-        serde = FeedbackSerde(options_indices, sentiment_index_mapping)
+        serde = FeedbackSerde(options_indices)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -269,22 +268,34 @@ class ButtonGroupMixin:
             selection_visualization=selection_visualization,
         )
 
-        return register_widget_and_enqueue(
-            self.dg,
-            widget_name,
-            button_group_proto,
-            widget_id,
-            formatted_options,
-            indexable_options,
-            default_values,
-            ctx,
-            on_change,
-            args,
-            kwargs,
-            None,
-            format_func,
-            deserializer=deserializer,
-            serializer=serializer,
+        _deserializer: WidgetDeserializer
+        _serializer: WidgetSerializer
+        if deserializer is None or serializer is None:
+            serde = MultiSelectSerde(indexable_options, default_values)
+            _deserializer = serde.deserialize
+            _serializer = serde.serialize
+        else:
+            _deserializer = deserializer
+            _serializer = serializer
+
+        return cast(
+            T,
+            register_widget_and_enqueue(
+                self.dg,
+                widget_name,
+                button_group_proto,
+                widget_id,
+                formatted_options,
+                indexable_options,
+                _deserializer,
+                _serializer,
+                ctx,
+                on_change,
+                args,
+                kwargs,
+                None,
+                format_func,
+            ),
         )
 
     @property

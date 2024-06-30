@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
+    MultiSelectSerde,
     check_multiselect_policies,
     register_widget_and_enqueue,
     transform_options,
@@ -32,7 +33,7 @@ from streamlit.type_util import (
     Key,
     LabelVisibility,
     OptionSequence,
-    T,
+    V,
     maybe_raise_label_warnings,
     to_key,
 )
@@ -51,7 +52,7 @@ class MultiSelectMixin:
     def multiselect(
         self,
         label: str,
-        options: OptionSequence[T],
+        options: OptionSequence[V],
         default: Any | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
@@ -64,7 +65,7 @@ class MultiSelectMixin:
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[T]:
+    ) -> list[V]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -182,7 +183,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence[T],
+        options: OptionSequence[V],
         default: Sequence[Any] | Any | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
@@ -196,7 +197,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
-    ) -> list[T]:
+    ) -> list[V]:
         key = to_key(key)
 
         check_multiselect_policies(self.dg, key, on_change, default)
@@ -238,6 +239,7 @@ class MultiSelectMixin:
         if help is not None:
             proto.help = dedent(help)
 
+        serde = MultiSelectSerde(indexable_options, default_values)
         return register_widget_and_enqueue(
             self.dg,
             widget_name,
@@ -245,7 +247,8 @@ class MultiSelectMixin:
             widget_id,
             formatted_options,
             indexable_options,
-            default_values,
+            serde.deserialize,
+            serde.serialize,
             ctx,
             on_change,
             args,

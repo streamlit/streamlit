@@ -21,9 +21,7 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
-FeedbackOptions = Literal["thumbs", "faces", "stars"]
-
-_thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
+_thumb_icons = [":material/thumb_down:", ":material/thumb_up:"]
 _face_icons = [
     ":material/sentiment_sad:",
     ":material/sentiment_dissatisfied:",
@@ -44,6 +42,8 @@ _selected_star_icon = (
     "LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMXoiLz48L3N2Zz4='>"
 )
 
+FeedbackOptions = Literal["thumbs", "faces", "stars"]
+
 
 class FeedbackSerde:
     """Uses the MultiSelectSerde under-the-hood, but accepts a single index value
@@ -54,31 +54,36 @@ class FeedbackSerde:
     serialized/deserialized. Otherwise, the index is used as the sentiment.
     """
 
-    def __init__(self, options, sentiment_mapping: list[int] | None) -> None:
-        self.multiselect_serde: MultiSelectSerde[int] = MultiSelectSerde(options)
-        self.sentiment_mapping = sentiment_mapping
+    def __init__(self, option_indices: list[int]) -> None:
+        """Initialize the FeedbackSerde with a list of sentimets."""
+        self.multiselect_serde: MultiSelectSerde[int] = MultiSelectSerde(option_indices)
 
     def serialize(self, value: int | None) -> list[int]:
-        if self.sentiment_mapping is not None:
-            value = self.sentiment_mapping[value] if value is not None else None
+        """Serialize the passed sentiment option into its corresponding index
+        (wrapped in a list).
+        """
         _value = [value] if value is not None else []
         return self.multiselect_serde.serialize(_value)
 
     def deserialize(self, ui_value: list[int], widget_id: str = "") -> int | None:
+        """Receive a list of indices and return the corresponding sentiments."""
         deserialized = self.multiselect_serde.deserialize(ui_value, widget_id)
 
         if len(deserialized) == 0:
             return None
 
-        index = deserialized[0]
-        return (
-            index if self.sentiment_mapping is None else self.sentiment_mapping[index]
-        )
+        return deserialized[0]
 
 
 def create_format_func(
     option_icons: ButtonGroupProto.Option | list[ButtonGroupProto.Option],
 ) -> Callable[[int], ButtonGroupProto.Option]:
+    """Return a function that accepts an index and returns the corresponding option.
+
+    If the passed options is None, returns an empty string.
+    If the passed options is a single option, always return the same option.
+    """
+
     def format_func(option_index: int) -> ButtonGroupProto.Option:
         if option_icons is None:
             return ""
@@ -93,21 +98,17 @@ def create_format_func(
 
 def get_mapped_options(
     feedback_option: FeedbackOptions,
-) -> tuple[
-    ButtonGroupProto.Option | list[ButtonGroupProto.Option], list[int], list[int] | None
-]:
+) -> tuple[ButtonGroupProto.Option | list[ButtonGroupProto.Option], list[int]]:
     # options object understandable by the web app
     options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
     # we use the option index in the webapp communication to
     # indicate which option is selected
     options_indices: list[int] = []
-    # used in case the sentiment is different to the option's index. For example,thumbs
-    # up is index 0 as we want to show it first, but sentiment 1.
-    sentiment_index_mapping: list[int] | None = None
 
     if feedback_option == "thumbs":
-        options_indices = list(range(len(_thumb_icons)))
-        sentiment_index_mapping = list(reversed(options_indices))
+        # reversing the index mapping to have thumbs up first (but still with the higher
+        # index (=sentiment) in the list)
+        options_indices = list(reversed(range(len(_thumb_icons))))
         options = [ButtonGroupProto.Option(content=icon) for icon in _thumb_icons]
     elif feedback_option == "faces":
         options_indices = list(range(len(_face_icons)))
@@ -120,4 +121,4 @@ def get_mapped_options(
             disable_selection_highlight=True,
         )
 
-    return options, options_indices, sentiment_index_mapping
+    return options, options_indices

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, TypeAlias, cast
 
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
@@ -55,6 +55,16 @@ if TYPE_CHECKING:
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
+OptionSelectorReturnType: TypeAlias = T | list[T]
+
+
+class Serde(Generic[V]):
+    def serialize(self, value: V) -> Any:
+        raise NotImplementedError
+
+    def deserialize(self, ui_value: Any, widget_id: str = "") -> V:
+        raise NotImplementedError
+
 
 @dataclass
 class MultiSelectSerde(Generic[T]):
@@ -62,7 +72,7 @@ class MultiSelectSerde(Generic[T]):
     default_value: list[int] = field(default_factory=list)
 
     def serialize(self, value: list[T]) -> list[int]:
-        indices = check_and_convert_to_indices(self.options, value)
+        indices = _check_and_convert_to_indices(self.options, value)
         return indices if indices is not None else []
 
     def deserialize(
@@ -76,20 +86,7 @@ class MultiSelectSerde(Generic[T]):
         return [self.options[i] for i in current_value]
 
 
-def _get_over_max_options_message(current_selections: int, max_selections: int):
-    curr_selections_noun = "option" if current_selections == 1 else "options"
-    max_selections_noun = "option" if max_selections == 1 else "options"
-    return f"""
-Multiselect has {current_selections} {curr_selections_noun} selected but \
-`max_selections` is set to {max_selections}.
-This happened because you either gave too many options to `default` or you manipulated \
-the widget's state through `st.session_state`. Note that the latter can happen before \
-the line indicated in the traceback.
-Please select at most {max_selections} {max_selections_noun}.
-"""
-
-
-def check_and_convert_to_indices(
+def _check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any | None
 ) -> list[int] | None:
     """Perform validation checks and return indices based on the default values."""
@@ -122,7 +119,19 @@ def check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def get_default_count(default: Sequence[Any] | Any | None) -> int:
+def _get_over_max_options_message(current_selections: int, max_selections: int):
+    curr_selections_noun = "option" if current_selections == 1 else "options"
+    max_selections_noun = "option" if max_selections == 1 else "options"
+    return f"""
+Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
+is set to {max_selections}. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most {max_selections} {max_selections_noun}.
+"""
+
+
+def _get_default_count(default: Sequence[Any] | Any | None) -> int:
     if default is None:
         return 0
     if not is_iterable(default):
@@ -142,7 +151,7 @@ def check_multiselect_policies(
     check_session_state_rules(default_value=default, key=key, writes_allowed=True)
 
 
-def default_format_func(option: T) -> str:
+def _default_format_func(option: T) -> str:
     return str(option)
 
 
@@ -153,13 +162,13 @@ def transform_options(
 ) -> tuple[Sequence[T], list[Any], list[int]]:
     indexable_options = ensure_indexable(options)
     check_python_comparable(indexable_options)
-    indices = check_and_convert_to_indices(indexable_options, default)
-    indices = indices if indices is not None else []
+    default_indices = _check_and_convert_to_indices(indexable_options, default)
+    default_indices = default_indices if default_indices is not None else []
     if format_func is None:
-        format_func = default_format_func
+        format_func = _default_format_func
     formatted_options = [format_func(option) for option in indexable_options]
 
-    return indexable_options, formatted_options, indices
+    return indexable_options, formatted_options, default_indices
 
 
 def register_widget_and_enqueue(
@@ -167,28 +176,17 @@ def register_widget_and_enqueue(
     widget_name: str,
     proto: MultiSelectProto | ButtonGroupProto,
     widget_id: str,
-    options: OptionSequence[V],
-    indexable_options: Sequence[V],
-    default_options: list[int],
+    options: OptionSequence[T],
+    indexable_options: Sequence[T],
+    deserializer: WidgetDeserializer[OptionSelectorReturnType],
+    serializer: WidgetSerializer[OptionSelectorReturnType],
     ctx: ScriptRunContext | None = None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
     max_selections: int | None = None,
     app_testing_value: Any | None = None,
-    deserializer: WidgetDeserializer[T] | None = None,
-    serializer: WidgetSerializer[T] | None = None,
-) -> T:
-    _deserializer: WidgetDeserializer
-    _serializer: WidgetSerializer
-    if deserializer is None or serializer is None:
-        serde = MultiSelectSerde(indexable_options, default_options)
-        _deserializer = serde.deserialize
-        _serializer = serde.serialize
-    else:
-        _deserializer = deserializer
-        _serializer = serializer
-
+) -> OptionSelectorReturnType:
     widget_state = register_widget(
         widget_name,
         proto,
@@ -196,16 +194,15 @@ def register_widget_and_enqueue(
         on_change_handler=on_change_handler,
         args=args,
         kwargs=kwargs,
-        deserializer=_deserializer,
-        serializer=_serializer,
+        deserializer=deserializer,
+        serializer=serializer,
         ctx=ctx,
     )
-    default_count = get_default_count(widget_state.value)
+    default_count = _get_default_count(widget_state.value)
     if max_selections and default_count > max_selections:
         raise StreamlitAPIException(
             _get_over_max_options_message(default_count, max_selections)
         )
-
     if isinstance(widget_state.value, list):
         widget_state = maybe_coerce_enum_sequence(
             widget_state, options, indexable_options
@@ -214,7 +211,7 @@ def register_widget_and_enqueue(
         widget_state = maybe_coerce_enum(widget_state, options, indexable_options)
 
     if widget_state.value_changed:
-        proto.value[:] = _serializer(widget_state.value)
+        proto.value[:] = serializer(widget_state.value)
         proto.set_value = True
 
     if ctx:
