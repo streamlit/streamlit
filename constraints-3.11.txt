@@ -137,7 +137,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.17
+uv==0.2.18
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
