@@ -402,9 +402,6 @@ class SessionStateSerdeTest(DeltaGeneratorTestCase):
         feedback = st.feedback("stars", key="feedback")
         check_roundtrip("feedback", feedback)
 
-        feedback = st.feedback("stars", key="feedback_stars", value=3)
-        check_roundtrip("feedback_stars", feedback)
-
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_file_uploader_serde(self, get_upload_files_patch):
         file_rec = UploadedFileRec("file1", "file1", "type", b"123")

@@ -108,6 +108,7 @@ class StreamlitTest(unittest.TestCase):
                 "empty",
                 "error",
                 "exception",
+                "feedback",
                 "file_uploader",
                 "form",
                 "form_submit_button",

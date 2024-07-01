@@ -419,21 +419,29 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.feedback, "feedback"),
-            (st.multiselect, "multiselect"),
-            (st.radio, "radio"),
-            (st.select_slider, "select_slider"),
-            (st.selectbox, "selectbox"),
+            (
+                st._button_group,
+                "options_selector.button_group",
+                True,
+            ),
+            (st.multiselect, "options_selector.multiselect", False),
+            (st.radio, "radio", False),
+            (st.select_slider, "select_slider", False),
+            (st.selectbox, "selectbox", False),
         ]
     )
-    def test_widget_id_computation_options_widgets(self, widget_func, module_name):
+    def test_widget_id_computation_options_widgets(
+        self, widget_func, module_name, no_label
+    ):
         options = ["a", "b", "c"]
 
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_widget_id",
             wraps=compute_widget_id,
         ) as patched_compute_widget_id:
-            widget_func("my_widget", options)
+            widget_func("my_widget", options) if no_label is False else widget_func(
+                options
+            )
 
         sig = inspect.signature(widget_func)
         patched_compute_widget_id.assert_called_with(
@@ -443,7 +451,9 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
         with self.assertRaises(errors.DuplicateWidgetID):
-            widget_func("my_widget", options, disabled=True)
+            widget_func(
+                "my_widget", options, disabled=True
+            ) if no_label is False else widget_func(options, disabled=True)
 
     def test_widget_id_computation_data_editor(self):
         with patch(

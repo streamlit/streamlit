@@ -142,6 +142,7 @@ balloons = _main.balloons
 bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
 button = _main.button
+_button_group = _main._button_group
 caption = _main.caption
 camera_input = _main.camera_input
 chat_message = _main.chat_message

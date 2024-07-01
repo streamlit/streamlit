@@ -300,17 +300,25 @@ class ButtonGroupMixin:
 
         widget_name = "button_group"
         indexable_options, formatted_options, default_values = transform_options(
-            options, default, format_func
+            options,
+            default,
+            format_func
+            if format_func is not None
+            else lambda x: ButtonGroupProto.Option(content=str(x)),
         )
         ctx = get_script_run_ctx()
+        form_id = current_form_id(self.dg)
         widget_id = compute_widget_id(
             widget_name,
             user_key=key,
             key=key,
             options=formatted_options,
             default=default_values,
-            disabled=disabled,
             selection_visualization=selection_visualization,
+            form_id=form_id,
+            click_mode=click_mode,
+            serializer=str(serializer),
+            deserializer=str(deserializer),
             page=ctx.active_script_hash if ctx else None,
         )
 
@@ -319,7 +327,7 @@ class ButtonGroupMixin:
             formatted_options,
             default_values,
             disabled,
-            current_form_id(self.dg),
+            form_id,
             click_mode=click_mode,
             selection_visualization=selection_visualization,
         )
