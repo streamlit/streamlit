@@ -190,7 +190,6 @@ function createOptionChild(
     return (
       <BaseButton
         {...props}
-        key={content}
         size={BaseButtonSize.SMALL}
         kind={BaseButtonKind.BUTTON_GROUP}
         style={style}
@@ -292,7 +291,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       selected,
       theme
     )
-    return <Element key={option.content} />
+    return <Element key={`${option.content}-${index}`} />
   })
   return (
     <BasewebButtonGroup
