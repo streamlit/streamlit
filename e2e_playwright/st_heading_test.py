@@ -45,7 +45,7 @@ def test_correct_number_and_content_of_title_elements(app: Page):
     titles = _get_title_elements(app)
     expect(titles).to_have_count(6)
 
-    expect(titles.nth(0)).to_have_text("This title is awesome!")
+    expect(titles.nth(0)).to_have_text("info This title is awesome!")
     expect(titles.nth(1)).to_have_text("This title is awesome too!")
     expect(titles.nth(2)).to_have_text("Code - Title with hidden Anchor")
     expect(titles.nth(3)).to_have_text("a link")
@@ -58,7 +58,7 @@ def test_correct_number_and_content_of_header_elements(app: Page):
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
     expect(headers).to_have_count(5)
 
-    expect(headers.nth(0)).to_have_text("This header is awesome!")
+    expect(headers.nth(0)).to_have_text("info This header is awesome!")
     expect(headers.nth(1)).to_have_text("This header is awesome too!")
     expect(headers.nth(2)).to_have_text(
         "This header with hidden anchor is awesome tooooo!"
@@ -72,7 +72,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     )
     expect(subheaders).to_have_count(7)
 
-    expect(subheaders.nth(0)).to_have_text("This subheader is awesome!")
+    expect(subheaders.nth(0)).to_have_text("info This subheader is awesome!")
     expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
     expect(subheaders.nth(2)).to_have_text("Code - Subheader without Anchor")
     expect(subheaders.nth(3)).to_have_text("Code - Subheader with Anchor test_link")
