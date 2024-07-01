@@ -66,15 +66,16 @@ $$
 ax^2 + bx + c = 0
 $$
 
-# Some header 1
+## :material/home: Some header
 
 | Col1      | Col2        |
 | --------- | ----------- |
-| Some      | Data        |
+| Some      | :material/description: Data        |
 
 Some text
 - :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
+- :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
 
 :blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
 
@@ -204,21 +205,3 @@ st.latex(
 st.markdown(
     "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"
 )
-
-st.markdown(
-    ":material/add: llo :material/foo: :material/chevron_right: world test/123 :red[foo :blue[bar] baz] :foo bar baz :bar:faz"
-)
-
-st.subheader(":material/home: Home")
-
-st.markdown(
-    ":material/chevron_right: This text can contain material icons :red[:material/local_fire_department:]"
-)
-
-
-col1, col2 = st.columns(2)
-with col1:
-    st.button(":material/search: Search")
-
-with col2:
-    st.button("Next :material/arrow_forward:")
