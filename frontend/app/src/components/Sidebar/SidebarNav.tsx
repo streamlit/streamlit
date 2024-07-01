@@ -67,14 +67,14 @@ const SidebarNav = ({
   }, [expanded])
 
   const generateNavLinks = useCallback(
-    (page: IAppPage) => {
+    (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
       const pageName = page.pageName as string
       const tooltipContent = pageName.replace(/_/g, " ")
       const isActive = page.pageScriptHash === currentPageScriptHash
 
       return (
-        <li key={pageName}>
+        <li key={`${pageName}-${index}`}>
           <SidebarNavLink
             isActive={isActive}
             pageUrl={pageUrl}
