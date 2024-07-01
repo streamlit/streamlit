@@ -171,14 +171,6 @@ def maybe_coerce(
 ) -> RegisterWidgetResult[T]: ...
 
 
-# @overload
-# def maybe_coerce(
-#     register_widget_result: RegisterWidgetResult[list[T]],
-#     options: OptionSequence[T],
-#     opt_sequence: Sequence[T],
-# ) -> RegisterWidgetResult[list[T]]: ...
-
-
 def maybe_coerce(
     register_widget_result,
     options,

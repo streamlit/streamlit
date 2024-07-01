@@ -41,10 +41,10 @@ class ButtonGroupFeedbackTest(DeltaGeneratorTestCase):
 
         delta = self.get_delta_from_queue().new_element.button_group
         self.assertEqual(
-            delta.options,
+            [option.content for option in delta.options],
             [
-                ButtonGroupProto.Option(content=":material/thumb_up:"),
-                ButtonGroupProto.Option(content=":material/thumb_down:"),
+                ":material/thumb_up:",
+                ":material/thumb_down:",
             ],
         )
         self.assertEqual(delta.default, [])
@@ -90,8 +90,8 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [])
         self.assertEqual(
-            c.options,
-            [ButtonGroupProto.Option(content=option) for option in proto_options],
+            [option.content for option in c.options],
+            proto_options,
         )
 
     def test_default_string(self):
@@ -109,8 +109,8 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [3])
         self.assertEqual(
-            c.options,
-            [ButtonGroupProto.Option(content=option) for option in proto_options],
+            [option.content for option in c.options],
+            proto_options,
         )
 
     @parameterized.expand(
@@ -133,7 +133,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [])
-        self.assertEqual(c.options, [])
+        self.assertEqual([option.content for option in c.options], [])
 
     @parameterized.expand([(15, TypeError), ("str", TypeError)])
     def test_invalid_options(self, options, expected):
@@ -157,11 +157,8 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(
-            c.options,
-            [
-                ButtonGroupProto.Option(content=option)
-                for option in ["Coffee", "Tea", "Water"]
-            ],
+            [option.content for option in c.options],
+            ["Coffee", "Tea", "Water"],
         )
 
     @parameterized.expand(
@@ -185,11 +182,8 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(
-            c.options,
-            [
-                ButtonGroupProto.Option(content=option)
-                for option in ["Coffee", "Tea", "Water"]
-            ],
+            [option.content for option in c.options],
+            ["Coffee", "Tea", "Water"],
         )
 
     @parameterized.expand(
@@ -238,8 +232,8 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected_default)
         self.assertEqual(
-            c.options,
-            [ButtonGroupProto.Option(content=option) for option in expected_options],
+            [option.content for option in c.options],
+            expected_options,
         )
 
     @parameterized.expand(
@@ -304,10 +298,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.button_group
 
         self.assertEqual(proto.default, [])
-        self.assertEqual(
-            proto.options,
-            [ButtonGroupProto.Option(content=option) for option in ["bar", "baz"]],
-        )
+        self.assertEqual([option.content for option in proto.options], ["bar", "baz"])
 
 
 def test_button_group_coercion():

@@ -23,7 +23,6 @@ message ButtonGroup {
   enum ClickMode {
       SINGLE_SELECT = 0;
       MULTI_SELECT = 1;
-      // BUTTON = 2;
   }
 
   message Option {
