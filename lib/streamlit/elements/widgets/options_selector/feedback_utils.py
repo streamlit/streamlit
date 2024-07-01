@@ -21,7 +21,7 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
-_thumb_icons = [":material/thumb_down:", ":material/thumb_up:"]
+_thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
 _face_icons = [
     ":material/sentiment_sad:",
     ":material/sentiment_dissatisfied:",
@@ -97,7 +97,7 @@ def create_format_func(
 
 def get_mapped_options(
     feedback_option: FeedbackOptions,
-) -> tuple[ButtonGroupProto.Option | list[ButtonGroupProto.Option], list[int]]:
+) -> tuple[list[ButtonGroupProto.Option], list[int]]:
     # options object understandable by the web app
     options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
     # we use the option index in the webapp communication to
@@ -114,10 +114,12 @@ def get_mapped_options(
         options = [ButtonGroupProto.Option(content=icon) for icon in _face_icons]
     elif feedback_option == "stars":
         options_indices = list(range(_number_stars))
-        options = ButtonGroupProto.Option(
-            content=_star_icon,
-            selected_content=_selected_star_icon,
-            disable_selection_highlight=True,
-        )
+        options = [
+            ButtonGroupProto.Option(
+                content=_star_icon,
+                selected_content=_selected_star_icon,
+                disable_selection_highlight=True,
+            )
+        ] * _number_stars
 
     return options, options_indices

@@ -337,8 +337,6 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
             "on_change",
             "on_click",
             "on_submit",
-            "serializer",
-            "deserializer",
         }
 
         kwargs = {
@@ -422,7 +420,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                st._button_group,
+                st._internal_button_group,
                 "options_selector.button_group",
                 True,
             ),

@@ -18,11 +18,9 @@ from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Sequence,
     cast,
-    overload,
 )
 
 from streamlit.elements.lib.policies import (
@@ -30,10 +28,6 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
-)
-from streamlit.elements.lib.utils import (
-    maybe_coerce_enum,
-    maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import (
@@ -46,14 +40,9 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from enum import Enum
-
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetCallback,
-    )
-    from streamlit.runtime.state.common import (
-        RegisterWidgetResult,
     )
 
 
@@ -155,50 +144,15 @@ def check_max_selections(
         )
 
 
-@overload
-def maybe_coerce(
-    register_widget_result: RegisterWidgetResult[Enum],
-    options: type[Enum],
-    opt_sequence: Sequence[Any],
-) -> RegisterWidgetResult[Enum]: ...
-
-
-@overload
-def maybe_coerce(
-    register_widget_result: RegisterWidgetResult[T],
-    options: OptionSequence[T],
-    opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[T]: ...
-
-
-def maybe_coerce(
-    register_widget_result,
-    options,
-    indexable_options,
-):
-    if isinstance(register_widget_result.value, list):
-        return maybe_coerce_enum_sequence(
-            register_widget_result, options, indexable_options
-        )
-
-    return maybe_coerce_enum(register_widget_result, options, indexable_options)
-
-
-def _default_format_func(option: T) -> str:
-    return str(option)
-
-
-def transform_options(
-    options: OptionSequence[T],
-    default: Sequence[Any] | Any | None = None,
-    format_func: Callable[[T], Any] | None = None,
-) -> tuple[Sequence[T], list[Any], list[int]]:
+def ensure_indexable_and_comparable(options: OptionSequence[T]) -> Sequence[T]:
     indexable_options = ensure_indexable(options)
     check_python_comparable(indexable_options)
+    return indexable_options
+
+
+def get_default_indices(
+    indexable_options: Sequence[T], default: Sequence[Any] | Any | None = None
+) -> list[int]:
     default_indices = _check_and_convert_to_indices(indexable_options, default)
     default_indices = default_indices if default_indices is not None else []
-    if format_func is None:
-        format_func = _default_format_func
-    formatted_options = [format_func(option) for option in indexable_options]
-
-    return indexable_options, formatted_options, default_indices
+    return default_indices

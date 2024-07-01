@@ -26,7 +26,8 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
     check_max_selections,
     check_multiselect_policies,
-    transform_options,
+    ensure_indexable_and_comparable,
+    get_default_indices,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -209,9 +210,9 @@ class MultiSelectMixin:
         widget_name = "multiselect"
         maybe_raise_label_warnings(label, label_visibility)
 
-        indexable_options, formatted_options, default_values = transform_options(
-            options, default, format_func
-        )
+        indexable_options = ensure_indexable_and_comparable(options)
+        formatted_options = [format_func(option) for option in indexable_options]
+        default_values = get_default_indices(indexable_options, default)
 
         form_id = current_form_id(self.dg)
         widget_id = compute_widget_id(

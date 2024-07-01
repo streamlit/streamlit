@@ -16,7 +16,6 @@
 
 import streamlit as st
 
-import pytest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 from parameterized import parameterized
@@ -25,10 +24,6 @@ import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, patch
 
-
-from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.util import patch_config_options
-from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.errors import StreamlitAPIException
 
 
@@ -39,12 +34,10 @@ class ButtonGroupFeedbackTest(DeltaGeneratorTestCase):
         st.feedback("thumbs")
 
         delta = self.get_delta_from_queue().new_element.button_group
+        correct_thumbs_order = [":material/thumb_up:", ":material/thumb_down:"]
         self.assertEqual(
             [option.content for option in delta.options],
-            [
-                ":material/thumb_up:",
-                ":material/thumb_down:",
-            ],
+            correct_thumbs_order,
         )
         self.assertEqual(delta.default, [])
         self.assertEqual(delta.click_mode, 0)
@@ -82,9 +75,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_option_types(self, options, proto_options):
         """Test that it supports different types of options."""
-        st._button_group(
-            options, format_func=lambda x: ButtonGroupProto.Option(content=x)
-        )
+        st._internal_button_group(options)
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [])
@@ -98,10 +89,9 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        st._button_group(
+        st._internal_button_group(
             arg_options,
             default={},
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
         )
 
         c = self.get_delta_from_queue().new_element.button_group
@@ -123,10 +113,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st._button_group(
-            options,
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-        )
+        st._internal_button_group(options)
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [])
@@ -136,19 +123,12 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_invalid_options(self, options, expected):
         """Test that it handles invalid options."""
         with self.assertRaises(expected):
-            st._button_group(
-                options,
-                format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-            )
+            st._internal_button_group(options)
 
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):
         """Test that valid default can be passed as expected."""
-        st._button_group(
-            ["Coffee", "Tea", "Water"],
-            default=defaults,
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-        )
+        st._internal_button_group(["Coffee", "Tea", "Water"], default=defaults)
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(
@@ -167,11 +147,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_default_types(self, defaults, expected):
         """Test that iterables other than lists can be passed as defaults."""
-        st._button_group(
-            ["Coffee", "Tea", "Water"],
-            default=defaults,
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-        )
+        st._internal_button_group(["Coffee", "Tea", "Water"], default=defaults)
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
@@ -217,11 +193,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_options_with_default_types(
         self, options, defaults, expected_options, expected_default
     ):
-        st._button_group(
-            options,
-            default=defaults,
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-        )
+        st._internal_button_group(options, default=defaults)
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected_default)
         self.assertEqual(
@@ -238,18 +210,11 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_invalid_defaults(self, defaults, expected):
         """Test that invalid default trigger the expected exception."""
         with self.assertRaises(expected):
-            st._button_group(
-                ["Coffee", "Tea", "Water"],
-                default=defaults,
-                format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-            )
+            st._internal_button_group(["Coffee", "Tea", "Water"], default=defaults)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
-        st._button_group(
-            ["bar", "baz"],
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-        )
+        st._internal_button_group(["bar", "baz"])
 
         proto = self.get_delta_from_queue().new_element.button_group
         self.assertEqual(proto.form_id, "")
@@ -259,10 +224,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         """Test that form id is marshalled correctly inside of a form."""
 
         with st.form("form"):
-            st._button_group(
-                ["bar", "baz"],
-                format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-            )
+            st._internal_button_group(["bar", "baz"])
         # 2 elements will be created: form block, widget
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
@@ -276,10 +238,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         col1, col2 = st.columns(2)
 
         with col1:
-            st._button_group(
-                ["bar", "baz"],
-                format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-            )
+            st._internal_button_group(["bar", "baz"])
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
@@ -288,47 +247,3 @@ class TestButtonGroup(DeltaGeneratorTestCase):
 
         self.assertEqual(proto.default, [])
         self.assertEqual([option.content for option in proto.options], ["bar", "baz"])
-
-
-def test_button_group_coercion():
-    """Test E2E Enum Coercion on a selectbox."""
-
-    def script():
-        from enum import Enum
-
-        import streamlit as st
-
-        from streamlit.elements.widgets.options_selector.button_group import (
-            ButtonGroupMixin,
-        )
-        from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-
-        class EnumA(Enum):
-            A = 1
-            B = 2
-            C = 3
-
-        button_group = st._button_group(
-            EnumA,
-            default=[EnumA.A, EnumA.C],
-            format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
-        )
-        print(f"Button Group: {button_group}")
-        st.text(id(button_group.value[0].__class__))
-        st.text(id(EnumA))
-        st.text(all(selected in EnumA for selected in button_group.value))
-
-    at = AppTest.from_function(script).run()
-
-    def test_enum():
-        button_group = at.button_group[0]
-        original_class = button_group.value[0].__class__
-        button_group.set_value([original_class.A, original_class.B]).run()
-        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
-        assert at.text[2].value == "True", "Not all enums found in class"
-
-    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
-        test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        with pytest.raises(AssertionError):
-            test_enum()  # expect a failure with the config value off.

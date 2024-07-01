@@ -38,9 +38,9 @@ class TestGetMappedOptions:
             assert option.content == _thumb_icons[index]
 
         # ensure order of thumbs
-        assert "down" in options[0].content
+        assert "down" in options[1].content
         assert options_indices[0] == 1
-        assert "up" in options[1].content
+        assert "up" in options[0].content
         assert options_indices[1] == 0
 
     def test_faces(self):
@@ -61,12 +61,14 @@ class TestGetMappedOptions:
     def test_stars(self):
         options, options_indices = get_mapped_options("stars")
 
-        assert isinstance(options, ButtonGroupProto.Option)
+        assert len(options) == 5
         assert len(options_indices) == 5
 
-        assert options.content == _star_icon
-        assert options.selected_content == _selected_star_icon
-        assert options.disable_selection_highlight == True
+        for index, option in enumerate(options):
+            assert option.content == _star_icon
+            assert option.selected_content == _selected_star_icon
+            assert options_indices[index] == index
+            assert option.disable_selection_highlight == True
 
 
 class TestCreateFormatFunc:
