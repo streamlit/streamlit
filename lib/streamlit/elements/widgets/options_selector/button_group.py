@@ -317,8 +317,6 @@ class ButtonGroupMixin:
             selection_visualization=selection_visualization,
             form_id=form_id,
             click_mode=click_mode,
-            serializer=str(serializer),
-            deserializer=str(deserializer),
             page=ctx.active_script_hash if ctx else None,
         )
 

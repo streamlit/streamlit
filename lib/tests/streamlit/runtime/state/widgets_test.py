@@ -337,6 +337,8 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
             "on_change",
             "on_click",
             "on_submit",
+            "serializer",
+            "deserializer",
         }
 
         kwargs = {
