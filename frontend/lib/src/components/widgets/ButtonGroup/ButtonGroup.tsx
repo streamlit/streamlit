@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
+import React, {
+  ReactElement,
+  useEffect,
+  useState,
+  forwardRef,
+  Ref,
+} from "react"
 
 import { useTheme } from "@emotion/react"
 
@@ -186,7 +192,12 @@ function createOptionChild(
     option.disableSelectionHighlight || false,
     theme
   )
-  return function BaseButtonGroup(props: any): ReactElement {
+
+  // we have to use forwardRef here becaused BasewebButtonGroup passes it down to its children
+  return forwardRef(function BaseButtonGroup(
+    props: any,
+    _: Ref<BasewebButtonGroup>
+  ): ReactElement {
     return (
       <BaseButton
         {...props}
@@ -197,7 +208,7 @@ function createOptionChild(
         {getContentElement(content)}
       </BaseButton>
     )
-  }
+  })
 }
 
 function getInitialValue(
