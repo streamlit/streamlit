@@ -420,7 +420,7 @@ export function RenderedMarkdown({
               role: "img",
               ariaLabel: icon_name + " icon",
               style: {
-                "font-family": "Material Symbols Outlined",
+                "font-family": "Material Symbols Rounded",
                 "user-select": "none",
                 display: "inline-block",
                 "vertical-align": "bottom",
