@@ -439,6 +439,9 @@ export function RenderedMarkdown({
       }
       // We replace all `:material/` occurrences with `:material_` to avoid
       // conflicts with the directive plugin.
+      // Since all `:material/` already got replaced with `:material_`
+      // within the markdown text (see below), we need to use `:material_`
+      // within the regex.
       findAndReplace(tree, [[/:material_(\w+):/g, replace]])
       return tree
     }
