@@ -95,7 +95,6 @@ def set_user_option(key: str, value: Any) -> None:
 
     Currently, only the following config options can be set within the script itself:
         * client.caching
-        * client.displayEnabled
         * deprecation.*
 
     Calling with any other options will raise StreamlitAPIException.
@@ -269,23 +268,6 @@ def _delete_option(key: str) -> None:
 # Config Section: Global #
 
 _create_section("global", "Global options that apply across all of Streamlit.")
-
-_create_option(
-    "global.disableWatchdogWarning",
-    description="""
-        By default, Streamlit checks if the Python watchdog module is available
-        and, if not, prints a warning asking for you to install it. The watchdog
-        module is not required, but highly recommended. It improves Streamlit's
-        ability to detect changes to files in your filesystem.
-
-        If you'd like to turn off this warning, set this to True.
-        """,
-    default_val=False,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
-)
 
 
 _create_option(
@@ -471,17 +453,6 @@ _create_option(
 
 _create_section("client", "Settings for scripts that use Streamlit.")
 
-_create_option(
-    "client.displayEnabled",
-    description="""If false, makes your Streamlit script not draw to a
-        Streamlit app.""",
-    default_val=True,
-    type_=bool,
-    scriptable=True,
-    deprecated=True,
-    deprecation_text="client.displayEnabled has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
-)
 
 _create_option(
     "client.showErrorDetails",
@@ -541,33 +512,6 @@ _create_option(
         Python code to write it to the app.
         """,
     default_val=True,
-    type_=bool,
-)
-
-_create_option(
-    "runner.installTracer",
-    description="""
-        Install a Python tracer to allow you to stop or pause your script at
-        any point and introspect it. As a side-effect, this slows down your
-        script's execution.
-        """,
-    default_val=False,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="runner.installTracer has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
-)
-
-_create_option(
-    "runner.fixMatplotlib",
-    description="""
-        Sets the MPLBACKEND environment variable to Agg inside Streamlit to
-        prevent Python crashing.
-        """,
-    default_val=True,
-    deprecated=True,
-    deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
     type_=bool,
 )
 
@@ -1015,7 +959,7 @@ _create_option(
     scriptable=True,
     deprecated=True,
     deprecation_text="The support for global pyplot instances is planned to be removed soon.",
-    expiration_date="2024-04-15",
+    expiration_date="2024-12-15",
     type_=bool,
 )
 
