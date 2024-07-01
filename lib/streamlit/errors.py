@@ -38,6 +38,13 @@ class DeprecationError(Error):
     pass
 
 
+class FragmentStorageKeyError(Error, KeyError):
+    """A KeyError raised when a KeyError is encountered during a FragmentStorage
+    operation."""
+
+    pass
+
+
 class NoStaticFiles(Error):
     pass
 

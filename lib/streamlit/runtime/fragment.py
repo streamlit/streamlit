@@ -22,6 +22,7 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -103,13 +104,19 @@ class MemoryFragmentStorage(FragmentStorage):
                 del self._fragments[fid]
 
     def get(self, key: str) -> Fragment:
-        return self._fragments[key]
+        try:
+            return self._fragments[key]
+        except KeyError as e:
+            raise FragmentStorageKeyError(str(e))
 
     def set(self, key: str, value: Fragment) -> None:
         self._fragments[key] = value
 
     def delete(self, key: str) -> None:
-        del self._fragments[key]
+        try:
+            del self._fragments[key]
+        except KeyError as e:
+            raise FragmentStorageKeyError(str(e))
 
     def contains(self, key: str) -> bool:
         return key in self._fragments

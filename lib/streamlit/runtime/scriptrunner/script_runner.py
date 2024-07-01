@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Callable, Final
 from blinker import Signal
 
 from streamlit import config, runtime, util
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -572,7 +573,7 @@ class ScriptRunner:
                                 )
                                 wrapped_fragment()
 
-                            except KeyError:
+                            except FragmentStorageKeyError:
                                 raise RuntimeError(
                                     f"Could not find fragment with id {fragment_id}"
                                 )
