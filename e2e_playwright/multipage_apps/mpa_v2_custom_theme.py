@@ -27,40 +27,42 @@ pg = st.navigation(
     {
         "Overview": [
             st.Page(
-                "pages/02_page2.py", title="Home", default=True, icon=":material/home:"
+                "pages/02_page2.py",
+                title="Home Page",
+                default=True,
+                icon=":material/home:",
             ),
             st.Page(
-                "pages/03_page3.py", title="North Star", icon=":material/star_border:"
+                "pages/03_page3.py", title="Plant Page", icon=":material/potted_plant:"
             ),
         ],
         "Random": [
             st.Page("pages/09_logo_page.py", title="Logo Page", icon=":material/star:"),
             st.Page(
                 "pages/06_page_6.py",
-                title="App statuses over time",
-                icon=":material/access_time:",
+                title="Star Page",
+                icon=":material/star_border:",
             ),
             st.Page(
                 "pages/07_page_7.py",
-                title="Cloud apps leaderboard",
-                icon=":material/share:",
+                title="Animal Page",
+                icon=":material/pets:",
             ),
             st.Page(
                 "pages/08_slow_page.py",
-                title="Something Random",
+                title="Random Page",
                 icon=":material/rocket_launch:",
             ),
             st.Page(
                 "pages/04_page_with_duplicate_name.py",
-                title="Core Metrics",
-                url_path="fourth",
-                icon=":material/hourglass_top:",
+                title="Time Page",
+                icon=":material/access_time:",
             ),
             st.Page(
                 "pages/05_page_with_duplicate_name.py",
-                title="Other Page",
-                url_path="fifth",
-                icon=":material/pets:",
+                title="Events Page",
+                url_path="events",
+                icon=":material/emoji_events:",
             ),
         ],
     }

@@ -34,12 +34,10 @@ def configure_custom_text_color():
 
 
 def test_custom_text_color(
-    themed_app: Page, configure_custom_text_color, assert_snapshot: ImageCompareFunction
+    app: Page, configure_custom_text_color, assert_snapshot: ImageCompareFunction
 ):
     """Test that custom text color is applied correctly to SidebarNav."""
-    themed_app.get_by_text("Logo Page").click()
-    wait_for_app_loaded(themed_app)
+    app.get_by_text("Logo Page").click()
+    wait_for_app_loaded(app)
 
-    assert_snapshot(
-        themed_app.get_by_test_id("stSidebar"), name="sidebar-nav-custom-theme"
-    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="sidebar-nav-custom-theme")
