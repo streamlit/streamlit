@@ -91,50 +91,47 @@ class ButtonGroupMixin:
     # @gather_metrics("button_group")
     # def button_group(
     #     self,
-    #     options: list[str],
+    #     options: OptionSequence[V],
     #     *,
     #     key: Key | None = None,
     #     default: list[bool] | None = None,
-    #     click_mode: ButtonGroupClickMode = "multiselect",
+    #     click_mode: str = "select",
     #     disabled: bool = False,
-    #     format_func: Callable[[str], dict[str, str]] | None = None,
+    #     format_func: Callable[[V], dict[str, str]] | None = None,
     #     on_change: WidgetCallback | None = None,
     #     args: WidgetArgs | None = None,
     #     kwargs: WidgetKwargs | None = None,
-    # ) -> str | list[str] | None:
+    # ) -> list[V]:
     #     default_values = (
     #         [index for index, default_val in enumerate(default) if default_val is True]
     #         if default is not None
     #         else []
     #     )
 
-    #     def _transformed_format_func(x: str) -> ButtonGroupProto.Option:
+    #     def _transformed_format_func(x: V) -> ButtonGroupProto.Option:
     #         if format_func is None:
-    #             return ButtonGroupProto.Option(content=x)
+    #             return ButtonGroupProto.Option(content=str(x))
 
     #         transformed = format_func(x)
     #         return ButtonGroupProto.Option(
     #             content=transformed["content"],
     #             selected_content=transformed["selected_content"],
     #         )
-    #     serde = MultiSelectSerde(indexable_options, default_values)
-    #     _deserializer = serde.deserialize
-    #     _serializer = serde.serialize
-    #     return self._button_group(
-    #         options,
-    #         key=key,
-    #         default=default_values,
-    #         click_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
-    #         if click_mode == "multiselect"
-    #         else ButtonGroupProto.SINGLE_SELECT,
-    #         disabled=disabled,
-    #         format_func=_transformed_format_func if format_func is not None else None,
-    #         deserializer=_deserializer,
-    #         serializer=_serializer,
-    #         on_change=on_change,
-    #         args=args,
-    #         kwargs=kwargs,
-    #     )
+
+    # res: RegisterWidgetResult[list[V]] = self._button_group(
+    #     options,
+    #     key=key,
+    #     default=default_values,
+    #     click_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
+    #     if click_mode == "multiselect"
+    #     else ButtonGroupProto.SINGLE_SELECT,
+    #     disabled=disabled,
+    #     format_func=_transformed_format_func if format_func is not None else None,
+    #     on_change=on_change,
+    #     args=args,
+    #     kwargs=kwargs,
+    # )
+    # return res.value
 
     @gather_metrics("feedback")
     def feedback(
@@ -244,7 +241,7 @@ class ButtonGroupMixin:
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
-        format_func: Callable[[V], ButtonGroupProto.Option],
+        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T] | None = None,
         serializer: WidgetSerializer[T] | None = None,
         on_change: WidgetCallback | None = None,
@@ -267,15 +264,15 @@ class ButtonGroupMixin:
         ),
         disabled: bool = False,
         format_func: Callable[[V], ButtonGroupProto.Option],
-        deserializer: WidgetDeserializer[list[T]] | None = None,
-        serializer: WidgetSerializer[list[T]] | None = None,
+        deserializer: None = None,
+        serializer: None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
             ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         ),
-    ) -> RegisterWidgetResult[list[T]]: ...
+    ) -> RegisterWidgetResult[list[V]]: ...
 
     def _button_group(
         self,
@@ -287,7 +284,7 @@ class ButtonGroupMixin:
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
-        format_func: Callable[[V], ButtonGroupProto.Option],
+        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[Any] | None = None,
         serializer: WidgetSerializer[Any] | None = None,
         on_change: WidgetCallback | None = None,
