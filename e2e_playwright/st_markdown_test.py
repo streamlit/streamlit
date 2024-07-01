@@ -195,8 +195,10 @@ def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction)
     latex_elements = themed_app.get_by_test_id("stMarkdown")
     assert_snapshot(latex_elements.nth(48), name="st_latex-latex")
     expect(themed_app.get_by_test_id("stMarkdown").nth(48)).to_contain_text("LATE​X")
+
     assert_snapshot(latex_elements.nth(49), name="st_latex-formula")
-    expect(themed_app.get_by_test_id("stMarkdown").nth(49)).to_contain_text("a + b")
+
+    expect(themed_app.get_by_test_id("stMarkdown").nth(50)).to_contain_text("a + b")
     assert_snapshot(latex_elements.nth(50), name="st_latex-sympy")
 
 
