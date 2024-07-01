@@ -32,7 +32,6 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
-import { isSet } from "lodash"
 
 const materialIconRegexp = /^:material\/(.+):$/
 
@@ -42,9 +41,6 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
 }
-
-// TODO: use initialValue behavior like Multiselect is doing it?
-// TODO: see commit widget value of multi-select widget -> should we do the same?
 
 function handleMultiSelection(
   index: number,
@@ -205,6 +201,14 @@ function createOptionChild(
   }
 }
 
+function getInitialValue(
+  widgetMgr: WidgetStateManager,
+  element: ButtonGroupProto
+): number[] {
+  const storedValue = widgetMgr.getIntArrayValue(element)
+  return storedValue ?? element.default
+}
+
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
   const {
@@ -218,7 +222,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
 
   const theme: EmotionTheme = useTheme()
 
-  const [selected, setSelected] = useState<number[]>(defaultValues || [])
+  const [selected, setSelected] = useState<number[]>(
+    getInitialValue(widgetMgr, element) || []
+  )
   // initial render is due to mounting, hence setting it to false
   const [isSetFromUi, setFromUi] = useState<boolean>(false)
 
@@ -243,11 +249,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     }
   }, [element.formId, widgetMgr, defaultValues, element, fragmentId])
 
+  const valueString = JSON.stringify(value)
   useEffect(() => {
-    console.log("ButtonGroup useEffect")
+    const parsedValue = JSON.parse(valueString)
     if (setValue) {
-      setSelected(value)
+      setSelected(parsedValue)
       setFromUi(false)
+      elementRef.current.setValue = false
     } else {
       syncValue(
         selected,
@@ -257,7 +265,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         isSetFromUi
       )
     }
-  }, [selected, widgetMgr, fragmentId, value, setValue, isSetFromUi])
+  }, [selected, widgetMgr, fragmentId, valueString, setValue, isSetFromUi])
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
