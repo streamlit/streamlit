@@ -82,7 +82,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
 def test_display_titles_with_anchors(app: Page):
     titles = _get_title_elements(app)
 
-    expect(titles.nth(0)).to_have_id("this-title-is-awesome")
+    expect(titles.nth(0)).to_have_id("info-this-title-is-awesome")
     expect(titles.nth(1)).to_have_id("awesome-title")
     expect(titles.nth(2)).to_have_id("code-title-with-hidden-anchor")
     expect(titles.nth(3)).to_have_id("a-link")
@@ -95,10 +95,10 @@ def test_display_headers_with_anchors_and_style_icons(app: Page):
     headers = _get_header_elements(app)
 
     first_header = headers.nth(0)
-    expect(first_header).to_have_id("this-header-is-awesome")
+    expect(first_header).to_have_id("info-this-header-is-awesome")
     expect(first_header.locator("svg")).to_be_attached()
     expect(first_header.locator("a")).to_have_attribute(
-        "href", "#this-header-is-awesome"
+        "href", "#info-this-header-is-awesome"
     )
 
     second_header = headers.nth(1)
@@ -115,10 +115,10 @@ def test_display_subheaders_with_anchors_and_style_icons(app: Page):
     headers = _get_subheader_elements(app)
 
     first_header = headers.nth(0)
-    expect(first_header).to_have_id("this-subheader-is-awesome")
+    expect(first_header).to_have_id("info-this-subheader-is-awesome")
     expect(first_header.locator("svg")).to_be_attached()
     expect(first_header.locator("a")).to_have_attribute(
-        "href", "#this-subheader-is-awesome"
+        "href", "#info-this-subheader-is-awesome"
     )
 
     second_header = headers.nth(1)
@@ -138,9 +138,9 @@ def test_clicking_on_anchor_changes_url(app: Page):
     first_header = headers.nth(0)
     first_header.hover()
     link = first_header.locator("a")
-    expect(link).to_have_attribute("href", "#this-header-is-awesome")
+    expect(link).to_have_attribute("href", "#info-this-header-is-awesome")
     link.click()
-    expect(app).to_have_url(re.compile(".*#this-header-is-awesome"))
+    expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
 
 
 def test_headers_snapshot_match(
