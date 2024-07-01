@@ -88,6 +88,7 @@ class ScriptRunnerTest(AsyncTestCase):
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        mock_runtime.media_file_mgr.clear_session_refs = MagicMock()
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
@@ -280,6 +281,8 @@ class ScriptRunnerTest(AsyncTestCase):
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_called_once()
+
     @patch("streamlit.exception")
     def test_run_nonexistent_fragment(self, patched_st_exception):
         """Tests that we raise an exception when trying to run a nonexistent fragment."""
@@ -355,6 +358,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
         fragment.assert_has_calls([call(), call(), call()])
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
