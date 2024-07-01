@@ -26,7 +26,6 @@ import pandas as pd
 from unittest.mock import MagicMock, patch
 
 
-from streamlit.elements.widgets.options_selector.button_group import ButtonGroupMixin
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -83,8 +82,8 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_option_types(self, options, proto_options):
         """Test that it supports different types of options."""
-        ButtonGroupMixin._button_group(
-            st._main, options, format_func=lambda x: ButtonGroupProto.Option(content=x)
+        st._button_group(
+            options, format_func=lambda x: ButtonGroupProto.Option(content=x)
         )
 
         c = self.get_delta_from_queue().new_element.button_group
@@ -99,8 +98,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        ButtonGroupMixin._button_group(
-            st._main,
+        st._button_group(
             arg_options,
             default={},
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
@@ -125,8 +123,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_no_options(self, options):
         """Test that it handles no options."""
-        ButtonGroupMixin._button_group(
-            st._main,
+        st._button_group(
             options,
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
         )
@@ -139,8 +136,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_invalid_options(self, options, expected):
         """Test that it handles invalid options."""
         with self.assertRaises(expected):
-            ButtonGroupMixin._button_group(
-                st._main,
+            st._button_group(
                 options,
                 format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
             )
@@ -148,8 +144,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):
         """Test that valid default can be passed as expected."""
-        ButtonGroupMixin._button_group(
-            st._main,
+        st._button_group(
             ["Coffee", "Tea", "Water"],
             default=defaults,
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
@@ -172,8 +167,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_default_types(self, defaults, expected):
         """Test that iterables other than lists can be passed as defaults."""
-        ButtonGroupMixin._button_group(
-            st._main,
+        st._button_group(
             ["Coffee", "Tea", "Water"],
             default=defaults,
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
@@ -223,8 +217,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_options_with_default_types(
         self, options, defaults, expected_options, expected_default
     ):
-        ButtonGroupMixin._button_group(
-            st._main,
+        st._button_group(
             options,
             default=defaults,
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
@@ -245,8 +238,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_invalid_defaults(self, defaults, expected):
         """Test that invalid default trigger the expected exception."""
         with self.assertRaises(expected):
-            ButtonGroupMixin._button_group(
-                st._main,
+            st._button_group(
                 ["Coffee", "Tea", "Water"],
                 default=defaults,
                 format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
@@ -254,8 +246,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
-        ButtonGroupMixin._button_group(
-            st._main,
+        st._button_group(
             ["bar", "baz"],
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
         )
@@ -268,8 +259,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         """Test that form id is marshalled correctly inside of a form."""
 
         with st.form("form"):
-            ButtonGroupMixin._button_group(
-                st._main,
+            st._button_group(
                 ["bar", "baz"],
                 format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
             )
@@ -286,8 +276,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         col1, col2 = st.columns(2)
 
         with col1:
-            ButtonGroupMixin._button_group(
-                st._main,
+            st._button_group(
                 ["bar", "baz"],
                 format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
             )
@@ -319,8 +308,7 @@ def test_button_group_coercion():
             B = 2
             C = 3
 
-        button_group = ButtonGroupMixin._button_group(
-            st._main,
+        button_group = st._button_group(
             EnumA,
             default=[EnumA.A, EnumA.C],
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
