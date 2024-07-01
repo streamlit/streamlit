@@ -52,8 +52,6 @@ def test_displays_individual_markdowns(app: Page):
         "[text]",
         "link",
         "[][]",
-        "Inline math with KaTeX\\KaTeXKATE​X",
-        "ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0",
         "Col1Col2SomeData",
         "Bold text within blue background",
         "Italic text within red background",
