@@ -201,8 +201,8 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         """Multiple widgets with the same generated key should report an error."""
         widgets = {
             "button": lambda key=None: st.button("", key=key),
+            "button_group": lambda key=None: st.feedback([1, 2], key=key),
             "checkbox": lambda key=None: st.checkbox("", key=key),
-            "feedback": lambda key=None: st.feedback([1, 2], key=key),
             "multiselect": lambda key=None: st.multiselect("", options=[1, 2], key=key),
             "radio": lambda key=None: st.radio("", options=[1, 2], key=key),
             "selectbox": lambda key=None: st.selectbox("", options=[1, 2], key=key),
