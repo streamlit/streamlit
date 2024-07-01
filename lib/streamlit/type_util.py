@@ -142,6 +142,8 @@ LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
 VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
+ChartStackType = Literal["normalize", "center", "layered"]
+
 
 class SupportsStr(Protocol):
     def __str__(self) -> str: ...
@@ -459,6 +461,7 @@ def is_graphviz_chart(
         # GraphViz >= 0.18
         or is_type(obj, "graphviz.graphs.Graph")
         or is_type(obj, "graphviz.graphs.Digraph")
+        or is_type(obj, "graphviz.sources.Source")
     )
 
 
