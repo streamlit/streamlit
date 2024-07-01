@@ -64,8 +64,6 @@ def _build_proto(
     proto.default[:] = default_values
     proto.form_id = current_form_id
     proto.disabled = disabled
-
-    proto = cast(ButtonGroupProto, proto)
     proto.click_mode = click_mode
 
     for formatted_option in formatted_options:
