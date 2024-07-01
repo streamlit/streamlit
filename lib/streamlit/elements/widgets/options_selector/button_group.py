@@ -32,7 +32,6 @@ from streamlit.elements.widgets.options_selector.feedback_utils import (
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
-    check_max_selections,
     check_multiselect_policies,
     maybe_coerce,
     transform_options,
@@ -300,7 +299,6 @@ class ButtonGroupMixin:
             ctx=ctx,
         )
 
-        check_max_selections(widget_state.value, None)
         widget_state = maybe_coerce(widget_state, options, indexable_options)
 
         if widget_state.value_changed:
