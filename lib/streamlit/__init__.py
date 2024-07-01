@@ -44,7 +44,6 @@ For more detailed info, see https://docs.streamlit.io.
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
-
 import os as _os
 
 # Set Matplotlib backend to avoid a crash.
@@ -72,11 +71,12 @@ from streamlit.delta_generator import (
     event_dg as _event_dg,
     bottom_dg as _bottom_dg,
 )
+
+from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
-    experimental_singleton as _experimental_singleton,
-    experimental_memo as _experimental_memo,
+    cache as _cache,
 )
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
@@ -94,24 +94,25 @@ from streamlit.commands.experimental_query_params import (
     set_query_params as _set_query_params,
 )
 
-# Modules that the user should have access to. These are imported with "as"
-# syntax pass mypy checking with implicit_reexport disabled.
-
 import streamlit.column_config as _column_config
+
+
+# Modules that the user should have access to. These are imported with the "as" syntax and the same name; note that renaming the import with "as" does not make it an explicit export.
+# In this case, you should import it with an underscore to make clear that it is internal and then assign it to a variable with the new intended name.
+# You can check the export behavior by running 'mypy --strict example_app.py', which disables implicit_reexport, where you use the respective command in the example_app.py Streamlit app.
+
 from streamlit.echo import echo as echo
-from streamlit.runtime.legacy_caching import cache as _cache
+from streamlit.commands.logo import logo as logo
+from streamlit.commands.navigation import navigation as navigation
+from streamlit.navigation.page import Page as Page
 from streamlit.elements.spinner import spinner as spinner
+
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
     rerun as rerun,
-    experimental_rerun as _experimental_rerun,
     switch_page as switch_page,
 )
-
-# We add the metrics tracking for caching here,
-# since the actual cache function calls itself recursively
-cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -129,7 +130,6 @@ _config.on_config_parsed(_update_logger, True)
 secrets = _secrets_singleton
 
 # DeltaGenerator methods:
-
 _main = _main_dg
 sidebar = _sidebar_dg
 _event = _event_dg
@@ -224,6 +224,8 @@ query_params = _QueryParamsProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+# `st.cache` is deprecated and should be removed soon
+cache = _cache
 
 # Namespaces
 column_config = _column_config
@@ -232,12 +234,11 @@ column_config = _column_config
 connection = _connection
 
 # Experimental APIs
+experimental_dialog = _dialog_decorator
 experimental_fragment = _fragment
-experimental_memo = _experimental_memo
-experimental_singleton = _experimental_singleton
 experimental_user = _UserInfoProxy()
 
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
@@ -253,8 +254,9 @@ experimental_set_query_params = _deprecate_func_name(
     _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
-experimental_rerun = _experimental_rerun
-experimental_data_editor = _main.experimental_data_editor
-experimental_connection = _deprecate_func_name(
-    connection, "experimental_connection", "2024-04-01", name_override="connection"
-)
+
+
+# make it possible to call streamlit.components.v1.html etc. by importing it here
+# import in the very end to avoid partially-initialized module import errors, because
+# streamlit.components.v1 also uses some streamlit imports
+import streamlit.components.v1  # noqa: F401

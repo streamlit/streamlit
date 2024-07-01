@@ -86,7 +86,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
               maxHeight: "70vh",
               overflow: "auto",
-              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2rem)`,
+              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
               minWidth: element.useContainerWidth
                 ? // If use_container_width==True, we use the container width as minimum:
                   `${Math.max(width, 160)}px` // 10rem ~= 160px
@@ -99,15 +99,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderBottomRightRadius: theme.radii.xl,
               borderBottomLeftRadius: theme.radii.xl,
 
-              borderLeftWidth: "1px",
-              borderRightWidth: "1px",
-              borderTopWidth: "1px",
-              borderBottomWidth: "1px",
+              borderLeftWidth: theme.sizes.borderWidth,
+              borderRightWidth: theme.sizes.borderWidth,
+              borderTopWidth: theme.sizes.borderWidth,
+              borderBottomWidth: theme.sizes.borderWidth,
 
-              paddingRight: "calc(1.5em - 1px)", // 1px to account for border.
-              paddingLeft: "calc(1.5em - 1px)",
-              paddingBottom: "calc(1.5em - 1px)",
-              paddingTop: "calc(1.5em - 1px)",
+              paddingRight: `calc(${theme.spacing.twoXL} - 1px)`, // 1px to account for border.
+              paddingLeft: `calc(${theme.spacing.twoXL} - 1px)`,
+              paddingBottom: `calc(${theme.spacing.twoXL} - 1px)`,
+              paddingTop: `calc(${theme.spacing.twoXL} - 1px)`,
 
               borderLeftStyle: "solid",
               borderRightStyle: "solid",

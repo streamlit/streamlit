@@ -121,6 +121,10 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "litellm",
     "comet_llm",
     "instructor",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+    "sklearn",
     # Workflow Tools:
     "prefect",
     "luigi",
@@ -302,16 +306,14 @@ F = TypeVar("F", bound=Callable[..., Any])
 def gather_metrics(
     name: str,
     func: F,
-) -> F:
-    ...
+) -> F: ...
 
 
 @overload
 def gather_metrics(
     name: str,
     func: None = None,
-) -> Callable[[F], F]:
-    ...
+) -> Callable[[F], F]: ...
 
 
 def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
@@ -360,7 +362,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         exec_start = timer()
         # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
-        from streamlit.runtime.scriptrunner.script_runner import RerunException
+        from streamlit.runtime.scriptrunner.exceptions import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
 
@@ -373,6 +375,11 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         )
 
         command_telemetry: Command | None = None
+        # This flag is needed to make sure that only the command (the outermost command)
+        # that deactivated tracking (via ctx.command_tracking_deactivated) is able to reset it
+        # again. This is important to prevent nested commands from reactivating tracking.
+        # At this point, we don't know yet if the command will deactivated tracking.
+        has_set_command_tracking_deactivated = False
 
         if ctx and tracking_activated:
             try:
@@ -389,6 +396,10 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
                 ctx.tracked_commands_counter.update([command_telemetry.name])
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ctx.command_tracking_deactivated = True
+                # The ctx.command_tracking_deactivated flag was set to True,
+                # we also need to set has_set_command_tracking_deactivated to True
+                # to make sure that this command is able to reset it again.
+                has_set_command_tracking_deactivated = True
             except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
@@ -403,7 +414,9 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
             raise ex
         finally:
             # Activate tracking again if command executes without any exceptions
-            if ctx:
+            # we only want to do that if this command has set the
+            # flag to deactivate tracking.
+            if ctx and has_set_command_tracking_deactivated:
                 ctx.command_tracking_deactivated = False
 
         if tracking_activated and command_telemetry:
@@ -469,6 +482,6 @@ def create_page_profile_message(
         page_profile.uncaught_exception = uncaught_exception
 
     if ctx := get_script_run_ctx():
-        page_profile.is_fragment_run = bool(ctx.current_fragment_id)
+        page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
 
     return msg

@@ -20,7 +20,7 @@ def test_shows_clear_cache_dialog_when_c_is_pressed(app: Page):
     expect(app.get_by_role("dialog")).to_be_visible()
     expect(app.get_by_role("dialog")).to_have_text(
         """
-Clear cachesAre you sure you want to clear the app's function caches?This will remove all cached entries from functions using @st.cache, @st.cache_data, and @st.cache_resource.CancelClear caches
+Clear cachesAre you sure you want to clear the app's function caches?This will remove all cached entries from functions using @st.cache_data and @st.cache_resource.CancelClear caches
     """
     )
 

@@ -114,7 +114,7 @@ message Element {
     Progress progress = 5;
     Radio radio = 23;
     Selectbox selectbox = 25;
-    Skeleton skeleton = 52;  // Internal-only.
+    Skeleton skeleton = 52;
     Slider slider = 21;
     Snow snow = 46;
     Spinner spinner = 44;

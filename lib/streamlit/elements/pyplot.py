@@ -52,15 +52,21 @@ class PyplotMixin:
         clear_figure : bool
             If True, the figure will be cleared after being rendered.
             If False, the figure will not be cleared after being rendered.
-            If left unspecified, we pick a default based on the value of `fig`.
+            If left unspecified, we pick a default based on the value of ``fig``.
 
-            * If `fig` is set, defaults to `False`.
+            * If ``fig`` is set, defaults to ``False``.
 
-            * If `fig` is not set, defaults to `True`. This simulates Jupyter's
+            * If ``fig`` is not set, defaults to ``True``. This simulates Jupyter's
               approach to matplotlib rendering.
 
         use_container_width : bool
-            If True, set the chart width to the column width. Defaults to `True`.
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``True``
+            (default), Streamlit sets the width of the figure to match the
+            width of the parent container. If ``use_container_width`` is
+            ``False``, Streamlit sets the width of the chart to fit its
+            contents according to the plotting library, up to the width of the
+            parent container.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -128,7 +134,6 @@ def marshall(
     **kwargs: Any,
 ) -> None:
     try:
-        import matplotlib
         import matplotlib.pyplot as plt
 
         plt.ioff()

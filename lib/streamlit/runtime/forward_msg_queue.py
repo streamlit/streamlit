@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from streamlit.proto.Delta_pb2 import Delta
 
 
 class ForwardMsgQueue:
@@ -38,7 +40,7 @@ class ForwardMsgQueue:
         # redundant outgoing Deltas (where a newer Delta supersedes
         # an older Delta, with the same delta_path, that's still in the
         # queue).
-        self._delta_index_map: dict[tuple[int, ...], int] = dict()
+        self._delta_index_map: dict[tuple[int, ...], int] = {}
 
     def get_debug(self) -> dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
@@ -79,10 +81,30 @@ class ForwardMsgQueue:
         self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)
 
-    def clear(self) -> None:
-        """Clear the queue."""
-        self._queue = []
-        self._delta_index_map = dict()
+    def clear(self, retain_lifecycle_msgs: bool = False) -> None:
+        """Clear the queue, potentially retaining lifecycle messages.
+
+        The retain_lifecycle_msgs argument exists because in some cases (in particular
+        when a currently running script is interrupted by a new BackMsg), we don't want
+        to remove certain messages from the queue as doing so may cause the client to
+        not hear about important script lifecycle events (such as the script being
+        stopped early in order to be rerun).
+        """
+        if not retain_lifecycle_msgs:
+            self._queue = []
+        else:
+            self._queue = [
+                msg
+                for msg in self._queue
+                if msg.WhichOneof("type")
+                in {
+                    "script_finished",
+                    "session_status_changed",
+                    "parent_message",
+                }
+            ]
+
+        self._delta_index_map = {}
 
     def flush(self) -> list[ForwardMsg]:
         """Clear the queue and return a list of the messages it contained

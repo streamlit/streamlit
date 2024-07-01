@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List
+from __future__ import annotations
+
+from typing import Any
 
 import streamlit as st
 from streamlit import runtime
-from tests.streamlit import pyspark_mocks
 
 
 def set_multiselect_9_to_have_bad_state():
@@ -26,13 +27,15 @@ def set_multiselect_9_to_have_bad_state():
 
 options = ("male", "female")
 
-i1 = st.multiselect("multiselect 1", options, placeholder="Please select")
+i1 = st.multiselect(
+    "multiselect 1", options, placeholder="Please select", help="Help text"
+)
 st.text(f"value 1: {i1}")
 
 i2 = st.multiselect("multiselect 2", options, format_func=lambda x: x.capitalize())
 st.text(f"value 2: {i2}")
 
-i3: List[Any] = st.multiselect("multiselect 3", [])
+i3: list[Any] = st.multiselect("multiselect 3", [])
 st.text(f"value 3: {i3}")
 
 i4 = st.multiselect("multiselect 4", ["coffee", "tea", "water"], ["tea", "water"])
@@ -40,12 +43,10 @@ st.text(f"value 4: {i4}")
 
 i5 = st.multiselect(
     "multiselect 5",
-    list(
-        map(
-            lambda x: f"{x} I am a ridiculously long string to have in a multiselect, so perhaps I should just not wrap and go to the next line.",
-            range(5),
-        )
-    ),
+    [
+        f"{x} I am a ridiculously long string to have in a multiselect, so perhaps I should just not wrap and go to the next line."
+        for x in range(5)
+    ],
 )
 st.text(f"value 5: {i5}")
 
@@ -80,5 +81,3 @@ if runtime.exists():
     st.multiselect("multiselect 11", options, key="multiselect11", on_change=on_change)
     st.text(f"value 11: {st.session_state.multiselect11}")
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
-
-st.multiselect("PySpark DataFrame", options=pyspark_mocks.DataFrame())  # type: ignore

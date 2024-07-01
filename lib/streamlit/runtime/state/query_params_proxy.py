@@ -72,18 +72,32 @@ class QueryParamsProxy(MutableMapping[str, str]):
                 raise AttributeError(missing_key_error_message(key))
 
     @overload
-    def update(self, mapping: SupportsKeysAndGetItem[str, str], /, **kwds: str):
-        ...
+    def update(
+        self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]], /, **kwds: str
+    ) -> None: ...
 
     @overload
-    def update(self, keys_and_values: Iterable[tuple[str, str]], /, **kwds: str):
-        ...
+    def update(
+        self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]], /, **kwds: str
+    ) -> None: ...
 
     @overload
-    def update(self, **kwds: str):
-        ...
+    def update(self, **kwds: str | Iterable[str]) -> None: ...
 
     def update(self, other=(), /, **kwds):
+        """
+        Update one or more values in query_params at once from a dictionary or
+        dictionary-like object.
+
+        See `Mapping.update()` from Python's `collections` library.
+
+        Parameters
+        ----------
+        other: SupportsKeysAndGetItem[str, str] | Iterable[tuple[str, str]]
+            A dictionary or mapping of strings to strings.
+        **kwds: str
+            Additional key/value pairs to update passed as keyword arguments.
+        """
         with get_session_state().query_params() as qp:
             qp.update(other, **kwds)
 
@@ -146,3 +160,48 @@ class QueryParamsProxy(MutableMapping[str, str]):
         """
         with get_session_state().query_params() as qp:
             return qp.to_dict()
+
+    @overload
+    def from_dict(
+        self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]]
+    ) -> None: ...
+
+    @overload
+    def from_dict(
+        self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]]
+    ) -> None: ...
+
+    @gather_metrics("query_params.from_dict")
+    def from_dict(self, params):
+        """
+        Set all of the query parameters from a dictionary or dictionary-like object.
+
+        This method primarily exists for advanced users who want to control
+        multiple query parameters in a single update. To set individual query
+        parameters, use key or attribute notation instead.
+
+        This method inherits limitations from ``st.query_params`` and can't be
+        used to set embedding options as described in `Embed your app \
+        <https://docs.streamlit.io/deploy/streamlit-community-cloud/share-your-app/embed-your-app#embed-options>`_.
+
+        To handle repeated keys, the value in a key-value pair should be a list.
+
+        .. note::
+            ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
+            you are working with repeated keys. A true inverse operation is
+            ``{key: st.query_params.get_all(key) for key st.query_params}``.
+
+        Parameters
+        ----------
+        params: dict
+            A dictionary used to replace the current query parameters.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.query_params.from_dict({"foo": "bar", "baz": [1, "two"]})
+
+        """
+        with get_session_state().query_params() as qp:
+            return qp.from_dict(params)

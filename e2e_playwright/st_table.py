@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from tests.streamlit.data_mocks import (
+from shared.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
     INTERVAL_TYPES_DF,
@@ -104,7 +104,7 @@ st.subheader("Categorical Index (pd.CategoricalIndex)")
 st.table(SPECIAL_TYPES_DF.set_index("categorical"))
 
 st.subheader("Period Index (pd.PeriodIndex)")
-st.table(PERIOD_TYPES_DF.set_index("L"))
+st.table(PERIOD_TYPES_DF.set_index("D"))
 
 st.subheader("Timedelta Index (pd.TimedeltaIndex)")
 st.table(SPECIAL_TYPES_DF.set_index("timedelta"))

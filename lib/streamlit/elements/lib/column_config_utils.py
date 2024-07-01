@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, Final, Literal, Mapping, Union
@@ -23,12 +24,13 @@ from typing_extensions import TypeAlias
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import DataFormat, is_colum_type_arrow_incompatible
 
 if TYPE_CHECKING:
     import pyarrow as pa
     from pandas import DataFrame, Index, Series
+
+    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 
 # The index identifier can be used to apply configuration options
@@ -427,7 +429,9 @@ def process_config_mapping(
         elif isinstance(config, str):
             transformed_column_config[column] = ColumnConfig(label=config)
         elif isinstance(config, dict):
-            transformed_column_config[column] = config
+            # Ensure that the column config objects are cloned
+            # since we will apply in-place changes to it.
+            transformed_column_config[column] = copy.deepcopy(config)
         else:
             raise StreamlitAPIException(
                 f"Invalid column config for column `{column}`. "

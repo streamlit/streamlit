@@ -171,8 +171,6 @@ def _build_st_write_call(nodes):
         ),
         args=nodes,
         keywords=[],
-        kwargs=None,
-        starargs=None,
     )
 
 
@@ -231,7 +229,7 @@ def _get_st_write_from_expr(
 
 
 def _is_string_constant_node(node) -> bool:
-    return type(node) is ast.Constant and type(node.value) is str
+    return isinstance(node, ast.Constant) and isinstance(node.value, str)
 
 
 def _is_docstring_node(node, node_index, parent_type) -> bool:

@@ -47,7 +47,7 @@ class PageHelperFunctionTests(unittest.TestCase):
         with pytest.raises(AssertionError) as e:
             source_util.page_sort_key(Path("/foo/bar/baz.rs"))
 
-        assert str(e.value) == "/foo/bar/baz.rs is not a Python file"
+        assert str(e.value) == f"{Path('/foo/bar/baz.rs')} is not a Python file"
 
     @parameterized.expand(
         [
@@ -178,7 +178,3 @@ def test_get_pages(tmpdir):
             "icon": "",
         },
     }
-
-    # Assert address-equality to verify the cache is used the second time
-    # get_pages is called.
-    assert source_util.get_pages(main_script_path) is received_pages

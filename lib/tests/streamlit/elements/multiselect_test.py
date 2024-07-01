@@ -116,10 +116,19 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
-    @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
+    @parameterized.expand(
+        [
+            ((),),
+            ([],),
+            (np.array([]),),
+            (pd.Series(np.array([])),),
+            (set(),),
+            (list(),),
+        ]
+    )
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st.multiselect("the label", options)
+        st.multiselect("the label", options, default=options)
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
@@ -378,6 +387,15 @@ Please select at most 2 options.
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.placeholder, "Select your beverage")
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.multiselect("the label", ["Coffee", "Tea", "Water"]))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
 
 
 def test_multiselect_enum_coercion():

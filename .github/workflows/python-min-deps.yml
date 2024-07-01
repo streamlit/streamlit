@@ -1,4 +1,4 @@
-name: Python Dependency Minimum Versions
+name: Python Minimum Dependency Versions
 
 on:
   push:
@@ -12,10 +12,6 @@ on:
       ref:
         required: true
         type: string
-    secrets:
-      PARAMETER_PASSWORD:
-        description: "Token passed from caller workflows for snowflake integration tests"
-        required: true
 
 # Avoid duplicate workflows on same branch
 concurrency:
@@ -30,14 +26,11 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
-  py_version:
+  py-min-deps-test:
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
-
-    # TODO: Should we add developer-friendly name for this job also?
-    #   This will unfortunately require a branch protection update.
 
     env:
       PYTHON_VERSION: "${{needs.build_info.outputs.PYTHON_MIN_VERSION}}"
@@ -48,94 +41,26 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          fetch-depth: 2
           submodules: "recursive"
-
+          fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MIN_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: "${{ env.PYTHON_MIN_VERSION }}"
-
-      # This section is an inlined copy of the make_init action
-      # Both because we need to do some parts of it differently
-      # and because it running in a separate action causes the python path
-      # setup to work weirdly, so some tests fail unless you run an install
-      # command in the workflow directly.
-      - name: Restore pre-commit cache
-        id: cache-pre-commit
-        uses: actions/cache@v4
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
         with:
-          path: ~/.cache/pre-commit
-          key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
-      - name: Install pre-commit
-        run: |
-          pip install pre-commit
-          pre-commit install-hooks
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
-          cache: "yarn"
-          cache-dependency-path: "**/yarn.lock"
-      - name: Initialize React
-        run: |
-          # Create the cache directory if it does not exist.
-          mkdir -p $(yarn cache dir)
-          make react-init
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          # protobuf, dot, & graphviz dependencies
-          sudo apt install -y gnupg \
-              graphviz \
-              libgvc6 \
-              protobuf-compiler
-      # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
-      # Actions are running as of 2023.05.03 - doesn't have recent versions
-      # of protoc in its package repository. To work around this, we vendor in
-      # protoc 3.20.3.
-      # We can remove the vendored protoc binary and this run step once Github
-      # Actions moves to a newer version of Ubunutu.
-      - name: Add vendored `protoc` to $PATH
-        run: |
-          echo "$PWD/vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
-      # Combine hashes of the Python interpreter, requirements files, and today's
-      # date into a file whose hash will key the Python virtualenv.
-      - name: Create Python environment cache key
-        run: |
-          md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
-          md5sum lib/min-constraints-gen.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
-          md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
-          md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
-          date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
-      - name: Restore virtualenv from cache
-        id: cache-virtualenv
-        uses: actions/cache@v4
-        with:
-          path: venv
-          key: v1-python-venv-min-${{ hashFiles('**/python_cache_key.md5') }}
-      - name: Create Virtual Env
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          deactivate
-      - name: Activate virtualenv
-        run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      - name: Install deps
-        run: make python-init-test-min-deps
+          use_cached_venv: false
+      - name: Install min dependencies (force reinstall)
+        run: uv pip install -r lib/min-constraints-gen.txt --force-reinstall
       - name: Generate Protobufs
         run: make protobuf
-      # End of inlined make_init action
-
       - name: Make local modules visible
-        run: pip install --editable lib --no-deps
+        run: uv pip install --editable ./lib --no-deps
       - name: Run Python Tests
         run: make pytest
-      - name: Run Integration Tests
-        run: make integration-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Validate min-constraints-gen

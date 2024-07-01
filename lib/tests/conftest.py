@@ -16,6 +16,7 @@
 Global pytest fixtures. This file is automatically run by pytest before tests
 are executed.
 """
+
 import os
 import sys
 from unittest.mock import mock_open, patch
@@ -99,6 +100,11 @@ def pytest_configure(config: pytest.Config):
 
 
 def pytest_runtest_setup(item: pytest.Item):
+    # Ensure Default Strategy is V1 to start
+    from streamlit.runtime.pages_manager import PagesManager, PagesStrategyV1
+
+    PagesManager.DefaultStrategy = PagesStrategyV1
+
     is_require_snowflake = item.config.getoption("--require-snowflake", default=False)
     has_require_snowflake_marker = bool(
         list(item.iter_markers(name="require_snowflake"))

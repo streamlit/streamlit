@@ -15,14 +15,16 @@
  */
 
 import React from "react"
+import { Textarea as UITextArea } from "baseui/textarea"
+import { withTheme } from "@emotion/react"
+import uniqueId from "lodash/uniqueId"
+
 import { TextArea as TextAreaProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
   WidgetStateManager,
   Source,
 } from "@streamlit/lib/src/WidgetStateManager"
-
-import { Textarea as UITextArea } from "baseui/textarea"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
   WidgetLabel,
@@ -35,14 +37,14 @@ import {
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives"
-import { StyledTextAreaContainer } from "./styled-components"
-import uniqueId from "lodash/uniqueId"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
   disabled: boolean
   element: TextAreaProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
   fragmentId?: string
 }
 
@@ -176,13 +178,16 @@ class TextArea extends React.PureComponent<Props, State> {
       this.commitWidgetValue({ fromUi: true })
       const { formId } = this.props.element
       if (isInForm({ formId })) {
-        this.props.widgetMgr.submitForm(this.props.element.formId)
+        this.props.widgetMgr.submitForm(
+          this.props.element.formId,
+          this.props.fragmentId
+        )
       }
     }
   }
 
   public render(): React.ReactNode {
-    const { element, disabled, width, widgetMgr } = this.props
+    const { element, disabled, width, widgetMgr, theme } = this.props
     const { value, dirty } = this.state
     const style = { width }
     const { height, placeholder } = element
@@ -213,36 +218,46 @@ class TextArea extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledTextAreaContainer>
-          <UITextArea
-            value={value ?? ""}
-            placeholder={placeholder}
-            onBlur={this.onBlur}
-            onChange={this.onChange}
-            onKeyDown={this.onKeyDown}
-            aria-label={element.label}
-            disabled={disabled}
-            id={this.id}
-            overrides={{
-              Input: {
-                style: {
-                  lineHeight: "1.4",
-                  height: height ? `${height}px` : "",
-                  minHeight: "95px",
-                  resize: "vertical",
-                  "::placeholder": {
-                    opacity: "0.7",
-                  },
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  paddingRight: "1rem",
-                  paddingLeft: "1rem",
-                  paddingBottom: "1rem",
-                  paddingTop: "1rem",
+        <UITextArea
+          value={value ?? ""}
+          placeholder={placeholder}
+          onBlur={this.onBlur}
+          onChange={this.onChange}
+          onKeyDown={this.onKeyDown}
+          aria-label={element.label}
+          disabled={disabled}
+          id={this.id}
+          overrides={{
+            Input: {
+              style: {
+                lineHeight: theme.lineHeights.inputWidget,
+                height: height ? `${height}px` : "",
+                minHeight: "95px",
+                resize: "vertical",
+                "::placeholder": {
+                  opacity: "0.7",
                 },
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                paddingRight: theme.spacing.lg,
+                paddingLeft: theme.spacing.lg,
+                paddingBottom: theme.spacing.lg,
+                paddingTop: theme.spacing.lg,
               },
-            }}
-          />
-        </StyledTextAreaContainer>
+            },
+            Root: {
+              props: {
+                "data-testid": "stTextInput-RootElement",
+              },
+              style: {
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
+              },
+            },
+          }}
+        />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
         {width > breakpoints.hideWidgetDetails && (
           <InputInstructions
@@ -258,4 +273,4 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 }
 
-export default TextArea
+export default withTheme(TextArea)

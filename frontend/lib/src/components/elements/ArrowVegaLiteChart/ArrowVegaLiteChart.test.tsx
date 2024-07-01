@@ -14,157 +14,64 @@
  * limitations under the License.
  */
 
-import {
-  CATEGORICAL,
-  DATE,
-  DATETIME,
-  DATETIMETZ,
-  FLOAT64,
-  INT64,
-  UINT64,
-  RANGE,
-  UNICODE,
-} from "@streamlit/lib/src/mocks/arrow"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { getDataArray } from "./ArrowVegaLiteChart"
+import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
-describe("Types of dataframe indexes as x axis", () => {
-  describe("Supported", () => {
-    test("datetimetz", () => {
-      const mockElement = { data: DATETIMETZ }
-      const q = new Quiver(mockElement)
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { ArrowVegaLiteChart, PropsWithFullScreen } from "./ArrowVegaLiteChart"
+import { VegaLiteChartElement } from "./arrowUtils"
 
-      expect(getDataArray(q)).toEqual([
-        {
-          "(index)": 978220800000,
-          "2000-12-31 00:00:00": new Date(
-            "2020-01-02T05:00:00.000Z"
-          ).valueOf(),
-          "2001-12-31 00:00:00": new Date(
-            "2020-10-20T05:00:00.000Z"
-          ).valueOf(),
-        },
-        {
-          "(index)": 1009756800000,
-          "2000-12-31 00:00:00": new Date(
-            "2020-01-02T05:00:00.000Z"
-          ).valueOf(),
-          "2001-12-31 00:00:00": new Date(
-            "2020-10-20T05:00:00.000Z"
-          ).valueOf(),
-        },
-      ])
-    })
+const getProps = (
+  elementProps: Partial<VegaLiteChartElement> = {},
+  props: Partial<PropsWithFullScreen> = {}
+): PropsWithFullScreen => ({
+  element: {
+    data: null,
+    id: "1",
+    useContainerWidth: false,
+    datasets: [],
+    selectionMode: [],
+    formId: "",
+    spec: JSON.stringify({
+      data: {
+        values: [
+          { category: "A", group: "x", value: 0.1 },
+          { category: "A", group: "y", value: 0.6 },
+          { category: "A", group: "z", value: 0.9 },
+          { category: "B", group: "x", value: 0.7 },
+          { category: "B", group: "y", value: 0.2 },
+          { category: "B", group: "z", value: 1.1 },
+          { category: "C", group: "x", value: 0.6 },
+          { category: "C", group: "y", value: 0.1 },
+          { category: "C", group: "z", value: 0.2 },
+        ],
+      },
+      mark: "bar",
+      encoding: {
+        x: { field: "category" },
+        y: { field: "value", type: "quantitative" },
+      },
+    }),
+    vegaLiteTheme: "streamlit",
+    ...elementProps,
+  },
+  theme: mockTheme.emotion,
+  width: 0,
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
+  height: 0,
+  isFullScreen: false,
+  ...props,
+})
 
-    test("date", () => {
-      const mockElement = { data: DATE }
-      const q = new Quiver(mockElement)
-
-      expect(getDataArray(q)).toEqual([
-        {
-          "(index)": 978220800000,
-          "2000-12-31 00:00:00": new Date("2020-01-02T00:00:00").valueOf(),
-          "2001-12-31 00:00:00": new Date("2020-10-20T00:00:00").valueOf(),
-        },
-        {
-          "(index)": 1009756800000,
-          "2000-12-31 00:00:00": new Date("2020-01-02T00:00:00").valueOf(),
-          "2001-12-31 00:00:00": new Date("2020-10-20T00:00:00").valueOf(),
-        },
-      ])
-    })
-
-    test("datetime", () => {
-      const mockElement = { data: DATETIME }
-      const q = new Quiver(mockElement)
-
-      expect(getDataArray(q)).toEqual([
-        {
-          "(index)": 978220800000,
-          "2000-12-31 00:00:00": new Date("2020-01-02T05:00:00").valueOf(),
-          "2001-12-31 00:00:00": new Date("2020-10-20T05:00:00").valueOf(),
-        },
-        {
-          "(index)": 1009756800000,
-          "2000-12-31 00:00:00": new Date("2020-01-02T05:00:00").valueOf(),
-          "2001-12-31 00:00:00": new Date("2020-10-20T05:00:00").valueOf(),
-        },
-      ])
-    })
-
-    test("float64", () => {
-      const mockElement = { data: FLOAT64 }
-      const q = new Quiver(mockElement)
-
-      expect(getDataArray(q)).toEqual([
-        { "(index)": 1.24, "1.24": 1.2, "2.35": 1.3 },
-        { "(index)": 2.35, "1.24": 1.4, "2.35": 1.5 },
-      ])
-    })
-
-    test("int64", () => {
-      const mockElement = { data: INT64 }
-      const q = new Quiver(mockElement)
-      expect(getDataArray(q)).toEqual([
-        {
-          "(index)": 1,
-          "1": 0,
-          "2": 1,
-        },
-        {
-          "(index)": 2,
-          "1": 2,
-          "2": 3,
-        },
-      ])
-    })
-
-    test("range", () => {
-      const mockElement = { data: RANGE }
-      const q = new Quiver(mockElement)
-
-      expect(getDataArray(q)).toEqual([
-        { "(index)": 0, "0": "foo", "1": "1" },
-        { "(index)": 1, "0": "bar", "1": "2" },
-      ])
-    })
-
-    test("uint64", () => {
-      const mockElement = { data: UINT64 }
-      const q = new Quiver(mockElement)
-      expect(getDataArray(q)).toEqual([
-        {
-          "(index)": 1,
-          "1": 1,
-          "2": 2,
-        },
-        {
-          "(index)": 2,
-          "1": 3,
-          "2": 4,
-        },
-      ])
-    })
-  })
-
-  describe("Unsupported", () => {
-    test("categorical", () => {
-      const mockElement = { data: CATEGORICAL }
-      const q = new Quiver(mockElement)
-      expect(getDataArray(q)).toEqual([
-        { c1: "foo", c2: 100 },
-        { c1: "bar", c2: 200 },
-      ])
-    })
-
-    test("unicode", () => {
-      const mockElement = { data: UNICODE }
-      const q = new Quiver(mockElement)
-
-      expect(getDataArray(q)).toEqual([
-        { c1: "foo", c2: "1" },
-        { c1: "bar", c2: "2" },
-      ])
-    })
+describe("ArrowVegaLiteChart", () => {
+  it("renders without crashing", () => {
+    render(<ArrowVegaLiteChart {...getProps()} />)
+    expect(screen.getByTestId("stArrowVegaLiteChart")).toBeInTheDocument()
   })
 })

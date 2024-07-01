@@ -14,6 +14,8 @@
 
 """Tests ScriptRunner functionality"""
 
+from __future__ import annotations
+
 import os
 import sys
 import time
@@ -24,9 +26,7 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit import source_util
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -34,10 +34,10 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
-from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -52,6 +52,7 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
+from streamlit.delta_generator import DeltaGenerator, dg_stack
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -274,8 +275,8 @@ class ScriptRunnerTest(AsyncTestCase):
         # files contained in the directory of __main__.__file__, which we
         # assume is the main script directory.
         self.assertEqual(
-            scriptrunner._main_script_path,
-            sys.modules["__main__"].__file__,
+            os.path.realpath(scriptrunner._main_script_path),
+            os.path.realpath(sys.modules["__main__"].__file__),
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
@@ -758,6 +759,83 @@ class ScriptRunnerTest(AsyncTestCase):
         # culled it. Ensure widget cache no longer holds our widget ID.
         self.assertRaises(KeyError, lambda: scriptrunner._session_state[widget_id])
 
+    def test_dg_stack_preserved_for_fragment_rerun(self):
+        """Tests that the dg_stack and cursor are preserved for a fragment rerun.
+
+        Having a fragment rerun that is interrupted by a RerunException triggered by another fragment run
+        simulates what we have seen in the issue where the main app was rendered inside of a dialog when
+        two fragment-related reruns were handled in the same ScriptRunner thread.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        # set the dg_stack from the fragment to simulate a populated dg_stack of a real app
+        dg_stack_set_by_fragment = (
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+        )
+        scriptrunner._fragment_storage.set(
+            "my_fragment1",
+            lambda: dg_stack.set(dg_stack_set_by_fragment),
+        )
+
+        # trigger a run with fragment_id to avoid clearing the fragment_storage in the script runner
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+
+        # yielding a rerun request will raise a RerunException in the script runner with the provided RerunData
+        on_scriptrunner_yield_mock = MagicMock()
+        on_scriptrunner_yield_mock.side_effect = [
+            # the original_dg_stack will be set to the dg_stack populated by the first requested_rerun of the fragment
+            ScriptRequest(
+                ScriptRequestType.RERUN, RerunData(fragment_id_queue=["my_fragment1"])
+            ),
+            ScriptRequest(ScriptRequestType.STOP),
+        ]
+        scriptrunner._requests.on_scriptrunner_yield = on_scriptrunner_yield_mock
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.get_runner_thread_dg_stack()) == len(
+            dg_stack_set_by_fragment
+        )
+        assert scriptrunner.get_runner_thread_dg_stack() == dg_stack_set_by_fragment
+
+    def test_dg_stack_reset_for_full_app_rerun(self):
+        """Tests that the dg_stack and cursor are reset for a full app rerun."""
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        # simulate a dg_stack populated by the fragment
+        dg_stack_set_by_fragment = (
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+            DeltaGenerator(),
+        )
+        scriptrunner._fragment_storage.set(
+            "my_fragment1",
+            lambda: dg_stack.set(dg_stack_set_by_fragment),
+        )
+
+        # trigger a run with fragment_id to avoid clearing the fragment_storage in the script runner
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+
+        # yielding a rerun request will raise a RerunException in the script runner with the provided RerunData
+        on_scriptrunner_yield_mock = MagicMock()
+        on_scriptrunner_yield_mock.side_effect = [
+            # raise RerunException for full app run
+            ScriptRequest(ScriptRequestType.RERUN, RerunData()),
+            ScriptRequest(ScriptRequestType.STOP),
+        ]
+        scriptrunner._requests.on_scriptrunner_yield = on_scriptrunner_yield_mock
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        # for full app run, the dg_stack should have been reset
+        assert len(scriptrunner.get_runner_thread_dg_stack()) == 1
+
     # TODO re-enable after flakiness is fixed
     def off_test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
@@ -814,50 +892,6 @@ class ScriptRunnerTest(AsyncTestCase):
                     ScriptRunnerEvent.SHUTDOWN,
                 ],
             )
-
-    def test_invalidating_cache(self):
-        """Test that st.caches are cleared when a dependency changes."""
-        # Make sure there are no caches from other tests.
-        caching._mem_caches.clear()
-
-        # Run st_cache_script.
-        runner = TestScriptRunner("st_cache_script.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The script has 5 cached functions, each of which writes out
-        # some text.
-        self._assert_text_deltas(
-            runner,
-            [
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached_depending_on_not_yet_defined called",
-            ],
-        )
-
-        # Set _cached_pages to None manually (instead of using
-        # source_util.invalidate_pages_cache) to avoid firing on_pages_changed
-        # events.
-        source_util._cached_pages = None
-
-        # Run a slightly different script on a second runner.
-        runner = TestScriptRunner("st_cache_script_changed.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The cached functions should not have been called on this second run,
-        # except for the one that has actually changed.
-        self._assert_text_deltas(
-            runner,
-            [
-                "cached_depending_on_not_yet_defined called",
-            ],
-        )
 
     @patch(
         "streamlit.source_util.get_pages",
@@ -1059,6 +1093,7 @@ class TestScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(main_script_path),
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
@@ -1096,6 +1131,9 @@ class TestScriptRunner(ScriptRunner):
     def _run_script(self, rerun_data: RerunData) -> None:
         self.forward_msg_queue.clear()
         super()._run_script(rerun_data)
+
+        # Set the _dg_stack here to the one belonging to the thread context
+        self._dg_stack = dg_stack.get()
 
     def join(self) -> None:
         """Join the script_thread if it's running."""
@@ -1137,6 +1175,10 @@ class TestScriptRunner(ScriptRunner):
             if widget_label == label:
                 return widget.id
         return None
+
+    def get_runner_thread_dg_stack(self) -> tuple[DeltaGenerator, ...]:
+        """The returned stack was set by the ScriptRunner thread and, thus, has its context."""
+        return self._dg_stack
 
 
 def require_widgets_deltas(

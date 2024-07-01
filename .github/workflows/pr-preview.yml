@@ -47,10 +47,11 @@ jobs:
       - name: Create Wheel File
         timeout-minutes: 120
         run: |
+          sudo apt update
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
       - name: Store Whl File
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: whl_file
           path: lib/dist/*.whl

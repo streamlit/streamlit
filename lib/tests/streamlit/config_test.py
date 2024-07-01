@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Config System Unittest."""
+
 import copy
 import os
 import textwrap
@@ -337,7 +338,6 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
-                "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
                 "client.showSidebarNavigation",
@@ -355,6 +355,7 @@ class ConfigTest(unittest.TestCase):
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.disableWidgetStateDuplicationWarning",
+                "global.e2eTest",
                 "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",

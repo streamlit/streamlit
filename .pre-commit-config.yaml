@@ -19,32 +19,17 @@
 # the second commit should pass,
 # because the files were linted after trying to do the first commit.
 repos:
-  - repo: https://github.com/psf/black
-    rev: 22.6.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.4.8
     hooks:
-      - id: black
-        args:
-          # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
-          - --target-version=py37
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
         files: \.py$|\.pyi$
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.11.5
-    hooks:
-      - id: isort
-        args:
-          - --filter-files
-        exclude: ^lib/streamlit/__init__\.py$
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v1.7.7
-    hooks:
-      - id: autoflake
-        args:
-          - "--in-place"
-          - "--ignore-init-module-imports"
-          - "--ignore-pass-after-docstring"
-          - "--remove-unused-variables"
-        additional_dependencies:
-          - pyflakes==3.0.1
+      # Run the formatter.
+      - id: ruff-format
+        files: \.py$|\.pyi$
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a
@@ -53,6 +38,8 @@ repos:
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier
         name: Prettier
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn prettier --write
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
@@ -60,6 +47,8 @@ repos:
         pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend yarn prettier ../.github --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
@@ -90,6 +79,8 @@ repos:
       - id: eslint
         name: Eslint
         always_run: true
+        # TODO: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint --fix
         files: ^frontend/src/.*\.(js|jsx|ts|tsx)$
         language: node
@@ -102,13 +93,6 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
-      - id: no-relative-imports
-        language: pygrep
-        name: No relative imports
-        description: Streamlit style is to use absolute imports only (except docs building)
-        entry: "^\\s*from\\s+\\."
-        pass_filenames: true
-        files: \.py$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.4
     hooks:
@@ -171,7 +155,6 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
-          |^lib/tests/isolated_asyncio_test_case\.py$
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$

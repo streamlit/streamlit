@@ -17,7 +17,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
-from typing import Any, Awaitable, Final
+from typing import TYPE_CHECKING, Any, Awaitable, Final
 
 import tornado.concurrent
 import tornado.locks
@@ -29,10 +29,12 @@ from tornado.websocket import WebSocketHandler
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import is_url_from_allowed_origins
+
+if TYPE_CHECKING:
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -101,12 +103,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
-        user_info: dict[str, str | None] = dict()
-
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
+        user_info: dict[str, str | None] = {
+            "email": None if is_public_cloud_app else email
+        }
 
         existing_session_id = None
         try:
@@ -175,18 +174,22 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         # developmentMode-only messages used in e2e tests to test reconnect handling and
         # disabling widgets.
         if msg.WhichOneof("type") == "debug_disconnect_websocket":
-            if config.get_option("global.developmentMode"):
+            if config.get_option("global.developmentMode") or config.get_option(
+                "global.e2eTest"
+            ):
                 self.close()
             else:
                 _LOGGER.warning(
-                    "Client tried to disconnect websocket when not in development mode."
+                    "Client tried to disconnect websocket when not in development mode or e2e testing."
                 )
         elif msg.WhichOneof("type") == "debug_shutdown_runtime":
-            if config.get_option("global.developmentMode"):
+            if config.get_option("global.developmentMode") or config.get_option(
+                "global.e2eTest"
+            ):
                 self._runtime.stop()
             else:
                 _LOGGER.warning(
-                    "Client tried to shut down runtime when not in development mode."
+                    "Client tried to shut down runtime when not in development mode or e2e testing."
                 )
         else:
             # AppSession handles all other BackMsg types.

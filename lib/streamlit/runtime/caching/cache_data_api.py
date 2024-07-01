@@ -19,14 +19,22 @@ from __future__ import annotations
 import pickle
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, Literal, TypeVar, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -42,8 +50,8 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+    show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
@@ -61,6 +69,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -314,20 +327,13 @@ class CacheDataAPI:
     st.cache_data.clear().
     """
 
-    def __init__(
-        self, decorator_metric_name: str, deprecation_warning: str | None = None
-    ):
+    def __init__(self, decorator_metric_name: str):
         """Create a CacheDataAPI instance.
 
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_memo` is
-            deprecated, but we're still supporting it and tracking its usage separately
-            from `@st.cache_data`.
-
-        deprecation_warning
-            An optional deprecation warning to show when the API is accessed.
+            The metric name to record for decorator usage.
         """
 
         # Parameterize the decorator metric name.
@@ -335,7 +341,6 @@ class CacheDataAPI:
         self._decorator = gather_metrics(  # type: ignore
             decorator_metric_name, self._decorator
         )
-        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -343,8 +348,7 @@ class CacheDataAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -357,8 +361,7 @@ class CacheDataAPI:
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -402,7 +405,7 @@ class CacheDataAPI:
         cache with ``st.cache_data.clear()``.
 
         To cache global resources, use ``st.cache_resource`` instead. Learn more
-        about caching at https://docs.streamlit.io/library/advanced-features/caching.
+        about caching at https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -443,7 +446,6 @@ class CacheDataAPI:
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -452,6 +454,10 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            ``experimental_allow_widgets`` is deprecated and will be removed in
+            a later version.
 
         Example
         -------
@@ -513,6 +519,9 @@ class CacheDataAPI:
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
         ...
+        >>> fetch_and_clean_data.clear(_db_connection, 50)
+        >>> # Clear the cached entry for the arguments provided.
+        >>>
         >>> fetch_and_clean_data.clear()
         >>> # Clear all cached entries for this function.
 
@@ -554,7 +563,8 @@ class CacheDataAPI:
                 f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
             )
 
-        self._maybe_show_deprecation_warning()
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_data")
 
         def wrapper(f):
             return make_cached_func_wrapper(
@@ -587,15 +597,7 @@ class CacheDataAPI:
     @gather_metrics("clear_data_caches")
     def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
-        self._maybe_show_deprecation_warning()
         _data_caches.clear_all()
-
-    def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_memo` name,
-        show a deprecation warning.
-        """
-        if self._deprecation_warning is not None:
-            show_deprecation_warning(self._deprecation_warning)
 
 
 class DataCache(Cache):
@@ -701,8 +703,11 @@ class DataCache(Cache):
 
         self.storage.set(key, pickled_entry)
 
-    def _clear(self) -> None:
-        self.storage.clear()
+    def _clear(self, key: str | None = None) -> None:
+        if not key:
+            self.storage.clear()
+        else:
+            self.storage.delete(key)
 
     def _read_multi_results_from_storage(self, key: str) -> MultiCacheResults:
         """Look up the results from storage and ensure it has the right type.

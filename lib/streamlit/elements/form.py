@@ -21,10 +21,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 
 class FormData(NamedTuple):
@@ -123,7 +123,7 @@ class FormMixin:
         Submit button is pressed, all widget values inside the form will be
         sent to Streamlit in a batch.
 
-        To add elements to a form object, you can use "with" notation
+        To add elements to a form object, you can use ``with`` notation
         (preferred) or just call methods directly on the form. See
         examples below.
 
@@ -157,7 +157,7 @@ class FormMixin:
 
         Examples
         --------
-        Inserting elements using "with" notation:
+        Inserting elements using ``with`` notation:
 
         >>> import streamlit as st
         >>>
@@ -194,11 +194,15 @@ class FormMixin:
 
         """
         # Import this here to avoid circular imports.
-        from streamlit.elements.utils import check_session_state_rules
+        from streamlit.elements.lib.policies import (
+            check_cache_replay_rules,
+            check_session_state_rules,
+        )
 
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         # A form is uniquely identified by its key.
@@ -268,9 +272,14 @@ class FormMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
 
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------

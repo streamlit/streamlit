@@ -47,14 +47,14 @@ export const TitleSkeleton = styled.div(({ theme }) => ({
   maxWidth: "75%", // Picked because it looks good.
   background:
     theme.colors.skeletonBackgroundColor || theme.colors.darkenedBgMix15,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.default,
   ...ANIMATION_STYLES,
 }))
 
-export const ParagraphSkeleton = styled.div(() => ({
+export const ParagraphSkeleton = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "0.5rem", // Picked because it looks good.
+  gap: theme.spacing.sm, // Picked because it looks good.
 }))
 
 export interface TextLineSkeletonProps {
@@ -67,7 +67,7 @@ export const TextLineSkeleton = styled.div<TextLineSkeletonProps>(
     width,
     background:
       theme.colors.skeletonBackgroundColor || theme.colors.darkenedBgMix15,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.default,
     ...ANIMATION_STYLES,
   })
 )
@@ -83,7 +83,7 @@ export const SquareSkeleton = styled.div<SquareSkeletonProps>(
     width: width ?? "100%",
     background:
       theme.colors.skeletonBackgroundColor || theme.colors.darkenedBgMix15,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.default,
     ...ANIMATION_STYLES,
   })
 )

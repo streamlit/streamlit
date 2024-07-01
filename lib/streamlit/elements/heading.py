@@ -23,10 +23,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 class HeadingProtoTag(Enum):
@@ -67,9 +67,12 @@ class HeadingMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -137,9 +140,12 @@ class HeadingMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -209,9 +215,12 @@ class HeadingMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor

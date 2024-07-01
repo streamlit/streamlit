@@ -24,9 +24,9 @@ message Arrow {
   bytes data = 1;
   // Pandas styler information
   Styler styler = 2;
-  // Width in CSS points
+  // Width in pixels
   uint32 width = 3;
-  // Height in CSS points
+  // Height in pixels
   uint32 height = 4;
   // If True, will overwrite the dataframe width to fit to container.
   bool use_container_width = 5;
@@ -42,12 +42,22 @@ message Arrow {
   string form_id = 10;
   // Defines the order in which columns are displayed
   repeated string column_order = 11;
+  // Activated dataframe selections events
+  repeated SelectionMode selection_mode = 12;
 
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.
     FIXED = 1; // Activates editing but only allow editing of existing cells.
     DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
+  }
+
+  // Available editing modes:
+  enum SelectionMode {
+    SINGLE_ROW = 0; // Only one row can be selected at a time.
+    MULTI_ROW = 1; // Multiple rows can be selected at a time.
+    SINGLE_COLUMN = 2; // Only one column can be selected at a time.
+    MULTI_COLUMN = 3; // Multiple columns can be selected at a time.
   }
 }
 

@@ -39,7 +39,6 @@ from typing_extensions import TypeAlias
 
 from streamlit import logger as _logger
 from streamlit import type_util
-from streamlit.deprecation_util import deprecate_func_name
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
@@ -55,7 +54,12 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_fragment_path_policy,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -597,14 +601,6 @@ class DataEditorMixin:
 
         The data editor widget allows you to edit dataframes and many other data structures in a table-like UI.
 
-        .. warning::
-            When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
-            1.23.0, the data editor's representation in ``st.session_state`` was changed.
-            The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
-            different format (``{0: {"column name": "edited value"}}`` instead of
-            ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
-            ``st.experimental_data_editor`` in combination with ``st.session_state``.
-
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
@@ -621,20 +617,29 @@ class DataEditorMixin:
                   changed through column configuration.
 
         width : int or None
-            Desired width of the data editor expressed in pixels. If None, the width will
-            be automatically determined.
+            Desired width of the data editor expressed in pixels. If ``width``
+            is ``None`` (default), Streamlit sets the data editor width to fit
+            its contents up to the width of the parent container. If ``width``
+            is greater than the width of the parent container, Streamlit sets
+            the data editor width to match the width of the parent container.
 
         height : int or None
-            Desired height of the data editor expressed in pixels. If None, the height will
-            be automatically determined.
+            Desired height of the data editor expressed in pixels. If ``height``
+            is ``None`` (default), Streamlit sets the height to show at most
+            ten rows. Vertical scrolling within the data editor element is
+            enabled when the height does not accomodate all rows.
 
         use_container_width : bool
-            If True, set the data editor width to the width of the parent container.
-            This takes precedence over the width argument. Defaults to False.
+            Whether to override ``width`` with the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the data editor's width according to ``width``. If
+            ``use_container_width`` is ``True``, Streamlit sets the width of
+            the data editor to match the width of the parent container.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), the visibility of
-            index columns is automatically determined based on the data.
+            Whether to hide the index column(s). If ``hide_index`` is ``None``
+            (default), the visibility of index columns is automatically
+            determined based on the data.
 
         column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
@@ -655,7 +660,7 @@ class DataEditorMixin:
             * One of the column types defined under ``st.column_config``, e.g.
               ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
-              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+              and config options `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
 
@@ -774,10 +779,14 @@ class DataEditorMixin:
            height: 350px
 
         """
+        # Lazy-loaded import
         import pandas as pd
         import pyarrow as pa
 
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
@@ -865,7 +874,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             key=key,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         proto = ArrowProto()
@@ -933,17 +942,3 @@ class DataEditorMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    # TODO(lukasmasuch): Remove the deprecated function name after 2023-09-01:
-    # Also remove the warning message in the `st.data_editor` docstring.
-    experimental_data_editor = deprecate_func_name(
-        gather_metrics("experimental_data_editor", data_editor),
-        "experimental_data_editor",
-        "2023-09-01",
-        """
-**Breaking change:** The data editor's representation in `st.session_state` was changed. The `edited_cells` dictionary is now called `edited_rows` and uses a
-different format (`{0: {"column name": "edited value"}}` instead of
-`{"0:1": "edited value"}`). You may need to adjust the code if your app uses
-`st.experimental_data_editor` in combination with `st.session_state`."
-""",
-    )

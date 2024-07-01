@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance } from "color2k"
+import { getLuminance, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
@@ -169,9 +169,9 @@ export const createEmotionTheme = (
     }
 
     if (radii.checkboxRadius)
-      conditionalOverrides.radii.sm = addPxUnit(radii.checkboxRadius)
+      conditionalOverrides.radii.md = addPxUnit(radii.checkboxRadius)
     if (radii.baseWidgetRadius)
-      conditionalOverrides.radii.md = addPxUnit(radii.baseWidgetRadius)
+      conditionalOverrides.radii.lg = addPxUnit(radii.baseWidgetRadius)
   }
 
   if (fontSizes) {
@@ -473,6 +473,42 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
     violet: violet,
     purple: purple,
     gray: gray,
+  }
+}
+
+export function getMarkdownBgColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    redbg: transparentize(
+      theme.colors[lightTheme ? "red80" : "red60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
+    yellowbg: transparentize(
+      theme.colors[lightTheme ? "yellow70" : "yellow50"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    greenbg: transparentize(
+      theme.colors[lightTheme ? "green70" : "green60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    bluebg: transparentize(
+      theme.colors[lightTheme ? "blue70" : "blue60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    violetbg: transparentize(
+      theme.colors[lightTheme ? "purple70" : "purple60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    purplebg: transparentize(
+      theme.colors[lightTheme ? "purple90" : "purple80"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    graybg: transparentize(
+      theme.colors[lightTheme ? "gray70" : "gray50"],
+      lightTheme ? 0.9 : 0.7
+    ),
   }
 }
 

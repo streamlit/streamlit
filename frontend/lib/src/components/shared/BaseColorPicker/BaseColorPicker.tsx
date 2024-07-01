@@ -34,7 +34,7 @@ import {
 } from "./styled-components"
 
 export interface BaseColorPickerProps {
-  disabled?: boolean
+  disabled: boolean
   width?: number
   value: string
   showValue?: boolean
@@ -106,19 +106,13 @@ class BaseColorPicker extends React.PureComponent<
     const { width, showValue, label, labelVisibility, help, disabled } =
       this.props
     const { value } = this.state
-    const cursor = disabled ? "not-allowed" : "default"
-    const style = { width, cursor }
-    const previewStyle = {
-      cursor,
-      "pointer-events": disabled ? "none" : "auto",
-    }
-    const blockStyle = {
-      backgroundColor: value,
-      opacity: disabled ? "0.4" : "",
-    }
 
     return (
-      <StyledColorPicker data-testid="stColorPicker" style={style}>
+      <StyledColorPicker
+        data-testid="stColorPicker"
+        width={width}
+        disabled={disabled}
+      >
         <WidgetLabel
           label={label}
           disabled={disabled}
@@ -131,10 +125,9 @@ class BaseColorPicker extends React.PureComponent<
           )}
         </WidgetLabel>
         <UIPopover
-          data-testid="stColorPickerPopover"
           onClose={this.onColorClose}
           content={() => (
-            <StyledChromePicker>
+            <StyledChromePicker data-testid="stColorPickerPopover">
               <ChromePicker
                 color={value}
                 onChange={this.onColorChange}
@@ -143,8 +136,12 @@ class BaseColorPicker extends React.PureComponent<
             </StyledChromePicker>
           )}
         >
-          <StyledColorPreview style={previewStyle}>
-            <StyledColorBlock style={blockStyle} data-testid="stColorBlock" />
+          <StyledColorPreview disabled={disabled}>
+            <StyledColorBlock
+              data-testid="stColorBlock"
+              backgroundColor={value}
+              disabled={disabled}
+            />
             {showValue && (
               <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
             )}

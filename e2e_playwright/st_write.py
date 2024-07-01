@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import io
-from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime
+from typing import NamedTuple
 
 import altair as alt
 import graphviz
@@ -58,7 +58,7 @@ st.write(datetime(2021, 1, 1))
 st.write(np.float64(1.0))
 
 
-class SomeObject1(object):
+class SomeObject1:
     def __str__(self):
         return "1 * 2 - 3 = 4 `ok` !"
 
@@ -66,7 +66,7 @@ class SomeObject1(object):
 st.write(SomeObject1())  # escaped single line string
 
 
-class SomeObject2(object):
+class SomeObject2:
     def __str__(self):
         return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
 
@@ -113,7 +113,12 @@ st.write(st.session_state)
 st.write(st.experimental_user)
 st.write(st.query_params)
 
-Point = namedtuple("Point", ["x", "y"])
+
+class Point(NamedTuple):
+    x: int
+    y: int
+
+
 st.write(Point(1, 2))
 
 st.subheader("st.write(help)")

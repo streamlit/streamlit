@@ -21,11 +21,13 @@ from typing import TYPE_CHECKING, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.elements.widgets.file_uploader import _get_upload_files
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
@@ -111,9 +113,12 @@ class CameraInputMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -195,6 +200,9 @@ class CameraInputMixin:
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         maybe_raise_label_warnings(label, label_visibility)
@@ -206,7 +214,7 @@ class CameraInputMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         camera_input_proto = CameraInputProto()

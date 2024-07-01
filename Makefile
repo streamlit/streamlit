@@ -95,14 +95,9 @@ python-init-dev-only:
 python-init-test-only: lib/test-requirements.txt
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
 
-.PHONY: python-init-test-min-deps
-# Install Streamlit and test requirements, with minimum dependency versions
-python-init-test-min-deps:
-	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true USE_CONSTRAINTS_FILE=true CONSTRAINTS_URL="lib/min-constraints-gen.txt" make python-init
-
 .PHONY: python-init
 python-init:
-	pip_args=("--editable" "lib[snowflake]");\
+	pip_args=("--editable" "./lib[snowflake]");\
 	if [ "${USE_CONSTRAINTS_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
@@ -112,30 +107,34 @@ python-init:
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/test-requirements.txt"); \
 	fi;\
-	echo "Running command: pip install $${pip_args[@]}";\
-	pip install $${pip_args[@]};
+	if command -v "uv" > /dev/null; then \
+		echo "Running command: uv pip install $${pip_args[@]}"; \
+		uv pip install $${pip_args[@]}; \
+	else \
+		echo "Running command: pip install $${pip_args[@]}"; \
+		pip install $${pip_args[@]}; \
+	fi;\
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		python -m playwright install --with-deps; \
 	fi;\
 
 .PHONY: pylint
-# Verify that our Python files are properly formatted.
+# Verify that our Python files are properly formatted
+# and that there are no lint errors.
 pylint:
-	# Does not modify any files. Returns with a non-zero
-	# status if anything is not properly formatted. (This isn't really
-	# "linting"; we're not checking anything but code style.)
-	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check examples/ && \
-		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
-		$(BLACK) --diff --check lib/tests/ && \
-		$(BLACK) --diff --check e2e/scripts/ ; \
-	fi
+	# Checks if the formatting is correct:
+	ruff format --check
+	# Run linter:
+	ruff check
 
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
+# https://docs.astral.sh/ruff/formatter/#sorting-imports
 pyformat:
-	pre-commit run black --all-files --hook-stage manual
-	pre-commit run isort --all-files --hook-stage manual
+	# Sort imports:
+	ruff check --select I --fix
+	# Run code formatter
+	ruff format
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -162,10 +161,10 @@ pytest-snowflake:
 mypy:
 	./scripts/mypy
 
-.PHONY: integration-tests
+.PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
-integration-tests:
-	python3 scripts/run_bare_integration_tests.py
+bare-execution-tests:
+	python3 scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
@@ -217,6 +216,7 @@ clean:
 	find . -name __pycache__ -type d -delete || true
 	find . -name .pytest_cache -exec rm -rfv {} \; || true
 	rm -rf .mypy_cache
+	rm -rf .ruff_cache
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
@@ -238,8 +238,6 @@ MIN_PROTOC_VERSION = 3.20
 .PHONY: check-protoc
 # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 check-protoc:
-	@# We support Python protobuf 4.21, which is incompatible with code generated from
-	@# protoc < 3.20
 	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
 		exit 1; \
@@ -349,7 +347,14 @@ playwright:
 playwright-custom-components:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pip install extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment; \
+	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-option-menu streamlit-url-fragment"; \
+	if command -v "uv" > /dev/null; then \
+		echo "Running command: uv pip install $${pip_args}"; \
+		uv pip install $${pip_args}; \
+	else \
+		echo "Running command: pip install $${pip_args}"; \
+		pip install $${pip_args}; \
+	fi; \
 	pytest ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc

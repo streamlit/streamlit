@@ -28,7 +28,7 @@ import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
 
-from streamlit import cli_util, config, file_util, source_util, util
+from streamlit import cli_util, config, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -86,7 +86,8 @@ UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
 MESSAGE_ENDPOINT: Final = r"_stcore/message"
-HEALTH_ENDPOINT: Final = r"(?:healthz|_stcore/health)"
+NEW_HEALTH_ENDPOINT: Final = "_stcore/health"
+HEALTH_ENDPOINT: Final = rf"(?:healthz|{NEW_HEALTH_ENDPOINT})"
 HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
     r"(?:script-health-check|_stcore/script-health-check)"
@@ -286,22 +287,22 @@ class Server:
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
-                dict(runtime=self._runtime),
+                {"runtime": self._runtime},
             ),
             (
                 make_url_path_regex(base, HEALTH_ENDPOINT),
                 HealthHandler,
-                dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
+                {"callback": lambda: self._runtime.is_ready_for_browser_connection},
             ),
             (
                 make_url_path_regex(base, MESSAGE_ENDPOINT),
                 MessageCacheHandler,
-                dict(cache=self._runtime.message_cache),
+                {"cache": self._runtime.message_cache},
             ),
             (
                 make_url_path_regex(base, METRIC_ENDPOINT),
                 StatsRequestHandler,
-                dict(stats_manager=self._runtime.stats_mgr),
+                {"stats_manager": self._runtime.stats_mgr},
             ),
             (
                 make_url_path_regex(base, HOST_CONFIG_ENDPOINT),
@@ -313,10 +314,10 @@ class Server:
                     rf"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
                 ),
                 UploadFileRequestHandler,
-                dict(
-                    file_mgr=self._runtime.uploaded_file_mgr,
-                    is_active_session=self._runtime.is_active_session,
-                ),
+                {
+                    "file_mgr": self._runtime.uploaded_file_mgr,
+                    "is_active_session": self._runtime.is_active_session,
+                },
             ),
             (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
@@ -326,7 +327,7 @@ class Server:
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
-                dict(registry=self._runtime.component_registry),
+                {"registry": self._runtime.component_registry},
             ),
         ]
 
@@ -336,9 +337,9 @@ class Server:
                     (
                         make_url_path_regex(base, SCRIPT_HEALTH_CHECK_ENDPOINT),
                         HealthHandler,
-                        dict(
-                            callback=lambda: self._runtime.does_script_run_without_error()
-                        ),
+                        {
+                            "callback": lambda: self._runtime.does_script_run_without_error()
+                        },
                     )
                 ]
             )
@@ -368,12 +369,12 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: {
-                                page_info["page_name"]
-                                for page_info in source_util.get_pages(
-                                    self.main_script_path
-                                ).values()
-                            },
+                            "reserved_paths": [
+                                # These paths are required for identifying
+                                # the base url path.
+                                NEW_HEALTH_ENDPOINT,
+                                HOST_CONFIG_ENDPOINT,
+                            ],
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
@@ -395,9 +396,9 @@ class Server:
 
     @property
     def is_running_hello(self) -> bool:
-        from streamlit.hello import Hello
+        from streamlit.hello import streamlit_app
 
-        return self._main_script_path == Hello.__file__
+        return self._main_script_path == streamlit_app.__file__
 
     def stop(self) -> None:
         cli_util.print_to_cli("  Stopping...", fg="blue")

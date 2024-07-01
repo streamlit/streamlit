@@ -23,7 +23,7 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
     paddingBottom: theme.spacing.lg,
     paddingRight: theme.spacing.lg,
     paddingLeft: theme.spacing.lg,
-    border: `1px solid ${theme.colors.fadedText10}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
 
     "pre, code": {
       backgroundColor: theme.colors.transparent,

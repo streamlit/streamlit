@@ -280,7 +280,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(number_input_proto.default, 0)
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch("streamlit.elements.utils.get_session_state")
+    @patch("streamlit.elements.lib.policies.get_session_state")
     def test_no_warning_with_value_set_in_state(self, patched_get_session_state):
         mock_session_state = MagicMock()
         mock_session_state.is_new_state_value.return_value = True
@@ -323,7 +323,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         # Generate widget id and reset context
         st.number_input("a number", min_value=1, max_value=100, key="number")
         widget_id = self.script_run_ctx.session_state.get_widget_states()[0].id
-        self.script_run_ctx.reset()
+        self.script_run_ctx.reset(page_script_hash=self.script_run_ctx.page_script_hash)
 
         # Set the state of the widgets to the test state
         widget_state = WidgetState()
@@ -370,6 +370,15 @@ class NumberInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.number_input("My Label", value=value, max_value=max_value)
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.number_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def test_number_input_interaction():
     """Test interactions with an empty number input widget."""
@@ -397,3 +406,18 @@ def test_number_input_interaction():
     at = number_input.set_value(None).run()
     number_input = at.number_input[0]
     assert number_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "number_input" not in st.session_state:
+            st.session_state["number_input"] = None
+
+        st.number_input("number_input", key="number_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.number_input[0].value is None

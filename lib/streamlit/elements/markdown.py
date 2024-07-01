@@ -56,20 +56,25 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
-            By default, any HTML tags found in the body will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
+            Whether to render HTML within ``body``. If this is ``False``
+            (default), any HTML tags found in ``body`` will be escaped and
+            therefore treated as raw text. If this is ``True``, any HTML
+            expressions within ``body`` will be rendered.
 
-            That said, we *strongly advise against it*. It is hard to write
-            secure HTML, so by using this argument you may be compromising your
-            users' security. For more information, see:
+            Adding custom HTML to your app impacts safety, styling, and
+            maintainability.
 
-            https://github.com/streamlit/streamlit/issues/152
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         help : str
             An optional tooltip that gets displayed next to the Markdown.
@@ -81,7 +86,7 @@ class MarkdownMixin:
         >>> st.markdown("*Streamlit* is **really** ***cool***.")
         >>> st.markdown('''
         ...     :red[Streamlit] :orange[can] :green[write] :blue[text] :violet[in]
-        ...     :gray[pretty] :rainbow[colors].''')
+        ...     :gray[pretty] :rainbow[colors] and :blue-background[highlight] text.''')
         >>> st.markdown("Here's a bouquet &mdash;\
         ...             :tulip::cherry_blossom::rose::hibiscus::sunflower::blossom:")
         >>>
@@ -94,7 +99,7 @@ class MarkdownMixin:
 
         .. output::
            https://doc-markdown.streamlit.app/
-           height: 260px
+           height: 350px
 
         """
         markdown_proto = MarkdownProto()
@@ -174,20 +179,25 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
-            By default, any HTML tags found in strings will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
+            Whether to render HTML within ``body``. If this is ``False``
+            (default), any HTML tags found in ``body`` will be escaped and
+            therefore treated as raw text. If this is ``True``, any HTML
+            expressions within ``body`` will be rendered.
 
-            That said, *we strongly advise against it*. It is hard to write secure
-            HTML, so by using this argument you may be compromising your users'
-            security. For more information, see:
+            Adding custom HTML to your app impacts safety, styling, and
+            maintainability.
 
-            https://github.com/streamlit/streamlit/issues/152
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         help : str
             An optional tooltip that gets displayed next to the caption.

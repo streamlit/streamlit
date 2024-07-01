@@ -25,15 +25,16 @@ from typing_extensions import TypeAlias
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.PageProfile_pb2 import Command
-from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
-from streamlit.runtime.state import SafeSessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 if TYPE_CHECKING:
+    from streamlit.cursor import RunningCursor
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
-
+    from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
+    from streamlit.runtime.state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
@@ -60,9 +61,9 @@ class ScriptRunContext:
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
-    page_script_hash: str
     user_info: UserInfo
-    fragment_storage: "FragmentStorage"
+    fragment_storage: FragmentStorage
+    pages_manager: PagesManager
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
@@ -73,14 +74,27 @@ class ScriptRunContext:
     widget_ids_this_run: set[str] = field(default_factory=set)
     widget_user_keys_this_run: set[str] = field(default_factory=set)
     form_ids_this_run: set[str] = field(default_factory=set)
-    cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
+    cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: set[str] | None = None
+    # we allow only one dialog to be open at the same time
+    has_dialog_opened: bool = False
+    # If true, it indicates that we are in a cached function that disallows
+    # the usage of widgets.
+    disallow_cached_widget_usage: bool = False
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
     _production_query_params_used = False
+
+    @property
+    def page_script_hash(self):
+        return self.pages_manager.get_current_page_script_hash()
+
+    @property
+    def active_script_hash(self):
+        return self.pages_manager.get_active_script_hash()
 
     def reset(
         self,
@@ -93,7 +107,7 @@ class ScriptRunContext:
         self.widget_user_keys_this_run = set()
         self.form_ids_this_run = set()
         self.query_string = query_string
-        self.page_script_hash = page_script_hash
+        self.pages_manager.set_current_page_script_hash(page_script_hash)
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False
@@ -101,7 +115,10 @@ class ScriptRunContext:
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
         self.current_fragment_id = None
+        self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
+        self.has_dialog_opened = False
+        self.disallow_cached_widget_usage = False
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
@@ -122,9 +139,9 @@ class ScriptRunContext:
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
                 "`set_page_config()` can only be called once per app page, "
-                + "and must be called as the first Streamlit command in your script.\n\n"
-                + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
+                "and must be called as the first Streamlit command in your script.\n\n"
+                "For more information refer to the [docs]"
+                "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
             )
 
         # We want to disallow set_page config if one of the following occurs:
@@ -135,6 +152,8 @@ class ScriptRunContext:
         ):
             self._set_page_config_allowed = False
 
+        msg.metadata.active_script_hash = self.active_script_hash
+
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
 
@@ -142,8 +161,8 @@ class ScriptRunContext:
         if self._experimental_query_params_used and self._production_query_params_used:
             raise StreamlitAPIException(
                 "Using `st.query_params` together with either `st.experimental_get_query_params` "
-                + "or `st.experimental_set_query_params` is not supported. Please convert your app "
-                + "to only use `st.query_params`"
+                "or `st.experimental_set_query_params` is not supported. Please convert your app "
+                "to only use `st.query_params`"
             )
 
     def mark_experimental_query_params_used(self):
@@ -214,4 +233,4 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
 
 
 # Needed to avoid circular dependencies while running tests.
-import streamlit
+import streamlit  # noqa: E402, F401

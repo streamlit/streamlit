@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import requests
 
 import streamlit as st
@@ -24,3 +26,14 @@ url2 = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-
 st.audio(url2, start_time=10, end_time=13)
 
 st.audio(url2, start_time=15, end_time=19, loop=True)
+
+autoplay = st.checkbox("Autoplay", value=False)
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+st.audio(url2, autoplay=autoplay)

@@ -20,11 +20,21 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
+import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import Video, { VideoProps } from "./Video"
 
 describe("Video Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
+
+  const mockSetElementState = jest.fn()
+  const mockGetElementState = jest.fn()
+  const elementMgrMock = {
+    setElementState: mockSetElementState,
+    getElementState: mockGetElementState,
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }
 
   const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
     element: VideoProto.create({
@@ -35,6 +45,7 @@ describe("Video Element", () => {
     }),
     endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
     width: 0,
+    elementMgr: elementMgrMock as unknown as ElementStateManager,
   })
 
   beforeEach(() => {
@@ -71,6 +82,47 @@ describe("Video Element", () => {
       "src",
       "https://mock.media.url"
     )
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
+  })
+
+  it("does not autoplay if preventAutoplay is set", () => {
+    mockGetElementState.mockReturnValueOnce(true) // Autoplay should be prevented
+    const props = getProps({ autoplay: true, id: "uniqueVideoId" })
+    render(<Video {...props} />)
+    const audioElement = screen.getByTestId("stVideo")
+    expect(audioElement).not.toHaveAttribute("autoPlay")
+  })
+
+  it("autoplays if preventAutoplay is not set and autoplay is true", () => {
+    mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented
+    const props = getProps({ autoplay: true, id: "uniqueVideoId" })
+    render(<Video {...props} />)
+    const audioElement = screen.getByTestId("stVideo")
+    expect(audioElement).toHaveAttribute("autoPlay")
+  })
+
+  it("calls setElementState to prevent future autoplay on first autoplay", () => {
+    mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented initially
+    const props = getProps({ autoplay: true, id: "uniqueVideoId" })
+    render(<Video {...props} />)
+    expect(mockSetElementState).toHaveBeenCalledTimes(1)
+    expect(mockSetElementState).toHaveBeenCalledWith(
+      props.element.id,
+      "preventAutoplay",
+      true
+    )
+  })
+
+  // Test to ensure that setElementState is not called again if autoplay is already prevented
+  it("does not call setElementState again if autoplay is already prevented", () => {
+    mockGetElementState.mockReturnValueOnce(true) // Autoplay is already prevented
+    const props = getProps({ autoplay: true, id: "uniqueVideoId" })
+    render(<Video {...props} />)
+    expect(mockSetElementState).not.toHaveBeenCalled()
   })
 
   describe("YouTube", () => {

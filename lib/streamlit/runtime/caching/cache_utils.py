@@ -21,10 +21,9 @@ import hashlib
 import inspect
 import threading
 import time
-import types
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -38,7 +37,6 @@ from streamlit.runtime.caching.cache_errors import (
     UnserializableReturnValueError,
     get_cached_func_name_md,
 )
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
@@ -46,22 +44,19 @@ from streamlit.runtime.caching.cached_message_replay import (
     replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
+from streamlit.type_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.util import HASHLIB_KWARGS
+
+if TYPE_CHECKING:
+    from types import FunctionType
+
+    from streamlit.runtime.caching.cache_type import CacheType
 
 _LOGGER: Final = get_logger(__name__)
 
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-
-# We show a special "UnevaluatedDataFrame" warning for cached funcs
-# that attempt to return one of these unserializable types:
-UNEVALUATED_DATAFRAME_TYPES = (
-    "snowflake.snowpark.table.Table",
-    "snowflake.snowpark.dataframe.DataFrame",
-    "pyspark.sql.dataframe.DataFrame",
-)
 
 
 class Cache:
@@ -102,14 +97,19 @@ class Cache:
         with self._value_locks_lock:
             return self._value_locks[value_key]
 
-    def clear(self):
-        """Clear all values from this cache."""
+    def clear(self, key: str | None = None):
+        """Clear values from this cache.
+        If no argument is passed, all items are cleared from the cache.
+        A key can be passed to clear that key from the cache only."""
         with self._value_locks_lock:
-            self._value_locks.clear()
-        self._clear()
+            if not key:
+                self._value_locks.clear()
+            elif key in self._value_locks:
+                del self._value_locks[key]
+        self._clear(key=key)
 
     @abstractmethod
-    def _clear(self) -> None:
+    def _clear(self, key: str | None = None) -> None:
         """Subclasses must implement this to perform cache-clearing logic."""
         raise NotImplementedError
 
@@ -123,7 +123,7 @@ class CachedFuncInfo:
 
     def __init__(
         self,
-        func: types.FunctionType,
+        func: FunctionType,
         show_spinner: bool | str,
         allow_widgets: bool,
         hash_funcs: HashFuncsDict | None,
@@ -154,7 +154,7 @@ def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
     value otherwise.
 
     The wrapper also has a `clear` function that can be called to clear
-    all of the wrapper's cached values.
+    some or all of the wrapper's cached values.
     """
     cached_func = CachedFunc(info)
 
@@ -293,6 +293,9 @@ class CachedFunc:
                     type_util.is_type(computed_value, type_name)
                     for type_name in UNEVALUATED_DATAFRAME_TYPES
                 ]:
+                    # If the returned value is an unevaluated dataframe, raise an error.
+                    # Unevaluated dataframes are not yet in the local memory, which also
+                    # means they cannot be properly cached (serialized).
                     raise UnevaluatedDataFrameError(
                         f"""
                         The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
@@ -303,15 +306,58 @@ class CachedFunc:
                     return_value=computed_value, func=self._info.func
                 )
 
-    def clear(self):
-        """Clear the wrapped function's associated cache."""
+    def clear(self, *args, **kwargs):
+        """Clear the cached function's associated cache.
+
+        If no arguments are passed, Streamlit will clear all values cached for
+        the function. If arguments are passed, Streamlit will clear the cached
+        value for these arguments only.
+
+        Parameters
+        ----------
+        *args: Any
+            Arguments of the cached functions.
+        **kwargs: Any
+            Keyword arguments of the cached function.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> @st.cache_data
+        >>> def foo(bar):
+        >>>     time.sleep(2)
+        >>>     st.write(f"Executed foo({bar}).")
+        >>>     return bar
+        >>>
+        >>> if st.button("Clear all cached values for `foo`", on_click=foo.clear):
+        >>>     foo.clear()
+        >>>
+        >>> if st.button("Clear the cached value of `foo(1)`"):
+        >>>     foo.clear(1)
+        >>>
+        >>> foo(1)
+        >>> foo(2)
+
+        """
         cache = self._info.get_function_cache(self._function_key)
-        cache.clear()
+        if args or kwargs:
+            key = _make_value_key(
+                cache_type=self._info.cache_type,
+                func=self._info.func,
+                func_args=args,
+                func_kwargs=kwargs,
+                hash_funcs=self._info.hash_funcs,
+            )
+        else:
+            key = None
+        cache.clear(key=key)
 
 
 def _make_value_key(
     cache_type: CacheType,
-    func: types.FunctionType,
+    func: FunctionType,
     func_args: tuple[Any, ...],
     func_kwargs: dict[str, Any],
     hash_funcs: HashFuncsDict | None,
@@ -376,7 +422,7 @@ def _make_value_key(
     return value_key
 
 
-def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
+def _make_function_key(cache_type: CacheType, func: FunctionType) -> str:
     """Create the unique key for a function's cache.
 
     A function's key is stable across reruns of the app, and changes when
@@ -415,7 +461,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     return cache_key
 
 
-def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> str | None:
+def _get_positional_arg_name(func: FunctionType, arg_index: int) -> str | None:
     """Return the name of a function's positional argument.
 
     If arg_index is out of range, or refers to a parameter that is not a

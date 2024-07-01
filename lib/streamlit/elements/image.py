@@ -150,7 +150,7 @@ class ImageMixin:
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
             width = WidthBehaviour.AUTO
-        elif use_column_width == "always" or use_column_width == True:
+        elif use_column_width == "always" or use_column_width is True:
             width = WidthBehaviour.COLUMN
         elif width is None:
             width = WidthBehaviour.ORIGINAL
@@ -296,9 +296,11 @@ def _ensure_image_size_and_format(
     if width > 0 and actual_width > width:
         # We need to resize the image.
         new_height = int(1.0 * actual_height * width / actual_width)
-        pil_image = pil_image.resize(
-            (width, new_height), resample=Image.Resampling.BILINEAR
-        )
+        # pillow reexports Image.Resampling.BILINEAR as Image.BILINEAR for backwards
+        # compatibility reasons, so we use the reexport to support older pillow
+        # versions. The types don't seem to reflect this, though, hence the type: ignore
+        # below.
+        pil_image = pil_image.resize((width, new_height), resample=Image.BILINEAR)  # type: ignore[attr-defined]
         return _PIL_to_bytes(pil_image, format=image_format, quality=90)
 
     if pil_image.format != image_format:
@@ -511,7 +513,7 @@ def marshall_images(
     else:
         images = [image]
 
-    if type(caption) is list:
+    if isinstance(caption, list):
         captions: Sequence[str | None] = caption
     else:
         if isinstance(caption, str):
@@ -526,7 +528,9 @@ def marshall_images(
         else:
             captions = [str(caption)]
 
-    assert type(captions) == list, "If image is a list then caption should be as well"
+    assert isinstance(
+        captions, list
+    ), "If image is a list then caption should be as well"
     assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
         len(captions),
         len(images),

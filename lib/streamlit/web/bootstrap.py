@@ -18,24 +18,13 @@ import asyncio
 import os
 import signal
 import sys
-from pathlib import Path
 from typing import Any, Final
 
-from streamlit import (
-    cli_util,
-    config,
-    env_util,
-    file_util,
-    net_util,
-    secrets,
-    util,
-    version,
-)
+from streamlit import cli_util, config, env_util, file_util, net_util, secrets, util
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
-from streamlit.source_util import invalidate_pages_cache
-from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
+from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
 _LOGGER: Final = get_logger(__name__)
@@ -117,7 +106,6 @@ def _on_server_start(server: Server) -> None:
     _maybe_print_static_folder_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
-    _print_new_version_message()
 
     # Load secrets.toml if it exists. If the file doesn't exist, this
     # function will return without raising an exception. We catch any parse
@@ -125,7 +113,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        _LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
+        _LOGGER.error("Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -179,27 +167,6 @@ def _fix_pydantic_duplicate_validators_error():
         pass
 
 
-def _print_new_version_message() -> None:
-    if version.should_show_new_version_notice():
-        NEW_VERSION_TEXT: Final = """
-  %(new_version)s
-
-  See what's new at https://discuss.streamlit.io/c/announcements
-
-  Enter the following command to upgrade:
-  %(prompt)s %(command)s
-""" % {
-            "new_version": cli_util.style_for_cli(
-                "A new version of Streamlit is available.", fg="blue", bold=True
-            ),
-            "prompt": cli_util.style_for_cli("$", fg="blue"),
-            "command": cli_util.style_for_cli(
-                "pip install streamlit --upgrade", bold=True
-            ),
-        }
-        cli_util.print_to_cli(NEW_VERSION_TEXT)
-
-
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
@@ -250,15 +217,6 @@ def _print_url(is_running_hello: bool) -> None:
             ("Unix Socket", config.get_option("server.address")),
         ]
 
-    elif config.get_option("server.headless"):
-        internal_ip = net_util.get_internal_ip()
-        if internal_ip:
-            named_urls.append(("Network URL", server_util.get_url(internal_ip)))
-
-        external_ip = net_util.get_external_ip()
-        if external_ip:
-            named_urls.append(("External URL", server_util.get_url(external_ip)))
-
     else:
         named_urls = [
             ("Local URL", server_util.get_url("localhost")),
@@ -267,6 +225,11 @@ def _print_url(is_running_hello: bool) -> None:
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
             named_urls.append(("Network URL", server_util.get_url(internal_ip)))
+
+        if config.get_option("server.headless"):
+            external_ip = net_util.get_external_ip()
+            if external_ip:
+                named_urls.append(("External URL", server_util.get_url(external_ip)))
 
     cli_util.print_to_cli("")
     cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
@@ -352,21 +315,6 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
             watch_file(filename, on_config_changed)
 
 
-def _install_pages_watcher(main_script_path_str: str) -> None:
-    def _on_pages_changed(_path: str) -> None:
-        invalidate_pages_cache()
-
-    main_script_path = Path(main_script_path_str)
-    pages_dir = main_script_path.parent / "pages"
-
-    watch_dir(
-        str(pages_dir),
-        _on_pages_changed,
-        glob_pattern="*.py",
-        allow_nonexistent=True,
-    )
-
-
 def run(
     main_script_path: str,
     is_hello: bool,
@@ -383,7 +331,6 @@ def run(
     _fix_pydeck_mapbox_api_warning()
     _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
-    _install_pages_watcher(main_script_path)
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)

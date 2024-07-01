@@ -44,9 +44,9 @@ st.pyplot(fig, use_container_width=False)
 st.write("Advanced Seaborn figure:")
 # Generate data
 data_points = 100
-xData: "np.typing.NDArray[np.float_]" = (np.random.randn(data_points, 1) * 30) + 30
-yData: "np.typing.NDArray[np.float_]" = np.random.randn(data_points, 1) * 30
-data: "np.typing.NDArray[np.float_]" = np.random.randn(data_points, 2)
+xData: "np.typing.NDArray[np.float64]" = (np.random.randn(data_points, 1) * 30) + 30
+yData: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 1) * 30
+data: "np.typing.NDArray[np.float64]" = np.random.randn(data_points, 2)
 
 # Generate plot
 fig, ax = plt.subplots(figsize=(4.5, 4.5))
@@ -87,3 +87,6 @@ st.write("Figure using deprecated global object:")
 plot = pyplot.plot(data)
 st.pyplot()
 pyplot.clf()
+
+fig, ax = plt.subplots()
+st.pyplot(fig)

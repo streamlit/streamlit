@@ -17,15 +17,16 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-import streamlit
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -38,6 +39,9 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 @dataclass
@@ -85,9 +89,12 @@ class ColorPickerMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -132,8 +139,8 @@ class ColorPickerMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> color = st.color_picker('Pick A Color', '#00f900')
-        >>> st.write('The current color is', color)
+        >>> color = st.color_picker("Pick A Color", "#00f900")
+        >>> st.write("The current color is", color)
 
         .. output::
            https://doc-color-picker.streamlit.app/
@@ -169,6 +176,9 @@ class ColorPickerMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
@@ -181,7 +191,7 @@ class ColorPickerMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # set value default
@@ -245,6 +255,6 @@ class ColorPickerMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> streamlit.delta_generator.DeltaGenerator:
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

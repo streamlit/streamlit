@@ -19,5 +19,7 @@
 # Since we do not know what other internals are used out in the wild, let's try to
 # model the old behavior and not to break things.
 
-from streamlit.components.v1.component_registry import declare_component
-from streamlit.components.v1.custom_component import *
+from streamlit.components.v1.component_registry import (
+    declare_component as declare_component,  # noqa: PLC0414
+)
+from streamlit.components.v1.custom_component import *  # noqa: F403

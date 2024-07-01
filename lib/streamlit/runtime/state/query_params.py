@@ -65,6 +65,7 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
+        self._ensure_single_query_api_used()
         self.__set_item_internal(key, value)
         self._send_query_param_msg()
 
@@ -86,6 +87,7 @@ class QueryParams(MutableMapping[str, str]):
             self._query_params[key] = str(value)
 
     def __delitem__(self, key: str) -> None:
+        self._ensure_single_query_api_used()
         try:
             if key in EMBED_QUERY_PARAMS_KEYS:
                 raise KeyError(missing_key_error_message(key))
@@ -96,17 +98,19 @@ class QueryParams(MutableMapping[str, str]):
 
     def update(
         self,
-        other: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str] = (),
+        other: Iterable[tuple[str, str | Iterable[str]]]
+        | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
         /,
         **kwds: str,
     ):
-        # an update function that only sends one ForwardMsg
-        # once all keys have been updated.
+        # This overrides the `update` provided by MutableMapping
+        # to ensure only one one ForwardMsg is sent.
+        self._ensure_single_query_api_used()
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
             for key in other.keys():
                 self.__set_item_internal(key, other[key])
         else:
-            for (key, value) in other:
+            for key, value in other:
                 self.__set_item_internal(key, value)
         for key, value in kwds.items():
             self.__set_item_internal(key, value)
@@ -146,12 +150,8 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
-        new_query_params = {}
-        for key, value in self._query_params.items():
-            if key in EMBED_QUERY_PARAMS_KEYS:
-                new_query_params[key] = value
-        self._query_params = new_query_params
-
+        self._ensure_single_query_api_used()
+        self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
 
     def to_dict(self) -> dict[str, str]:
@@ -163,11 +163,30 @@ class QueryParams(MutableMapping[str, str]):
             if key not in EMBED_QUERY_PARAMS_KEYS
         }
 
+    def from_dict(
+        self,
+        _dict: Iterable[tuple[str, str | Iterable[str]]]
+        | SupportsKeysAndGetItem[str, str | Iterable[str]],
+    ):
+        self._ensure_single_query_api_used()
+        old_value = self._query_params.copy()
+        self.clear_with_no_forward_msg(preserve_embed=True)
+        try:
+            self.update(_dict)
+        except StreamlitAPIException:
+            # restore the original from before we made any changes.
+            self._query_params = old_value
+            raise
+
     def set_with_no_forward_msg(self, key: str, val: list[str] | str) -> None:
         self._query_params[key] = val
 
-    def clear_with_no_forward_msg(self) -> None:
-        self._query_params.clear()
+    def clear_with_no_forward_msg(self, preserve_embed: bool = False) -> None:
+        self._query_params = {
+            key: value
+            for key, value in self._query_params.items()
+            if key in EMBED_QUERY_PARAMS_KEYS and preserve_embed
+        }
 
     def _ensure_single_query_api_used(self):
         # Avoid circular imports

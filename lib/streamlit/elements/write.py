@@ -86,7 +86,7 @@ class WriteMixin:
         Example
         -------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
-        basic LLM chat app <https://docs.streamlit.io/knowledge-base/tutorials\
+        basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
         you can pass a generic generator function as input:
 
@@ -197,6 +197,10 @@ class WriteMixin:
                     ) from err
 
             if isinstance(chunk, str):
+                if not chunk:
+                    # Empty strings can be ignored
+                    continue
+
                 first_text = False
                 if not stream_container:
                     stream_container = self.dg.empty()
@@ -216,10 +220,14 @@ class WriteMixin:
 
         flush_stream_response()
 
-        # If the output only contains a single string, return it as a string
-        if len(written_content) == 1 and isinstance(written_content[0], str):
+        if not written_content:
+            # If nothing was streamed, return an empty string.
+            return ""
+        elif len(written_content) == 1 and isinstance(written_content[0], str):
+            # If the output only contains a single string, return it as a string
             return written_content[0]
-        # Otherwise return it as a list
+
+        # Otherwise return it as a list of write-compatible objects
         return written_content
 
     @gather_metrics("write")
@@ -264,17 +272,18 @@ class WriteMixin:
             - write(obj)            : Prints str(obj) if otherwise unknown.
 
         unsafe_allow_html : bool
-            This is a keyword-only argument that defaults to False.
+            Whether to render HTML within ``*args``. This only applies to
+            strings or objects falling back on ``_repr_html_()``. If this is
+            ``False`` (default), any HTML tags found in ``body`` will be
+            escaped and therefore treated as raw text. If this is ``True``, any
+            HTML expressions within ``body`` will be rendered.
 
-            By default, any HTML tags found in strings will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
+            Adding custom HTML to your app impacts safety, styling, and
+            maintainability.
 
-            That said, *we strongly advise against it*. It is hard to write secure
-            HTML, so by using this argument you may be compromising your users'
-            security. For more information, see:
-
-            https://github.com/streamlit/streamlit/issues/152
+            .. note::
+                If you only want to insert HTML or CSS without Markdown text,
+                we recommend using ``st.html`` instead.
 
         **kwargs : any
             Keyword arguments. Not used.
@@ -392,7 +401,9 @@ class WriteMixin:
                         item()
                     else:
                         self.write(item, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_snowpark_or_pyspark_data_object(arg):
+            elif type_util.is_unevaluated_data_object(
+                arg
+            ) or type_util.is_snowpark_row_list(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
@@ -473,6 +484,9 @@ class WriteMixin:
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
+            elif type_util.is_streamlit_secrets_class(arg):
+                flush_buffer()
+                self.dg.json(arg.to_dict())
             else:
                 stringified_arg = str(arg)
 

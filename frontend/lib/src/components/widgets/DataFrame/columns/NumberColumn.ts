@@ -56,7 +56,14 @@ export interface NumberColumnParams {
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
   const arrowTypeName = Quiver.getTypeName(props.arrowType)
-
+  let format = undefined
+  if (arrowTypeName === "timedelta64[ns]") {
+    // Use duration formatting for timedelta64[ns] type:
+    format = "duration[ns]"
+  } else if (arrowTypeName.startsWith("period[")) {
+    // Use period formatting for period types:
+    format = arrowTypeName
+  }
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
@@ -64,8 +71,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       step: isIntegerType(arrowTypeName) ? 1 : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: arrowTypeName.startsWith("uint") ? 0 : undefined,
-      // Use duration formatting for timedelta64[ns] type:
-      format: arrowTypeName === "timedelta64[ns]" ? "duration[ns]" : undefined,
+      format,
     } as NumberColumnParams,
     // User parameters:
     props.columnTypeOptions
@@ -89,6 +95,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     style: props.isIndex ? "faded" : "normal",
     allowNegative,
     fixedDecimals,
+    // We don't want to show any thousand separators
+    // in the cell overlay/editor:
+    thousandSeparator: "",
   } as NumberCell
 
   const validateInput = (data?: any): boolean | number => {
@@ -201,6 +210,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
+        // We want to enforce the raw number without formatting when its copied:
+        copyData: isNullOrUndefined(cellData) ? "" : toSafeString(cellData),
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {

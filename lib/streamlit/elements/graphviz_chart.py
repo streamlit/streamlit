@@ -32,7 +32,9 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
+FigureOrDot: TypeAlias = Union[
+    "graphviz.Graph", "graphviz.Digraph", "graphviz.Source", str
+]
 
 
 class GraphvizMixin:
@@ -46,12 +48,16 @@ class GraphvizMixin:
 
         Parameters
         ----------
-        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, str
+        figure_or_dot : graphviz.dot.Graph, graphviz.dot.Digraph, graphviz.sources.Source, str
             The Graphlib graph object or dot string to display
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``False``
+            (default), Streamlit sets the width of the chart to fit its contents
+            according to the plotting library, up to the width of the parent
+            container. If ``use_container_width`` is ``True``, Streamlit sets
+            the width of the figure to match the width of the parent container.
 
         Example
         -------

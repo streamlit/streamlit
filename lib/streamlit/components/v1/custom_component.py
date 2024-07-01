@@ -17,9 +17,10 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from streamlit import _main, type_util
 from streamlit.components.types.base_custom_component import BaseCustomComponent
+from streamlit.delta_generator import main_dg
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
@@ -28,10 +29,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import to_bytes
+from streamlit.type_util import is_bytes_like, is_dataframe_like, to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -48,10 +50,17 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
-        return self.create_instance(*args, default=default, key=key, **kwargs)
+        return self.create_instance(
+            *args,
+            default=default,
+            key=key,
+            on_change=on_change,
+            **kwargs,
+        )
 
     @gather_metrics("create_instance")
     def create_instance(
@@ -59,6 +68,7 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -75,6 +85,8 @@ class CustomComponent(BaseCustomComponent):
         key: str or None
             If not None, this is the user key we use to generate the
             component's "widget ID".
+        on_change: WidgetCallback or None
+            An optional callback invoked when the widget's value changes. No arguments are passed to it.
         **kwargs
             Keyword args to pass to the component.
 
@@ -88,7 +100,7 @@ class CustomComponent(BaseCustomComponent):
             raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
 
         try:
-            import pyarrow
+            import pyarrow  # noqa: F401
 
             from streamlit.components.v1 import component_arrow
         except ImportError:
@@ -101,6 +113,7 @@ PyArrow. To do so locally:
 And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             )
 
+        check_cache_replay_rules()
         # In addition to the custom kwargs passed to the component, we also
         # send the special 'default' and 'key' params to the component
         # frontend.
@@ -109,12 +122,12 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         json_args = {}
         special_args = []
         for arg_name, arg_val in all_args.items():
-            if type_util.is_bytes_like(arg_val):
+            if is_bytes_like(arg_val):
                 bytes_arg = SpecialArg()
                 bytes_arg.key = arg_name
                 bytes_arg.bytes = to_bytes(arg_val)
                 special_args.append(bytes_arg)
-            elif type_util.is_dataframe_like(arg_val):
+            elif is_dataframe_like(arg_val):
                 dataframe_arg = SpecialArg()
                 dataframe_arg.key = arg_name
                 component_arrow.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
@@ -167,7 +180,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     key=key,
                     json_args=serialized_json_args,
                     special_args=special_args,
-                    page=ctx.page_script_hash if ctx else None,
+                    page=ctx.active_script_hash if ctx else None,
                 )
             else:
                 computed_id = compute_widget_id(
@@ -177,7 +190,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     form_id=current_form_id(dg),
                     url=self.url,
                     key=key,
-                    page=ctx.page_script_hash if ctx else None,
+                    page=ctx.active_script_hash if ctx else None,
                 )
             element.component_instance.id = computed_id
 
@@ -193,6 +206,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=ctx,
+                on_change_handler=on_change,
             )
             widget_value = component_state.value
 
@@ -203,23 +217,17 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 widget_value = default
             elif isinstance(widget_value, ArrowTableProto):
                 widget_value = component_arrow.arrow_proto_to_dataframe(widget_value)
-
-            # widget_value will be either None or whatever the component's most
-            # recent setWidgetValue value is. We coerce None -> NoValue,
-            # because that's what DeltaGenerator._enqueue expects.
-            return widget_value if widget_value is not None else NoValue
+            return widget_value
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        dg = _main
+        dg = main_dg
 
         element = Element()
         return_value = marshall_component(dg, element)
-        result = dg._enqueue(
-            "component_instance", element.component_instance, return_value
-        )
 
-        return result
+        dg._enqueue("component_instance", element.component_instance)
+        return return_value
 
     def __eq__(self, other) -> bool:
         """Equality operator."""

@@ -18,10 +18,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.utils import SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -235,7 +233,16 @@ class ChatTest(DeltaGeneratorTestCase):
             st.session_state.my_key = "Foo"
             st.chat_input("Placeholder", key="my_key")
 
-        self.assertEqual(
-            SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT,
+        self.assertIn(
+            "Values for the widget with key",
             str(exception_message.value),
         )
+
+    def test_chat_input_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.chat_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)

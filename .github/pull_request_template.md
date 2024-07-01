@@ -1,8 +1,3 @@
-<!--
-⚠️ BEFORE CONTRIBUTING PLEASE READ OUR CONTRIBUTING GUIDELINES!
-https://github.com/streamlit/streamlit/wiki/Contributing
--->
-
 ## Describe your changes
 
 ## GitHub Issue Link (if applicable)

@@ -15,7 +15,6 @@
  */
 
 export const breakpoints = {
-  toast: "68px",
   // This value is used to determine whether we should hide/show the "Please enter to apply" in all widgets.
   hideWidgetDetails: 180,
   // This value is used to determine whether we should hide/show the - and + buttons in st.number_input.

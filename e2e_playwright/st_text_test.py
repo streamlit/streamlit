@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_st_text_shows_correct_text(app: Page):
@@ -33,3 +34,9 @@ def test_st_text_doesnt_apply_formatting(
     assert_snapshot(
         app.get_by_test_id("stText").nth(2), name="st_text-no_formatting_applied"
     )
+
+
+def test_help_tooltip_works(app: Page):
+    """Test that the help tooltip is displayed on hover."""
+    text_with_help = app.get_by_test_id("stText").nth(3)
+    expect_help_tooltip(app, text_with_help, "This is a help tooltip!")

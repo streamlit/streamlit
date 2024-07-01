@@ -22,11 +22,13 @@ from typing import TYPE_CHECKING, Literal, Union, cast, overload
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -36,6 +38,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -154,9 +157,12 @@ class NumberInputMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -219,8 +225,8 @@ class NumberInputMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input('Insert a number')
-        >>> st.write('The current number is ', number)
+        >>> number = st.number_input("Insert a number")
+        >>> st.write("The current number is ", number)
 
         .. output::
            https://doc-number-input.streamlit.app/
@@ -231,7 +237,7 @@ class NumberInputMixin:
         >>> import streamlit as st
         >>>
         >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
-        >>> st.write('The current number is ', number)
+        >>> st.write("The current number is ", number)
 
         .. output::
            https://doc-number-input-empty.streamlit.app/
@@ -277,6 +283,9 @@ class NumberInputMixin:
         ctx: ScriptRunContext | None = None,
     ) -> Number | None:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=value if value != "min" else None, key=key
@@ -296,7 +305,7 @@ class NumberInputMixin:
             help=help,
             placeholder=None if placeholder is None else str(placeholder),
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # Ensure that all arguments are of the same type.
@@ -319,6 +328,10 @@ class NumberInputMixin:
                 f"\n`max_value` has {type(max_value).__name__} type."
                 f"\n`step` has {type(step).__name__} type."
             )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         if value == "min":
             if min_value is not None:
@@ -388,17 +401,13 @@ class NumberInputMixin:
         try:
             if all_ints:
                 if min_value is not None:
-                    JSNumber.validate_int_bounds(
-                        min_value, "`min_value`"  # type: ignore
-                    )
+                    JSNumber.validate_int_bounds(int(min_value), "`min_value`")
                 if max_value is not None:
-                    JSNumber.validate_int_bounds(
-                        max_value, "`max_value`"  # type: ignore
-                    )
+                    JSNumber.validate_int_bounds(int(max_value), "`max_value`")
                 if step is not None:
-                    JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
+                    JSNumber.validate_int_bounds(int(step), "`step`")
                 if value is not None:
-                    JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
+                    JSNumber.validate_int_bounds(int(value), "`value`")
             else:
                 if min_value is not None:
                     JSNumber.validate_float_bounds(min_value, "`min_value`")

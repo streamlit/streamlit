@@ -44,7 +44,13 @@ st.plotly_chart(fig_bubble, theme=None)
 # Tests Discrete coloring with streamlit theme
 # uses container width when use_container_width flag is True
 fig_bubble.update_layout(height=300, width=300)
-st.plotly_chart(fig_bubble, use_container_width=True, theme="streamlit")
+st.plotly_chart(
+    fig_bubble,
+    use_container_width=True,
+    theme="streamlit",
+    # Also test custom toolbar modification:
+    config={"modeBarButtonsToRemove": ["zoom"]},
+)
 
 # Candlestick Chart
 open_data_candlestick = [33.0, 33.3, 33.5, 33.0, 34.1]
@@ -139,8 +145,8 @@ st.plotly_chart(fig_ternary, theme="streamlit")
 fig_table = go.Figure(
     data=[
         go.Table(
-            header=dict(values=["A Scores", "B Scores"]),
-            cells=dict(values=[[100, 90, 80, 90], [95, 85, 75, 95]]),
+            header={"values": ["A Scores", "B Scores"]},
+            cells={"values": [[100, 90, 80, 90], [95, 85, 75, 95]]},
         )
     ]
 )
@@ -193,7 +199,7 @@ fig = go.Figure(
         branchvalues="total",
     )
 )
-fig.update_layout(margin=dict(t=10, l=100, r=100, b=110))
+fig.update_layout(margin={"t": 10, "l": 100, "r": 100, "b": 110})
 st.plotly_chart(fig, theme="streamlit")
 
 # Separate template Customization Chart
@@ -227,17 +233,15 @@ fig = px.line(
 
 fig.update_xaxes(
     rangeslider_visible=True,
-    rangeselector=dict(
-        buttons=list(
-            [
-                dict(count=1, label="1m", step="month", stepmode="backward"),
-                dict(count=6, label="6m", step="month", stepmode="backward"),
-                dict(count=1, label="YTD", step="year", stepmode="todate"),
-                dict(count=1, label="1y", step="year", stepmode="backward"),
-                dict(step="all"),
-            ]
-        )
-    ),
+    rangeselector={
+        "buttons": [
+            {"count": 1, "label": "1m", "step": "month", "stepmode": "backward"},
+            {"count": 6, "label": "6m", "step": "month", "stepmode": "backward"},
+            {"count": 1, "label": "YTD", "step": "year", "stepmode": "todate"},
+            {"count": 1, "label": "1y", "step": "year", "stepmode": "backward"},
+            {"step": "all"},
+        ]
+    },
 )
 fig.update_layout(height=300, width=600)
 fig.update_layout(
@@ -256,12 +260,10 @@ fig = px.line(data, height=100, width=300)
 fig.update_xaxes(visible=False, fixedrange=True)
 fig.update_yaxes(visible=False, fixedrange=True)
 fig.update_layout(annotations=[], overwrite=True)
-fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
+fig.update_layout(showlegend=False, margin={"t": 10, "l": 10, "b": 10, "r": 10})
 
 # uses figure height and width when use_container_width is False
-st.plotly_chart(
-    fig, config=dict(displayModeBar=False), use_container_width=False, theme=None
-)
+st.plotly_chart(fig, use_container_width=False, theme=None)
 
 # uses container width when use_container_width flag is True
 st.plotly_chart(fig, use_container_width=True, theme=None)

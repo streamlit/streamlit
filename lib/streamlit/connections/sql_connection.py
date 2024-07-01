@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from collections import ChainMap
 from copy import deepcopy
-from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
 from streamlit.connections import BaseConnection
@@ -25,6 +24,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
     from pandas import DataFrame
     from sqlalchemy.engine import Connection as SQLAlchemyConnection
     from sqlalchemy.engine.base import Engine
@@ -40,6 +41,7 @@ _ALL_CONNECTION_PARAMS = {
     "host",
     "port",
     "database",
+    "query",
 }
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
@@ -107,6 +109,7 @@ class SQLConnection(BaseConnection["Engine"]):
                 host=conn_params["host"],
                 port=int(conn_params["port"]) if "port" in conn_params else None,
                 database=conn_params.get("database"),
+                query=conn_params["query"] if "query" in conn_params else None,
             )
 
         create_engine_kwargs = ChainMap(

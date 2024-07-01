@@ -121,9 +121,7 @@ def set_user_option(key: str, value: Any) -> None:
         return
 
     raise StreamlitAPIException(
-        "{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead.".format(
-            key=key
-        )
+        f"{key} cannot be set on the fly. Set as command line option, e.g. streamlit run script.py --{key}, or in config.toml instead."
     )
 
 
@@ -142,7 +140,7 @@ def get_option(key: str) -> Any:
         config_options = get_config_options()
 
         if key not in config_options:
-            raise RuntimeError('Config key "%s" not defined.' % key)
+            raise RuntimeError(f'Config key "{key}" not defined.')
         return config_options[key].value
 
 
@@ -174,9 +172,9 @@ def get_options_for_section(section: str) -> dict[str, Any]:
 
 def _create_section(section: str, description: str) -> None:
     """Create a config section and store it globally in this module."""
-    assert section not in _section_descriptions, (
-        'Cannot define section "%s" twice.' % section
-    )
+    assert (
+        section not in _section_descriptions
+    ), f'Cannot define section "{section}" twice.'
     _section_descriptions[section] = description
 
 
@@ -247,7 +245,7 @@ def _create_option(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
-    assert key not in _config_options_template, 'Cannot define option "%s" twice.' % key
+    assert key not in _config_options_template, f'Cannot define option "{key}" twice.'
     _config_options_template[key] = option
     return option
 
@@ -340,6 +338,14 @@ _create_option(
     deprecation_text="global.logLevel has been replaced with logger.level",
     expiration_date="2020-11-30",
     replaced_by="logger.level",
+)
+
+_create_option(
+    "global.e2eTest",
+    description="Are we in an e2e (playwright) test? Set automatically when our e2e tests are running.",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
 )
 
 _create_option(
@@ -464,19 +470,6 @@ _create_option(
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")
-
-_create_option(
-    "client.caching",
-    description="""
-        Whether to enable st.cache. This does not affect st.cache_data or
-        st.cache_resource.""",
-    default_val=True,
-    type_=bool,
-    scriptable=True,
-    deprecated=True,
-    deprecation_text="client.caching has been deprecated and is not required anymore for our new caching commands.",
-    expiration_date="2024-01-20",
-)
 
 _create_option(
     "client.displayEnabled",
@@ -639,8 +632,7 @@ _create_section("server", "Settings for the Streamlit server")
 
 _create_option(
     "server.folderWatchBlacklist",
-    description="""List of folders that should not be watched for changes. This
-    impacts both "Run on Save" and @st.cache.
+    description="""List of folders that should not be watched for changes.
 
     Relative paths will be taken as relative to the current working directory.
 
@@ -1360,9 +1352,9 @@ def _check_conflicts() -> None:
             "server.port"
         ), "server.port does not work when global.developmentMode is true."
 
-        assert _is_unset("browser.serverPort"), (
-            "browser.serverPort does not work when global.developmentMode is " "true."
-        )
+        assert _is_unset(
+            "browser.serverPort"
+        ), "browser.serverPort does not work when global.developmentMode is true."
 
     # XSRF conflicts
     if get_option("server.enableXsrfProtection"):
@@ -1411,12 +1403,14 @@ def on_config_parsed(
     Callable[[], bool]
         A function that the caller can use to deregister func.
     """
+
     # We need to use the same receiver when we connect or disconnect on the
     # Signal. If we don't do this, then the registered receiver won't be released
     # leading to a memory leak because the Signal will keep a reference of the
     # callable argument. When the callable argument is an object method, then
     # the reference to that object won't be released.
-    receiver = lambda _: func_with_lock()
+    def receiver(_):
+        return func_with_lock()
 
     def disconnect():
         return _on_config_parsed.disconnect(receiver)

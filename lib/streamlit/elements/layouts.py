@@ -21,9 +21,11 @@ from typing_extensions import TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
@@ -40,7 +42,7 @@ class LayoutsMixin:
         multiple elements. This allows you to, for example, insert multiple
         elements into your app out of order.
 
-        To add elements to the returned container, you can use the "with" notation
+        To add elements to the returned container, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -66,7 +68,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        Inserting elements using "with" notation:
+        Inserting elements using ``with`` notation:
 
         >>> import streamlit as st
         >>>
@@ -129,6 +131,7 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+
         if height:
             # Activate scrolling container behavior:
             block_proto.allow_empty = True
@@ -143,21 +146,26 @@ class LayoutsMixin:
 
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: str | None = "small"
+        self,
+        spec: SpecType,
+        *,
+        gap: Literal["small", "medium", "large"] = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
         returns a list of container objects.
 
-        To add elements to the returned containers, you can use the "with" notation
+        To add elements to the returned containers, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
         Columns can only be placed inside other columns up to one level of nesting.
 
         .. warning::
-            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
+            Columns cannot be placed inside other columns in the sidebar. This
+            is only possible in the main area of the app.
 
         Parameters
         ----------
@@ -173,7 +181,11 @@ class LayoutsMixin:
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
-            The size of the gap between the columns. Defaults to "small".
+            The size of the gap between the columns. The default is ``"small"``.
+
+        vertical_alignment : "top", "center", or "bottom"
+            The vertical alignment of the content inside the columns. The
+            default is ``"top"``.
 
         Returns
         -------
@@ -182,7 +194,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a column:
+        You can use the ``with`` notation to insert any element into a column:
 
         >>> import streamlit as st
         >>>
@@ -222,15 +234,40 @@ class LayoutsMixin:
             https://doc-columns2.streamlit.app/
             height: 550px
 
+        Use ``vertical_alignment="bottom"`` to align widgets.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, middle, right = st.columns(3, vertical_alignment="bottom")
+        >>>
+        >>> left.text_input("Write something")
+        >>> middle.button("Click me", use_container_width=True)
+        >>> right.checkbox("Check me")
+
+        .. output ::
+            https://doc-columns-bottom-widgets.streamlit.app/
+            height: 200px
+
+        Adjust vertical alignment to customize your grid layouts.
+
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
+        >>> vertical_alignment = st.selectbox(
+        >>>     "Vertical alignment", ["top", "center", "bottom"], index=2
+        >>> )
+        >>>
+        >>> left, middle, right = st.columns(3, vertical_alignment=vertical_alignment)
+        >>> left.image("https://static.streamlit.io/examples/cat.jpg")
+        >>> middle.image("https://static.streamlit.io/examples/dog.jpg")
+        >>> right.image("https://static.streamlit.io/examples/owl.jpg")
+
+        .. output ::
+            https://doc-columns-vertical-alignment.streamlit.app/
+            height: 600px
+
         """
         weights = spec
-        weights_exception = StreamlitAPIException(
-            "The input argument to st.columns must be either a "
-            + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
-            + "for more information."
-        )
-
         if isinstance(weights, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
@@ -238,10 +275,29 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise weights_exception
+            raise StreamlitAPIException(
+                "The input argument to st.columns must be either a "
+                "positive integer or a list of positive numeric weights. "
+                "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
+                "for more information."
+            )
+
+        vertical_alignment_mapping: dict[
+            str, BlockProto.Column.VerticalAlignment.ValueType
+        ] = {
+            "top": BlockProto.Column.VerticalAlignment.TOP,
+            "center": BlockProto.Column.VerticalAlignment.CENTER,
+            "bottom": BlockProto.Column.VerticalAlignment.BOTTOM,
+        }
+
+        if vertical_alignment not in vertical_alignment_mapping:
+            raise StreamlitAPIException(
+                'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
+                f"The argument passed was {vertical_alignment}."
+            )
 
         def column_gap(gap):
-            if type(gap) == str:
+            if isinstance(gap, str):
                 gap_size = gap.lower()
                 valid_sizes = ["small", "medium", "large"]
 
@@ -259,6 +315,9 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
+            col_proto.column.vertical_alignment = vertical_alignment_mapping[
+                vertical_alignment
+            ]
             col_proto.allow_empty = True
             return col_proto
 
@@ -276,7 +335,7 @@ class LayoutsMixin:
         Tabs are a navigational element that allows users to easily
         move between groups of related content.
 
-        To add elements to the returned containers, you can use the "with" notation
+        To add elements to the returned containers, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -302,9 +361,12 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -317,7 +379,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a tab:
+        You can use the ``with`` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -364,7 +426,7 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
-        if any(isinstance(tab, str) == False for tab in tabs):
+        if any(not isinstance(tab, str) for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
@@ -381,14 +443,20 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(self, label: str, expanded: bool = False) -> DeltaGenerator:
+    def expander(
+        self,
+        label: str,
+        expanded: bool = False,
+        *,
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
         and can be expanded or collapsed by the user. When collapsed, all that is
         visible is the provided label.
 
-        To add elements to the returned container, you can use the "with" notation
+        To add elements to the returned container, you can use the ``with`` notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -412,31 +480,52 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
+        icon : str, None
+            An optional emoji or icon to display next to the expander label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
         Examples
         --------
-        You can use the `with` notation to insert any element into an expander
+        You can use the ``with`` notation to insert any element into an expander
 
         >>> import streamlit as st
         >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.expander("See explanation"):
-        ...     st.write(\"\"\"
+        ...     st.write('''
         ...         The chart above shows some numbers I picked for you.
         ...         I rolled actual dice for these, so they're *guaranteed* to
         ...         be random.
-        ...     \"\"\")
+        ...     ''')
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
@@ -450,11 +539,11 @@ class LayoutsMixin:
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> expander = st.expander("See explanation")
-        >>> expander.write(\"\"\"
+        >>> expander.write('''
         ...     The chart above shows some numbers I picked for you.
         ...     I rolled actual dice for these, so they're *guaranteed* to
         ...     be random.
-        ... \"\"\")
+        ... ''')
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
@@ -468,6 +557,8 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
+        if icon is not None:
+            expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = False
@@ -483,7 +574,7 @@ class LayoutsMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
@@ -518,9 +609,12 @@ class LayoutsMixin:
                 must be on their own lines). Supported LaTeX functions are listed
                 at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-                where ``color`` needs to be replaced with any of the following
-                supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -535,13 +629,21 @@ class LayoutsMixin:
             True. The default is False.
 
         use_container_width : bool
-            An optional boolean, which makes the popover button stretch its width
-            to match the parent container. This only affects the button and not
-            the width of the popover container.
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
+
+            The popover containter's minimimun width matches the width of its
+            button. The popover container may be wider than its button to fit
+            the container's contents.
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a popover:
+        You can use the ``with`` notation to insert any element into a popover:
 
         >>> import streamlit as st
         >>>
@@ -605,11 +707,11 @@ class LayoutsMixin:
 
         The label, state, and expanded state can all be updated by calling ``.update()``
         on the returned object. To add elements to the returned container, you can
-        use "with" notation (preferred) or just call methods directly on the returned
+        use ``with`` notation (preferred) or just call methods directly on the returned
         object.
 
         By default, ``st.status()`` initializes in the "running" state. When called using
-        "with" notation, it automatically updates to the "complete" state at the end
+        ``with`` notation, it automatically updates to the "complete" state at the end
         of the "with" block. See examples below for more details.
 
         Parameters
@@ -630,9 +732,12 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -662,7 +767,7 @@ class LayoutsMixin:
         Examples
         --------
 
-        You can use the `with` notation to insert any element into an status container:
+        You can use the ``with`` notation to insert any element into an status container:
 
         >>> import time
         >>> import streamlit as st
@@ -675,13 +780,13 @@ class LayoutsMixin:
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
         >>>
-        >>> st.button('Rerun')
+        >>> st.button("Rerun")
 
         .. output ::
             https://doc-status.streamlit.app/
             height: 300px
 
-        You can also use `.update()` on the container to change the label, state,
+        You can also use ``.update()`` on the container to change the label, state,
         or expanded state:
 
         >>> import time
@@ -696,7 +801,7 @@ class LayoutsMixin:
         ...     time.sleep(1)
         ...     status.update(label="Download complete!", state="complete", expanded=False)
         >>>
-        >>> st.button('Rerun')
+        >>> st.button("Rerun")
 
         .. output ::
             https://doc-status-update.streamlit.app/
@@ -709,6 +814,24 @@ class LayoutsMixin:
         return StatusContainer._create(
             self.dg, label=label, expanded=expanded, state=state
         )
+
+    def _dialog(
+        self,
+        title: str,
+        *,
+        dismissible: bool = True,
+        width: Literal["small", "large"] = "small",
+    ) -> Dialog:
+        """Inserts the dialog container.
+
+        Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
+        The dialog_decorator also has a more descriptive docstring since it is user-facing.
+        """
+
+        # We need to import Dialog here to avoid a circular import
+        from streamlit.elements.lib.dialog import Dialog
+
+        return Dialog._create(self.dg, title, dismissible=dismissible, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:

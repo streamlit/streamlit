@@ -22,11 +22,13 @@ from typing_extensions import TypeAlias
 
 from streamlit import config
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
@@ -160,8 +162,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[UploadedFile] | None:
-        ...
+    ) -> list[UploadedFile] | None: ...
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = False or omitted
@@ -179,8 +180,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> UploadedFile | None:
-        ...
+    ) -> UploadedFile | None: ...
 
     # The following 2 overloads represent the cases where
     # the `type` argument is a keyword-only argument.
@@ -203,8 +203,7 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[UploadedFile] | None:
-        ...
+    ) -> list[UploadedFile] | None: ...
 
     # 1. type is skipped or a keyword argument
     # 2. accept_multiple_files = False or omitted
@@ -222,8 +221,7 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> UploadedFile | None:
-        ...
+    ) -> UploadedFile | None: ...
 
     @gather_metrics("file_uploader")
     def file_uploader(
@@ -242,9 +240,9 @@ class FileUploaderMixin:
     ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
-        this using the `server.maxUploadSize` config option. For more info
+        this using the ``server.maxUploadSize`` config option. For more info
         on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
+        https://docs.streamlit.io/develop/api-reference/configuration/config.toml
 
         Parameters
         ----------
@@ -263,9 +261,12 @@ class FileUploaderMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -398,6 +399,9 @@ class FileUploaderMixin:
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         maybe_raise_label_warnings(label, label_visibility)
@@ -411,7 +415,7 @@ class FileUploaderMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if type:

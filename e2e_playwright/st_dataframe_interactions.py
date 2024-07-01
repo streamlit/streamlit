@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import random
+import time
 
 import numpy as np
 import pandas as pd
@@ -29,4 +30,46 @@ random_df = pd.DataFrame(
 
 st.dataframe(random_df)
 
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+
 st.data_editor(random_df, num_rows="dynamic")
+
+
+cell_overlay_test_df = pd.DataFrame(
+    {
+        "big_numbers": [1231231.41, 12012],
+        "text": ["hello\nworld", "foo"],
+    }
+)
+
+cell_overlay_test_column_config = {
+    # the e2e interaction testing logic requires all cells to medium
+    # width to calculate the cell positions correctly.
+    "big_numbers": st.column_config.NumberColumn(
+        width="medium",
+    ),
+    "text": st.column_config.TextColumn(
+        width="medium",
+    ),
+}
+
+
+st.header("Test read-only cell overlay")
+st.dataframe(
+    cell_overlay_test_df, hide_index=True, column_config=cell_overlay_test_column_config
+)
+
+st.header("Test cell editor")
+
+result = st.data_editor(
+    cell_overlay_test_df, hide_index=True, column_config=cell_overlay_test_column_config
+)
+
+st.write("Edited DF:", str(result))

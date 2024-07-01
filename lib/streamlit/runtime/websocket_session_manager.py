@@ -14,12 +14,10 @@
 
 from __future__ import annotations
 
-from typing import Callable, Final, List, cast
+from typing import TYPE_CHECKING, Callable, Final, List, cast
 
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
-from streamlit.runtime.script_data import ScriptData
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     ActiveSessionInfo,
     SessionClient,
@@ -27,8 +25,11 @@ from streamlit.runtime.session_manager import (
     SessionManager,
     SessionStorage,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.watcher import LocalSourcesWatcher
+
+if TYPE_CHECKING:
+    from streamlit.runtime.script_data import ScriptData
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -100,7 +101,6 @@ class WebsocketSessionManager(SessionManager):
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._message_enqueued_callback,
-            local_sources_watcher=LocalSourcesWatcher(script_data.main_script_path),
             user_info=user_info,
             session_id_override=session_id_override,
         )

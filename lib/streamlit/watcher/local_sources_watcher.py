@@ -14,25 +14,31 @@
 
 from __future__ import annotations
 
-import collections
 import os
 import sys
-import types
 from pathlib import Path
-from typing import Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-from streamlit.source_util import get_pages
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
     get_default_path_watcher_class,
 )
 
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from streamlit.runtime.pages_manager import PagesManager
+
 _LOGGER: Final = get_logger(__name__)
 
-WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
+
+class WatchedModule(NamedTuple):
+    watcher: Any
+    module_name: Any
+
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
@@ -40,8 +46,9 @@ PathWatcher = None
 
 
 class LocalSourcesWatcher:
-    def __init__(self, main_script_path: str):
-        self._main_script_path = os.path.abspath(main_script_path)
+    def __init__(self, pages_manager: PagesManager):
+        self._pages_manager = pages_manager
+        self._main_script_path = os.path.abspath(self._pages_manager.main_script_path)
         self._script_folder = os.path.dirname(self._main_script_path)
         self._on_file_changed: list[Callable[[str], None]] = []
         self._is_closed = False
@@ -58,22 +65,29 @@ class LocalSourcesWatcher:
         self.update_watched_pages()
 
     def update_watched_pages(self) -> None:
-        old_watched_pages = self._watched_pages
+        old_page_paths = self._watched_pages.copy()
         new_pages_paths: set[str] = set()
 
-        for page_info in get_pages(self._main_script_path).values():
+        for page_info in self._pages_manager.get_pages().values():
+            if not page_info["script_path"]:
+                continue
+
             new_pages_paths.add(page_info["script_path"])
-            if page_info["script_path"] not in old_watched_pages:
+            if page_info["script_path"] not in self._watched_pages:
                 self._register_watcher(
                     page_info["script_path"],
                     module_name=None,
                 )
 
-        for old_page_path in old_watched_pages:
-            if old_page_path not in new_pages_paths:
+        for old_page_path in old_page_paths:
+            # Only remove pages that are no longer valid files
+            if old_page_path not in new_pages_paths and not os.path.isfile(
+                old_page_path
+            ):
                 self._deregister_watcher(old_page_path)
+                self._watched_pages.remove(old_page_path)
 
-        self._watched_pages = new_pages_paths
+        self._watched_pages = self._watched_pages.union(new_pages_paths)
 
     def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)
@@ -172,7 +186,7 @@ class LocalSourcesWatcher:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
-def get_module_paths(module: types.ModuleType) -> set[str]:
+def get_module_paths(module: ModuleType) -> set[str]:
     paths_extractors = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
@@ -193,7 +207,7 @@ def get_module_paths(module: types.ModuleType) -> set[str]:
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: [p for p in m.__path__._path],
+        lambda m: list(m.__path__._path),
     ]
 
     all_paths = set()

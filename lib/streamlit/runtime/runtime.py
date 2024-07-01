@@ -23,9 +23,7 @@ from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
-from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
@@ -40,9 +38,7 @@ from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
 )
-from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
-from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
@@ -59,12 +55,14 @@ from streamlit.runtime.state import (
     SessionStateStatProvider,
 )
 from streamlit.runtime.stats import StatsManager
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
-from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
+    from streamlit.components.types.base_component_registry import BaseComponentRegistry
+    from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
+    from streamlit.runtime.media_file_storage import MediaFileStorage
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -219,7 +217,6 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(_mem_caches)
         self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
@@ -563,7 +560,6 @@ class Runtime:
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},
         )
 

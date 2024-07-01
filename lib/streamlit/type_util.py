@@ -42,9 +42,7 @@ from typing import (
 from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
-from streamlit import config, errors
-from streamlit import logger as _logger
-from streamlit import string_util
+from streamlit import config, errors, logger, string_util
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
@@ -59,11 +57,13 @@ if TYPE_CHECKING:
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
+    from streamlit.runtime.secrets import Secrets
+
 
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
 
-_LOGGER = _logger.get_logger(__name__)
+_LOGGER = logger.get_logger(__name__)
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
@@ -127,8 +127,7 @@ class DataFrameGenericAlias(Protocol[V_co]):
     """
 
     @property
-    def iloc(self) -> _iLocIndexer:
-        ...
+    def iloc(self) -> _iLocIndexer: ...
 
 
 OptionSequence: TypeAlias = Union[
@@ -143,10 +142,11 @@ LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
 VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
+ChartStackType = Literal["normalize", "center", "layered"]
+
 
 class SupportsStr(Protocol):
-    def __str__(self) -> str:
-        ...
+    def __str__(self) -> str: ...
 
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
@@ -156,20 +156,17 @@ def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["pydeck.bindings.deck.Deck"]
-) -> TypeGuard[Deck]:
-    ...
+) -> TypeGuard[Deck]: ...
 
 
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["plotly.graph_objs._figure.Figure"]
-) -> TypeGuard[Figure]:
-    ...
+) -> TypeGuard[Figure]: ...
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
-    ...
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool: ...
 
 
 def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
@@ -218,6 +215,11 @@ _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
 _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+_MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
+_MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
+_SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
+_SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
+
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -225,6 +227,18 @@ _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_SERIES_TYPE_STR,
     _PANDAS_STYLER_TYPE_STR,
     _NUMPY_ARRAY_TYPE_STR,
+)
+
+# We show a special "UnevaluatedDataFrame" warning for cached funcs
+# that attempt to return one of these unserializable types:
+UNEVALUATED_DATAFRAME_TYPES = (
+    _MODIN_DF_TYPE_STR,
+    _MODIN_SERIES_TYPE_STR,
+    _PYSPARK_DF_TYPE_STR,
+    _SNOWPANDAS_DF_TYPE_STR,
+    _SNOWPANDAS_SERIES_TYPE_STR,
+    _SNOWPARK_DF_TYPE_STR,
+    _SNOWPARK_TABLE_TYPE_STR,
 )
 
 DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
@@ -261,6 +275,8 @@ class DataFormat(Enum):
     PYARROW_TABLE = auto()  # pyarrow.Table
     SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
     PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    MODIN_OBJECT = auto()  # Modin DataFrame, Series
+    SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     PANDAS_STYLER = auto()  # pandas Styler
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
@@ -281,23 +297,34 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
-def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
-    """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
-    True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
-    False otherwise.
+def is_unevaluated_data_object(obj: object) -> bool:
+    """True if the object is one of the supported unevaluated data objects:
+
+    Currently supported objects are:
+    - Snowpark DataFrame / Table
+    - PySpark DataFrame
+    - Modin DataFrame / Series
+    - Snowpandas DataFrame / Series
+
+    Unevaluated means that the data is not yet in the local memory.
+    Unevaluated data objects are treated differently from other data objects by only
+    requesting a subset of the data instead of loading all data into th memory
     """
-    return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
+    return (
+        is_snowpark_data_object(obj)
+        or is_pyspark_data_object(obj)
+        or is_snowpandas_data_object(obj)
+        or is_modin_data_object(obj)
+    )
 
 
 def is_snowpark_data_object(obj: object) -> bool:
-    """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
-    True when obj is a list which contains snowflake.snowpark.row.Row,
-    False otherwise.
-    """
-    if is_type(obj, _SNOWPARK_TABLE_TYPE_STR):
-        return True
-    if is_type(obj, _SNOWPARK_DF_TYPE_STR):
-        return True
+    """True if obj is a Snowpark DataFrame or Table."""
+    return is_type(obj, _SNOWPARK_TABLE_TYPE_STR) or is_type(obj, _SNOWPARK_DF_TYPE_STR)
+
+
+def is_snowpark_row_list(obj: object) -> bool:
+    """True if obj is a list of snowflake.snowpark.row.Row."""
     if not isinstance(obj, list):
         return False
     if len(obj) < 1:
@@ -312,7 +339,19 @@ def is_pyspark_data_object(obj: object) -> bool:
     return (
         is_type(obj, _PYSPARK_DF_TYPE_STR)
         and hasattr(obj, "toPandas")
-        and callable(getattr(obj, "toPandas"))
+        and callable(obj.toPandas)
+    )
+
+
+def is_modin_data_object(obj: object) -> bool:
+    """True if obj is of Modin Dataframe or Series"""
+    return is_type(obj, _MODIN_DF_TYPE_STR) or is_type(obj, _MODIN_SERIES_TYPE_STR)
+
+
+def is_snowpandas_data_object(obj: object) -> bool:
+    """True if obj is a Snowpark Pandas DataFrame or Series."""
+    return is_type(obj, _SNOWPANDAS_DF_TYPE_STR) or is_type(
+        obj, _SNOWPANDAS_SERIES_TYPE_STR
     )
 
 
@@ -422,6 +461,7 @@ def is_graphviz_chart(
         # GraphViz >= 0.18
         or is_type(obj, "graphviz.graphs.Graph")
         or is_type(obj, "graphviz.graphs.Digraph")
+        or is_type(obj, "graphviz.sources.Source")
     )
 
 
@@ -466,7 +506,7 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     t = type(x)
     b = t.__bases__
-    if len(b) != 1 or b[0] != tuple:
+    if len(b) != 1 or b[0] is not tuple:
         return False
     f = getattr(t, "_fields", None)
     if not isinstance(f, tuple):
@@ -493,6 +533,11 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     return True
 
 
+def is_streamlit_secrets_class(obj: object) -> TypeGuard[Secrets]:
+    """True if obj is a Streamlit Secrets object."""
+    return is_type(obj, "streamlit.runtime.secrets.Secrets")
+
+
 def is_sequence(seq: Any) -> bool:
     """True if input looks like a sequence."""
     if isinstance(seq, str):
@@ -509,8 +554,7 @@ def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
-) -> DataFrame:
-    ...
+) -> DataFrame: ...
 
 
 @overload
@@ -519,8 +563,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> DataFrame | Styler:
-    ...
+) -> DataFrame | Styler: ...
 
 
 def convert_anything_to_df(
@@ -578,19 +621,47 @@ def convert_anything_to_df(
             return pd.DataFrame([])
         return pd.DataFrame(data)
 
-    if (
-        is_type(data, _SNOWPARK_DF_TYPE_STR)
-        or is_type(data, _SNOWPARK_TABLE_TYPE_STR)
-        or is_type(data, _PYSPARK_DF_TYPE_STR)
-    ):
-        if is_type(data, _PYSPARK_DF_TYPE_STR):
-            data = data.limit(max_unevaluated_rows).toPandas()
-        else:
-            data = pd.DataFrame(data.take(max_unevaluated_rows))
+    if is_modin_data_object(data):
+        data = data.head(max_unevaluated_rows)._to_pandas()
+
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `collect()` on the dataframe to show more."
+                "Call `_to_pandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_pyspark_data_object(data):
+        data = data.limit(max_unevaluated_rows).toPandas()
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `toPandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_snowpark_data_object(data):
+        data = data.limit(max_unevaluated_rows).to_pandas()
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `to_pandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_snowpandas_data_object(data):
+        data = data.head(max_unevaluated_rows).to_pandas()
+
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -621,13 +692,11 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
-    ...
+def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]: ...
 
 
 @overload
-def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
-    ...
+def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]: ...
 
 
 def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]:
@@ -646,7 +715,7 @@ def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]
 
     """
 
-    if is_snowpark_or_pyspark_data_object(obj):
+    if is_unevaluated_data_object(obj):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):
@@ -671,7 +740,7 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # This is an imperfect check because there is no guarantee that an `index`
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
-    if callable(index_fn):
+    if callable(index_fn) and type(it) != EnumMeta:
         # We return a shallow copy of the Sequence here because the return value of
         # this function is saved in a widget serde class instance to be used in later
         # script runs, and we don't want mutations to the options object passed to a
@@ -712,11 +781,15 @@ def is_pandas_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
     """
     import pandas as pd
-    from packaging import version
 
-    return version.parse(pd.__version__) < version.parse(v)
+    return is_version_less_than(pd.__version__, v)
 
 
 def is_pyarrow_version_less_than(v: str) -> bool:
@@ -731,11 +804,54 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
     """
     import pyarrow as pa
+
+    return is_version_less_than(pa.__version__, v)
+
+
+def is_altair_version_less_than(v: str) -> bool:
+    """Return True if the current Altair version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
+    """
+    import altair as alt
+
+    return is_version_less_than(alt.__version__, v)
+
+
+def is_version_less_than(v1: str, v2: str) -> bool:
+    """Return True if the v1 version string is less than the v2 version string
+    based on semantic versioning.
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
     from packaging import version
 
-    return version.parse(pa.__version__) < version.parse(v)
+    return version.parse(v1) < version.parse(v2)
 
 
 def _maybe_truncate_table(
@@ -853,6 +969,17 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     if column.dtype.kind in [
         "c",  # complex64, complex128, complex256
     ]:
+        return True
+
+    if str(column.dtype) in {
+        # These period types are not yet supported by our frontend impl.
+        # See comments in Quiver.ts for more details.
+        "period[B]",
+        "period[N]",
+        "period[ns]",
+        "period[U]",
+        "period[us]",
+    }:
         return True
 
     if column.dtype == "object":
@@ -1020,6 +1147,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.PANDAS_STYLER
     elif is_snowpark_data_object(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_modin_data_object(input_data):
+        return DataFormat.MODIN_OBJECT
+    elif is_snowpandas_data_object(input_data):
+        return DataFormat.SNOWPANDAS_OBJECT
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
     elif isinstance(input_data, (list, tuple, set)):
@@ -1104,6 +1235,8 @@ def convert_df_to_data_format(
         DataFormat.PYSPARK_OBJECT,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
+        DataFormat.MODIN_OBJECT,
+        DataFormat.SNOWPANDAS_OBJECT,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
@@ -1163,19 +1296,17 @@ def convert_df_to_data_format(
         df = _unify_missing_values(df)
         # The key is expected to be the index -> this will return the first column
         # as a dict with index as key.
-        return dict() if df.empty else df.iloc[:, 0].to_dict()
+        return {} if df.empty else df.iloc[:, 0].to_dict()
 
     raise ValueError(f"Unsupported input data format: {data_format}")
 
 
 @overload
-def to_key(key: None) -> None:
-    ...
+def to_key(key: None) -> None: ...
 
 
 @overload
-def to_key(key: Key) -> str:
-    ...
+def to_key(key: Key) -> str: ...
 
 
 def to_key(key: Key | None) -> str | None:

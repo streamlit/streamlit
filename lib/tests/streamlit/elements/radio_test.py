@@ -251,6 +251,15 @@ class RadioTest(DeltaGeneratorTestCase):
         self.assertEqual(c.default, 0)
         self.assertEqual(c.captions, ["first caption", "", "", "last caption"])
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.radio("the label", ["option 1", "option 2"]))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def test_radio_interaction():
     """Test interactions with an empty radio widget."""
@@ -307,3 +316,18 @@ def test_radio_enum_coercion():
     with patch_config_options({"runner.enumCoercion": "off"}):
         with pytest.raises(AssertionError):
             test_enum()  # expect a failure with the config value off.
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "radio" not in st.session_state:
+            st.session_state["radio"] = None
+
+        st.radio("radio", ["a", "b", "c"], key="radio")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.radio[0].value is None

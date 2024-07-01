@@ -25,6 +25,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -67,13 +68,14 @@ class MockSessionManager(SessionManager):
     ) -> str:
         with mock.patch(
             "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
+        ), mock.patch.object(
+            PagesManager, "get_pages", mock.MagicMock(return_value={})
         ):
             session = AppSession(
                 script_data=script_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 script_cache=self._script_cache,
                 message_enqueued_callback=self._message_enqueued_callback,
-                local_sources_watcher=mock.MagicMock(),
                 user_info=user_info,
                 session_id_override=session_id_override,
             )

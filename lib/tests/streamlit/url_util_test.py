@@ -27,8 +27,8 @@ GITHUB_URLS = [
         "https://github.com/aritropaul/streamlit/raw/b72adbcf00c91775db14e739e2ea33d6df9079c3/lib/streamlit/cli.py",
     ),
     (
-        "https://github.com/streamlit/streamlit/blob/develop/examples/video.py",
-        "https://github.com/streamlit/streamlit/raw/develop/examples/video.py",
+        "https://github.com/streamlit/streamlit/blob/develop/e2e_playwright/st_video.py",
+        "https://github.com/streamlit/streamlit/raw/develop/e2e_playwright/st_video.py",
     ),
     (
         "https://github.com/text2gene/text2gene/blob/master/sbin/clinvar.hgvs_citations.sql",
@@ -61,7 +61,7 @@ INVALID_URLS = [
     "http://homestarrunner.com",
     "https://somethinglikegithub.com/withablob",
     "gist.github.com/nothing",
-    "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/video.py",
+    "https://raw.githubusercontent.com/streamlit/streamlit/develop/e2e_playwright/st_video.py",
     "streamlit.io/raw/blob",
 ]
 

@@ -42,7 +42,7 @@ spec_with_width = {
 }
 
 interactive_spec = {
-    "title": f"Interactive Bar Chart Example",
+    "title": "Interactive Bar Chart Example",
     "data": {
         "values": [
             {"a": "A", "b": 28},
@@ -177,3 +177,14 @@ st.vega_lite_chart(
     },
     use_container_width=True,
 )
+
+spec = {
+    "mark": "line",
+    "encoding": {
+        "x": {"field": "a", "type": "quantitative"},
+        "y": {"field": "b", "type": "quantitative"},
+    },
+}
+
+# empty chart
+st.vega_lite_chart(spec, use_container_width=True)

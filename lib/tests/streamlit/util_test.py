@@ -70,7 +70,7 @@ class UtilTest(unittest.TestCase):
 
         import streamlit as st
 
-        @st.cache
+        @st.cache_data
         def f():
             return True
 

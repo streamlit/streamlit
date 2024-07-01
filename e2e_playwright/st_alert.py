@@ -76,3 +76,12 @@ st.write("Hello world!")
 
 st.error(text, icon="🚨")
 st.success(text)
+
+st.error("This is an error with non emoji icon", icon=":material/running_with_errors:")
+
+st.warning("This is a warning with non emoji icon", icon=":material/warning:")
+st.info("This is an info message with non emoji icon", icon=":material/info:")
+st.success(
+    "This is a success message with non emoji icon",
+    icon=":material/celebration:",
+)

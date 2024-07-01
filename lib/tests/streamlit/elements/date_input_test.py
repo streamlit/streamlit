@@ -171,6 +171,20 @@ class DateInputTest(DeltaGeneratorTestCase):
     def test_value_in_range(self, value, min_date, max_date):
         st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
 
+    def test_default_min_if_today_is_before_min(self):
+        min_date = date(9998, 2, 28)
+        st.date_input("the label", min_value=min_date, max_value=date(9999, 2, 28))
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert datetime.strptime(c.default[0], "%Y/%m/%d").date() == min_date
+
+    def test_default_max_if_today_is_after_min(self):
+        max_date = date(1001, 2, 28)
+        st.date_input("the label", min_value=date(1000, 2, 28), max_value=max_date)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert datetime.strptime(c.default[0], "%Y/%m/%d").date() == max_date
+
     def test_range_session_state(self):
         """Test a range set by session state."""
         date_range_input = [date(2024, 1, 15), date(2024, 1, 15) + timedelta(2)]
@@ -271,6 +285,15 @@ class DateInputTest(DeltaGeneratorTestCase):
             st.date_input("the label", format=format)
         self.assertTrue(str(ex.exception).startswith("The provided format"))
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.date_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def test_date_input_interaction():
     """Test interactions with an empty date_input widget."""
@@ -293,3 +316,18 @@ def test_date_input_interaction():
     at = date_input.set_value(None).run()
     date_input = at.date_input[0]
     assert date_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "date_input" not in st.session_state:
+            st.session_state["date_input"] = None
+
+        st.date_input("date_input", key="date_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.date_input[0].value is None

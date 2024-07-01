@@ -19,11 +19,13 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
-    get_label_visibility_proto_value,
 )
+from streamlit.elements.lib.utils import get_label_visibility_proto_value
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -85,9 +87,12 @@ class CheckboxMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -130,10 +135,10 @@ class CheckboxMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> agree = st.checkbox('I agree')
+        >>> agree = st.checkbox("I agree")
         >>>
         >>> if agree:
-        ...     st.write('Great!')
+        ...     st.write("Great!")
 
         .. output::
            https://doc-checkbox.streamlit.app/
@@ -188,9 +193,12 @@ class CheckboxMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -233,10 +241,10 @@ class CheckboxMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> on = st.toggle('Activate feature')
+        >>> on = st.toggle("Activate feature")
         >>>
         >>> if on:
-        ...     st.write('Feature activated!')
+        ...     st.write("Feature activated!")
 
         .. output::
            https://doc-toggle.streamlit.app/
@@ -274,11 +282,13 @@ class CheckboxMixin:
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=None if value is False else value, key=key
         )
-
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(
@@ -289,7 +299,7 @@ class CheckboxMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         checkbox_proto = CheckboxProto()

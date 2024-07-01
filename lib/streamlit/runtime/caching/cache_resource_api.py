@@ -19,14 +19,12 @@ from __future__ import annotations
 import math
 import threading
 import types
-from datetime import timedelta
-from typing import Any, Callable, Final, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, TypeVar, cast, overload
 
 from cachetools import TTLCache
 from typing_extensions import TypeAlias
 
 import streamlit as st
-from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -42,12 +40,17 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+    show_widget_replay_deprecation,
 )
-from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from streamlit.runtime.caching.hashing import HashFuncsDict
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -194,26 +197,18 @@ class CacheResourceAPI:
     and st.cache_resource.clear().
     """
 
-    def __init__(
-        self, decorator_metric_name: str, deprecation_warning: str | None = None
-    ):
+    def __init__(self, decorator_metric_name: str):
         """Create a CacheResourceAPI instance.
 
         Parameters
         ----------
         decorator_metric_name
-            The metric name to record for decorator usage. `@st.experimental_singleton` is
-            deprecated, but we're still supporting it and tracking its usage separately
-            from `@st.cache_resource`.
-
-        deprecation_warning
-            An optional deprecation warning to show when the API is accessed.
+            The metric name to record for decorator usage.
         """
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
         self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
-        self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
     # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
@@ -222,8 +217,7 @@ class CacheResourceAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
-        ...
+    def __call__(self, func: F) -> F: ...
 
     # Decorator with arguments
     @overload
@@ -236,8 +230,7 @@ class CacheResourceAPI:
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
         hash_funcs: HashFuncsDict | None = None,
-    ) -> Callable[[F], F]:
-        ...
+    ) -> Callable[[F], F]: ...
 
     def __call__(
         self,
@@ -282,7 +275,7 @@ class CacheResourceAPI:
         cache with ``st.cache_resource.clear()``.
 
         To cache data, use ``st.cache_data`` instead. Learn more about caching at
-        https://docs.streamlit.io/library/advanced-features/caching.
+        https://docs.streamlit.io/develop/concepts/architecture/caching.
 
         Parameters
         ----------
@@ -325,7 +318,6 @@ class CacheResourceAPI:
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the
             widget value is treated as an additional input parameter to the cache.
-            We may remove support for this option at any time without notice.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -334,6 +326,10 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            ``experimental_allow_widgets`` is deprecated and will be removed in
+            a later version.
 
         Example
         -------
@@ -384,6 +380,9 @@ class CacheResourceAPI:
         ...     # Create a database connection object that points to the URL.
         ...     return connection
         ...
+        >>> fetch_and_clean_data.clear(_sessionmaker, "https://streamlit.io/")
+        >>> # Clear the cached entry for the arguments provided.
+        >>>
         >>> get_database_session.clear()
         >>> # Clear all cached entries for this function.
 
@@ -414,7 +413,8 @@ class CacheResourceAPI:
         ... def get_person_name(person: Person):
         ...     return person.name
         """
-        self._maybe_show_deprecation_warning()
+        if experimental_allow_widgets:
+            show_widget_replay_deprecation("cache_resource")
 
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
@@ -446,15 +446,7 @@ class CacheResourceAPI:
     @gather_metrics("clear_resource_caches")
     def clear(self) -> None:
         """Clear all cache_resource caches."""
-        self._maybe_show_deprecation_warning()
         _resource_caches.clear_all()
-
-    def _maybe_show_deprecation_warning(self):
-        """If the API is being accessed with the deprecated `st.experimental_singleton` name,
-        show a deprecation warning.
-        """
-        if self._deprecation_warning is not None:
-            show_deprecation_warning(self._deprecation_warning)
 
 
 class ResourceCache(Cache):
@@ -481,11 +473,11 @@ class ResourceCache(Cache):
 
     @property
     def max_entries(self) -> float:
-        return cast(float, self._mem_cache.maxsize)
+        return self._mem_cache.maxsize
 
     @property
     def ttl_seconds(self) -> float:
-        return cast(float, self._mem_cache.ttl)
+        return self._mem_cache.ttl
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -549,9 +541,12 @@ class ResourceCache(Cache):
             multi_results.results[widget_key] = result
             self._mem_cache[key] = multi_results
 
-    def _clear(self) -> None:
+    def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
-            self._mem_cache.clear()
+            if key is None:
+                self._mem_cache.clear()
+            elif key in self._mem_cache:
+                del self._mem_cache[key]
 
     def get_stats(self) -> list[CacheStat]:
         # Shallow clone our cache. Computing item sizes is potentially

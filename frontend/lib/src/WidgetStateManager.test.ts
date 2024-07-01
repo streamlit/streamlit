@@ -109,7 +109,12 @@ describe("Widget State Manager", () => {
     "sets string value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setStringValue(widget, "mockStringValue", { fromUi: true })
+      widgetMgr.setStringValue(
+        widget,
+        "mockStringValue",
+        { fromUi: true },
+        undefined
+      )
       expect(widgetMgr.getStringValue(widget)).toBe("mockStringValue")
       assertCallbacks({ insideForm })
     }
@@ -119,7 +124,7 @@ describe("Widget State Manager", () => {
     "sets boolean value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setBoolValue(widget, true, { fromUi: true })
+      widgetMgr.setBoolValue(widget, true, { fromUi: true }, undefined)
       expect(widgetMgr.getBoolValue(widget)).toBe(true)
       assertCallbacks({ insideForm })
     }
@@ -129,7 +134,7 @@ describe("Widget State Manager", () => {
     "sets int value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setIntValue(widget, 100, { fromUi: true })
+      widgetMgr.setIntValue(widget, 100, { fromUi: true }, undefined)
       expect(widgetMgr.getIntValue(widget)).toBe(100)
       assertCallbacks({ insideForm })
     }
@@ -139,7 +144,7 @@ describe("Widget State Manager", () => {
     "sets float value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setDoubleValue(widget, 3.14, { fromUi: true })
+      widgetMgr.setDoubleValue(widget, 3.14, { fromUi: true }, undefined)
       expect(widgetMgr.getDoubleValue(widget)).toBe(3.14)
       assertCallbacks({ insideForm })
     }
@@ -151,7 +156,7 @@ describe("Widget State Manager", () => {
    */
   it("sets trigger value correctly", () => {
     const widget = getWidget({ insideForm: false })
-    widgetMgr.setTriggerValue(widget, { fromUi: true })
+    widgetMgr.setTriggerValue(widget, { fromUi: true }, undefined)
     // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
     assertCallbacks({ insideForm: false })
@@ -163,7 +168,12 @@ describe("Widget State Manager", () => {
    */
   it("sets string trigger value correctly", () => {
     const widget = getWidget({ insideForm: false })
-    widgetMgr.setStringTriggerValue(widget, "sample string", { fromUi: true })
+    widgetMgr.setStringTriggerValue(
+      widget,
+      "sample string",
+      { fromUi: true },
+      undefined
+    )
     // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
     assertCallbacks({ insideForm: false })
@@ -173,9 +183,14 @@ describe("Widget State Manager", () => {
     "sets string array value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setStringArrayValue(widget, ["foo", "bar", "baz"], {
-        fromUi: true,
-      })
+      widgetMgr.setStringArrayValue(
+        widget,
+        ["foo", "bar", "baz"],
+        {
+          fromUi: true,
+        },
+        undefined
+      )
       expect(widgetMgr.getStringArrayValue(widget)).toEqual([
         "foo",
         "bar",
@@ -189,7 +204,12 @@ describe("Widget State Manager", () => {
     "sets int array value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setIntArrayValue(widget, [4, 5, 6], { fromUi: true })
+      widgetMgr.setIntArrayValue(
+        widget,
+        [4, 5, 6],
+        { fromUi: true },
+        undefined
+      )
       expect(widgetMgr.getIntArrayValue(widget)).toEqual([4, 5, 6])
       assertCallbacks({ insideForm })
     }
@@ -199,9 +219,14 @@ describe("Widget State Manager", () => {
     "sets float array value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setDoubleArrayValue(widget, [1.1, 2.2, 3.3], {
-        fromUi: true,
-      })
+      widgetMgr.setDoubleArrayValue(
+        widget,
+        [1.1, 2.2, 3.3],
+        {
+          fromUi: true,
+        },
+        undefined
+      )
       expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([1.1, 2.2, 3.3])
       assertCallbacks({ insideForm })
     }
@@ -211,7 +236,12 @@ describe("Widget State Manager", () => {
     "sets ArrowTable value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setArrowValue(widget, MOCK_ARROW_TABLE, { fromUi: true })
+      widgetMgr.setArrowValue(
+        widget,
+        MOCK_ARROW_TABLE,
+        { fromUi: true },
+        undefined
+      )
       expect(widgetMgr.getArrowValue(widget)).toEqual(MOCK_ARROW_TABLE)
       assertCallbacks({ insideForm })
     }
@@ -221,9 +251,14 @@ describe("Widget State Manager", () => {
     "sets JSON value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setJsonValue(widget, MOCK_JSON, {
-        fromUi: true,
-      })
+      widgetMgr.setJsonValue(
+        widget,
+        MOCK_JSON,
+        {
+          fromUi: true,
+        },
+        undefined
+      )
       expect(widgetMgr.getJsonValue(widget)).toBe(JSON.stringify(MOCK_JSON))
       assertCallbacks({ insideForm })
     }
@@ -233,7 +268,7 @@ describe("Widget State Manager", () => {
     "sets bytes value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setBytesValue(widget, MOCK_BYTES, { fromUi: true })
+      widgetMgr.setBytesValue(widget, MOCK_BYTES, { fromUi: true }, undefined)
       expect(widgetMgr.getBytesValue(widget)).toEqual(MOCK_BYTES)
       assertCallbacks({ insideForm })
     }
@@ -243,9 +278,14 @@ describe("Widget State Manager", () => {
     "sets FileUploaderState value correctly (insideForm=%p)",
     insideForm => {
       const widget = getWidget({ insideForm })
-      widgetMgr.setFileUploaderStateValue(widget, MOCK_FILE_UPLOADER_STATE, {
-        fromUi: true,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        widget,
+        MOCK_FILE_UPLOADER_STATE,
+        {
+          fromUi: true,
+        },
+        undefined
+      )
       expect(widgetMgr.getFileUploaderStateValue(widget)).toEqual(
         MOCK_FILE_UPLOADER_STATE
       )
@@ -254,24 +294,39 @@ describe("Widget State Manager", () => {
   )
 
   it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
-    widgetMgr.setIntValue(MOCK_WIDGET, Number.MAX_SAFE_INTEGER, {
-      fromUi: true,
-    })
+    widgetMgr.setIntValue(
+      MOCK_WIDGET,
+      Number.MAX_SAFE_INTEGER,
+      {
+        fromUi: true,
+      },
+      undefined
+    )
 
     expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MAX_SAFE_INTEGER)
 
-    widgetMgr.setIntValue(MOCK_WIDGET, Number.MIN_SAFE_INTEGER, {
-      fromUi: true,
-    })
+    widgetMgr.setIntValue(
+      MOCK_WIDGET,
+      Number.MIN_SAFE_INTEGER,
+      {
+        fromUi: true,
+      },
+      undefined
+    )
 
     expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
   })
 
   it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
     const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
-    widgetMgr.setIntArrayValue(MOCK_WIDGET, values, {
-      fromUi: true,
-    })
+    widgetMgr.setIntArrayValue(
+      MOCK_WIDGET,
+      values,
+      {
+        fromUi: true,
+      },
+      undefined
+    )
 
     expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
   })
@@ -361,40 +416,60 @@ describe("Widget State Manager", () => {
 
   describe("Primitive types as JSON values", () => {
     it("sets string value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, "mockStringValue", { fromUi: true })
+      widgetMgr.setJsonValue(
+        MOCK_WIDGET,
+        "mockStringValue",
+        { fromUi: true },
+        undefined
+      )
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify("mockStringValue")
       )
     })
 
     it("sets int value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, 45, { fromUi: true })
+      widgetMgr.setJsonValue(MOCK_WIDGET, 45, { fromUi: true }, undefined)
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(45))
     })
 
     it("sets float value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, 3.14, { fromUi: true })
+      widgetMgr.setJsonValue(MOCK_WIDGET, 3.14, { fromUi: true }, undefined)
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(3.14))
     })
 
     it("sets string array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, ["foo", "bar", "baz"], {
-        fromUi: true,
-      })
+      widgetMgr.setJsonValue(
+        MOCK_WIDGET,
+        ["foo", "bar", "baz"],
+        {
+          fromUi: true,
+        },
+        undefined
+      )
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify(["foo", "bar", "baz"])
       )
     })
 
     it("sets int array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, [5, 6, 7], { fromUi: true })
+      widgetMgr.setJsonValue(
+        MOCK_WIDGET,
+        [5, 6, 7],
+        { fromUi: true },
+        undefined
+      )
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify([5, 6, 7])
       )
     })
 
     it("sets float array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_WIDGET, [1.1, 2.2, 3.3], { fromUi: true })
+      widgetMgr.setJsonValue(
+        MOCK_WIDGET,
+        [1.1, 2.2, 3.3],
+        { fromUi: true },
+        undefined
+      )
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify([1.1, 2.2, 3.3])
       )
@@ -448,17 +523,27 @@ describe("Widget State Manager", () => {
       )
 
       // Populate a form
-      widgetMgr.setStringValue({ id: "widget1", formId }, "foo", {
-        fromUi: true,
-      })
-      widgetMgr.setStringValue({ id: "widget2", formId }, "bar", {
-        fromUi: true,
-      })
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+      widgetMgr.setStringValue(
+        { id: "widget2", formId },
+        "bar",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
 
       // We have a single pending form.
       expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
 
-      widgetMgr.submitForm(formId)
+      widgetMgr.submitForm(formId, undefined)
 
       // Our backMsg should be populated with our two widget values,
       // plus the submitButton's value.
@@ -485,11 +570,16 @@ describe("Widget State Manager", () => {
       )
 
       // Populate a form
-      widgetMgr.setStringValue({ id: "widget1", formId }, "foo", {
-        fromUi: true,
-      })
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
 
-      widgetMgr.submitForm(formId, undefined, "myFragmentId")
+      widgetMgr.submitForm(formId, "myFragmentId", undefined)
 
       // Our backMsg should be populated with our two widget values,
       // plus the submitButton's value.
@@ -508,9 +598,9 @@ describe("Widget State Manager", () => {
     })
 
     it("throws on invalid formId", () => {
-      expect(() => widgetMgr.submitForm(MOCK_WIDGET.formId)).toThrow(
-        `invalid formID ${MOCK_WIDGET.formId}`
-      )
+      expect(() =>
+        widgetMgr.submitForm(MOCK_WIDGET.formId, undefined)
+      ).toThrow(`invalid formID ${MOCK_WIDGET.formId}`)
     })
 
     it("submits the form for the first submitButton if an actualSubmitButton proto is passed", () => {
@@ -523,7 +613,7 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "secondSubmitButton" })
       )
-      widgetMgr.submitForm(formId)
+      widgetMgr.submitForm(formId, undefined)
 
       expect(sendBackMsg).toHaveBeenCalledWith(
         {
@@ -543,7 +633,7 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "secondSubmitButton" })
       )
-      widgetMgr.submitForm(formId)
+      widgetMgr.submitForm(formId, undefined)
 
       expect(sendBackMsg).not.toHaveBeenCalled()
     })
@@ -558,7 +648,7 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "secondSubmitButton", disabled: true })
       )
-      widgetMgr.submitForm(formId)
+      widgetMgr.submitForm(formId, undefined)
 
       expect(sendBackMsg).not.toHaveBeenCalled()
     })
@@ -576,14 +666,24 @@ describe("Widget State Manager", () => {
 
     beforeEach(() => {
       // Set widget value for the first form.
-      widgetMgr.setStringValue(FORM_1, "foo", {
-        fromUi: true,
-      })
+      widgetMgr.setStringValue(
+        FORM_1,
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
 
       // Set widget value for the second form.
-      widgetMgr.setStringValue(FORM_2, "bar", {
-        fromUi: true,
-      })
+      widgetMgr.setStringValue(
+        FORM_2,
+        "bar",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
     })
 
     it("checks that there are two pending forms", () => {
@@ -599,7 +699,7 @@ describe("Widget State Manager", () => {
       )
 
       // Submit the first form.
-      widgetMgr.submitForm(FORM_1.formId)
+      widgetMgr.submitForm(FORM_1.formId, undefined)
 
       // Our backMsg should be populated with the first form widget value,
       // plus the first submitButton's triggerValue.
@@ -615,7 +715,7 @@ describe("Widget State Manager", () => {
     })
 
     it("checks that only the second form is pending after the first is submitted", () => {
-      widgetMgr.submitForm(FORM_1.formId)
+      widgetMgr.submitForm(FORM_1.formId, undefined)
       expect(formsData.formsWithPendingChanges).toEqual(
         new Set([FORM_2.formId])
       )
@@ -623,9 +723,10 @@ describe("Widget State Manager", () => {
 
     it("calls sendBackMsg with data from both forms", () => {
       // Submit the first form and then the second form.
-      widgetMgr.submitForm(FORM_1.formId)
+      widgetMgr.submitForm(FORM_1.formId, undefined)
       widgetMgr.submitForm(
         FORM_2.formId,
+        undefined,
         new ButtonProto({ id: "submitButton2" })
       )
 
@@ -644,8 +745,8 @@ describe("Widget State Manager", () => {
     })
 
     it("checks that no more pending forms exist after both are submitted", () => {
-      widgetMgr.submitForm(FORM_1.formId)
-      widgetMgr.submitForm(FORM_2.formId)
+      widgetMgr.submitForm(FORM_1.formId, undefined)
+      widgetMgr.submitForm(FORM_2.formId, undefined)
       expect(formsData.formsWithPendingChanges).toEqual(new Set())
     })
 
@@ -662,6 +763,7 @@ describe("Widget State Manager", () => {
       // Submit the second form.
       widgetMgr.submitForm(
         FORM_2.formId,
+        undefined,
         new ButtonProto({ id: "submitButton2" })
       )
 
@@ -675,6 +777,98 @@ describe("Widget State Manager", () => {
         undefined
       )
     })
+  })
+
+  describe("manages element state values", () => {
+    it("sets extra widget information properly", () => {
+      widgetMgr.setElementState("id", "color", "red")
+      // @ts-expect-error
+      expect(widgetMgr.elementStates.get("id")?.get("color")).toEqual("red")
+    })
+
+    it("returns extra widget information when id exists and key exists", () => {
+      // @ts-expect-error
+      widgetMgr.elementStates.set("id", new Map([["color", "red"]]))
+      expect(widgetMgr.getElementState("id", "color")).toEqual("red")
+    })
+
+    it("returns undefined when when id does not exist", () => {
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+
+    it("returns undefined when when id exists and key does not exist", () => {
+      // @ts-expect-error
+      widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+
+    it("deletes a value for the key if set", () => {
+      // @ts-expect-error
+      widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
+      widgetMgr.deleteElementState("id", "color")
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+
+    it("does not error when deleting for the key if not set", () => {
+      widgetMgr.deleteElementState("id", "color")
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+  })
+
+  it("cleans up widget & element states on removeInactive", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+    const widgetId4 = "TEST_ID_4"
+    const elementId1 = "TEST_ID_5"
+    const elementId2 = "TEST_ID_6"
+    widgetMgr.setStringValue(
+      { id: widgetId1 },
+      "widgetState1",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+    widgetMgr.setStringValue(
+      { id: widgetId2 },
+      "widgetState2",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+    widgetMgr.setStringValue(
+      { id: widgetId3 },
+      "widgetState3",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+    widgetMgr.setStringValue(
+      { id: widgetId4 },
+      "widgetState4",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+
+    widgetMgr.setElementState(elementId1, "key1", "elementState1")
+    widgetMgr.setElementState(elementId2, "key2", "elementState2")
+
+    const activeIds = new Set([widgetId3, widgetId4, elementId2])
+    widgetMgr.removeInactive(activeIds)
+
+    expect(widgetMgr.getStringValue({ id: widgetId1 })).toBeUndefined()
+    expect(widgetMgr.getStringValue({ id: widgetId2 })).toBeUndefined()
+    expect(widgetMgr.getStringValue({ id: widgetId3 })).toEqual("widgetState3")
+    expect(widgetMgr.getStringValue({ id: widgetId4 })).toEqual("widgetState4")
+    expect(widgetMgr.getElementState(elementId1, "key1")).toBeUndefined()
+    expect(widgetMgr.getElementState(elementId2, "key2")).toEqual(
+      "elementState2"
+    )
   })
 })
 
@@ -760,5 +954,41 @@ describe("WidgetStateDict", () => {
     expect(widgetStateDict.getState(widgetId1)).toEqual({ id: widgetId1 })
     expect(widgetStateDict.getState(widgetId2)).toEqual({ id: widgetId2 })
     expect(widgetStateDict.getState(widgetId3)).toEqual({ id: widgetId3 })
+  })
+
+  it("supplies WidgetStates with for active widgets based on input", () => {
+    const widgetStateManager = new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    })
+
+    widgetStateManager.setStringValue(
+      { id: "widget1" },
+      "foo",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+    widgetStateManager.setStringValue(
+      { id: "widget2" },
+      "bar",
+      {
+        fromUi: false,
+      },
+      undefined
+    )
+
+    const activeIds = new Set(["widget2"])
+    const widgetStates = widgetStateManager.getActiveWidgetStates(activeIds)
+
+    expect(widgetStates).toEqual({
+      widgets: [
+        {
+          id: "widget2",
+          stringValue: "bar",
+        },
+      ],
+    })
   })
 })

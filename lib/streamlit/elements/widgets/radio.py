@@ -19,9 +19,13 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import (
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
     check_callback_rules,
+    check_fragment_path_policy,
     check_session_state_rules,
+)
+from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     maybe_coerce_enum,
 )
@@ -33,6 +37,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
@@ -117,9 +122,12 @@ class RadioMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -186,10 +194,10 @@ class RadioMixin:
         ...     [":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"],
         ...     captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."])
         >>>
-        >>> if genre == ':rainbow[Comedy]':
-        ...     st.write('You selected comedy.')
+        >>> if genre == ":rainbow[Comedy]":
+        ...     st.write("You selected comedy.")
         ... else:
-        ...     st.write("You didn\'t select comedy.")
+        ...     st.write("You didn't select comedy.")
 
         .. output::
            https://doc-radio.streamlit.app/
@@ -249,9 +257,13 @@ class RadioMixin:
         ctx: ScriptRunContext | None,
     ) -> T | None:
         key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
         maybe_raise_label_warnings(label, label_visibility)
+
         opt = ensure_indexable(options)
         check_python_comparable(opt)
 
@@ -266,7 +278,7 @@ class RadioMixin:
             horizontal=horizontal,
             captions=captions,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:
@@ -288,6 +300,10 @@ class RadioMixin:
                 raise StreamlitAPIException(
                     f"Radio captions must be strings. Passed type: {type(caption).__name__}"
                 )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            index = None
 
         radio_proto = RadioProto()
         radio_proto.id = id

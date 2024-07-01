@@ -101,6 +101,12 @@ function ChatInput({
   }
 
   const handleSubmit = (): void => {
+    // We want the chat input to always be in focus
+    // even if the user clicks the submit button
+    if (chatInputRef.current) {
+      chatInputRef.current.focus()
+    }
+
     if (!value) {
       return
     }
@@ -190,13 +196,14 @@ function ChatInput({
           overrides={{
             Root: {
               style: {
+                minHeight: theme.sizes.minElementHeight,
                 outline: "none",
                 backgroundColor: theme.colors.transparent,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: "1px",
-                borderRightWidth: "1px",
-                borderTopWidth: "1px",
-                borderBottomWidth: "1px",
+                borderLeftWidth: theme.sizes.borderWidth,
+                borderRightWidth: theme.sizes.borderWidth,
+                borderTopWidth: theme.sizes.borderWidth,
+                borderBottomWidth: theme.sizes.borderWidth,
                 width: `${width}px`,
               },
             },
@@ -210,7 +217,7 @@ function ChatInput({
                 "data-testid": "stChatInputTextArea",
               },
               style: {
-                lineHeight: "1.4",
+                lineHeight: theme.lineHeights.inputWidget,
                 backgroundColor: theme.colors.transparent,
                 "::placeholder": {
                   color: placeholderColor,

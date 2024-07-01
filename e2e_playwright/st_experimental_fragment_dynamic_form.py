@@ -44,9 +44,11 @@ def get_location():
             if len(city) < 8:
                 st.warning(f"City name {city} must be at least 8 characters")
             else:
-                st.session_state.new_location = dict(
-                    country=country, state=state, city=city
-                )
+                st.session_state.new_location = {
+                    "country": country,
+                    "state": state,
+                    "city": city,
+                }
                 st.rerun()
 
 

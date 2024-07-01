@@ -66,13 +66,19 @@ class PydeckMixin:
 
         To get a token for yourself, create an account at https://mapbox.com.
         For more info on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration
+        https://docs.streamlit.io/develop/api-reference/configuration/config.toml.
 
         Parameters
         ----------
         pydeck_obj: pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
-        use_container_width: bool
+        use_container_width : bool
+            Whether to override the figure's native width with the width of
+            the parent container. If ``use_container_width`` is ``False``
+            (default), Streamlit sets the width of the chart to fit its contents
+            according to the plotting library, up to the width of the parent
+            container. If ``use_container_width`` is ``True``, Streamlit sets
+            the width of the figure to match the width of the parent container.
 
         Example
         -------

@@ -163,7 +163,9 @@ jest.mock("@streamlit/app/src/SegmentMetricsManager", () => {
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    return new actualModule.SegmentMetricsManager(...props)
+    const metricsMgr = new actualModule.SegmentMetricsManager(...props)
+    jest.spyOn(metricsMgr, "enqueue")
+    return metricsMgr
   })
 
   return {
@@ -270,7 +272,7 @@ function renderApp(props: Props): RenderResult {
 }
 
 function getStoredValue<T>(Type: any): T {
-  return Type.mock.results[0].value
+  return Type.mock.results[Type.mock.results.length - 1].value
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -397,6 +399,18 @@ describe("App", () => {
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
     expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
+  })
+
+  it("sends updateReport to our metrics manager", () => {
+    renderApp(getProps())
+
+    const metricsManager = getStoredValue<SegmentMetricsManager>(
+      SegmentMetricsManager
+    )
+
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
   describe("App.handleNewSession", () => {
@@ -789,7 +803,7 @@ describe("App", () => {
       expect(navLinks[0]).toHaveStyle("font-weight: 600")
       expect(navLinks[1]).toHaveStyle("font-weight: 400")
 
-      expect(document.title).toBe("page1 · Streamlit")
+      expect(document.title).toBe("page1")
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages,
@@ -1083,7 +1097,7 @@ describe("App", () => {
         fragmentIdsThisRun: [],
       })
 
-      expect(document.title).toBe("streamlit_app · Streamlit")
+      expect(document.title).toBe("streamlit_app")
     })
 
     it("does *not* reset document title if fragment", () => {
@@ -1391,7 +1405,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1408,7 +1422,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
       expect(connectionManager.sendMessage).toBeCalledTimes(2)
 
@@ -1428,7 +1442,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1445,7 +1459,7 @@ describe("App", () => {
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
       expect(connectionManager.sendMessage).toBeCalledTimes(1)
 
       expect(
@@ -1467,7 +1481,7 @@ describe("App", () => {
       })
 
       window.history.pushState({}, "", "/foo/bar/baz")
-      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
         // @ts-expect-error
@@ -1519,6 +1533,56 @@ describe("App", () => {
         type: "SET_QUERY_PARAM",
         queryParams: "",
       })
+    })
+  })
+
+  describe("App.handleScriptFinished", () => {
+    it("will not increment cache count if session info is not set", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is not set and the script finished early", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will not increment cache count if session info is set and the script finished early", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+    })
+
+    it("will increment cache count if session info is set", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
     })
   })
 
@@ -1816,6 +1880,71 @@ describe("App", () => {
         expect(result).toEqual(expectedResult)
       }
     )
+  })
+
+  describe("App.handleConnectionStateChanged", () => {
+    it("Sends WEBSOCKET_CONNECTED and WEBSOCKET_DISCONNECTED messages", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_CONNECTED",
+      })
+
+      // Change the ConnectionManager state to anything other than
+      // ConnectionState.CONNECTED. Moving from CONNECTED to any other state
+      // should cause us to send a WEBSOCKET_DISCONNECTED message.
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.PINGING_SERVER
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_DISCONNECTED",
+        attemptingToReconnect: true,
+      })
+    })
+
+    it("Sets attemptingToReconnect to false if DISCONNECTED_FOREVER", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_CONNECTED",
+      })
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_DISCONNECTED",
+        attemptingToReconnect: false,
+      })
+    })
   })
 
   describe("handles HostCommunication messaging", () => {
@@ -2193,6 +2322,7 @@ describe("App", () => {
           pageName: "",
           pageScriptHash: "hash1",
           queryString: "",
+          widgetStates: {},
         },
       })
     })
@@ -2382,6 +2512,25 @@ describe("App", () => {
         type: "CUSTOM_PARENT_MESSAGE",
         message: "random string",
       })
+    })
+
+    it("properly handles TERMINATE_WEBSOCKET_CONNECTION and RESTART_WEBSOCKET_CONNECTION messages", () => {
+      prepareHostCommunicationManager()
+
+      const originalConnectionManager = getMockConnectionManager()
+
+      fireWindowPostMessage({
+        type: "TERMINATE_WEBSOCKET_CONNECTION",
+      })
+
+      expect(originalConnectionManager.disconnect).toHaveBeenCalled()
+
+      fireWindowPostMessage({
+        type: "RESTART_WEBSOCKET_CONNECTION",
+      })
+
+      const newConnectionManager = getMockConnectionManager()
+      expect(newConnectionManager).not.toBe(originalConnectionManager)
     })
   })
 })

@@ -18,20 +18,21 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 # We cannot lazy-load click here because its used via decorators.
 import click
 
 import streamlit.runtime.caching as caching
-import streamlit.runtime.legacy_caching as legacy_caching
 import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
-from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
+
+if TYPE_CHECKING:
+    from streamlit.config_option import ConfigOption
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -74,7 +75,10 @@ def _make_sensitive_option_callback(config_option: ConfigOption):
     return callback
 
 
-def configurator_options(func):
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def configurator_options(func: F) -> F:
     """Decorator that adds config param keys to click dynamically."""
     for _, value in reversed(_config._config_options_template.items()):
         parsed_parameter = _convert_config_option_to_click_option(value)
@@ -171,7 +175,7 @@ def main_version():
 @main.command("docs")
 def main_docs():
     """Show help in browser."""
-    print("Showing help page in browser...")
+    click.echo("Showing help page in browser...")
     from streamlit import util
 
     util.open_browser("https://docs.streamlit.io")
@@ -181,10 +185,10 @@ def main_docs():
 @configurator_options
 def main_hello(**kwargs):
     """Runs the Hello World script."""
-    from streamlit.hello import Hello
+    from streamlit.hello import streamlit_app
 
     bootstrap.load_config_options(flag_options=kwargs)
-    filename = Hello.__file__
+    filename = streamlit_app.__file__
     _main_run(filename, flag_options=kwargs)
 
 
@@ -281,13 +285,7 @@ def cache():
 
 @cache.command("clear")
 def cache_clear():
-    """Clear st.cache, st.cache_data, and st.cache_resource caches."""
-    result = legacy_caching.clear_cache()
-    cache_path = legacy_caching.get_cache_path()
-    if result:
-        print(f"Cleared directory {cache_path}.")
-    else:
-        print(f"Nothing to clear at {cache_path}.")
+    """Clear st.cache_data and st.cache_resource caches."""
 
     # in this `streamlit cache clear` cli command we cannot use the
     # `cache_storage_manager from runtime (since runtime is not initialized)

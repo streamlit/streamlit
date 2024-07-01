@@ -178,7 +178,7 @@ st.dataframe(
             default=True,  # Should be ignored
             options=[1, 2, 3, 4, 5],
         ),
-        "col_1": st.column_config.SelectboxColumn(),
+        "col_1": st.column_config.SelectboxColumn(options=["a", "b", "c", "d"]),
     },
 )
 
@@ -222,7 +222,7 @@ st.dataframe(
         "col_1": st.column_config.LinkColumn(),
         "col_2": st.column_config.LinkColumn(
             "Display text via Regex",
-            display_text="https://(.*?)\.streamlit\.app",
+            display_text=r"https://(.*?)\.streamlit\.app",
         ),
         "col_3": st.column_config.LinkColumn(
             "Static display text",

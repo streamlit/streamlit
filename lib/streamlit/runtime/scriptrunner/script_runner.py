@@ -25,11 +25,12 @@ from typing import TYPE_CHECKING, Callable, Final
 
 from blinker import Signal
 
-from streamlit import config, runtime, source_util, util
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit import config, runtime, util
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
+from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
@@ -46,17 +47,19 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
-    ## "Control" events. These are emitted when the ScriptRunner's state changes.
+    # "Control" events. These are emitted when the ScriptRunner's state changes.
 
     # The script started running.
     SCRIPT_STARTED = "SCRIPT_STARTED"
@@ -79,8 +82,8 @@ class ScriptRunnerEvent(Enum):
     # is shut down.
     SHUTDOWN = "SHUTDOWN"
 
-    ## "Data" events. These are emitted when the ScriptRunner's script has
-    ## data to send to the frontend.
+    # "Data" events. These are emitted when the ScriptRunner's script has
+    # data to send to the frontend.
 
     # The script has a ForwardMsg to send to the frontend.
     ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
@@ -113,7 +116,8 @@ class ScriptRunner:
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: dict[str, str | None],
-        fragment_storage: "FragmentStorage",
+        fragment_storage: FragmentStorage,
+        pages_manager: PagesManager,
     ):
         """Initialize the ScriptRunner.
 
@@ -163,6 +167,7 @@ class ScriptRunner:
         self._user_info = user_info
         self._fragment_storage = fragment_storage
 
+        self._pages_manager = pages_manager
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -264,7 +269,8 @@ class ScriptRunner:
         if ctx is None:
             # This should never be possible on the script_runner thread.
             raise RuntimeError(
-                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
+                "ScriptRunner thread has a null ScriptRunContext. "
+                "Something has gone very wrong!"
             )
         return ctx
 
@@ -290,10 +296,10 @@ class ScriptRunner:
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             main_script_path=self._main_script_path,
-            page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
             fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -411,8 +417,6 @@ class ScriptRunner:
             The RerunData to use.
 
         """
-        # Avoid circular imports
-        from streamlit.delta_generator import dg_stack
 
         assert self._is_in_script_thread()
 
@@ -425,66 +429,68 @@ class ScriptRunner:
             # Reset DeltaGenerators, widgets, media files.
             runtime.get_instance().media_file_mgr.clear_session_refs()
 
-            main_script_path = self._main_script_path
-            pages = source_util.get_pages(main_script_path)
-            # Safe because pages will at least contain the app's main page.
-            main_page_info = list(pages.values())[0]
-            current_page_info = None
+            self._pages_manager.set_script_intent(
+                rerun_data.page_script_hash, rerun_data.page_name
+            )
+            active_script = self._pages_manager.get_initial_active_script(
+                rerun_data.page_script_hash, rerun_data.page_name
+            )
+            main_page_info = self._pages_manager.get_main_page()
             uncaught_exception = None
 
-            if rerun_data.page_script_hash:
-                current_page_info = pages.get(rerun_data.page_script_hash, None)
-            elif not rerun_data.page_script_hash and rerun_data.page_name:
-                # If a user navigates directly to a non-main page of an app, we get
-                # the first script run request before the list of pages has been
-                # sent to the frontend. In this case, we choose the first script
-                # with a name matching the requested page name.
-                current_page_info = next(
-                    filter(
-                        # There seems to be this weird bug with mypy where it
-                        # thinks that p can be None (which is impossible given the
-                        # types of pages), so we add `p and` at the beginning of
-                        # the predicate to circumvent this.
-                        lambda p: p and (p["page_name"] == rerun_data.page_name),
-                        pages.values(),
-                    ),
-                    None,
-                )
-            else:
-                # If no information about what page to run is given, default to
-                # running the main page.
-                current_page_info = main_page_info
-
             page_script_hash = (
-                current_page_info["page_script_hash"]
-                if current_page_info is not None
+                active_script["page_script_hash"]
+                if active_script is not None
                 else main_page_info["page_script_hash"]
             )
 
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
             ctx = self._get_script_run_ctx()
+            # Clear widget state on page change. This normally happens implicitly
+            # in the script run cleanup steps, but doing it explicitly ensures
+            # it happens even if a script run was interrupted.
+            previous_page_script_hash = ctx.page_script_hash
+            if previous_page_script_hash != page_script_hash:
+                # Page changed, enforce reset widget state where possible.
+                # This enforcement matters when a new script thread is started
+                # before the previous script run is completed (from user
+                # interaction). Use the widget ids from the rerun data to
+                # maintain some widget state, as the rerun data should
+                # contain the latest widget ids from the frontend.
+                widget_ids: set[str] = set()
+
+                if (
+                    rerun_data.widget_states is not None
+                    and rerun_data.widget_states.widgets is not None
+                ):
+                    widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+                self._session_state.on_script_finished(widget_ids)
+
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
             )
+            self._pages_manager.reset_active_script_hash()
 
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
+                pages=self._pages_manager.get_pages(),
             )
 
             # Compile the script. Any errors thrown here will be surfaced
             # to the user via a modal dialog in the frontend, and won't result
             # in their previous script elements disappearing.
             try:
-                if current_page_info:
-                    script_path = current_page_info["script_path"]
+                if active_script is not None:
+                    script_path = active_script["script_path"]
                 else:
-                    script_path = main_script_path
+                    # page must not be found
+                    script_path = main_page_info["script_path"]
 
                     # At this point, we know that either
                     #   * the script corresponding to the hash requested no longer
@@ -517,43 +523,25 @@ class ScriptRunner:
             if config.get_option("runner.installTracer"):
                 self._install_tracer()
 
-            # This will be set to a RerunData instance if our execution
-            # is interrupted by a RerunException.
-            rerun_exception_data: RerunData | None = None
+            # Create fake module. This gives us a name global namespace to
+            # execute the code in.
+            module = self._new_module("__main__")
 
-            # Saving and restoring our original cursors/dg_stack is needed
-            # specifically to handle the case where a RerunException is raised while
-            # running a fragment. In this case, we need to restore both to their states
-            # at the start of the script run to ensure that we write to the correct
-            # places in the app during the rerun (without this, ctx.cursors and dg_stack
-            # will still be set to the snapshots they were restored from when running
-            # the fragment).
-            original_cursors = ctx.cursors
-            original_dg_stack = dg_stack.get()
+            # Install the fake module as the __main__ module. This allows
+            # the pickle module to work inside the user's code, since it now
+            # can know the module where the pickled objects stem from.
+            # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+            # our code, as it will point to the wrong module!!!
+            sys.modules["__main__"] = module
 
-            # If the script stops early, we don't want to remove unseen widgets,
-            # so we track this to potentially skip session state cleanup later.
-            premature_stop: bool = False
+            # Add special variables to the module's globals dict.
+            # Note: The following is a requirement for the CodeHasher to
+            # work correctly. The CodeHasher is scoped to
+            # files contained in the directory of __main__.__file__, which we
+            # assume is the main script directory.
+            module.__dict__["__file__"] = script_path
 
-            try:
-                # Create fake module. This gives us a name global namespace to
-                # execute the code in.
-                module = self._new_module("__main__")
-
-                # Install the fake module as the __main__ module. This allows
-                # the pickle module to work inside the user's code, since it now
-                # can know the module where the pickled objects stem from.
-                # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
-                # our code, as it will point to the wrong module!!!
-                sys.modules["__main__"] = module
-
-                # Add special variables to the module's globals dict.
-                # Note: The following is a requirement for the CodeHasher to
-                # work correctly. The CodeHasher is scoped to
-                # files contained in the directory of __main__.__file__, which we
-                # assume is the main script directory.
-                module.__dict__["__file__"] = script_path
-
+            def code_to_exec(code=code, module=module, ctx=ctx, rerun_data=rerun_data):
                 with modified_sys_path(
                     self._main_script_path
                 ), self._set_execing_flag():
@@ -564,7 +552,6 @@ class ScriptRunner:
                         )
 
                     ctx.on_script_start()
-                    prep_time = timer() - start_time
 
                     if rerun_data.fragment_id_queue:
                         for fragment_id in rerun_data.fragment_id_queue:
@@ -584,65 +571,58 @@ class ScriptRunner:
                         exec(code, module.__dict__)
 
                     self._session_state.maybe_check_serializable()
-                    self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
-            except RerunException as e:
-                rerun_exception_data = e.rerun_data
-                ctx.cursors = original_cursors
-                dg_stack.set(original_dg_stack)
-                # Interruption due to a rerun is usually from `st.rerun()`, which
-                # we want to count as a script completion so triggers reset.
-                # It is also possible for this to happen if fast reruns is off,
-                # but this is very rare.
-                premature_stop = False
+                    # check for control requests, e.g. rerun requests have arrived
+                    self._maybe_handle_execution_control_request()
 
-            except StopException:
-                # This is thrown when the script executes `st.stop()`.
-                # We don't have to do anything here.
-                premature_stop = True
+            prep_time = timer() - start_time
+            (
+                _,
+                run_without_errors,
+                rerun_exception_data,
+                premature_stop,
+            ) = exec_func_with_error_handling(code_to_exec, ctx)
+            # setting the session state here triggers a yield-callback call
+            # which reads self._requests and checks for rerun data
+            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
 
-            except Exception as ex:
-                self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-                uncaught_exception = ex
-                handle_uncaught_app_exception(uncaught_exception)
-                premature_stop = True
+            if rerun_exception_data:
+                # The handling for when a full script run or a fragment is stopped early
+                # is the same, so we only have one ScriptRunnerEvent for this scenario.
+                finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+            elif rerun_data.fragment_id_queue:
+                finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+            else:
+                finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
-            finally:
-                if rerun_exception_data:
-                    # The handling for when a full script run or a fragment is stopped early
-                    # is the same, so we only have one ScriptRunnerEvent for this scenario.
-                    finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
-                elif rerun_data.fragment_id_queue:
-                    finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
-                else:
-                    finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            if ctx.gather_usage_stats:
+                try:
+                    # Prevent issues with circular import
+                    from streamlit.runtime.metrics_util import (
+                        create_page_profile_message,
+                        to_microseconds,
+                    )
 
-                if ctx.gather_usage_stats:
-                    try:
-                        # Prevent issues with circular import
-                        from streamlit.runtime.metrics_util import (
-                            create_page_profile_message,
-                            to_microseconds,
-                        )
-
-                        # Create and send page profile information
-                        ctx.enqueue(
-                            create_page_profile_message(
-                                ctx.tracked_commands,
-                                exec_time=to_microseconds(timer() - start_time),
-                                prep_time=to_microseconds(prep_time),
-                                uncaught_exception=type(uncaught_exception).__name__
+                    # Create and send page profile information
+                    ctx.enqueue(
+                        create_page_profile_message(
+                            ctx.tracked_commands,
+                            exec_time=to_microseconds(timer() - start_time),
+                            prep_time=to_microseconds(prep_time),
+                            uncaught_exception=(
+                                type(uncaught_exception).__name__
                                 if uncaught_exception
-                                else None,
-                            )
+                                else None
+                            ),
                         )
-                    except Exception as ex:
-                        # Always capture all exceptions since we want to make sure that
-                        # the telemetry never causes any issues.
-                        _LOGGER.debug("Failed to create page profile", exc_info=ex)
-                self._on_script_finished(ctx, finished_event, premature_stop)
+                    )
+                except Exception as ex:
+                    # Always capture all exceptions since we want to make sure that
+                    # the telemetry never causes any issues.
+                    _LOGGER.debug("Failed to create page profile", exc_info=ex)
+            self._on_script_finished(ctx, finished_event, premature_stop)
 
-            # Use _log_if_error() to make sure we never ever ever stop running the
-            # script without meaning to.
+            # # Use _log_if_error() to make sure we never ever ever stop running the
+            # # script without meaning to.
             _log_if_error(_clean_problem_modules)
 
             if rerun_exception_data is not None:
@@ -678,35 +658,6 @@ class ScriptRunner:
     def _new_module(self, name: str) -> types.ModuleType:
         """Create a new module with the given name."""
         return types.ModuleType(name)
-
-
-class ScriptControlException(BaseException):
-    """Base exception for ScriptRunner."""
-
-    pass
-
-
-class StopException(ScriptControlException):
-    """Silently stop the execution of the user's script."""
-
-    pass
-
-
-class RerunException(ScriptControlException):
-    """Silently stop and rerun the user's script."""
-
-    def __init__(self, rerun_data: RerunData):
-        """Construct a RerunException
-
-        Parameters
-        ----------
-        rerun_data : RerunData
-            The RerunData that should be used to rerun the script
-        """
-        self.rerun_data = rerun_data
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
 
 def _clean_problem_modules() -> None:

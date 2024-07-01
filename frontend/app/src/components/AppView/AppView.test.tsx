@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import {
   AppContext,
   Props as AppContextProps,
@@ -38,6 +38,7 @@ import {
   mockSessionInfo,
   render,
   Block as BlockProto,
+  Logo as LogoProto,
 } from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
@@ -51,6 +52,8 @@ class ResizeObserver {
 }
 window.ResizeObserver = ResizeObserver
 
+const FAKE_SCRIPT_HASH = "fake_script_hash"
+
 function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
   return {
     wideMode: false,
@@ -62,20 +65,20 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     showColoredLine: false,
     pageLinkBaseUrl: "",
     sidebarChevronDownshift: 0,
-    toastAdjustment: false,
     ...context,
   }
 }
+
+const mockEndpointProp = mockEndpoints()
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
   const sessionInfo = mockSessionInfo()
-  const endpoints = mockEndpoints()
 
   return {
-    endpoints: endpoints,
-    elements: AppRoot.empty(true),
+    endpoints: mockEndpointProp,
+    elements: AppRoot.empty(FAKE_SCRIPT_HASH, true),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
@@ -86,14 +89,16 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     }),
     uploadClient: new FileUploadClient({
       sessionInfo: sessionInfo,
-      endpoints: endpoints,
+      endpoints: mockEndpointProp,
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: jest.fn(),
     }),
     widgetsDisabled: true,
-    componentRegistry: new ComponentRegistry(endpoints),
+    componentRegistry: new ComponentRegistry(mockEndpointProp),
     formsData,
+    appLogo: null,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
+    navSections: [],
     onPageChange: jest.fn(),
     currentPageScriptHash: "main_page_script_hash",
     hideSidebarNav: false,
@@ -123,20 +128,37 @@ describe("AppView element", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
       ForwardMsgMetadata.create({}),
-      "no script run id"
+      "no script run id",
+      FAKE_SCRIPT_HASH
     )
 
     const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
       [sidebarElement],
       new BlockProto({ allowEmpty: true })
     )
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
     })
     render(<AppView {...props} />)
 
@@ -170,24 +192,41 @@ describe("AppView element", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
       ForwardMsgMetadata.create({}),
-      "no script run id"
+      "no script run id",
+      FAKE_SCRIPT_HASH
     )
 
     const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
       [sidebarElement],
       new BlockProto({ allowEmpty: true })
     )
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
 
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
       appPages,
     })
     render(<AppView {...props} />)
@@ -221,13 +260,32 @@ describe("AppView element", () => {
       return realUseContext(input)
     })
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
     })
     render(<AppView {...props} />)
 
@@ -251,6 +309,68 @@ describe("AppView element", () => {
       screen.getByTestId("stAppViewBlockContainer")
     )
     expect(style.maxWidth).toEqual("initial")
+  })
+
+  describe("handles logo rendering with no sidebar", () => {
+    const imageOnly = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+    })
+
+    const imageWithLink = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      link: "www.example.com",
+    })
+
+    const fullAppLogo = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      link: "www.example.com",
+      iconImage: "https://docs.streamlit.io/logo.svg",
+    })
+
+    it("doesn't render if no logo provided", () => {
+      render(<AppView {...getProps()} />)
+      expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+    })
+
+    it("uses iconImage if provided", () => {
+      const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
+      render(<AppView {...getProps({ appLogo: fullAppLogo })} />)
+      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      expect(openSidebarContainer).toBeInTheDocument()
+      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      expect(collapsedLogo).toBeInTheDocument()
+      expect(sourceSpy).toHaveBeenCalledWith(
+        "https://docs.streamlit.io/logo.svg"
+      )
+    })
+
+    it("defaults to image if no iconImage", () => {
+      const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
+      render(<AppView {...getProps({ appLogo: imageOnly })} />)
+      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      expect(openSidebarContainer).toBeInTheDocument()
+      const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
+      expect(collapsedLogo).toBeInTheDocument()
+      expect(sourceSpy).toHaveBeenCalledWith(
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png"
+      )
+    })
+
+    it("default no link with image", () => {
+      render(<AppView {...getProps({ appLogo: imageOnly })} />)
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+    })
+
+    it("link with image if provided", () => {
+      render(<AppView {...getProps({ appLogo: imageWithLink })} />)
+      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
+        "href",
+        "www.example.com"
+      )
+    })
   })
 
   describe("when window.location.hash changes", () => {
@@ -290,19 +410,36 @@ describe("AppView element", () => {
         },
       }),
       ForwardMsgMetadata.create({}),
-      "no script run id"
+      "no script run id",
+      FAKE_SCRIPT_HASH
     )
 
-    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
-    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const main = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const sidebar = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
+    const event = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true })
+    )
     const bottom = new BlockNode(
+      FAKE_SCRIPT_HASH,
       [chatInputElement],
       new BlockProto({ allowEmpty: true })
     )
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
+      elements: new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
+      ),
     })
 
     render(<AppView {...props} />)

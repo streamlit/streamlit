@@ -26,11 +26,11 @@ def test_default_toast_rendering(
     themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(2)
-    toasts.nth(1).hover()
+    expect(toasts).to_have_count(3)
+    toasts.nth(2).hover()
 
-    expect(toasts.nth(1)).to_have_text("🐶This is a default toast messageClose")
-    assert_snapshot(toasts.nth(1), name="toast-default")
+    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
+    assert_snapshot(toasts.nth(2), name="toast-default")
 
 
 def test_collapsed_toast_rendering(
@@ -42,13 +42,13 @@ def test_collapsed_toast_rendering(
     themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(2)
-    toasts.nth(0).hover()
+    expect(toasts).to_have_count(3)
+    toasts.nth(1).hover()
 
-    expect(toasts.nth(0)).to_have_text(
-        "🦄Random toast message that is a really really really really really really really long message, going way past the 3view moreClose"
+    expect(toasts.nth(1)).to_contain_text(
+        "🦄Random toast message that is a really really really really really really really long message, going wayview moreClose"
     )
-    assert_snapshot(toasts.nth(0), name="toast-collapsed")
+    assert_snapshot(toasts.nth(1), name="toast-collapsed")
 
 
 def test_expanded_toast_rendering(
@@ -60,14 +60,30 @@ def test_expanded_toast_rendering(
     themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
-    expect(toasts).to_have_count(2)
-    toasts.nth(0).hover()
+    expect(toasts).to_have_count(3)
+    toasts.nth(1).hover()
 
     expand = themed_app.get_by_text("view more")
     expect(expand).to_have_count(1)
     expand.click()
 
-    expect(toasts.nth(0)).to_have_text(
+    expect(toasts.nth(1)).to_contain_text(
         "🦄Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
     )
-    assert_snapshot(toasts.nth(0), name="toast-expanded")
+    assert_snapshot(toasts.nth(1), name="toast-expanded")
+
+
+def test_toast_with_material_icon_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that toasts with material icons are correctly rendered."""
+    themed_app.keyboard.press("r")
+    wait_for_app_loaded(themed_app)
+    themed_app.wait_for_timeout(250)
+
+    toasts = themed_app.get_by_test_id("stToast")
+    expect(toasts).to_have_count(3)
+    toasts.nth(0).hover()
+
+    expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!Close")
+    assert_snapshot(toasts.nth(0), name="toast-material-icon")

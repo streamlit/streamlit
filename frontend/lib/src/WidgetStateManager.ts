@@ -29,7 +29,7 @@ import {
   WidgetStates,
 } from "./proto"
 import { Signal, SignalConnection } from "typed-signals"
-import { isValidFormId } from "./util/utils"
+import { isValidFormId, notNullOrUndefined } from "./util/utils"
 
 export interface Source {
   fromUi: boolean
@@ -154,7 +154,10 @@ class FormState {
 
 interface Props {
   /** Callback to deliver a message to the server */
-  sendRerunBackMsg: (widgetStates: WidgetStates, fragmentId?: string) => void
+  sendRerunBackMsg: (
+    widgetStates: WidgetStates,
+    fragmentId: string | undefined
+  ) => void
 
   /**
    * Callback invoked whenever our FormsData changed. (Because FormsData
@@ -177,6 +180,11 @@ export class WidgetStateManager {
 
   // External data about all forms.
   private formsData: FormsData
+
+  // A dictionary that maps elementId -> element state keys -> element state values.
+  // This is used to store frontend-only state for elements.
+  // This state is not never sent to the server.
+  private readonly elementStates = new Map<string, Map<string, any>>()
 
   constructor(props: Props) {
     this.props = props
@@ -208,8 +216,8 @@ export class WidgetStateManager {
    */
   public submitForm(
     formId: string,
-    actualSubmitButton?: WidgetInfo,
-    fragmentId?: string
+    fragmentId: string | undefined,
+    actualSubmitButton?: WidgetInfo
   ): void {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
@@ -275,7 +283,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: string,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).stringTriggerValue =
       new StringTriggerValue({ data: value })
@@ -290,7 +298,7 @@ export class WidgetStateManager {
   public setTriggerValue(
     widget: WidgetInfo,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).triggerValue = true
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -310,7 +318,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: boolean,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).boolValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -329,7 +337,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: number | null,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).intValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -348,7 +356,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: number | null,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -367,7 +375,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: string | null,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).stringValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -377,7 +385,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: string[],
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).stringArrayValue = new StringArray({
       data: value,
@@ -417,7 +425,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: number[],
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: value,
@@ -443,7 +451,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: number[],
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
       data: value,
@@ -464,7 +472,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: any,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -474,7 +482,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: IArrowTable,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).arrowValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -497,7 +505,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: Uint8Array,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).bytesValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -516,7 +524,7 @@ export class WidgetStateManager {
     widget: WidgetInfo,
     value: IFileUploaderState,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).fileUploaderStateValue = value
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
@@ -545,7 +553,7 @@ export class WidgetStateManager {
   private onWidgetValueChanged(
     formId: string | undefined,
     source: Source,
-    fragmentId?: string
+    fragmentId: string | undefined
   ): void {
     if (isValidFormId(formId)) {
       this.syncFormsWithPendingChanges()
@@ -571,11 +579,21 @@ export class WidgetStateManager {
     })
   }
 
-  public sendUpdateWidgetsMessage(fragmentId?: string): void {
+  public sendUpdateWidgetsMessage(fragmentId: string | undefined): void {
     this.props.sendRerunBackMsg(
       this.widgetStates.createWidgetStatesMsg(),
       fragmentId
     )
+  }
+
+  public getActiveWidgetStates(activeIds: Set<string>): WidgetStates {
+    const msg = new WidgetStates()
+    this.widgetStates.forEach(widgetState => {
+      if (activeIds.has(widgetState.id)) {
+        msg.widgets.push(widgetState)
+      }
+    })
+    return msg
   }
 
   /**
@@ -586,6 +604,11 @@ export class WidgetStateManager {
   public removeInactive(activeIds: Set<string>): void {
     this.widgetStates.removeInactive(activeIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+    this.elementStates.forEach((_, elementId) => {
+      if (!activeIds.has(elementId)) {
+        this.deleteElementState(elementId)
+      }
+    })
   }
 
   /**
@@ -707,6 +730,47 @@ export class WidgetStateManager {
     if (this.formsData !== newData) {
       this.formsData = newData
       this.props.formsDataChanged(this.formsData)
+    }
+  }
+
+  /**
+   * Get the element state value for the given element ID and key, if it exists.
+   * This is a frontend-only state that is never sent to the server.
+   */
+  public getElementState(elementId: string, key: string): any {
+    return this.elementStates.get(elementId)?.get(key)
+  }
+
+  /**
+   * Sets the state of an element identified by its ID and its key.
+   * This is a frontend-only state that is never sent to the server.
+   * It can be used to store element state to restore the state
+   * of an element in situations where an element is removed and re-added.
+   *
+   * @param {string} elementId - The unique identifier of the element.
+   * @param {string} key - The key to set
+   * @param {any} value - The value to set for the element's state.
+   * @returns {void}
+   */
+  public setElementState(elementId: string, key: string, value: any): void {
+    if (!this.elementStates.has(elementId)) {
+      this.elementStates.set(elementId, new Map<string, any>())
+    }
+
+    // It's expected here that there is always an initialized map for an elementId
+    ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
+  }
+
+  /**
+   * Deletes the state associated with a specific element by ID. If a key is provided,
+   * only the state corresponding to that key is removed. If no key is specified, all states
+   * associated with the element ID are removed.
+   */
+  public deleteElementState(elementId: string, key?: string): void {
+    if (notNullOrUndefined(key)) {
+      this.elementStates.get(elementId)?.delete(key)
+    } else {
+      this.elementStates.delete(elementId)
     }
   }
 }

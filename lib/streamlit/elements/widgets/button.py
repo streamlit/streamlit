@@ -22,11 +22,17 @@ from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit import runtime, source_util
+from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_fragment_path_policy,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
+from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
@@ -40,8 +46,9 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
-from streamlit.string_util import validate_emoji
+from streamlit.string_util import validate_icon_or_emoji
 from streamlit.type_util import Key, to_key
+from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -49,7 +56,7 @@ if TYPE_CHECKING:
 FORM_DOCS_INFO: Final = """
 
 For more information, refer to the
-[documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).
+[documentation for forms](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form).
 """
 
 DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
@@ -98,9 +105,12 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -126,8 +136,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -140,10 +156,10 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> st.button("Reset", type="primary")
-        >>> if st.button('Say hello'):
-        ...     st.write('Why hello there')
+        >>> if st.button("Say hello"):
+        ...     st.write("Why hello there")
         ... else:
-        ...     st.write('Goodbye')
+        ...     st.write("Goodbye")
 
         .. output::
            https://doc-buton.streamlit.app/
@@ -200,6 +216,10 @@ class ButtonMixin:
         user is connected, so it's a good idea to keep file sizes under a
         couple hundred megabytes to conserve memory.
 
+        If you want to prevent your app from rerunning when a user clicks the
+        download button, wrap the download button in a `fragment
+        <https://docs.streamlit.io/develop/concepts/architecture/fragments>`_.
+
         Parameters
         ----------
         label : str
@@ -217,9 +237,12 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -257,10 +280,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
 
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Returns
         -------
@@ -277,15 +304,15 @@ class ButtonMixin:
         >>> @st.cache_data
         ... def convert_df(df):
         ...     # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        ...     return df.to_csv().encode('utf-8')
+        ...     return df.to_csv().encode("utf-8")
         >>>
         >>> csv = convert_df(my_large_df)
         >>>
         >>> st.download_button(
         ...     label="Download data as CSV",
         ...     data=csv,
-        ...     file_name='large_df.csv',
-        ...     mime='text/csv',
+        ...     file_name="large_df.csv",
+        ...     mime="text/csv",
         ... )
 
         Download a string as a file:
@@ -293,15 +320,15 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> text_contents = '''This is some text'''
-        >>> st.download_button('Download some text', text_contents)
+        >>> st.download_button("Download some text", text_contents)
 
         Download a binary file:
 
         >>> import streamlit as st
         >>>
-        >>> binary_contents = b'example content'
-        >>> # Defaults to 'application/octet-stream'
-        >>> st.download_button('Download binary file', binary_contents)
+        >>> binary_contents = b"example content"
+        >>> # Defaults to "application/octet-stream"
+        >>> st.download_button("Download binary file", binary_contents)
 
         Download an image:
 
@@ -377,9 +404,12 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -396,9 +426,14 @@ class ButtonMixin:
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container.
+        use_container_width : bool
+            Whether to expand the button's width to fill its parent container.
+            If ``use_container_width`` is ``False`` (default), Streamlit sizes
+            the button to fit its contents. If ``use_container_width`` is
+            ``True``, the width of the button matches its parent container.
+
+            In both cases, if the contents of the button are wider than the
+            parent container, the contents will line wrap.
 
         Example
         -------
@@ -430,7 +465,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page: str,
+        page: str | StreamlitPage,
         *,
         label: str | None = None,
         icon: str | None = None,
@@ -438,7 +473,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
     ) -> DeltaGenerator:
-        """Display a link to another page in a multipage app or to an external page.
+        r"""Display a link to another page in a multipage app or to an external page.
 
         If another page in a multipage app is specified, clicking ``st.page_link``
         stops the current page execution and runs the specified page as if the
@@ -450,10 +485,10 @@ class ButtonMixin:
 
         Parameters
         ----------
-        page : str
-            The file path (relative to the main script) of the page to switch to.
-            Alternatively, this can be the URL to an external page (must start
-            with "http://" or "https://").
+        page : str or st.Page
+            The file path (relative to the main script) or an st.Page indicating
+            the page to switch to. Alternatively, this can be the URL to an
+            external page (must start with "http://" or "https://").
         label : str
             The label for the page link. Labels are required for external pages.
             Labels can optionally contain Markdown and supports the following
@@ -469,18 +504,32 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
-        icon : str
-            An optional argument that specifies an emoji to use as
-            the icon for the link. Shortcodes are not allowed. Please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to ``None``, which means no icon is displayed.
+        icon : str, None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
         help : str
             An optional tooltip that gets displayed when the link is
             hovered over.
@@ -488,9 +537,9 @@ class ButtonMixin:
             An optional boolean, which disables the page link if set to
             ``True``. The default is ``False``.
         use_container_width : bool
-            An optional boolean, which makes the link stretch its width to
-            match the parent container. The default is ``True`` for page links
-            in the sidebar, and ``False`` for those in the main app.
+            Whether to expand the link's width to fill its parent container.
+            The default is ``True`` for page links in the sidebar and ``False``
+            for those in the main app.
 
         Example
         -------
@@ -515,8 +564,7 @@ class ButtonMixin:
         navigation menus for your apps!
 
         .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
-        .. _client.showSidebarNavigation: https://docs.streamlit.io/library\
-            /advanced-features/configuration#client
+        .. _client.showSidebarNavigation: https://docs.streamlit.io/develop/api-reference/configuration/config.toml#client
 
         .. output ::
             https://doc-page-link.streamlit.app/
@@ -551,7 +599,10 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_callback_rules(self.dg, on_click)
 
         id = compute_widget_id(
             "download_button",
@@ -563,7 +614,7 @@ class ButtonMixin:
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -626,7 +677,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page: str,
+        page: str | StreamlitPage,
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
@@ -641,7 +692,7 @@ class ButtonMixin:
             page_link_proto.label = label
 
         if icon is not None:
-            page_link_proto.icon = validate_emoji(icon)
+            page_link_proto.icon = validate_icon_or_emoji(icon)
 
         if help is not None:
             page_link_proto.help = dedent(help)
@@ -649,38 +700,45 @@ class ButtonMixin:
         if use_container_width is not None:
             page_link_proto.use_container_width = use_container_width
 
-        # Handle external links:
-        if page.startswith("http://") or page.startswith("https://"):
-            if label is None or label == "":
-                raise StreamlitAPIException(
-                    f"The label param is required for external links used with st.page_link - please provide a label."
-                )
-            else:
-                page_link_proto.page = page
-                page_link_proto.external = True
-                return self.dg._enqueue("page_link", page_link_proto)
+        if isinstance(page, StreamlitPage):
+            page_link_proto.page_script_hash = page._script_hash
+            page_link_proto.page = page.url_path
+            if label is None:
+                page_link_proto.label = page.title
+        else:
+            # Handle external links:
+            if is_url(page):
+                if label is None or label == "":
+                    raise StreamlitAPIException(
+                        "The label param is required for external links used with st.page_link - please provide a label."
+                    )
+                else:
+                    page_link_proto.page = page
+                    page_link_proto.external = True
+                    return self.dg._enqueue("page_link", page_link_proto)
 
-        ctx = get_script_run_ctx()
-        ctx_main_script = ""
-        if ctx:
-            ctx_main_script = ctx.main_script_path
+            ctx = get_script_run_ctx()
+            ctx_main_script = ""
+            all_app_pages = {}
+            if ctx:
+                ctx_main_script = ctx.main_script_path
+                all_app_pages = ctx.pages_manager.get_pages()
 
-        main_script_directory = get_main_script_directory(ctx_main_script)
-        requested_page = os.path.realpath(
-            normalize_path_join(main_script_directory, page)
-        )
-        all_app_pages = source_util.get_pages(ctx_main_script).values()
+            main_script_directory = get_main_script_directory(ctx_main_script)
+            requested_page = os.path.realpath(
+                normalize_path_join(main_script_directory, page)
+            )
 
-        # Handle retrieving the page_script_hash & page
-        for page_data in all_app_pages:
-            full_path = page_data["script_path"]
-            page_name = page_data["page_name"]
-            if requested_page == full_path:
-                if label is None:
-                    page_link_proto.label = page_name.replace("_", " ")
-                page_link_proto.page_script_hash = page_data["page_script_hash"]
-                page_link_proto.page = page_name
-                break
+            # Handle retrieving the page_script_hash & page
+            for page_data in all_app_pages.values():
+                full_path = page_data["script_path"]
+                page_name = page_data["page_name"]
+                if requested_page == full_path:
+                    if label is None:
+                        page_link_proto.label = page_name.replace("_", " ")
+                    page_link_proto.page_script_hash = page_data["page_script_hash"]
+                    page_link_proto.page = page_name
+                    break
 
         if page_link_proto.page_script_hash == "":
             raise StreamlitAPIException(
@@ -704,8 +762,12 @@ class ButtonMixin:
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
     ) -> bool:
+        key = to_key(key)
+
+        check_fragment_path_policy(self.dg)
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         id = compute_widget_id(
@@ -717,7 +779,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except

@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from playwright.sync_api import Page, expect
+from __future__ import annotations
 
-from e2e_playwright.conftest import ImageCompareFunction
+import pytest
+from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
+
+from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_prefixed_markdown
+from e2e_playwright.shared.dataframe_utils import click_on_cell, get_open_cell_overlay
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -228,11 +232,214 @@ def test_clicking_on_fullscreen_toolbar_button(
     )
 
 
+def test_data_editor_keeps_state_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the data editor keeps state correctly after unmounting."""
+    data_editor_element = app.get_by_test_id("stDataFrame").nth(1)
+    data_editor_toolbar = data_editor_element.get_by_test_id("stElementToolbar")
+    expect(data_editor_element).to_have_css("height", "247px")
+
+    # Activate toolbar:
+    data_editor_element.hover()
+    # Check that it is visible
+    expect(data_editor_toolbar).to_have_css("opacity", "1")
+
+    # Click add row button:
+    add_row_button = data_editor_toolbar.get_by_test_id("stElementToolbarButton").nth(0)
+    add_row_button.click()
+
+    # The height should reflect that one row is added (247px+35px=282px):
+    expect(data_editor_element).to_have_css("height", "282px")
+    # The added row will trigger a rerun after a bounce, so we need to wait
+    # for the app to finish running before we unmount the component.
+    wait_for_app_run(app, 500)
+
+    # Click button to unmount the component:
+    app.get_by_test_id("stButton").locator("button").click()
+    wait_for_app_run(app, 4000)
+
+    # Check the height again, the row should be still attached:
+    expect(data_editor_element).to_have_css("height", "282px")
+
+    # Take a screenshot after unmounting:
+    assert_snapshot(
+        data_editor_element,
+        name="st_data_editor-after_unmounting",
+    )
+
+
+def _test_csv_download(
+    page: Page,
+    locator: FrameLocator | Locator,
+    click_enter_on_file_picker: bool = False,
+):
+    dataframe_element = locator.get_by_test_id("stDataFrame").nth(0)
+    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+
+    download_csv_toolbar_button = dataframe_toolbar.get_by_test_id(
+        "stElementToolbarButton"
+    ).first
+
+    # Activate toolbar:
+    dataframe_element.hover()
+    # Check that it is visible
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    with page.expect_download(timeout=10000) as download_info:
+        download_csv_toolbar_button.click()
+
+        # playwright does not support all fileaccess APIs yet (see this issue: https://github.com/microsoft/playwright/issues/8850)
+        # this means we don't know if the system dialog opened to pick a location (expect_file_chooser does not work). So as a workaround, we wait for now and then press enter.
+        if click_enter_on_file_picker:
+            page.wait_for_timeout(1000)
+            page.keyboard.press("Enter")
+
+    download = download_info.value
+    download_path = download.path()
+    with open(download_path, encoding="UTF-8") as f:
+        content = f.read()
+        # the app uses a fixed seed, so the data is always the same. This is the reason why we can check it here.
+        some_row = "1,-0.977277879876411,0.9500884175255894,-0.1513572082976979,-0.10321885179355784,0.41059850193837233"
+        # we usually try to avoid assert in playwright tests, but since we don't have to wait for any UI interaction or DOM state, it's ok here
+        assert some_row in content
+
+
+def test_csv_download_button(
+    app: Page, browser_name: str, browser_type_launch_args: dict
+):
+    """Test that the csv download button works.
+
+    Note that the library we are using calls the file picker API to download the file. This is not supported in headless mode. Hence, the test
+    triggers different code paths in the app depending on the browser and the launch arguments.
+    """
+
+    click_enter_on_file_picker = False
+
+    # right now the filechooser will only be opened on Chrome. Maybe this will change in the future and the
+    # check has to be updated; or maybe playwright will support the file-access APIs better.
+    # In headless mode, the file-access API our csv-download button uses under-the-hood does not work. So we monkey-patch it to throw an error and trigger our alternative download logic.
+    if browser_name == "chromium":
+        if browser_type_launch_args.get("headless", False):
+            click_enter_on_file_picker = True
+        else:
+            app.evaluate(
+                "() => window.showSaveFilePicker = () => {throw new Error('Monkey-patched showOpenFilePicker')}",
+            )
+    _test_csv_download(app, app.locator("body"), click_enter_on_file_picker)
+
+
+def test_csv_download_button_in_iframe(iframed_app: IframedPage):
+    """Test that the csv download button works in an iframe.
+
+    Based on the test behavior and the fact that we don't have to patch the 'window.showSaveFilePicker' as in the test above,
+    it seems that the fallback download method is used.
+    """
+
+    page: Page = iframed_app.page
+    frame_locator: FrameLocator = iframed_app.open_app()
+
+    _test_csv_download(page, frame_locator)
+
+
+def test_csv_download_button_in_iframe_with_new_tab_host_config(
+    iframed_app: IframedPage,
+):
+    """Test that the csv download button works in an iframe and the host-config enforced download in new tab.
+
+    Based on the test behavior and the fact that we don't have to patch the 'window.showSaveFilePicker' as in the test above,
+    it seems that the fallback download method is used.
+    If this ever changes, the host-config[enforceDownloadInNewTab] might not take any effect as it is only used in the fallback mechanism.
+    """
+    page: Page = iframed_app.page
+
+    def fulfill_host_config_request(route: Route):
+        response = route.fetch()
+        result = response.json()
+        result["enforceDownloadInNewTab"] = True
+        route.fulfill(json=result)
+
+    page.route("**/_stcore/host-config", fulfill_host_config_request)
+
+    # ensure that the route interception works and we get the correct enforceDownloadInNewTab config
+    with page.expect_event(
+        "response",
+        lambda response: response.url.endswith("_stcore/host-config")
+        and response.json()["enforceDownloadInNewTab"] is True,
+        timeout=10000,
+    ):
+        frame_locator: FrameLocator = iframed_app.open_app()
+        _test_csv_download(page, frame_locator)
+
+
+def test_number_cell_read_only_overlay_formatting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the number cell overlay is formatted correctly."""
+    overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
+    # Click on the first cell of the table
+    click_on_cell(overlay_test_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    assert_snapshot(cell_overlay, name="st_dataframe-number_col_overlay")
+
+
+def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number cell can be edited."""
+    cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
+    # Click on the first cell of the table
+    click_on_cell(cell_overlay_test_df, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    assert_snapshot(cell_overlay, name="st_data_editor-number_col_editor")
+
+    # Change the value
+    cell_overlay.locator(".gdg-input").fill("9876.54")
+    # Press Enter to apply the change
+    themed_app.keyboard.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(themed_app, "Edited DF:", "9876.54", exact_match=False)
+
+
+def test_text_cell_read_only_overlay_formatting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the text cell overlay is formatted correctly."""
+    overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(2)
+    # Click on the first cell of the table
+    click_on_cell(overlay_test_df, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (text) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_text("hello\nworld")
+    assert_snapshot(cell_overlay, name="st_dataframe-text_col_overlay")
+
+
+def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the number cell can be edited."""
+    cell_overlay_test_df = themed_app.get_by_test_id("stDataFrame").nth(3)
+    # Click on the first cell of the table
+    click_on_cell(cell_overlay_test_df, 1, 1, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(themed_app)
+    # Get the (number) input element and check the value
+    expect(cell_overlay.locator(".gdg-input")).to_have_text("hello\nworld")
+    assert_snapshot(cell_overlay, name="st_data_editor-text_col_editor")
+
+    # Change the value
+    cell_overlay.locator(".gdg-input").fill("edited value")
+    # Press Enter to apply the change
+    themed_app.keyboard.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Check if that the value was submitted
+    expect_prefixed_markdown(
+        themed_app, "Edited DF:", "edited value", exact_match=False
+    )
+
+
 # TODO(lukasmasuch): Add additional interactive tests:
-# - Selecting a cell
-# - Opening a cell
-# - Applying a cell edit
 # - Copy data to clipboard
 # - Paste in data
-# - Download data via toolbar: I wasn't able to find out how to detect the
-#   showSaveFilePicker the filechooser doesn't work.

@@ -157,8 +157,8 @@ class TestCLIRegressions:
         assert (
             STREAMLIT_RELEASE_VERSION != None and STREAMLIT_RELEASE_VERSION != ""
         ), "You must set the $STREAMLIT_RELEASE_VERSION env variable"
-        assert STREAMLIT_RELEASE_VERSION in self.run_command(
-            "streamlit version"
+        assert (
+            STREAMLIT_RELEASE_VERSION in self.run_command("streamlit version")
         ), f"Package version does not match the desired version of {STREAMLIT_RELEASE_VERSION}"
 
     def test_streamlit_activate(self):
@@ -180,8 +180,8 @@ class TestCLIRegressions:
         """
 
         out_one, out_two = self.run_double_proc(
-            f"streamlit run --server.headless=true {REPO_ROOT}/examples/file_uploader.py",
-            f"streamlit run --server.headless=true {REPO_ROOT}/examples/file_uploader.py",
+            f"streamlit run --server.headless=true {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
+            f"streamlit run --server.headless=true {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
         )
 
         assert ":8501" in out_one, f"Incorrect port. See output:\n{out_one}"
@@ -189,8 +189,8 @@ class TestCLIRegressions:
 
     def test_conflicting_port(self):
         out_one, out_two = self.run_double_proc(
-            f"streamlit run --server.headless=true {REPO_ROOT}/examples/file_uploader.py",
-            f"streamlit run --server.headless=true --server.port=8501 {REPO_ROOT}/examples/file_uploader.py",
+            f"streamlit run --server.headless=true {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
+            f"streamlit run --server.headless=true --server.port=8501 {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
         )
 
         assert ":8501" in out_one, f"Incorrect port. See output:\n{out_one}"
@@ -200,7 +200,7 @@ class TestCLIRegressions:
 
     def test_cli_defined_port(self):
         out = self.run_single_proc(
-            f"streamlit run --server.headless=true --server.port=9999 {REPO_ROOT}/examples/file_uploader.py",
+            f"streamlit run --server.headless=true --server.port=9999 {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
         )
 
         assert ":9999" in out, f"Incorrect port. See output:\n{out}"
@@ -210,7 +210,7 @@ class TestCLIRegressions:
             file.write("[server]\n  port=8888")
 
         out = self.run_single_proc(
-            f"streamlit run --server.headless=true {REPO_ROOT}/examples/file_uploader.py",
+            f"streamlit run --server.headless=true {REPO_ROOT}/e2e_playwright/st_file_uploader.py",
         )
 
         assert ":8888" in out, f"Incorrect port. See output:\n{out}"

@@ -175,7 +175,7 @@ st.data_editor(
             default=True,
             options=[1, 2, 3, 4, 5],
         ),
-        "col_1": st.column_config.SelectboxColumn(),
+        "col_1": st.column_config.SelectboxColumn(options=["a", "b", "c", "d"]),
     },
 )
 
@@ -210,13 +210,13 @@ st.data_editor(
             disabled=False,
             default="https://streamlit.io/",
             max_chars=50,
-            validate="^http.*$",
+            validate=r"^http.*$",
         ),
         "col_1": st.column_config.LinkColumn(),
         "col_2": st.column_config.LinkColumn(
             "Display text via Regex",
-            validate="^https://.*?\.streamlit\.app$",
-            display_text="https://(.*?)\.streamlit\.app",
+            validate=r"^https://.*?\.streamlit\.app$",
+            display_text=r"https://(.*?)\.streamlit\.app",
         ),
     },
 )

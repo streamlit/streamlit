@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.help unit test."""
+
 import inspect
 import unittest
 from unittest.mock import patch
@@ -109,7 +110,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("st.audio", ds.name)
         self.assertEqual("method", ds.type)
 
-        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'MediaTime' = 0, *, sample_rate: 'int | None' = None, end_time: 'MediaTime | None' = None, loop: 'bool' = False) -> 'DeltaGenerator'"
+        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'MediaTime' = 0, *, sample_rate: 'int | None' = None, end_time: 'MediaTime | None' = None, loop: 'bool' = False, autoplay: 'bool' = False) -> 'DeltaGenerator'"
 
         self.assertEqual(
             f"streamlit.delta_generator.MediaMixin.audio{signature}", ds.value

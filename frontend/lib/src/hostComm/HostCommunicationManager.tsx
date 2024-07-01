@@ -61,6 +61,8 @@ export interface HostCommunicationProps {
   readonly deployedAppMetadataChanged: (
     deployedAppMetadata: DeployedAppMetadata
   ) => void
+  readonly restartWebsocketConnection: () => void
+  readonly terminateWebsocketConnection: () => void
 }
 
 /**
@@ -247,6 +249,14 @@ export default class HostCommunicationManager {
 
     if (message.type === "SET_CUSTOM_THEME_CONFIG") {
       this.props.themeChanged(message.themeInfo)
+    }
+
+    if (message.type === "RESTART_WEBSOCKET_CONNECTION") {
+      this.props.restartWebsocketConnection()
+    }
+
+    if (message.type === "TERMINATE_WEBSOCKET_CONNECTION") {
+      this.props.terminateWebsocketConnection()
     }
   }
 }

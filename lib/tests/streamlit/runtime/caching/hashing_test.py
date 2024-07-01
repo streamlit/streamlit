@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.memo/singleton hashing tests."""
+
 import datetime
 import functools
 import hashlib
@@ -28,12 +29,8 @@ from enum import Enum, auto
 from io import BytesIO, StringIO
 from unittest.mock import MagicMock, Mock
 
-import cffi
-import dateutil.tz
 import numpy as np
-import pandas
 import pandas as pd
-import tzlocal
 from parameterized import parameterized
 from PIL import Image
 
@@ -103,16 +100,8 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(id(naive_datetime1), id(naive_datetime1_copy))
         self.assertNotEqual(get_hash(naive_datetime1), get_hash(naive_datetime3))
 
-    @parameterized.expand(
-        [
-            datetime.timezone.utc,
-            tzlocal.get_localzone(),
-            dateutil.tz.gettz("America/Los_Angeles"),
-            dateutil.tz.gettz("Europe/Berlin"),
-            dateutil.tz.UTC,
-        ]
-    )
-    def test_datetime_aware(self, tz_info):
+    def test_datetime_aware(self):
+        tz_info = datetime.timezone.utc
         aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
         aware_datetime1_copy = datetime.datetime(
             2007, 12, 23, 15, 45, 55, tzinfo=tz_info
@@ -138,9 +127,9 @@ class HashTest(unittest.TestCase):
         ]
     )
     def test_pandas_timestamp(self, tz_info):
-        timestamp1 = pandas.Timestamp("2017-01-01T12", tz=tz_info)
-        timestamp1_copy = pandas.Timestamp("2017-01-01T12", tz=tz_info)
-        timestamp2 = pandas.Timestamp("2019-01-01T12", tz=tz_info)
+        timestamp1 = pd.Timestamp("2017-01-01T12", tz=tz_info)
+        timestamp1_copy = pd.Timestamp("2017-01-01T12", tz=tz_info)
+        timestamp2 = pd.Timestamp("2019-01-01T12", tz=tz_info)
 
         self.assertEqual(get_hash(timestamp1), get_hash(timestamp1_copy))
         self.assertNotEqual(id(timestamp1), id(timestamp1_copy))
@@ -531,33 +520,7 @@ class HashTest(unittest.TestCase):
 
 
 class NotHashableTest(unittest.TestCase):
-    """Tests for various unhashable types. Many of these types *are*
-    hashable by @st.cache's hasher, and we're explicitly removing support for
-    them.
-    """
-
-    def _build_cffi(self, name):
-        ffibuilder = cffi.FFI()
-        ffibuilder.set_source(
-            "cffi_bin._%s" % name,
-            r"""
-                static int %s(int x)
-                {
-                    return x + "A";
-                }
-            """
-            % name,
-        )
-
-        ffibuilder.cdef("int %s(int);" % name)
-        ffibuilder.compile(verbose=True)
-
-    def test_compiled_ffi_not_hashable(self):
-        self._build_cffi("foo")
-        from cffi_bin._foo import ffi as foo
-
-        with self.assertRaises(UnhashableTypeError):
-            get_hash(foo)
+    """Tests for various unhashable types."""
 
     def test_lambdas_not_hashable(self):
         with self.assertRaises(UnhashableTypeError):

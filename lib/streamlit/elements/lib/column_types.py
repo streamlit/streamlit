@@ -532,8 +532,10 @@ def LinkColumn(
         * A string that is displayed in every cell, e.g. ``"Open link"``.
 
         * A regular expression (JS flavor, detected by usage of parentheses)
-          to extract a part of the URL via a capture group, e.g. ``"https://(.*?)\.example\.com"``
-          to extract the display text "foo" from the URL "\https://foo.example.com".
+          to extract a part of the URL via a capture group, e.g. ``"https://(.*?)\\.example\\.com"``
+          to extract the display text "foo" from the URL "\\https://foo.example.com".
+
+        .. Comment: The backslash in front of foo.example.com prevents a hyperlink.
 
         For more complex cases, you may use `Pandas Styler's format \
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
@@ -1036,7 +1038,7 @@ def ImageColumn(
     The cell values need to be one of:
 
     * A URL to fetch the image from. This can also be a relative URL of an image
-      deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
+      deployed via `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
       Note that you can NOT use an arbitrary local image if it is not available through
       a public URL.
     * A data URL containing an SVG XML like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
