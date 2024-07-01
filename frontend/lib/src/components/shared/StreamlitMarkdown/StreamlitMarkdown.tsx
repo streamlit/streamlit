@@ -329,7 +329,7 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   disableLinks,
-}: RenderedMarkdownProps): ReactElement {
+}: Readonly<RenderedMarkdownProps>): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
     code: CustomCodeTag,
@@ -398,8 +398,9 @@ export function RenderedMarkdown({
               (data.hProperties.className || "") + " has-background-color"
           }
         } else {
-          // Convert unsupported text directives to plain text to avoid them being ignored/not rendered
-          // See https://github.com/streamlit/streamlit/issues/8726, https://github.com/streamlit/streamlit/issues/5968
+          // Workaround to convert unsupported text directives to plain text to avoid them being
+          // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
+          // https://github.com/streamlit/streamlit/issues/5968
           node.type = "text"
           node.value = `:${nodeName}`
           node.data = {}
@@ -410,31 +411,34 @@ export function RenderedMarkdown({
 
   function remarkMaterialIcons() {
     return (tree: any) => {
-      function replace(_full_match: string, icon_name: string): any {
+      function replace(fullMatch: string, iconName: string): any {
         return {
           type: "text",
-          // value: full_match, // Is this needed?
+          value: fullMatch,
           data: {
             hName: "span",
             hProperties: {
               role: "img",
-              ariaLabel: icon_name + " icon",
+              ariaLabel: iconName + " icon",
               style: {
-                "font-family": "Material Symbols Rounded",
-                "user-select": "none",
                 display: "inline-block",
-                "vertical-align": "bottom",
-                "font-weight": "normal",
-                "white-space": "nowrap",
-                "word-wrap": "normal",
+                fontFamily: "Material Symbols Rounded",
+                // Disable selection for copying it as text.
+                // Allowing this leads to copying the underlying icon name,
+                // which can be confusing / unexpected.
+                userSelect: "none",
+                verticalAlign: "bottom",
+                fontWeight: "normal",
+                whiteSpace: "nowrap",
+                wordWrap: "normal",
               },
             },
-
-            hChildren: [{ type: "text", value: icon_name }],
+            hChildren: [{ type: "text", value: iconName }],
           },
         }
       }
-
+      // We replace all `:material/` occurrences with `:material_` to avoid
+      // conflicts with the directive plugin.
       findAndReplace(tree, [[/:material_(\w+):/g, replace]])
       return tree
     }
@@ -442,11 +446,11 @@ export function RenderedMarkdown({
 
   const plugins = [
     remarkMathPlugin,
-    remarkMaterialIcons,
     remarkEmoji,
     remarkGfm,
     remarkDirective,
     remarkColoring,
+    remarkMaterialIcons,
   ]
 
   const rehypePlugins: PluggableList = [
@@ -454,10 +458,11 @@ export function RenderedMarkdown({
     ...(allowHTML ? [rehypeRaw] : []),
   ]
 
-  // :material/ is detected as an directive (from remark_directive)
+  // :material/ is detected as an directive by remark directive logic.
   // However, the directive logic ignores emoji shortcodes. As a workaround,
-  // we can make it look like an emoji shortcode by replacing the / with _.
-  const parsedString = source.replaceAll(":material/", ":material_")
+  // we can make it look like an emoji shortcode by replacing the `/` with `_`.
+  const processedSource = source.replaceAll(":material/", ":material_")
+
   // Sets disallowed markdown for widget labels
   const disallowed = [
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
@@ -492,7 +497,7 @@ export function RenderedMarkdown({
         // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
       >
-        {parsedString}
+        {processedSource}
       </ReactMarkdown>
     </ErrorBoundary>
   )
