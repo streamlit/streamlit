@@ -11446,7 +11446,7 @@ mdast-util-directive@^2.0.0:
     stringify-entities "^4.0.0"
     unist-util-visit-parents "^5.0.0"
 
-mdast-util-find-and-replace@2.2.2, mdast-util-find-and-replace@^2.0.0, mdast-util-find-and-replace@^2.2.2:
+mdast-util-find-and-replace@^2.0.0, mdast-util-find-and-replace@^2.2.2:
   version "2.2.2"
   resolved "https://registry.yarnpkg.com/mdast-util-find-and-replace/-/mdast-util-find-and-replace-2.2.2.tgz#cc2b774f7f3630da4bd592f61966fecade8b99b1"
   integrity sha512-MTtdFRz/eMDHXzeK6W3dO7mXUlF82Gom4y0oOgvHhh/HXZAGvIQDUvQ0SuUx+j2tv44b8xTHOm8K/9OoRFnXKw==
