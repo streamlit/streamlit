@@ -33,7 +33,7 @@ const defaultSelectedIndex = 2
 const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
-): undefined => {
+): void => {
   let expectCheck: any = expect(element)
   if (!should_exist) {
     expectCheck = expect.not
