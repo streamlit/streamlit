@@ -244,6 +244,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   }, [element.formId, widgetMgr, defaultValues, element, fragmentId])
 
   useEffect(() => {
+    console.log("ButtonGroup useEffect")
     if (setValue) {
       setSelected(value)
       setFromUi(false)

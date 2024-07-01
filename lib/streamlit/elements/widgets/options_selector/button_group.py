@@ -228,7 +228,7 @@ class ButtonGroupMixin:
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
-        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
+        format_func: Callable[[V], ButtonGroupProto.Option],
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,

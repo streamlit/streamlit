@@ -38,6 +38,7 @@ from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
     Button,
+    ButtonGroup,
     Caption,
     ChatInput,
     ChatMessage,
@@ -455,6 +456,10 @@ class AppTest:
             given key.
         """
         return self._tree.button
+
+    @property
+    def button_group(self) -> WidgetList[ButtonGroup]:
+        return self._tree.button_group
 
     @property
     def caption(self) -> ElementList[Caption]:
