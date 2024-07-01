@@ -35,11 +35,13 @@ _star_icon = ":material/star:"
 # in base64 format and send it over the wire as an image.
 _selected_star_icon = (
     "<img src='data:image/svg+xml;base64,"
-    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9"
-    "zdmciIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0Ij48cGF0aCBkPSJNMCAwaDI"
-    "0djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGgyNHYyNEgweiIgZmlsbD0ibm9uZSIvPjxwYXR"
-    "oIGQ9Ik0xMiAxNy4yN0wxOC4xOCAyMWwtMS42NC03LjAzTDIyIDkuMjRsLTcuMTktLjYxTDEyIDIgOS4xOSA4"
-    "LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMXoiLz48L3N2Zz4='>"
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0i"
+    "MCAtOTYwIDk2MCA5NjAiIHdpZHRoPSIyNHB4IiBmaWxsPSIjNWY2MzY4Ij48cGF0aCBkPSJNNDgwLTI2OSAz"
+    "MTQtMTY5cS0xMSA3LTIzIDZ0LTIxLThxLTktNy0xNC0xNy41dC0yLTIzLjVsNDQtMTg5LTE0Ny0xMjdxLTEwL"
+    "TktMTIuNS0yMC41VDE0MC01NzFxNC0xMSAxMi0xOHQyMi05bDE5NC0xNyA3NS0xNzhxNS0xMiAxNS41LTE4dDI"
+    "xLjUtNnExMSAwIDIxLjUgNnQxNS41IDE4bDc1IDE3OCAxOTQgMTdxMTQgMiAyMiA5dDEyIDE4cTQgMTEgMS41I"
+    "DIyLjVUODA5LTUyOEw2NjItNDAxbDQ0IDE4OXEzIDEzLTIgMjMuNVQ2OTAtMTcxcS05IDctMjEgOHQtMjMtNkw"
+    "0ODAtMjY5WiIvPjwvc3ZnPg=='/>"
 )
 
 FeedbackOptions = Literal["thumbs", "faces", "stars"]
