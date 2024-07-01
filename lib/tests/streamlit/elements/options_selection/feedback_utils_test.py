@@ -70,11 +70,6 @@ class TestGetMappedOptions:
 
 
 class TestCreateFormatFunc:
-    def test_pass_none_options(self):
-        format_func = create_format_func(None)
-        res = format_func(0)
-        assert res == ""
-
     def test_pass_single_option_return_option(self):
         option = ButtonGroupProto.Option(content="test")
         format_func = create_format_func(option)

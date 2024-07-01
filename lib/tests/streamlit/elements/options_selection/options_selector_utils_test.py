@@ -21,7 +21,6 @@ from streamlit.elements.widgets.options_selector.options_selector_utils import (
     _get_over_max_options_message,
     _check_and_convert_to_indices,
     transform_options,
-    register_widget_and_enqueue,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -178,90 +177,3 @@ class TestTransformOptions:
             assert f"{option}" in formatted_options
 
         assert default_indices == [2]
-
-
-class TestRegisterWidgetAndEnqueue(DeltaGeneratorTestCase):
-    @patch(
-        "streamlit.elements.widgets.options_selector.options_selector_utils.register_widget"
-    )
-    def test_register_widget_and_enqueue_int_return_value(
-        self, patched_register_widget
-    ):
-        result = RegisterWidgetResult(value=42, value_changed=False)
-        patched_register_widget.return_value = result
-        proto = ButtonGroupProto()
-        value = register_widget_and_enqueue(
-            st._main_dg,
-            "button_group",
-            proto,
-            "widget_id",
-            ["a", "b"],
-            ["a", "b"],
-            None,
-            None,
-        )
-
-        # ensure correct return value is returned
-        assert value == result.value
-
-        # ensure that proto is enqueued
-        assert self.get_delta_from_queue().new_element.button_group == proto
-
-    @patch(
-        "streamlit.elements.widgets.options_selector.options_selector_utils.register_widget"
-    )
-    def test_register_widget_and_enqueue_exceed_max_selection(
-        self, patched_register_widget
-    ):
-        return_value = RegisterWidgetResult(value=[0, 1, 2], value_changed=False)
-        patched_register_widget.return_value = return_value
-        proto = ButtonGroupProto()
-        with pytest.raises(StreamlitAPIException):
-            register_widget_and_enqueue(
-                st._main_dg,
-                "button_group",
-                proto,
-                "widget_id",
-                ["a", "b"],
-                ["a", "b"],
-                None,
-                None,
-                max_selections=2,
-            )
-
-    @patch(
-        "streamlit.elements.widgets.options_selector.options_selector_utils.register_widget"
-    )
-    def test_register_widget_and_enqueue_coerce_enum(self, patched_register_widget):
-        class EnumA(enum.Enum):
-            A = enum.auto()
-            B = enum.auto()
-            C = enum.auto()
-
-        enum_orig = EnumA
-
-        class EnumA(enum.Enum):
-            A = enum.auto()
-            B = enum.auto()
-            C = enum.auto()
-
-        enum_equal = EnumA
-        enum_equal_list = [EnumA.A, EnumA.B, EnumA.C]
-
-        list_result = RegisterWidgetResult([enum_orig.A, enum_orig.C], False)
-        patched_register_widget.return_value = list_result
-
-        proto = ButtonGroupProto()
-        value = register_widget_and_enqueue(
-            st._main_dg,
-            "button_group",
-            proto,
-            "widget_id",
-            enum_equal_list,
-            enum_equal_list,
-            None,
-            None,
-        )
-
-        list_coerced = RegisterWidgetResult([enum_equal.A, enum_equal.C], False)
-        assert value == list_coerced.value

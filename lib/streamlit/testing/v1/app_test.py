@@ -458,7 +458,7 @@ class AppTest:
         return self._tree.button
 
     @property
-    def button_group(self) -> WidgetList[ButtonGroup]:
+    def button_group(self) -> WidgetList[ButtonGroup[Any]]:
         return self._tree.button_group
 
     @property

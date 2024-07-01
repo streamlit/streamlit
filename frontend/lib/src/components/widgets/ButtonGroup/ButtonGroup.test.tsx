@@ -18,14 +18,11 @@
 import React from "react"
 import { screen, within, fireEvent, act } from "@testing-library/react"
 import "@testing-library/jest-dom"
-
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
-import ButtonGroup, { Props } from "./ButtonGroup"
 
-// jest.mock("@streamlit/lib/src/WidgetStateManager")
+import ButtonGroup, { Props } from "./ButtonGroup"
 
 const materialIconNames = ["icon", "icon_2", "icon_3"]
 const defaultSelectedIndex = 2

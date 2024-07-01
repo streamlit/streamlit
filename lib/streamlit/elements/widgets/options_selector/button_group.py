@@ -14,7 +14,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast, get_args
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    cast,
+    get_args,
+    overload,
+)
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.widgets.options_selector.feedback_utils import (
@@ -25,18 +32,22 @@ from streamlit.elements.widgets.options_selector.feedback_utils import (
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
+    check_max_selections,
     check_multiselect_policies,
-    register_widget_and_enqueue,
+    maybe_coerce,
     transform_options,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import (
+    RegisterWidgetResult,
     WidgetDeserializer,
     WidgetSerializer,
     compute_widget_id,
+    save_for_app_testing,
 )
 from streamlit.type_util import Key, OptionSequence, T, V, to_key
 
@@ -56,7 +67,9 @@ def _build_proto(
     disabled: bool,
     current_form_id: str,
     click_mode: ButtonGroupProto.ClickMode.ValueType,
-    selection_visualization: ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
+    selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
+        ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
+    ),
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -104,7 +117,9 @@ class ButtonGroupMixin:
     #             content=transformed["content"],
     #             selected_content=transformed["selected_content"],
     #         )
-
+    #     serde = MultiSelectSerde(indexable_options, default_values)
+    #     _deserializer = serde.deserialize
+    #     _serializer = serde.serialize
     #     return self._button_group(
     #         options,
     #         key=key,
@@ -114,6 +129,8 @@ class ButtonGroupMixin:
     #         else ButtonGroupProto.SINGLE_SELECT,
     #         disabled=disabled,
     #         format_func=_transformed_format_func if format_func is not None else None,
+    #         deserializer=_deserializer,
+    #         serializer=_serializer,
     #         on_change=on_change,
     #         args=args,
     #         kwargs=kwargs,
@@ -207,14 +224,58 @@ class ButtonGroupMixin:
             click_mode=ButtonGroupProto.SINGLE_SELECT,
             disabled=disabled,
             format_func=format_func,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
             selection_visualization=selection_visualization,
         )
-        return sentiment
+        return sentiment.value
+
+    @overload
+    def _button_group(
+        self,
+        options: OptionSequence[V],
+        *,
+        key: Key | None = None,
+        default: list[int] | None = None,
+        click_mode: ButtonGroupProto.ClickMode.ValueType = (
+            ButtonGroupProto.SINGLE_SELECT
+        ),
+        disabled: bool = False,
+        format_func: Callable[[V], ButtonGroupProto.Option],
+        deserializer: WidgetDeserializer[T] | None = None,
+        serializer: WidgetSerializer[T] | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
+            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
+        ),
+    ) -> RegisterWidgetResult[T]: ...
+
+    @overload
+    def _button_group(
+        self,
+        options: OptionSequence[V],
+        *,
+        key: Key | None = None,
+        default: list[int] | None = None,
+        click_mode: ButtonGroupProto.ClickMode.ValueType = (
+            ButtonGroupProto.SINGLE_SELECT
+        ),
+        disabled: bool = False,
+        format_func: Callable[[V], ButtonGroupProto.Option],
+        deserializer: WidgetDeserializer[list[T]] | None = None,
+        serializer: WidgetSerializer[list[T]] | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
+            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
+        ),
+    ) -> RegisterWidgetResult[list[T]]: ...
 
     def _button_group(
         self,
@@ -227,15 +288,15 @@ class ButtonGroupMixin:
         ),
         disabled: bool = False,
         format_func: Callable[[V], ButtonGroupProto.Option],
+        deserializer: WidgetDeserializer[Any] | None = None,
+        serializer: WidgetSerializer[Any] | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        deserializer: WidgetDeserializer[T] | None = None,
-        serializer: WidgetSerializer[T] | None = None,
-        selection_visualization: ButtonGroupProto.ButtonStyle.ValueType = (
+        selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
             ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         ),
-    ) -> T:
+    ) -> RegisterWidgetResult[Any]:
         key = to_key(key)
 
         check_multiselect_policies(self.dg, key, on_change, default)
@@ -256,7 +317,7 @@ class ButtonGroupMixin:
             page=ctx.active_script_hash if ctx else None,
         )
 
-        button_group_proto = _build_proto(
+        proto = _build_proto(
             widget_id,
             formatted_options,
             default_values,
@@ -266,35 +327,35 @@ class ButtonGroupMixin:
             selection_visualization=selection_visualization,
         )
 
-        _deserializer: WidgetDeserializer
-        _serializer: WidgetSerializer
-        if deserializer is None or serializer is None:
+        if serializer is None or deserializer is None:
             serde = MultiSelectSerde(indexable_options, default_values)
-            _deserializer = serde.deserialize
-            _serializer = serde.serialize
-        else:
-            _deserializer = deserializer
-            _serializer = serializer
+            deserializer = serde.deserialize
+            serializer = serde.serialize
 
-        return cast(
-            T,
-            register_widget_and_enqueue(
-                self.dg,
-                widget_name,
-                button_group_proto,
-                widget_id,
-                formatted_options,
-                indexable_options,
-                _deserializer,
-                _serializer,
-                ctx,
-                on_change,
-                args,
-                kwargs,
-                None,
-                format_func,
-            ),
+        widget_state = register_widget(
+            "button_group",
+            proto,
+            # user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserializer,
+            serializer=serializer,
+            ctx=ctx,
         )
+
+        check_max_selections(widget_state.value, None)
+        widget_state = maybe_coerce(widget_state, options, indexable_options)
+
+        if widget_state.value_changed:
+            proto.value[:] = serializer(widget_state.value)
+            proto.set_value = True
+
+        if ctx:
+            save_for_app_testing(ctx, widget_id, format_func)
+        self.dg._enqueue(widget_name, proto)
+
+        return widget_state
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -260,7 +260,6 @@ class TestButtonGroup(DeltaGeneratorTestCase):
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
-
         ButtonGroupMixin._button_group(
             st._main,
             ["bar", "baz"],
@@ -336,9 +335,9 @@ def test_button_group_coercion():
             format_func=lambda x: ButtonGroupProto.Option(content=str(x)),
         )
         print(f"Button Group: {button_group}")
-        st.text(id(button_group[0].__class__))
+        st.text(id(button_group.value[0].__class__))
         st.text(id(EnumA))
-        st.text(all(selected in EnumA for selected in button_group))
+        st.text(all(selected in EnumA for selected in button_group.value))
 
     at = AppTest.from_function(script).run()
 

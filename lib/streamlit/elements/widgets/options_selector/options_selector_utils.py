@@ -15,7 +15,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, TypeAlias, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Sequence,
+    cast,
+    overload,
+)
 
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
@@ -28,21 +36,9 @@ from streamlit.elements.lib.utils import (
     maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state import (
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-    register_widget,
-)
-from streamlit.runtime.state.common import (
-    WidgetDeserializer,
-    WidgetSerializer,
-    save_for_app_testing,
-)
 from streamlit.type_util import (
     OptionSequence,
     T,
-    V,
     check_python_comparable,
     ensure_indexable,
     is_iterable,
@@ -50,20 +46,15 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
+    from enum import Enum
+
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-    from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
-    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
-
-OptionSelectorReturnType: TypeAlias = T | list[T]
-
-
-class Serde(Generic[V]):
-    def serialize(self, value: V) -> Any:
-        raise NotImplementedError
-
-    def deserialize(self, ui_value: Any, widget_id: str = "") -> V:
-        raise NotImplementedError
+    from streamlit.runtime.state import (
+        WidgetCallback,
+    )
+    from streamlit.runtime.state.common import (
+        RegisterWidgetResult,
+    )
 
 
 @dataclass
@@ -151,6 +142,56 @@ def check_multiselect_policies(
     check_session_state_rules(default_value=default, key=key, writes_allowed=True)
 
 
+def check_max_selections(
+    selections: Sequence[Any] | Any | None, max_selections: int | None
+):
+    if max_selections is None:
+        return
+
+    default_count = _get_default_count(selections)
+    if default_count > max_selections:
+        raise StreamlitAPIException(
+            _get_over_max_options_message(default_count, max_selections)
+        )
+
+
+@overload
+def maybe_coerce(
+    register_widget_result: RegisterWidgetResult[Enum],
+    options: type[Enum],
+    opt_sequence: Sequence[Any],
+) -> RegisterWidgetResult[Enum]: ...
+
+
+@overload
+def maybe_coerce(
+    register_widget_result: RegisterWidgetResult[T],
+    options: OptionSequence[T],
+    opt_sequence: Sequence[T],
+) -> RegisterWidgetResult[T]: ...
+
+
+# @overload
+# def maybe_coerce(
+#     register_widget_result: RegisterWidgetResult[list[T]],
+#     options: OptionSequence[T],
+#     opt_sequence: Sequence[T],
+# ) -> RegisterWidgetResult[list[T]]: ...
+
+
+def maybe_coerce(
+    register_widget_result,
+    options,
+    indexable_options,
+):
+    if isinstance(register_widget_result.value, list):
+        return maybe_coerce_enum_sequence(
+            register_widget_result, options, indexable_options
+        )
+
+    return maybe_coerce_enum(register_widget_result, options, indexable_options)
+
+
 def _default_format_func(option: T) -> str:
     return str(option)
 
@@ -169,53 +210,3 @@ def transform_options(
     formatted_options = [format_func(option) for option in indexable_options]
 
     return indexable_options, formatted_options, default_indices
-
-
-def register_widget_and_enqueue(
-    dg: DeltaGenerator,
-    widget_name: str,
-    proto: MultiSelectProto | ButtonGroupProto,
-    widget_id: str,
-    options: OptionSequence[T],
-    indexable_options: Sequence[T],
-    deserializer: WidgetDeserializer[OptionSelectorReturnType],
-    serializer: WidgetSerializer[OptionSelectorReturnType],
-    ctx: ScriptRunContext | None = None,
-    on_change_handler: WidgetCallback | None = None,
-    args: WidgetArgs | None = None,
-    kwargs: WidgetKwargs | None = None,
-    max_selections: int | None = None,
-    app_testing_value: Any | None = None,
-) -> OptionSelectorReturnType:
-    widget_state = register_widget(
-        widget_name,
-        proto,
-        # user_key=key,
-        on_change_handler=on_change_handler,
-        args=args,
-        kwargs=kwargs,
-        deserializer=deserializer,
-        serializer=serializer,
-        ctx=ctx,
-    )
-    default_count = _get_default_count(widget_state.value)
-    if max_selections and default_count > max_selections:
-        raise StreamlitAPIException(
-            _get_over_max_options_message(default_count, max_selections)
-        )
-    if isinstance(widget_state.value, list):
-        widget_state = maybe_coerce_enum_sequence(
-            widget_state, options, indexable_options
-        )
-    else:
-        widget_state = maybe_coerce_enum(widget_state, options, indexable_options)
-
-    if widget_state.value_changed:
-        proto.value[:] = serializer(widget_state.value)
-        proto.set_value = True
-
-    if ctx:
-        save_for_app_testing(ctx, widget_id, app_testing_value)
-    dg._enqueue(widget_name, proto)
-
-    return widget_state.value

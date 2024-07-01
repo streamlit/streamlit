@@ -85,9 +85,6 @@ def create_format_func(
     """
 
     def format_func(option_index: int) -> ButtonGroupProto.Option:
-        if option_icons is None:
-            return ""
-
         if isinstance(option_icons, ButtonGroupProto.Option):
             return option_icons
 

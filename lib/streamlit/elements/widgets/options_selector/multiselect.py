@@ -18,17 +18,21 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    get_label_visibility_proto_value,
+    maybe_coerce_enum_sequence,
+)
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
+    check_max_selections,
     check_multiselect_policies,
-    register_widget_and_enqueue,
     transform_options,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state import register_widget
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -240,22 +244,33 @@ class MultiSelectMixin:
             proto.help = dedent(help)
 
         serde = MultiSelectSerde(indexable_options, default_values)
-        return register_widget_and_enqueue(
-            self.dg,
-            widget_name,
+        widget_state = register_widget(
+            "multiselect",
             proto,
-            widget_id,
-            formatted_options,
-            indexable_options,
-            serde.deserialize,
-            serde.serialize,
-            ctx,
-            on_change,
-            args,
-            kwargs,
-            max_selections=max_selections,
-            app_testing_value=format_func,
+            # user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
         )
+
+        check_max_selections(widget_state.value, max_selections)
+        widget_state = maybe_coerce_enum_sequence(
+            widget_state, options, indexable_options
+        )
+
+        if widget_state.value_changed:
+            proto.value[:] = serde.serialize(widget_state.value)
+            proto.set_value = True
+
+        if ctx:
+            save_for_app_testing(ctx, widget_id, format_func)
+
+        self.dg._enqueue(widget_name, proto)
+
+        return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:
