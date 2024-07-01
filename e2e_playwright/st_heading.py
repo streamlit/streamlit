@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-st.title("This title is awesome!")
+st.title(":material/info: This title is awesome!")
 st.title("This title is awesome too!", help="Some help tooltip", anchor="awesome-title")
 st.title("`Code` - Title with hidden Anchor", anchor=False)
 st.title("a [link](#test)")
@@ -22,13 +22,17 @@ st.title("a [link](#test)")
 st.title("日本語タイトル")
 st.title("その他の邦題", anchor="アンカー")
 
-st.header("This header is awesome!")
+st.header(":material/info: This header is awesome!")
 st.header("This header is awesome too!", anchor="awesome-header")
 st.header("This header with hidden anchor is awesome tooooo!", anchor=False)
 st.header("header with help", help="Some help tooltip")
-st.header("header with help and hidden anchor", help="Some help tooltip", anchor=False)
+st.header(
+    "header with help and hidden anchor",
+    help="Some help tooltip",
+    anchor=False,
+)
 
-st.subheader("This subheader is awesome!")
+st.subheader(":material/info: This subheader is awesome!")
 st.subheader("This subheader is awesome too!", anchor="awesome-subheader")
 st.subheader("`Code` - Subheader without Anchor")
 st.subheader(
