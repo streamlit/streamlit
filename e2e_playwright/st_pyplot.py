@@ -82,11 +82,3 @@ kwargs = {
 # We need to set clear_figure=True, otherwise the global object
 # test below would not work.
 st.pyplot(fig, clear_figure=True, **kwargs)
-
-st.write("Figure using deprecated global object:")
-plot = pyplot.plot(data)
-st.pyplot()
-pyplot.clf()
-
-fig, ax = plt.subplots()
-st.pyplot(fig)
