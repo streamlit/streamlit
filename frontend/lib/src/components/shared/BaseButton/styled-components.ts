@@ -301,8 +301,8 @@ export const StyledBorderlessIconButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ size, theme, style }) => {
   const iconPadding: Record<BaseButtonSize, string> = {
-    [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
-    [BaseButtonSize.SMALL]: theme.spacing.twoXS,
+    [BaseButtonSize.XSMALL]: theme.spacing.twoXS,
+    [BaseButtonSize.SMALL]: theme.spacing.xs,
     [BaseButtonSize.MEDIUM]: theme.spacing.md,
     [BaseButtonSize.LARGE]: theme.spacing.lg,
   }
@@ -317,9 +317,9 @@ export const StyledBorderlessIconButton = styled(
       outline: "none",
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
+      backgroundColor: theme.colors.transparent,
       borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+      color: theme.colors.gray50,
     },
 
     ...style,
