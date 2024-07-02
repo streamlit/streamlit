@@ -45,7 +45,5 @@ def test_displays_a_pyplot_figures(
 
 def test_shows_deprecation_warning(app: Page):
     """Test that the deprecation warning is displayed correctly."""
-    deprecation_message = app.get_by_text(
-        "Calling st.pyplot() without a figure is deprecated."
-    )
+    deprecation_message = app.get_by_text("without a figure is deprecated.")
     expect(deprecation_message).to_have_count(1)
