@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
-from typing import Final, Literal, TypeAlias
+from typing import Final, Literal
+
+from typing_extensions import TypeAlias
 
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
