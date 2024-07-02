@@ -319,7 +319,6 @@ class ConfigTest(unittest.TestCase):
                 "browser",
                 "client",
                 "theme",
-                "deprecation",
                 "global",
                 "logger",
                 "magic",
