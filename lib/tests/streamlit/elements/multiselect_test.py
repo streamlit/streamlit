@@ -22,16 +22,15 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-
+from streamlit.elements.widgets.multiselect import (
+    _get_default_count,
+    _get_over_max_options_message,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from streamlit.elements.widgets.options_selector.multiselect import (
-    _get_default_count,
-    _get_over_max_options_message,
-)
 
 
 class Multiselectbox(DeltaGeneratorTestCase):

@@ -14,17 +14,95 @@
 
 """button_group unit test."""
 
-import streamlit as st
-
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
-
-from parameterized import parameterized
-
+import pytest
 import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, patch
+from parameterized import parameterized
 
+import streamlit as st
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from streamlit.errors import StreamlitAPIException
+from streamlit.elements.widgets.button_group import (
+    get_mapped_options,
+    _STAR_ICON,
+    _SELECTED_STAR_ICON,
+    _FACES_ICONS,
+    _THUMB_ICONS,
+    FeedbackSerde,
+)
+
+
+class TestGetMappedOptions:
+    def test_thumbs(self):
+        options, options_indices = get_mapped_options("thumbs")
+
+        assert len(options) == 2
+        assert len(options_indices) == 2
+
+        for index, option in enumerate(options):
+            assert option.content == _THUMB_ICONS[index]
+
+        # ensure order of thumbs
+        assert "down" in options[1].content
+        assert options_indices[0] == 1
+        assert "up" in options[0].content
+        assert options_indices[1] == 0
+
+    def test_faces(self):
+        options, options_indices = get_mapped_options("faces")
+
+        assert len(options) == 5
+        assert len(options_indices) == 5
+
+        for index, option in enumerate(options):
+            assert option.content == _FACES_ICONS[index]
+            assert option.selected_content == ""
+            assert options_indices[index] == index
+
+        # ensure order of faces
+        assert "sad" in options[0].content
+        assert "very_satisfied" in options[4].content
+
+    def test_stars(self):
+        options, options_indices = get_mapped_options("stars")
+
+        assert len(options) == 5
+        assert len(options_indices) == 5
+
+        for index, option in enumerate(options):
+            assert option.content == _STAR_ICON
+            assert option.selected_content == _SELECTED_STAR_ICON
+            assert options_indices[index] == index
+            assert option.disable_selection_highlight == True
+
+
+class TestFeedbackSerde:
+    def test_serialize(self):
+        option_indices = [5, 6, 7]
+        serde = FeedbackSerde(option_indices)
+        res = serde.serialize(6)
+        assert res == [1]
+
+    def test_serialize_raise_option_does_not_exist(self):
+        option_indices = [5, 6, 7]
+        serde = FeedbackSerde(option_indices)
+
+        with pytest.raises(StreamlitAPIException):
+            serde.serialize(8)
+
+    def test_deserialize(self):
+        option_indices = [5, 6, 7]
+        serde = FeedbackSerde(option_indices)
+        res = serde.deserialize([1], "")
+        assert res == 6
+
+    def test_deserialize_raise_indexerror(self):
+        option_indices = [5, 6, 7]
+        serde = FeedbackSerde(option_indices)
+
+        with pytest.raises(IndexError):
+            serde.deserialize([3], "")
 
 
 class ButtonGroupFeedbackTest(DeltaGeneratorTestCase):

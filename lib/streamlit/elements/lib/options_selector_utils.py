@@ -16,19 +16,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import (
-    TYPE_CHECKING,
     Any,
     Generic,
     Sequence,
     cast,
 )
 
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import (
     OptionSequence,
@@ -37,12 +30,6 @@ from streamlit.type_util import (
     ensure_indexable,
     is_type,
 )
-
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
-    from streamlit.runtime.state import (
-        WidgetCallback,
-    )
 
 
 @dataclass
@@ -96,18 +83,6 @@ def _check_and_convert_to_indices(
             )
 
     return [opt.index(value) for value in default_values]
-
-
-def check_multiselect_policies(
-    dg: DeltaGenerator,
-    key: str | None,
-    on_change: WidgetCallback | None = None,
-    default: Sequence[Any] | Any | None = None,
-):
-    check_fragment_path_policy(dg)
-    check_cache_replay_rules()
-    check_callback_rules(dg, on_change)
-    check_session_state_rules(default_value=default, key=key, writes_allowed=True)
 
 
 def ensure_indexable_and_comparable(options: OptionSequence[T]) -> Sequence[T]:

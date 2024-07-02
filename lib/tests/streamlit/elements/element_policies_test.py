@@ -26,6 +26,7 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
+    check_widget_policies,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
@@ -189,6 +190,25 @@ class CheckCacheReplayTest(ElementPoliciesTest):
     def test_cache_replay_rules_fails(self, patched_st_exception):
         check_cache_replay_rules()
         patched_st_exception.assert_called()
+
+
+class CheckWidget(ElementPoliciesTest):
+    @patch("streamlit.elements.lib.policies.check_fragment_path_policy")
+    @patch("streamlit.elements.lib.policies.check_cache_replay_rules")
+    @patch("streamlit.elements.lib.policies.check_callback_rules")
+    @patch("streamlit.elements.lib.policies.check_session_state_rules")
+    def test_all_relevant_policies_are_called(
+        self,
+        patched_check_fragment_path_policy,
+        patched_check_cache_replay_rules,
+        patched_check_callback_rules,
+        patched_check_session_state_rules,
+    ):
+        check_widget_policies(None, None, None, None)
+        patched_check_fragment_path_policy.assert_called_once()
+        patched_check_cache_replay_rules.assert_called_once()
+        patched_check_callback_rules.assert_called_once()
+        patched_check_session_state_rules.assert_called_once()
 
 
 class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):

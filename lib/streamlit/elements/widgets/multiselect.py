@@ -18,15 +18,15 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
 
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.options_selector_utils import (
+    MultiSelectSerde,
+    ensure_indexable_and_comparable,
+    get_default_indices,
+)
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     maybe_coerce_enum_sequence,
-)
-from streamlit.elements.widgets.options_selector.options_selector_utils import (
-    MultiSelectSerde,
-    check_multiselect_policies,
-    ensure_indexable_and_comparable,
-    get_default_indices,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -239,7 +239,7 @@ class MultiSelectMixin:
     ) -> list[V]:
         key = to_key(key)
 
-        check_multiselect_policies(self.dg, key, on_change, default)
+        check_widget_policies(self.dg, key, on_change, default)
 
         widget_name = "multiselect"
         maybe_raise_label_warnings(label, label_visibility)

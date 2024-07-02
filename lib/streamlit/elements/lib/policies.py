@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
 from streamlit import config, runtime
 from streamlit.elements.form import is_in_form
@@ -143,3 +143,15 @@ def check_fragment_path_policy(dg: DeltaGenerator):
     for index, path_index in enumerate(current_fragment_delta_path):
         if current_cursor_delta_path[index] != path_index:
             raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)
+
+
+def check_widget_policies(
+    dg: DeltaGenerator,
+    key: str | None,
+    on_change: WidgetCallback | None = None,
+    default: Sequence[Any] | Any | None = None,
+):
+    check_fragment_path_policy(dg)
+    check_cache_replay_rules()
+    check_callback_rules(dg, on_change)
+    check_session_state_rules(default_value=default, key=key, writes_allowed=True)
