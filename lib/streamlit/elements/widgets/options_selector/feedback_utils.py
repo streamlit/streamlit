@@ -14,26 +14,26 @@
 
 from __future__ import annotations
 
-from typing import Callable, Literal
+from typing import Callable, Final, Literal, TypeAlias
 
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 
-_thumb_icons = [":material/thumb_up:", ":material/thumb_down:"]
-_face_icons = [
+_THUMB_ICONS: Final = [":material/thumb_up:", ":material/thumb_down:"]
+_FACES_ICONS: Final = [
     ":material/sentiment_sad:",
     ":material/sentiment_dissatisfied:",
     ":material/sentiment_neutral:",
     ":material/sentiment_satisfied:",
     ":material/sentiment_very_satisfied:",
 ]
-_number_stars = 5
-_star_icon = ":material/star:"
+_NUMBER_STARS: Final = 5
+_STAR_ICON: Final = ":material/star:"
 # we don't have the filled-material icon library as a dependency. Hence, we have it here
 # in base64 format and send it over the wire as an image.
-_selected_star_icon = (
+_SELECTED_STAR_ICON: Final = (
     "<img src='data:image/svg+xml;base64,"
     "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0i"
     "MCAtOTYwIDk2MCA5NjAiIHdpZHRoPSIyNHB4IiBmaWxsPSIjNWY2MzY4Ij48cGF0aCBkPSJNNDgwLTI2OSAz"
@@ -44,7 +44,7 @@ _selected_star_icon = (
     "0ODAtMjY5WiIvPjwvc3ZnPg=='/>"
 )
 
-FeedbackOptions = Literal["thumbs", "faces", "stars"]
+FeedbackOptions: TypeAlias = Literal["thumbs", "faces", "stars"]
 
 
 class FeedbackSerde:
@@ -107,19 +107,19 @@ def get_mapped_options(
     if feedback_option == "thumbs":
         # reversing the index mapping to have thumbs up first (but still with the higher
         # index (=sentiment) in the list)
-        options_indices = list(reversed(range(len(_thumb_icons))))
-        options = [ButtonGroupProto.Option(content=icon) for icon in _thumb_icons]
+        options_indices = list(reversed(range(len(_THUMB_ICONS))))
+        options = [ButtonGroupProto.Option(content=icon) for icon in _THUMB_ICONS]
     elif feedback_option == "faces":
-        options_indices = list(range(len(_face_icons)))
-        options = [ButtonGroupProto.Option(content=icon) for icon in _face_icons]
+        options_indices = list(range(len(_FACES_ICONS)))
+        options = [ButtonGroupProto.Option(content=icon) for icon in _FACES_ICONS]
     elif feedback_option == "stars":
-        options_indices = list(range(_number_stars))
+        options_indices = list(range(_NUMBER_STARS))
         options = [
             ButtonGroupProto.Option(
-                content=_star_icon,
-                selected_content=_selected_star_icon,
+                content=_STAR_ICON,
+                selected_content=_SELECTED_STAR_ICON,
                 disable_selection_highlight=True,
             )
-        ] * _number_stars
+        ] * _NUMBER_STARS
 
     return options, options_indices

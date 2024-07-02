@@ -18,10 +18,10 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.elements.widgets.options_selector.feedback_utils import (
     create_format_func,
     get_mapped_options,
-    _star_icon,
-    _selected_star_icon,
-    _face_icons,
-    _thumb_icons,
+    _STAR_ICON,
+    _SELECTED_STAR_ICON,
+    _FACES_ICONS,
+    _THUMB_ICONS,
     FeedbackSerde,
 )
 from streamlit.errors import StreamlitAPIException
@@ -35,7 +35,7 @@ class TestGetMappedOptions:
         assert len(options_indices) == 2
 
         for index, option in enumerate(options):
-            assert option.content == _thumb_icons[index]
+            assert option.content == _THUMB_ICONS[index]
 
         # ensure order of thumbs
         assert "down" in options[1].content
@@ -50,7 +50,7 @@ class TestGetMappedOptions:
         assert len(options_indices) == 5
 
         for index, option in enumerate(options):
-            assert option.content == _face_icons[index]
+            assert option.content == _FACES_ICONS[index]
             assert option.selected_content == ""
             assert options_indices[index] == index
 
@@ -65,8 +65,8 @@ class TestGetMappedOptions:
         assert len(options_indices) == 5
 
         for index, option in enumerate(options):
-            assert option.content == _star_icon
-            assert option.selected_content == _selected_star_icon
+            assert option.content == _STAR_ICON
+            assert option.selected_content == _SELECTED_STAR_ICON
             assert options_indices[index] == index
             assert option.disable_selection_highlight == True
 
