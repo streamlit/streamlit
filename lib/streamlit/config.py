@@ -95,7 +95,6 @@ def set_user_option(key: str, value: Any) -> None:
 
     Currently, only the following config options can be set within the script itself:
         * client.caching
-        * deprecation.*
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -882,22 +881,6 @@ _create_option(
         """,
     visibility="hidden",
     default_val=False,
-    type_=bool,
-)
-
-
-# Config Section: deprecations
-
-_create_section("deprecation", "Configuration to show or hide deprecation warnings.")
-
-_create_option(
-    "deprecation.showPyplotGlobalUse",
-    description="Set to false to disable the deprecation warning for using the global pyplot instance.",
-    default_val=True,
-    scriptable=True,
-    deprecated=True,
-    deprecation_text="The support for global pyplot instances is planned to be removed soon.",
-    expiration_date="2024-04-15",
     type_=bool,
 )
 
