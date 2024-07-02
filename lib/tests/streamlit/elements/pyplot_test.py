@@ -15,7 +15,7 @@
 """st.pyplot unit tests."""
 
 from typing import Optional
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -76,6 +76,14 @@ class PyplotTest(DeltaGeneratorTestCase):
                 plt_clf.assert_called_once()
             else:
                 plt_clf.assert_not_called()
+
+    @patch("streamlit.elements.pyplot.show_deprecation_warning")
+    def test_global_object_deprecation_warning(self, show_warning_mock: Mock):
+        """We show deprecation warnings when st.pyplot is called without a figure object."""
+        plt.hist(np.random.normal(1, 1, size=100), bins=20)
+        st.pyplot()
+
+        show_warning_mock.assert_called_once()
 
     @parameterized.expand([("true", True), ("false", False), ("none", None)])
     def test_st_pyplot_clear_figure(self, _, clear_figure: Optional[bool]):
