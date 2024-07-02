@@ -15,7 +15,7 @@
 import pytest
 
 from streamlit.elements.lib.options_selector_utils import (
-    _check_and_convert_to_indices,
+    check_and_convert_to_indices,
     ensure_indexable_and_comparable,
     get_default_indices,
 )
@@ -25,23 +25,23 @@ import numpy as np
 
 class TestCheckAndConvertToIndices:
     def test_check_and_convert_to_indices_none_default(self):
-        res = _check_and_convert_to_indices(["a"], None)
+        res = check_and_convert_to_indices(["a"], None)
         assert res == None
 
     def test_check_and_convert_to_indices_single_default(self):
-        res = _check_and_convert_to_indices(["a", "b"], "a")
+        res = check_and_convert_to_indices(["a", "b"], "a")
         assert res == [0]
 
     def test_check_and_convert_to_indices_default_is_numpy_array(self):
-        res = _check_and_convert_to_indices(["a", "b"], np.array(["b"]))
+        res = check_and_convert_to_indices(["a", "b"], np.array(["b"]))
         assert res == [1]
 
     def test_check_and_convert_to_indices_default_is_tuple(self):
-        res = _check_and_convert_to_indices(["a", "b"], ("b",))
+        res = check_and_convert_to_indices(["a", "b"], ("b",))
         assert res == [1]
 
     def test_check_and_convert_to_indices_default_is_set(self):
-        res = _check_and_convert_to_indices(
+        res = check_and_convert_to_indices(
             ["a", "b"],
             set(
                 "b",
@@ -51,7 +51,7 @@ class TestCheckAndConvertToIndices:
 
     def test_check_and_convert_to_indices_default_not_in_opts(self):
         with pytest.raises(StreamlitAPIException):
-            _check_and_convert_to_indices(["a", "b"], "c")
+            check_and_convert_to_indices(["a", "b"], "c")
 
 
 class TestTransformOptions:

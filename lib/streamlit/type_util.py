@@ -114,7 +114,6 @@ V_co = TypeVar(
 )
 
 T = TypeVar("T")
-V = TypeVar("V")
 
 
 class DataFrameGenericAlias(Protocol[V_co]):

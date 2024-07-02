@@ -14,10 +14,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import (
     Any,
-    Generic,
     Sequence,
     cast,
 )
@@ -32,27 +30,7 @@ from streamlit.type_util import (
 )
 
 
-@dataclass
-class MultiSelectSerde(Generic[T]):
-    options: Sequence[T]
-    default_value: list[int] = field(default_factory=list)
-
-    def serialize(self, value: list[T]) -> list[int]:
-        indices = _check_and_convert_to_indices(self.options, value)
-        return indices if indices is not None else []
-
-    def deserialize(
-        self,
-        ui_value: list[int] | None,
-        widget_id: str = "",
-    ) -> list[T]:
-        current_value: list[int] = (
-            ui_value if ui_value is not None else self.default_value
-        )
-        return [self.options[i] for i in current_value]
-
-
-def _check_and_convert_to_indices(
+def check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any | None
 ) -> list[int] | None:
     """Perform validation checks and return indices based on the default values."""
@@ -94,6 +72,6 @@ def ensure_indexable_and_comparable(options: OptionSequence[T]) -> Sequence[T]:
 def get_default_indices(
     indexable_options: Sequence[T], default: Sequence[Any] | Any | None = None
 ) -> list[int]:
-    default_indices = _check_and_convert_to_indices(indexable_options, default)
+    default_indices = check_and_convert_to_indices(indexable_options, default)
     default_indices = default_indices if default_indices is not None else []
     return default_indices

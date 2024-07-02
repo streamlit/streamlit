@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
-    MultiSelectSerde,
+    check_and_convert_to_indices,
     ensure_indexable_and_comparable,
     get_default_indices,
 )
@@ -38,7 +39,7 @@ from streamlit.type_util import (
     Key,
     LabelVisibility,
     OptionSequence,
-    V,
+    T,
     is_iterable,
     maybe_raise_label_warnings,
     to_key,
@@ -51,6 +52,26 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+
+
+@dataclass
+class MultiSelectSerde(Generic[T]):
+    options: Sequence[T]
+    default_value: list[int] = field(default_factory=list)
+
+    def serialize(self, value: list[T]) -> list[int]:
+        indices = check_and_convert_to_indices(self.options, value)
+        return indices if indices is not None else []
+
+    def deserialize(
+        self,
+        ui_value: list[int] | None,
+        widget_id: str = "",
+    ) -> list[T]:
+        current_value: list[int] = (
+            ui_value if ui_value is not None else self.default_value
+        )
+        return [self.options[i] for i in current_value]
 
 
 def _get_over_max_options_message(current_selections: int, max_selections: int):
@@ -91,7 +112,7 @@ class MultiSelectMixin:
     def multiselect(
         self,
         label: str,
-        options: OptionSequence[V],
+        options: OptionSequence[T],
         default: Any | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
@@ -104,7 +125,7 @@ class MultiSelectMixin:
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[V]:
+    ) -> list[T]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -222,7 +243,7 @@ class MultiSelectMixin:
     def _multiselect(
         self,
         label: str,
-        options: OptionSequence[V],
+        options: OptionSequence[T],
         default: Sequence[Any] | Any | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
@@ -236,7 +257,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
-    ) -> list[V]:
+    ) -> list[T]:
         key = to_key(key)
 
         check_widget_policies(self.dg, key, on_change, default)

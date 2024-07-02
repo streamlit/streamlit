@@ -21,6 +21,7 @@ from typing import (
     Final,
     Literal,
     Sequence,
+    TypeVar,
     cast,
     get_args,
 )
@@ -29,7 +30,6 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
-    MultiSelectSerde,
     ensure_indexable_and_comparable,
     get_default_indices,
 )
@@ -37,6 +37,7 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     maybe_coerce_enum_sequence,
 )
+from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -49,7 +50,7 @@ from streamlit.runtime.state.common import (
     compute_widget_id,
     save_for_app_testing,
 )
-from streamlit.type_util import Key, OptionSequence, T, V, to_key
+from streamlit.type_util import Key, OptionSequence, T, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -58,6 +59,9 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+
+V = TypeVar("V")
+
 _THUMB_ICONS: Final = (":material/thumb_up:", ":material/thumb_down:")
 _FACES_ICONS: Final = (
     ":material/sentiment_sad:",
