@@ -270,8 +270,6 @@ class AppSession:
             The message to enqueue
 
         """
-        if not config.get_option("client.displayEnabled"):
-            return
 
         if self._debug_last_backmsg_id:
             msg.debug_last_backmsg_id = self._debug_last_backmsg_id
