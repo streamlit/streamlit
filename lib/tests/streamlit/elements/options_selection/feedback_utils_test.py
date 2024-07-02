@@ -16,7 +16,6 @@ import pytest
 
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.elements.widgets.options_selector.feedback_utils import (
-    create_format_func,
     get_mapped_options,
     _STAR_ICON,
     _SELECTED_STAR_ICON,
@@ -69,27 +68,6 @@ class TestGetMappedOptions:
             assert option.selected_content == _SELECTED_STAR_ICON
             assert options_indices[index] == index
             assert option.disable_selection_highlight == True
-
-
-class TestCreateFormatFunc:
-    def test_pass_single_option_return_option(self):
-        option = ButtonGroupProto.Option(content="test")
-        format_func = create_format_func(option)
-
-        # when single option is passed, always the same option is returned
-        for i in range(100):
-            assert format_func(i) == option
-
-    def pass_options(self):
-        option1 = ButtonGroupProto.Option(content="test1")
-        option2 = ButtonGroupProto.Option(content="test2")
-        format_func = create_format_func([option1, option2])
-
-        assert format_func(0) == option1
-        assert format_func(1) == option2
-
-        with pytest.raises(IndexError):
-            format_func(2)
 
 
 class TestFeedbackSerde:

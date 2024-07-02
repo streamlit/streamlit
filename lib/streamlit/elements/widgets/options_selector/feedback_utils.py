@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Final, Literal, TypeAlias
+from typing import Final, Literal, TypeAlias
 
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
@@ -77,29 +77,11 @@ class FeedbackSerde:
         return deserialized[0]
 
 
-def create_format_func(
-    option_icons: ButtonGroupProto.Option | list[ButtonGroupProto.Option],
-) -> Callable[[int], ButtonGroupProto.Option]:
-    """Return a function that accepts an index and returns the corresponding option.
-
-    If the passed options is None, returns an empty string.
-    If the passed options is a single option, always return the same option.
-    """
-
-    def format_func(option_index: int) -> ButtonGroupProto.Option:
-        if isinstance(option_icons, ButtonGroupProto.Option):
-            return option_icons
-
-        return option_icons[option_index]
-
-    return format_func
-
-
 def get_mapped_options(
     feedback_option: FeedbackOptions,
 ) -> tuple[list[ButtonGroupProto.Option], list[int]]:
     # options object understandable by the web app
-    options: ButtonGroupProto.Option | list[ButtonGroupProto.Option] = []
+    options: list[ButtonGroupProto.Option] = []
     # we use the option index in the webapp communication to
     # indicate which option is selected
     options_indices: list[int] = []
