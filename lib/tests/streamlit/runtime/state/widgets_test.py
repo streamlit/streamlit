@@ -421,10 +421,10 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         [
             (
                 st._internal_button_group,
-                "options_selector.button_group",
+                "button_group",
                 True,
             ),
-            (st.multiselect, "options_selector.multiselect", False),
+            (st.multiselect, "multiselect", False),
             (st.radio, "radio", False),
             (st.select_slider, "select_slider", False),
             (st.selectbox, "selectbox", False),

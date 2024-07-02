@@ -165,6 +165,7 @@ function getSelectedStyle(
 
   return {
     backgroundColor: theme.colors.lightGray,
+    color: theme.colors.black,
   }
 }
 
@@ -187,11 +188,18 @@ function createOptionChild(
     option.content ?? "",
     option.selectedContent
   )
-  const style = getSelectedStyle(
-    isVisuallySelected,
-    option.disableSelectionHighlight || false,
-    theme
-  )
+  const style = {
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.transparent,
+      borderColor: theme.colors.transparent,
+      color: theme.colors.gray50,
+    },
+    ...getSelectedStyle(
+      isVisuallySelected,
+      option.disableSelectionHighlight || false,
+      theme
+    ),
+  }
 
   // we have to use forwardRef here becaused BasewebButtonGroup passes it down to its children
   return forwardRef(function BaseButtonGroup(
@@ -202,7 +210,7 @@ function createOptionChild(
       <BaseButton
         {...props}
         size={BaseButtonSize.SMALL}
-        kind={BaseButtonKind.BUTTON_GROUP}
+        kind={BaseButtonKind.BORDERLESS_ICON}
         style={style}
       >
         {getContentElement(content)}

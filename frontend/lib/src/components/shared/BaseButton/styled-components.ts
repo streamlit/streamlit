@@ -32,7 +32,6 @@ export enum BaseButtonKind {
   HEADER_BUTTON = "header",
   HEADER_NO_PADDING = "headerNoPadding",
   ELEMENT_TOOLBAR = "elementToolbar",
-  BUTTON_GROUP = "buttonGroup",
 }
 
 export enum BaseButtonSize {
@@ -300,7 +299,7 @@ export const StyledHeaderNoPaddingButton = styled(
 
 export const StyledBorderlessIconButton = styled(
   StyledBaseButton
-)<RequiredBaseButtonProps>(({ size, theme }) => {
+)<RequiredBaseButtonProps>(({ size, theme, style }) => {
   const iconPadding: Record<BaseButtonSize, string> = {
     [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
     [BaseButtonSize.SMALL]: theme.spacing.twoXS,
@@ -322,6 +321,8 @@ export const StyledBorderlessIconButton = styled(
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
     },
+
+    ...style,
   }
 })
 
@@ -377,15 +378,3 @@ export const StyledElementToolbarButton = styled(
     },
   }
 })
-
-export const StyledButtonGroupButton = styled(
-  StyledElementToolbarButton
-)<RequiredBaseButtonProps>(() => ({ theme, style }) => ({
-  "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.transparent,
-    borderColor: theme.colors.transparent,
-    color: theme.colors.gray50,
-  },
-
-  ...style,
-}))

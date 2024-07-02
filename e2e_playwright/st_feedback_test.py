@@ -25,7 +25,7 @@ def get_button_group(app: Page, index: int) -> Locator:
 
 
 def get_feedback_icon_buttons(locator: Locator, type: str) -> Locator:
-    return locator.get_by_test_id("baseButton-buttonGroup").filter(has_text=type)
+    return locator.get_by_test_id("baseButton-borderlessIcon").filter(has_text=type)
 
 
 def get_feedback_icon_button(locator: Locator, type: str, index: int = 0) -> Locator:

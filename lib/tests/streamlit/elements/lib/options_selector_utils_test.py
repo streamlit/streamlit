@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from parameterized import parameterized
 import pytest
 
-from streamlit.elements.widgets.options_selector.options_selector_utils import (
+from streamlit.elements.lib.options_selector_utils import (
     _check_and_convert_to_indices,
     ensure_indexable_and_comparable,
     get_default_indices,

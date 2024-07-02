@@ -31,7 +31,6 @@ import {
   StyledHeaderButton,
   StyledHeaderNoPaddingButton,
   StyledElementToolbarButton,
-  StyledButtonGroupButton,
 } from "./styled-components"
 
 function BaseButton({
@@ -68,8 +67,6 @@ function BaseButton({
     ComponentType = StyledHeaderNoPaddingButton
   } else if (kind === BaseButtonKind.ELEMENT_TOOLBAR) {
     ComponentType = StyledElementToolbarButton
-  } else if (kind === BaseButtonKind.BUTTON_GROUP) {
-    ComponentType = StyledButtonGroupButton
   }
 
   return (

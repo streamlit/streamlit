@@ -97,7 +97,7 @@ describe("ButtonGroup widget", () => {
     const buttons = within(buttonGroupWidget).getAllByRole("button")
     expect(buttons).toHaveLength(3)
     buttons.forEach((button, index) => {
-      expect(button).toHaveAttribute("kind", "buttonGroup")
+      expect(button).toHaveAttribute("kind", "borderlessIcon")
       const icon = within(button).getByTestId("stIconMaterial")
       expect(icon.textContent).toContain(materialIconNames[index])
     })
@@ -117,7 +117,7 @@ describe("ButtonGroup widget", () => {
     const buttons = within(buttonGroupWidget).getAllByRole("button")
     expect(buttons).toHaveLength(2)
     buttons.forEach(button => {
-      expect(button).toHaveAttribute("kind", "buttonGroup")
+      expect(button).toHaveAttribute("kind", "borderlessIcon")
       within(button).getByTestId("stMarkdownContainer")
     })
     expect(buttons[0].textContent).toContain("Some text")
@@ -317,7 +317,7 @@ describe("ButtonGroup widget", () => {
 
       const buttons = getButtonGroupButtons()
       buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "buttonGroup")
+        expect(button).toHaveAttribute("kind", "borderlessIcon")
         const icon = within(button).getByTestId("stIconMaterial")
         expect(icon.textContent).toContain(materialIconNames[index])
       })
