@@ -288,8 +288,7 @@ def _ensure_image_size_and_format(
     """
     from PIL import Image
 
-    pil_image: PILImage
-    pil_image = Image.open(io.BytesIO(image_data))
+    pil_image: PILImage = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = pil_image.size
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
