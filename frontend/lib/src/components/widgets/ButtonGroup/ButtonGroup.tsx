@@ -23,6 +23,7 @@ import React, {
 } from "react"
 
 import { useTheme } from "@emotion/react"
+import isEqual from "lodash/isEqual"
 
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
@@ -236,10 +237,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const [selected, setSelected] = useState<number[]>(
     getInitialValue(widgetMgr, element) || []
   )
-  // initial render is due to mounting, hence setting it to false
-  const [isSetFromUi, setFromUi] = useState<boolean>(false)
 
   const elementRef = React.useRef(element)
+  // set to undefined for the first render so we know when its mounted
+  const selectedRef = React.useRef<number[] | undefined>(undefined)
+
   // This is required for the form clearing functionality:
   useEffect(() => {
     if (!element.formId) {
@@ -252,7 +254,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     // On form clear, reset the selections (in chart & widget state)
     formClearHelper.manageFormClearListener(widgetMgr, element.formId, () => {
       setSelected(defaultValues)
-      setFromUi(true)
     })
 
     return () => {
@@ -265,18 +266,18 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     const parsedValue = JSON.parse(valueString)
     if (setValue) {
       setSelected(parsedValue)
-      setFromUi(false)
+      syncValue(selected, elementRef.current, widgetMgr, fragmentId, false)
       elementRef.current.setValue = false
     } else {
-      syncValue(
-        selected,
-        elementRef.current,
-        widgetMgr,
-        fragmentId,
-        isSetFromUi
-      )
+      // only commit to the backend if the value has changed
+      if (isEqual(selected, selectedRef.current)) {
+        return
+      }
+      const fromUi = selectedRef.current === undefined ? false : true
+      syncValue(selected, elementRef.current, widgetMgr, fragmentId, fromUi)
     }
-  }, [selected, widgetMgr, fragmentId, valueString, setValue, isSetFromUi])
+    selectedRef.current = selected
+  }, [selected, widgetMgr, fragmentId, valueString, setValue])
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
@@ -284,7 +285,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   ): void => {
     const newSelected = handleSelection(clickMode, index, selected)
     setSelected(newSelected)
-    setFromUi(true)
   }
 
   let mode = undefined

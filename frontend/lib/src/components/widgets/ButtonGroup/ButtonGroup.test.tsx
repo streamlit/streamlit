@@ -154,6 +154,7 @@ describe("ButtonGroup widget", () => {
         { fromUi: false },
         undefined
       )
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
 
       fireEvent.click(buttons[1])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
@@ -162,6 +163,7 @@ describe("ButtonGroup widget", () => {
         { fromUi: true },
         undefined
       )
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
 
       fireEvent.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
@@ -170,6 +172,11 @@ describe("ButtonGroup widget", () => {
         { fromUi: true },
         undefined
       )
+
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
+      // click on same button does not increase counter
+      fireEvent.click(getButtonGroupButtons()[0])
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
     })
 
     it("onClick prop for multi select", () => {
@@ -245,11 +252,21 @@ describe("ButtonGroup widget", () => {
 
     it("sets widget value on update", () => {
       const props = getProps({ value: [1], setValue: true })
+      jest.spyOn(props.widgetMgr, "setIntArrayValue")
 
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()
       expectHighlightStyle(buttons[1])
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
+
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+        props.element,
+        props.element.default,
+        {
+          fromUi: false,
+        },
+        undefined
+      )
     })
 
     describe("visualize selection behavior", () => {
