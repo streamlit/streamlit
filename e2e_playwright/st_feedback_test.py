@@ -33,32 +33,32 @@ def get_feedback_icon_button(locator: Locator, type: str, index: int = 0) -> Loc
 
 
 def test_click_thumbsup_and_take_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    thumbs = get_button_group(app, 0)
+    thumbs = get_button_group(themed_app, 0)
     get_feedback_icon_button(thumbs, "thumb_up").click()
-    wait_for_app_run(app)
+    wait_for_app_run(themed_app)
     assert_snapshot(thumbs, name="st_feedback-thumbs")
 
 
 def test_clicking_on_faces_shows_sentiment_via_on_change_callback_and_take_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    faces = get_button_group(app, 1)
+    faces = get_button_group(themed_app, 1)
     get_feedback_icon_button(faces, "sentiment_satisfied").click()
-    wait_for_app_run(app)
-    text = get_markdown(app, "Faces sentiment: 3")
+    wait_for_app_run(themed_app)
+    text = get_markdown(themed_app, "Faces sentiment: 3")
     expect(text).to_be_attached()
     assert_snapshot(faces, name="st_feedback-faces")
 
 
 def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    stars = get_button_group(app, 2)
+    stars = get_button_group(themed_app, 2)
     get_feedback_icon_button(stars, "star", 4).click()
-    wait_for_app_run(app)
-    text = get_markdown(app, "Star sentiment: 4")
+    wait_for_app_run(themed_app)
+    text = get_markdown(themed_app, "Star sentiment: 4")
     expect(text).to_be_attached()
     assert_snapshot(stars, name="st_feedback-stars")
 
