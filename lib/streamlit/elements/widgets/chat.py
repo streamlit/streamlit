@@ -298,8 +298,8 @@ class ChatMixin:
             height: 350px
 
         The chat input can also be used inline by nesting it inside any layout
-        container (container, columns, tabs, sidebar, etc) or fragment. Create 
-        chat interfaces embedded next to other content or have multiple 
+        container (container, columns, tabs, sidebar, etc) or fragment. Create
+        chat interfaces embedded next to other content or have multiple
         chatbots!
 
         >>> import streamlit as st
