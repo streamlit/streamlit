@@ -18,6 +18,7 @@ import asyncio
 import os
 import signal
 import sys
+import importlib
 from typing import Any, Final
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets, util
@@ -315,6 +316,13 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
             watch_file(filename, on_config_changed)
 
 
+def _run_init_script():
+    init = config.get_option("server.init")
+    if init:
+        mod, func = init.split(":")
+        getattr(importlib.import_module(mod), func)()
+
+
 def run(
     main_script_path: str,
     is_hello: bool,
@@ -331,6 +339,7 @@ def run(
     _fix_pydeck_mapbox_api_warning()
     _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
+    _run_init_script()
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)
