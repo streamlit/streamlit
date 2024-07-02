@@ -631,7 +631,6 @@ class Runtime:
 
                     for active_session_info in self._session_mgr.list_active_sessions():
                         msg_list = active_session_info.session.flush_browser_queue()
-
                         for msg in msg_list:
                             try:
                                 self._send_message(active_session_info, msg)
