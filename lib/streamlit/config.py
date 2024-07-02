@@ -329,18 +329,6 @@ def _global_development_mode() -> bool:
 
 
 _create_option(
-    "global.logLevel",
-    description="""Level of logging: 'error', 'warning', 'info', or 'debug'.
-
-    Default: 'info'
-    """,
-    deprecated=True,
-    deprecation_text="global.logLevel has been replaced with logger.level",
-    expiration_date="2020-11-30",
-    replaced_by="logger.level",
-)
-
-_create_option(
     "global.e2eTest",
     description="Are we in an e2e (playwright) test? Set automatically when our e2e tests are running.",
     visibility="hidden",
@@ -401,21 +389,6 @@ _create_option(
     type_=bool,
 )
 
-_create_option(
-    "global.dataFrameSerialization",
-    description="""
-        DataFrame serialization.
-
-        Acceptable values:
-        - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
-          but battle-tested.
-        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
-    default_val="arrow",
-    type_=str,
-    deprecated=True,
-    deprecation_text="Legacy serialization has been removed. All dataframes will be serialized using Apache Arrow.",
-    expiration_date="2023-11-01",
-)
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -427,9 +400,7 @@ def _logger_log_level() -> str:
 
     Default: 'info'
     """
-    if get_option("global.logLevel"):
-        return str(get_option("global.logLevel"))
-    elif get_option("global.developmentMode"):
+    if get_option("global.developmentMode"):
         return "debug"
     else:
         return "info"
@@ -925,17 +896,6 @@ _create_option(
     visibility="hidden",
 )
 
-_create_option(
-    "ui.hideSidebarNav",
-    description="Flag to hide the sidebar page navigation component.",
-    default_val=False,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
-    expiration_date="2024-01-20",
-    visibility="hidden",
-)
-
 
 # Config Section: Mapbox #
 
@@ -985,28 +945,6 @@ _create_option(
 # Config Section: deprecations
 
 _create_section("deprecation", "Configuration to show or hide deprecation warnings.")
-
-_create_option(
-    "deprecation.showfileUploaderEncoding",
-    description="Set to false to disable the deprecation warning for the file uploader encoding.",
-    default_val=True,
-    scriptable=True,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="deprecation.showfileUploaderEncoding has been deprecated and will be removed in a future version.",
-    expiration_date="2021-01-06",
-)
-
-_create_option(
-    "deprecation.showImageFormat",
-    description="Set to false to disable the deprecation warning for the image format parameter.",
-    default_val=True,
-    scriptable=True,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="The format parameter for st.image has been removed.",
-    expiration_date="2021-03-24",
-)
 
 _create_option(
     "deprecation.showPyplotGlobalUse",

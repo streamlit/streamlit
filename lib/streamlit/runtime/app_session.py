@@ -883,8 +883,6 @@ def _populate_config_msg(msg: Config) -> None:
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
-    # ui.hideSidebarNav is deprecated, will be removed in the future
-    msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
