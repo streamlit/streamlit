@@ -16,7 +16,7 @@ import datetime
 
 import streamlit as st
 
-valid_label = "**Bold Text** *Italicized* ~Strikethough~ `Code Block` 🐶 :joy:"
+valid_label = ":material/check_circle: **Bold Text** *Italicized* ~Strikethough~ `Code Block` 🐶 :joy:"
 
 color_label = (
     "Colored Text - :red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]"
@@ -115,6 +115,7 @@ with st.container():
             "`Code Block`",
             "🐶",
             ":joy:",
+            ":material/check_circle: Icon",
         ]
     )
 

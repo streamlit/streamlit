@@ -426,8 +426,12 @@ class ScriptRunner:
             start_time: float = timer()
             prep_time: float = 0  # This will be overwritten once preparations are done.
 
-            # Reset DeltaGenerators, widgets, media files.
-            runtime.get_instance().media_file_mgr.clear_session_refs()
+            if not rerun_data.fragment_id_queue:
+                # Don't clear session refs for media files if we're running a fragment.
+                # Otherwise, we're likely to remove files that still have corresponding
+                # download buttons/links to them present in the app, which will result
+                # in a 404 should the user click on them.
+                runtime.get_instance().media_file_mgr.clear_session_refs()
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
