@@ -23,6 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.exceptions import RerunException
@@ -48,8 +49,8 @@ class MemoryFragmentStorageTest(unittest.TestCase):
     def test_get(self):
         assert self._storage.get("some_key") == "some_fragment"
 
-    def test_get_KeyError(self):
-        with pytest.raises(KeyError):
+    def test_get_FragmentStorageKeyError(self):
+        with pytest.raises(FragmentStorageKeyError):
             self._storage.get("nonexistent_key")
 
     def test_set(self):
@@ -61,11 +62,11 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
     def test_delete(self):
         self._storage.delete("some_key")
-        with pytest.raises(KeyError):
+        with pytest.raises(FragmentStorageKeyError):
             self._storage.get("nonexistent_key")
 
-    def test_del_KeyError(self):
-        with pytest.raises(KeyError):
+    def test_del_FragmentStorageKeyError(self):
+        with pytest.raises(FragmentStorageKeyError):
             self._storage.delete("nonexistent_key")
 
     def test_clear(self):
