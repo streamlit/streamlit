@@ -27,6 +27,7 @@ from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
 from streamlit.delta_generator import DeltaGenerator, dg_stack
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
@@ -353,6 +354,38 @@ class ScriptRunnerTest(AsyncTestCase):
 
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_FragmentStorageKeyError_becomes_RuntimeError(
+        self, patched_handle_exception
+    ):
+        fragment = MagicMock()
+        fragment.side_effect = FragmentStorageKeyError("kaboom")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        ex = patched_handle_exception.call_args[0][0]
+        assert isinstance(ex, RuntimeError)
+
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_regular_KeyError_is_rethrown(self, patched_handle_exception):
+        fragment = MagicMock()
+        fragment.side_effect = KeyError("kaboom")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        ex = patched_handle_exception.call_args[0][0]
+        assert isinstance(ex, KeyError)
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
