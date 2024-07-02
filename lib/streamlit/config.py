@@ -829,6 +829,15 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.init",
+    description="""
+        Call specified function on startup.
+        """,
+    default_val="",
+    type_=str,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")
