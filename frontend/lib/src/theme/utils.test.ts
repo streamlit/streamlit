@@ -654,3 +654,44 @@ describe("getWrappedHeadersStyle", () => {
     })
   })
 })
+
+describe("theme overrides", () => {
+  beforeEach(async () => {
+    jest.resetModules()
+    window.__streamlit = undefined
+  })
+
+  afterEach(() => {
+    jest.resetModules()
+    window.__streamlit = undefined
+  })
+
+  it("honors the window variables set", async () => {
+    window.__streamlit = {
+      LIGHT_THEME: {
+        primaryColor: "purple",
+      },
+      DARK_THEME: {
+        primaryColor: "yellow",
+      },
+    }
+
+    const module = await import("./utils")
+    // Ensure we are not working with the same object
+    expect(module.getMergedLightTheme()).not.toEqual(lightTheme)
+    expect(module.getMergedDarkTheme()).not.toEqual(darkTheme)
+
+    expect(module.getMergedLightTheme().emotion.colors.primary).toEqual(
+      "purple"
+    )
+    expect(module.getMergedDarkTheme().emotion.colors.primary).toEqual(
+      "yellow"
+    )
+  })
+
+  it("maintains original theme if no global themes are specified", async () => {
+    const module = await import("./utils")
+    expect(module.getMergedLightTheme()).toEqual(lightTheme)
+    expect(module.getMergedDarkTheme()).toEqual(darkTheme)
+  })
+})
