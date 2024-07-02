@@ -16,28 +16,12 @@ from parameterized import parameterized
 import pytest
 
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
-    _get_default_count,
     _check_and_convert_to_indices,
     ensure_indexable_and_comparable,
     get_default_indices,
 )
 from streamlit.errors import StreamlitAPIException
 import numpy as np
-
-
-class TestDefaultCount:
-    @parameterized.expand(
-        [
-            (["a", "b", "c"], 3),
-            (["a"], 1),
-            ([], 0),
-            ("a", 1),
-            (None, 0),
-            (("a", "b", "c"), 3),
-        ]
-    )
-    def test_get_default_count(self, default, expected_count):
-        assert _get_default_count(default) == expected_count
 
 
 class TestCheckAndConvertToIndices:

@@ -35,7 +35,6 @@ from streamlit.type_util import (
     T,
     check_python_comparable,
     ensure_indexable,
-    is_iterable,
     is_type,
 )
 
@@ -99,26 +98,6 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def _get_over_max_options_message(current_selections: int, max_selections: int):
-    curr_selections_noun = "option" if current_selections == 1 else "options"
-    max_selections_noun = "option" if max_selections == 1 else "options"
-    return f"""
-Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
-is set to {max_selections}. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most {max_selections} {max_selections_noun}.
-"""
-
-
-def _get_default_count(default: Sequence[Any] | Any | None) -> int:
-    if default is None:
-        return 0
-    if not is_iterable(default):
-        return 1
-    return len(cast(Sequence[Any], default))
-
-
 def check_multiselect_policies(
     dg: DeltaGenerator,
     key: str | None,
@@ -129,19 +108,6 @@ def check_multiselect_policies(
     check_cache_replay_rules()
     check_callback_rules(dg, on_change)
     check_session_state_rules(default_value=default, key=key, writes_allowed=True)
-
-
-def check_max_selections(
-    selections: Sequence[Any] | Any | None, max_selections: int | None
-):
-    if max_selections is None:
-        return
-
-    default_count = _get_default_count(selections)
-    if default_count > max_selections:
-        raise StreamlitAPIException(
-            _get_over_max_options_message(default_count, max_selections)
-        )
 
 
 def ensure_indexable_and_comparable(options: OptionSequence[T]) -> Sequence[T]:

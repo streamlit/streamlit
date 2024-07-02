@@ -24,11 +24,11 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.elements.widgets.options_selector.options_selector_utils import (
     MultiSelectSerde,
-    check_max_selections,
     check_multiselect_policies,
     ensure_indexable_and_comparable,
     get_default_indices,
 )
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -39,6 +39,7 @@ from streamlit.type_util import (
     LabelVisibility,
     OptionSequence,
     V,
+    is_iterable,
     maybe_raise_label_warnings,
     to_key,
 )
@@ -50,6 +51,39 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+
+
+def _get_over_max_options_message(current_selections: int, max_selections: int):
+    curr_selections_noun = "option" if current_selections == 1 else "options"
+    max_selections_noun = "option" if max_selections == 1 else "options"
+    return f"""
+Multiselect has {current_selections} {curr_selections_noun} selected but `max_selections`
+is set to {max_selections}. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most {max_selections} {max_selections_noun}.
+"""
+
+
+def _get_default_count(default: Sequence[Any] | Any | None) -> int:
+    if default is None:
+        return 0
+    if not is_iterable(default):
+        return 1
+    return len(cast(Sequence[Any], default))
+
+
+def _check_max_selections(
+    selections: Sequence[Any] | Any | None, max_selections: int | None
+):
+    if max_selections is None:
+        return
+
+    default_count = _get_default_count(selections)
+    if default_count > max_selections:
+        raise StreamlitAPIException(
+            _get_over_max_options_message(default_count, max_selections)
+        )
 
 
 class MultiSelectMixin:
@@ -257,7 +291,7 @@ class MultiSelectMixin:
             ctx=ctx,
         )
 
-        check_max_selections(widget_state.value, max_selections)
+        _check_max_selections(widget_state.value, max_selections)
         widget_state = maybe_coerce_enum_sequence(
             widget_state, options, indexable_options
         )

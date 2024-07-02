@@ -28,7 +28,8 @@ from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from streamlit.elements.widgets.options_selector.options_selector_utils import (
+from streamlit.elements.widgets.options_selector.multiselect import (
+    _get_default_count,
     _get_over_max_options_message,
 )
 
@@ -293,6 +294,19 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.max_selections, 2)
+
+    @parameterized.expand(
+        [
+            (["a", "b", "c"], 3),
+            (["a"], 1),
+            ([], 0),
+            ("a", 1),
+            (None, 0),
+            (("a", "b", "c"), 3),
+        ]
+    )
+    def test_get_default_count(self, default, expected_count):
+        assert _get_default_count(default) == expected_count
 
     def test_placeholder(self):
         """Test that it can be called with placeholder params."""
