@@ -17,6 +17,7 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_warning
 
 
 def test_displays_a_pyplot_figures(
@@ -24,7 +25,7 @@ def test_displays_a_pyplot_figures(
 ):
     """Test that all pyplot figures are displayed correctly via screenshot matching."""
     pyplot_elements = themed_app.get_by_test_id("stImage")
-    expect(pyplot_elements).to_have_count(6)
+    expect(pyplot_elements).to_have_count(8)
 
     # pyplot graph assertion
     expect(themed_app.get_by_test_id("stImage").last.locator("img")).to_have_attribute(
@@ -37,3 +38,12 @@ def test_displays_a_pyplot_figures(
     assert_snapshot(pyplot_elements.nth(3), name="st_pyplot-container_width_false")
     assert_snapshot(pyplot_elements.nth(4), name="st_pyplot-seaborn")
     assert_snapshot(pyplot_elements.nth(5), name="st_pyplot-seaborn_using_kwargs")
+
+    # Snapshot testing the global object is flaky. But we anyways want to remove this,
+    # functionality so we can just comment it out for now.
+    # assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")
+
+
+def test_shows_deprecation_warning(app: Page):
+    """Test that the deprecation warning is displayed correctly."""
+    expect_warning(app, "without providing a figure argument has been deprecated")
