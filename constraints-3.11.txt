@@ -49,7 +49,7 @@ langchain==0.2.6
 langchain-community==0.2.6
 langchain-core==0.2.10
 langchain-text-splitters==0.2.2
-langsmith==0.1.82
+langsmith==0.1.83
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -63,11 +63,11 @@ mypy-protobuf==3.6.0
 nh3==0.2.17
 nodeenv==1.9.1
 numpy==1.26.4
-orjson==3.10.5
+orjson==3.10.6
 packaging==24.1
 pandas==2.2.2
 parameterized==0.9.0
-pillow==10.3.0
+pillow==10.4.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
 platformdirs==4.2.2
