@@ -21,14 +21,14 @@ def get_uuids(app: Page):
     expect(app.get_by_test_id("stMarkdown")).to_have_count(3)
 
     outside_fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
-    inner_fragment_text = app.get_by_test_id("stMarkdown").nth(1).text_content()
-    outer_fragment_text = app.get_by_test_id("stMarkdown").last.text_content()
+    outer_fragment_text = app.get_by_test_id("stMarkdown").nth(1).text_content()
+    inner_fragment_text = app.get_by_test_id("stMarkdown").last.text_content()
 
-    return outside_fragment_text, inner_fragment_text, outer_fragment_text
+    return outside_fragment_text, outer_fragment_text, inner_fragment_text
 
 
 def test_full_app_rerun(app: Page):
-    outside_fragment_text, inner_fragment_text, outer_fragment_text = get_uuids(app)
+    outside_fragment_text, outer_fragment_text, inner_fragment_text = get_uuids(app)
 
     click_button(app, "rerun whole app")
 
@@ -37,13 +37,13 @@ def test_full_app_rerun(app: Page):
         outside_fragment_text
     )
     expect(app.get_by_test_id("stMarkdown").nth(1)).not_to_have_text(
-        inner_fragment_text
+        outer_fragment_text
     )
-    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(outer_fragment_text)
+    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(inner_fragment_text)
 
 
 def test_outer_fragment_rerun(app: Page):
-    outside_fragment_text, inner_fragment_text, outer_fragment_text = get_uuids(app)
+    outside_fragment_text, outer_fragment_text, inner_fragment_text = get_uuids(app)
 
     click_button(app, "rerun outer fragment")
 
@@ -51,17 +51,17 @@ def test_outer_fragment_rerun(app: Page):
     # constant, but the other two should have changed.
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(outside_fragment_text)
     expect(app.get_by_test_id("stMarkdown").nth(1)).not_to_have_text(
-        inner_fragment_text
+        outer_fragment_text
     )
-    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(outer_fragment_text)
+    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(inner_fragment_text)
 
 
 def test_inner_fragment_rerun(app: Page):
-    outside_fragment_text, inner_fragment_text, outer_fragment_text = get_uuids(app)
+    outside_fragment_text, outer_fragment_text, inner_fragment_text = get_uuids(app)
 
     click_button(app, "rerun inner fragment")
 
     # We reran the inner fragment. Only that corresponding UUID should have changed.
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(outside_fragment_text)
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(inner_fragment_text)
-    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(outer_fragment_text)
+    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(outer_fragment_text)
+    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(inner_fragment_text)
