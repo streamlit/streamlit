@@ -168,7 +168,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
       const strStep = step.toString()
       if (this.isFloatData() && step !== 0 && strStep.includes(".")) {
         const decimalPlaces = strStep.split(".")[1].length
-        format = `%.${decimalPlaces}f`
+        format = `%0.${decimalPlaces}f`
       }
     }
 
