@@ -102,7 +102,7 @@ class TestQueryParamsProxy(unittest.TestCase):
 
     def test__getattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):
-            self.query_params_proxy.nonexistent
+            self.query_params_proxy.nonexistent  # noqa: B018
 
     def test__delattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):

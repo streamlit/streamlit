@@ -75,7 +75,7 @@ class TypeUtilTest(unittest.TestCase):
         self.assertTrue(res)
 
     def test_is_namedtuple(self):
-        Boy = namedtuple("Boy", ("name", "age"))
+        Boy = namedtuple("Boy", ("name", "age"))  # noqa: PYI024
         John = Boy("John", "29")
 
         res = type_util.is_namedtuple(John)

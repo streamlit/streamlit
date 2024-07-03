@@ -444,10 +444,10 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         sum_weights = sum(weights)
         st.columns(weights)
 
-        for i, w in enumerate(weights):
+        for idx, weight in enumerate(weights):
             # Pull the delta from the back of the queue, using negative index
-            delta = self.get_delta_from_queue(i - len(weights))
-            self.assertEqual(delta.add_block.column.weight, w / sum_weights)
+            delta = self.get_delta_from_queue(idx - len(weights))
+            self.assertEqual(delta.add_block.column.weight, weight / sum_weights)
 
     def test_bad_columns_negative_int(self):
         with self.assertRaises(StreamlitAPIException):

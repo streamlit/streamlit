@@ -146,7 +146,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         """Test a named variable using walrus operator."""
 
         with patch_varname_getter():
-            st.help(myvar := 123)
+            st.help(myvar := 123)  # noqa: F841
 
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("myvar", ds.name)

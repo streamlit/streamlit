@@ -165,10 +165,10 @@ class SecretsTest(unittest.TestCase):
     def test_getattr_nonexistent(self, *mocks):
         """Verify that access to missing attribute raises  AttributeError."""
         with self.assertRaises(AttributeError):
-            self.secrets.nonexistent_secret
+            self.secrets.nonexistent_secret  # noqa: B018
 
         with self.assertRaises(AttributeError):
-            self.secrets.subsection.nonexistent_secret
+            self.secrets.subsection.nonexistent_secret  # noqa: B018
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
