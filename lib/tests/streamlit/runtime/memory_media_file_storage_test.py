@@ -14,6 +14,8 @@
 
 """Unit tests for MemoryMediaFileStorage"""
 
+from __future__ import annotations
+
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock, mock_open

@@ -14,9 +14,10 @@
 
 """Unit tests for MediaFileManager"""
 
+from __future__ import annotations
+
 import random
 import unittest
-from typing import Optional
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, call, mock_open
 
@@ -101,7 +102,7 @@ class MediaFileManagerTest(TestCase):
         content: bytes,
         mimetype: str,
         coordinates: str,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> MemoryFile:
         """Add a new file to our test manager and return its MediaFile object."""
         file_id = _calculate_file_id(content, mimetype, filename)

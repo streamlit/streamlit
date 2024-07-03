@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
-from typing import Dict, List, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +26,7 @@ from streamlit.runtime.state.session_state import SessionState
 
 
 def _create_mock_session_state(
-    initial_query_params_values: Dict[str, Union[List[str], str]],
+    initial_query_params_values: dict[str, list[str] | str],
 ) -> SafeSessionState:
     """Return a new SafeSessionState instance populated with the
     given query param values.
