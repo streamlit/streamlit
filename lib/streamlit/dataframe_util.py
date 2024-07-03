@@ -27,7 +27,6 @@ from typing import (
     Iterable,
     Protocol,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
     cast,
