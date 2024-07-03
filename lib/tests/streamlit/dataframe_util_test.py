@@ -856,7 +856,7 @@ class DataframeUtilTest(unittest.TestCase):
         a variety of types to a sequence.
         """
         converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
-        self.assertEquals(set(converted_sequence), set(result_sequence))
+        self.assertEqual(set(converted_sequence), set(result_sequence))
         # Check that it is a new object and not the same as the input:
         assert converted_sequence is not input_data
 
