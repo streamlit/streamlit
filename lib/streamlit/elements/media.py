@@ -95,7 +95,7 @@ class MediaMixin:
             one of the following:
 
             * ``None`` (default): The element plays from the beginning.
-            * An``int`` or ``float`` specifying the time in seconds. ``float``
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
               values are rounded down to whole seconds.
             * A string specifying the time in a format supported by `Pandas'
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
