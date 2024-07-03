@@ -35,11 +35,7 @@ const expectHighlightStyle = (
   if (!should_exist) {
     expectCheck = expect.not
   }
-  // style="background-color: rgb(230, 234, 241);"
-  expectCheck.toHaveAttribute(
-    "style",
-    expect.stringMatching(/background-color: rgb(.*);/)
-  )
+  expectCheck.toHaveStyle("background-color: rgb(230, 234, 241);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {
@@ -90,7 +86,7 @@ describe("ButtonGroup widget", () => {
   })
 
   it("option-children with material-icon render correctly", () => {
-    const props = getProps()
+    const props = getProps({ default: [] })
     render(<ButtonGroup {...props} />)
 
     const buttonGroupWidget = screen.getByTestId("stButtonGroup")
@@ -329,7 +325,7 @@ describe("ButtonGroup widget", () => {
     })
 
     it("show selection content when selected and available", () => {
-      const props = getProps()
+      const props = getProps({ default: [] })
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()

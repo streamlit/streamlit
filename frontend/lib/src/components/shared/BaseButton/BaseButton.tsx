@@ -20,6 +20,7 @@ import {
   BaseButtonKind,
   BaseButtonSize,
   StyledBorderlessIconButton,
+  StyledBorderlessIconButtonActive,
   StyledIconButton,
   StyledLinkButton,
   StyledMinimalButton,
@@ -41,7 +42,6 @@ function BaseButton({
   fluidWidth,
   children,
   autoFocus,
-  style,
 }: Readonly<BaseButtonPropsT>): ReactElement {
   let ComponentType = StyledPrimaryButton
 
@@ -55,6 +55,8 @@ function BaseButton({
     ComponentType = StyledIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
+  } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {
+    ComponentType = StyledBorderlessIconButtonActive
   } else if (kind === BaseButtonKind.MINIMAL) {
     ComponentType = StyledMinimalButton
   } else if (kind === BaseButtonKind.PRIMARY_FORM_SUBMIT) {
@@ -78,7 +80,6 @@ function BaseButton({
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
       data-testid={`baseButton-${kind}`}
-      style={style || {}}
     >
       {children}
     </ComponentType>

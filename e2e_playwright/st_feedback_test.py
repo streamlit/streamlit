@@ -25,7 +25,9 @@ def get_button_group(app: Page, index: int) -> Locator:
 
 
 def get_feedback_icon_buttons(locator: Locator, type: str) -> Locator:
-    return locator.get_by_test_id("baseButton-borderlessIcon").filter(has_text=type)
+    return locator.get_by_test_id(
+        re.compile("baseButton-borderlessIcon(Active)?")
+    ).filter(has_text=type)
 
 
 def get_feedback_icon_button(locator: Locator, type: str, index: int = 0) -> Locator:
@@ -56,9 +58,9 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     stars = get_button_group(themed_app, 2)
-    get_feedback_icon_button(stars, "star", 4).click()
+    get_feedback_icon_button(stars, "star", 3).click()
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Star sentiment: 4")
+    text = get_markdown(themed_app, "Star sentiment: 3")
     expect(text).to_be_attached()
     assert_snapshot(stars, name="st_feedback-stars")
 
@@ -111,7 +113,6 @@ def test_feedback_remount_keep_value(app: Page):
     selected_button.click()
     wait_for_app_run(app)
     expect(app.get_by_text("feedback-after-sleep: 1")).to_be_visible()
-
     expect(selected_button).to_have_css(
         "background-color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )

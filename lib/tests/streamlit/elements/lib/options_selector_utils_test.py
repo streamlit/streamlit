@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
 from streamlit.elements.lib.options_selector_utils import (
@@ -20,13 +21,12 @@ from streamlit.elements.lib.options_selector_utils import (
     get_default_indices,
 )
 from streamlit.errors import StreamlitAPIException
-import numpy as np
 
 
 class TestCheckAndConvertToIndices:
     def test_check_and_convert_to_indices_none_default(self):
         res = check_and_convert_to_indices(["a"], None)
-        assert res == None
+        assert res is None
 
     def test_check_and_convert_to_indices_single_default(self):
         res = check_and_convert_to_indices(["a", "b"], "a")

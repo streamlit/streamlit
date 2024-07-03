@@ -26,6 +26,7 @@ export enum BaseButtonKind {
   LINK = "link",
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
+  BORDERLESS_ICON_ACTIVE = "borderlessIconActive",
   MINIMAL = "minimal",
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
@@ -50,8 +51,6 @@ export interface BaseButtonProps {
   fluidWidth?: boolean | number
   children: ReactNode
   autoFocus?: boolean
-  // Additional styles for the button
-  style?: React.CSSProperties
 }
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
@@ -299,7 +298,7 @@ export const StyledHeaderNoPaddingButton = styled(
 
 export const StyledBorderlessIconButton = styled(
   StyledBaseButton
-)<RequiredBaseButtonProps>(({ size, theme, style }) => {
+)<RequiredBaseButtonProps>(({ size, theme }) => {
   const iconPadding: Record<BaseButtonSize, string> = {
     [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
     [BaseButtonSize.SMALL]: theme.spacing.twoXS,
@@ -321,13 +320,23 @@ export const StyledBorderlessIconButton = styled(
       boxShadow: "none",
       outline: "none",
     },
+    "&:hover": {
+      backgroundColor: theme.colors.lightGray,
+    },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.transparent,
       borderColor: theme.colors.transparent,
       color: theme.colors.gray50,
     },
+  }
+})
 
-    ...style,
+export const StyledBorderlessIconButtonActive = styled(
+  StyledBorderlessIconButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    backgroundColor: theme.colors.lightGray,
+    color: theme.colors.black,
   }
 })
 

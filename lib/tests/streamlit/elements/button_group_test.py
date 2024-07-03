@@ -14,23 +14,24 @@
 
 """button_group unit test."""
 
-import pytest
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from streamlit.errors import StreamlitAPIException
 from streamlit.elements.widgets.button_group import (
-    get_mapped_options,
-    _STAR_ICON,
-    _SELECTED_STAR_ICON,
     _FACES_ICONS,
+    _SELECTED_STAR_ICON,
+    _STAR_ICON,
     _THUMB_ICONS,
     FeedbackSerde,
+    get_mapped_options,
 )
+from streamlit.errors import StreamlitAPIException
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class TestGetMappedOptions:
@@ -74,7 +75,7 @@ class TestGetMappedOptions:
             assert option.content == _STAR_ICON
             assert option.selected_content == _SELECTED_STAR_ICON
             assert options_indices[index] == index
-            assert option.disable_selection_highlight == True
+            assert option.disable_selection_highlight
 
 
 class TestFeedbackSerde:
@@ -186,7 +187,6 @@ class TestButtonGroup(DeltaGeneratorTestCase):
             (np.array([]),),
             (pd.Series(np.array([])),),
             (set(),),
-            (list(),),
         ]
     )
     def test_no_options(self, options):

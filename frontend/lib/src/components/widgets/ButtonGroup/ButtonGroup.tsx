@@ -156,28 +156,13 @@ function getContent(
   return fallbackContent
 }
 
-function getSelectedStyle(
-  isVisuallySelected: boolean,
-  isSelectionHighlightDisabled: boolean,
-  theme: EmotionTheme
-): Record<string, string> | undefined {
-  if (!isVisuallySelected || isSelectionHighlightDisabled) {
-    return undefined
-  }
-
-  return {
-    backgroundColor: theme.colors.lightGray,
-    color: theme.colors.black,
-  }
-}
-
 function createOptionChild(
   option: ButtonGroupProto.IOption,
   index: number,
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
-  selected: number[],
-  theme: EmotionTheme
+  selected: number[]
+  // theme: EmotionTheme
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -190,24 +175,18 @@ function createOptionChild(
     option.content ?? "",
     option.selectedContent
   )
-  const style = getSelectedStyle(
-    isVisuallySelected,
-    option.disableSelectionHighlight || false,
-    theme
-  )
 
   // we have to use forwardRef here becaused BasewebButtonGroup passes it down to its children
+  const buttonKind =
+    !isVisuallySelected || option.disableSelectionHighlight || false
+      ? BaseButtonKind.BORDERLESS_ICON
+      : BaseButtonKind.BORDERLESS_ICON_ACTIVE
   return forwardRef(function BaseButtonGroup(
     props: any,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
     return (
-      <BaseButton
-        {...props}
-        size={BaseButtonSize.XSMALL}
-        kind={BaseButtonKind.BORDERLESS_ICON}
-        style={style}
-      >
+      <BaseButton {...props} size={BaseButtonSize.XSMALL} kind={buttonKind}>
         {getContentElement(content)}
       </BaseButton>
     )
@@ -301,8 +280,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       index,
       selectionVisualization,
       clickMode,
-      selected,
-      theme
+      selected
     )
     return <Element key={`${option.content}-${index}`} />
   })
