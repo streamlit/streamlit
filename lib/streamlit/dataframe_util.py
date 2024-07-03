@@ -51,7 +51,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
-MAX_UNEVALUATED_DF_ROWS = 10000
+_MAX_UNEVALUATED_DF_ROWS = 10000
 
 _PANDAS_DF_TYPE_STR: Final = "pandas.core.frame.DataFrame"
 _PANDAS_INDEX_TYPE_STR: Final = "pandas.core.indexes.base.Index"
@@ -67,39 +67,6 @@ _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
 
-
-_DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
-    _PANDAS_DF_TYPE_STR,
-    _PANDAS_INDEX_TYPE_STR,
-    _PANDAS_SERIES_TYPE_STR,
-    _PANDAS_STYLER_TYPE_STR,
-    _NUMPY_ARRAY_TYPE_STR,
-)
-
-# We show a special "UnevaluatedDataFrame" warning for cached funcs
-# that attempt to return one of these unserializable types:
-UNEVALUATED_DATAFRAME_TYPES = (
-    _MODIN_DF_TYPE_STR,
-    _MODIN_SERIES_TYPE_STR,
-    _PYSPARK_DF_TYPE_STR,
-    _SNOWPANDAS_DF_TYPE_STR,
-    _SNOWPANDAS_SERIES_TYPE_STR,
-    _SNOWPARK_DF_TYPE_STR,
-    _SNOWPARK_TABLE_TYPE_STR,
-)
-
-DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
-
-_DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
-    dict,
-    list,
-    set,
-    tuple,
-    type(None),
-)
-
-_DataFrameCompatible: TypeAlias = Union[dict, list, set, Tuple[Any], None]
-DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
 V_co = TypeVar(
     "V_co",
@@ -158,8 +125,20 @@ def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
     return is_type(obj, _PANDAS_DF_TYPE_STR)
 
 
-def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
-    return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
+def is_dataframe_like(obj: object) -> bool:
+    return determine_data_format(obj) in [
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.PANDAS_SERIES,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_STYLER,
+        DataFormat.NUMPY_LIST,
+        DataFormat.NUMPY_MATRIX,
+        DataFormat.PYARROW_TABLE,
+        DataFormat.SNOWPARK_OBJECT,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.MODIN_OBJECT,
+        DataFormat.SNOWPANDAS_OBJECT,
+    ]
 
 
 def is_unevaluated_data_object(obj: object) -> bool:
@@ -220,18 +199,13 @@ def is_snowpandas_data_object(obj: object) -> bool:
     )
 
 
-def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
-    """True if type that can be passed to convert_anything_to_df."""
-    return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
-
-
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
 def convert_anything_to_pandas_df(
     data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
 ) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.

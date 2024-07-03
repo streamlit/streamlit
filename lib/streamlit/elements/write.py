@@ -401,22 +401,14 @@ class WriteMixin:
                         item()
                     else:
                         self.write(item, unsafe_allow_html=unsafe_allow_html)
-            elif dataframe_util.is_unevaluated_data_object(
+            elif isinstance(arg, Exception):
+                flush_buffer()
+                self.dg.exception(arg)
+            elif dataframe_util.is_dataframe_like(
                 arg
             ) or dataframe_util.is_snowpark_row_list(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
-            elif dataframe_util.is_dataframe_like(arg):
-                import numpy as np
-
-                flush_buffer()
-                if len(np.shape(arg)) > 2:
-                    self.dg.text(arg)
-                else:
-                    self.dg.dataframe(arg)
-            elif isinstance(arg, Exception):
-                flush_buffer()
-                self.dg.exception(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
                 self.dg.altair_chart(arg)

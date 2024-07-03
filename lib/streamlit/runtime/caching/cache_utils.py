@@ -26,7 +26,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import type_util
-from streamlit.dataframe_util import UNEVALUATED_DATAFRAME_TYPES
+from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
@@ -289,10 +289,7 @@ class CachedFunc:
                 # An exception was thrown while we tried to write to the cache. Report it to the user.
                 # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
                 # collect dataframe before using `st.cache_data`.)
-                if True in [
-                    type_util.is_type(computed_value, type_name)
-                    for type_name in UNEVALUATED_DATAFRAME_TYPES
-                ]:
+                if is_unevaluated_data_object(computed_value):
                     # If the returned value is an unevaluated dataframe, raise an error.
                     # Unevaluated dataframes are not yet in the local memory, which also
                     # means they cannot be properly cached (serialized).
