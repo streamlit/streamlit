@@ -70,9 +70,14 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     [width, theme]
   )
 
+  // don't use the Modal's isOpen prop as it feels laggy when using it
+  if (!isOpen) {
+    return <></>
+  }
+
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       closeable={dismissible}
       onClose={() => setIsOpen(false)}
       size={size}
