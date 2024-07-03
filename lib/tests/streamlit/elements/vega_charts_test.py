@@ -28,6 +28,7 @@ from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
     _parse_selection_mode,
@@ -36,7 +37,6 @@ from streamlit.elements.vega_charts import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
-from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.type_util import (
     is_altair_version_less_than,
 )
@@ -158,7 +158,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             st.altair_chart(chart, theme="bad_theme")
 
         self.assertEqual(
-            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
             str(exc.exception),
         )
 

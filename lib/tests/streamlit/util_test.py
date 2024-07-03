@@ -181,5 +181,5 @@ class UtilTest(unittest.TestCase):
 
     def test_calc_md5_can_handle_bytes_and_strings(self):
         assert util.calc_md5("eventually bytes") == util.calc_md5(
-            "eventually bytes".encode("utf-8")
+            b"eventually bytes"
         )

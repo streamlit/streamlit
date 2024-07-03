@@ -56,7 +56,7 @@ class UtilTest(unittest.TestCase):
             m.assert_called_once_with("foo", "rb")
 
 
-class FakeStat(object):
+class FakeStat:
     """Emulates the output of os.stat()."""
 
     def __init__(self, mtime):

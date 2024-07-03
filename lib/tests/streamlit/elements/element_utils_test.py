@@ -14,13 +14,14 @@
 
 import enum
 import unittest
+
 import pytest
 
 from streamlit import errors
 from streamlit.elements.lib.utils import (
+    _coerce_enum,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
-    _coerce_enum,
 )
 from streamlit.runtime.state.common import RegisterWidgetResult
 from tests.testutil import patch_config_options

@@ -44,7 +44,7 @@ with patch(
     # be sure to catch any instances of calling config.get_option() when
     # first importing a file. We disallow this because doing so means that we
     # miss config options set via flag or environment variable.
-    import streamlit as st
+    import streamlit as st  # noqa: F401
     from streamlit import config, file_util, source_util
 
     assert (

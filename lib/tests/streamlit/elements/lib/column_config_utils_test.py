@@ -22,6 +22,7 @@ import pandas as pd
 import pyarrow as pa
 from parameterized import parameterized
 
+from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
     INDEX_IDENTIFIER,
@@ -41,10 +42,9 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.column_types import ColumnConfig
 from streamlit.errors import StreamlitAPIException
-from streamlit.dataframe_util import DataFormat
 
 
-class TestObject(object):
+class TestObject:
     def __str__(self):
         return "TestObject"
 

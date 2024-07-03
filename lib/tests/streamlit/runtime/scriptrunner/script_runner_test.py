@@ -26,6 +26,7 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
+from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
@@ -52,7 +53,6 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.delta_generator import DeltaGenerator, dg_stack
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -1001,21 +1001,21 @@ class ScriptRunnerTest(AsyncTestCase):
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
-    def _assert_no_exceptions(self, scriptrunner: "TestScriptRunner") -> None:
+    def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
         """Assert that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
         """
         self.assertEqual([], scriptrunner.script_thread_exceptions)
 
     def _assert_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+        self, scriptrunner: TestScriptRunner, expected_events: list[ScriptRunnerEvent]
     ) -> None:
         """Assert that the ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect."""
         self.assertEqual(expected_events, scriptrunner.events)
 
     def _assert_control_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+        self, scriptrunner: TestScriptRunner, expected_events: list[ScriptRunnerEvent]
     ) -> None:
         """Assert the non-data ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect. ("Non-data" refers to all events except
@@ -1027,7 +1027,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(expected_events, control_events)
 
     def _assert_forward_msgs(
-        self, scriptrunner: "TestScriptRunner", messages: List[ForwardMsg]
+        self, scriptrunner: TestScriptRunner, messages: list[ForwardMsg]
     ) -> None:
         """Assert that the ScriptRunner's ForwardMsgQueue contains the
         given list of ForwardMsgs.
@@ -1035,7 +1035,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(messages, scriptrunner.forward_msgs())
 
     def _assert_num_deltas(
-        self, scriptrunner: "TestScriptRunner", num_deltas: int
+        self, scriptrunner: TestScriptRunner, num_deltas: int
     ) -> None:
         """Assert that the given number of delta ForwardMsgs were enqueued
         during script execution.
@@ -1049,7 +1049,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(num_deltas, len(scriptrunner.deltas()))
 
     def _assert_text_deltas(
-        self, scriptrunner: "TestScriptRunner", text_deltas: List[str]
+        self, scriptrunner: TestScriptRunner, text_deltas: list[str]
     ) -> None:
         """Assert that the scriptrunner's ForwardMsgQueue contains text deltas
         with the given contents.

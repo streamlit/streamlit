@@ -155,7 +155,7 @@ class SecretsTest(unittest.TestCase):
             self.secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with(
-            f"Error parsing secrets file at /mock/secrets.toml"
+            "Error parsing secrets file at /mock/secrets.toml"
         )
 
     @patch("streamlit.watcher.path_watcher.watch_file")
@@ -266,7 +266,7 @@ class MultipleSecretsFilesTest(unittest.TestCase):
             secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with(
-            f"No secrets files found. Valid paths for a secrets.toml file are: /mock1/secrets.toml, /mock2/secrets.toml"
+            "No secrets files found. Valid paths for a secrets.toml file are: /mock1/secrets.toml, /mock2/secrets.toml"
         )
 
     @patch("streamlit.runtime.secrets._LOGGER")

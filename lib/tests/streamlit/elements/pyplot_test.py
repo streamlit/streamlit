@@ -15,7 +15,7 @@
 """st.pyplot unit tests."""
 
 from typing import Optional
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import matplotlib
 import matplotlib.pyplot as plt

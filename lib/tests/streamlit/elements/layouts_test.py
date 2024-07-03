@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from parameterized import parameterized
 from unittest.mock import patch
+
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException

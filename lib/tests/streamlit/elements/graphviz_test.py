@@ -83,4 +83,4 @@ class GraphvizTest(DeltaGeneratorTestCase):
         st.graphviz_chart(graph)
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
-        self.assertIn("grenade", getattr(c, "spec"))
+        self.assertIn("grenade", c.spec)

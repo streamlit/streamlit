@@ -29,6 +29,10 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe_util import (
+    DataFormat,
+    bytes_to_data_frame,
+)
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnDataKind,
@@ -45,10 +49,6 @@ from streamlit.elements.widgets.data_editor import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.dataframe_util import (
-    DataFormat,
-    bytes_to_data_frame,
-)
 from streamlit.type_util import is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata

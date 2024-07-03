@@ -25,9 +25,9 @@ from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
-from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_snowpark_session
 

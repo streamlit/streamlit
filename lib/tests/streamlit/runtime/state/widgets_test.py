@@ -446,7 +446,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     def test_widget_id_computation_data_editor(self):
         with patch(
-            f"streamlit.elements.widgets.data_editor.compute_widget_id",
+            "streamlit.elements.widgets.data_editor.compute_widget_id",
             wraps=compute_widget_id,
         ) as patched_compute_widget_id:
             st.data_editor(data=[])
