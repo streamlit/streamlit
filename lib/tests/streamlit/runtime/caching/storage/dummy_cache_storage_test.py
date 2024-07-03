@@ -14,6 +14,8 @@
 
 """Unit tests for DummyCacheStorage and MemoryCacheStorageManager"""
 
+from __future__ import annotations
+
 import unittest
 
 from streamlit.runtime.caching.storage import (

@@ -14,6 +14,8 @@
 
 """st.memo/singleton hashing tests."""
 
+from __future__ import annotations
+
 import datetime
 import functools
 import hashlib
