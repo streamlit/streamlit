@@ -28,7 +28,10 @@ from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    UnserializableSessionStateError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -745,7 +748,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         lam_func = nested()
         self.session_state["unserializable"] = lam_func
-        with pytest.raises(Exception):
+        with pytest.raises(UnserializableSessionStateError):
             self.session_state._check_serializable()
 
 

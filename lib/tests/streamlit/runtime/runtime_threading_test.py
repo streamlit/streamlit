@@ -40,7 +40,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
             try:
                 # This function should be called in another thread, which
                 # should not already have an asyncio loop.
-                with self.assertRaises(BaseException):
+                with self.assertRaises(RuntimeError):
                     asyncio.get_running_loop()
 
                 # Create a Runtime instance and put it in the (thread-safe) queue,

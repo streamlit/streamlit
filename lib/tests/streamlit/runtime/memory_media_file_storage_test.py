@@ -168,14 +168,14 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
 
         # delete file 1. It should not exist, but file2 should.
         self.storage.delete_file(file_id1)
-        with self.assertRaises(Exception):
+        with self.assertRaises(MediaFileStorageError):
             self.storage.get_file(file_id1)
 
         self.assertIsNotNone(self.storage.get_file(file_id2))
 
         # delete file 2
         self.storage.delete_file(file_id2)
-        with self.assertRaises(Exception):
+        with self.assertRaises(MediaFileStorageError):
             self.storage.get_file(file_id2)
 
     def test_delete_invalid_file_is_a_noop(self):
