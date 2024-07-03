@@ -230,34 +230,17 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
-@overload
-def convert_anything_to_df(
+def convert_anything_to_pandas_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
-) -> DataFrame: ...
-
-
-@overload
-def convert_anything_to_df(
-    data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
-    ensure_copy: bool = False,
-    allow_styler: bool = False,
-) -> DataFrame | Styler: ...
-
-
-def convert_anything_to_df(
-    data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
-    ensure_copy: bool = False,
-    allow_styler: bool = False,
-) -> DataFrame | Styler:
+) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
     ----------
-    data : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+    data : any
+        The data to convert to a Pandas DataFrame.
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
@@ -267,13 +250,9 @@ def convert_anything_to_df(
         If True, make sure to always return a copy of the data. If False, it depends on the
         type of the data. For example, a Pandas DataFrame will be returned as-is.
 
-    allow_styler: bool
-        If True, allows this to return a Pandas Styler object as well. If False, returns
-        a plain Pandas DataFrame (which, of course, won't contain the Styler's styles).
-
     Returns
     -------
-    pandas.DataFrame or pandas.Styler
+    pandas.DataFrame
 
     """
     import pandas as pd
@@ -286,22 +265,10 @@ def convert_anything_to_df(
         # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
         # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
         sr = cast("StyleRenderer", data)
-
-        if allow_styler:
-            if ensure_copy:
-                out = copy.deepcopy(sr)
-                out.data = sr.data.copy()
-                return cast("Styler", out)
-            else:
-                return data
-        else:
-            return cast("Styler", sr.data.copy() if ensure_copy else sr.data)
+        return cast("DataFrame", sr.data.copy() if ensure_copy else sr.data)
 
     if is_type(data, "numpy.ndarray"):
-        if len(data.shape) == 0:
-            return pd.DataFrame([])
-        return pd.DataFrame(data)
-
+        return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
@@ -397,7 +364,7 @@ def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]
     """
 
     if is_unevaluated_data_object(obj):
-        obj = convert_anything_to_df(obj)
+        obj = convert_anything_to_pandas_df(obj)
 
     if is_dataframe(obj):
         # Return first column as a pd.Series
@@ -421,7 +388,7 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # This is an imperfect check because there is no guarantee that an `index`
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
-    if callable(index_fn) and type(it) != EnumMeta:
+    if callable(index_fn) and not isinstance(it, EnumMeta):
         # We return a shallow copy of the Sequence here because the return value of
         # this function is saved in a widget serde class instance to be used in later
         # script runs, and we don't want mutations to the options object passed to a
