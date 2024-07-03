@@ -36,7 +36,7 @@ from typing import (
 )
 
 from google.protobuf.message import Message
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, util
 from streamlit.errors import StreamlitAPIException

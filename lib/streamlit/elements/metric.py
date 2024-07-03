@@ -22,7 +22,6 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
-    Key,
     LabelVisibility,
     get_label_visibility_proto_value,
 )
