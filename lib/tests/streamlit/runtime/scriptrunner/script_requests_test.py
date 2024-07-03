@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
-from typing import Optional
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner.script_requests import (
@@ -30,7 +31,7 @@ def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     return states.widgets[-1]
 
 
-def _get_widget(id: str, states: WidgetStates) -> Optional[WidgetState]:
+def _get_widget(id: str, states: WidgetStates) -> WidgetState | None:
     """Return the widget with the given ID."""
     for state in states.widgets:
         if state.id == id:

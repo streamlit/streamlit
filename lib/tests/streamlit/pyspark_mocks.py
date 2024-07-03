@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class DataFrame:
@@ -32,7 +35,7 @@ class DataFrame:
     def __init__(self, data: pd.DataFrame):
         self._data: pd.DataFrame = data
 
-    def limit(self, n: int) -> "DataFrame":
+    def limit(self, n: int) -> DataFrame:
         """Returns the top n element of a mock version of pyspark dataframe"""
         return DataFrame(self._data.head(n))
 

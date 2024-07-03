@@ -28,7 +28,6 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
 
 class ElementPoliciesTest(unittest.TestCase):

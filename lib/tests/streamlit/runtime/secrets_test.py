@@ -14,6 +14,8 @@
 
 """st.secrets unit tests."""
 
+from __future__ import annotations
+
 import os
 import sys
 import tempfile
@@ -155,7 +157,7 @@ class SecretsTest(unittest.TestCase):
             self.secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with(
-            f"Error parsing secrets file at /mock/secrets.toml"
+            "Error parsing secrets file at /mock/secrets.toml"
         )
 
     @patch("streamlit.watcher.path_watcher.watch_file")
@@ -163,10 +165,10 @@ class SecretsTest(unittest.TestCase):
     def test_getattr_nonexistent(self, *mocks):
         """Verify that access to missing attribute raises  AttributeError."""
         with self.assertRaises(AttributeError):
-            self.secrets.nonexistent_secret
+            self.secrets.nonexistent_secret  # noqa: B018
 
         with self.assertRaises(AttributeError):
-            self.secrets.subsection.nonexistent_secret
+            self.secrets.subsection.nonexistent_secret  # noqa: B018
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
@@ -266,7 +268,7 @@ class MultipleSecretsFilesTest(unittest.TestCase):
             secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with(
-            f"No secrets files found. Valid paths for a secrets.toml file are: /mock1/secrets.toml, /mock2/secrets.toml"
+            "No secrets files found. Valid paths for a secrets.toml file are: /mock1/secrets.toml, /mock2/secrets.toml"
         )
 
     @patch("streamlit.runtime.secrets._LOGGER")

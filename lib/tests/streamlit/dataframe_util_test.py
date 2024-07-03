@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-import unittest
 import enum
+import unittest
+from collections import OrderedDict
 from datetime import date
 from decimal import Decimal
 from typing import Any
 from unittest.mock import patch
-from collections import OrderedDict
-
 
 import numpy as np
 import pandas as pd
@@ -32,14 +31,13 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
-
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import (
     SHARED_TEST_CASES,
-    TestCaseMetadata,
-    TestObject,
-    TestEnum,
     StrTestEnum,
+    TestCaseMetadata,
+    TestEnum,
+    TestObject,
     data_generator,
 )
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
@@ -367,7 +365,7 @@ class DataframeUtilTest(unittest.TestCase):
             """DummyClass for testing purposes"""
 
         # empty list should not be snowpark dataframe
-        self.assertFalse(dataframe_util.is_snowpark_row_list(list()))
+        self.assertFalse(dataframe_util.is_snowpark_row_list([]))
 
         # list with items should not be snowpark dataframe
         self.assertFalse(
@@ -600,11 +598,11 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertFalse(l1 is l2)
         self.assertEqual(l1, l2)
 
-    def test_convert_anything_to_sequence_object_not_indexable(self):
-        l = dataframe_util.convert_anything_to_sequence({"a", "b", "c"})
-        self.assertIn("a", l)
-        self.assertIn("b", l)
-        self.assertIn("c", l)
+    def test_ensure_indexable_object_not_indexable(self):
+        converted_list = dataframe_util.ensure_indexable({"a", "b", "c"})
+        self.assertIn("a", converted_list)
+        self.assertIn("b", converted_list)
+        self.assertIn("c", converted_list)
 
     def test_convert_anything_to_sequence_enum_is_indexable(self):
         """Test Enums are indexable"""
@@ -617,11 +615,11 @@ class DataframeUtilTest(unittest.TestCase):
             OPT1 = "a"
             OPT2 = "b"
 
-        l = dataframe_util.convert_anything_to_sequence(Opt)
-        self.assertEqual(list(Opt), l)
+        converted_list = dataframe_util.ensure_indexable(Opt)
+        self.assertEqual(list(Opt), converted_list)
 
-        l = dataframe_util.convert_anything_to_sequence(StrOpt)
-        self.assertEqual(list(StrOpt), l)
+        converted_list = dataframe_util.ensure_indexable(StrOpt)
+        self.assertEqual(list(StrOpt), converted_list)
 
     @parameterized.expand(
         [

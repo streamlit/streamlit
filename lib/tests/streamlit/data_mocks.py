@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import enum
 import random
 from datetime import date
@@ -93,7 +95,7 @@ SHARED_TEST_CASES = [
     # Set does not have a stable order across different Python version.
     # Therefore, we are only testing this with one item.
     (
-        {"st.number_input", "st.number_input"},
+        {"st.number_input", "st.number_input"},  # noqa: B033
         TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
     ),
     # Tuple of strings (Tuple[str]):
@@ -213,7 +215,7 @@ SHARED_TEST_CASES = [
 ]
 
 
-class TestObject(object):
+class TestObject:
     def __str__(self):
         return "TestObject"
 

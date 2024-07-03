@@ -14,8 +14,14 @@
 
 import streamlit as st
 
-to_celsius = lambda fahrenheit: (fahrenheit - 32) * 5.0 / 9.0
-to_fahrenheit = lambda celsius: 9.0 / 5.0 * celsius + 32
+
+def to_celsius(fahrenheit):
+    return (fahrenheit - 32) * 5.0 / 9.0
+
+
+def to_fahrenheit(celsius):
+    return 9.0 / 5.0 * celsius + 32
+
 
 MIN_CELSIUS, MAX_CELSIUS = -100.0, 100.0
 

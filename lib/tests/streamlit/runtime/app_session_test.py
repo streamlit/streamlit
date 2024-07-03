@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import gc
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, Callable, cast
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import DEFAULT, MagicMock, patch
 
@@ -64,8 +66,8 @@ def del_path(monkeypatch):
 
 
 def _create_test_session(
-    event_loop: Optional[AbstractEventLoop] = None,
-    session_id_override: Optional[str] = None,
+    event_loop: AbstractEventLoop | None = None,
+    session_id_override: str | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -843,7 +845,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         # Create a mocked ForwardMsgQueue that tracks "enqueue" and "clear"
         # function calls together in a list. We'll assert the content
         # and order of these calls.
-        forward_msg_queue_events: List[Any] = []
+        forward_msg_queue_events: list[Any] = []
         CLEAR_QUEUE = object()
 
         mock_queue = MagicMock(spec=ForwardMsgQueue)
