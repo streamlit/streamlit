@@ -160,7 +160,7 @@ class RuntimeTest(RuntimeTestCase):
             user_info = MagicMock()
             existing_session_id = "some_session_id"
 
-            session_id = self.runtime.connect_session(
+            self.runtime.connect_session(
                 client=client,
                 user_info=user_info,
                 existing_session_id=existing_session_id,
@@ -185,7 +185,7 @@ class RuntimeTest(RuntimeTestCase):
             user_info = MagicMock()
             session_id_override = "some_session_id"
 
-            session_id = self.runtime.connect_session(
+            self.runtime.connect_session(
                 client=client,
                 user_info=user_info,
                 session_id_override=session_id_override,

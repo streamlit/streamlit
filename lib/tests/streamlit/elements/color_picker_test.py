@@ -57,12 +57,12 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
     def test_invalid_value_type_error(self):
         """Tests that when the value type is invalid, an exception is generated"""
-        with pytest.raises(StreamlitAPIException) as exc_message:
+        with pytest.raises(StreamlitAPIException):
             st.color_picker("the label", 1234567)
 
     def test_invalid_string(self):
         """Tests that when the string doesn't match regex, an exception is generated"""
-        with pytest.raises(StreamlitAPIException) as exc_message:
+        with pytest.raises(StreamlitAPIException):
             st.color_picker("the label", "#invalid-string")
 
     def test_outside_form(self):

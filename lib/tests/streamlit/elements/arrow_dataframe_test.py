@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pytest as pytest
+import pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 

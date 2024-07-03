@@ -123,7 +123,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
             (np.array([]),),
             (pd.Series(np.array([])),),
             (set(),),
-            (list(),),
+            ([],),
         ]
     )
     def test_no_options(self, options):

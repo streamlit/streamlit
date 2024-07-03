@@ -31,7 +31,7 @@ class ScriptDataTest(unittest.TestCase):
         assert os.path.realpath(script_data.main_script_path) == os.path.realpath(
             "/path/to/some/script.py"
         )
-        assert script_data.is_hello == False
+        assert script_data.is_hello is False
         assert os.path.realpath(script_data.script_folder) == os.path.realpath(
             "/path/to/some"
         )

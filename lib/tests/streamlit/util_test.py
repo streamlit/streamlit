@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import random
 import unittest
-from typing import Dict, List, Set
 from unittest.mock import patch
 
 import numpy as np
@@ -29,7 +30,10 @@ class UtilTest(unittest.TestCase):
 
     def test_memoization(self):
         """Test that util.memoize works."""
-        non_memoized_func = lambda: random.randint(0, 1000000)
+
+        def non_memoized_func():
+            return random.randint(0, 1000000)
+
         yes_memoized_func = util.memoize(non_memoized_func)
         assert non_memoized_func() != non_memoized_func()
         assert yes_memoized_func() == yes_memoized_func()
@@ -148,9 +152,9 @@ class UtilTest(unittest.TestCase):
     )
     def test_exclude_keys_in_dict(
         self,
-        d: Dict[str, List[str]],
-        keys_to_drop: List[str],
-        result: Dict[str, List[str]],
+        d: dict[str, list[str]],
+        keys_to_drop: list[str],
+        result: dict[str, list[str]],
     ):
         assert util.exclude_keys_in_dict(d, keys_to_drop) == result
 
@@ -175,11 +179,9 @@ class UtilTest(unittest.TestCase):
         ]
     )
     def test_extract_key_query_params(
-        self, query_params: Dict[str, List[str]], param_key: str, result: Set[str]
+        self, query_params: dict[str, list[str]], param_key: str, result: set[str]
     ):
         assert util.extract_key_query_params(query_params, param_key) == result
 
     def test_calc_md5_can_handle_bytes_and_strings(self):
-        assert util.calc_md5("eventually bytes") == util.calc_md5(
-            b"eventually bytes"
-        )
+        assert util.calc_md5("eventually bytes") == util.calc_md5(b"eventually bytes")

@@ -14,7 +14,7 @@
 
 """Graphviz unit test."""
 
-import graphviz as graphviz
+import graphviz
 
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase

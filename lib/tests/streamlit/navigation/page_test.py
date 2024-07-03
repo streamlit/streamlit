@@ -124,7 +124,7 @@ class StPagesTest(DeltaGeneratorTestCase):
             pass
 
         with pytest.raises(StreamlitAPIException):
-            page = st.Page(page_9, url_path="")
+            st.Page(page_9, url_path="")
 
     def test_page_run_cannot_run_standalone(self):
         """Test that a page cannot run standalone."""

@@ -95,7 +95,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.page == "https://streamlit.io"
         assert c.external
-        assert c.use_container_width == True
+        assert c.use_container_width is True
 
     def test_use_container_width_can_be_set_to_false(self):
         """Test use_container_width can be set to false."""
@@ -107,7 +107,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.page == "https://streamlit.io"
         assert c.external
-        assert c.use_container_width == False
+        assert c.use_container_width is False
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_label(self):

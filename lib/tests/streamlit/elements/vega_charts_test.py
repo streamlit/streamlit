@@ -1164,7 +1164,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(
-        [[None], [[]], [tuple()]],
+        [[None], [[]], [()]],
     )
     def test_chart_with_empty_color(self, color_arg: Any):
         """Test color support for built-in charts with wide-format table."""

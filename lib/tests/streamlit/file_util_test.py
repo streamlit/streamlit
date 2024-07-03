@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import errno
 import os
 import unittest
@@ -182,7 +184,7 @@ class FileInPythonPathTest(unittest.TestCase):
         return os.path.join(os.getcwd(), path)
 
     def test_no_pythonpath(self):
-        with patch("os.environ", {}) as d:
+        with patch("os.environ", {}):
             self.assertFalse(
                 file_util.file_in_pythonpath(
                     self._make_it_absolute("../something/dir1/dir2/module")

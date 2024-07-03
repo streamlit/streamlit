@@ -16,6 +16,7 @@ from __future__ import annotations
 import datetime
 import unittest
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -40,8 +41,10 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
-from streamlit.elements.lib.column_types import ColumnConfig
 from streamlit.errors import StreamlitAPIException
+
+if TYPE_CHECKING:
+    from streamlit.elements.lib.column_types import ColumnConfig
 
 
 class TestObject:

@@ -14,6 +14,8 @@
 
 """Utility functions to use in our tests."""
 
+from __future__ import annotations
+
 import json
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
@@ -24,16 +26,18 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
+
+# Reexport functions that were moved to main codebase
+from streamlit.testing.v1.util import (
+    build_mock_config_get_option as build_mock_config_get_option,  # noqa: PLC0414
+)
+from streamlit.testing.v1.util import (
+    patch_config_options as patch_config_options,  # noqa: PLC0414
+)
 from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
 
 if TYPE_CHECKING:
     from snowflake.snowpark import Session
-
-# Reexport functions that were moved to main codebase
-from streamlit.testing.v1.util import (
-    build_mock_config_get_option as build_mock_config_get_option,
-)
-from streamlit.testing.v1.util import patch_config_options as patch_config_options
 
 
 def should_skip_pydantic_tests() -> bool:
@@ -106,7 +110,7 @@ def normalize_md(txt: str) -> str:
 
 
 @contextmanager
-def create_snowpark_session() -> "Session":
+def create_snowpark_session() -> Session:
     from snowflake.snowpark import Session
 
     credential = json.loads(SNOWFLAKE_CREDENTIAL_FILE.read_text())

@@ -36,7 +36,7 @@ class EchoTest(DeltaGeneratorTestCase):
             def foo(x):
                 y = x + 10
 
-                print(y)
+                st.write(y)
 
             class MyClass:
                 def do_x(self):
@@ -52,7 +52,7 @@ class EchoTest(DeltaGeneratorTestCase):
 def foo(x):
     y = x + 10
 
-    print(y)
+    st.write(y)
 
 class MyClass(object):
     def do_x(self):
@@ -92,7 +92,7 @@ class MyClass(object):
             def foo(x):
                 y = x + 10
 
-                print(y)
+                st.write(y)
 
             class MyClass:
                 def do_x(self):
@@ -107,7 +107,7 @@ class MyClass(object):
 def foo(x):
     y = x + 10
 
-    print(y)
+    st.write(y)
 
 class MyClass(object):
     def do_x(self):
@@ -145,14 +145,12 @@ class MyClass(object):
         self.clear_queue()
 
     def test_root_level_echo(self):
-
         echo_str = "a = 123"
 
         element = self.get_delta_from_queue(0).new_element
         self.assertEqual(echo_str, element.code.code_text)
 
     def test_echo_multiline_param(self):
-
         echo_str = "a = 123"
 
         element = self.get_delta_from_queue(0).new_element

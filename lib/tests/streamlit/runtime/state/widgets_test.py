@@ -110,7 +110,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state.set_widgets_from_proto(prev_states)
 
         mock_callback = MagicMock()
-        deserializer = lambda x, s: x
+
+        def deserializer(x, s):
+            return x
 
         callback_cases = [
             ("trigger", "trigger_value", None, None, None),
@@ -497,4 +499,4 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Incorrectly inidcates no user key
-        assert user_key_from_widget_id(k) == None
+        assert user_key_from_widget_id(k) is None

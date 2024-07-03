@@ -20,7 +20,7 @@ import datetime
 import json
 import unittest
 from decimal import Decimal
-from typing import Any, Dict, List, Mapping
+from typing import Any, Mapping
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -199,7 +199,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        added_rows: List[Dict[str, Any]] = [
+        added_rows: list[dict[str, Any]] = [
             {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
             {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
         ]
@@ -220,7 +220,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        deleted_rows: List[int] = [0, 2]
+        deleted_rows: list[int] = [0, 2]
 
         _apply_row_deletions(df, deleted_rows)
 
@@ -237,8 +237,8 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        deleted_rows: List[int] = [0, 2]
-        added_rows: List[Dict[str, Any]] = [
+        deleted_rows: list[int] = [0, 2]
+        added_rows: list[dict[str, Any]] = [
             {"col1": 10, "col2": "foo", "col3": False},
             {"col1": 11, "col2": "bar", "col3": True},
         ]

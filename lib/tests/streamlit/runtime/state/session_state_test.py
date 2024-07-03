@@ -44,7 +44,9 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
-identity = lambda x: x
+
+def identity(x):
+    return x
 
 
 def _raw_session_state() -> SessionState:
@@ -248,15 +250,15 @@ class SessionStateUpdateTest(DeltaGeneratorTestCase):
 
         st.checkbox("checkbox", value=True, key="c")
 
-        assert state.c == True
+        assert state.c is True
 
     def test_setting_before_widget_creation(self):
         state = st.session_state
         state.c = True
-        assert state.c == True
+        assert state.c is True
 
         c = st.checkbox("checkbox", key="c")
-        assert c == True
+        assert c is True
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -707,7 +709,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         self.session_state._remove_stale_widgets({existing_widget_key})
 
-        assert self.session_state[existing_widget_key] == True
+        assert self.session_state[existing_widget_key] is True
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 

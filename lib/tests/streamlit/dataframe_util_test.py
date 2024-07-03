@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import enum
 import unittest
 from datetime import date
@@ -355,7 +357,7 @@ class TypeUtilTest(unittest.TestCase):
             """DummyClass for testing purposes"""
 
         # empty list should not be snowpark dataframe
-        self.assertFalse(dataframe_util.is_snowpark_row_list(list()))
+        self.assertFalse(dataframe_util.is_snowpark_row_list([]))
 
         # list with items should not be snowpark dataframe
         self.assertFalse(
