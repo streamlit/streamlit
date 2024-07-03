@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class DataFrame:
@@ -33,7 +38,7 @@ class DataFrame:
     def _to_pandas(self) -> pd.DataFrame:
         return self._data
 
-    def head(self, n: int) -> "DataFrame":
+    def head(self, n: int) -> DataFrame:
         """Returns the top n element of a mock version of Modin DataFrame."""
         return DataFrame(self._data.head(n))
 
@@ -56,6 +61,6 @@ class Series:
     def _to_pandas(self) -> pd.Series:
         return self._data
 
-    def head(self, n: int) -> "Series":
+    def head(self, n: int) -> Series:
         """Returns the top n element of a mock version of Modin Series."""
         return Series(self._data.head(n))

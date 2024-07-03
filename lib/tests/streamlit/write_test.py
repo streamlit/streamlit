@@ -14,6 +14,8 @@
 
 """Streamlit Unit test."""
 
+from __future__ import annotations
+
 import dataclasses
 import time
 import unittest
