@@ -598,8 +598,8 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertFalse(l1 is l2)
         self.assertEqual(l1, l2)
 
-    def test_ensure_indexable_object_not_indexable(self):
-        converted_list = dataframe_util.ensure_indexable({"a", "b", "c"})
+    def test_convert_anything_to_sequence_object_not_indexable(self):
+        converted_list = dataframe_util.convert_anything_to_sequence({"a", "b", "c"})
         self.assertIn("a", converted_list)
         self.assertIn("b", converted_list)
         self.assertIn("c", converted_list)
@@ -615,10 +615,10 @@ class DataframeUtilTest(unittest.TestCase):
             OPT1 = "a"
             OPT2 = "b"
 
-        converted_list = dataframe_util.ensure_indexable(Opt)
+        converted_list = dataframe_util.convert_anything_to_sequence(Opt)
         self.assertEqual(list(Opt), converted_list)
 
-        converted_list = dataframe_util.ensure_indexable(StrOpt)
+        converted_list = dataframe_util.convert_anything_to_sequence(StrOpt)
         self.assertEqual(list(StrOpt), converted_list)
 
     @parameterized.expand(

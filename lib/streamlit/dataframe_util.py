@@ -368,8 +368,9 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     if isinstance(obj, dict):
         return list(obj.keys())
 
+    # Fallback to our DataFrame conversion logic:
     try:
-        # We use ensure_copy here because the return value of this function is saved
+        # We use ensure_copy here because the return value of this function is
         # saved in a widget serde class instance to be used in later script runs,
         # and we don't want mutations to the options object passed to a
         # widget affect the widget.
