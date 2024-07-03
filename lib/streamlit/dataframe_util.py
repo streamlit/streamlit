@@ -260,7 +260,7 @@ def convert_anything_to_pandas_df(
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
-        return cast("DataFrame", data.data.copy() if ensure_copy else data.data)  # type: ignore
+        return cast("DataFrame", data.data.copy() if ensure_copy else data.data)
 
     if is_type(data, "numpy.ndarray"):
         return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
