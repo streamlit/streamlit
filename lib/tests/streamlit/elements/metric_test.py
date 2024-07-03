@@ -20,7 +20,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
-from streamlit.elements.lib.utils import _LOGGER
+from streamlit.elements.lib.policies import _LOGGER
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
