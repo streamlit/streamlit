@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from pathlib import Path
 
 CREDENTIAL_DIR = Path(__file__).resolve().parents[2] / ".credentials"

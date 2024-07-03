@@ -14,11 +14,17 @@
 
 """Shared protobuf message mocking utilities."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from streamlit.cursor import make_delta_path
 from streamlit.elements import arrow
-from streamlit.elements.arrow import Data
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
+
+if TYPE_CHECKING:
+    from streamlit.elements.arrow import Data
 
 
 def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
@@ -30,7 +36,7 @@ def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
 
 
 def create_script_finished_message(
-    status: "ForwardMsg.ScriptFinishedStatus.ValueType",
+    status: ForwardMsg.ScriptFinishedStatus.ValueType,
 ) -> ForwardMsg:
     """Create a script_finished ForwardMsg."""
     msg = ForwardMsg()

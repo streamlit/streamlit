@@ -20,7 +20,7 @@ import datetime
 import json
 import unittest
 from decimal import Decimal
-from typing import Any, Dict, List, Mapping
+from typing import Any, Mapping
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -29,6 +29,10 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe_util import (
+    DataFormat,
+    bytes_to_data_frame,
+)
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnDataKind,
@@ -45,10 +49,6 @@ from streamlit.elements.widgets.data_editor import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.dataframe_util import (
-    DataFormat,
-    bytes_to_data_frame,
-)
 from streamlit.type_util import is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
@@ -199,7 +199,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        added_rows: List[Dict[str, Any]] = [
+        added_rows: list[dict[str, Any]] = [
             {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
             {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
         ]
@@ -220,7 +220,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        deleted_rows: List[int] = [0, 2]
+        deleted_rows: list[int] = [0, 2]
 
         _apply_row_deletions(df, deleted_rows)
 
@@ -237,8 +237,8 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        deleted_rows: List[int] = [0, 2]
-        added_rows: List[Dict[str, Any]] = [
+        deleted_rows: list[int] = [0, 2]
+        added_rows: list[dict[str, Any]] = [
             {"col1": 10, "col2": "foo", "col3": False},
             {"col1": 11, "col2": "bar", "col3": True},
         ]

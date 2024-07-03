@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from typing import Callable, List, Tuple
+from typing import Callable, Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -476,14 +476,14 @@ def _run_fragment_writes_to_nested_inside_container_app(
     _some_method()
 
 
-outside_container_writing_apps: List[APP_FUNCTION] = [
+outside_container_writing_apps: list[APP_FUNCTION] = [
     _run_fragment_writes_to_outside_container_app,
     _run_fragment_writes_to_nested_outside_container_app,
     _run_fragment_writes_to_nested_outside_container_app2,
     _run_fragment_writes_to_nested_outside_container_app3,
 ]
 
-inside_container_writing_apps: List[APP_FUNCTION] = [
+inside_container_writing_apps: list[APP_FUNCTION] = [
     _run_fragment_writes_to_inside_container_app,
     _run_fragment_writes_to_nested_inside_container_app,
 ]
@@ -492,9 +492,9 @@ TEST_TUPLE = Tuple[str, APP_FUNCTION, ELEMENT_PRODUCER]
 
 
 def get_test_tuples(
-    app_functions: List[APP_FUNCTION],
-    elements: List[Tuple[str, Callable[[], DeltaGenerator]]],
-) -> List[TEST_TUPLE]:
+    app_functions: list[APP_FUNCTION],
+    elements: list[tuple[str, Callable[[], DeltaGenerator]]],
+) -> list[TEST_TUPLE]:
     """Create a tuple of (name, app-to-run, element-producer), so that each passed app runs with every passed element.
 
     Parameters

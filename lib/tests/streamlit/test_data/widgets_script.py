@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from __future__ import annotations
+
 import streamlit as st
 
 c1, c2 = st.columns(2)

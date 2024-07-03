@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from parameterized import parameterized
 from unittest.mock import patch
+
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -425,8 +426,8 @@ class TabsTest(DeltaGeneratorTestCase):
         # 6 elements will be created: 1 horizontal block, 5 tabs
         self.assertEqual(len(all_deltas), 6)
         self.assertEqual(len(tabs_block), 5)
-        for index, tabs_block in enumerate(tabs_block):
-            self.assertEqual(tabs_block.add_block.tab.label, f"tab {index}")
+        for index, tab_block in enumerate(tabs_block):
+            self.assertEqual(tab_block.add_block.tab.label, f"tab {index}")
 
 
 class DialogTest(DeltaGeneratorTestCase):

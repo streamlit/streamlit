@@ -110,7 +110,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state.set_widgets_from_proto(prev_states)
 
         mock_callback = MagicMock()
-        deserializer = lambda x, s: x
+
+        def deserializer(x, s):
+            return x
 
         callback_cases = [
             ("trigger", "trigger_value", None, None, None),
@@ -446,7 +448,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     def test_widget_id_computation_data_editor(self):
         with patch(
-            f"streamlit.elements.widgets.data_editor.compute_widget_id",
+            "streamlit.elements.widgets.data_editor.compute_widget_id",
             wraps=compute_widget_id,
         ) as patched_compute_widget_id:
             st.data_editor(data=[])
@@ -497,4 +499,4 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Incorrectly inidcates no user key
-        assert user_key_from_widget_id(k) == None
+        assert user_key_from_widget_id(k) is None

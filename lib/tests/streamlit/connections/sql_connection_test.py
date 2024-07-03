@@ -239,7 +239,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         conn = SQLConnection("my_sql_connection")
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             conn.query("SELECT 1;")
 
         # conn._connect should have just been called once when first creating the

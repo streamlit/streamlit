@@ -19,17 +19,15 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
+from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -52,8 +50,12 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.delta_generator import DeltaGenerator, dg_stack
 from tests import testutil
+
+if TYPE_CHECKING:
+    from streamlit.proto.Delta_pb2 import Delta
+    from streamlit.proto.Element_pb2 import Element
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -1001,21 +1003,21 @@ class ScriptRunnerTest(AsyncTestCase):
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
-    def _assert_no_exceptions(self, scriptrunner: "TestScriptRunner") -> None:
+    def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
         """Assert that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
         """
         self.assertEqual([], scriptrunner.script_thread_exceptions)
 
     def _assert_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+        self, scriptrunner: TestScriptRunner, expected_events: list[ScriptRunnerEvent]
     ) -> None:
         """Assert that the ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect."""
         self.assertEqual(expected_events, scriptrunner.events)
 
     def _assert_control_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+        self, scriptrunner: TestScriptRunner, expected_events: list[ScriptRunnerEvent]
     ) -> None:
         """Assert the non-data ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect. ("Non-data" refers to all events except
@@ -1027,7 +1029,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(expected_events, control_events)
 
     def _assert_forward_msgs(
-        self, scriptrunner: "TestScriptRunner", messages: List[ForwardMsg]
+        self, scriptrunner: TestScriptRunner, messages: list[ForwardMsg]
     ) -> None:
         """Assert that the ScriptRunner's ForwardMsgQueue contains the
         given list of ForwardMsgs.
@@ -1035,7 +1037,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(messages, scriptrunner.forward_msgs())
 
     def _assert_num_deltas(
-        self, scriptrunner: "TestScriptRunner", num_deltas: int
+        self, scriptrunner: TestScriptRunner, num_deltas: int
     ) -> None:
         """Assert that the given number of delta ForwardMsgs were enqueued
         during script execution.
@@ -1049,7 +1051,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(num_deltas, len(scriptrunner.deltas()))
 
     def _assert_text_deltas(
-        self, scriptrunner: "TestScriptRunner", text_deltas: List[str]
+        self, scriptrunner: TestScriptRunner, text_deltas: list[str]
     ) -> None:
         """Assert that the scriptrunner's ForwardMsgQueue contains text deltas
         with the given contents.
@@ -1089,14 +1091,14 @@ class TestScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: List[BaseException] = []
+        self.script_thread_exceptions: list[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
-        self.events: List[ScriptRunnerEvent] = []
-        self.event_data: List[Any] = []
+        self.events: list[ScriptRunnerEvent] = []
+        self.event_data: list[Any] = []
 
         def record_event(
-            sender: Optional[ScriptRunner], event: ScriptRunnerEvent, **kwargs
+            sender: ScriptRunner | None, event: ScriptRunnerEvent, **kwargs
         ) -> None:
             # Assert that we're not getting unexpected `sender` params
             # from ScriptRunner.on_event
@@ -1136,21 +1138,21 @@ class TestScriptRunner(ScriptRunner):
         """Clear all messages from our ForwardMsgQueue."""
         self.forward_msg_queue.clear()
 
-    def forward_msgs(self) -> List[ForwardMsg]:
+    def forward_msgs(self) -> list[ForwardMsg]:
         """Return all messages in our ForwardMsgQueue."""
         return self.forward_msg_queue._queue
 
-    def deltas(self) -> List[Delta]:
+    def deltas(self) -> list[Delta]:
         """Return the delta messages in our ForwardMsgQueue."""
         return [
             msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
         ]
 
-    def elements(self) -> List[Element]:
+    def elements(self) -> list[Element]:
         """Return the delta.new_element messages in our ForwardMsgQueue."""
         return [delta.new_element for delta in self.deltas()]
 
-    def text_deltas(self) -> List[str]:
+    def text_deltas(self) -> list[str]:
         """Return the string contents of text deltas in our ForwardMsgQueue"""
         return [
             element.text.body
@@ -1158,7 +1160,7 @@ class TestScriptRunner(ScriptRunner):
             if element.WhichOneof("type") == "text"
         ]
 
-    def get_widget_id(self, widget_type: str, label: str) -> Optional[str]:
+    def get_widget_id(self, widget_type: str, label: str) -> str | None:
         """Returns the id of the widget with the specified type and label"""
         for delta in self.deltas():
             new_element = getattr(delta, "new_element", None)
@@ -1174,7 +1176,7 @@ class TestScriptRunner(ScriptRunner):
 
 
 def require_widgets_deltas(
-    runners: List[TestScriptRunner], timeout: float = 15
+    runners: list[TestScriptRunner], timeout: float = 15
 ) -> None:
     """Wait for the given ScriptRunners to each produce the appropriate
     number of deltas for widgets_script.py before a timeout. If the timeout
