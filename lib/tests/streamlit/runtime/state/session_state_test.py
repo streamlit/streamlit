@@ -14,10 +14,12 @@
 
 """Session state unit tests."""
 
+from __future__ import annotations
+
 import unittest
 from copy import deepcopy
 from datetime import date, datetime, timedelta
-from typing import Any, List, Tuple
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -541,7 +543,7 @@ def _compact_copy(state: SessionState) -> SessionState:
     return state_copy
 
 
-def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
+def _sorted_items(state: SessionState) -> list[tuple[str, Any]]:
     """Return all key-value pairs in the SessionState.
     The returned list is sorted by key for easier comparison.
     """

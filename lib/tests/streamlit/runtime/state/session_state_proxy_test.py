@@ -14,8 +14,10 @@
 
 """SessionStateProxy unit tests."""
 
+from __future__ import annotations
+
 import unittest
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,7 +31,7 @@ from streamlit.runtime.state.common import (
 
 
 def _create_mock_session_state(
-    initial_state_values: Dict[str, Any],
+    initial_state_values: dict[str, Any],
 ) -> SafeSessionState:
     """Return a new SafeSessionState instance populated with the
     given state values.

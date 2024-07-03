@@ -106,7 +106,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         )
         ServerTestCase._next_session_id += 1
 
-        mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)
+        mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)  # noqa: B026
         type(mock_session).id = mock_id
         return mock_session
 
