@@ -57,7 +57,9 @@ class HtmlMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.html("<p><span style='text-decoration: line-through double red;'>Oops</span>!</p>")
+        >>> st.html(
+        ...     "<p><span style='text-decoration: line-through double red;'>Oops</span>!</p>"
+        ... )
 
         .. output::
            https://doc-html.streamlit.app/
