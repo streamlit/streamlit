@@ -48,8 +48,8 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.dataframe_util import (
     DataFormat,
     bytes_to_data_frame,
-    is_pandas_version_less_than,
 )
+from streamlit.type_util import is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
 
