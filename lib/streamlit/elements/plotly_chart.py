@@ -47,13 +47,13 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib

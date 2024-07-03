@@ -36,9 +36,10 @@ from typing import (
 from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
+    ChartStackType,
     ChartType,
     generate_chart,
 )
@@ -49,6 +50,7 @@ from streamlit.elements.lib.policies import (
     check_fragment_path_policy,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -57,7 +59,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import ChartStackType, Key, to_key
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -279,10 +280,10 @@ def _serialize_data(data: Any) -> bytes:
     import pyarrow as pa
 
     if isinstance(data, pa.Table):
-        return type_util.pyarrow_table_to_bytes(data)
+        return dataframe_util.pyarrow_table_to_bytes(data)
 
-    df = type_util.convert_anything_to_df(data)
-    return type_util.data_frame_to_bytes(df)
+    df = dataframe_util.convert_anything_to_df(data)
+    return dataframe_util.data_frame_to_bytes(df)
 
 
 def _marshall_chart_data(

@@ -21,7 +21,7 @@ import types
 from io import StringIO
 from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
 
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
@@ -128,7 +128,7 @@ class WriteMixin:
 
         # Just apply some basic checks for common iterable types that should
         # not be passed in here.
-        if isinstance(stream, str) or type_util.is_dataframe_like(stream):
+        if isinstance(stream, str) or dataframe_util.is_dataframe_like(stream):
             raise StreamlitAPIException(
                 "`st.write_stream` expects a generator or stream-like object as input "
                 f"not {type(stream)}. Please use `st.write` instead for "
@@ -401,12 +401,12 @@ class WriteMixin:
                         item()
                     else:
                         self.write(item, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_unevaluated_data_object(
+            elif dataframe_util.is_unevaluated_data_object(
                 arg
-            ) or type_util.is_snowpark_row_list(arg):
+            ) or dataframe_util.is_snowpark_row_list(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
-            elif type_util.is_dataframe_like(arg):
+            elif dataframe_util.is_dataframe_like(arg):
                 import numpy as np
 
                 flush_buffer()

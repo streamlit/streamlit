@@ -22,7 +22,7 @@ import pyarrow as pa
 from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
-from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -119,7 +119,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
 
         with patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df
 

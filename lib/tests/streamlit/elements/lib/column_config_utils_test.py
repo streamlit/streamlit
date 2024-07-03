@@ -41,7 +41,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.column_types import ColumnConfig
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import DataFormat
+from streamlit.dataframe_util import DataFormat
 
 
 class TestObject(object):

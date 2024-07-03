@@ -27,8 +27,14 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -42,7 +48,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

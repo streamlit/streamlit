@@ -27,7 +27,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_snowpark_session
 
@@ -180,7 +180,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
         with patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df
 
@@ -353,7 +353,7 @@ class StArrowTableAPITest(DeltaGeneratorTestCase):
 
     def test_table(self):
         """Test st.table."""
-        from streamlit.type_util import bytes_to_data_frame
+        from streamlit.dataframe_util import bytes_to_data_frame
 
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 

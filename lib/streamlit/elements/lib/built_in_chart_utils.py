@@ -25,12 +25,15 @@ from typing import (
     Collection,
     Final,
     Hashable,
+    Literal,
     Sequence,
     TypedDict,
     cast,
 )
 
-from streamlit import type_util
+from typing_extensions import TypeAlias
+
+from streamlit import dataframe_util, type_util
 from streamlit.color_util import (
     Color,
     is_color_like,
@@ -44,8 +47,11 @@ if TYPE_CHECKING:
     import altair as alt
     import pandas as pd
 
+    from streamlit.dataframe_util import DataFrameCompatible
     from streamlit.elements.arrow import Data
-    from streamlit.type_util import ChartStackType, DataFrameCompatible
+
+VegaLiteType: TypeAlias = Literal["quantitative", "ordinal", "temporal", "nominal"]
+ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
 
 
 class PrepDataColumns(TypedDict):
@@ -129,7 +135,7 @@ def generate_chart(
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
-    df = type_util.convert_anything_to_df(data, ensure_copy=True)
+    df = dataframe_util.convert_anything_to_df(data, ensure_copy=True)
 
     # From now on, use "df" instead of "data". Deleting "data" to guarantee we follow this.
     del data
@@ -248,7 +254,7 @@ def prep_chart_data_for_add_rows(
     """
     import pandas as pd
 
-    df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
+    df = cast(pd.DataFrame, dataframe_util.convert_anything_to_df(data))
 
     # Make range indices start at last_index.
     if isinstance(df.index, pd.RangeIndex):
@@ -271,6 +277,66 @@ def prep_chart_data_for_add_rows(
     out_data, *_ = _prep_data(df, **add_rows_metadata.columns)
 
     return out_data, add_rows_metadata
+
+
+def _infer_vegalite_type(
+    data: pd.Series[Any],
+) -> VegaLiteType:
+    """
+    From an array-like input, infer the correct vega typecode
+    ('ordinal', 'nominal', 'quantitative', or 'temporal')
+
+    Parameters
+    ----------
+    data: Numpy array or Pandas Series
+    """
+    # The code below is copied from Altair, and slightly modified.
+    # We copy this code here so we don't depend on private Altair functions.
+    # Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py#L193
+
+    from pandas.api.types import infer_dtype
+
+    # STREAMLIT MOD: I'm using infer_dtype directly here, rather than using Altair's wrapper. Their
+    # wrapper is only there to support Pandas < 0.20, but Streamlit requires Pandas 1.3.
+    typ = infer_dtype(data)
+
+    if typ in [
+        "floating",
+        "mixed-integer-float",
+        "integer",
+        "mixed-integer",
+        "complex",
+    ]:
+        return "quantitative"
+
+    elif typ == "categorical" and data.cat.ordered:
+        # STREAMLIT MOD: The original code returns a tuple here:
+        # return ("ordinal", data.cat.categories.tolist())
+        # But returning the tuple here isn't compatible with our
+        # built-in chart implementation. And it also doesn't seem to be necessary.
+        # Altair already extracts the correct sort order somewhere else.
+        # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
+        return "ordinal"
+    elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
+        return "nominal"
+    elif typ in [
+        "datetime",
+        "datetime64",
+        "timedelta",
+        "timedelta64",
+        "date",
+        "time",
+        "period",
+    ]:
+        return "temporal"
+    else:
+        # STREAMLIT MOD: I commented this out since Streamlit doesn't have a warnings object.
+        # warnings.warn(
+        #     "I don't know how to infer vegalite type from '{}'.  "
+        #     "Defaulting to nominal.".format(typ),
+        #     stacklevel=1,
+        # )
+        return "nominal"
 
 
 def _get_pandas_index_attr(
@@ -327,8 +393,8 @@ def _prep_data(
 def _last_index_for_melted_dataframes(
     data: DataFrameCompatible | Any,
 ) -> Hashable | None:
-    if type_util.is_dataframe_compatible(data):
-        data = type_util.convert_anything_to_df(data)
+    if dataframe_util.is_dataframe_compatible(data):
+        data = dataframe_util.convert_anything_to_df(data)
 
         if data.index.size > 0:
             return cast(Hashable, data.index[-1])
@@ -434,7 +500,7 @@ def _melt_data(
 
     # Arrow has problems with object types after melting two different dtypes
     # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-    fixed_df = type_util.fix_arrow_incompatible_column_types(
+    fixed_df = dataframe_util.fix_arrow_incompatible_column_types(
         melted_df,
         selected_columns=[
             *columns_to_leave_alone,
@@ -862,7 +928,7 @@ def _get_color_encoding(
         if color_column == _MELTED_COLOR_COLUMN_NAME:
             column_type = "nominal"
         else:
-            column_type = type_util.infer_vegalite_type(df[color_column])
+            column_type = _infer_vegalite_type(df[color_column])
 
         color_enc = alt.Color(
             field=color_column, legend=_COLOR_LEGEND_SETTINGS, type=column_type
@@ -982,7 +1048,7 @@ def _get_tooltip_encoding(
 
 def _get_x_encoding_type(
     df: pd.DataFrame, chart_type: ChartType, x_column: str | None
-) -> type_util.VegaLiteType:
+) -> VegaLiteType:
     if x_column is None:
         return "quantitative"  # Anything. If None, Vega-Lite may hide the axis.
 
@@ -991,18 +1057,18 @@ def _get_x_encoding_type(
     if chart_type == ChartType.VERTICAL_BAR and not _is_date_column(df, x_column):
         return "ordinal"
 
-    return type_util.infer_vegalite_type(df[x_column])
+    return _infer_vegalite_type(df[x_column])
 
 
 def _get_y_encoding_type(
     df: pd.DataFrame, chart_type: ChartType, y_column: str | None
-) -> type_util.VegaLiteType:
+) -> VegaLiteType:
     # Horizontal bar charts should have a discrete (ordinal) y-axis, UNLESS type is date/time
     if chart_type == ChartType.HORIZONTAL_BAR and not _is_date_column(df, y_column):
         return "ordinal"
 
     if y_column:
-        return type_util.infer_vegalite_type(df[y_column])
+        return _infer_vegalite_type(df[y_column])
 
     return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 

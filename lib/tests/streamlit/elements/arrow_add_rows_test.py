@@ -18,7 +18,7 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.dataframe_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 DATAFRAME = pd.DataFrame({"a": [10], "b": [20], "c": [30]})
