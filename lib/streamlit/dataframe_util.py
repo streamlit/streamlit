@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import contextlib
-import copy
 import math
 from enum import Enum, EnumMeta, auto
 from typing import (
@@ -31,14 +30,13 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
 from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors, logger, string_util
-from streamlit.type_util import is_iterable, is_type
+from streamlit.type_util import is_type
 
 if TYPE_CHECKING:
     import numpy as np
