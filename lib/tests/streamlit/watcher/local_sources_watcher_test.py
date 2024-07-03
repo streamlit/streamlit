@@ -62,12 +62,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         for name in modules:
             try:
                 del sys.modules[the_globals[name].__name__]
-            except:
+            except Exception:
                 pass
 
             try:
                 del sys.modules[name]
-            except:
+            except Exception:
                 pass
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
