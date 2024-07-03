@@ -332,7 +332,7 @@ Offending object:
         ) from ex
 
 
-def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
+def convert_anything_to_sequence(obj: Any) -> Sequence[Any]:
     """Try to convert different formats to an indexable Sequence.
 
     If the input is a dataframe-like object, we can just select the first
@@ -349,10 +349,16 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     Sequence
         The converted sequence.
     """
-    if isinstance(obj, (list, tuple, set, EnumMeta)):
+    if obj is None:
+        return []
+
+    if isinstance(obj, (str, list, tuple, set, range, EnumMeta)):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
+
+    if isinstance(obj, dict):
+        return list(obj.keys())
 
     try:
         # We use ensure_copy here because the return value of this function is saved
@@ -363,7 +369,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
         # Return first column as a list:
         return (
-            [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
+            [] if data_df.empty else cast(Sequence[Any], data_df.iloc[:, 0].to_list())
         )
     except errors.StreamlitAPIException as e:
         raise TypeError(

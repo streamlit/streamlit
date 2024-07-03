@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 import enum
 from datetime import date
 from decimal import Decimal
 from typing import Any
 from unittest.mock import patch
+from collections import OrderedDict
+
 
 import numpy as np
 import pandas as pd
@@ -30,7 +34,14 @@ import streamlit as st
 from streamlit import dataframe_util
 
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata, TestObject
+from tests.streamlit.data_mocks import (
+    SHARED_TEST_CASES,
+    TestCaseMetadata,
+    TestObject,
+    TestEnum,
+    StrTestEnum,
+    data_generator,
+)
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
@@ -42,7 +53,7 @@ from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
-class TypeUtilTest(unittest.TestCase):
+class DataframeUtilTest(unittest.TestCase):
     def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
@@ -581,7 +592,7 @@ class TypeUtilTest(unittest.TestCase):
             {0: None, 1: None, 2: None, 3: None},
         )
 
-    def test_ensure_indexable_object_is_indexable(self):
+    def test_convert_anything_to_sequence_object_is_indexable(self):
         l1 = ["a", "b", "c"]
         l2 = dataframe_util.convert_anything_to_sequence(l1)
 
@@ -589,13 +600,13 @@ class TypeUtilTest(unittest.TestCase):
         self.assertFalse(l1 is l2)
         self.assertEqual(l1, l2)
 
-    def test_ensure_indexable_object_not_indexable(self):
+    def test_convert_anything_to_sequence_object_not_indexable(self):
         l = dataframe_util.convert_anything_to_sequence({"a", "b", "c"})
         self.assertIn("a", l)
         self.assertIn("b", l)
         self.assertIn("c", l)
 
-    def test_ensure_indexable_enum_is_indexable(self):
+    def test_convert_anything_to_sequence_enum_is_indexable(self):
         """Test Enums are indexable"""
 
         class Opt(enum.Enum):
@@ -611,6 +622,231 @@ class TypeUtilTest(unittest.TestCase):
 
         l = dataframe_util.convert_anything_to_sequence(StrOpt)
         self.assertEqual(list(StrOpt), l)
+
+    @parameterized.expand(
+        [
+            (None, []),
+            # List:
+            ([], []),
+            (
+                ["st.number_input", "st.text_area", "st.text_input"],
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            (
+                [1, 2, 3],
+                [1, 2, 3],
+            ),
+            # Reversed list:
+            (
+                reversed(["st.number_input", "st.text_area", "st.text_input"]),
+                ["st.text_input", "st.text_area", "st.number_input"],
+            ),
+            # Set:
+            (set(), []),
+            (
+                {"st.number_input", "st.text_area", "st.text_input"},
+                ["st.text_input", "st.number_input", "st.text_area"],
+            ),
+            # Tuple:
+            ((), []),
+            (
+                ("st.number_input", "st.text_area", "st.text_input"),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Dict:
+            ({}, []),
+            (
+                {
+                    "st.number_input": "number",
+                    "st.text_area": "text",
+                    "st.text_input": "text",
+                },
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Dict keys:
+            (
+                {
+                    "st.number_input": "number",
+                    "st.text_area": "text",
+                    "st.text_input": "text",
+                }.keys(),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Dict values:
+            (
+                {
+                    "st.number_input": "number",
+                    "st.text_area": "text",
+                    "st.text_input": "text",
+                }.values(),
+                ["number", "text", "text"],
+            ),
+            # OrderedDict:
+            (
+                OrderedDict(
+                    [
+                        ("st.number_input", "number"),
+                        ("st.text_area", "text"),
+                        ("st.text_input", "text"),
+                    ]
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Enum:
+            (
+                TestEnum,
+                [TestEnum.NUMBER_INPUT, TestEnum.TEXT_AREA, TestEnum.TEXT_INPUT],
+            ),
+            (StrTestEnum, ["st.number_input", "st.text_area", "st.text_input"]),
+            # Generator:
+            (data_generator(), ["st.number_input", "st.text_area", "st.text_input"]),
+            # Enumerate:
+            (
+                enumerate(["st.number_input", "st.text_area", "st.text_input"]),
+                [0, 1, 2],
+            ),
+            # String:
+            ("abc", ["a", "b", "c"]),
+            # Range:
+            (range(3), [0, 1, 2]),
+            # Pandas Dataframe:
+            (
+                pd.DataFrame(),
+                [],
+            ),
+            (
+                pd.DataFrame(
+                    columns=["name", "type"], index=pd.RangeIndex(start=0, step=1)
+                ),
+                [],
+            ),
+            (
+                pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"]),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            (
+                pd.DataFrame(
+                    {
+                        "widgets": ["st.number_input", "st.text_area", "st.text_input"],
+                        "types": ["number", "text", "text"],
+                    }
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pandas Series (pd.Series):
+            (
+                pd.Series(
+                    ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pandas Index (pd.Index):
+            (
+                pd.Index(["st.number_input", "st.text_area", "st.text_input"]),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pandas Styler (pd.Styler):
+            (
+                pd.DataFrame(
+                    ["st.number_input", "st.text_area", "st.text_input"]
+                ).style,
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pandas Categorical (pd.Categorical):
+            (
+                pd.Categorical(["st.number_input", "st.text_area", "st.text_input"]),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pandas DatetimeIndex (pd.DatetimeIndex):
+            (
+                pd.DatetimeIndex(
+                    ["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]
+                ),
+                [
+                    pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
+                    pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
+                ],
+            ),
+            # Pandas DatetimeArrayå:
+            (
+                pd.arrays.DatetimeArray(
+                    pd.DatetimeIndex(
+                        ["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]
+                    ),
+                ),
+                [
+                    pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
+                    pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
+                ],
+            ),
+            # Pandas RangeIndex (pd.RangeIndex):
+            (
+                pd.RangeIndex(start=0, stop=3, step=1),
+                [0, 1, 2],
+            ),
+            # Numpy array:
+            (
+                np.array([]),
+                [],
+            ),
+            (
+                np.array(["st.number_input", "st.text_area", "st.text_input"]),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pyarrow Table:
+            (
+                pa.Table.from_pandas(
+                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Snowpark Table:
+            (
+                SnowparkTable(
+                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Snowpark DataFrame:
+            (
+                SnowparkDataFrame(
+                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Snowpark Pandas DataFrame:
+            (
+                SnowpandasDataFrame(
+                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Snowpark Pandas Series:
+            (
+                SnowpandasSeries(
+                    pd.Series(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Pyspark Dataframe:
+            (
+                PysparkDataFrame(
+                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+        ]
+    )
+    def test_convert_anything_to_sequence(
+        self, input_data: Any, result_sequence: list[Any]
+    ):
+        """Test that `convert_anything_to_sequence` correctly converts
+        a variety of types to a sequence.
+        """
+        converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
+        self.assertEquals(set(converted_sequence), set(result_sequence))
+        # Check that it is a new object and not the same as the input:
+        assert converted_sequence is not input_data
 
 
 class TestArrowTruncation(DeltaGeneratorTestCase):
