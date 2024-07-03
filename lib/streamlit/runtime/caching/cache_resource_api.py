@@ -339,6 +339,7 @@ class CacheResourceAPI:
         ... def get_database_session(url):
         ...     # Create a database session object that points to the URL.
         ...     return session
+        >>>
         >>> s1 = get_database_session(SESSION_URL_1)
         >>> # Actually executes the function, since this is the first time it was
         >>> # encountered.
@@ -360,6 +361,7 @@ class CacheResourceAPI:
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
         ...     return connection
+        >>>
         >>> s1 = get_database_session(create_sessionmaker(), DATA_URL_1)
         >>> # Actually executes the function, since this is the first time it was
         >>> # encountered.
@@ -377,6 +379,7 @@ class CacheResourceAPI:
         ... def get_database_session(_sessionmaker, url):
         ...     # Create a database connection object that points to the URL.
         ...     return connection
+        >>>
         >>> fetch_and_clean_data.clear(_sessionmaker, "https://streamlit.io/")
         >>> # Clear the cached entry for the arguments provided.
         >>>
