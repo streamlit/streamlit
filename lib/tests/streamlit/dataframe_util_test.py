@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+import enum
 from datetime import date
 from decimal import Decimal
 from typing import Any
