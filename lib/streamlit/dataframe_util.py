@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
-    from pandas.io.formats.style_renderer import StyleRenderer
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -222,7 +221,7 @@ def is_snowpandas_data_object(obj: object) -> bool:
 
 
 def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
-    """True if type that can be passed to convert_anything_to_df."""
+    """True if type that can be passed to convert_anything_to_pandas_df."""
     return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
 
 
@@ -230,50 +229,29 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
-@overload
-def convert_anything_to_df(
+def convert_anything_to_pandas_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
-) -> DataFrame: ...
-
-
-@overload
-def convert_anything_to_df(
-    data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
-    ensure_copy: bool = False,
-    allow_styler: bool = False,
-) -> DataFrame | Styler: ...
-
-
-def convert_anything_to_df(
-    data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
-    ensure_copy: bool = False,
-    allow_styler: bool = False,
-) -> DataFrame | Styler:
+) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
     ----------
-    data : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+    data : any
+        The data to convert to a Pandas DataFrame.
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
         taking max_unevaluated_rows, defaults to 10k and 100 for st.table
 
     ensure_copy: bool
-        If True, make sure to always return a copy of the data. If False, it depends on the
-        type of the data. For example, a Pandas DataFrame will be returned as-is.
-
-    allow_styler: bool
-        If True, allows this to return a Pandas Styler object as well. If False, returns
-        a plain Pandas DataFrame (which, of course, won't contain the Styler's styles).
+        If True, make sure to always return a copy of the data. If False, it depends on
+        the type of the data. For example, a Pandas DataFrame will be returned as-is.
 
     Returns
     -------
-    pandas.DataFrame or pandas.Styler
+    pandas.DataFrame
 
     """
     import pandas as pd
@@ -282,26 +260,10 @@ def convert_anything_to_df(
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
-        # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
-        # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
-        # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
-        sr = cast("StyleRenderer", data)
-
-        if allow_styler:
-            if ensure_copy:
-                out = copy.deepcopy(sr)
-                out.data = sr.data.copy()
-                return cast("Styler", out)
-            else:
-                return data
-        else:
-            return cast("Styler", sr.data.copy() if ensure_copy else sr.data)
+        return cast("DataFrame", data.data.copy() if ensure_copy else data.data)
 
     if is_type(data, "numpy.ndarray"):
-        if len(data.shape) == 0:
-            return pd.DataFrame([])
-        return pd.DataFrame(data)
-
+        return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
@@ -310,8 +272,8 @@ def convert_anything_to_df(
 
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `_to_pandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `_to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -319,8 +281,8 @@ def convert_anything_to_df(
         data = data.limit(max_unevaluated_rows).toPandas()
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `toPandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `toPandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -328,8 +290,8 @@ def convert_anything_to_df(
         data = data.limit(max_unevaluated_rows).to_pandas()
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `to_pandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -341,8 +303,8 @@ def convert_anything_to_df(
 
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `to_pandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -398,7 +360,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         # and we don't want mutations to the options object passed to a
         # widget affect the widget.
         # (See https://github.com/streamlit/streamlit/issues/7534)
-        data_df = convert_anything_to_df(obj, ensure_copy=True)
+        data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
         # Return first column as a pd.Series
         # The type of the elements in this column is not known up front, hence
         # the Iterable[Any] return type.

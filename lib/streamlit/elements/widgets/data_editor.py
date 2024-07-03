@@ -805,7 +805,7 @@ class DataEditorMixin:
 
         # The dataframe should always be a copy of the original data
         # since we will apply edits directly to it.
-        data_df = dataframe_util.convert_anything_to_df(data, ensure_copy=True)
+        data_df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
 
         # Check if the index is supported.
         if not _is_supported_index(data_df.index):

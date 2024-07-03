@@ -29,7 +29,7 @@ class DataFrameCoercionTest(unittest.TestCase):
         of equal-length lists
         """
         d = {"a": [1], "b": [2], "c": [3]}
-        df = dataframe_util.convert_anything_to_df(d)
+        df = dataframe_util.convert_anything_to_pandas_df(d)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (1, 3))
 
@@ -38,7 +38,7 @@ class DataFrameCoercionTest(unittest.TestCase):
         from an empty numpy array.
         """
         arr = np.array([])
-        df = dataframe_util.convert_anything_to_df(arr)
+        df = dataframe_util.convert_anything_to_pandas_df(arr)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (0, 1))
 
@@ -46,7 +46,7 @@ class DataFrameCoercionTest(unittest.TestCase):
         """Test that a DataFrame can be constructed from a pandas.Styler"""
         d = {"a": [1], "b": [2], "c": [3]}
         styler = pd.DataFrame(d).style.format("{:.2%}")
-        df = dataframe_util.convert_anything_to_df(styler)
+        df = dataframe_util.convert_anything_to_pandas_df(styler)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (1, 3))
 
@@ -54,6 +54,6 @@ class DataFrameCoercionTest(unittest.TestCase):
         """Test that a DataFrame can be constructed from a pyarrow.Table"""
         d = {"a": [1], "b": [2], "c": [3]}
         table = pa.Table.from_pandas(pd.DataFrame(d))
-        df = dataframe_util.convert_anything_to_df(table)
+        df = dataframe_util.convert_anything_to_pandas_df(table)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (1, 3))
