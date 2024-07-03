@@ -17,7 +17,7 @@ from uuid import uuid4
 import streamlit as st
 
 
-@st.experimental_fragment
+@st.fragment
 def outer_fragment():
     with st.container(border=True):
         st.write(f"outer fragment: {uuid4()}")
@@ -25,7 +25,7 @@ def outer_fragment():
         inner_fragment()
 
 
-@st.experimental_fragment
+@st.fragment
 def inner_fragment():
     with st.container(border=True):
         st.write(f"inner fragment: {uuid4()}")
