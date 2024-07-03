@@ -59,9 +59,7 @@ class ServerUtilTest(unittest.TestCase):
             ("/foo/bar/", 9988, "http://the_ip_address:9988/foo/bar"),
         ]
     )
-    def test_get_url(
-        self, base_url: str | None, port: int | None, expected_url: str
-    ):
+    def test_get_url(self, base_url: str | None, port: int | None, expected_url: str):
         options = {"server.headless": False, "global.developmentMode": False}
 
         if base_url:
