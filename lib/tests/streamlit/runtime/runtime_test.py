@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import os
 import shutil
 import tempfile
 import unittest
-from typing import List
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
@@ -53,7 +54,7 @@ class MockSessionClient(SessionClient):
     """A SessionClient that captures all its ForwardMsgs into a list."""
 
     def __init__(self):
-        self.forward_msgs: List[ForwardMsg] = []
+        self.forward_msgs: list[ForwardMsg] = []
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         self.forward_msgs.append(msg)
