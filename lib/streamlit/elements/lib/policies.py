@@ -14,17 +14,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
-from streamlit import config, errors, runtime
+from streamlit import config, errors, logger, runtime
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, get_session_state
-from streamlit.type_util import _LOGGER
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+_LOGGER: Final = logger.get_logger(__name__)
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
