@@ -332,7 +332,7 @@ Offending object:
         ) from ex
 
 
-def convert_anything_to_sequence(obj: Any) -> Sequence[Any]:
+def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     """Try to convert different formats to an indexable Sequence.
 
     If the input is a dataframe-like object, we can just select the first
@@ -350,7 +350,7 @@ def convert_anything_to_sequence(obj: Any) -> Sequence[Any]:
         The converted sequence.
     """
     if obj is None:
-        return []
+        return []  # type: ignore
 
     if isinstance(obj, str):
         # String is a special case: theoretically it is iterable, but we don't want
@@ -377,7 +377,7 @@ def convert_anything_to_sequence(obj: Any) -> Sequence[Any]:
         data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
         # Return first column as a list:
         return (
-            [] if data_df.empty else cast(Sequence[Any], data_df.iloc[:, 0].to_list())
+            [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
         )
     except errors.StreamlitAPIException as e:
         raise TypeError(
