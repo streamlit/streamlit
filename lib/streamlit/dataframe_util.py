@@ -352,6 +352,8 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         The converted sequence.
     """
     if isinstance(obj, (list, tuple, set, EnumMeta)):
+        # This also ensures that the sequence is copied to prevent
+        # potential mutations to the original object.
         return list(obj)
 
     try:
@@ -361,9 +363,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         # widget affect the widget.
         # (See https://github.com/streamlit/streamlit/issues/7534)
         data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
-        # Return first column as a pd.Series
-        # The type of the elements in this column is not known up front, hence
-        # the Iterable[Any] return type.
+        # Return first column as a list:
         return (
             [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
         )
