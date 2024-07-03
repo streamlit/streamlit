@@ -301,16 +301,21 @@ export const StyledBorderlessIconButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ size, theme, style }) => {
   const iconPadding: Record<BaseButtonSize, string> = {
-    [BaseButtonSize.XSMALL]: theme.spacing.twoXS,
-    [BaseButtonSize.SMALL]: theme.spacing.xs,
+    [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
+    [BaseButtonSize.SMALL]: theme.spacing.twoXS,
     [BaseButtonSize.MEDIUM]: theme.spacing.md,
     [BaseButtonSize.LARGE]: theme.spacing.lg,
   }
 
   return {
     backgroundColor: theme.colors.transparent,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
     padding: iconPadding[size],
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
+
+    border: "none",
+    display: "flex",
+    minHeight: "unset",
 
     "&:focus": {
       boxShadow: "none",

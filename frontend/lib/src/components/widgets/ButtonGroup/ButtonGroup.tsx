@@ -106,6 +106,7 @@ function getContentElement(content: string): ReactElement {
       style={{
         marginBottom: 0,
         width: iconSizes[fontSize],
+        display: "inline-flex",
       }}
     />
   )
@@ -203,7 +204,7 @@ function createOptionChild(
     return (
       <BaseButton
         {...props}
-        size={BaseButtonSize.SMALL}
+        size={BaseButtonSize.XSMALL}
         kind={BaseButtonKind.BORDERLESS_ICON}
         style={style}
       >
