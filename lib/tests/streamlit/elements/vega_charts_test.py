@@ -128,7 +128,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
         with mock.patch(
-            "streamlit.dataframe_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df
 
@@ -557,7 +557,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
 
         with patch(
-            "streamlit.dataframe_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df1
 
