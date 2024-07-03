@@ -38,8 +38,14 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -54,7 +60,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import adjust_years
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

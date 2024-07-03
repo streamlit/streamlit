@@ -36,10 +36,9 @@ from streamlit.elements.vega_charts import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.type_util import (
-    bytes_to_data_frame,
     is_altair_version_less_than,
-    pyarrow_table_to_bytes,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 

@@ -37,8 +37,8 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
+from streamlit import dataframe_util
 from streamlit import logger as _logger
-from streamlit import type_util
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
@@ -60,6 +60,7 @@ from streamlit.elements.lib.policies import (
     check_fragment_path_policy,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -71,7 +72,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
+from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -89,7 +90,7 @@ _LOGGER: Final = _logger.get_logger(__name__)
 EditableData = TypeVar(
     "EditableData",
     bound=Union[
-        DataFrameGenericAlias[Any],  # covers DataFrame and Series
+        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
         Tuple[Any],
         List[Any],
         Set[Any],
@@ -795,8 +796,8 @@ class DataEditorMixin:
 
         column_config_mapping: ColumnConfigMapping = {}
 
-        data_format = type_util.determine_data_format(data)
-        if data_format == DataFormat.UNKNOWN:
+        data_format = dataframe_util.determine_data_format(data)
+        if data_format == dataframe_util.DataFormat.UNKNOWN:
             raise StreamlitAPIException(
                 f"The data type ({type(data).__name__}) or format is not supported by the data editor. "
                 "Please convert your data into a Pandas Dataframe or another supported data format."
@@ -804,7 +805,7 @@ class DataEditorMixin:
 
         # The dataframe should always be a copy of the original data
         # since we will apply edits directly to it.
-        data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
+        data_df = dataframe_util.convert_anything_to_df(data, ensure_copy=True)
 
         # Check if the index is supported.
         if not _is_supported_index(data_df.index):
@@ -855,7 +856,7 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
-        arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+        arrow_bytes = dataframe_util.pyarrow_table_to_bytes(arrow_table)
 
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
@@ -902,7 +903,7 @@ class DataEditorMixin:
 
         proto.form_id = current_form_id(self.dg)
 
-        if type_util.is_pandas_styler(data):
+        if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
             # Get first 10 chars of md5 hash of the key or delta path as styler uuid
             # and set it as styler uuid.
@@ -936,7 +937,7 @@ class DataEditorMixin:
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
         self.dg._enqueue("arrow_data_frame", proto)
-        return type_util.convert_df_to_data_format(data_df, data_format)
+        return dataframe_util.convert_df_to_data_format(data_df, data_format)
 
     @property
     def dg(self) -> DeltaGenerator:

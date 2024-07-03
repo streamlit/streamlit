@@ -25,8 +25,14 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -38,7 +44,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

@@ -45,7 +45,7 @@ from streamlit.elements.widgets.data_editor import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.type_util import (
+from streamlit.dataframe_util import (
     DataFormat,
     bytes_to_data_frame,
     is_pandas_version_less_than,

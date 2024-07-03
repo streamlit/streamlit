@@ -27,6 +27,7 @@ from streamlit.elements.lib.policies import (
     check_fragment_path_policy,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -42,7 +43,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import is_emoji, validate_material_icon
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

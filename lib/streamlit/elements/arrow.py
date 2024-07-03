@@ -32,7 +32,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit import type_util
+from streamlit import dataframe_util
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -48,13 +48,13 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -511,15 +511,15 @@ class ArrowMixin:
 
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
-            proto.data = type_util.pyarrow_table_to_bytes(data)
+            proto.data = dataframe_util.pyarrow_table_to_bytes(data)
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
 
             # Determine the input data format
-            data_format = type_util.determine_data_format(data)
+            data_format = dataframe_util.determine_data_format(data)
 
-            if type_util.is_pandas_styler(data):
+            if dataframe_util.is_pandas_styler(data):
                 # If pandas.Styler uuid is not provided, a hash of the position
                 # of the element will be used. This will cause a rerender of the table
                 # when the position of the element is changed.
@@ -528,7 +528,7 @@ class ArrowMixin:
                 marshall_styler(proto, data, default_uuid)
 
             # Convert the input data into a pandas.DataFrame
-            data_df = type_util.convert_anything_to_df(data, ensure_copy=False)
+            data_df = dataframe_util.convert_anything_to_df(data, ensure_copy=False)
             apply_data_specific_configs(
                 column_config_mapping,
                 data_df,
@@ -536,7 +536,7 @@ class ArrowMixin:
                 check_arrow_compatibility=False,
             )
             # Serialize the data to bytes:
-            proto.data = type_util.data_frame_to_bytes(data_df)
+            proto.data = dataframe_util.data_frame_to_bytes(data_df)
 
         if hide_index is not None:
             update_column_config(
@@ -615,8 +615,8 @@ class ArrowMixin:
 
         # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
         # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
-        if type_util.is_unevaluated_data_object(data):
-            data = type_util.convert_anything_to_df(data, max_unevaluated_rows=100)
+        if dataframe_util.is_unevaluated_data_object(data):
+            data = dataframe_util.convert_anything_to_df(data, max_unevaluated_rows=100)
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
@@ -707,7 +707,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
     """
     import pyarrow as pa
 
-    if type_util.is_pandas_styler(data):
+    if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
         # and `None` otherwise.
         assert isinstance(
@@ -716,7 +716,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         marshall_styler(proto, data, default_uuid)
 
     if isinstance(data, pa.Table):
-        proto.data = type_util.pyarrow_table_to_bytes(data)
+        proto.data = dataframe_util.pyarrow_table_to_bytes(data)
     else:
-        df = type_util.convert_anything_to_df(data)
-        proto.data = type_util.data_frame_to_bytes(df)
+        df = dataframe_util.convert_anything_to_df(data)
+        proto.data = dataframe_util.data_frame_to_bytes(df)

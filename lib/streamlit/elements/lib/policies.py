@@ -16,11 +16,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from streamlit import config, runtime
+from streamlit import config, errors, runtime
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, get_session_state
+from streamlit.type_util import _LOGGER
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -143,3 +144,18 @@ def check_fragment_path_policy(dg: DeltaGenerator):
     for index, path_index in enumerate(current_fragment_delta_path):
         if current_cursor_delta_path[index] != path_index:
             raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)
+
+
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
+    if not label:
+        _LOGGER.warning(
+            "`label` got an empty value. This is discouraged for accessibility "
+            "reasons and may be disallowed in the future by raising an exception. "
+            "Please provide a non-empty label and hide it with label_visibility "
+            "if needed."
+        )
+    if label_visibility not in ("visible", "hidden", "collapsed"):
+        raise errors.StreamlitAPIException(
+            f"Unsupported label_visibility option '{label_visibility}'. "
+            f"Valid values are 'visible', 'hidden' or 'collapsed'."
+        )
