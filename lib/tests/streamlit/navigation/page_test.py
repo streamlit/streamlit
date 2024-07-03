@@ -108,15 +108,6 @@ class StPagesTest(DeltaGeneratorTestCase):
         page = st.Page(page_9, default=True)
         assert page.url_path == ""
 
-    def test_url_path_is_empty_string_if_default(self):
-        """Tests that url path is "" if the page is the default page"""
-
-        def page_9():
-            pass
-
-        page = st.Page(page_9, default=True)
-        assert page.url_path == ""
-
     def test_non_default_pages_cannot_have_empty_url_path(self):
         """Tests that an error is raised if the empty url path is provided for a non-default page"""
 

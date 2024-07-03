@@ -90,7 +90,7 @@ def pytest_configure(config: pytest.Config):
         if sys.version_info[0:2] != (3, 8):
             raise pytest.UsageError("Python 3.8 is required to run Snowflake tests")
         try:
-            import snowflake.snowpark
+            import snowflake.snowpark  # noqa: F401
         except ImportError:
             raise pytest.UsageError(
                 "The snowflake-snowpark-python package is not installed."

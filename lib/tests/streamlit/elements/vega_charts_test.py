@@ -405,7 +405,6 @@ class AltairChartTest(DeltaGeneratorTestCase):
         # 2 elements will be created: form block, altair_chart
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
-        self.get_delta_from_queue(0).add_block
         vega_lite_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
         self.assertEqual(vega_lite_proto.form_id, "")
 

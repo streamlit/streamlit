@@ -14,7 +14,8 @@
 
 """st.pyplot unit tests."""
 
-from typing import Optional
+from __future__ import annotations
+
 from unittest.mock import Mock, patch
 
 import matplotlib
@@ -64,7 +65,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         self.assertTrue(el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT))
 
     @parameterized.expand([("true", True), ("false", False), ("none", None)])
-    def test_st_pyplot_clear_global_figure(self, _, clear_figure: Optional[bool]):
+    def test_st_pyplot_clear_global_figure(self, _, clear_figure: bool | None):
         """st.pyplot should clear the global figure if `clear_figure` is
         True *or* None.
         """
@@ -86,7 +87,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         show_warning_mock.assert_called_once()
 
     @parameterized.expand([("true", True), ("false", False), ("none", None)])
-    def test_st_pyplot_clear_figure(self, _, clear_figure: Optional[bool]):
+    def test_st_pyplot_clear_figure(self, _, clear_figure: bool | None):
         """st.pyplot should clear the passed-in figure if `clear_figure` is True."""
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
