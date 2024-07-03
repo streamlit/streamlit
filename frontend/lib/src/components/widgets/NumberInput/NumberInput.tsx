@@ -156,7 +156,22 @@ export class NumberInput extends React.PureComponent<Props, State> {
       return null
     }
 
-    const format = getNonEmptyString(this.props.element.format)
+    let format = getNonEmptyString(this.props.element.format)
+
+    /**
+     * In the instance where a step is specified for a float,
+     * and a format is not explicitly provided, we will use the
+     * precision of the step to format the result.
+     */
+    if (format == null) {
+      const { step } = this.props.element
+      const strStep = step.toString()
+      if (this.isFloatData() && step !== 0 && strStep.includes(".")) {
+        const decimalPlaces = strStep.split(".")[1].length
+        format = `%.${decimalPlaces}f`
+      }
+    }
+
     if (format == null) {
       return value.toString()
     }
@@ -172,6 +187,10 @@ export class NumberInput extends React.PureComponent<Props, State> {
 
   private isIntData = (): boolean => {
     return this.props.element.dataType === NumberInputProto.DataType.INT
+  }
+
+  private isFloatData = (): boolean => {
+    return this.props.element.dataType === NumberInputProto.DataType.FLOAT
   }
 
   private getMin = (): number => {
