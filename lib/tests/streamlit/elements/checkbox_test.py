@@ -22,7 +22,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.type_util import _LOGGER
+from streamlit.elements.lib.policies import _LOGGER
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 

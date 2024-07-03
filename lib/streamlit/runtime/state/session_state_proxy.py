@@ -18,11 +18,11 @@ from typing import Any, Final, Iterator, MutableMapping
 
 from streamlit import logger as _logger
 from streamlit import runtime
+from streamlit.elements.lib.utils import Key
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.common import require_valid_user_key
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.type_util import Key
 
 _LOGGER: Final = _logger.get_logger(__name__)
 

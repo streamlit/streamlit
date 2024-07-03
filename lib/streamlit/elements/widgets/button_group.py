@@ -35,7 +35,9 @@ from streamlit.elements.lib.options_selector_utils import (
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
+    Key,
     maybe_coerce_enum_sequence,
+    to_key,
 )
 from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
@@ -50,15 +52,17 @@ from streamlit.runtime.state.common import (
     compute_widget_id,
     save_for_app_testing,
 )
-from streamlit.type_util import Key, OptionSequence, T, to_key
 
 if TYPE_CHECKING:
+    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,
         WidgetCallback,
         WidgetKwargs,
     )
+    from streamlit.type_util import T
+
 
 V = TypeVar("V")
 

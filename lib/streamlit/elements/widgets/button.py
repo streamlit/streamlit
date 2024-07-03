@@ -38,6 +38,7 @@ from streamlit.elements.lib.policies import (
     check_fragment_path_policy,
     check_session_state_rules,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
@@ -55,7 +56,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import Key, to_key
 from streamlit.url_util import is_url
 
 if TYPE_CHECKING:

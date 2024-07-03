@@ -26,6 +26,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import type_util
+from streamlit.dataframe_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
@@ -44,7 +45,6 @@ from streamlit.runtime.caching.cached_message_replay import (
     replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
-from streamlit.type_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:

@@ -38,10 +38,10 @@ from streamlit import (
     cli_util,
     config,
     cursor,
+    dataframe_util,
     env_util,
     logger,
     runtime,
-    type_util,
     util,
 )
 from streamlit.elements.alert import AlertMixin
@@ -708,7 +708,7 @@ def _prep_data_for_add_rows(
 ) -> tuple[Data, AddRowsMetadata | None]:
     if not add_rows_metadata:
         # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-        return type_util.convert_anything_to_df(data, allow_styler=True), None
+        return dataframe_util.convert_anything_to_df(data, allow_styler=True), None
 
     # If add_rows_metadata is set, it indicates that the add_rows used called
     # on a chart based on our built-in chart commands.

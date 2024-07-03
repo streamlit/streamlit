@@ -20,12 +20,11 @@ from typing import (
     cast,
 )
 
+from streamlit.dataframe_util import OptionSequence, ensure_indexable
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import (
-    OptionSequence,
     T,
     check_python_comparable,
-    ensure_indexable,
     is_type,
 )
 

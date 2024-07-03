@@ -14,9 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any, Final, Sequence
 
-from streamlit import config, runtime
+from streamlit import config, errors, logger, runtime
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -24,6 +24,9 @@ from streamlit.runtime.state import WidgetCallback, get_session_state
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+_LOGGER: Final = logger.get_logger(__name__)
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
@@ -155,3 +158,18 @@ def check_widget_policies(
     check_cache_replay_rules()
     check_callback_rules(dg, on_change)
     check_session_state_rules(default_value=default, key=key, writes_allowed=True)
+
+
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
+    if not label:
+        _LOGGER.warning(
+            "`label` got an empty value. This is discouraged for accessibility "
+            "reasons and may be disallowed in the future by raising an exception. "
+            "Please provide a non-empty label and hide it with label_visibility "
+            "if needed."
+        )
+    if label_visibility not in ("visible", "hidden", "collapsed"):
+        raise errors.StreamlitAPIException(
+            f"Unsupported label_visibility option '{label_visibility}'. "
+            f"Valid values are 'visible', 'hidden' or 'collapsed'."
+        )
