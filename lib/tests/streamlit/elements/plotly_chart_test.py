@@ -59,7 +59,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
             st.plotly_chart(fig, theme="bad_theme")
 
         self.assertEqual(
-            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
             str(exc.exception),
         )
 
@@ -175,7 +175,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
 
         data = [trace0]
-        with self.assertRaises(StreamlitAPIException) as exc:
+        with self.assertRaises(StreamlitAPIException):
             st.plotly_chart(data, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))

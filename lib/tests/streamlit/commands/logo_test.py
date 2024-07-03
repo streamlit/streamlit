@@ -58,7 +58,7 @@ class LogoTest(DeltaGeneratorTestCase):
         streamlit = Image.open(
             str(pathlib.Path(__file__).parent / "full-streamlit.png")
         )
-        with pytest.raises(StreamlitAPIException) as exc_message:
+        with pytest.raises(StreamlitAPIException):
             st.logo(streamlit, link="www.example.com")
 
     def test_with_icon_image(self):

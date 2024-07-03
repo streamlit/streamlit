@@ -14,6 +14,8 @@
 
 """Config System Unittest."""
 
+from __future__ import annotations
+
 import copy
 import os
 import textwrap
@@ -328,7 +330,7 @@ class ConfigTest(unittest.TestCase):
                 "ui",
             ]
         )
-        keys = sorted(list(config._section_descriptions.keys()))
+        keys = sorted(config._section_descriptions.keys())
         self.assertEqual(sections, keys)
 
     def test_config_option_keys(self):

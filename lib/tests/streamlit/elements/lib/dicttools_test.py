@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
-from typing import Any, Dict
+from typing import Any
 
 from parameterized import parameterized
 
@@ -31,7 +33,7 @@ class DictToolsTest(unittest.TestCase):
             ({"a": 1, "b": {"c": None, "d": 3}}, {"a": 1, "b": {"d": 3}}),
         ]
     )
-    def test_remove_none_values(self, input: Dict[str, Any], expected: Dict[str, Any]):
+    def test_remove_none_values(self, input: dict[str, Any], expected: dict[str, Any]):
         """Test remove_none_values."""
 
         self.assertEqual(

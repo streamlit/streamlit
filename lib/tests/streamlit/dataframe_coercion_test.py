@@ -14,6 +14,8 @@
 
 """Tests coercing various objects to DataFrames"""
 
+from __future__ import annotations
+
 import unittest
 
 import numpy as np

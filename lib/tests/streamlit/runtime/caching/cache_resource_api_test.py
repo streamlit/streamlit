@@ -14,9 +14,11 @@
 
 """st.cache_resource unit tests."""
 
+from __future__ import annotations
+
 import threading
 import unittest
-from typing import Any, List
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 from parameterized import parameterized
@@ -28,7 +30,6 @@ from streamlit.runtime.caching import (
     get_resource_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cached_message_replay import MultiCacheResults
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
@@ -43,6 +44,9 @@ from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
 from tests.testutil import create_mock_script_run_ctx
+
+if TYPE_CHECKING:
+    from streamlit.runtime.caching.cached_message_replay import MultiCacheResults
 
 
 def as_cached_result(value: Any) -> MultiCacheResults:
@@ -206,7 +210,7 @@ class CacheResourceValidateTest(unittest.TestCase):
         """If we have a validate function and it returns True, we don't recompute our cached value."""
         validate = Mock(return_value=True)
 
-        call_count: List[int] = [0]
+        call_count: list[int] = [0]
 
         @st.cache_resource(validate=validate)
         def f() -> int:
@@ -227,7 +231,7 @@ class CacheResourceValidateTest(unittest.TestCase):
         """If we have a validate function and it returns False, we recompute our cached value."""
         validate = Mock(return_value=False)
 
-        call_count: List[int] = [0]
+        call_count: list[int] = [0]
 
         @st.cache_resource(validate=validate)
         def f() -> int:
