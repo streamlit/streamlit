@@ -835,6 +835,20 @@ class DataframeUtilTest(unittest.TestCase):
                 ),
                 ["st.number_input", "st.text_area", "st.text_input"],
             ),
+            # Modin Dataframe:
+            (
+                ModinDataFrame(
+                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
+            # Modin Series:
+            (
+                ModinSeries(
+                    pd.Series(["st.number_input", "st.text_area", "st.text_input"])
+                ),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
         ]
     )
     def test_convert_anything_to_sequence(
