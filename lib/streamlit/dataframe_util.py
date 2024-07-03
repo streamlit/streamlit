@@ -246,8 +246,8 @@ def convert_anything_to_pandas_df(
         taking max_unevaluated_rows, defaults to 10k and 100 for st.table
 
     ensure_copy: bool
-        If True, make sure to always return a copy of the data. If False, it depends on the
-        type of the data. For example, a Pandas DataFrame will be returned as-is.
+        If True, make sure to always return a copy of the data. If False, it depends on
+        the type of the data. For example, a Pandas DataFrame will be returned as-is.
 
     Returns
     -------
