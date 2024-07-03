@@ -620,14 +620,14 @@ class TypeUtilTest(unittest.TestCase):
 
     def test_ensure_indexable_object_is_indexable(self):
         l1 = ["a", "b", "c"]
-        l2 = dataframe_util.ensure_indexable(l1)
+        l2 = dataframe_util.convert_anything_to_sequence(l1)
 
         # Assert that l1 was shallow copied into l2.
         self.assertFalse(l1 is l2)
         self.assertEqual(l1, l2)
 
     def test_ensure_indexable_object_not_indexable(self):
-        l = dataframe_util.ensure_indexable({"a", "b", "c"})
+        l = dataframe_util.convert_anything_to_sequence({"a", "b", "c"})
         self.assertIn("a", l)
         self.assertIn("b", l)
         self.assertIn("c", l)
@@ -643,10 +643,10 @@ class TypeUtilTest(unittest.TestCase):
             OPT1 = "a"
             OPT2 = "b"
 
-        l = dataframe_util.ensure_indexable(Opt)
+        l = dataframe_util.convert_anything_to_sequence(Opt)
         self.assertEqual(list(Opt), l)
 
-        l = dataframe_util.ensure_indexable(StrOpt)
+        l = dataframe_util.convert_anything_to_sequence(StrOpt)
         self.assertEqual(list(StrOpt), l)
 
 

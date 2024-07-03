@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 
 from typing_extensions import TypeGuard
 
-from streamlit.dataframe_util import OptionSequence, ensure_indexable
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
@@ -267,7 +267,7 @@ class SelectSliderMixin:
         check_session_state_rules(default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
+        opt = convert_anything_to_sequence(options)
         check_python_comparable(opt)
 
         if len(opt) == 0:
