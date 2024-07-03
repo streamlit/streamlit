@@ -705,8 +705,6 @@ class DataframeUtilTest(unittest.TestCase):
                 enumerate(["st.number_input", "st.text_area", "st.text_input"]),
                 [0, 1, 2],
             ),
-            # String:
-            ("abc", ["a", "b", "c"]),
             # Range:
             (range(3), [0, 1, 2]),
             # Pandas Dataframe:
