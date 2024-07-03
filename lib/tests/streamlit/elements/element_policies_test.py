@@ -15,6 +15,7 @@
 import copy
 import os
 import unittest
+from typing import Final
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,8 +27,11 @@ from streamlit.elements.lib.policies import (
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
+    check_widget_policies,
 )
 from streamlit.errors import StreamlitAPIException
+
+_KEY: Final = "the key"
 
 
 class ElementPoliciesTest(unittest.TestCase):
@@ -38,18 +42,18 @@ class CheckCallbackRulesTest(ElementPoliciesTest):
     @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=False))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_not_in_form(self):
-        check_callback_rules(None, lambda x: x)
+        check_callback_rules(MagicMock(), lambda x: x)
 
     @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_in_form(self):
-        check_callback_rules(None, None)
+        check_callback_rules(MagicMock(), None)
 
     @patch("streamlit.elements.lib.policies.is_in_form", MagicMock(return_value=True))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_error(self):
         with pytest.raises(StreamlitAPIException) as e:
-            check_callback_rules(None, lambda x: x)
+            check_callback_rules(MagicMock(), lambda x: x)
 
         assert "is not allowed." in str(e.value)
 
@@ -71,7 +75,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules(None, key="the key")
+        check_session_state_rules(None, key=_KEY)
 
         patched_st_warning.assert_not_called()
 
@@ -85,7 +89,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = False
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules(5, key="the key")
+        check_session_state_rules(5, key=_KEY)
 
         patched_st_warning.assert_not_called()
 
@@ -101,7 +105,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules(5, key="the key")
+        check_session_state_rules(5, key=_KEY)
 
         patched_st_warning.assert_not_called()
 
@@ -115,7 +119,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         patched_get_session_state.return_value = mock_session_state
 
         with pytest.raises(StreamlitAPIException) as e:
-            check_session_state_rules(5, key="the key", writes_allowed=False)
+            check_session_state_rules(5, key=_KEY, writes_allowed=False)
 
         assert 'Values for the widget with key "the key"' in str(e.value)
 
@@ -160,7 +164,7 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
         # Reset globale flag:
         utils._shown_default_value_warning = False
 
-        check_session_state_rules(5, key="the key")
+        check_session_state_rules(5, key=_KEY)
 
         patched_st_warning.assert_called_once()
         args, _ = patched_st_warning.call_args
@@ -228,3 +232,22 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         dg._active_dg._cursor = MagicMock()
         dg._active_dg._cursor.delta_path = [0, 1, 2, 0]
         check_fragment_path_policy(dg)
+
+
+class CheckWidget(ElementPoliciesTest):
+    @patch("streamlit.elements.lib.policies.check_fragment_path_policy")
+    @patch("streamlit.elements.lib.policies.check_cache_replay_rules")
+    @patch("streamlit.elements.lib.policies.check_callback_rules")
+    @patch("streamlit.elements.lib.policies.check_session_state_rules")
+    def test_all_relevant_policies_are_called(
+        self,
+        patched_check_fragment_path_policy,
+        patched_check_cache_replay_rules,
+        patched_check_callback_rules,
+        patched_check_session_state_rules,
+    ):
+        check_widget_policies(MagicMock(), None, None, None)
+        patched_check_fragment_path_policy.assert_called_once()
+        patched_check_cache_replay_rules.assert_called_once()
+        patched_check_callback_rules.assert_called_once()
+        patched_check_session_state_rules.assert_called_once()

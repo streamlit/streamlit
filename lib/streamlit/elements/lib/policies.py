@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
 from streamlit.elements.form import is_in_form
@@ -30,7 +30,8 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
-    """Ensures that widgets other than `st.form_submit` within a form don't have an on_change callback set.
+    """Ensures that widgets other than `st.form_submit` within a form don't have an \
+        on_change callback set.
 
     Raises
     ------
@@ -51,9 +52,12 @@ _shown_default_value_warning: bool = False
 def check_session_state_rules(
     default_value: Any, key: str | None, writes_allowed: bool = True
 ) -> None:
-    """Ensures that no values are set for widgets with the given key when writing is not allowed.
+    """Ensures that no values are set for widgets with the given key when writing \
+        is not allowed.
 
-    Additionally, if `global.disableWidgetStateDuplicationWarning` is False a warning is shown when a widget has a default value but its value is also set via session state.
+    Additionally, if `global.disableWidgetStateDuplicationWarning` is False a warning is
+      shown when a widget has a default value but its value is also set via
+      session state.
 
     Raises
     ------
@@ -71,7 +75,8 @@ def check_session_state_rules(
 
     if not writes_allowed:
         raise StreamlitAPIException(
-            f'Values for the widget with key "{key}" cannot be set using `st.session_state`.'
+            f'Values for the widget with key "{key}" cannot be set using \
+                `st.session_state`.'
         )
 
     if (
@@ -126,6 +131,15 @@ _fragment_writes_widget_to_outside_error = (
 
 
 def check_fragment_path_policy(dg: DeltaGenerator):
+    """Ensures that the current widget is not written outside of the \
+    fragment's delta path.
+
+    Should be called by ever element that acts as a widget.
+    We don't allow writing widgets from within a widget to the outside path
+    because it can lead to unexpected behavior. For elements, this is okay
+    because they do not trigger a re-run.
+    """
+
     ctx = get_script_run_ctx()
     # Check is only relevant for fragments
     if ctx is None or ctx.current_fragment_id is None:
@@ -138,14 +152,29 @@ def check_fragment_path_policy(dg: DeltaGenerator):
 
     current_cursor_delta_path = current_cursor.delta_path
 
-    # the elements delta path cannot be smaller than the fragment's delta path if it is inside of the fragment
+    # the elements delta path cannot be smaller than the fragment's delta path if it is
+    # inside of the fragment
     if len(current_cursor_delta_path) < len(current_fragment_delta_path):
         raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)
 
-    # all path indices of the fragment-path must occur in the inner-elements delta path, otherwise it is outside of the fragment container
+    # all path indices of the fragment-path must occur in the inner-elements delta path,
+    # otherwise it is outside of the fragment container
     for index, path_index in enumerate(current_fragment_delta_path):
         if current_cursor_delta_path[index] != path_index:
             raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)
+
+
+def check_widget_policies(
+    dg: DeltaGenerator,
+    key: str | None,
+    on_change: WidgetCallback | None = None,
+    default: Sequence[Any] | Any | None = None,
+):
+    """Check all widget policies for the given DeltaGenerator."""
+    check_fragment_path_policy(dg)
+    check_cache_replay_rules()
+    check_callback_rules(dg, on_change)
+    check_session_state_rules(default_value=default, key=key, writes_allowed=True)
 
 
 def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
