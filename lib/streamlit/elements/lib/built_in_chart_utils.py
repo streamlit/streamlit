@@ -135,7 +135,7 @@ def generate_chart(
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
-    df = dataframe_util.convert_anything_to_df(data, ensure_copy=True)
+    df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
 
     # From now on, use "df" instead of "data". Deleting "data" to guarantee we follow this.
     del data
@@ -254,7 +254,7 @@ def prep_chart_data_for_add_rows(
     """
     import pandas as pd
 
-    df = cast(pd.DataFrame, dataframe_util.convert_anything_to_df(data))
+    df = cast(pd.DataFrame, dataframe_util.convert_anything_to_pandas_df(data))
 
     # Make range indices start at last_index.
     if isinstance(df.index, pd.RangeIndex):
@@ -394,7 +394,7 @@ def _last_index_for_melted_dataframes(
     data: DataFrameCompatible | Any,
 ) -> Hashable | None:
     if dataframe_util.is_dataframe_compatible(data):
-        data = dataframe_util.convert_anything_to_df(data)
+        data = dataframe_util.convert_anything_to_pandas_df(data)
 
         if data.index.size > 0:
             return cast(Hashable, data.index[-1])

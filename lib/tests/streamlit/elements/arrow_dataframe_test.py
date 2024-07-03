@@ -180,7 +180,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
         with patch(
-            "streamlit.dataframe_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df
 
