@@ -36,10 +36,9 @@ from streamlit.elements.vega_charts import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.type_util import (
-    bytes_to_data_frame,
     is_altair_version_less_than,
-    pyarrow_table_to_bytes,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -129,7 +128,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
         with mock.patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df
 
@@ -558,7 +557,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
 
         with patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df1
 

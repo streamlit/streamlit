@@ -18,16 +18,21 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
+from streamlit.dataframe_util import OptionSequence, ensure_indexable
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
     check_fragment_path_policy,
     check_session_state_rules,
+    maybe_raise_label_warnings,
 )
 from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
     get_label_visibility_proto_value,
     maybe_coerce_enum_sequence,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -41,16 +46,10 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
-    Key,
-    LabelVisibility,
-    OptionSequence,
     T,
     check_python_comparable,
-    ensure_indexable,
     is_iterable,
     is_type,
-    maybe_raise_label_warnings,
-    to_key,
 )
 
 if TYPE_CHECKING:

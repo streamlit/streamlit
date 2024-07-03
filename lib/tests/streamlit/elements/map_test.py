@@ -79,7 +79,7 @@ class StMapTest(DeltaGeneratorTestCase):
     def test_map_uses_convert_anything_to_df(self):
         """Test that st.map uses convert_anything_to_df to convert input data."""
         with mock.patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = mock_df
 
