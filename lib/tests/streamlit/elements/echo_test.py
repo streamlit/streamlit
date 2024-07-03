@@ -153,7 +153,7 @@ class MyClass:
         self.assertEqual(echo_str, element.code.code_text)
 
     def test_echo_multiline_param(self):
-        import tests.streamlit.echo_test_data.root_level_echo  # noqa: F401
+        import tests.streamlit.echo_test_data.multiline_param_echo  # noqa: F401
 
         echo_str = "a = 123"
 
