@@ -23,9 +23,7 @@ from typing_extensions import TypeGuard
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
+    check_widget_policies,
     maybe_raise_label_warnings,
 )
 from streamlit.elements.lib.utils import (
@@ -262,9 +260,12 @@ class SelectSliderMixin:
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_sequence(options)

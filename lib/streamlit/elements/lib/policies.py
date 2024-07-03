@@ -168,13 +168,19 @@ def check_widget_policies(
     dg: DeltaGenerator,
     key: str | None,
     on_change: WidgetCallback | None = None,
-    default: Sequence[Any] | Any | None = None,
+    *,
+    default_value: Sequence[Any] | Any | None = None,
+    writes_allowed: bool = True,
+    enable_check_callback_rules: bool = True,
 ):
     """Check all widget policies for the given DeltaGenerator."""
     check_fragment_path_policy(dg)
     check_cache_replay_rules()
-    check_callback_rules(dg, on_change)
-    check_session_state_rules(default_value=default, key=key, writes_allowed=True)
+    if enable_check_callback_rules:
+        check_callback_rules(dg, on_change)
+    check_session_state_rules(
+        default_value=default_value, key=key, writes_allowed=writes_allowed
+    )
 
 
 def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
