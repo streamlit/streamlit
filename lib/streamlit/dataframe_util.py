@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
-    from pandas.io.formats.style_renderer import StyleRenderer
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -261,11 +260,7 @@ def convert_anything_to_pandas_df(
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
-        # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
-        # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
-        # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
-        sr = cast("StyleRenderer", data)
-        return cast("DataFrame", sr.data.copy() if ensure_copy else sr.data)
+        return cast("DataFrame", data.data.copy() if ensure_copy else data.data)  # type: ignore
 
     if is_type(data, "numpy.ndarray"):
         return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
@@ -277,8 +272,8 @@ def convert_anything_to_pandas_df(
 
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `_to_pandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `_to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -286,8 +281,8 @@ def convert_anything_to_pandas_df(
         data = data.limit(max_unevaluated_rows).toPandas()
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `toPandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `toPandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -295,8 +290,8 @@ def convert_anything_to_pandas_df(
         data = data.limit(max_unevaluated_rows).to_pandas()
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `to_pandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -308,8 +303,8 @@ def convert_anything_to_pandas_df(
 
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `to_pandas()` on the dataframe to show more."
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
