@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
+from __future__ import annotations
+
 import enum
+import unittest
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -28,7 +30,6 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
-
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata, TestObject
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
@@ -63,7 +64,7 @@ class TypeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_df` correctly converts
         a variety of types to a DataFrame.
         """
-        converted_df = dataframe_util.convert_anything_to_df(input_data)
+        converted_df = dataframe_util.convert_anything_to_pandas_df(input_data)
         self.assertIsInstance(converted_df, pd.DataFrame)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
@@ -88,7 +89,7 @@ class TypeUtilTest(unittest.TestCase):
         the row count is > 1000.
         """
         with patch("streamlit.caption") as mock:
-            converted_df = dataframe_util.convert_anything_to_df(
+            converted_df = dataframe_util.convert_anything_to_pandas_df(
                 input_data, max_unevaluated_rows=1000
             )
             self.assertIsInstance(converted_df, pd.DataFrame)
@@ -107,7 +108,7 @@ class TypeUtilTest(unittest.TestCase):
             index=[1.0, "foo", 3],
         )
 
-        converted_df = dataframe_util.convert_anything_to_df(
+        converted_df = dataframe_util.convert_anything_to_pandas_df(
             orginal_df, ensure_copy=True
         )
         # Apply a change
@@ -115,7 +116,7 @@ class TypeUtilTest(unittest.TestCase):
         # Ensure that the original dataframe is not changed
         self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
 
-        converted_df = dataframe_util.convert_anything_to_df(
+        converted_df = dataframe_util.convert_anything_to_pandas_df(
             orginal_df, ensure_copy=False
         )
         # Apply a change
@@ -128,45 +129,8 @@ class TypeUtilTest(unittest.TestCase):
         key-value dicts to a dataframe.
         """
         data = {"a": 1, "b": 2}
-        df = dataframe_util.convert_anything_to_df(data)
+        df = dataframe_util.convert_anything_to_pandas_df(data)
         pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
-
-    def test_convert_anything_to_df_passes_styler_through(self):
-        """Test that `convert_anything_to_df` correctly passes Stylers through."""
-        original_df = pd.DataFrame(
-            {
-                "integer": [1, 2, 3],
-                "float": [1.0, 2.1, 3.2],
-                "string": ["foo", "bar", None],
-            },
-            index=[1.0, "foo", 3],
-        )
-
-        original_styler = original_df.style.highlight_max(axis=0)
-
-        out = dataframe_util.convert_anything_to_df(original_styler, allow_styler=True)
-        self.assertEqual(original_styler, out)
-        self.assertEqual(id(original_df), id(out.data))
-
-    def test_convert_anything_to_df_clones_stylers(self):
-        """Test that `convert_anything_to_df` correctly clones Stylers."""
-        original_df = pd.DataFrame(
-            {
-                "integer": [1, 2, 3],
-                "float": [1.0, 2.1, 3.2],
-                "string": ["foo", "bar", None],
-            },
-            index=[1.0, "foo", 3],
-        )
-
-        original_styler = original_df.style.highlight_max(axis=0)
-
-        out = dataframe_util.convert_anything_to_df(
-            original_styler, allow_styler=True, ensure_copy=True
-        )
-        self.assertNotEqual(original_styler, out)
-        self.assertNotEqual(id(original_df), id(out.data))
-        pd.testing.assert_frame_equal(original_df, out.data)
 
     def test_convert_anything_to_df_converts_stylers(self):
         """Test that `convert_anything_to_df` correctly converts Stylers to DF, without cloning the
@@ -183,7 +147,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = dataframe_util.convert_anything_to_df(original_styler, allow_styler=False)
+        out = dataframe_util.convert_anything_to_pandas_df(original_styler)
         self.assertNotEqual(id(original_styler), id(out))
         self.assertEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
@@ -201,8 +165,8 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = dataframe_util.convert_anything_to_df(
-            original_styler, allow_styler=False, ensure_copy=True
+        out = dataframe_util.convert_anything_to_pandas_df(
+            original_styler, ensure_copy=True
         )
         self.assertNotEqual(id(original_styler), id(out))
         self.assertNotEqual(id(original_df), id(out))
@@ -213,7 +177,7 @@ class TypeUtilTest(unittest.TestCase):
             def to_pandas(self):
                 return pd.DataFrame([])
 
-        converted = dataframe_util.convert_anything_to_df(DataFrameIsh())
+        converted = dataframe_util.convert_anything_to_pandas_df(DataFrameIsh())
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
 
@@ -393,7 +357,7 @@ class TypeUtilTest(unittest.TestCase):
             """DummyClass for testing purposes"""
 
         # empty list should not be snowpark dataframe
-        self.assertFalse(dataframe_util.is_snowpark_row_list(list()))
+        self.assertFalse(dataframe_util.is_snowpark_row_list([]))
 
         # list with items should not be snowpark dataframe
         self.assertFalse(
@@ -494,7 +458,7 @@ class TypeUtilTest(unittest.TestCase):
         """Test that `convert_df_to_data_format` correctly converts a
         DataFrame to the specified data format.
         """
-        converted_df = dataframe_util.convert_anything_to_df(input_data)
+        converted_df = dataframe_util.convert_anything_to_pandas_df(input_data)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
@@ -533,7 +497,7 @@ class TypeUtilTest(unittest.TestCase):
                     self.assertEqual(str(converted_data), str(input_data))
                     pd.testing.assert_frame_equal(
                         converted_df,
-                        dataframe_util.convert_anything_to_df(converted_data),
+                        dataframe_util.convert_anything_to_pandas_df(converted_data),
                     )
 
     def test_convert_df_to_data_format_with_unknown_data_format(self):
@@ -627,10 +591,10 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(l1, l2)
 
     def test_ensure_indexable_object_not_indexable(self):
-        l = dataframe_util.ensure_indexable({"a", "b", "c"})
-        self.assertIn("a", l)
-        self.assertIn("b", l)
-        self.assertIn("c", l)
+        converted_list = dataframe_util.ensure_indexable({"a", "b", "c"})
+        self.assertIn("a", converted_list)
+        self.assertIn("b", converted_list)
+        self.assertIn("c", converted_list)
 
     def test_ensure_indexable_enum_is_indexable(self):
         """Test Enums are indexable"""
@@ -643,11 +607,11 @@ class TypeUtilTest(unittest.TestCase):
             OPT1 = "a"
             OPT2 = "b"
 
-        l = dataframe_util.ensure_indexable(Opt)
-        self.assertEqual(list(Opt), l)
+        converted_list = dataframe_util.ensure_indexable(Opt)
+        self.assertEqual(list(Opt), converted_list)
 
-        l = dataframe_util.ensure_indexable(StrOpt)
-        self.assertEqual(list(StrOpt), l)
+        converted_list = dataframe_util.ensure_indexable(StrOpt)
+        self.assertEqual(list(StrOpt), converted_list)
 
 
 class TestArrowTruncation(DeltaGeneratorTestCase):

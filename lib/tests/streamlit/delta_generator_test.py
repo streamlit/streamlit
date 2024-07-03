@@ -14,6 +14,8 @@
 
 """DeltaGenerator Unittest."""
 
+from __future__ import annotations
+
 import asyncio
 import functools
 import inspect
@@ -35,12 +37,9 @@ from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator, get_last_dg_added_to_context_stack
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
@@ -448,10 +447,10 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         sum_weights = sum(weights)
         st.columns(weights)
 
-        for i, w in enumerate(weights):
+        for idx, weight in enumerate(weights):
             # Pull the delta from the back of the queue, using negative index
-            delta = self.get_delta_from_queue(i - len(weights))
-            self.assertEqual(delta.add_block.column.weight, w / sum_weights)
+            delta = self.get_delta_from_queue(idx - len(weights))
+            self.assertEqual(delta.add_block.column.weight, weight / sum_weights)
 
     def test_bad_columns_negative_int(self):
         with self.assertRaises(StreamlitAPIException):

@@ -28,6 +28,7 @@ from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
     _parse_selection_mode,
@@ -36,7 +37,6 @@ from streamlit.elements.vega_charts import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
-from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from streamlit.type_util import (
     is_altair_version_less_than,
 )
@@ -128,7 +128,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
         with mock.patch(
-            "streamlit.dataframe_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df
 
@@ -158,7 +158,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             st.altair_chart(chart, theme="bad_theme")
 
         self.assertEqual(
-            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
             str(exc.exception),
         )
 
@@ -405,7 +405,6 @@ class AltairChartTest(DeltaGeneratorTestCase):
         # 2 elements will be created: form block, altair_chart
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
-        self.get_delta_from_queue(0).add_block
         vega_lite_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
         self.assertEqual(vega_lite_proto.form_id, "")
 
@@ -557,7 +556,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
 
         with patch(
-            "streamlit.dataframe_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = df1
 
@@ -1164,7 +1163,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(
-        [[None], [[]], [tuple()]],
+        [[None], [[]], [()]],
     )
     def test_chart_with_empty_color(self, color_arg: Any):
         """Test color support for built-in charts with wide-format table."""

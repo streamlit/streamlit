@@ -14,8 +14,9 @@
 
 """Unit tests for server_util.py."""
 
+from __future__ import annotations
+
 import unittest
-from typing import Optional
 from unittest.mock import patch
 
 from parameterized import parameterized
@@ -58,9 +59,7 @@ class ServerUtilTest(unittest.TestCase):
             ("/foo/bar/", 9988, "http://the_ip_address:9988/foo/bar"),
         ]
     )
-    def test_get_url(
-        self, base_url: Optional[str], port: Optional[int], expected_url: str
-    ):
+    def test_get_url(self, base_url: str | None, port: int | None, expected_url: str):
         options = {"server.headless": False, "global.developmentMode": False}
 
         if base_url:

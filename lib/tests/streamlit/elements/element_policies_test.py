@@ -29,7 +29,6 @@ from streamlit.elements.lib.policies import (
     check_widget_policies,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
 
 class ElementPoliciesTest(unittest.TestCase):
