@@ -352,15 +352,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     if obj is None:
         return []  # type: ignore
 
-    if isinstance(obj, str):
-        # String is a special case: theoretically it is iterable, but we don't want
-        # to iterate over its characters. Instead, we raise a TypeError.
-        raise TypeError(
-            "Object is not an iterable and could not be converted to one. "
-            f"Object type: {type(obj)}"
-        )
-
-    if isinstance(obj, (list, tuple, set, range, EnumMeta)):
+    if isinstance(obj, (str, list, tuple, set, range, EnumMeta)):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)

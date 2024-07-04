@@ -698,6 +698,8 @@ class DataframeUtilTest(unittest.TestCase):
             (StrTestEnum, ["st.number_input", "st.text_area", "st.text_input"]),
             # Generator:
             (data_generator(), ["st.number_input", "st.text_area", "st.text_input"]),
+            # String:
+            ("abc", ["a", "b", "c"]),
             # Enumerate:
             (
                 enumerate(["st.number_input", "st.text_area", "st.text_input"]),
