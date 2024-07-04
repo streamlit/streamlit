@@ -32,12 +32,7 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
@@ -608,9 +603,13 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
-        check_callback_rules(self.dg, on_click)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_click,
+            default_value=None,
+            writes_allowed=False,
+        )
 
         id = compute_widget_id(
             "download_button",
@@ -772,11 +771,14 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        if not is_form_submitter:
-            check_callback_rules(self.dg, on_click)
-        check_cache_replay_rules()
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_click,
+            default_value=None,
+            writes_allowed=False,
+            enable_check_callback_rules=not is_form_submitter,
+        )
 
         id = compute_widget_id(
             "button",

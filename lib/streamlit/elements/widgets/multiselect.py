@@ -263,9 +263,13 @@ class MultiSelectMixin:
     ) -> list[T]:
         key = to_key(key)
 
-        check_widget_policies(self.dg, key, on_change, default)
-
         widget_name = "multiselect"
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=default,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         indexable_options = convert_to_sequence_and_check_comparable(options)

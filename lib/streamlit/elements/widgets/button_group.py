@@ -349,7 +349,7 @@ class ButtonGroupMixin:
     ) -> RegisterWidgetResult[T]:
         key = to_key(key)
 
-        check_widget_policies(self.dg, key, on_change, default)
+        check_widget_policies(self.dg, key, on_change, default_value=default)
 
         widget_name = "button_group"
         ctx = get_script_run_ctx()
