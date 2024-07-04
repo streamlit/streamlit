@@ -118,6 +118,7 @@ class ContextProxy:
     @property
     @gather_metrics("context.headers")
     def headers(self):
+        """Websocket request headers."""
         session_client = _get_session_client()
 
         if session_client is None:
@@ -128,6 +129,7 @@ class ContextProxy:
     @property
     @gather_metrics("context.cookies")
     def cookies(self):
+        """Websocket request cookies."""
         session_client = _get_session_client()
 
         if session_client is None:
