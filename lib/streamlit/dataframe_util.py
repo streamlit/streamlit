@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import math
 import re
+from collections.abc import KeysView
 from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
@@ -244,6 +245,15 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
+def _fix_column_naming(data_df: DataFrame) -> DataFrame:
+    if len(data_df.columns) == 1 and data_df.columns[0] == 0:
+        # Pandas automatically names the first column with 0 if it is not named.
+        # We rename it to "value" to make it more descriptive if there is only
+        # one column in the dataframe.
+        data_df.rename(columns={0: "value"}, inplace=True)
+    return data_df
+
+
 def convert_anything_to_pandas_df(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
@@ -282,7 +292,11 @@ def convert_anything_to_pandas_df(
         return cast(pd.DataFrame, data.data.copy() if ensure_copy else data.data)
 
     if isinstance(data, np.ndarray):
-        return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
+        return (
+            pd.DataFrame([])
+            if len(data.shape) == 0
+            else _fix_column_naming(pd.DataFrame(data))
+        )
 
     if is_xarray_dataset(data):
         if ensure_copy:
@@ -351,16 +365,19 @@ def convert_anything_to_pandas_df(
         data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
+    if isinstance(data, (EnumMeta)):
+        # Support for enum classes
+        return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
+
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return pd.DataFrame(data)
-
+        return _fix_column_naming(pd.DataFrame(data))
     except ValueError as ex:
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return pd.DataFrame.from_dict(data, orient="index")
+                return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
@@ -807,6 +824,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATASET
     elif is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
+    elif isinstance(input_data, (range, EnumMeta, KeysView)):
+        return DataFormat.LIST_OF_VALUES
     elif isinstance(input_data, (list, tuple, set)):
         if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure

@@ -817,18 +817,35 @@ class DataEditorMixin:
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
-        apply_data_specific_configs(
-            column_config_mapping, data_df, data_format, check_arrow_compatibility=True
-        )
+
+        # Deactivate editing for columns that are not compatible with arrow
+        for column_name, column_data in data_df.items():
+            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+                update_column_config(
+                    column_config_mapping, column_name, {"disabled": True}
+                )
+                # Convert incompatible type to string
+                data_df[column_name] = column_data.astype("string")
+
+        apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
-        # Temporary workaround: We hide range indices if num_rows is dynamic.
-        # since the current way of handling this index during editing is a bit confusing.
-        if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
+
+        if not isinstance(data_df.index, pd.RangeIndex):
+            # If the index is not a range index, we will configure it as required
+            # since the user is required to provide a (unique) value for editing.
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
+
+            # Temporary workaround: We hide range indices if num_rows is dynamic.
+            # since the current way of handling this index during editing is a bit
+            # confusing.
+            if num_rows == "dynamic":
+                update_column_config(
+                    column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                )
 
         if hide_index is not None:
             update_column_config(

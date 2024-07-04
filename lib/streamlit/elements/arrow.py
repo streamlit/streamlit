@@ -513,12 +513,7 @@ class ArrowMixin:
             data_df = dataframe_util.convert_anything_to_pandas_df(
                 data, ensure_copy=False
             )
-            apply_data_specific_configs(
-                column_config_mapping,
-                data_df,
-                data_format,
-                check_arrow_compatibility=False,
-            )
+            apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
 
