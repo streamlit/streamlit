@@ -121,7 +121,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         with pytest.raises(StreamlitAPIException) as e:
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
 
-        assert 'Values for the widget with key "the key"' in str(e.value)
+        assert "Values for the widget with key 'the key'" in str(e.value)
 
 
 class SpecialSessionStatesTest(ElementPoliciesTest):

@@ -30,8 +30,8 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
-    """Ensures that widgets other than `st.form_submit` within a form don't have an \
-        on_change callback set.
+    """Ensures that widgets other than `st.form_submit_button` within a form don't have
+    an on_change callback set.
 
     Raises
     ------
@@ -52,12 +52,11 @@ _shown_default_value_warning: bool = False
 def check_session_state_rules(
     default_value: Any, key: str | None, writes_allowed: bool = True
 ) -> None:
-    """Ensures that no values are set for widgets with the given key when writing \
-        is not allowed.
+    """Ensures that no values are set for widgets with the given key when writing
+    is not allowed.
 
     Additionally, if `global.disableWidgetStateDuplicationWarning` is False a warning is
-      shown when a widget has a default value but its value is also set via
-      session state.
+    shown when a widget has a default value but its value is also set via session state.
 
     Raises
     ------
@@ -75,8 +74,8 @@ def check_session_state_rules(
 
     if not writes_allowed:
         raise StreamlitAPIException(
-            f'Values for the widget with key "{key}" cannot be set using \
-                `st.session_state`.'
+            f"Values for the widget with key '{key}' cannot be set using"
+            " `st.session_state`."
         )
 
     if (
@@ -131,7 +130,7 @@ _fragment_writes_widget_to_outside_error = (
 
 
 def check_fragment_path_policy(dg: DeltaGenerator):
-    """Ensures that the current widget is not written outside of the \
+    """Ensures that the current widget is not written outside of the
     fragment's delta path.
 
     Should be called by ever element that acts as a widget.
