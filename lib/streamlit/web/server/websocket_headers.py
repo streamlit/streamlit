@@ -21,7 +21,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
 _GET_WEBSOCKET_HEADERS_DEPRECATE_MSG = (
-    "The `streamlit._get_websocket_headers` function is deprecated and will be removed "
+    "The `_get_websocket_headers` function is deprecated and will be removed "
     "in a future version of Streamlit. Please use `st.context` instead."
 )
 

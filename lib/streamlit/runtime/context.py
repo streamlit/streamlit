@@ -19,6 +19,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Iterable, Iterator, Mapping
 
 from streamlit import runtime
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
@@ -107,6 +108,7 @@ class StreamlitCookies(Mapping[str, str]):
 
 class _ContextProxy:
     @property
+    @gather_metrics("context.headers")
     def headers(self):
         session_client = _get_session_client()
 
@@ -116,6 +118,7 @@ class _ContextProxy:
         return StreamlitHeaders.from_tornado_headers(session_client.request.headers)
 
     @property
+    @gather_metrics("context.cookies")
     def cookies(self):
         session_client = _get_session_client()
 
