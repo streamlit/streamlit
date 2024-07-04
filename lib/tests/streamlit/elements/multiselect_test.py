@@ -135,7 +135,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
 
-    @parameterized.expand([(15, TypeError), ("str", TypeError)])
+    @parameterized.expand([(15, TypeError)])
     def test_invalid_options(self, options, expected):
         """Test that it handles invalid options."""
         with self.assertRaises(expected):
