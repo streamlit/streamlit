@@ -50,11 +50,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 _MAX_UNEVALUATED_DF_ROWS = 10000
 
-_PANDAS_DF_TYPE_STR: Final = "pandas.core.frame.DataFrame"
-_PANDAS_INDEX_TYPE_STR: Final = "pandas.core.indexes.base.Index"
-_PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
-_NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
@@ -193,6 +189,7 @@ def is_snowpandas_data_object(obj: object) -> bool:
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
+    """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
@@ -221,16 +218,21 @@ def convert_anything_to_pandas_df(
     pandas.DataFrame
 
     """
+    import numpy as np
     import pandas as pd
 
     if isinstance(data, pd.DataFrame):
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
-    if is_pandas_styler(data):
-        return cast("DataFrame", data.data.copy() if ensure_copy else data.data)
+    if isinstance(data, (pd.Series, pd.Index)):
+        return pd.DataFrame(data)
 
-    if is_type(data, "numpy.ndarray"):
+    if is_pandas_styler(data):
+        return cast(pd.DataFrame, data.data.copy() if ensure_copy else data.data)
+
+    if isinstance(data, np.ndarray):
         return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
+
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
@@ -424,7 +426,7 @@ def _maybe_truncate_table(
     return table
 
 
-def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
+def serialize_arrow_table_to_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to bytes using Apache Arrow.
 
     Parameters
@@ -562,14 +564,18 @@ def fix_arrow_incompatible_column_types(
     return df_copy if df_copy is not None else df
 
 
-def data_frame_to_bytes(df: DataFrame) -> bytes:
-    """Serialize pandas.DataFrame to bytes using Apache Arrow.
+def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
+    """Serialize pandas.DataFrame to Arrow IPC bytes.
 
     Parameters
     ----------
     df : pandas.DataFrame
         A dataframe to convert.
 
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
     """
     import pyarrow as pa
 
@@ -583,14 +589,15 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
-    return pyarrow_table_to_bytes(table)
+    return serialize_arrow_table_to_bytes(table)
 
 
-def bytes_to_data_frame(source: bytes) -> DataFrame:
-    """Convert bytes to pandas.DataFrame.
+def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
+    """Convert Arrow bytes (IPC format) to pandas.DataFrame.
 
     Using this function in production needs to make sure that
-    the pyarrow version >= 14.0.1.
+    the pyarrow version >= 14.0.1, because of a critical
+    security vulnerability in pyarrow < 14.0.1.
 
     Parameters
     ----------
@@ -604,7 +611,7 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
     return reader.read_pandas()
 
 
-def is_list_of_scalars(data: Iterable[Any]) -> bool:
+def _is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
     from pandas.api.types import infer_dtype
 
@@ -657,7 +664,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
     elif isinstance(input_data, (list, tuple, set)):
-        if is_list_of_scalars(input_data):
+        if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure
             if isinstance(input_data, tuple):
                 return DataFormat.TUPLE_OF_VALUES
@@ -685,7 +692,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
             if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
             # In the future, we could potentially also support the tight & split formats here
-            if is_list_of_scalars(input_data.values()):
+            if _is_list_of_scalars(input_data.values()):
                 # Only use the key-value dict format if the values are only scalar values
                 return DataFormat.KEY_VALUE_DICT
     return DataFormat.UNKNOWN
@@ -703,7 +710,7 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     return df.fillna(np.nan).replace([np.nan], [None])
 
 
-def convert_df_to_data_format(
+def convert_pandas_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> (
     DataFrame
@@ -715,7 +722,7 @@ def convert_df_to_data_format(
     | set[Any]
     | dict[str, Any]
 ):
-    """Convert a dataframe to the specified data format.
+    """Convert a Pandas DataFrame to the specified data format.
 
     Parameters
     ----------

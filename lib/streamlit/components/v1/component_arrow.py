@@ -74,7 +74,7 @@ def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
 
     index = map(_maybe_tuple_to_list, index.values)
     index_df = pd.DataFrame(index)
-    proto.index = dataframe_util.data_frame_to_bytes(index_df)
+    proto.index = dataframe_util.convert_pandas_df_to_arrow_bytes(index_df)
 
 
 def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
@@ -94,7 +94,7 @@ def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
 
     columns = map(_maybe_tuple_to_list, columns.values)
     columns_df = pd.DataFrame(columns)
-    proto.columns = dataframe_util.data_frame_to_bytes(columns_df)
+    proto.columns = dataframe_util.convert_pandas_df_to_arrow_bytes(columns_df)
 
 
 def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
@@ -109,7 +109,7 @@ def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
         A dataframe to marshall.
 
     """
-    proto.data = dataframe_util.data_frame_to_bytes(df)
+    proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
 
 
 def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
@@ -130,9 +130,9 @@ def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
 
     import pandas as pd
 
-    data = dataframe_util.bytes_to_data_frame(proto.data)
-    index = dataframe_util.bytes_to_data_frame(proto.index)
-    columns = dataframe_util.bytes_to_data_frame(proto.columns)
+    data = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.data)
+    index = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.index)
+    columns = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.columns)
 
     return pd.DataFrame(
         data.values, index=index.values.T.tolist(), columns=columns.values.T.tolist()

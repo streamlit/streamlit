@@ -280,10 +280,10 @@ def _serialize_data(data: Any) -> bytes:
     import pyarrow as pa
 
     if isinstance(data, pa.Table):
-        return dataframe_util.pyarrow_table_to_bytes(data)
+        return dataframe_util.serialize_arrow_table_to_bytes(data)
 
     df = dataframe_util.convert_anything_to_pandas_df(data)
-    return dataframe_util.data_frame_to_bytes(df)
+    return dataframe_util.convert_pandas_df_to_arrow_bytes(df)
 
 
 def _marshall_chart_data(

@@ -29,10 +29,7 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.dataframe_util import (
-    DataFormat,
-    bytes_to_data_frame,
-)
+from streamlit.dataframe_util import DataFormat, convert_arrow_bytes_to_pandas_df
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnDataKind,
@@ -407,7 +404,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         return_df = st.data_editor(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
         pd.testing.assert_frame_equal(return_df, df)
 
     @parameterized.expand(SHARED_TEST_CASES)
@@ -420,7 +417,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         return_data = st.data_editor(input_data)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        reconstructed_df = bytes_to_data_frame(proto.data)
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
         self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
         self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
 
@@ -583,7 +580,9 @@ class DataEditorTest(DeltaGeneratorTestCase):
         return_df = st.data_editor(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), return_df)
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.data), return_df
+        )
         self.assertEqual(return_df.columns.to_list(), ["2_c1", "3_c2", "4_c3"])
 
     def test_pandas_styler_support(self):
