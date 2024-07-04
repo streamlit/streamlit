@@ -36,8 +36,12 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("toggle", lambda: st.toggle("Toggle me")),
     # end checkboxes
     ("color_picker", lambda: st.color_picker("Pick a color")),
+    # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
+    ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
+    # media manager
     ("file_uploader", lambda: st.file_uploader("Upload me")),
+    # selectors
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
     ("number_input", lambda: st.number_input("Enter a number")),
     ("radio", lambda: st.radio("Choose me", ["a", "b", "c"])),
