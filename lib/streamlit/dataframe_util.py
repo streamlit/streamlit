@@ -87,7 +87,9 @@ OptionSequence: TypeAlias = Union[
     DataFrameGenericAlias[V_co],
 ]
 
-# Various data types supported by our dataframe processing:
+# Various data types supported by our dataframe processing
+# used for commands like `st.dataframe`, `st.table`, `st.map`,
+# st.line_chart`...
 Data: TypeAlias = Union[
     "DataFrame",
     "Series",
