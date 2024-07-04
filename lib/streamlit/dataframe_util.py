@@ -425,6 +425,10 @@ def convert_anything_to_arrow_bytes(
 ) -> bytes:
     """Try to convert different formats to Arrow IPC format (bytes).
 
+    This method tries to directly convert the input data to Arrow bytes
+    for some supported formats, but falls back to conversion to a Pandas
+    DataFrame and then to Arrow bytes.
+
     Parameters
     ----------
     data : any
