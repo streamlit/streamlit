@@ -125,8 +125,8 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     def __getattr__(self, key: str) -> Any:
         try:
             return self[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
+        except KeyError as exc:
+            raise AttributeError(_missing_attr_error_message(key)) from exc
 
     @gather_metrics("session_state.set_attr")
     def __setattr__(self, key: str, value: Any) -> None:
@@ -135,8 +135,8 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     def __delattr__(self, key: str) -> None:
         try:
             del self[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
+        except KeyError as exc:
+            raise AttributeError(_missing_attr_error_message(key)) from exc
 
     def to_dict(self) -> dict[str, Any]:
         """Return a dict containing all session_state and keyed widget values."""

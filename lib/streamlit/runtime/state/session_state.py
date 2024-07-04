@@ -407,8 +407,8 @@ class SessionState:
             key = wid_key_map[widget_id]
         try:
             return self._getitem(widget_id, key)
-        except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+        except KeyError as exc:
+            raise KeyError(_missing_key_error_message(key)) from exc
 
     def _getitem(self, widget_id: str | None, user_key: str | None) -> Any:
         """Get the value of an entry in Session State, using either the

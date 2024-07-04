@@ -61,8 +61,8 @@ class QueryParams(MutableMapping[str, str]):
                     # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
                     return value[-1]
             return value
-        except KeyError:
-            raise KeyError(missing_key_error_message(key))
+        except KeyError as exc:
+            raise KeyError(missing_key_error_message(key)) from exc
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         self._ensure_single_query_api_used()
@@ -93,8 +93,8 @@ class QueryParams(MutableMapping[str, str]):
                 raise KeyError(missing_key_error_message(key))
             del self._query_params[key]
             self._send_query_param_msg()
-        except KeyError:
-            raise KeyError(missing_key_error_message(key))
+        except KeyError as exc:
+            raise KeyError(missing_key_error_message(key)) from exc
 
     def update(
         self,

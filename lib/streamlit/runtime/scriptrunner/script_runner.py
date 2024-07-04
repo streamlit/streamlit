@@ -546,11 +546,9 @@ class ScriptRunner:
                                 )
                                 ctx.current_fragment_id = fragment_id
                                 wrapped_fragment()
+                            except KeyError as exc:
+                                raise RuntimeError(f"Could not find fragment with id {fragment_id}") from exc
 
-                            except KeyError:
-                                raise RuntimeError(
-                                    f"Could not find fragment with id {fragment_id}"
-                                )
                     else:
                         self._fragment_storage.clear()
                         exec(code, module.__dict__)

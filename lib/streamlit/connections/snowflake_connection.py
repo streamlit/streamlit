@@ -115,8 +115,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                     "or as kwargs to `st.connection`? "
                     "See the [SnowflakeConnection configuration documentation](https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
                     "for more details and examples."
-                )
-            raise e
+                ) from e
 
     def query(
         self,

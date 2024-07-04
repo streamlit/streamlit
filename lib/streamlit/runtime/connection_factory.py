@@ -342,4 +342,4 @@ def connection_factory(
             if pypi_package:
                 extra_info = f"You need to install the '{pypi_package}' package to use this connection."
 
-        raise ModuleNotFoundError(f"{str(e)}. {extra_info}")
+        raise ModuleNotFoundError(f"{str(e)}. {extra_info}") from e

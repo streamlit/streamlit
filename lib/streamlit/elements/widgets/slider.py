@@ -619,66 +619,65 @@ class SliderMixin:
                 "Slider `min_value` must be less than the `max_value`."
                 f"\nThe values were {min_value} and {max_value}."
             )
+            # Now, convert to microseconds (so we can serialize datetime to a long)
+            if data_type in TIMELIKE_TYPES:
+                # Restore times/datetimes to original timezone (dates are always naive)
+                orig_tz = (
+                    value[0].tzinfo
+                    if data_type in (SliderProto.TIME, SliderProto.DATETIME)
+                    else None
+                )
 
-        # Now, convert to microseconds (so we can serialize datetime to a long)
-        if data_type in TIMELIKE_TYPES:
-            # Restore times/datetimes to original timezone (dates are always naive)
-            orig_tz = (
-                value[0].tzinfo
-                if data_type in (SliderProto.TIME, SliderProto.DATETIME)
-                else None
+                value = list(map(_datetime_to_micros, value))
+                min_value = _datetime_to_micros(min_value)
+                max_value = _datetime_to_micros(max_value)
+                step = _delta_to_micros(cast(timedelta, step))
+
+            # It would be great if we could guess the number of decimal places from
+            # the `step` argument, but this would only be meaningful if step were a
+            # decimal. As a possible improvement we could make this function accept
+            # decimals and/or use some heuristics for floats.
+
+            slider_proto = SliderProto()
+            slider_proto.type = SliderProto.Type.SLIDER
+            slider_proto.id = id
+            slider_proto.label = label
+            slider_proto.format = format
+            slider_proto.default[:] = value
+            slider_proto.min = min_value
+            slider_proto.max = max_value
+            slider_proto.step = cast(float, step)
+            slider_proto.data_type = data_type
+            slider_proto.options[:] = []
+            slider_proto.form_id = current_form_id(self.dg)
+            slider_proto.disabled = disabled
+            slider_proto.label_visibility.value = get_label_visibility_proto_value(
+                label_visibility
             )
 
-            value = list(map(_datetime_to_micros, value))
-            min_value = _datetime_to_micros(min_value)
-            max_value = _datetime_to_micros(max_value)
-            step = _delta_to_micros(cast(timedelta, step))
+            if help is not None:
+                slider_proto.help = dedent(help)
 
-        # It would be great if we could guess the number of decimal places from
-        # the `step` argument, but this would only be meaningful if step were a
-        # decimal. As a possible improvement we could make this function accept
-        # decimals and/or use some heuristics for floats.
+            serde = SliderSerde(value, data_type, single_value, orig_tz)
 
-        slider_proto = SliderProto()
-        slider_proto.type = SliderProto.Type.SLIDER
-        slider_proto.id = id
-        slider_proto.label = label
-        slider_proto.format = format
-        slider_proto.default[:] = value
-        slider_proto.min = min_value
-        slider_proto.max = max_value
-        slider_proto.step = cast(float, step)
-        slider_proto.data_type = data_type
-        slider_proto.options[:] = []
-        slider_proto.form_id = current_form_id(self.dg)
-        slider_proto.disabled = disabled
-        slider_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
+            widget_state = register_widget(
+                "slider",
+                slider_proto,
+                user_key=key,
+                on_change_handler=on_change,
+                args=args,
+                kwargs=kwargs,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+            )
 
-        if help is not None:
-            slider_proto.help = dedent(help)
+            if widget_state.value_changed:
+                slider_proto.value[:] = serde.serialize(widget_state.value)
+                slider_proto.set_value = True
 
-        serde = SliderSerde(value, data_type, single_value, orig_tz)
-
-        widget_state = register_widget(
-            "slider",
-            slider_proto,
-            user_key=key,
-            on_change_handler=on_change,
-            args=args,
-            kwargs=kwargs,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            ctx=ctx,
-        )
-
-        if widget_state.value_changed:
-            slider_proto.value[:] = serde.serialize(widget_state.value)
-            slider_proto.set_value = True
-
-        self.dg._enqueue("slider", slider_proto)
-        return cast(SliderReturn, widget_state.value)
+            self.dg._enqueue("slider", slider_proto)
+            return cast(SliderReturn, widget_state.value)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -102,17 +102,16 @@ class CustomComponent(BaseCustomComponent):
 
         try:
             import pyarrow  # noqa: F401
-
             from streamlit.components.v1 import component_arrow
-        except ImportError:
+        except ImportError as exc:
             raise StreamlitAPIException(
                 """To use Custom Components in Streamlit, you need to install
-PyArrow. To do so locally:
+    PyArrow. To do so locally:
 
-`pip install pyarrow`
+    `pip install pyarrow`
 
-And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
-            )
+    And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
+            ) from exc
 
         check_cache_replay_rules()
         # In addition to the custom kwargs passed to the component, we also
@@ -141,7 +140,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         except Exception as ex:
             raise MarshallComponentException(
                 "Could not convert component args to JSON", ex
-            )
+            ) from ex
 
         def marshall_component(
             dg: DeltaGenerator, element: Element

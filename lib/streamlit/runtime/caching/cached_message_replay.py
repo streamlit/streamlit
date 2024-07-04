@@ -415,8 +415,8 @@ def replay_cached_messages(
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 new_dg = dg._block(msg.message)
                 returned_dgs[msg.returned_dgs_id] = new_dg
-    except KeyError:
-        raise CacheReplayClosureError(cache_type, cached_func)
+    except KeyError as exc:
+        raise CacheReplayClosureError(cache_type, cached_func) from exc
 
 
 def _make_widget_key(widgets: list[tuple[str, Any]], cache_type: CacheType) -> str:

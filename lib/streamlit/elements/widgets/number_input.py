@@ -323,13 +323,16 @@ class NumberInputMixin:
         )
 
         if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
-            )
+            try:
+                raise StreamlitAPIException(
+                    "All numerical arguments must be of the same type."
+                    f"\n`value` has {type(value).__name__} type."
+                    f"\n`min_value` has {type(min_value).__name__} type."
+                    f"\n`max_value` has {type(max_value).__name__} type."
+                    f"\n`step` has {type(step).__name__} type."
+                ) from None
+            except Exception as e:
+                raise StreamlitAPIException(str(e)) from e
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -362,14 +365,12 @@ class NumberInputMixin:
         # Warn user if they format an int type as a float or vice versa.
         if format in ["%d", "%u", "%i"] and float_value:
             import streamlit as st
-
             st.warning(
                 "Warning: NumberInput value below has type float,"
                 f" but format {format} displays as integer."
             )
         elif format[-1] == "f" and int_value:
             import streamlit as st
-
             st.warning(
                 "Warning: NumberInput value below has type int so is"
                 f" displayed as int despite format string {format}."
@@ -380,11 +381,11 @@ class NumberInputMixin:
 
         try:
             float(format % 2)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as e:
             raise StreamlitAPIException(
                 "Format string for st.number_input contains invalid characters: %s"
                 % format
-            )
+            ) from e
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
@@ -420,7 +421,7 @@ class NumberInputMixin:
                 if value is not None:
                     JSNumber.validate_float_bounds(value, "`value`")
         except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
+            raise StreamlitAPIException(str(e)) from e
 
         data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
 

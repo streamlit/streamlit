@@ -66,8 +66,8 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
     def __getattr__(self, key: str) -> str | None:
         try:
             return _get_user_info()[key]
-        except KeyError:
-            raise AttributeError
+        except KeyError as exc:
+            raise AttributeError from exc
 
     def __setattr__(self, name: str, value: str | None) -> NoReturn:
         raise StreamlitAPIException("st.experimental_user cannot be modified")

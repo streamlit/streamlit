@@ -269,7 +269,6 @@ class CachedFunc:
                 cached_result = cache.read_result(value_key)
                 # Another thread computed the value before us. Early exit!
                 return self._handle_cache_hit(cached_result)
-
             except CacheKeyNotFoundError:
                 pass
 
@@ -279,13 +278,13 @@ class CachedFunc:
             ):
                 computed_value = self._info.func(*func_args, **func_kwargs)
 
-            # We've computed our value, and now we need to write it back to the cache
-            # along with any "replay messages" that were generated during value computation.
-            messages = self._info.cached_message_replay_ctx._most_recent_messages
             try:
+                messages = self._info.cached_message_replay_ctx._most_recent_messages
+                # We've computed our value, and now we need to write it back to the cache
+                # along with any "replay messages" that were generated during value computation.
                 cache.write_result(value_key, computed_value, messages)
                 return computed_value
-            except (CacheError, RuntimeError):
+            except (CacheError, RuntimeError) as exc:
                 # An exception was thrown while we tried to write to the cache. Report it to the user.
                 # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
                 # collect dataframe before using `st.cache_data`.)
@@ -298,10 +297,10 @@ class CachedFunc:
                         The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
                         of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
                         so `st.cache_data` can serialize and cache it."""
-                    )
+                    ) from exc
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
-                )
+                ) from exc
 
     def clear(self, *args, **kwargs):
         """Clear the cached function's associated cache.
@@ -411,7 +410,7 @@ def _make_value_key(
                 hash_source=func,
             )
         except UnhashableTypeError as exc:
-            raise UnhashableParamError(cache_type, func, arg_name, arg_value, exc)
+            raise UnhashableParamError(cache_type, func, arg_name, arg_value, exc) from exc
 
     value_key = args_hasher.hexdigest()
     _LOGGER.debug("Cache key: %s", value_key)
