@@ -722,6 +722,8 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"]),
                 ["st.number_input", "st.text_area", "st.text_input"],
             ),
+            # Dataframe with multiple columns (widgets & types)
+            # The first column is expected to be selected as the sequence.
             (
                 pd.DataFrame(
                     {

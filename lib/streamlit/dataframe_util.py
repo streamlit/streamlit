@@ -335,7 +335,7 @@ Offending object:
 def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     """Try to convert different formats to an indexable Sequence.
 
-    If the input is a dataframe-like object, we can just select the first
+    If the input is a dataframe-like object, we just select the first
     column to iterate over. If the input cannot be converted to a sequence,
     a TypeError is raised.
 
