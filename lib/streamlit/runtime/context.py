@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+from streamlit.type_util import is_type
 
 if TYPE_CHECKING:
     from http.cookies import Morsel
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from tornado.httputil import HTTPHeaders
 
 
-def _get_session_client() -> BrowserWebSocketHandler | None:
+def _get_session_client():
     ctx = get_script_run_ctx()
     if ctx is None:
         return None
@@ -38,7 +38,10 @@ def _get_session_client() -> BrowserWebSocketHandler | None:
     if session_client is None:
         return None
 
-    if not isinstance(session_client, BrowserWebSocketHandler):
+    if not is_type(
+        session_client,
+        "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler",
+    ):
         return None
     return session_client
 
