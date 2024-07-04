@@ -534,47 +534,80 @@ class ScriptRunner:
             # assume is the main script directory.
             module.__dict__["__file__"] = script_path
 
-            def code_to_exec(code=code, module=module, ctx=ctx, rerun_data=rerun_data):
-                with modified_sys_path(
-                    self._main_script_path
-                ), self._set_execing_flag():
+            with modified_sys_path(self._main_script_path), self._set_execing_flag():
+
+                def exec_callbacks_and_main(
+                    code=code, module=module, ctx=ctx, rerun_data=rerun_data
+                ):
                     # Run callbacks for widgets whose values have changed.
                     if rerun_data.widget_states is not None:
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states
                         )
-
                     ctx.on_script_start()
 
-                    if rerun_data.fragment_id_queue:
-                        for fragment_id in rerun_data.fragment_id_queue:
-                            try:
-                                wrapped_fragment = self._fragment_storage.get(
-                                    fragment_id
-                                )
-                                wrapped_fragment()
-
-                            except FragmentStorageKeyError:
-                                raise RuntimeError(
-                                    f"Could not find fragment with id {fragment_id}"
-                                )
-                    else:
+                    if not rerun_data.fragment_id_queue:
                         exec(code, module.__dict__)
-                        self._fragment_storage.clear(
-                            new_fragment_ids=ctx.new_fragment_ids
-                        )
+                        # self._fragment_storage.clear(
+                        #     new_fragment_ids=ctx.new_fragment_ids
+                        # )
 
                     self._session_state.maybe_check_serializable()
                     # check for control requests, e.g. rerun requests have arrived
                     self._maybe_handle_execution_control_request()
 
-            prep_time = timer() - start_time
-            (
-                _,
-                run_without_errors,
-                rerun_exception_data,
-                premature_stop,
-            ) = exec_func_with_error_handling(code_to_exec, ctx)
+                def exec_fragment(fragment_id: str) -> Callable[[], None]:
+                    def exec_code_callback():
+                        try:
+                            wrapped_fragment = self._fragment_storage.get(fragment_id)
+                            wrapped_fragment()
+                        except FragmentStorageKeyError:
+                            raise RuntimeError(
+                                f"Could not find fragment with id {fragment_id}"
+                            )
+                        self._session_state.maybe_check_serializable()
+                        # check for control requests, e.g. rerun requests have arrived
+                        self._maybe_handle_execution_control_request()
+
+                    return exec_code_callback
+
+                (
+                    _,
+                    run_without_errors,
+                    rerun_exception_data,
+                    premature_stop,
+                ) = exec_func_with_error_handling(exec_callbacks_and_main, ctx)
+
+                if (
+                    run_without_errors
+                    and not rerun_exception_data
+                    and not premature_stop
+                ):
+                    at_least_one_fragment_error = False
+                    at_least_one_fragment_stopped_prematurely = False
+                    for fragment_id in rerun_data.fragment_id_queue:
+                        # Ignore RerunExceptions from fragments because right now they
+                        # are not allowed to stop the execution flow anyways
+                        # (see script_requests.py#on_scriptrunner_yield)
+                        (
+                            _,
+                            run_without_errors,
+                            __,
+                            premature_stop,
+                        ) = exec_func_with_error_handling(
+                            exec_fragment(fragment_id),
+                            ctx,
+                        )
+                        if not at_least_one_fragment_error and run_without_errors:
+                            at_least_one_fragment_error = True
+                        if (
+                            not at_least_one_fragment_stopped_prematurely
+                            and premature_stop
+                        ):
+                            at_least_one_fragment_stopped_prematurely = True
+
+                    run_without_errors = not at_least_one_fragment_error
+                    premature_stop = at_least_one_fragment_stopped_prematurely
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
