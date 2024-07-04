@@ -8,7 +8,7 @@ backports.tarfile==1.2.0
 blinker==1.8.2
 bokeh==2.4.3
 cachetools==5.3.3
-certifi==2024.6.2
+certifi==2024.7.4
 cffi==1.16.0
 cfgv==3.4.0
 charset-normalizer==3.3.2
@@ -134,7 +134,7 @@ types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417
 types-requests==2.31.0.6
-types-setuptools==70.1.0.20240627
+types-setuptools==70.2.0.20240704
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.14
