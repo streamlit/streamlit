@@ -54,6 +54,8 @@ _MAX_UNEVALUATED_DF_ROWS = 10000
 
 _PANDAS_DATA_OBJECT_TYPE_RE: Final = re.compile(r"^pandas.*$")
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
+_XARRAY_DATA_ARRAY_TYPE_STR: Final = "xarray.core.dataarray.DataArray"
+_XARRAY_DATASET_TYPE_STR: Final = "xarray.core.dataset.Dataset"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
@@ -121,6 +123,8 @@ class DataFormat(Enum):
     MODIN_OBJECT = auto()  # Modin DataFrame, Series
     SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     PANDAS_STYLER = auto()  # pandas Styler
+    XARRAY_DATASET = auto()  # xarray.Dataset
+    XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -157,6 +161,8 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PYSPARK_OBJECT,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.XARRAY_DATASET,
+        DataFormat.XARRAY_DATA_ARRAY,
     ]
 
 
@@ -223,6 +229,16 @@ def is_snowpandas_data_object(obj: object) -> bool:
     )
 
 
+def is_xarray_dataset(obj: object) -> bool:
+    """True if obj is a Xarray Dataset."""
+    return is_type(obj, _XARRAY_DATASET_TYPE_STR)
+
+
+def is_xarray_data_array(obj: object) -> bool:
+    """True if obj is a Xarray DataArray."""
+    return is_type(obj, _XARRAY_DATA_ARRAY_TYPE_STR)
+
+
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
@@ -267,6 +283,16 @@ def convert_anything_to_pandas_df(
 
     if isinstance(data, np.ndarray):
         return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
+
+    if is_xarray_dataset(data):
+        if ensure_copy:
+            data = data.copy(deep=True)
+        return data.to_dataframe()
+
+    if is_xarray_data_array(data):
+        if ensure_copy:
+            data = data.copy(deep=True)
+        return pd.DataFrame(data.to_series())
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
@@ -777,6 +803,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.SNOWPANDAS_OBJECT
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
+    elif is_xarray_dataset(input_data):
+        return DataFormat.XARRAY_DATASET
+    elif is_xarray_data_array(input_data):
+        return DataFormat.XARRAY_DATA_ARRAY
     elif isinstance(input_data, (list, tuple, set)):
         if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure
@@ -824,6 +854,16 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     return df.fillna(np.nan).replace([np.nan], [None])
 
 
+def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
+    # Select first column in dataframe and create a new series based on the values
+    if len(df.columns) != 1:
+        raise ValueError(
+            "DataFrame is expected to have a single column but "
+            f"has {len(df.columns)}."
+        )
+    return df[df.columns[0]]
+
+
 def convert_pandas_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> (
@@ -848,7 +888,7 @@ def convert_pandas_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray dataset / array, list, set, tuple, or dict.
         The converted dataframe.
     """
 
@@ -880,13 +920,15 @@ def convert_pandas_df_to_data_format(
 
         return pa.Table.from_pandas(df)
     elif data_format == DataFormat.PANDAS_SERIES:
-        # Select first column in dataframe and create a new series based on the values
-        if len(df.columns) != 1:
-            raise ValueError(
-                "DataFrame is expected to have a single column but "
-                f"has {len(df.columns)}."
-            )
-        return df[df.columns[0]]
+        return _pandas_df_to_series(df)
+    elif data_format == DataFormat.XARRAY_DATASET:
+        import xarray as xr
+
+        return xr.Dataset.from_dataframe(df)
+    elif data_format == DataFormat.XARRAY_DATA_ARRAY:
+        import xarray as xr
+
+        return xr.DataArray.from_series(_pandas_df_to_series(df))
     elif data_format == DataFormat.LIST_OF_RECORDS:
         return _unify_missing_values(df).to_dict(orient="records")
     elif data_format == DataFormat.LIST_OF_ROWS:
