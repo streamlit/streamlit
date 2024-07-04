@@ -156,31 +156,31 @@ export class NumberInput extends React.PureComponent<Props, State> {
       return null
     }
 
-    let format = getNonEmptyString(this.props.element.format)
+    const { format, step } = this.props.element
+    let formatString = getNonEmptyString(format)
 
     /**
      * In the instance where a step is specified for a float,
      * and a format is not explicitly provided, we will use the
      * precision of the step to format the result.
      */
-    if (format == null) {
-      const { step } = this.props.element
+    if (formatString == null) {
       const strStep = step.toString()
       if (this.isFloatData() && step !== 0 && strStep.includes(".")) {
         const decimalPlaces = strStep.split(".")[1].length
-        format = `%0.${decimalPlaces}f`
+        formatString = `%0.${decimalPlaces}f`
       }
     }
 
-    if (format == null) {
+    if (formatString == null) {
       return value.toString()
     }
 
     try {
-      return sprintf(format, value)
+      return sprintf(formatString, value)
     } catch (e) {
-      // Don't explode if we have a malformed format string.
-      logWarning(`Error in sprintf(${format}, ${value}): ${e}`)
+      // Don't explode if we have a malformed formatString.
+      logWarning(`Error in sprintf(${formatString}, ${value}): ${e}`)
       return String(value)
     }
   }
