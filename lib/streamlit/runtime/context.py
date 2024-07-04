@@ -83,6 +83,9 @@ class StreamlitHeaders(Mapping[str, str]):
     def __iter__(self) -> Iterator[str]:
         return iter(self._headers)
 
+    def to_dict(self) -> dict[str, str]:
+        return {key: self[key] for key in self}
+
 
 class StreamlitCookies(Mapping[str, str]):
     def __init__(self, cookies: Mapping[str, str]):
@@ -105,8 +108,13 @@ class StreamlitCookies(Mapping[str, str]):
     def __iter__(self) -> Iterator[str]:
         return iter(self._cookies)
 
+    def to_dict(self) -> dict[str, str]:
+        return dict(self._cookies)
 
-class _ContextProxy:
+
+class ContextProxy:
+    """A proxy for accessing the current request headers and cookies."""
+
     @property
     @gather_metrics("context.headers")
     def headers(self):
