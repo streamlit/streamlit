@@ -147,8 +147,8 @@ class LocalDiskCacheStorage(CacheStorage):
                     value = input.read()
                     _LOGGER.debug("Disk cache HIT: %s", key)
                     return bytes(value)
-            except FileNotFoundError:
-                raise CacheStorageKeyNotFoundError("Key not found in disk cache")
+            except FileNotFoundError as exc:
+                raise CacheStorageKeyNotFoundError("Key not found in disk cache") from exc
             except Exception as ex:
                 _LOGGER.error(ex)
                 raise CacheStorageError("Unable to read from cache") from ex

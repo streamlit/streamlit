@@ -111,8 +111,8 @@ class SafeSessionState:
     def __getattr__(self, key: str) -> Any:
         try:
             return self[key]
-        except KeyError:
-            raise AttributeError(f"{key} not found in session_state.")
+        except KeyError as exc:
+            raise AttributeError(f"{key} not found in session_state.") from exc
 
     def __setattr__(self, key: str, value: Any) -> None:
         self[key] = value
@@ -120,8 +120,8 @@ class SafeSessionState:
     def __delattr__(self, key: str) -> None:
         try:
             del self[key]
-        except KeyError:
-            raise AttributeError(f"{key} not found in session_state.")
+        except KeyError as exc:
+            raise AttributeError(f"{key} not found in session_state.") from exc
 
     def __repr__(self):
         """Presents itself as a simple dict of the underlying SessionState instance"""

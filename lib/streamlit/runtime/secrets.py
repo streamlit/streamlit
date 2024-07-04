@@ -93,15 +93,15 @@ class AttrDict(Mapping[str, Any]):
         try:
             value = self.__nested_secrets__[key]
             return self._maybe_wrap_in_attr_dict(value)
-        except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+        except KeyError as exc:
+            raise KeyError(_missing_key_error_message(key)) from exc
 
     def __getattr__(self, attr_name: str) -> Any:
         try:
             value = self.__nested_secrets__[attr_name]
             return self._maybe_wrap_in_attr_dict(value)
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(attr_name))
+        except KeyError as exc:
+            raise AttributeError(_missing_attr_error_message(attr_name)) from exc
 
     def __repr__(self):
         return repr(self.__nested_secrets__)
@@ -301,11 +301,8 @@ class Secrets(Mapping[str, Any]):
                 return value
             else:
                 return AttrDict(value)
-        # We add FileNotFoundError since __getattr__ is expected to only raise
-        # AttributeError. Without handling FileNotFoundError, unittests.mocks
-        # fails during mock creation on Python3.9
-        except (KeyError, FileNotFoundError):
-            raise AttributeError(_missing_attr_error_message(key))
+        except (KeyError, FileNotFoundError) as exc:
+            raise AttributeError(_missing_attr_error_message(key)) from exc
 
     def __getitem__(self, key: str) -> Any:
         """Return the value with the given key. If no such key
@@ -319,8 +316,8 @@ class Secrets(Mapping[str, Any]):
                 return value
             else:
                 return AttrDict(value)
-        except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+        except KeyError as exc:
+            raise KeyError(_missing_key_error_message(key)) from exc
 
     def __repr__(self) -> str:
         # If the runtime is NOT initialized, it is a method call outside

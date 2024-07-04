@@ -757,13 +757,13 @@ def check_python_comparable(seq: Sequence[Any]) -> None:
     except LookupError:
         # In case of empty sequences, the check not raise an exception.
         pass
-    except ValueError:
+    except ValueError as exc:
         raise StreamlitAPIException(
             "Invalid option type provided. Options must be comparable, returning a "
             f"boolean when used with *==*. \n\nGot **{type(seq[0]).__name__}**, "
             "which cannot be compared. Refactor your code to use elements of "
             "comparable types as options, e.g. use indices instead."
-        )
+        ) from exc
 
 
 def is_pandas_version_less_than(v: str) -> bool:

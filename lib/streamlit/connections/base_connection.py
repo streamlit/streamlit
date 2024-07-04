@@ -80,10 +80,8 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             return object.__getattribute__(self, name)
         except AttributeError as e:
             if hasattr(self._instance, name):
-                raise AttributeError(
-                    f"`{name}` doesn't exist here, but you can call `._instance.{name}` instead"
-                )
-            raise e
+                raise AttributeError(f"`{name}` doesn't exist here, but you can call `._instance.{name}` instead") from e
+            raise
 
     def _repr_html_(self) -> str:
         """Return a human-friendly markdown string describing this connection.

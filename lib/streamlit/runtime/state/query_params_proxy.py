@@ -61,15 +61,15 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             try:
                 return qp[key]
-            except KeyError:
-                raise AttributeError(missing_key_error_message(key))
+            except KeyError as exc:
+                raise AttributeError(missing_key_error_message(key)) from exc
 
     def __delattr__(self, key: str) -> None:
         with get_session_state().query_params() as qp:
             try:
                 del qp[key]
-            except KeyError:
-                raise AttributeError(missing_key_error_message(key))
+            except KeyError as exc:
+                raise AttributeError(missing_key_error_message(key)) from exc
 
     @overload
     def update(

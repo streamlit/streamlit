@@ -135,10 +135,9 @@ def marshall(
 ) -> None:
     try:
         import matplotlib.pyplot as plt
-
         plt.ioff()
-    except ImportError:
-        raise ImportError("pyplot() command requires matplotlib")
+    except ImportError as exc:
+        raise ImportError('pyplot() command requires matplotlib') from exc
 
     # You can call .savefig() on a Figure object or directly on the pyplot
     # module, in which case you're doing it to the latest Figure.

@@ -52,7 +52,7 @@ def get_latest_streamlit_version() -> Version:
     try:
         version_str = rsp.json()["info"]["version"]
     except Exception as e:
-        raise RuntimeError("Got unexpected response from PyPI", e)
+        raise RuntimeError("Got unexpected response from PyPI", e) from e
     return Version(version_str)
 
 

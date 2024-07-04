@@ -150,21 +150,21 @@ class Credentials:
             with open(self._conf_file) as f:
                 data = toml.load(f).get("general")
             if data is None:
-                raise Exception
+                raise RuntimeError("Unable to load data from TOML file.")
             self.activation = _verify_email(data.get("email"))
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
             if auto_resolve:
                 self.activate(show_instructions=not auto_resolve)
                 return
             raise RuntimeError(
                 'Credentials not found. Please run "streamlit activate".'
-            )
-        except Exception:
+            ) from exc
+        except Exception as exc:
             if auto_resolve:
                 self.reset()
                 self.activate(show_instructions=not auto_resolve)
                 return
-            raise Exception(
+            raise RuntimeError(
                 textwrap.dedent(
                     """
                 Unable to load credentials from %s.
@@ -172,7 +172,7 @@ class Credentials:
                 """
                 )
                 % (self._conf_file)
-            )
+            ) from exc
 
     def _check_activated(self, auto_resolve: bool = True) -> None:
         """Check if streamlit is activated.
