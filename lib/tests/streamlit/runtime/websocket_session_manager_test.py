@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -78,7 +80,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
 
     def test_connect_session_assert(self):
         with pytest.raises(AssertionError):
-            session_id = self.connect_session(
+            self.connect_session(
                 existing_session_id="existing_session_id",
                 session_id_override="session_id_override",
             )

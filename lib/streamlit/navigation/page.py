@@ -35,17 +35,22 @@ def Page(
     url_path: str | None = None,
     default: bool = False,
 ):
-    """Configure a page for ``st.navigation`` in a multipage app.
+    """Configure a page for ``st.navigation`` in a multipage app.
 
     Call ``st.Page`` to initialize a ``StreamlitPage`` object, and pass it to
     ``st.navigation`` to declare a page in your app.
 
     When a user navigates to a page, ``st.navigation`` returns the selected
-    ``StreamlitPage`` object. Call ``StreamlitPage.run()`` on the returned page
-    to execute the page. You can only run the page returned by
+    ``StreamlitPage`` object. Call ``.run()`` on the returned ``StreamlitPage``
+    object to execute the page. You can only run the page returned by
     ``st.navigation``, and you can only run it once per app rerun.
 
-    A page can be defined by a Python file or ``Callable``.
+    A page can be defined by a Python file or ``Callable``. Python files used
+    as a ``StreamlitPage`` source will have ``__name__ == "__page__"``.
+    Functions used as a ``StreamlitPage`` source will have ``__name__``
+    corresponding to the module they were imported from. Only the entrypoint
+    file and functions defined within the entrypoint file have
+    ``__name__ == "__main__"`` to adhere to Python convention.
 
     Parameters
     ----------
@@ -74,13 +79,13 @@ def Page(
         * A single-character emoji. For example, you can set ``icon="🚨"``
             or ``icon="🔥"``. Emoji short codes are not supported.
 
-        * An icon from the Material Symbols library (outlined style) in the
+        * An icon from the Material Symbols library (rounded style) in the
             format ``":material/icon_name:"`` where "icon_name" is the name
             of the icon in snake case.
 
             For example, ``icon=":material/thumb_up:"`` will display the
             Thumb Up icon. Find additional icons in the `Material Symbols \
-            <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+            <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
             font library.
 
     url_path: str or None

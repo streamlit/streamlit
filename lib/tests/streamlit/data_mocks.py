@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import enum
 import random
 from datetime import date
 from typing import NamedTuple
@@ -20,7 +23,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.type_util import DataFormat
+from streamlit.dataframe_util import DataFormat
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
@@ -92,7 +95,7 @@ SHARED_TEST_CASES = [
     # Set does not have a stable order across different Python version.
     # Therefore, we are only testing this with one item.
     (
-        {"st.number_input", "st.number_input"},
+        {"st.number_input", "st.number_input"},  # noqa: B033
         TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
     ),
     # Tuple of strings (Tuple[str]):
@@ -212,6 +215,24 @@ SHARED_TEST_CASES = [
 ]
 
 
-class TestObject(object):
+class TestObject:
     def __str__(self):
         return "TestObject"
+
+
+class StrTestEnum(str, enum.Enum):
+    NUMBER_INPUT = "st.number_input"
+    TEXT_AREA = "st.text_area"
+    TEXT_INPUT = "st.text_input"
+
+
+class TestEnum(enum.Enum):
+    NUMBER_INPUT = "st.number_input"
+    TEXT_AREA = "st.text_area"
+    TEXT_INPUT = "st.text_input"
+
+
+def data_generator():
+    yield "st.number_input"
+    yield "st.text_area"
+    yield "st.text_input"

@@ -38,7 +38,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
       userSelect: "none",
-      fontFamily: "Material Symbols Outlined",
+      fontFamily: "Material Symbols Rounded",
       fontWeight: "normal",
       fontStyle: "normal",
       lineHeight: 1,

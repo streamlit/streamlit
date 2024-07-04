@@ -17,16 +17,18 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
 from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
@@ -41,14 +43,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
-    Key,
-    LabelVisibility,
-    OptionSequence,
     T,
     check_python_comparable,
-    ensure_indexable,
-    maybe_raise_label_warnings,
-    to_key,
 )
 from streamlit.util import index_
 
@@ -238,13 +234,15 @@ class SelectboxMixin:
     ) -> T | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None if index == 0 else index, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None if index == 0 else index,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
+        opt = convert_anything_to_sequence(options)
         check_python_comparable(opt)
 
         id = compute_widget_id(

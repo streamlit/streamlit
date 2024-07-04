@@ -110,7 +110,7 @@ def dialog_decorator(
     app should generally be stored in Session State.
 
     A user can dismiss a modal dialog by clicking outside of it, clicking the
-    "**X**" in its upper-right corner, or pressing``ESC`` on their keyboard.
+    "**X**" in its upper-right corner, or pressing ``ESC`` on their keyboard.
     Dismissing a modal dialog does not trigger an app rerun. To close the modal
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
     dialog function.

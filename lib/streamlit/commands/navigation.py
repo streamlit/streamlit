@@ -69,7 +69,7 @@ def navigation(
     ``streamlit run``) acts like a router or frame of common elements around
     each of your pages. Streamlit executes the entrypoint file with every app
     rerun. To execute the current page, you must call the ``.run()`` method on
-    the page object returned by ``st.navigation``.
+    the ``StreamlitPage`` object returned by ``st.navigation``.
 
     The set of available pages can be updated with each rerun for dynamic
     navigation. By default, ``st.navigation`` draws the available pages in the
@@ -155,7 +155,7 @@ def navigation(
     >>> st.sidebar.selectbox("Foo", ["A", "B", "C"], key="foo")
     >>> st.sidebar.checkbox("Bar", key="bar")
     >>>
-    >>> pg = st.navigation(st.Page(page1), st.Page(page2))
+    >>> pg = st.navigation([st.Page(page1), st.Page(page2)])
     >>> pg.run()
 
     """

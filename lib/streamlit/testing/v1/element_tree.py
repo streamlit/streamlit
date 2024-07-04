@@ -32,7 +32,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit import type_util, util
+from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import (
@@ -201,12 +201,12 @@ class Widget(Element, ABC):
     def _widget_state(self) -> WidgetState: ...
 
 
-El = TypeVar("El", bound=Element, covariant=True)
+El_co = TypeVar("El_co", bound=Element, covariant=True)
 
 
-class ElementList(Generic[El]):
-    def __init__(self, els: Sequence[El]):
-        self._list: Sequence[El] = els
+class ElementList(Generic[El_co]):
+    def __init__(self, els: Sequence[El_co]):
+        self._list: Sequence[El_co] = els
 
     def __len__(self) -> int:
         return len(self._list)
@@ -216,12 +216,12 @@ class ElementList(Generic[El]):
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> El: ...
+    def __getitem__(self, idx: int) -> El_co: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> ElementList[El]: ...
+    def __getitem__(self, idx: slice) -> ElementList[El_co]: ...
 
-    def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
+    def __getitem__(self, idx: int | slice) -> El_co | ElementList[El_co]:
         if isinstance(idx, slice):
             return ElementList(self._list[idx])
         else:
@@ -233,7 +233,7 @@ class ElementList(Generic[El]):
     def __repr__(self):
         return util.repr_(self)
 
-    def __eq__(self, other: ElementList[El] | object) -> bool:
+    def __eq__(self, other: ElementList[El_co] | object) -> bool:
         if isinstance(other, ElementList):
             return self._list == other._list
         else:
@@ -244,11 +244,11 @@ class ElementList(Generic[El]):
         return [e.value for e in self]
 
 
-W = TypeVar("W", bound=Widget, covariant=True)
+W_co = TypeVar("W_co", bound=Widget, covariant=True)
 
 
-class WidgetList(ElementList[W], Generic[W]):
-    def __call__(self, key: str) -> W:
+class WidgetList(ElementList[W_co], Generic[W_co]):
+    def __call__(self, key: str) -> W_co:
         for e in self._list:
             if e.key == key:
                 return e
@@ -506,7 +506,7 @@ class Dataframe(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
@@ -1107,7 +1107,7 @@ class Table(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 @dataclass(repr=False)

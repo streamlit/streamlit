@@ -15,9 +15,21 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Iterable,
+    Literal,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
-from streamlit import type_util
+from typing_extensions import TypeAlias
+
+from streamlit import config, dataframe_util, errors, logger
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state.common import RegisterWidgetResult
 
@@ -25,8 +37,15 @@ if TYPE_CHECKING:
     from streamlit.type_util import T
 
 
+_LOGGER: Final = logger.get_logger(__name__)
+
+Key: TypeAlias = Union[str, int]
+
+LabelVisibility: TypeAlias = Literal["visible", "hidden", "collapsed"]
+
+
 def get_label_visibility_proto_value(
-    label_visibility_string: type_util.LabelVisibility,
+    label_visibility_string: LabelVisibility,
 ) -> LabelVisibilityMessage.LabelVisibilityOptions.ValueType:
     """Returns one of LabelVisibilityMessage enum constants.py based on string value."""
 
@@ -41,6 +60,78 @@ def get_label_visibility_proto_value(
 
 
 @overload
+def to_key(key: None) -> None: ...
+
+
+@overload
+def to_key(key: Key) -> str: ...
+
+
+def to_key(key: Key | None) -> str | None:
+    return None if key is None else str(key)
+
+
+E1 = TypeVar("E1", bound=Enum)
+E2 = TypeVar("E2", bound=Enum)
+
+_ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
+
+
+def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
+    """Attempt to coerce an Enum value to another EnumMeta.
+
+    An Enum value of EnumMeta E1 is considered coercable to EnumType E2
+    if the EnumMeta __qualname__ match and the names of their members
+    match as well. (This is configurable in streamlist configs)
+    """
+    if not isinstance(from_enum_value, Enum):
+        raise ValueError(
+            f"Expected an Enum in the first argument. Got {type(from_enum_value)}"
+        )
+    if not isinstance(to_enum_class, EnumMeta):
+        raise ValueError(
+            f"Expected an EnumMeta/Type in the second argument. Got {type(to_enum_class)}"
+        )
+    if isinstance(from_enum_value, to_enum_class):
+        return from_enum_value  # Enum is already a member, no coersion necessary
+
+    coercion_type = config.get_option("runner.enumCoercion")
+    if coercion_type not in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
+        raise errors.StreamlitAPIException(
+            "Invalid value for config option runner.enumCoercion. "
+            f"Expected one of {_ALLOWED_ENUM_COERCION_CONFIG_SETTINGS}, "
+            f"but got '{coercion_type}'."
+        )
+    if coercion_type == "off":
+        return from_enum_value  # do not attempt to coerce
+
+    # We now know this is an Enum AND the user has configured coercion enabled.
+    # Check if we do NOT meet the required conditions and log a failure message
+    # if that is the case.
+    from_enum_class = from_enum_value.__class__
+    if (
+        from_enum_class.__qualname__ != to_enum_class.__qualname__
+        or (
+            coercion_type == "nameOnly"
+            and set(to_enum_class._member_names_) != set(from_enum_class._member_names_)
+        )
+        or (
+            coercion_type == "nameAndValue"
+            and set(to_enum_class._value2member_map_)
+            != set(from_enum_class._value2member_map_)
+        )
+    ):
+        _LOGGER.debug("Failed to coerce %s to class %s", from_enum_value, to_enum_class)
+        return from_enum_value  # do not attempt to coerce
+
+    # At this point we think the Enum is coercable, and we know
+    # E1 and E2 have the same member names. We convert from E1 to E2 using _name_
+    # (since user Enum subclasses can override the .name property in 3.11)
+    _LOGGER.debug("Coerced %s to class %s", from_enum_value, to_enum_class)
+    return to_enum_class[from_enum_value._name_]
+
+
+@overload
 def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[Enum],
     options: type[Enum],
@@ -51,7 +142,7 @@ def maybe_coerce_enum(
 @overload
 def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[T],
-    options: type_util.OptionSequence[T],
+    options: dataframe_util.OptionSequence[T],
     opt_sequence: Sequence[T],
 ) -> RegisterWidgetResult[T]: ...
 
@@ -74,7 +165,7 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
             return register_widget_result
 
     return RegisterWidgetResult(
-        type_util.coerce_enum(register_widget_result.value, coerce_class),
+        _coerce_enum(register_widget_result.value, coerce_class),
         register_widget_result.value_changed,
     )
 
@@ -84,7 +175,7 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
 @overload
 def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[list[T]],
-    options: type_util.OptionSequence[T],
+    options: dataframe_util.OptionSequence[T],
     opt_sequence: Sequence[T],
 ) -> RegisterWidgetResult[list[T]]: ...
 
@@ -92,7 +183,7 @@ def maybe_coerce_enum_sequence(
 @overload
 def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[tuple[T, T]],
-    options: type_util.OptionSequence[T],
+    options: dataframe_util.OptionSequence[T],
     opt_sequence: Sequence[T],
 ) -> RegisterWidgetResult[tuple[T, T]]: ...
 
@@ -118,8 +209,7 @@ def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
     # Return a new RegisterWidgetResult with the coerced enum values sequence
     return RegisterWidgetResult(
         type(register_widget_result.value)(
-            type_util.coerce_enum(val, coerce_class)
-            for val in register_widget_result.value
+            _coerce_enum(val, coerce_class) for val in register_widget_result.value
         ),
         register_widget_result.value_changed,
     )

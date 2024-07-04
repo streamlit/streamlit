@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, Collection, Dict, Final, Iterable, Union,
 from typing_extensions import TypeAlias
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
-from streamlit import config, type_util
+from streamlit import config, dataframe_util
 from streamlit.color_util import Color, IntColorTuple, is_color_like, to_int_color_tuple
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
@@ -263,7 +263,7 @@ def to_deckgl_json(
     if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
-    df = type_util.convert_anything_to_df(data)
+    df = dataframe_util.convert_anything_to_pandas_df(data)
 
     lat_col_name = _get_lat_or_lon_col_name(df, "latitude", lat, _DEFAULT_LAT_COL_NAMES)
     lon_col_name = _get_lat_or_lon_col_name(

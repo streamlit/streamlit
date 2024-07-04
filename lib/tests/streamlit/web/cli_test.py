@@ -14,6 +14,8 @@
 
 """Unit tests for the Streamlit CLI."""
 
+from __future__ import annotations
+
 import contextlib
 import os
 import subprocess

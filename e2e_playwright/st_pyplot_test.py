@@ -17,6 +17,7 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import expect_warning
 
 
 def test_displays_a_pyplot_figures(
@@ -45,5 +46,4 @@ def test_displays_a_pyplot_figures(
 
 def test_shows_deprecation_warning(app: Page):
     """Test that the deprecation warning is displayed correctly."""
-    deprecation_message = app.get_by_text("PyplotGlobalUseWarning")
-    expect(deprecation_message).to_have_count(1)
+    expect_warning(app, "without providing a figure argument has been deprecated")

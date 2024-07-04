@@ -108,35 +108,6 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
         return util.repr_(self)
 
 
-class StreamlitDeprecationWarning(StreamlitAPIWarning):
-    """Used to display a warning.
-
-    Note that this should not be "raised", but passed to st.exception
-    instead.
-    """
-
-    def __init__(self, config_option, msg, *args):
-        message = """
-{0}
-
-You can disable this warning by disabling the config option:
-`{1}`
-
-```
-st.set_option('{1}', False)
-```
-or in your `.streamlit/config.toml`
-```
-[deprecation]
-{2} = false
-```
-    """.format(msg, config_option, config_option.split(".")[1])
-        super().__init__(message, *args)
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-
 class StreamlitModuleNotFoundError(StreamlitAPIWarning):
     """Print a pretty message when a Streamlit command requires a dependency
     that is not one of our core dependencies."""

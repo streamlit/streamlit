@@ -34,12 +34,15 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
@@ -54,7 +57,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import adjust_years
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -429,11 +431,11 @@ class TimeWidgetsMixin:
     ) -> time | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "now" else None, key=key
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "now" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -694,11 +696,11 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "default_value_today" else None, key=key
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "default_value_today" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 

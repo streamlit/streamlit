@@ -24,12 +24,8 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
@@ -47,7 +43,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import Key, to_key
 from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
@@ -522,13 +517,13 @@ class ButtonMixin:
             * A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
 
-            * An icon from the Material Symbols library (outlined style) in the
+            * An icon from the Material Symbols library (rounded style) in the
               format ``":material/icon_name:"`` where "icon_name" is the name
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
         help : str
             An optional tooltip that gets displayed when the link is
@@ -600,9 +595,13 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
-        check_callback_rules(self.dg, on_click)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_click,
+            default_value=None,
+            writes_allowed=False,
+        )
 
         id = compute_widget_id(
             "download_button",
@@ -764,11 +763,14 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        if not is_form_submitter:
-            check_callback_rules(self.dg, on_click)
-        check_cache_replay_rules()
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_click,
+            default_value=None,
+            writes_allowed=False,
+            enable_check_callback_rules=not is_form_submitter,
+        )
 
         id = compute_widget_id(
             "button",

@@ -91,7 +91,7 @@ def create_gif(size):
 
     # Make ten frames with the circle of a random size and location
     random.seed(0)
-    for i in range(0, 10):
+    for _ in range(0, 10):
         frame = im.copy()
         draw = ImageDraw.Draw(frame)
         pos = (random.randrange(0, size), random.randrange(0, size))

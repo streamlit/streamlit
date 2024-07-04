@@ -36,28 +36,24 @@ from typing import (
 from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
+    ChartStackType,
     ChartType,
     generate_chart,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -66,7 +62,6 @@ if TYPE_CHECKING:
     from streamlit.color_util import Color
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.arrow import Data
-    from streamlit.runtime.state import WidgetCallback
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
@@ -279,10 +274,10 @@ def _serialize_data(data: Any) -> bytes:
     import pyarrow as pa
 
     if isinstance(data, pa.Table):
-        return type_util.pyarrow_table_to_bytes(data)
+        return dataframe_util.convert_arrow_table_to_arrow_bytes(data)
 
-    df = type_util.convert_anything_to_df(data)
-    return type_util.data_frame_to_bytes(df)
+    df = dataframe_util.convert_anything_to_pandas_df(data)
+    return dataframe_util.convert_pandas_df_to_arrow_bytes(df)
 
 
 def _marshall_chart_data(
@@ -957,6 +952,7 @@ class VegaChartsMixin:
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
         horizontal: bool = False,
+        stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -1045,6 +1041,14 @@ class VegaChartsMixin:
             (default), the bars display vertically. If this is ``True``,
             Streamlit swaps the x-axis and y-axis and the bars display
             horizontally.
+
+        stack : bool, "normalize", "center", "layered", or None
+            Whether to stack the bars. If this is ``None`` (default), uses Vega's
+            default. If this is ``True``, the bars are stacked on top of each other.
+            If this is ``False``, the bars are displayed side by side. If "normalize",
+            the bars are stacked and normalized to 100%. If "center", the bars are
+            stacked around a central axis. If "layered", the bars are stacked on top
+            of one another.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -1139,6 +1143,20 @@ class VegaChartsMixin:
 
         """
 
+        # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
+        if type_util.is_altair_version_less_than("5.0.0") and stack is False:
+            raise StreamlitAPIException(
+                "Streamlit does not support non-stacked (grouped) bar charts with Altair 4.x. Please upgrade to Version 5."
+            )
+
+        # Check that the stack parameter is valid, raise more informative error message if not
+        VALID_STACK_TYPES = (None, True, False, "normalize", "center", "layered")
+        if stack not in VALID_STACK_TYPES:
+            raise StreamlitAPIException(
+                f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
+                "See documentation for `st.bar_chart` [here](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart) for more information."
+            )
+
         bar_chart_type = (
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
@@ -1154,6 +1172,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            stack=stack,
         )
         return cast(
             "DeltaGenerator",
@@ -1763,11 +1782,15 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            check_fragment_path_policy(self.dg)
-            check_cache_replay_rules()
-            if callable(on_select):
-                check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
 
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)

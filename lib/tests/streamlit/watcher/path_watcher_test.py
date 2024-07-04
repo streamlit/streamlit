@@ -14,6 +14,8 @@
 
 """Tests the public utility functions in path_watcher.py"""
 
+from __future__ import annotations
+
 import unittest
 from unittest.mock import Mock, call, patch
 
