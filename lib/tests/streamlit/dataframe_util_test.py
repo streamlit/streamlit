@@ -57,7 +57,7 @@ class DataframeUtilTest(unittest.TestCase):
         df2 = pd.DataFrame(df1.dtypes)
 
         try:
-            dataframe_util.data_frame_to_bytes(df2)
+            dataframe_util.convert_pandas_df_to_arrow_bytes(df2)
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
@@ -342,7 +342,7 @@ class DataframeUtilTest(unittest.TestCase):
         )
 
         try:
-            dataframe_util.data_frame_to_bytes(df)
+            dataframe_util.convert_pandas_df_to_arrow_bytes(df)
         except Exception as ex:
             self.fail(
                 "No exception should have been thrown here. "
@@ -472,12 +472,12 @@ class DataframeUtilTest(unittest.TestCase):
 
         if metadata.expected_data_format == dataframe_util.DataFormat.UNKNOWN:
             with self.assertRaises(ValueError):
-                dataframe_util.convert_df_to_data_format(
+                dataframe_util.convert_pandas_df_to_data_format(
                     converted_df, metadata.expected_data_format
                 )
             # We don't have to do any other tests for unknown data formats.
         else:
-            converted_data = dataframe_util.convert_df_to_data_format(
+            converted_data = dataframe_util.convert_pandas_df_to_data_format(
                 converted_df, metadata.expected_data_format
             )
 
@@ -513,7 +513,7 @@ class DataframeUtilTest(unittest.TestCase):
         passed an unknown data format.
         """
         with self.assertRaises(ValueError):
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), dataframe_util.DataFormat.UNKNOWN
             )
 
@@ -530,25 +530,25 @@ class DataframeUtilTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.LIST_OF_VALUES
             ),
             [None, None, None, None],
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.TUPLE_OF_VALUES
             ),
             (None, None, None, None),
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.SET_OF_VALUES
             ),
             {None},
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.LIST_OF_ROWS
             ),
             [
@@ -559,7 +559,7 @@ class DataframeUtilTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.LIST_OF_RECORDS
             ),
             [
@@ -570,7 +570,7 @@ class DataframeUtilTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.COLUMN_VALUE_MAPPING
             ),
             {
@@ -578,13 +578,13 @@ class DataframeUtilTest(unittest.TestCase):
             },
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.COLUMN_INDEX_MAPPING
             ),
             {"missing": {0: None, 1: None, 2: None, 3: None}},
         )
         self.assertEqual(
-            dataframe_util.convert_df_to_data_format(
+            dataframe_util.convert_pandas_df_to_data_format(
                 df, dataframe_util.DataFormat.KEY_VALUE_DICT
             ),
             {0: None, 1: None, 2: None, 3: None},
