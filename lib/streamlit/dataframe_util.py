@@ -22,6 +22,7 @@ from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Final,
     Iterable,
     Protocol,
@@ -84,6 +85,19 @@ class DataFrameGenericAlias(Protocol[V_co]):
 OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
+]
+
+# Various data types supported by our dataframe processing:
+Data: TypeAlias = Union[
+    DataFrame,
+    Series,
+    Styler,
+    Index,
+    pa.Table,
+    np.ndarray,
+    Iterable[Any],
+    Dict[Any, Any],
+    None,
 ]
 
 

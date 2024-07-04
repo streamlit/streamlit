@@ -19,9 +19,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-from typing import TYPE_CHECKING, Any, Collection, Dict, Final, Iterable, Union, cast
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING, Any, Collection, Final, cast
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit import config, dataframe_util
@@ -33,18 +31,9 @@ from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from pandas import DataFrame
-    from pandas.io.formats.style import Styler
 
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
-
-
-Data: TypeAlias = Union[
-    "DataFrame",
-    "Styler",
-    Iterable[Any],
-    Dict[Any, Any],
-    None,
-]
 
 # Map used as the basis for st.map.
 _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
