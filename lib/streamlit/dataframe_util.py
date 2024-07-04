@@ -618,7 +618,7 @@ def _maybe_truncate_table(
 
 
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
-    """Return True if the column type is known to cause issues during Arrow conversion."""
+    """Return True if column type is known to cause issues during Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind in [
@@ -649,7 +649,8 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         ]:
             return True
         elif inferred_type == "mixed":
-            # This includes most of the more complex/custom types (objects, dicts, lists, ...)
+            # This includes most of the more complex/custom types (objects, dicts,
+            # lists, ...)
             if len(column) == 0 or not hasattr(column, "iloc"):
                 # The column seems to be invalid, so we assume it is incompatible.
                 # But this would most likely never happen since empty columns
@@ -661,7 +662,8 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
 
             if (
                 not is_list_like(first_value)
-                # dicts are list-like, but have issues in Arrow JS (see comments in Quiver.ts)
+                # dicts are list-like, but have issues in Arrow JS (see comments in
+                # Quiver.ts)
                 or is_dict_like(first_value)
                 # Frozensets are list-like, but are not compatible with pyarrow.
                 or isinstance(first_value, frozenset)
@@ -803,9 +805,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.COLUMN_VALUE_MAPPING
             if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
-            # In the future, we could potentially also support the tight & split formats here
+            # In the future, we could potentially also support tight & split formats
             if _is_list_of_scalars(input_data.values()):
-                # Only use the key-value dict format if the values are only scalar values
+                # Only use the key-value dict format if the values are only scalar
                 return DataFormat.KEY_VALUE_DICT
     return DataFormat.UNKNOWN
 
@@ -881,7 +883,8 @@ def convert_pandas_df_to_data_format(
         # Select first column in dataframe and create a new series based on the values
         if len(df.columns) != 1:
             raise ValueError(
-                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+                "DataFrame is expected to have a single column but "
+                f"has {len(df.columns)}."
             )
         return df[df.columns[0]]
     elif data_format == DataFormat.LIST_OF_RECORDS:
@@ -907,7 +910,8 @@ def convert_pandas_df_to_data_format(
             return_list = df[df.columns[0]].tolist()
         elif len(df.columns) >= 1:
             raise ValueError(
-                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+                "DataFrame is expected to have a single column but "
+                f"has {len(df.columns)}."
             )
         if data_format == DataFormat.TUPLE_OF_VALUES:
             return tuple(return_list)
