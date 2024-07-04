@@ -120,7 +120,9 @@ def is_dataframe_like(obj: object) -> bool:
     This does not include basic collection types like list, dict, tuple, etc.
     """
 
-    if isinstance(obj, (list, tuple, set, dict, str, bytes, int, float, bool)):
+    if obj is None or isinstance(
+        obj, (list, tuple, set, dict, str, bytes, int, float, bool)
+    ):
         # Basic types are not considered dataframe-like, so we can
         # return False early to avoid unnecessary checks.
         return False
