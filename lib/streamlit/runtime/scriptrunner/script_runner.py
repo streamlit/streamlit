@@ -586,13 +586,13 @@ class ScriptRunner:
                     at_least_one_fragment_error = False
                     at_least_one_fragment_stopped_prematurely = False
                     for fragment_id in rerun_data.fragment_id_queue:
-                        # Ignore RerunExceptions from fragments because right now they
-                        # are not allowed to stop the execution flow anyways
-                        # (see script_requests.py#on_scriptrunner_yield)
+                        # When getting a rerun in a fragment run, stop the fragment
+                        # loop with the latest rerun_exception_data. Otherwise,
+                        # an st.rerun within a fragment cannot trigger an app rerun.
                         (
                             _,
                             run_without_errors,
-                            __,
+                            rerun_exception_data,
                             premature_stop,
                         ) = exec_func_with_error_handling(
                             exec_fragment(fragment_id),
@@ -605,6 +605,9 @@ class ScriptRunner:
                             and premature_stop
                         ):
                             at_least_one_fragment_stopped_prematurely = True
+
+                        if rerun_exception_data:
+                            break
 
                     run_without_errors = not at_least_one_fragment_error
                     premature_stop = at_least_one_fragment_stopped_prematurely
