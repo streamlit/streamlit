@@ -22,10 +22,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
     maybe_raise_label_warnings,
 )
 from streamlit.elements.lib.utils import (
@@ -206,10 +203,13 @@ class CameraInputMixin:
     ) -> UploadedFile | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None,
+            writes_allowed=False,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(
