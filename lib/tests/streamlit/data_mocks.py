@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import enum
 import random
 from datetime import date
 from typing import NamedTuple
@@ -217,3 +218,21 @@ SHARED_TEST_CASES = [
 class TestObject:
     def __str__(self):
         return "TestObject"
+
+
+class StrTestEnum(str, enum.Enum):
+    NUMBER_INPUT = "st.number_input"
+    TEXT_AREA = "st.text_area"
+    TEXT_INPUT = "st.text_input"
+
+
+class TestEnum(enum.Enum):
+    NUMBER_INPUT = "st.number_input"
+    TEXT_AREA = "st.text_area"
+    TEXT_INPUT = "st.text_input"
+
+
+def data_generator():
+    yield "st.number_input"
+    yield "st.text_area"
+    yield "st.text_input"

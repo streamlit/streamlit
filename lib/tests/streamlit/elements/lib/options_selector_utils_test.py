@@ -17,7 +17,7 @@ import pytest
 
 from streamlit.elements.lib.options_selector_utils import (
     check_and_convert_to_indices,
-    ensure_indexable_and_comparable,
+    convert_to_sequence_and_check_comparable,
     get_default_indices,
 )
 from streamlit.errors import StreamlitAPIException
@@ -58,7 +58,7 @@ class TestTransformOptions:
     def test_transform_options(self):
         options = ["a", "b", "c"]
 
-        indexable_options = ensure_indexable_and_comparable(options)
+        indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options = [f"transformed_{option}" for option in indexable_options]
         default_indices = get_default_indices(indexable_options, "b")
 
@@ -71,7 +71,7 @@ class TestTransformOptions:
     def test_transform_options_default_format_func(self):
         options = [5, 6, 7]
 
-        indexable_options = ensure_indexable_and_comparable(options)
+        indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options = [str(option) for option in indexable_options]
         default_indices = get_default_indices(indexable_options, 7)
 

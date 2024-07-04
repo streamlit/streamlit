@@ -20,7 +20,7 @@ from typing import (
     cast,
 )
 
-from streamlit.dataframe_util import OptionSequence, ensure_indexable
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import (
     T,
@@ -62,8 +62,8 @@ def check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def ensure_indexable_and_comparable(options: OptionSequence[T]) -> Sequence[T]:
-    indexable_options = ensure_indexable(options)
+def convert_to_sequence_and_check_comparable(options: OptionSequence[T]) -> Sequence[T]:
+    indexable_options = convert_anything_to_sequence(options)
     check_python_comparable(indexable_options)
     return indexable_options
 

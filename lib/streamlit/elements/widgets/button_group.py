@@ -30,7 +30,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
-    ensure_indexable_and_comparable,
+    convert_to_sequence_and_check_comparable,
     get_default_indices,
 )
 from streamlit.elements.lib.policies import check_widget_policies
@@ -299,7 +299,7 @@ class ButtonGroupMixin:
                 selected_content=transformed["selected_content"],
             )
 
-        indexable_options = ensure_indexable_and_comparable(options)
+        indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
         serde = MultiSelectSerde(indexable_options, default_values)
 

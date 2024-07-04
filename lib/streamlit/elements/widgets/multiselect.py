@@ -18,10 +18,11 @@ from dataclasses import dataclass, field
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
+from streamlit.dataframe_util import OptionSequence
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     check_and_convert_to_indices,
-    ensure_indexable_and_comparable,
+    convert_to_sequence_and_check_comparable,
     get_default_indices,
 )
 from streamlit.elements.lib.policies import (
@@ -267,7 +268,7 @@ class MultiSelectMixin:
         widget_name = "multiselect"
         maybe_raise_label_warnings(label, label_visibility)
 
-        indexable_options = ensure_indexable_and_comparable(options)
+        indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options = [format_func(option) for option in indexable_options]
         default_values = get_default_indices(indexable_options, default)
 
