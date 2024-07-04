@@ -89,12 +89,12 @@ OptionSequence: TypeAlias = Union[
 
 # Various data types supported by our dataframe processing:
 Data: TypeAlias = Union[
-    DataFrame,
-    Series,
-    Styler,
-    Index,
-    pa.Table,
-    np.ndarray,
+    "DataFrame",
+    "Series",
+    "Styler",
+    "Index",
+    "pa.Table",
+    "np.ndarray",
     Iterable[Any],
     Dict[Any, Any],
     None,
