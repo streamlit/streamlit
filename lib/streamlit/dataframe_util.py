@@ -223,7 +223,7 @@ def convert_anything_to_pandas_df(
     """
     import pandas as pd
 
-    if is_type(data, _PANDAS_DF_TYPE_STR):
+    if isinstance(data, pd.DataFrame):
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
