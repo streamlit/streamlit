@@ -691,7 +691,6 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         (e.g. charts) can ignore it.
 
     """
-    import pyarrow as pa
 
     if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
@@ -701,8 +700,4 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         ), "Default UUID must be a string for Styler data."
         marshall_styler(proto, data, default_uuid)
 
-    if isinstance(data, pa.Table):
-        proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
-    else:
-        df = dataframe_util.convert_anything_to_pandas_df(data)
-        proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)
