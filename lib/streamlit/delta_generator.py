@@ -100,7 +100,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame
 
     from streamlit.cursor import Cursor
-    from streamlit.elements.arrow import Data
+    from streamlit.dataframe_util import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
 

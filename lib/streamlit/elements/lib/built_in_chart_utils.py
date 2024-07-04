@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     import altair as alt
     import pandas as pd
 
-    from streamlit.elements.arrow import Data
+    from streamlit.dataframe_util import Data
 
 VegaLiteType: TypeAlias = Literal["quantitative", "ordinal", "temporal", "nominal"]
 ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]

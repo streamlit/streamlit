@@ -60,8 +60,8 @@ if TYPE_CHECKING:
     import altair as alt
 
     from streamlit.color_util import Color
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.arrow import Data
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {

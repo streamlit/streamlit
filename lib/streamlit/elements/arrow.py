@@ -18,14 +18,10 @@ import json
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
-    Any,
-    Dict,
     Final,
     Iterable,
-    List,
     Literal,
     TypedDict,
-    Union,
     cast,
     overload,
 )
@@ -53,24 +49,9 @@ from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-    from numpy import ndarray
-    from pandas import DataFrame, Index, Series
-    from pandas.io.formats.style import Styler
-
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
 
-Data: TypeAlias = Union[
-    "DataFrame",
-    "Series",
-    "Styler",
-    "Index",
-    "pa.Table",
-    "ndarray",
-    Iterable,
-    Dict[str, List[Any]],
-    None,
-]
 
 SelectionMode: TypeAlias = Literal[
     "single-row", "multi-row", "single-column", "multi-column"
