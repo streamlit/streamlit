@@ -259,7 +259,9 @@ describe("NumberInput widget", () => {
         render(<NumberInput {...props} />)
 
         expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-        expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.1111)
+        expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue(
+          "1.1111"
+        )
       })
     })
 
@@ -272,7 +274,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue("1")
     })
 
     it("automatically sets formatting when none provided based on step", () => {
@@ -284,7 +286,9 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.0)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue(
+        "1.000"
+      )
     })
 
     it("does not automatically format when a format is explicitly provided", () => {
@@ -297,7 +301,9 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.0)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue(
+        "1.00"
+      )
     })
 
     it("does not automatically format when the step size is integer", () => {
@@ -309,7 +315,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.0)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue("1")
     })
   })
 
