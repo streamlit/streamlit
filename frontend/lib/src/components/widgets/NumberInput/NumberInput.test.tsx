@@ -257,7 +257,7 @@ describe("NumberInput widget", () => {
           format: "%0.4f",
         })
         render(<NumberInput {...props} />)
-    
+
         expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
         expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.1111)
       })
@@ -270,7 +270,7 @@ describe("NumberInput widget", () => {
       })
 
       render(<NumberInput {...props} />)
-    
+
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
       expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1)
     })
@@ -282,34 +282,34 @@ describe("NumberInput widget", () => {
       })
 
       render(<NumberInput {...props} />)
-    
+
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.000)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.0)
     })
 
-    it('does not automatically format when a format is explicitly provided', () => {
+    it("does not automatically format when a format is explicitly provided", () => {
       const props = getFloatProps({
         default: 1.0,
         step: 0.1,
-        format: '%0.2f',
+        format: "%0.2f",
       })
 
       render(<NumberInput {...props} />)
-    
+
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.00)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.0)
     })
 
-    it('does not automatically format when the step size is integer', () => {
+    it("does not automatically format when the step size is integer", () => {
       const props = getFloatProps({
         default: 1.0,
         step: 1,
       })
 
       render(<NumberInput {...props} />)
-    
+
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
-      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.00)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.0)
     })
   })
 
