@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
-from streamlit.dataframe_util import OptionSequence, ensure_indexable
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
@@ -243,7 +243,7 @@ class SelectboxMixin:
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
+        opt = convert_anything_to_sequence(options)
         check_python_comparable(opt)
 
         id = compute_widget_id(

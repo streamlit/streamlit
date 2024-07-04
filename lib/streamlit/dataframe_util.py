@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import contextlib
-import copy
 import math
 from enum import Enum, EnumMeta, auto
 from typing import (
@@ -31,14 +30,13 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
 )
 
 from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors, logger, string_util
-from streamlit.type_util import is_iterable, is_type
+from streamlit.type_util import is_type
 
 if TYPE_CHECKING:
     import numpy as np
@@ -221,7 +219,7 @@ def is_snowpandas_data_object(obj: object) -> bool:
 
 
 def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
-    """True if type that can be passed to convert_anything_to_df."""
+    """True if type that can be passed to convert_anything_to_pandas_df."""
     return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
 
 
@@ -334,64 +332,51 @@ Offending object:
         ) from ex
 
 
-@overload
-def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]: ...
+def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
+    """Try to convert different formats to an indexable Sequence.
 
-
-@overload
-def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]: ...
-
-
-def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]:
-    """Try to convert different formats to something iterable. Most inputs
-    are assumed to be iterable, but if we have a DataFrame, we can just
-    select the first column to iterate over. If the input is not iterable,
+    If the input is a dataframe-like object, we just select the first
+    column to iterate over. If the input cannot be converted to a sequence,
     a TypeError is raised.
 
     Parameters
     ----------
-    obj : list, tuple, numpy.ndarray, pandas.Series, pandas.DataFrame, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame or snowflake.snowpark.table.Table
+    obj : OptionSequence
+        The object to convert to a sequence.
 
     Returns
     -------
-    iterable
-
+    Sequence
+        The converted sequence.
     """
+    if obj is None:
+        return []  # type: ignore
 
-    if is_unevaluated_data_object(obj):
-        obj = convert_anything_to_pandas_df(obj)
+    if isinstance(obj, (str, list, tuple, set, range, EnumMeta)):
+        # This also ensures that the sequence is copied to prevent
+        # potential mutations to the original object.
+        return list(obj)
 
-    if is_dataframe(obj):
-        # Return first column as a pd.Series
-        # The type of the elements in this column is not known up front, hence
-        # the Iterable[Any] return type.
-        return cast(Iterable[Any], obj.iloc[:, 0])
+    if isinstance(obj, dict):
+        return list(obj.keys())
 
-    if is_iterable(obj):
-        return obj
-
-    raise TypeError(
-        f"Object is not an iterable and could not be converted to one. Object: {obj}"
-    )
-
-
-def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
-    """Try to ensure a value is an indexable Sequence. If the collection already
-    is one, it has the index method that we need. Otherwise, convert it to a list.
-    """
-    it = ensure_iterable(obj)
-    # This is an imperfect check because there is no guarantee that an `index`
-    # function actually does the thing we want.
-    index_fn = getattr(it, "index", None)
-    if callable(index_fn) and not isinstance(it, EnumMeta):
-        # We return a shallow copy of the Sequence here because the return value of
-        # this function is saved in a widget serde class instance to be used in later
-        # script runs, and we don't want mutations to the options object passed to a
+    # Fallback to our DataFrame conversion logic:
+    try:
+        # We use ensure_copy here because the return value of this function is
+        # saved in a widget serde class instance to be used in later script runs,
+        # and we don't want mutations to the options object passed to a
         # widget affect the widget.
         # (See https://github.com/streamlit/streamlit/issues/7534)
-        return copy.copy(cast(Sequence[V_co], it))
-    else:
-        return list(it)
+        data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
+        # Return first column as a list:
+        return (
+            [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
+        )
+    except errors.StreamlitAPIException as e:
+        raise TypeError(
+            "Object is not an iterable and could not be converted to one. "
+            f"Object type: {type(obj)}"
+        ) from e
 
 
 def _maybe_truncate_table(
