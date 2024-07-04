@@ -25,7 +25,10 @@ from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.dataframe_util import (
+    convert_arrow_bytes_to_pandas_df,
+    convert_arrow_table_to_arrow_bytes,
+)
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -48,7 +51,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
@@ -70,7 +73,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
+        self.assertEqual(proto.data, convert_arrow_table_to_arrow_bytes(table))
 
     def test_hide_index_true(self):
         """Test that it can be called with hide_index=True param."""
@@ -150,7 +153,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.styler.display_values), expected
+            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
         )
 
     def test_throw_exception_if_data_exceeds_styler_config(self):
@@ -196,7 +199,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             st.dataframe(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(bytes_to_data_frame(proto.data).iat[0, 0], 42)
+        self.assertEqual(convert_arrow_bytes_to_pandas_df(proto.data).iat[0, 0], 42)
 
     @pytest.mark.require_snowflake
     def test_snowpark_collected(self):
@@ -207,7 +210,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             st.dataframe(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(bytes_to_data_frame(proto.data).iat[0, 0], 42)
+        self.assertEqual(convert_arrow_bytes_to_pandas_df(proto.data).iat[0, 0], 42)
 
     def test_dataframe_on_select_initial_returns(self):
         """Test st.dataframe returns an empty selection as initial result."""
@@ -353,11 +356,11 @@ class StArrowTableAPITest(DeltaGeneratorTestCase):
 
     def test_table(self):
         """Test st.table."""
-        from streamlit.dataframe_util import bytes_to_data_frame
+        from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
 
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
         st.table(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)

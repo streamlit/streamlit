@@ -236,7 +236,9 @@ def _marshall_display_values(
 
     """
     new_df = _use_display_values(df, styles)
-    proto.styler.display_values = dataframe_util.data_frame_to_bytes(new_df)
+    proto.styler.display_values = dataframe_util.convert_pandas_df_to_arrow_bytes(
+        new_df
+    )
 
 
 def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:

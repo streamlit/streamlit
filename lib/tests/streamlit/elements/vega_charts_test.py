@@ -28,7 +28,10 @@ from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.dataframe_util import (
+    convert_arrow_bytes_to_pandas_df,
+    convert_arrow_table_to_arrow_bytes,
+)
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
     _parse_selection_mode,
@@ -37,9 +40,7 @@ from streamlit.elements.vega_charts import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
-from streamlit.type_util import (
-    is_altair_version_less_than,
-)
+from streamlit.type_util import is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -104,7 +105,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         self.assertFalse(proto.HasField("data"))
         self.assertEqual(len(proto.datasets), 1)
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.datasets[0].data.data), EXPECTED_DATAFRAME
+            convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
+            EXPECTED_DATAFRAME,
         )
 
         spec_dict = json.loads(proto.spec)
@@ -546,7 +548,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+            convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
         self.assertDictEqual(
             json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
@@ -569,7 +571,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+            convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
         self.assertDictEqual(
             json.loads(proto.spec),
@@ -605,7 +607,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+            convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
         self.assertDictEqual(
             json.loads(proto.spec),
@@ -627,7 +629,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
         self.assertEqual(proto.HasField("data"), True)
-        self.assertEqual(proto.data.data, pyarrow_table_to_bytes(table))
+        self.assertEqual(proto.data.data, convert_arrow_table_to_arrow_bytes(table))
 
     def test_add_rows(self):
         """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
@@ -640,7 +642,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().arrow_add_rows
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.data.data), df2, check_dtype=False
+            convert_arrow_bytes_to_pandas_df(proto.data.data), df2, check_dtype=False
         )
 
     def test_no_args_add_rows(self):
@@ -654,7 +656,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().arrow_add_rows
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+            convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
         )
 
     def test_use_container_width(self):
@@ -856,7 +858,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
 
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.datasets[0].data.data),
+            convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
         )
 
@@ -1120,7 +1122,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             # Manually-specified colors are set via the color scale's range property.
             self.assertTrue(chart_spec["encoding"]["color"]["scale"]["range"])
 
-            proto_df = bytes_to_data_frame(proto.datasets[0].data.data)
+            proto_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
 
             pd.testing.assert_series_equal(
                 proto_df[color_column],
@@ -1362,7 +1364,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         self, orig_df, expected_df, chart_proto
     ):
         """Test that when we modify the outgoing DF we don't mutate the input DF."""
-        output_df = bytes_to_data_frame(chart_proto.datasets[0].data.data)
+        output_df = convert_arrow_bytes_to_pandas_df(chart_proto.datasets[0].data.data)
 
         self.assertNotEqual(id(orig_df), id(output_df))
         self.assertNotEqual(id(orig_df), id(expected_df))
