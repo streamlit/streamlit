@@ -235,7 +235,7 @@ def convert_anything_to_pandas_df(
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
-        taking max_unevaluated_rows, defaults to 10k and 100 for st.table
+        taking max_unevaluated_rows, defaults to 10k.
 
     ensure_copy: bool
         If True, make sure to always return a copy of the data. If False, it depends on
@@ -329,6 +329,130 @@ Offending object:
 {data}
 ```"""
         ) from ex
+
+
+def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
+    """Serialize pyarrow.Table to Arrow IPC bytes.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to convert.
+
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
+    """
+    try:
+        table = _maybe_truncate_table(table)
+    except RecursionError as err:
+        # This is a very unlikely edge case, but we want to make sure that
+        # it doesn't lead to unexpected behavior.
+        # If there is a recursion error, we just return the table as-is
+        # which will lead to the normal message limit exceed error.
+        _LOGGER.warning(
+            "Recursion error while truncating Arrow table. This is not "
+            "supposed to happen.",
+            exc_info=err,
+        )
+
+    import pyarrow as pa
+
+    # Convert table to bytes
+    sink = pa.BufferOutputStream()
+    writer = pa.RecordBatchStreamWriter(sink, table.schema)
+    writer.write_table(table)
+    writer.close()
+    return cast(bytes, sink.getvalue().to_pybytes())
+
+
+def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
+    """Serialize pandas.DataFrame to Arrow IPC bytes.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to convert.
+
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
+    """
+    import pyarrow as pa
+
+    try:
+        table = pa.Table.from_pandas(df)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+        _LOGGER.info(
+            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
+            "Applying automatic fixes for column types to make the dataframe "
+            "Arrow-compatible.",
+            ex,
+        )
+        df = fix_arrow_incompatible_column_types(df)
+        table = pa.Table.from_pandas(df)
+    return convert_arrow_table_to_arrow_bytes(table)
+
+
+def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
+    """Convert Arrow bytes (IPC format) to pandas.DataFrame.
+
+    Using this function in production needs to make sure that
+    the pyarrow version >= 14.0.1, because of a critical
+    security vulnerability in pyarrow < 14.0.1.
+
+    Parameters
+    ----------
+    source : bytes
+        A bytes object to convert.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The converted dataframe.
+    """
+    import pyarrow as pa
+
+    reader = pa.RecordBatchStreamReader(source)
+    return reader.read_pandas()
+
+
+def convert_anything_to_arrow_bytes(
+    data: Any,
+    max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
+) -> bytes:
+    """Try to convert different formats to Arrow IPC format (bytes).
+
+    This method tries to directly convert the input data to Arrow bytes
+    for some supported formats, but falls back to conversion to a Pandas
+    DataFrame and then to Arrow bytes.
+
+    Parameters
+    ----------
+    data : any
+        The data to convert to Arrow bytes.
+
+    max_unevaluated_rows: int
+        If unevaluated data is detected this func will evaluate it,
+        taking max_unevaluated_rows, defaults to 10k.
+
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
+    """
+
+    import pyarrow as pa
+
+    if isinstance(data, pa.Table):
+        return convert_arrow_table_to_arrow_bytes(data)
+
+    # Fallback: try to convert to pandas DataFrame
+    # and then to Arrow bytes
+    df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
+    return convert_pandas_df_to_arrow_bytes(df)
 
 
 def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
@@ -454,42 +578,6 @@ def _maybe_truncate_table(
     return table
 
 
-def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
-    """Serialize pyarrow.Table to Arrow IPC bytes.
-
-    Parameters
-    ----------
-    table : pyarrow.Table
-        A table to convert.
-
-    Returns
-    -------
-    bytes
-        The serialized Arrow IPC bytes.
-    """
-    try:
-        table = _maybe_truncate_table(table)
-    except RecursionError as err:
-        # This is a very unlikely edge case, but we want to make sure that
-        # it doesn't lead to unexpected behavior.
-        # If there is a recursion error, we just return the table as-is
-        # which will lead to the normal message limit exceed error.
-        _LOGGER.warning(
-            "Recursion error while truncating Arrow table. This is not "
-            "supposed to happen.",
-            exc_info=err,
-        )
-
-    import pyarrow as pa
-
-    # Convert table to bytes
-    sink = pa.BufferOutputStream()
-    writer = pa.RecordBatchStreamWriter(sink, table.schema)
-    writer.write_table(table)
-    writer.close()
-    return cast(bytes, sink.getvalue().to_pybytes())
-
-
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
@@ -594,58 +682,6 @@ def fix_arrow_incompatible_column_types(
             df_copy = df.copy()
         df_copy.index = df.index.astype("string")
     return df_copy if df_copy is not None else df
-
-
-def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
-    """Serialize pandas.DataFrame to Arrow IPC bytes.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A dataframe to convert.
-
-    Returns
-    -------
-    bytes
-        The serialized Arrow IPC bytes.
-    """
-    import pyarrow as pa
-
-    try:
-        table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
-        _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
-            "Applying automatic fixes for column types to make the dataframe "
-            "Arrow-compatible.",
-            ex,
-        )
-        df = fix_arrow_incompatible_column_types(df)
-        table = pa.Table.from_pandas(df)
-    return convert_arrow_table_to_arrow_bytes(table)
-
-
-def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
-    """Convert Arrow bytes (IPC format) to pandas.DataFrame.
-
-    Using this function in production needs to make sure that
-    the pyarrow version >= 14.0.1, because of a critical
-    security vulnerability in pyarrow < 14.0.1.
-
-    Parameters
-    ----------
-    source : bytes
-        A bytes object to convert.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The converted dataframe.
-    """
-    import pyarrow as pa
-
-    reader = pa.RecordBatchStreamReader(source)
-    return reader.read_pandas()
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
