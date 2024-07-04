@@ -118,10 +118,6 @@ class DataFormat(Enum):
     KEY_VALUE_DICT = auto()  # {index: value}
 
 
-def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
-    return is_type(obj, _PANDAS_DF_TYPE_STR)
-
-
 def is_dataframe_like(obj: object) -> bool:
     return determine_data_format(obj) in [
         DataFormat.PANDAS_DATAFRAME,
