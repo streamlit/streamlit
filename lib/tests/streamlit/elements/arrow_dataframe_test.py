@@ -27,7 +27,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
-    serialize_arrow_table_to_bytes,
+    convert_arrow_table_to_arrow_bytes,
 )
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
@@ -73,7 +73,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.data, serialize_arrow_table_to_bytes(table))
+        self.assertEqual(proto.data, convert_arrow_table_to_arrow_bytes(table))
 
     def test_hide_index_true(self):
         """Test that it can be called with hide_index=True param."""

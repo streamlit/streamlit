@@ -431,14 +431,18 @@ def _maybe_truncate_table(
     return table
 
 
-def serialize_arrow_table_to_bytes(table: pa.Table) -> bytes:
-    """Serialize pyarrow.Table to bytes using Apache Arrow.
+def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
+    """Serialize pyarrow.Table to Arrow IPC bytes.
 
     Parameters
     ----------
     table : pyarrow.Table
         A table to convert.
 
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
     """
     try:
         table = _maybe_truncate_table(table)
@@ -589,12 +593,13 @@ def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
     except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
         _LOGGER.info(
             "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
-            "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
+            "Applying automatic fixes for column types to make the dataframe "
+            "Arrow-compatible.",
             ex,
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
-    return serialize_arrow_table_to_bytes(table)
+    return convert_arrow_table_to_arrow_bytes(table)
 
 
 def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
@@ -609,6 +614,10 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
     source : bytes
         A bytes object to convert.
 
+    Returns
+    -------
+    pandas.DataFrame
+        The converted dataframe.
     """
     import pyarrow as pa
 

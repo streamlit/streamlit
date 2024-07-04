@@ -24,7 +24,7 @@ from pandas.io.formats.style_render import StylerRenderer as Styler
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
-    serialize_arrow_table_to_bytes,
+    convert_arrow_table_to_arrow_bytes,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -53,7 +53,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(proto.data, serialize_arrow_table_to_bytes(table))
+        self.assertEqual(proto.data, convert_arrow_table_to_arrow_bytes(table))
 
     def test_uuid(self):
         df = mock_data_frame()

@@ -856,7 +856,7 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
-        arrow_bytes = dataframe_util.serialize_arrow_table_to_bytes(arrow_table)
+        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(arrow_table)
 
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a

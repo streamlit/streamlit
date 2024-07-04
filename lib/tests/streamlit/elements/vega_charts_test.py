@@ -30,7 +30,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
-    serialize_arrow_table_to_bytes,
+    convert_arrow_table_to_arrow_bytes,
 )
 from streamlit.elements.vega_charts import (
     _extract_selection_parameters,
@@ -629,7 +629,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
         self.assertEqual(proto.HasField("data"), True)
-        self.assertEqual(proto.data.data, serialize_arrow_table_to_bytes(table))
+        self.assertEqual(proto.data.data, convert_arrow_table_to_arrow_bytes(table))
 
     def test_add_rows(self):
         """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
