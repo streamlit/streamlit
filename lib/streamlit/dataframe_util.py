@@ -115,6 +115,11 @@ class DataFormat(Enum):
 
 
 def is_dataframe_like(obj: object) -> bool:
+    """True if the object is a dataframe-like object.
+
+    This does not include basic collection types like list, dict, tuple, etc.
+    """
+
     return determine_data_format(obj) in [
         DataFormat.PANDAS_DATAFRAME,
         DataFormat.PANDAS_SERIES,
