@@ -114,7 +114,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
         for column in columns:
             with column:
-                """Noop"""
+                # Noop
                 pass
 
         all_deltas = self.get_all_deltas_from_queue()
@@ -128,7 +128,8 @@ class ColumnsTest(DeltaGeneratorTestCase):
         self.assertEqual(columns_blocks[2].add_block.column.weight, 5.0 / sum_weights)
 
     def test_columns_with_default_small_gap(self):
-        """Test that it works correctly with no gap argument (gap size is default of small)"""
+        """Test that it works correctly with no gap argument
+        (gap size is default of small)"""
 
         st.columns(3)
 
@@ -137,7 +138,8 @@ class ColumnsTest(DeltaGeneratorTestCase):
         horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
 
-        # 4 elements will be created: 1 horizontal block, 3 columns, each receives "small" gap arg
+        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
+        # "small" gap arg
         self.assertEqual(len(all_deltas), 4)
         self.assertEqual(horizontal_block.add_block.horizontal.gap, "small")
         self.assertEqual(columns_blocks[0].add_block.column.gap, "small")
@@ -154,7 +156,8 @@ class ColumnsTest(DeltaGeneratorTestCase):
         horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
 
-        # 4 elements will be created: 1 horizontal block, 3 columns, each receives "medium" gap arg
+        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
+        # "medium" gap arg
         self.assertEqual(len(all_deltas), 4)
         self.assertEqual(horizontal_block.add_block.horizontal.gap, "medium")
         self.assertEqual(columns_blocks[0].add_block.column.gap, "medium")
@@ -171,7 +174,8 @@ class ColumnsTest(DeltaGeneratorTestCase):
         horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
 
-        # 4 elements will be created: 1 horizontal block, 3 columns, each receives "large" gap arg
+        # 4 elements will be created: 1 horizontal block, 3 columns, each receives
+        # "large" gap arg
         self.assertEqual(len(all_deltas), 4)
         self.assertEqual(horizontal_block.add_block.horizontal.gap, "large")
         self.assertEqual(columns_blocks[0].add_block.column.gap, "large")
@@ -190,7 +194,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label")
 
         with expander:
-            """Noop"""
+            # Noop
             pass
 
         expander_block = self.get_delta_from_queue()
@@ -202,7 +206,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label", icon="🦄")
 
         with expander:
-            """Noop"""
+            # Noop
             pass
 
         expander_block = self.get_delta_from_queue()
@@ -214,7 +218,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander = st.expander("label", icon=":material/download:")
 
         with expander:
-            """Noop"""
+            # Noop
             pass
 
         expander_block = self.get_delta_from_queue()
@@ -229,7 +233,8 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander("label", icon="invalid")
         self.assertEqual(
             str(e.exception),
-            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.',
+            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
+            "please use a single character instead.",
         )
 
     def test_invalid_material_icon(self):
@@ -279,6 +284,7 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that it correctly applies label param."""
         popover = st.popover("label")
         with popover:
+            # Noop
             pass
 
         popover_block = self.get_delta_from_queue()
@@ -292,7 +298,7 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that it correctly applies use_container_width param."""
         popover = st.popover("label", use_container_width=True)
         with popover:
-            """Noop"""
+            # Noop
             pass
 
         popover_block = self.get_delta_from_queue()
@@ -303,7 +309,7 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that it correctly applies disabled param."""
         popover = st.popover("label", disabled=True)
         with popover:
-            """Noop"""
+            # Noop
             pass
 
         popover_block = self.get_delta_from_queue()
@@ -314,7 +320,7 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that it correctly applies help param."""
         popover = st.popover("label", help="help text")
         with popover:
-            """Noop"""
+            # Noop
             pass
 
         popover_block = self.get_delta_from_queue()
@@ -369,11 +375,12 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
     def test_usage_with_context_manager(self):
-        """Test that it correctly switches to complete state when used as context manager."""
+        """Test that it correctly switches to complete state when used as
+        context manager."""
         status = st.status("label")
 
         with status:
-            """Noop"""
+            # Noop
             pass
 
         status_block = self.get_delta_from_queue()
@@ -392,7 +399,8 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         self.assertEqual(status_block.add_block.expandable.icon, ":material/error:")
 
     def test_mutation_via_update_in_cm(self):
-        """Test that update can be used in context manager to change the label, state and expand."""
+        """Test that update can be used in context manager to change the label, state
+        and expand."""
         with st.status("label", expanded=False) as status:
             status.update(label="new label", state="error", expanded=True)
 
@@ -427,7 +435,7 @@ class TabsTest(DeltaGeneratorTestCase):
 
         for tab in tabs:
             with tab:
-                """Noop"""
+                # Noop
                 pass
 
         all_deltas = self.get_all_deltas_from_queue()
@@ -441,7 +449,8 @@ class TabsTest(DeltaGeneratorTestCase):
 
 
 class DialogTest(DeltaGeneratorTestCase):
-    """Run unit tests for the non-public delta-generator dialog and also the dialog decorator."""
+    """Run unit tests for the non-public delta-generator dialog and also the dialog
+    decorator."""
 
     title = "Test Dialog"
 
@@ -488,7 +497,8 @@ class DialogTest(DeltaGeneratorTestCase):
             dialog.open()
         dialog.close()
         with self.assertRaises(StreamlitAPIException):
-            # Close does not reset the dialog-flag as this is handled per script-run context
+            # Close does not reset the dialog-flag as this is handled per script-run
+            # context
             dialog.open()
 
     def test_dialog_decorator_with_title_opens(self):

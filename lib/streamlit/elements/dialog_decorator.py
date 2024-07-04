@@ -143,10 +143,7 @@ def dialog_decorator(
 
     .. warning::
         Only one dialog function may be called in a script run, which means
-        that only one dialog can be open at any given time. Since a dialog is
-        also a fragment, all fragment limitations apply. Dialogs can't contain
-        fragments, and fragments can't contain dialogs. Using dialogs in widget
-        callback functions is not supported.
+        that only one dialog can be open at any given time.
 
     .. |st.fragment| replace:: ``st.fragment``
     .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
