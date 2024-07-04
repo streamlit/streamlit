@@ -299,6 +299,18 @@ describe("NumberInput widget", () => {
       expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
       expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.00)
     })
+
+    it('does not automatically format when the step size is integer', () => {
+      const props = getFloatProps({
+        default: 1.0,
+        step: 1,
+      })
+
+      render(<NumberInput {...props} />)
+    
+      expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(1.00)
+    })
   })
 
   describe("IntData", () => {
