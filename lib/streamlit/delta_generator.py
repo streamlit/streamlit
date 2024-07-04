@@ -706,7 +706,8 @@ def _prep_data_for_add_rows(
 ) -> tuple[Data, AddRowsMetadata | None]:
     if not add_rows_metadata:
         if dataframe_util.is_pandas_styler(data):
-            # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+            # When calling add_rows on st.table or st.dataframe we want styles to
+            # pass through.
             return data, None
         return dataframe_util.convert_anything_to_pandas_df(data), None
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import math
+import re
 from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
@@ -36,7 +37,7 @@ from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors, logger, string_util
-from streamlit.type_util import is_type
+from streamlit.type_util import is_pandas_version_less_than, is_type
 
 if TYPE_CHECKING:
     import numpy as np
@@ -51,6 +52,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 _MAX_UNEVALUATED_DF_ROWS = 10000
 
+_PANDAS_DATA_OBJECT_TYPE_RE: Final = re.compile(r"^pandas.*$")
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
@@ -179,6 +181,11 @@ def is_unevaluated_data_object(obj: object) -> bool:
     )
 
 
+def is_pandas_data_object(obj: object) -> bool:
+    """True if obj is a Pandas object (e.g. DataFrame, Series, Index, Styler, ...)."""
+    return is_type(obj, _PANDAS_DATA_OBJECT_TYPE_RE)
+
+
 def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is a Snowpark DataFrame or Table."""
     return is_type(obj, _SNOWPARK_TABLE_TYPE_STR) or is_type(obj, _SNOWPARK_DF_TYPE_STR)
@@ -305,11 +312,18 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
-    # This is inefficient when data is a pyarrow.Table as it will be converted
-    # back to Arrow when marshalled to protobuf, but area/bar/line charts need
-    # DataFrame magic to generate the correct output.
-    if hasattr(data, "to_pandas"):
-        return cast(pd.DataFrame, data.to_pandas())
+    if hasattr(data, "to_pandas") and callable(data.to_pandas):
+        return pd.DataFrame(data.to_pandas())
+
+    if hasattr(data, "toPandas") and callable(data.toPandas):
+        return pd.DataFrame(data.toPandas())
+
+    # Check for dataframe interchange protocol
+    # Only available in pandas >= 1.5.0
+    # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
+    if is_pandas_version_less_than("1.5.0") is False and hasattr(data, "__dataframe__"):
+        data_df = pd.api.interchange.from_dataframe(data)
+        return data_df.copy() if ensure_copy else data_df
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -449,8 +463,33 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
+    if is_pandas_data_object(data):
+        # All pandas data objects should be handled via our pandas
+        # conversion logic. We are already calling it here
+        # to ensure that its not handled via the interchange
+        # protocol support below.
+        df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
+        return convert_pandas_df_to_arrow_bytes(df)
+
+    # Check for dataframe interchange protocol
+    if hasattr(data, "__dataframe__"):
+        from pyarrow import interchange as pa_interchange
+
+        arrow_table = pa_interchange.from_dataframe(data)
+        return convert_arrow_table_to_arrow_bytes(arrow_table)
+
+    # Check if data structure supports to_arrow or to_pyarrow methods
+    # and assume that it is converting to a pyarrow.Table
+    if hasattr(data, "to_arrow"):
+        arrow_table = cast(pa.Table, data.to_arrow())
+        return convert_arrow_table_to_arrow_bytes(arrow_table)
+
+    if hasattr(data, "to_pyarrow"):
+        arrow_table = cast(pa.Table, data.to_pyarrow())
+        return convert_arrow_table_to_arrow_bytes(arrow_table)
+
     # Fallback: try to convert to pandas DataFrame
-    # and then to Arrow bytes
+    # and then to Arrow bytes.
     df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
     return convert_pandas_df_to_arrow_bytes(df)
 
