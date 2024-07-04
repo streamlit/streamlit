@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Iterable, Iterator, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
@@ -92,7 +92,7 @@ class StreamlitCookies(Mapping[str, str]):
         self._cookies = MappingProxyType(cookies)
 
     @classmethod
-    def from_tornado_cookies(cls, tornado_cookies: dict[str, Morsel]):
+    def from_tornado_cookies(cls, tornado_cookies: dict[str, Morsel[Any]]):
         dict_like_cookies = {}
         for key, morsel in tornado_cookies.items():
             dict_like_cookies[key] = morsel.value
