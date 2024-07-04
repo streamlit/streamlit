@@ -105,7 +105,7 @@ class StreamlitCookies(Mapping[str, str]):
         return iter(self._cookies)
 
 
-class ContextProxy:
+class _ContextProxy:
     @property
     def headers(self):
         session_client = _get_session_client()
