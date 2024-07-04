@@ -22,6 +22,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -422,28 +423,30 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                st._internal_button_group,
+                # define a lambda that matches the signature of what button_group is passing to compute_widget_id
+                lambda key,
+                options,
+                disabled=False,
+                default=[],
+                click_mode=0: ButtonGroupMixin._internal_button_group(
+                    st._main, options, disabled=disabled
+                ),
                 "button_group",
-                True,
             ),
-            (st.multiselect, "multiselect", False),
-            (st.radio, "radio", False),
-            (st.select_slider, "select_slider", False),
-            (st.selectbox, "selectbox", False),
+            (st.multiselect, "multiselect"),
+            (st.radio, "radio"),
+            (st.select_slider, "select_slider"),
+            (st.selectbox, "selectbox"),
         ]
     )
-    def test_widget_id_computation_options_widgets(
-        self, widget_func, module_name, no_label
-    ):
+    def test_widget_id_computation_options_widgets(self, widget_func, module_name):
         options = ["a", "b", "c"]
 
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_widget_id",
             wraps=compute_widget_id,
         ) as patched_compute_widget_id:
-            widget_func("my_widget", options) if no_label is False else widget_func(
-                options
-            )
+            widget_func("my_widget", options)
 
         sig = inspect.signature(widget_func)
         patched_compute_widget_id.assert_called_with(
@@ -453,9 +456,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
         with self.assertRaises(errors.DuplicateWidgetID):
-            widget_func(
-                "my_widget", options, disabled=True
-            ) if no_label is False else widget_func(options, disabled=True)
+            widget_func("my_widget", options, disabled=True)
 
     def test_widget_id_computation_data_editor(self):
         with patch(
