@@ -52,7 +52,7 @@ from tests.testutil import create_snowpark_session, patch_config_options
 
 
 class DataframeUtilTest(unittest.TestCase):
-    def test_data_frame_with_dtype_values_to_bytes(self):
+    def test_convert_pandas_df_to_arrow_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
@@ -64,12 +64,12 @@ class DataframeUtilTest(unittest.TestCase):
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
-    def test_convert_anything_to_df(
+    def test_convert_anything_to_pandas_df(
         self,
         input_data: Any,
         metadata: TestCaseMetadata,
     ):
-        """Test that `convert_anything_to_df` correctly converts
+        """Test that `convert_anything_to_pandas_df` correctly converts
         a variety of types to a DataFrame.
         """
         converted_df = dataframe_util.convert_anything_to_pandas_df(input_data)
@@ -88,11 +88,11 @@ class DataframeUtilTest(unittest.TestCase):
             (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
         ]
     )
-    def test_convert_anything_to_df_show_warning_for_unevaluated_df(
+    def test_convert_anything_to_pandas_df_show_warning_for_unevaluated_df(
         self,
         input_data: Any,
     ):
-        """Test that `convert_anything_to_df` correctly converts
+        """Test that `convert_anything_to_pandas_df` correctly converts
         a variety unevaluated dataframes and shows a warning if
         the row count is > 1000.
         """
@@ -103,8 +103,8 @@ class DataframeUtilTest(unittest.TestCase):
             self.assertIsInstance(converted_df, pd.DataFrame)
             mock.assert_called_once()
 
-    def test_convert_anything_to_df_ensure_copy(self):
-        """Test that `convert_anything_to_df` creates a copy of the original
+    def test_convert_anything_to_pandas_df_ensure_copy(self):
+        """Test that `convert_anything_to_pandas_df` creates a copy of the original
         dataframe if `ensure_copy` is True.
         """
         orginal_df = pd.DataFrame(
@@ -132,16 +132,16 @@ class DataframeUtilTest(unittest.TestCase):
         # The original dataframe should be changed here since ensure_copy is False
         self.assertEqual(orginal_df["integer"].to_list(), [4, 5, 6])
 
-    def test_convert_anything_to_df_supports_key_value_dicts(self):
-        """Test that `convert_anything_to_df` correctly converts
+    def test_convert_anything_to_pandas_df_supports_key_value_dicts(self):
+        """Test that `convert_anything_to_pandas_df` correctly converts
         key-value dicts to a dataframe.
         """
         data = {"a": 1, "b": 2}
         df = dataframe_util.convert_anything_to_pandas_df(data)
         pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
-    def test_convert_anything_to_df_converts_stylers(self):
-        """Test that `convert_anything_to_df` correctly converts Stylers to DF, without cloning the
+    def test_convert_anything_to_pandas_df_converts_stylers(self):
+        """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF, without cloning the
         data.
         """
         original_df = pd.DataFrame(
@@ -160,8 +160,8 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
 
-    def test_convert_anything_to_df_converts_stylers_and_clones_data(self):
-        """Test that `convert_anything_to_df` correctly converts Stylers to DF, cloning the data."""
+    def test_convert_anything_to_pandas_df_converts_stylers_and_clones_data(self):
+        """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF, cloning the data."""
         original_df = pd.DataFrame(
             {
                 "integer": [1, 2, 3],
@@ -180,7 +180,7 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertNotEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
 
-    def test_convert_anything_to_df_calls_to_pandas_when_available(self):
+    def test_convert_anything_to_pandas_df_calls_to_pandas_when_available(self):
         class DataFrameIsh:
             def to_pandas(self):
                 return pd.DataFrame([])
@@ -188,6 +188,27 @@ class DataframeUtilTest(unittest.TestCase):
         converted = dataframe_util.convert_anything_to_pandas_df(DataFrameIsh())
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_convert_anything_to_arrow_bytes(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `convert_anything_to_arrow_bytes` correctly converts
+        a variety of types to Arrow bytes.
+        """
+        converted_bytes = dataframe_util.convert_anything_to_arrow_bytes(input_data)
+        self.assertIsInstance(converted_bytes, bytes)
+
+        # Load bytes back into a DataFrame and check the shape.
+        reconstructed_df = dataframe_util.convert_arrow_bytes_to_pandas_df(
+            converted_bytes
+        )
+        self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
+        self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
 
     @parameterized.expand(
         [
@@ -458,12 +479,12 @@ class DataframeUtilTest(unittest.TestCase):
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
-    def test_convert_df_to_data_format(
+    def test_convert_pandas_df_to_data_format(
         self,
         input_data: Any,
         metadata: TestCaseMetadata,
     ):
-        """Test that `convert_df_to_data_format` correctly converts a
+        """Test that `convert_pandas_df_to_data_format` correctly converts a
         DataFrame to the specified data format.
         """
         converted_df = dataframe_util.convert_anything_to_pandas_df(input_data)
@@ -508,7 +529,7 @@ class DataframeUtilTest(unittest.TestCase):
                         dataframe_util.convert_anything_to_pandas_df(converted_data),
                     )
 
-    def test_convert_df_to_data_format_with_unknown_data_format(self):
+    def test_convert_pandas_df_to_data_format_with_unknown_data_format(self):
         """Test that `convert_df_to_data_format` raises a ValueError when
         passed an unknown data format.
         """
