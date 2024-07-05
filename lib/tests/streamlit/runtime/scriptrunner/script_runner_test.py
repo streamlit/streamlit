@@ -821,6 +821,7 @@ class ScriptRunnerTest(AsyncTestCase):
             ScriptRequest(
                 ScriptRequestType.RERUN, RerunData(fragment_id_queue=["my_fragment1"])
             ),
+            None,
             ScriptRequest(ScriptRequestType.STOP),
         ]
         scriptrunner._requests.on_scriptrunner_yield = on_scriptrunner_yield_mock

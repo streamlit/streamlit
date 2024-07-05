@@ -578,6 +578,12 @@ class ScriptRunner:
                     premature_stop,
                 ) = exec_func_with_error_handling(exec_callbacks_and_main, ctx)
 
+                # if the callback or mainscript ran
+                # - with an error
+                # - or wants to rerun (a rerun request at this point can only be
+                #   app-scoped because no fragments ran so far)
+                # - stopped prematurely
+                # don't even run the fragments
                 if (
                     run_without_errors
                     and not rerun_exception_data
@@ -591,26 +597,35 @@ class ScriptRunner:
                         # an st.rerun within a fragment cannot trigger an app rerun.
                         (
                             _,
-                            run_without_errors,
-                            rerun_exception_data,
-                            premature_stop,
+                            fragment_run_without_errors,
+                            fragment_rerun_exception_data,
+                            fragment_premature_stop,
                         ) = exec_func_with_error_handling(
                             exec_fragment(fragment_id),
                             ctx,
                         )
-                        if not at_least_one_fragment_error and run_without_errors:
+                        if (
+                            not at_least_one_fragment_error
+                            and fragment_run_without_errors
+                        ):
                             at_least_one_fragment_error = True
                         if (
                             not at_least_one_fragment_stopped_prematurely
-                            and premature_stop
+                            and fragment_premature_stop
                         ):
                             at_least_one_fragment_stopped_prematurely = True
 
-                        if rerun_exception_data:
+                        # Assign rerun_exception_data here so that reruns work
+                        if fragment_rerun_exception_data:
+                            rerun_exception_data = fragment_rerun_exception_data
                             break
 
-                    run_without_errors = not at_least_one_fragment_error
-                    premature_stop = at_least_one_fragment_stopped_prematurely
+                    run_without_errors = (
+                        run_without_errors or not at_least_one_fragment_error
+                    )
+                    premature_stop = (
+                        premature_stop or at_least_one_fragment_stopped_prematurely
+                    )
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
