@@ -17,9 +17,11 @@ from __future__ import annotations
 from http.cookies import Morsel
 from unittest.mock import MagicMock, patch
 
+from parameterized import parameterized
 from tornado.httputil import HTTPHeaders
 
 import streamlit as st
+from streamlit.runtime.context import _normalize_header
 from tests.streamlit.web.server.server_test_case import ServerTestCase
 
 
@@ -50,3 +52,22 @@ class StContextTest(ServerTestCase):
     def test_context_cookies(self):
         """Test that `st.context.cookies` returns cookies from ScriptRunContext"""
         self.assertEqual(st.context.cookies.to_dict(), {"cookieName": "cookieValue"})
+
+    @parameterized.expand(
+        [
+            ("coNtent-TYPE", "Content-Type"),
+            ("coNtent-type", "Content-Type"),
+            ("Content-Type", "Content-Type"),
+            ("Content-Type", "Content-Type"),
+            ("Cache-Control", "Cache-Control"),
+            ("Cache-control", "Cache-Control"),
+            ("cache-control", "Cache-Control"),
+            ("cache-CONTROL", "Cache-Control"),
+            ("Access-Control-Max-Age", "Access-Control-Max-Age"),
+            ("Access-control-max-age", "Access-Control-Max-Age"),
+            ("access-control-MAX-age", "Access-Control-Max-Age"),
+        ]
+    )
+    def test_normalize_header(self, name, expected):
+        """Test that `_normalize_header` normalizes header names"""
+        self.assertEqual(_normalize_header(name), expected)
