@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import os
 import shutil
 import tempfile
 import unittest
-from typing import List
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
@@ -53,7 +54,7 @@ class MockSessionClient(SessionClient):
     """A SessionClient that captures all its ForwardMsgs into a list."""
 
     def __init__(self):
-        self.forward_msgs: List[ForwardMsg] = []
+        self.forward_msgs: list[ForwardMsg] = []
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         self.forward_msgs.append(msg)
@@ -160,7 +161,7 @@ class RuntimeTest(RuntimeTestCase):
             user_info = MagicMock()
             existing_session_id = "some_session_id"
 
-            session_id = self.runtime.connect_session(
+            self.runtime.connect_session(
                 client=client,
                 user_info=user_info,
                 existing_session_id=existing_session_id,
@@ -185,7 +186,7 @@ class RuntimeTest(RuntimeTestCase):
             user_info = MagicMock()
             session_id_override = "some_session_id"
 
-            session_id = self.runtime.connect_session(
+            self.runtime.connect_session(
                 client=client,
                 user_info=user_info,
                 session_id_override=session_id_override,

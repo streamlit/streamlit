@@ -36,37 +36,32 @@ from typing import (
 from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
+    ChartStackType,
     ChartType,
     generate_chart,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import ChartStackType, Key, to_key
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     import altair as alt
 
     from streamlit.color_util import Color
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.arrow import Data
-    from streamlit.runtime.state import WidgetCallback
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
@@ -274,17 +269,6 @@ def _prepare_vega_lite_spec(
     return spec
 
 
-def _serialize_data(data: Any) -> bytes:
-    """Serialize the any type of data structure to Arrow IPC format (bytes)."""
-    import pyarrow as pa
-
-    if isinstance(data, pa.Table):
-        return type_util.pyarrow_table_to_bytes(data)
-
-    df = type_util.convert_anything_to_df(data)
-    return type_util.data_frame_to_bytes(df)
-
-
 def _marshall_chart_data(
     proto: ArrowVegaLiteChartProto,
     spec: VegaLiteSpec,
@@ -307,11 +291,11 @@ def _marshall_chart_data(
             # We just need to pass the data information into the correct proto fields.
 
             # TODO(lukasmasuch): Are there any other cases where we need to serialize the data
-            #                    or can we remove the _serialize_data here?
+            # or can we remove the convert_anything_to_arrow_bytes here?
             dataset.data.data = (
                 dataset_data
                 if isinstance(dataset_data, bytes)
-                else _serialize_data(dataset_data)
+                else dataframe_util.convert_anything_to_arrow_bytes(dataset_data)
             )
         del spec["datasets"]
 
@@ -332,7 +316,7 @@ def _marshall_chart_data(
             del spec["data"]
 
     if data is not None:
-        proto.data.data = _serialize_data(data)
+        proto.data.data = dataframe_util.convert_anything_to_arrow_bytes(data)
 
 
 def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
@@ -354,7 +338,7 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
         """
         # Already serialize the data to be able to create a stable
         # dataset name:
-        data_bytes = _serialize_data(data)
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
         # Use the md5 hash of the data as the name:
         h = hashlib.new("md5", **HASHLIB_KWARGS)
         h.update(str(data_bytes).encode("utf-8"))
@@ -1787,11 +1771,15 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            check_fragment_path_policy(self.dg)
-            check_cache_replay_rules()
-            if callable(on_select):
-                check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
 
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)

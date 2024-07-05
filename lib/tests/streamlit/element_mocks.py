@@ -26,7 +26,9 @@ from streamlit.type_util import is_altair_version_less_than
 ELEMENT_PRODUCER = Callable[[], Any]
 
 WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
+    # buttons
     ("button", lambda: st.button("Click me")),
+    ("download_button", lambda: st.download_button("Download me", b"")),
     ("camera_input", lambda: st.camera_input("Take a picture")),
     ("chat_input", lambda: st.chat_input("Chat with me")),
     # checkboxes
@@ -34,13 +36,18 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("toggle", lambda: st.toggle("Toggle me")),
     # end checkboxes
     ("color_picker", lambda: st.color_picker("Pick a color")),
+    # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
+    ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
+    # media manager
     ("file_uploader", lambda: st.file_uploader("Upload me")),
+    # selectors
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
     ("number_input", lambda: st.number_input("Enter a number")),
     ("radio", lambda: st.radio("Choose me", ["a", "b", "c"])),
     ("slider", lambda: st.slider("Slide me")),
     ("selectbox", lambda: st.selectbox("Select me", ["a", "b", "c"])),
+    ("select_slider", lambda: st.select_slider("Select me", ["a", "b", "c"])),
     # text_widgets
     ("text_area", lambda: st.text_area("Write me")),
     ("text_input", lambda: st.text_input("Write me")),

@@ -20,12 +20,15 @@ from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
@@ -40,15 +43,12 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
-    Key,
-    LabelVisibility,
     SupportsStr,
-    maybe_raise_label_warnings,
-    to_key,
 )
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 @dataclass
@@ -261,10 +261,12 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None if value == "" else value, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None if value == "" else value,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         # Make sure value is always string or None:
@@ -531,10 +533,12 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None if value == "" else value, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None if value == "" else value,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         value = str(value) if value is not None else None

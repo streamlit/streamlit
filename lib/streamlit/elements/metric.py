@@ -20,12 +20,15 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.policies import maybe_raise_label_warnings
+from streamlit.elements.lib.utils import (
+    LabelVisibility,
+    get_label_visibility_proto_value,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import LabelVisibility, maybe_raise_label_warnings
 
 if TYPE_CHECKING:
     import numpy as np

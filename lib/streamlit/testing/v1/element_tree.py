@@ -32,7 +32,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit import type_util, util
+from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import (
@@ -506,7 +506,7 @@ class Dataframe(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
@@ -1107,7 +1107,7 @@ class Table(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 @dataclass(repr=False)
