@@ -31,7 +31,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.104.2
+hypothesis==6.105.0
 identify==2.5.36
 idna==3.7
 importlib_metadata==8.0.0
@@ -56,7 +56,7 @@ langsmith==0.1.83
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
-matplotlib==3.9.0
+matplotlib==3.9.1
 mdurl==0.1.2
 more-itertools==10.3.0
 multidict==6.0.5
