@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import inspect
+import threading
 from abc import abstractmethod
 from copy import deepcopy
 from functools import wraps
@@ -181,7 +182,10 @@ def _fragment(
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)
                 dg_stack.set(deepcopy(dg_stack_snapshot))
+
+                ctx.new_fragment_ids.add(fragment_id)
             else:
+                print(f"[{threading.get_ident()}] ADD NEW FRAGMENT IDS {fragment_id}")
                 # Otherwise, we must be in a full script run. We keep track of all
                 # fragments defined in this script run to ensure that we don't
                 # delete them when we clean up this session's fragment storage.

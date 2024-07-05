@@ -548,9 +548,15 @@ class ScriptRunner:
 
                     if not rerun_data.fragment_id_queue:
                         exec(code, module.__dict__)
-                        # self._fragment_storage.clear(
-                        #     new_fragment_ids=ctx.new_fragment_ids
-                        # )
+                        print(
+                            f"[{threading.get_ident()}] CURRENT_NEW_FRAGMENT_IDS: {ctx.new_fragment_ids}"
+                        )
+                        self._fragment_storage.clear(
+                            new_fragment_ids=ctx.new_fragment_ids
+                        )
+                        print(
+                            f"[{threading.get_ident()}] NEW_FRAGMENT_IDS AFTER DELETION: {ctx.new_fragment_ids}"
+                        )
 
                     self._session_state.maybe_check_serializable()
                     # check for control requests, e.g. rerun requests have arrived
@@ -559,6 +565,7 @@ class ScriptRunner:
                 def exec_fragment(fragment_id: str) -> Callable[[], None]:
                     def exec_code_callback():
                         try:
+                            print(f"TRY LOADING FRAGMENT WITH ID {fragment_id}")
                             wrapped_fragment = self._fragment_storage.get(fragment_id)
                             wrapped_fragment()
                         except FragmentStorageKeyError:
@@ -577,7 +584,9 @@ class ScriptRunner:
                     rerun_exception_data,
                     premature_stop,
                 ) = exec_func_with_error_handling(exec_callbacks_and_main, ctx)
-
+                print(
+                    f"[{threading.get_ident()}] RERUN_EXCEPTION_DATA: {rerun_exception_data} | PREMATURE_STOP: {premature_stop} | RUN_WITHOUT_ERRORS: {run_without_errors}"
+                )
                 # if the callback or mainscript ran
                 # - with an error
                 # - or wants to rerun (a rerun request at this point can only be
