@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast
 
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
@@ -26,11 +26,11 @@ from streamlit.type_util import is_type
 if TYPE_CHECKING:
     from http.cookies import Morsel
 
-    from tornado.httputil import HTTPHeaders
+    from tornado.httputil import HTTPHeaders, HTTPServerRequest
     from tornado.web import RequestHandler
 
 
-def _get_request() -> RequestHandler | None:
+def _get_request() -> HTTPServerRequest | None:
     ctx = get_script_run_ctx()
     if ctx is None:
         return None
@@ -47,7 +47,7 @@ def _get_request() -> RequestHandler | None:
         "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler",
     ):
         return None
-    return session_client.request
+    return cast("RequestHandler", session_client).request
 
 
 @lru_cache
@@ -71,7 +71,7 @@ class StreamlitHeaders(Mapping[str, str]):
         self._headers = dict_like_headers
 
     @classmethod
-    def from_tornado_headers(cls, tornado_headers: HTTPHeaders):
+    def from_tornado_headers(cls, tornado_headers: HTTPHeaders) -> StreamlitHeaders:
         return cls(tornado_headers.get_all())
 
     def get_all(self, key: str) -> list[str]:
@@ -99,7 +99,9 @@ class StreamlitCookies(Mapping[str, str]):
         self._cookies = MappingProxyType(cookies)
 
     @classmethod
-    def from_tornado_cookies(cls, tornado_cookies: dict[str, Morsel[Any]]):
+    def from_tornado_cookies(
+        cls, tornado_cookies: dict[str, Morsel[Any]]
+    ) -> StreamlitCookies:
         dict_like_cookies = {}
         for key, morsel in tornado_cookies.items():
             dict_like_cookies[key] = morsel.value
@@ -124,7 +126,7 @@ class ContextProxy:
 
     @property
     @gather_metrics("context.headers")
-    def headers(self):
+    def headers(self) -> StreamlitHeaders:
         """Websocket request headers."""
         session_client_request = _get_request()
 
@@ -135,7 +137,7 @@ class ContextProxy:
 
     @property
     @gather_metrics("context.cookies")
-    def cookies(self):
+    def cookies(self) -> StreamlitCookies:
         """Websocket request cookies."""
         session_client_request = _get_request()
 
