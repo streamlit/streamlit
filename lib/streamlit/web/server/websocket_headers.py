@@ -22,7 +22,7 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 
 _GET_WEBSOCKET_HEADERS_DEPRECATE_MSG = (
     "The `_get_websocket_headers` function is deprecated and will be removed "
-    "in a future version of Streamlit. Please use `st.context` instead."
+    "in a future version of Streamlit. Please use `st.context.headers` instead."
 )
 
 

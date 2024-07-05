@@ -27,9 +27,10 @@ if TYPE_CHECKING:
     from http.cookies import Morsel
 
     from tornado.httputil import HTTPHeaders
+    from tornado.web import RequestHandler
 
 
-def _get_session_client():
+def _get_request() -> RequestHandler | None:
     ctx = get_script_run_ctx()
     if ctx is None:
         return None
@@ -38,12 +39,15 @@ def _get_session_client():
     if session_client is None:
         return None
 
+    # We return websocket request only if session_client is an instance of
+    # BrowserWebSocketHandler (which is True for the Streamlit open-source
+    # implementation). For any other implementation, we return None.
     if not is_type(
         session_client,
         "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler",
     ):
         return None
-    return session_client
+    return session_client.request
 
 
 @lru_cache
@@ -122,21 +126,21 @@ class ContextProxy:
     @gather_metrics("context.headers")
     def headers(self):
         """Websocket request headers."""
-        session_client = _get_session_client()
+        session_client_request = _get_request()
 
-        if session_client is None:
+        if session_client_request is None:
             return StreamlitHeaders({})
 
-        return StreamlitHeaders.from_tornado_headers(session_client.request.headers)
+        return StreamlitHeaders.from_tornado_headers(session_client_request.headers)
 
     @property
     @gather_metrics("context.cookies")
     def cookies(self):
         """Websocket request cookies."""
-        session_client = _get_session_client()
+        session_client_request = _get_request()
 
-        if session_client is None:
+        if session_client_request is None:
             return StreamlitCookies({})
 
-        cookies = session_client.request.cookies
+        cookies = session_client_request.cookies
         return StreamlitCookies.from_tornado_cookies(cookies)
