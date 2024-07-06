@@ -25,7 +25,7 @@ emoji==2.12.1
 exceptiongroup==1.2.1
 execnet==2.1.1
 filelock==3.15.4
-fonttools==4.53.0
+fonttools==4.53.1
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -119,7 +119,7 @@ snowflake-snowpark-python==1.19.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.52
 sqlalchemy2-stubs==0.0.2a38
-tenacity==8.4.2
+tenacity==8.5.0
 testfixtures==8.3.0
 text-unidecode==1.3
 toml==0.10.2
