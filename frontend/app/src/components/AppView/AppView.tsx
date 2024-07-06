@@ -88,7 +88,7 @@ export interface AppViewProps {
 
   navSections: string[]
 
-  onPageChange: (pageName: string) => void
+  onPageChange: (pageName: string, queryParams?: Map<string, string[]>) => void
 
   currentPageScriptHash: string
 

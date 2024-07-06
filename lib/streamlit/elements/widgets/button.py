@@ -52,6 +52,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 
@@ -584,6 +585,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             use_container_width=use_container_width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -759,6 +761,15 @@ class ButtonMixin:
                 f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
             )
 
+        if query_params is not None:
+            if not hasattr(query_params, "get_all"):
+                query_params = QueryParams().from_dict(query_params)
+            update_query_params_proto(
+                page_link_proto, {k: query_params.get_all(k) for k in query_params}
+            )
+            if len(query_params) > 0:
+                page_link_proto.page += "?" + query_params.to_string()
+
         return self.dg._enqueue("page_link", page_link_proto)
 
     def _button(
@@ -900,3 +911,9 @@ def marshall_file(
         file_url = ""
 
     proto_download_button.url = file_url
+
+
+def update_query_params_proto(proto: PageLinkProto, qp: Mapping[str, Iterable[str]]):
+    """Updates the query_params PageLinkProto message iteratively, since it cannot be directly assigned."""
+    for key, values in qp.items():
+        proto.query_params[key].values.extend(values)
