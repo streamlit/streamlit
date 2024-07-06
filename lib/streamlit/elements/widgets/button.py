@@ -22,7 +22,9 @@ from typing import (
     TYPE_CHECKING,
     BinaryIO,
     Final,
+    Iterable,
     Literal,
+    Mapping,
     TextIO,
     Union,
     cast,
@@ -472,6 +474,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        query_params: Mapping[str, str | Iterable[str]] | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -536,6 +539,12 @@ class ButtonMixin:
             Whether to expand the link's width to fill its parent container.
             The default is ``True`` for page links in the sidebar and ``False``
             for those in the main app.
+        query_params : dict[str, str]
+            An optional dictionary (or other mapping) which is used to populate
+            the query parameters (the portion of the url after "?") on the switched-to
+            page. If not provided, all parameters are cleared when the page is changed.
+            If `st.query_params` itself is provided, all parameters will be maintained
+            on the new page.
 
         Example
         -------
@@ -684,6 +693,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        query_params: Mapping[str, str | Iterable[str]] | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
@@ -708,6 +718,10 @@ class ButtonMixin:
         else:
             # Handle external links:
             if is_url(page):
+                if query_params is not None:
+                    raise StreamlitAPIException(
+                        "The query_params argument cannot be used with st.page_link when the link provided is a raw URL."
+                    )
                 if label is None or label == "":
                     raise StreamlitAPIException(
                         "The label param is required for external links used with st.page_link - please provide a label."
