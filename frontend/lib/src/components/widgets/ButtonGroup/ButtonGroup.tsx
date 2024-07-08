@@ -31,7 +31,10 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
+import {
+  DynamicIcon,
+  isMaterialIcon,
+} from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
@@ -39,8 +42,6 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
-
-const materialIconRegexp = /^:material\/(.+):$/
 
 export interface Props {
   disabled: boolean
@@ -87,15 +88,9 @@ function syncValue(
   widgetMgr.setIntArrayValue(element, selected, { fromUi: fromUi }, fragmentId)
 }
 
-function getMaterialIcon(option: string): string | undefined {
-  const materialIconMatch = materialIconRegexp.exec(option)
-  return materialIconMatch ? materialIconMatch[1] : undefined
-}
-
 function getContentElement(content: string): ReactElement {
   const fontSize = "lg"
-  const isMaterialIcon = !!getMaterialIcon(content)
-  if (isMaterialIcon) {
+  if (isMaterialIcon(content)) {
     return <DynamicIcon size={fontSize} iconValue={content} />
   }
 
