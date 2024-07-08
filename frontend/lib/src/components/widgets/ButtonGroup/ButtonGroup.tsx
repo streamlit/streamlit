@@ -78,7 +78,7 @@ function getSingleSelection(currentSelection: number[]): number {
   return currentSelection[0]
 }
 
-function syncValue(
+function syncWithWidgetManager(
   selected: number[],
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
@@ -241,7 +241,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     const parsedValue = JSON.parse(valueString)
     if (setValue) {
       setSelected(parsedValue)
-      syncValue(selected, elementRef.current, widgetMgr, fragmentId, false)
+      syncWithWidgetManager(
+        selected,
+        elementRef.current,
+        widgetMgr,
+        fragmentId,
+        false
+      )
       elementRef.current.setValue = false
     } else {
       // only commit to the backend if the value has changed
@@ -249,7 +255,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         return
       }
       const fromUi = selectedRef.current === undefined ? false : true
-      syncValue(selected, elementRef.current, widgetMgr, fragmentId, fromUi)
+      syncWithWidgetManager(
+        selected,
+        elementRef.current,
+        widgetMgr,
+        fragmentId,
+        fromUi
+      )
     }
     selectedRef.current = selected
   }, [selected, widgetMgr, fragmentId, valueString, setValue])
