@@ -117,7 +117,9 @@ _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFF
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
 
 
-def maybe_raise_stack_warning(stack: str | None, command: str | None, docs_link: str):
+def maybe_raise_stack_warning(
+    stack: bool | ChartStackType | None, command: str | None, docs_link: str
+):
     # Check that the stack parameter is valid, raise more informative error message if not
     if stack not in (None, True, False, "normalize", "center", "layered"):
         raise StreamlitAPIException(
