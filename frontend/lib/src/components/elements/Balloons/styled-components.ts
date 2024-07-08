@@ -50,8 +50,4 @@ export const StyledBalloon = styled.img(({ theme }) => ({
   animationDirection: "normal",
   animationIterationCount: 1,
   opacity: 1,
-
-  "@media print": {
-    display: "none",
-  },
 }))
