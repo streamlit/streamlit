@@ -252,9 +252,7 @@ def connection_factory(
     file.
 
     >>> import streamlit as st
-    >>> conn = st.connection(
-    ...     "sql"
-    ... )  # Config section defined in [connections.sql] in secrets.toml.
+    >>> conn = st.connection("sql")  # [connections.sql] section in secrets.toml.
 
     Creating a SQLConnection with a custom name requires you to explicitly specify the
     type. If type is not passed as a kwarg, it must be set in the appropriate section of
