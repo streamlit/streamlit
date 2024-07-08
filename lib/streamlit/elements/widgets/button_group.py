@@ -229,18 +229,18 @@ class ButtonGroupMixin:
         Examples
         --------
         Example 1: Display a feedback widget with stars and show the selected sentiment
-        ```python
-        sentiment_mapping: = [0.0, 0.25, 0.5, 0.75, 1.0]
-        selected = st.feedback("stars")
-        st.write(f"You selected: {sentiment_mapping[selected]}")
-        ```
+
+        >>> import streamlit as st
+        >>> sentiment_mapping: = [0.0, 0.25, 0.5, 0.75, 1.0]
+        >>> selected = st.feedback("stars")
+        >>> st.write(f"You selected: {sentiment_mapping[selected]}")
 
         Example 2: Display a feedback widget with thumbs and show the selected sentiment
-        ```python
-        sentiment_mapping: = [0.0, 1.0]
-        selected = st.feedback("thumbs")
-        st.write(f"You selected: {sentiment_mapping[selected]}")
-        ```
+
+        >>> import streamlit as st
+        >>> sentiment_mapping: = [0.0, 1.0]
+        >>> selected = st.feedback("thumbs")
+        >>> st.write(f"You selected: {sentiment_mapping[selected]}")
         """
 
         if not isinstance(options, list) and options not in get_args(_FeedbackOptions):
@@ -380,7 +380,7 @@ class ButtonGroupMixin:
         )
 
         widget_state = register_widget(
-            "button_group",
+            widget_name,
             proto,
             # user_key=key,
             on_change_handler=on_change,
