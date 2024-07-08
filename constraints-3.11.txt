@@ -29,8 +29,8 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.105.0
-identify==2.5.36
+hypothesis==6.105.1
+identify==2.6.0
 idna==3.7
 importlib_metadata==8.0.0
 iniconfig==2.0.0
@@ -49,7 +49,7 @@ langchain==0.2.6
 langchain-community==0.2.6
 langchain-core==0.2.11
 langchain-text-splitters==0.2.2
-langsmith==0.1.83
+langsmith==0.1.84
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -137,7 +137,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.21
+uv==0.2.22
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
