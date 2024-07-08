@@ -339,11 +339,11 @@ class ButtonMixin:
         >>>
         >>> with open("flower.png", "rb") as file:
         ...     btn = st.download_button(
-        ...             label="Download image",
-        ...             data=file,
-        ...             file_name="flower.png",
-        ...             mime="image/png"
-        ...           )
+        ...         label="Download image",
+        ...         data=file,
+        ...         file_name="flower.png",
+        ...         mime="image/png",
+        ...     )
 
         .. output::
            https://doc-download-buton.streamlit.app/

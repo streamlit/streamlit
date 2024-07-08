@@ -579,15 +579,13 @@ class DeltaGenerator(
         >>> import numpy as np
         >>>
         >>> df1 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+        ... )
         >>> my_table = st.table(df1)
         >>>
         >>> df2 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+        ... )
         >>> my_table.add_rows(df2)
         >>> # Now the table shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
@@ -604,14 +602,16 @@ class DeltaGenerator(
         And for plots whose datasets are named, you can pass the data with a
         keyword argument where the key is the name:
 
-        >>> my_chart = st.vega_lite_chart({
-        ...     'mark': 'line',
-        ...     'encoding': {'x': 'a', 'y': 'b'},
-        ...     'datasets': {
-        ...       'some_fancy_name': df1,  # <-- named dataset
-        ...      },
-        ...     'data': {'name': 'some_fancy_name'},
-        ... }),
+        >>> my_chart = st.vega_lite_chart(
+        ...     {
+        ...         "mark": "line",
+        ...         "encoding": {"x": "a", "y": "b"},
+        ...         "datasets": {
+        ...             "some_fancy_name": df1,  # <-- named dataset
+        ...         },
+        ...         "data": {"name": "some_fancy_name"},
+        ...     }
+        ... )
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """

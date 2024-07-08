@@ -90,7 +90,7 @@ def cache(
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
-    ...
+    >>>
     >>> d1 = fetch_and_clean_data(DATA_URL_1)
     >>> # Actually executes the function, since this is the first time it was
     >>> # encountered.
