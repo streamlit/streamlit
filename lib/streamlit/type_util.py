@@ -39,9 +39,9 @@ from streamlit.errors import StreamlitAPIException
 if TYPE_CHECKING:
     import graphviz
     import sympy
+    from plotly.graph_objs import Figure
     from pydeck import Deck
 
-    from plotly.graph_objs import Figure
     from streamlit.runtime.secrets import Secrets
 
 T = TypeVar("T")
