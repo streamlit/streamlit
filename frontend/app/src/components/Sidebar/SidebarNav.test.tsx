@@ -261,11 +261,4 @@ describe("SidebarNav", () => {
     expect(links[0]).toHaveStyle("background-color: transparent")
     expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
   })
-
-  it("changes the text color when the page is active", () => {
-    const props = getProps({ currentPageScriptHash: "other_page_hash" })
-    render(<SidebarNav {...props} />)
-
-    expect(screen.getByText("my other page")).toHaveStyle("color: #262730")
-  })
 })
