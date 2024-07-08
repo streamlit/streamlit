@@ -60,8 +60,8 @@ if TYPE_CHECKING:
     import altair as alt
 
     from streamlit.color_util import Color
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.arrow import Data
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
@@ -269,17 +269,6 @@ def _prepare_vega_lite_spec(
     return spec
 
 
-def _serialize_data(data: Any) -> bytes:
-    """Serialize the any type of data structure to Arrow IPC format (bytes)."""
-    import pyarrow as pa
-
-    if isinstance(data, pa.Table):
-        return dataframe_util.pyarrow_table_to_bytes(data)
-
-    df = dataframe_util.convert_anything_to_pandas_df(data)
-    return dataframe_util.data_frame_to_bytes(df)
-
-
 def _marshall_chart_data(
     proto: ArrowVegaLiteChartProto,
     spec: VegaLiteSpec,
@@ -302,11 +291,11 @@ def _marshall_chart_data(
             # We just need to pass the data information into the correct proto fields.
 
             # TODO(lukasmasuch): Are there any other cases where we need to serialize the data
-            #                    or can we remove the _serialize_data here?
+            # or can we remove the convert_anything_to_arrow_bytes here?
             dataset.data.data = (
                 dataset_data
                 if isinstance(dataset_data, bytes)
-                else _serialize_data(dataset_data)
+                else dataframe_util.convert_anything_to_arrow_bytes(dataset_data)
             )
         del spec["datasets"]
 
@@ -327,7 +316,7 @@ def _marshall_chart_data(
             del spec["data"]
 
     if data is not None:
-        proto.data.data = _serialize_data(data)
+        proto.data.data = dataframe_util.convert_anything_to_arrow_bytes(data)
 
 
 def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
@@ -349,7 +338,7 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
         """
         # Already serialize the data to be able to create a stable
         # dataset name:
-        data_bytes = _serialize_data(data)
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
         # Use the md5 hash of the data as the name:
         h = hashlib.new("md5", **HASHLIB_KWARGS)
         h.update(str(data_bytes).encode("utf-8"))

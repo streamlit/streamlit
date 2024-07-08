@@ -18,14 +18,10 @@ import json
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
-    Any,
-    Dict,
     Final,
     Iterable,
-    List,
     Literal,
     TypedDict,
-    Union,
     cast,
     overload,
 )
@@ -53,24 +49,9 @@ from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-    from numpy import ndarray
-    from pandas import DataFrame, Index, Series
-    from pandas.io.formats.style import Styler
-
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
 
-Data: TypeAlias = Union[
-    "DataFrame",
-    "Series",
-    "Styler",
-    "Index",
-    "pa.Table",
-    "ndarray",
-    Iterable,
-    Dict[str, List[Any]],
-    None,
-]
 
 SelectionMode: TypeAlias = Literal[
     "single-row", "multi-row", "single-column", "multi-column"
@@ -512,7 +493,7 @@ class ArrowMixin:
 
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
-            proto.data = dataframe_util.pyarrow_table_to_bytes(data)
+            proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
@@ -539,7 +520,7 @@ class ArrowMixin:
                 check_arrow_compatibility=False,
             )
             # Serialize the data to bytes:
-            proto.data = dataframe_util.data_frame_to_bytes(data_df)
+            proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
 
         if hide_index is not None:
             update_column_config(
@@ -710,7 +691,6 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         (e.g. charts) can ignore it.
 
     """
-    import pyarrow as pa
 
     if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
@@ -720,8 +700,4 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         ), "Default UUID must be a string for Styler data."
         marshall_styler(proto, data, default_uuid)
 
-    if isinstance(data, pa.Table):
-        proto.data = dataframe_util.pyarrow_table_to_bytes(data)
-    else:
-        df = dataframe_util.convert_anything_to_pandas_df(data)
-        proto.data = dataframe_util.data_frame_to_bytes(df)
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)

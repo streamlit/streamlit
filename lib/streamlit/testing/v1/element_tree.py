@@ -507,7 +507,7 @@ class Dataframe(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
@@ -1193,7 +1193,7 @@ class Table(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return dataframe_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 @dataclass(repr=False)

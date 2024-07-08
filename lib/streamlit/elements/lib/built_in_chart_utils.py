@@ -47,8 +47,7 @@ if TYPE_CHECKING:
     import altair as alt
     import pandas as pd
 
-    from streamlit.dataframe_util import DataFrameCompatible
-    from streamlit.elements.arrow import Data
+    from streamlit.dataframe_util import Data
 
 VegaLiteType: TypeAlias = Literal["quantitative", "ordinal", "temporal", "nominal"]
 ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
@@ -391,15 +390,9 @@ def _prep_data(
 
 
 def _last_index_for_melted_dataframes(
-    data: DataFrameCompatible | Any,
+    data: pd.DataFrame,
 ) -> Hashable | None:
-    if dataframe_util.is_dataframe_compatible(data):
-        data = dataframe_util.convert_anything_to_pandas_df(data)
-
-        if data.index.size > 0:
-            return cast(Hashable, data.index[-1])
-
-    return None
+    return cast(Hashable, data.index[-1]) if data.index.size > 0 else None
 
 
 def _is_date_column(df: pd.DataFrame, name: str | None) -> bool:

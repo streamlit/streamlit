@@ -22,7 +22,10 @@ import pyarrow as pa
 from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
-from streamlit.dataframe_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.dataframe_util import (
+    convert_arrow_bytes_to_pandas_df,
+    convert_arrow_table_to_arrow_bytes,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -42,7 +45,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
 
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
@@ -50,7 +53,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         st.table(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
-        self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
+        self.assertEqual(proto.data, convert_arrow_table_to_arrow_bytes(table))
 
     def test_uuid(self):
         df = mock_data_frame()
@@ -111,7 +114,7 @@ class ArrowTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         pd.testing.assert_frame_equal(
-            bytes_to_data_frame(proto.styler.display_values), expected
+            convert_arrow_bytes_to_pandas_df(proto.styler.display_values), expected
         )
 
     def test_table_uses_convert_anything_to_df(self):

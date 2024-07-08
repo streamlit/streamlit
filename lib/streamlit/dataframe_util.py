@@ -22,11 +22,11 @@ from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Final,
     Iterable,
     Protocol,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -49,13 +49,9 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
-MAX_UNEVALUATED_DF_ROWS = 10000
+_MAX_UNEVALUATED_DF_ROWS = 10000
 
-_PANDAS_DF_TYPE_STR: Final = "pandas.core.frame.DataFrame"
-_PANDAS_INDEX_TYPE_STR: Final = "pandas.core.indexes.base.Index"
-_PANDAS_SERIES_TYPE_STR: Final = "pandas.core.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
-_NUMPY_ARRAY_TYPE_STR: Final = "numpy.ndarray"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
@@ -65,39 +61,6 @@ _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
 
-
-_DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
-    _PANDAS_DF_TYPE_STR,
-    _PANDAS_INDEX_TYPE_STR,
-    _PANDAS_SERIES_TYPE_STR,
-    _PANDAS_STYLER_TYPE_STR,
-    _NUMPY_ARRAY_TYPE_STR,
-)
-
-# We show a special "UnevaluatedDataFrame" warning for cached funcs
-# that attempt to return one of these unserializable types:
-UNEVALUATED_DATAFRAME_TYPES = (
-    _MODIN_DF_TYPE_STR,
-    _MODIN_SERIES_TYPE_STR,
-    _PYSPARK_DF_TYPE_STR,
-    _SNOWPANDAS_DF_TYPE_STR,
-    _SNOWPANDAS_SERIES_TYPE_STR,
-    _SNOWPARK_DF_TYPE_STR,
-    _SNOWPARK_TABLE_TYPE_STR,
-)
-
-DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
-
-_DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
-    dict,
-    list,
-    set,
-    tuple,
-    type(None),
-)
-
-_DataFrameCompatible: TypeAlias = Union[dict, list, set, Tuple[Any], None]
-DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
 V_co = TypeVar(
     "V_co",
@@ -122,6 +85,21 @@ class DataFrameGenericAlias(Protocol[V_co]):
 OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
+]
+
+# Various data types supported by our dataframe processing
+# used for commands like `st.dataframe`, `st.table`, `st.map`,
+# st.line_chart`...
+Data: TypeAlias = Union[
+    "DataFrame",
+    "Series",
+    "Styler",
+    "Index",
+    "pa.Table",
+    "np.ndarray",
+    Iterable[Any],
+    Dict[Any, Any],
+    None,
 ]
 
 
@@ -152,12 +130,32 @@ class DataFormat(Enum):
     KEY_VALUE_DICT = auto()  # {index: value}
 
 
-def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
-    return is_type(obj, _PANDAS_DF_TYPE_STR)
+def is_dataframe_like(obj: object) -> bool:
+    """True if the object is a dataframe-like object.
 
+    This does not include basic collection types like list, dict, tuple, etc.
+    """
 
-def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
-    return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
+    if obj is None or isinstance(
+        obj, (list, tuple, set, dict, str, bytes, int, float, bool)
+    ):
+        # Basic types are not considered dataframe-like, so we can
+        # return False early to avoid unnecessary checks.
+        return False
+
+    return determine_data_format(obj) in [
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.PANDAS_SERIES,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_STYLER,
+        DataFormat.NUMPY_LIST,
+        DataFormat.NUMPY_MATRIX,
+        DataFormat.PYARROW_TABLE,
+        DataFormat.SNOWPARK_OBJECT,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.MODIN_OBJECT,
+        DataFormat.SNOWPANDAS_OBJECT,
+    ]
 
 
 def is_unevaluated_data_object(obj: object) -> bool:
@@ -218,18 +216,14 @@ def is_snowpandas_data_object(obj: object) -> bool:
     )
 
 
-def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
-    """True if type that can be passed to convert_anything_to_pandas_df."""
-    return is_dataframe_like(obj) or type(obj) in _DATAFRAME_COMPATIBLE_TYPES
-
-
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
+    """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
 def convert_anything_to_pandas_df(
     data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
 ) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
@@ -241,7 +235,7 @@ def convert_anything_to_pandas_df(
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
-        taking max_unevaluated_rows, defaults to 10k and 100 for st.table
+        taking max_unevaluated_rows, defaults to 10k.
 
     ensure_copy: bool
         If True, make sure to always return a copy of the data. If False, it depends on
@@ -252,16 +246,21 @@ def convert_anything_to_pandas_df(
     pandas.DataFrame
 
     """
+    import numpy as np
     import pandas as pd
 
-    if is_type(data, _PANDAS_DF_TYPE_STR):
+    if isinstance(data, pd.DataFrame):
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
-    if is_pandas_styler(data):
-        return cast("DataFrame", data.data.copy() if ensure_copy else data.data)
+    if isinstance(data, (pd.Series, pd.Index)):
+        return pd.DataFrame(data)
 
-    if is_type(data, "numpy.ndarray"):
+    if is_pandas_styler(data):
+        return cast(pd.DataFrame, data.data.copy() if ensure_copy else data.data)
+
+    if isinstance(data, np.ndarray):
         return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
+
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
@@ -330,6 +329,130 @@ Offending object:
 {data}
 ```"""
         ) from ex
+
+
+def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
+    """Serialize pyarrow.Table to Arrow IPC bytes.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to convert.
+
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
+    """
+    try:
+        table = _maybe_truncate_table(table)
+    except RecursionError as err:
+        # This is a very unlikely edge case, but we want to make sure that
+        # it doesn't lead to unexpected behavior.
+        # If there is a recursion error, we just return the table as-is
+        # which will lead to the normal message limit exceed error.
+        _LOGGER.warning(
+            "Recursion error while truncating Arrow table. This is not "
+            "supposed to happen.",
+            exc_info=err,
+        )
+
+    import pyarrow as pa
+
+    # Convert table to bytes
+    sink = pa.BufferOutputStream()
+    writer = pa.RecordBatchStreamWriter(sink, table.schema)
+    writer.write_table(table)
+    writer.close()
+    return cast(bytes, sink.getvalue().to_pybytes())
+
+
+def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
+    """Serialize pandas.DataFrame to Arrow IPC bytes.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to convert.
+
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
+    """
+    import pyarrow as pa
+
+    try:
+        table = pa.Table.from_pandas(df)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+        _LOGGER.info(
+            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
+            "Applying automatic fixes for column types to make the dataframe "
+            "Arrow-compatible.",
+            ex,
+        )
+        df = fix_arrow_incompatible_column_types(df)
+        table = pa.Table.from_pandas(df)
+    return convert_arrow_table_to_arrow_bytes(table)
+
+
+def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
+    """Convert Arrow bytes (IPC format) to pandas.DataFrame.
+
+    Using this function in production needs to make sure that
+    the pyarrow version >= 14.0.1, because of a critical
+    security vulnerability in pyarrow < 14.0.1.
+
+    Parameters
+    ----------
+    source : bytes
+        A bytes object to convert.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The converted dataframe.
+    """
+    import pyarrow as pa
+
+    reader = pa.RecordBatchStreamReader(source)
+    return reader.read_pandas()
+
+
+def convert_anything_to_arrow_bytes(
+    data: Any,
+    max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
+) -> bytes:
+    """Try to convert different formats to Arrow IPC format (bytes).
+
+    This method tries to directly convert the input data to Arrow bytes
+    for some supported formats, but falls back to conversion to a Pandas
+    DataFrame and then to Arrow bytes.
+
+    Parameters
+    ----------
+    data : any
+        The data to convert to Arrow bytes.
+
+    max_unevaluated_rows: int
+        If unevaluated data is detected this func will evaluate it,
+        taking max_unevaluated_rows, defaults to 10k.
+
+    Returns
+    -------
+    bytes
+        The serialized Arrow IPC bytes.
+    """
+
+    import pyarrow as pa
+
+    if isinstance(data, pa.Table):
+        return convert_arrow_table_to_arrow_bytes(data)
+
+    # Fallback: try to convert to pandas DataFrame
+    # and then to Arrow bytes
+    df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
+    return convert_pandas_df_to_arrow_bytes(df)
 
 
 def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
@@ -455,38 +578,6 @@ def _maybe_truncate_table(
     return table
 
 
-def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
-    """Serialize pyarrow.Table to bytes using Apache Arrow.
-
-    Parameters
-    ----------
-    table : pyarrow.Table
-        A table to convert.
-
-    """
-    try:
-        table = _maybe_truncate_table(table)
-    except RecursionError as err:
-        # This is a very unlikely edge case, but we want to make sure that
-        # it doesn't lead to unexpected behavior.
-        # If there is a recursion error, we just return the table as-is
-        # which will lead to the normal message limit exceed error.
-        _LOGGER.warning(
-            "Recursion error while truncating Arrow table. This is not "
-            "supposed to happen.",
-            exc_info=err,
-        )
-
-    import pyarrow as pa
-
-    # Convert table to bytes
-    sink = pa.BufferOutputStream()
-    writer = pa.RecordBatchStreamWriter(sink, table.schema)
-    writer.write_table(table)
-    writer.close()
-    return cast(bytes, sink.getvalue().to_pybytes())
-
-
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
@@ -593,49 +684,7 @@ def fix_arrow_incompatible_column_types(
     return df_copy if df_copy is not None else df
 
 
-def data_frame_to_bytes(df: DataFrame) -> bytes:
-    """Serialize pandas.DataFrame to bytes using Apache Arrow.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A dataframe to convert.
-
-    """
-    import pyarrow as pa
-
-    try:
-        table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
-        _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
-            "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
-            ex,
-        )
-        df = fix_arrow_incompatible_column_types(df)
-        table = pa.Table.from_pandas(df)
-    return pyarrow_table_to_bytes(table)
-
-
-def bytes_to_data_frame(source: bytes) -> DataFrame:
-    """Convert bytes to pandas.DataFrame.
-
-    Using this function in production needs to make sure that
-    the pyarrow version >= 14.0.1.
-
-    Parameters
-    ----------
-    source : bytes
-        A bytes object to convert.
-
-    """
-    import pyarrow as pa
-
-    reader = pa.RecordBatchStreamReader(source)
-    return reader.read_pandas()
-
-
-def is_list_of_scalars(data: Iterable[Any]) -> bool:
+def _is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
     from pandas.api.types import infer_dtype
 
@@ -688,7 +737,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
     elif isinstance(input_data, (list, tuple, set)):
-        if is_list_of_scalars(input_data):
+        if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure
             if isinstance(input_data, tuple):
                 return DataFormat.TUPLE_OF_VALUES
@@ -716,7 +765,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
             if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
             # In the future, we could potentially also support the tight & split formats here
-            if is_list_of_scalars(input_data.values()):
+            if _is_list_of_scalars(input_data.values()):
                 # Only use the key-value dict format if the values are only scalar values
                 return DataFormat.KEY_VALUE_DICT
     return DataFormat.UNKNOWN
@@ -734,7 +783,7 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     return df.fillna(np.nan).replace([np.nan], [None])
 
 
-def convert_df_to_data_format(
+def convert_pandas_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> (
     DataFrame
@@ -746,7 +795,7 @@ def convert_df_to_data_format(
     | set[Any]
     | dict[str, Any]
 ):
-    """Convert a dataframe to the specified data format.
+    """Convert a Pandas DataFrame to the specified data format.
 
     Parameters
     ----------
