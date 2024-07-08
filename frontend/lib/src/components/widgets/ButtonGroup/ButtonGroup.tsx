@@ -110,13 +110,13 @@ function getContentElement(content: string): ReactElement {
 /**
  * Returns true if the element should be shown as selected (even though its technically not).
  * This is used, for example, to show all elements as selected that come before the actually selected element.
- * This returns false if mode is not SINGLE_SELECT or if SELECTION_MODE is set
  *
- * @param selectionMode
- * @param clickMode
+ * @param selectionVisualization sets the visualization mode
+ * @param clickMode either SINGLE_SELECT or MULTI_SELECT
  * @param selected list of selected indices. Since only SINGLE_SELECT is considered, this list will always have a length of 1.
  * @param index of the current element
- * @returns false if the click mode is set to SINGLE_SELECT or if the button style is not set to MINIMAL_FILL_UP; true otherwise for elements whose index is less or equal than the selected element
+ * @returns true if the element is the selected one, or if click_mode is SINGLE_SELECT and selectionVisualization is set to
+ *  ALL_UP_TO_SELECTED and the index of the element is smaller than the index of the selected element, false otherwise.
  */
 function showAsSelected(
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
