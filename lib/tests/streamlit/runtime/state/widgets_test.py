@@ -22,7 +22,6 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
-from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -423,14 +422,13 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                # define a lambda that matches the signature of what button_group is passing to compute_widget_id
+                # define a lambda that matches the signature of what button_group is
+                # passing to compute_widget_id, because st.feedback doesn't take a label
                 lambda key,
                 options,
                 disabled=False,
                 default=[],
-                click_mode=0: ButtonGroupMixin._internal_button_group(
-                    st._main, options, disabled=disabled
-                ),
+                click_mode=0: st.feedback(options, disabled=disabled),
                 "button_group",
             ),
             (st.multiselect, "multiselect"),
