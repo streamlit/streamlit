@@ -54,9 +54,9 @@ if TYPE_CHECKING:
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from pandas.io.formats.style_renderer import StyleRenderer
+    from plotly.graph_objs import Figure
     from pydeck import Deck
 
-    from plotly.graph_objs import Figure
     from streamlit.runtime.secrets import Secrets
 
 

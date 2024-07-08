@@ -614,7 +614,12 @@ def _get_opacity_encoding(
 ) -> alt.OpacityValue | None:
     import altair as alt
 
-    # Opacity applied for layered bar and area charts
+    # Since opacity set to 0.7 for all area charts previously, avoid
+    # changing visual behavior despite new stack param
+    if color_column and chart_type == ChartType.AREA:
+        return alt.OpacityValue(0.7)
+
+    # Layered bar chart
     if color_column and stack == "layered":
         return alt.OpacityValue(0.7)
 
