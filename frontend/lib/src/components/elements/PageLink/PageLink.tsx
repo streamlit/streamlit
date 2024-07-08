@@ -76,7 +76,10 @@ function PageLink(props: Props): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash as string)
+        onPageChange(
+          element.pageScriptHash as string,
+          element.queryString as string
+        )
       }
     }
   }

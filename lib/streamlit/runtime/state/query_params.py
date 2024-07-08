@@ -35,6 +35,7 @@ class QueryParams(MutableMapping[str, str]):
     """
 
     _query_params: dict[str, list[str] | str] = field(default_factory=dict)
+    _disable_forward_msg: bool = False
 
     def __iter__(self) -> Iterator[str]:
         self._ensure_single_query_api_used()
@@ -136,6 +137,8 @@ class QueryParams(MutableMapping[str, str]):
         return str(self._query_params)
 
     def _send_query_param_msg(self) -> None:
+        if self._disable_forward_msg:
+            return
         # Avoid circular imports
         from streamlit.runtime.scriptrunner import get_script_run_ctx
 

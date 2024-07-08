@@ -19,10 +19,6 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "PageLinkProto";
 
-message StringList {
-  repeated string values = 1;
-}
-
 message PageLink {
   string page = 1;
   string label = 2;
@@ -32,5 +28,5 @@ message PageLink {
   optional bool use_container_width = 6;
   bool disabled = 7;
   bool external = 8;
-  map<string, StringList> query_params = 9;
+  string query_string = 9;
 }

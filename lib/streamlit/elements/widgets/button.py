@@ -763,12 +763,17 @@ class ButtonMixin:
 
         if query_params is not None:
             if not hasattr(query_params, "get_all"):
-                query_params = QueryParams().from_dict(query_params)
-            update_query_params_proto(
-                page_link_proto, {k: query_params.get_all(k) for k in query_params}
-            )
-            if len(query_params) > 0:
-                page_link_proto.page += "?" + query_params.to_string()
+                query_params_internal: QueryParams = QueryParams()
+                query_params_internal._disable_forward_msg = (
+                    True  # turn off sending forward messages for THIS QueryParams
+                )
+                query_params_internal.from_dict(query_params)
+            else:
+                query_params_internal = cast(QueryParams, query_params)
+
+            page_link_proto.query_string = query_params_internal.to_string()
+            if page_link_proto.query_string != "":
+                page_link_proto.page += "?" + page_link_proto.query_string
 
         return self.dg._enqueue("page_link", page_link_proto)
 
@@ -913,7 +918,7 @@ def marshall_file(
     proto_download_button.url = file_url
 
 
-def update_query_params_proto(proto: PageLinkProto, qp: Mapping[str, Iterable[str]]):
-    """Updates the query_params PageLinkProto message iteratively, since it cannot be directly assigned."""
-    for key, values in qp.items():
-        proto.query_params[key].values.extend(values)
+# def update_query_params_proto(proto: PageLinkProto, qp: Mapping[str, Iterable[str]]):
+#     """Updates the query_params PageLinkProto message iteratively, since it cannot be directly assigned."""
+#     for key, values in qp.items():
+#         proto.query_params[key].values.extend(values)

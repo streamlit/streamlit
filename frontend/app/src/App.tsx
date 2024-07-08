@@ -1437,10 +1437,7 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (
-    pageScriptHash: string,
-    queryParams?: Map<string, string[]>
-  ): void => {
+  onPageChange = (pageScriptHash: string, queryString?: string): void => {
     const { elements, mainScriptHash } = this.state
 
     // We want to keep widget states for widgets that are still active
@@ -1460,7 +1457,7 @@ export class App extends PureComponent<Props, State> {
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
       pageScriptHash,
-      queryParams
+      queryString
     )
   }
 
@@ -1477,7 +1474,7 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    queryParams?: Map<string, string[]>
+    queryString?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1492,30 +1489,35 @@ export class App extends PureComponent<Props, State> {
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
 
-    let queryString: string
-    if (queryParams !== undefined) {
-      queryString = this.queryParamsToString(queryParams)
-    } else {
-      queryString = this.getQueryString()
-    }
     let pageName = ""
+    let queryStringChanged: boolean = false
 
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change
-        queryString = preserveEmbedQueryParams()
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_QUERY_PARAM",
-          queryParams: queryString,
-        })
+        // clear non-embed query parameters within a page change, and replace them with the
+        // queryString provided by the caller (if present)
+        if (queryString == undefined || queryString == "") {
+          queryString = preserveEmbedQueryParams()
+        } else {
+          queryString = queryString + "&" + preserveEmbedQueryParams()
+        }
+        queryStringChanged = true
       }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we
       // rerun the current page.
       pageScriptHash = currentPageScriptHash
+      // We also want to presever the existing query params _if_ they weren't specified
+      // (which should be the case when the user clicks "Rerun")
+      if (queryString == undefined) {
+        queryString = this.getQueryString()
+        queryStringChanged = false
+      } else {
+        queryStringChanged = true
+      }
     } else {
       // We must be in the case where the user is navigating directly to a
       // non-main page of this app. Since we haven't received the list of the
@@ -1527,6 +1529,13 @@ export class App extends PureComponent<Props, State> {
         basePath
       )
       pageScriptHash = ""
+    }
+
+    if (queryStringChanged) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_QUERY_PARAM",
+        queryParams: queryString ?? "",
+      })
     }
 
     this.sendBackMsg(
@@ -1785,11 +1794,17 @@ export class App extends PureComponent<Props, State> {
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
 
-  queryParamsToString = (queryParams: Map<string, string[]>): string => {
-    return [...queryParams.entries()]
-      .flatMap(([k, vs]) => vs.map(v => [k, v]))
-      .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
-      .join("&")
+  // queryParamsToString = (queryParams: Map<string, string[]>): string => {
+  //   return params URLSearchParams()
+
+  //   return [...queryParams.entries()]
+  //     .flatMap(([k, vs]) => vs.map(v => [k, v]))
+  //     .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
+  //     .join("&")
+  // }
+
+  queryStringToParams = (queryParams: string): URLSearchParams => {
+    return new URLSearchParams(queryParams)
   }
 
   isInCloudEnvironment = (): boolean => {

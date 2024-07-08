@@ -44,7 +44,7 @@ export interface Props {
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
-  onPageChange: (pageName: string, queryParams?: Map<string, string[]>) => void
+  onPageChange: (pageName: string, queryString?: string) => void
 }
 
 /** Displays a list of navigable app page links for multi-page apps. */

@@ -76,7 +76,7 @@ export interface LibContextProps {
    * Change the page in a multi-page app.
    * @see PageLink
    */
-  onPageChange: (pageScriptHash: string) => void
+  onPageChange: (pageScriptHash: string, queryString?: string) => void
 
   /**
    * The current page of a multi-page app.
