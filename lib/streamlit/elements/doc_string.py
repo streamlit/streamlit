@@ -90,7 +90,7 @@ class HelpMixin:
         >>>     return 'Woof!'
         >>>
         >>>
-        >>> fido = Dog('poodle', 'white')
+        >>> fido = Dog("poodle", "white")
         >>>
         >>> st.help(fido)
 

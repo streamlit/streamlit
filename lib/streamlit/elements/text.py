@@ -47,7 +47,7 @@ class TextMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.text('This is some text.')
+        >>> st.text("This is some text.")
 
         """
         text_proto = TextProto()

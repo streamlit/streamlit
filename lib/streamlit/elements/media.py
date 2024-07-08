@@ -288,7 +288,7 @@ class MediaMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> video_file = open('myvideo.mp4', 'rb')
+        >>> video_file = open("myvideo.mp4", "rb")
         >>> video_bytes = video_file.read()
         >>>
         >>> st.video(video_bytes)
@@ -376,7 +376,7 @@ def _reshape_youtube_url(url: str) -> str | None:
 
     Example
     -------
-    >>> print(_reshape_youtube_url('https://youtu.be/_T8LGqJtuGc'))
+    >>> print(_reshape_youtube_url("https://youtu.be/_T8LGqJtuGc"))
 
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc

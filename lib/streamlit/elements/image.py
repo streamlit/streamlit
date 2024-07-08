@@ -140,7 +140,7 @@ class ImageMixin:
         Example
         -------
         >>> import streamlit as st
-        >>> st.image('sunrise.jpg', caption='Sunrise by the mountains')
+        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 
         .. output::
            https://doc-image.streamlit.app/

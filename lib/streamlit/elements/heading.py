@@ -94,8 +94,8 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.header('This is a header with a divider', divider='rainbow')
-        >>> st.header('_Streamlit_ is :blue[cool] :sunglasses:')
+        >>> st.header("This is a header with a divider", divider="rainbow")
+        >>> st.header("_Streamlit_ is :blue[cool] :sunglasses:")
 
         .. output::
            https://doc-header.streamlit.app/
@@ -167,8 +167,8 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.subheader('This is a subheader with a divider', divider='rainbow')
-        >>> st.subheader('_Streamlit_ is :blue[cool] :sunglasses:')
+        >>> st.subheader("This is a subheader with a divider", divider="rainbow")
+        >>> st.subheader("_Streamlit_ is :blue[cool] :sunglasses:")
 
         .. output::
            https://doc-subheader.streamlit.app/
@@ -234,8 +234,8 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.title('This is a title')
-        >>> st.title('_Streamlit_ is :blue[cool] :sunglasses:')
+        >>> st.title("This is a title")
+        >>> st.title("_Streamlit_ is :blue[cool] :sunglasses:")
 
         .. output::
            https://doc-title.streamlit.app/
