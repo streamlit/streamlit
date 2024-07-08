@@ -145,7 +145,6 @@ def get_mapped_options(
             ButtonGroupProto.Option(
                 content=_STAR_ICON,
                 selected_content=_SELECTED_STAR_ICON,
-                disable_selection_highlight=True,
             )
         ] * _NUMBER_STARS
 

@@ -76,7 +76,6 @@ class TestGetMappedOptions:
             assert option.content == _STAR_ICON
             assert option.selected_content == _SELECTED_STAR_ICON
             assert options_indices[index] == index
-            assert option.disable_selection_highlight
 
 
 class TestFeedbackSerde:

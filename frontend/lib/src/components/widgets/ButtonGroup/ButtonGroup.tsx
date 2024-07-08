@@ -174,7 +174,7 @@ function createOptionChild(
 
   // we have to use forwardRef here becaused BasewebButtonGroup passes it down to its children
   const buttonKind =
-    !isVisuallySelected || option.disableSelectionHighlight || false
+    !isVisuallySelected || option.selectedContent || false
       ? BaseButtonKind.BORDERLESS_ICON
       : BaseButtonKind.BORDERLESS_ICON_ACTIVE
   return forwardRef(function BaseButtonGroup(

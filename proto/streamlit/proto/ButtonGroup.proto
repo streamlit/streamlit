@@ -28,9 +28,6 @@ message ButtonGroup {
   message Option {
     string content = 1;
     string selected_content = 2;
-    // Can be used to disable the default selection highlight
-    // (in case the selected content is visualization enough)
-    bool disable_selection_highlight = 3;
   }
 
   string id = 1;
