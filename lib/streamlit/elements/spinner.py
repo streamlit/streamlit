@@ -39,7 +39,7 @@ def spinner(text: str = "In progress...", *, _cache: bool = False) -> Iterator[N
     >>>
     >>> with st.spinner('Wait for it...'):
     >>>     time.sleep(5)
-    >>> st.success('Done!')
+    >>> st.success("Done!")
 
     """
     from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto

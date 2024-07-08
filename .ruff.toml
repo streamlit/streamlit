@@ -23,6 +23,10 @@ include = [
 target-version = 'py38'
 line-length = 88
 
+[format]
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
 [lint]
 select = [
   "B",      # flake8-bugbear

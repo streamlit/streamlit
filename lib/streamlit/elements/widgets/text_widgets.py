@@ -488,7 +488,7 @@ class TextWidgetsMixin:
         ...     "was the epoch of incredulity, it was the season of Light, it was the "
         ...     "season of Darkness, it was the spring of hope, it was the winter of "
         ...     "despair, (...)",
-        ...     )
+        ... )
         >>>
         >>> st.write(f"You wrote {len(txt)} characters.")
 

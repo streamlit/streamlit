@@ -457,11 +457,13 @@ def _melt_data(
     --------
 
     >>> import pandas as pd
-    >>> df = pd.DataFrame({
-    ...     "a": [1, 2, 3],
-    ...     "b": [4, 5, 6],
-    ...     "c": [7, 8, 9],
-    ... })
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "a": [1, 2, 3],
+    ...         "b": [4, 5, 6],
+    ...         "c": [7, 8, 9],
+    ...     }
+    ... )
     >>> _melt_data(df, ["a"], ["b", "c"], "value", "color")
     >>>    a color  value
     >>> 0  1        b      4
