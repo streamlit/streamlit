@@ -20,6 +20,7 @@ import React, {
   useState,
   forwardRef,
   Ref,
+  useMemo,
 } from "react"
 
 import { useTheme } from "@emotion/react"
@@ -202,7 +203,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     clickMode,
     default: defaultValues,
     options,
-    setValue,
     value,
     selectionVisualization,
   } = element
@@ -234,12 +234,12 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, widgetMgr, defaultValues, element, fragmentId])
+  }, [element.formId, widgetMgr, defaultValues])
 
-  const valueString = JSON.stringify(value)
+  const valueString = useMemo(() => JSON.stringify(value), [value])
   useEffect(() => {
     const parsedValue = JSON.parse(valueString)
-    if (setValue) {
+    if (elementRef.current.setValue) {
       setSelected(parsedValue)
       syncWithWidgetManager(
         selected,
@@ -264,7 +264,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       )
     }
     selectedRef.current = selected
-  }, [selected, widgetMgr, fragmentId, valueString, setValue])
+  }, [selected, widgetMgr, fragmentId, valueString])
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
