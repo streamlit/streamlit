@@ -1,6 +1,6 @@
 pre-commit
 # We fix ruff to a version to be in sync with the pre-commit hook:
-ruff==0.4.8
+ruff==0.5
 mypy>=1.4, <1.7
 mypy-protobuf>=3.2
 # semver 3 renames VersionInfo so temporarily pin until we deal with it

@@ -20,7 +20,7 @@ import datetime
 import json
 import unittest
 from decimal import Decimal
-from typing import Any, Dict, List, Mapping
+from typing import Any, Mapping
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -29,6 +29,7 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.dataframe_util import DataFormat, convert_arrow_bytes_to_pandas_df
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnDataKind,
@@ -45,11 +46,7 @@ from streamlit.elements.widgets.data_editor import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.type_util import (
-    DataFormat,
-    bytes_to_data_frame,
-    is_pandas_version_less_than,
-)
+from streamlit.type_util import is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
 
@@ -199,7 +196,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        added_rows: List[Dict[str, Any]] = [
+        added_rows: list[dict[str, Any]] = [
             {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
             {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
         ]
@@ -220,7 +217,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        deleted_rows: List[int] = [0, 2]
+        deleted_rows: list[int] = [0, 2]
 
         _apply_row_deletions(df, deleted_rows)
 
@@ -237,8 +234,8 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        deleted_rows: List[int] = [0, 2]
-        added_rows: List[Dict[str, Any]] = [
+        deleted_rows: list[int] = [0, 2]
+        added_rows: list[dict[str, Any]] = [
             {"col1": 10, "col2": "foo", "col3": False},
             {"col1": 11, "col2": "bar", "col3": True},
         ]
@@ -407,7 +404,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         return_df = st.data_editor(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+        pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)
         pd.testing.assert_frame_equal(return_df, df)
 
     @parameterized.expand(SHARED_TEST_CASES)
@@ -420,7 +417,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         return_data = st.data_editor(input_data)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        reconstructed_df = bytes_to_data_frame(proto.data)
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
         self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
         self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
 
@@ -583,7 +580,9 @@ class DataEditorTest(DeltaGeneratorTestCase):
         return_df = st.data_editor(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), return_df)
+        pd.testing.assert_frame_equal(
+            convert_arrow_bytes_to_pandas_df(proto.data), return_df
+        )
         self.assertEqual(return_df.columns.to_list(), ["2_c1", "3_c2", "4_c3"])
 
     def test_pandas_styler_support(self):

@@ -194,6 +194,7 @@ describe("StreamlitMarkdown", () => {
     { input: "[Link Text](www.example.com)", tag: "a", expected: "Link Text" },
     { input: "🐶", tag: "p", expected: "🐶" },
     { input: ":joy:", tag: "p", expected: "😂" },
+    { input: ":material/search:", tag: "span", expected: "search" },
   ]
 
   test.each(validCases)(
@@ -348,6 +349,25 @@ describe("StreamlitMarkdown", () => {
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
     })
+  })
+
+  it("properly adds custom material icon", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle(`font-family: Material Symbols Rounded`)
+    expect(markdown).toHaveStyle(`user-select: none`)
+    expect(markdown).toHaveStyle(`vertical-align: bottom`)
+    expect(markdown).toHaveStyle(`font-weight: normal`)
+  })
+
+  it("does not remove unknown directive", () => {
+    const source = `test :foo test:test :`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :foo test:test :")
+    expect(markdown).toBeInTheDocument()
   })
 
   it("properly adds background colors", () => {

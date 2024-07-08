@@ -186,7 +186,11 @@ class SQLConnection(BaseConnection["Engine"]):
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("sql")
-        >>> df = conn.query("select * from pet_owners where owner = :owner", ttl=3600, params={"owner":"barbara"})
+        >>> df = conn.query(
+        ...     "select * from pet_owners where owner = :owner",
+        ...     ttl=3600,
+        ...     params={"owner": "barbara"},
+        ... )
         >>> st.dataframe(df)
         """
 

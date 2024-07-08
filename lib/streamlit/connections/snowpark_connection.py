@@ -205,7 +205,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         >>> conn = st.connection("snowpark")
         >>> with conn.safe_session() as session:
         ...     df = session.table("mytable").limit(10).to_pandas()
-        ...
+        >>>
         >>> st.dataframe(df)
         """
         with self._lock:

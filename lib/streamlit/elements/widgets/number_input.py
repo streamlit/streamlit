@@ -23,12 +23,15 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -42,7 +45,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -189,7 +191,9 @@ class NumberInputMixin:
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. Output must be purely numeric. This does not impact
-            the return value. Valid formatters: %d %e %f %g %i %u
+            the return value. Formatting is handled by [sprintf.js](https://github.com/alexei/sprintf.js).
+            This can be used to adjust decimal precision in the displayed result. For example,
+            ``'%0.1f'`` to only show 1 digit after the decimal.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -236,7 +240,9 @@ class NumberInputMixin:
 
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
+        >>> number = st.number_input(
+        ...     "Insert a number", value=None, placeholder="Type a number..."
+        ... )
         >>> st.write("The current number is ", number)
 
         .. output::
@@ -284,11 +290,11 @@ class NumberInputMixin:
     ) -> Number | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "min" else None, key=key
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "min" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 

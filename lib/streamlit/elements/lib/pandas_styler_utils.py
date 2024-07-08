@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
-from streamlit import type_util
+from streamlit import dataframe_util
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
@@ -236,7 +236,9 @@ def _marshall_display_values(
 
     """
     new_df = _use_display_values(df, styles)
-    proto.styler.display_values = type_util.data_frame_to_bytes(new_df)
+    proto.styler.display_values = dataframe_util.convert_pandas_df_to_arrow_bytes(
+        new_df
+    )
 
 
 def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:

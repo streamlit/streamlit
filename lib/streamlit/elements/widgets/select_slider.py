@@ -20,16 +20,19 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 
 from typing_extensions import TypeGuard
 
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
 from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    to_key,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -47,14 +50,8 @@ from streamlit.runtime.state.common import (
     save_for_app_testing,
 )
 from streamlit.type_util import (
-    Key,
-    LabelVisibility,
-    OptionSequence,
     T,
     check_python_comparable,
-    ensure_indexable,
-    maybe_raise_label_warnings,
-    to_key,
 )
 from streamlit.util import index_
 
@@ -212,7 +209,16 @@ class SelectSliderMixin:
         >>>
         >>> color = st.select_slider(
         ...     "Select a color of the rainbow",
-        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"])
+        ...     options=[
+        ...         "red",
+        ...         "orange",
+        ...         "yellow",
+        ...         "green",
+        ...         "blue",
+        ...         "indigo",
+        ...         "violet",
+        ...     ],
+        ... )
         >>> st.write("My favorite color is", color)
 
         And here's an example of a range select slider:
@@ -221,8 +227,17 @@ class SelectSliderMixin:
         >>>
         >>> start_color, end_color = st.select_slider(
         ...     "Select a range of color wavelength",
-        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
-        ...     value=("red", "blue"))
+        ...     options=[
+        ...         "red",
+        ...         "orange",
+        ...         "yellow",
+        ...         "green",
+        ...         "blue",
+        ...         "indigo",
+        ...         "violet",
+        ...     ],
+        ...     value=("red", "blue"),
+        ... )
         >>> st.write("You selected wavelengths between", start_color, "and", end_color)
 
         .. output::
@@ -263,12 +278,15 @@ class SelectSliderMixin:
     ) -> T | tuple[T, T]:
         key = to_key(key)
 
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = ensure_indexable(options)
+        opt = convert_anything_to_sequence(options)
         check_python_comparable(opt)
 
         if len(opt) == 0:

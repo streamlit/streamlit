@@ -123,7 +123,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
             (np.array([]),),
             (pd.Series(np.array([])),),
             (set(),),
-            (list(),),
+            ([],),
         ]
     )
     def test_no_options(self, options):
@@ -135,7 +135,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
 
-    @parameterized.expand([(15, TypeError), ("str", TypeError)])
+    @parameterized.expand([(15, TypeError)])
     def test_invalid_options(self, options, expected):
         """Test that it handles invalid options."""
         with self.assertRaises(expected):
@@ -328,7 +328,7 @@ Please select at most 2 options.
             (
                 1,
                 1,
-                f"""
+                """
 Multiselect has 1 option selected but `max_selections`
 is set to 1. This happened because you either gave too many options to `default`
 or you manipulated the widget's state through `st.session_state`. Note that
@@ -339,7 +339,7 @@ Please select at most 1 option.
             (
                 1,
                 0,
-                f"""
+                """
 Multiselect has 1 option selected but `max_selections`
 is set to 0. This happened because you either gave too many options to `default`
 or you manipulated the widget's state through `st.session_state`. Note that
@@ -350,7 +350,7 @@ Please select at most 0 options.
             (
                 2,
                 1,
-                f"""
+                """
 Multiselect has 2 options selected but `max_selections`
 is set to 1. This happened because you either gave too many options to `default`
 or you manipulated the widget's state through `st.session_state`. Note that
@@ -361,7 +361,7 @@ Please select at most 1 option.
             (
                 3,
                 2,
-                f"""
+                """
 Multiselect has 3 options selected but `max_selections`
 is set to 2. This happened because you either gave too many options to `default`
 or you manipulated the widget's state through `st.session_state`. Note that

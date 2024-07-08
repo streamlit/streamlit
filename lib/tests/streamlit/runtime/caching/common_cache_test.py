@@ -14,11 +14,13 @@
 
 """Tests that are common to both st.cache_data and st.cache_resource"""
 
+from __future__ import annotations
+
 import threading
 import time
 import unittest
 from datetime import timedelta
-from typing import Any, List
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock, patch
 
 from parameterized import parameterized
@@ -27,7 +29,6 @@ import streamlit as st
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
@@ -52,6 +53,9 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx
+
+if TYPE_CHECKING:
+    from streamlit.runtime.caching.cache_type import CacheType
 
 
 def get_text_or_block(delta):
@@ -89,7 +93,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         super().tearDown()
 
-    def get_text_delta_contents(self) -> List[str]:
+    def get_text_delta_contents(self) -> list[str]:
         deltas = self.get_all_deltas_from_queue()
         text = [
             element.text.body

@@ -18,6 +18,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from streamlit.components.types.base_custom_component import BaseCustomComponent
+from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator import main_dg
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
@@ -29,7 +30,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import is_bytes_like, is_dataframe_like, to_bytes
+from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

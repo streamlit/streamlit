@@ -113,7 +113,7 @@ message Config {
   // See config option "ui.hideTopBar".
   bool hide_top_bar = 6;
 
-  // See config option "ui.hideSidebarNav".
+  // See config option "client.showSidebarNavigation".
   bool hide_sidebar_nav = 7;
 
   // See config option "client.toolbarMode".

@@ -14,6 +14,8 @@
 
 """Config System Unittest."""
 
+from __future__ import annotations
+
 import copy
 import os
 import textwrap
@@ -319,7 +321,6 @@ class ConfigTest(unittest.TestCase):
                 "browser",
                 "client",
                 "theme",
-                "deprecation",
                 "global",
                 "logger",
                 "magic",
@@ -329,7 +330,7 @@ class ConfigTest(unittest.TestCase):
                 "ui",
             ]
         )
-        keys = sorted(list(config._section_descriptions.keys()))
+        keys = sorted(config._section_descriptions.keys())
         self.assertEqual(sections, keys)
 
     def test_config_option_keys(self):
@@ -338,7 +339,6 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
-                "client.displayEnabled",
                 "client.showErrorDetails",
                 "client.showSidebarNavigation",
                 "client.toolbarMode",
@@ -348,29 +348,21 @@ class ConfigTest(unittest.TestCase):
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
                 "theme.font",
-                "deprecation.showfileUploaderEncoding",
-                "deprecation.showImageFormat",
-                "deprecation.showPyplotGlobalUse",
                 "global.appTest",
                 "global.developmentMode",
-                "global.disableWatchdogWarning",
                 "global.disableWidgetStateDuplicationWarning",
                 "global.e2eTest",
-                "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",
                 "global.showWarningOnDirectExecution",
                 "global.storeCachedForwardMessagesInMemory",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
-                "global.dataFrameSerialization",
                 "logger.enableRich",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
-                "runner.installTracer",
-                "runner.fixMatplotlib",
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "runner.enumCoercion",
@@ -397,7 +389,6 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "ui.hideTopBar",
-                "ui.hideSidebarNav",
             ]
         )
         keys = sorted(config._config_options.keys())

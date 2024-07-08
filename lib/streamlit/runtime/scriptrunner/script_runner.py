@@ -336,12 +336,7 @@ class ScriptRunner:
         # Whenever we enqueue a ForwardMsg, we also handle any pending
         # execution control request. This means that a script can be
         # cleanly interrupted and stopped inside most `st.foo` calls.
-        #
-        # (If "runner.installTracer" is true, then we'll actually be
-        # handling these requests in a callback called after every Python
-        # instruction instead.)
-        if not config.get_option("runner.installTracer"):
-            self._maybe_handle_execution_control_request()
+        self._maybe_handle_execution_control_request()
 
         # Pass the message to our associated AppSession.
         self.on_event.send(
@@ -382,17 +377,6 @@ class ScriptRunner:
         assert request.type == ScriptRequestType.STOP
         raise StopException()
 
-    def _install_tracer(self) -> None:
-        """Install function that runs before each line of the script."""
-
-        def trace_calls(frame, event, arg):
-            self._maybe_handle_execution_control_request()
-            return trace_calls
-
-        # Python interpreters are not required to implement sys.settrace.
-        if hasattr(sys, "settrace"):
-            sys.settrace(trace_calls)
-
     @contextmanager
     def _set_execing_flag(self):
         """A context for setting the ScriptRunner._execing flag.
@@ -426,8 +410,12 @@ class ScriptRunner:
             start_time: float = timer()
             prep_time: float = 0  # This will be overwritten once preparations are done.
 
-            # Reset DeltaGenerators, widgets, media files.
-            runtime.get_instance().media_file_mgr.clear_session_refs()
+            if not rerun_data.fragment_id_queue:
+                # Don't clear session refs for media files if we're running a fragment.
+                # Otherwise, we're likely to remove files that still have corresponding
+                # download buttons/links to them present in the app, which will result
+                # in a 404 should the user click on them.
+                runtime.get_instance().media_file_mgr.clear_session_refs()
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -519,9 +507,6 @@ class ScriptRunner:
             # If we get here, we've successfully compiled our script. The next step
             # is to run it. Errors thrown during execution will be shown to the
             # user as ExceptionElements.
-
-            if config.get_option("runner.installTracer"):
-                self._install_tracer()
 
             # Create fake module. This gives us a name global namespace to
             # execute the code in.

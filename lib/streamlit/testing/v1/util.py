@@ -27,12 +27,12 @@ def patch_config_options(config_overrides: dict[str, Any]):
 
     Examples:
     >>> with patch_config_options({"server.headless": True}):
-    ...     assert(config.get_option("server.headless") is True)
+    ...     assert config.get_option("server.headless") is True
     ...     # Other test code that relies on these options
 
     >>> @patch_config_options({"server.headless": True})
     ... def test_my_thing():
-    ...   assert(config.get_option("server.headless") is True)
+    ...     assert config.get_option("server.headless") is True
     """
     # Lazy-load for performance reasons.
     from unittest.mock import patch
