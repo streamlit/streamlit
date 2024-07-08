@@ -1490,7 +1490,7 @@ export class App extends PureComponent<Props, State> {
     const { basePath } = baseUriParts
 
     let pageName = ""
-    let queryStringChanged: boolean = false
+    let queryStringChanged = false
 
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this

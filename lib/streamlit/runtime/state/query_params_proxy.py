@@ -209,7 +209,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
             return qp.from_dict(params)
 
     @gather_metrics("query_params.to_string")
-    def to_string(self) -> dict[str, str]:
+    def to_string(self) -> str:
         """
         Get all query parameters as a url-encoded query string.
 
