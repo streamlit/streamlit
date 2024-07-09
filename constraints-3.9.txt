@@ -44,13 +44,13 @@ jeepney==0.8.0
 Jinja2==3.1.4
 jsonpatch==1.33
 jsonpointer==3.0.0
-jsonschema==4.22.0
+jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.1
 kiwisolver==1.4.5
-langchain==0.2.6
-langchain-community==0.2.6
-langchain-core==0.2.11
+langchain==0.2.7
+langchain-community==0.2.7
+langchain-core==0.2.12
 langchain-text-splitters==0.2.2
 langsmith==0.1.84
 markdown-it-py==3.0.0
@@ -142,7 +142,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==1.26.19
-uv==0.2.22
+uv==0.2.23
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1

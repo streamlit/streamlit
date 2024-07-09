@@ -38,7 +38,7 @@ jeepney==0.8.0
 Jinja2==3.1.4
 jsonpatch==1.33
 jsonpointer==3.0.0
-jsonschema==4.22.0
+jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.1
 kiwisolver==1.4.5
@@ -92,14 +92,14 @@ python-dateutil==2.9.0.post0
 python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
-readme_renderer==43.0
+readme_renderer==44.0
 referencing==0.35.1
 requests==2.32.3
 requests-mock==1.12.1
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
-rpds-py==0.18.1
+rpds-py==0.19.0
 ruff==0.5.0
 scipy==1.14.0
 seaborn==0.13.2
@@ -130,7 +130,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.22
+uv==0.2.23
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
