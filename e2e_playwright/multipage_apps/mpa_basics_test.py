@@ -164,11 +164,11 @@ def test_switch_page_preserves_embed_params(page: Page, app_port: int):
     page.goto(
         f"http://localhost:{app_port}/?embed=true&embed_options=light_theme&bar=foo"
     )
-    wait_for_app_loaded(page)
+    wait_for_app_loaded(page, embedded=True)
 
     # Trigger st.switch_page
     page.get_by_test_id("stButton").nth(0).locator("button").first.click()
-    wait_for_app_loaded(page)
+    wait_for_app_loaded(page, embedded=True)
 
     # Check that only embed query params persist
     expect(page).to_have_url(
