@@ -158,7 +158,6 @@ function createOptionChild(
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[]
-  // theme: EmotionTheme
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
