@@ -165,6 +165,7 @@ def test_switch_page_preserves_embed_params(page: Page, app_port: int):
         f"http://localhost:{app_port}/?embed=true&embed_options=light_theme&bar=foo"
     )
     wait_for_app_loaded(page, embedded=True)
+    expect(page.get_by_test_id("stJson")).to_contain_text('{"bar":"foo"}')
 
     # Trigger st.switch_page
     page.get_by_test_id("stButton").nth(0).locator("button").first.click()
@@ -174,6 +175,7 @@ def test_switch_page_preserves_embed_params(page: Page, app_port: int):
     expect(page).to_have_url(
         f"http://localhost:{app_port}/page2?embed=true&embed_options=light_theme"
     )
+    expect(page.get_by_test_id("stJson")).not_to_contain_text('{"bar":"foo"}')
 
 
 def test_switch_page_removes_query_params(page: Page, app_port: int):
