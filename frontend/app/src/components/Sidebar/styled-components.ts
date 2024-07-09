@@ -22,14 +22,19 @@ import {
 } from "@streamlit/lib/src/theme/utils"
 import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 
-// Check for custom text color & handle colors in Sidebar/SidebarNav accordingly
-const hasCustomTextColor = (theme: any): boolean => {
-  const isLightTheme = hasLightBackgroundColor(theme)
+// Check for custom text color & handle colors in SidebarNav accordingly
+const conditionalCustomColor = (
+  theme: any,
+  customThemeColor: string,
+  defaultThemeColor: string
+): string => {
+  let customTextColor = theme.colors.bodyText !== theme.colors.gray10
 
-  if (isLightTheme) {
-    return theme.colors.bodyText !== theme.colors.gray85
+  if (hasLightBackgroundColor(theme)) {
+    customTextColor = theme.colors.bodyText !== theme.colors.gray85
   }
-  return theme.colors.bodyText !== theme.colors.gray10
+
+  return customTextColor ? customThemeColor : defaultThemeColor
 }
 
 export interface StyledSidebarProps {
@@ -111,17 +116,21 @@ export interface StyledSidebarNavLinkProps {
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
-    const isCustomTextColor = hasCustomTextColor(theme)
-
-    const color = isCustomTextColor
-      ? theme.colors.bodyText
-      : theme.colors.navTextColor
-    const svgColor = isCustomTextColor
-      ? theme.colors.fadedText60
-      : theme.colors.navIconColor
-    const activeSvgColor = isCustomTextColor
-      ? theme.colors.bodyText
-      : theme.colors.navActiveTextColor
+    const color = conditionalCustomColor(
+      theme,
+      theme.colors.bodyText,
+      theme.colors.navTextColor
+    )
+    const svgColor = conditionalCustomColor(
+      theme,
+      theme.colors.fadedText60,
+      theme.colors.navIconColor
+    )
+    const activeSvgColor = conditionalCustomColor(
+      theme,
+      theme.colors.bodyText,
+      theme.colors.navActiveTextColor
+    )
 
     const defaultPageLinkStyles = {
       textDecoration: "none",
@@ -176,13 +185,16 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
-    const isCustomTextColor = hasCustomTextColor(theme)
-    const defaultColor = isCustomTextColor
-      ? transparentize(theme.colors.bodyText, 0.2)
-      : theme.colors.navTextColor
-    const activeColor = isCustomTextColor
-      ? theme.colors.bodyText
-      : theme.colors.navActiveTextColor
+    const defaultColor = conditionalCustomColor(
+      theme,
+      transparentize(theme.colors.bodyText, 0.2),
+      theme.colors.navTextColor
+    )
+    const activeColor = conditionalCustomColor(
+      theme,
+      theme.colors.bodyText,
+      theme.colors.navActiveTextColor
+    )
 
     return {
       color: isActive ? activeColor : defaultColor,
@@ -277,9 +289,11 @@ export const StyledSidebarOpenContainer =
   )
 
 export const StyledOpenSidebarButton = styled.div(({ theme }) => {
-  const color = hasCustomTextColor(theme)
-    ? theme.colors.bodyText
-    : theme.colors.sidebarControlColor
+  const color = conditionalCustomColor(
+    theme,
+    theme.colors.bodyText,
+    theme.colors.sidebarControlColor
+  )
 
   return {
     zIndex: theme.zIndices.header,
@@ -304,9 +318,11 @@ export interface StyledCollapseSidebarButtonProps {
 export const StyledCollapseSidebarButton =
   styled.div<StyledCollapseSidebarButtonProps>(
     ({ showSidebarCollapse, theme }) => {
-      const color = hasCustomTextColor(theme)
-        ? theme.colors.bodyText
-        : theme.colors.sidebarControlColor
+      const color = conditionalCustomColor(
+        theme,
+        theme.colors.bodyText,
+        theme.colors.sidebarControlColor
+      )
 
       return {
         display: showSidebarCollapse ? "inline" : "none",
@@ -327,14 +343,16 @@ export const StyledCollapseSidebarButton =
   )
 
 export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
-  const navHeaderColor = hasCustomTextColor(theme)
-    ? transparentize(theme.colors.bodyText, 0.15)
-    : theme.colors.navTextColor
+  const color = conditionalCustomColor(
+    theme,
+    transparentize(theme.colors.bodyText, 0.15),
+    theme.colors.navTextColor
+  )
 
   return {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
-    color: navHeaderColor,
+    color,
     lineHeight: theme.lineHeights.table,
     paddingRight: theme.spacing.sm,
     marginLeft: theme.spacing.twoXL,
@@ -345,14 +363,16 @@ export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
 })
 
 export const StyledViewButton = styled.button(({ theme }) => {
-  const viewButtonColor = hasCustomTextColor(theme)
-    ? theme.colors.bodyText
-    : theme.colors.navActiveTextColor
+  const color = conditionalCustomColor(
+    theme,
+    theme.colors.bodyText,
+    theme.colors.navActiveTextColor
+  )
 
   return {
     fontSize: theme.fontSizes.sm,
     lineHeight: "1.4rem",
-    color: viewButtonColor,
+    color,
     backgroundColor: theme.colors.transparent,
     border: "none",
     borderRadius: theme.radii.lg,
