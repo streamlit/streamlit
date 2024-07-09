@@ -53,6 +53,7 @@ export const StyledStreamlitMarkdown =
       // Toasts also have smaller font size
       const labelFontSize = (isLabel && !largerLabel) || isToast
       return {
+        width: "100%",
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         ...sharedMarkdownStyle(theme),
