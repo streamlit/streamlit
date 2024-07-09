@@ -567,7 +567,9 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with patch("streamlit.exception") as mock_st_exception:
+        with patch(
+            "streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception"
+        ) as mock_st_exception:
             level1_dialog()
             mock_st_exception.assert_called_once()
             assert (

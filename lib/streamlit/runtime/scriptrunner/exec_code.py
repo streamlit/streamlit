@@ -108,7 +108,8 @@ def exec_func_with_error_handling(
     except Exception as ex:
         run_without_errors = False
         uncaught_exception = ex
-        handle_uncaught_app_exception(uncaught_exception)
+        fragment_inner_container_dg = ctx.fragment_inner_container_dg
+        handle_uncaught_app_exception(uncaught_exception, fragment_inner_container_dg)
         premature_stop = True
 
     return result, run_without_errors, rerun_exception_data, premature_stop

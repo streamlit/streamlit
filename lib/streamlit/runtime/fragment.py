@@ -213,6 +213,7 @@ def _fragment(
                         ctx.current_fragment_delta_path = (
                             active_dg._cursor.delta_path if active_dg._cursor else []
                         )
+                        ctx.fragment_inner_container_dg = dg_stack.get()[-1]
                         result = non_optional_func(*args, **kwargs)
             finally:
                 ctx.current_fragment_id = None

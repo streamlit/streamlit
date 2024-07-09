@@ -18,10 +18,15 @@ from e2e_playwright.conftest import wait_for_app_run
 
 
 def get_uuids(app: Page):
+    """Test that fragments run and the exception-raising-fragment does not stop the
+    other fragments.
+    """
     expect(app.get_by_test_id("stMarkdown")).to_have_count(2)
 
     fragment_1_text = app.get_by_test_id("stMarkdown").first.text_content()
     fragment_2_text = app.get_by_test_id("stMarkdown").last.text_content()
+
+    expect(app.get_by_test_id("stException")).to_have_count(1)
 
     return fragment_1_text, fragment_2_text
 
@@ -44,3 +49,19 @@ def test_fragments_run_independently(app: Page):
     wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(fragment_1_text)
     expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(fragment_2_text)
+
+
+def test_fragment_exception_disappears_when_rerun(app: Page):
+    """Unselecting the checkbox should hide the exception message.
+    If this does not work, the reason might be that the exception is
+    written in the main app's delta path and a fragment rerun does not
+    remove the element.
+    """
+    fragment_1_text, fragment_2_text = get_uuids(app)
+    wait_for_app_run(app)
+    assert fragment_1_text is not None
+    assert fragment_2_text is not None
+
+    expect(app.get_by_test_id("stException")).to_have_count(1)
+    app.get_by_test_id("stCheckbox").locator("span").first.click()
+    expect(app.get_by_test_id("stException")).to_have_count(0)
