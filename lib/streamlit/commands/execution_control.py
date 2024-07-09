@@ -151,6 +151,10 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
 
         page_script_hash = matched_pages[0]["page_script_hash"]
 
+    # We want to reset query params (with exception of embed) when switching pages
+    with ctx.session_state.query_params() as qp:
+        qp.clear()
+
     ctx.script_requests.request_rerun(
         RerunData(
             query_string=ctx.query_string,
