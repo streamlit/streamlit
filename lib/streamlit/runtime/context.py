@@ -122,12 +122,17 @@ class StreamlitCookies(Mapping[str, str]):
 
 
 class ContextProxy:
-    """A proxy for accessing the current request headers and cookies."""
+    """An interface to context about the current user session. Context is exposed as
+    properties on `st.context`, such as `st.context.headers` or `st.context.cookies`.
+    Each property description explains more about the contents."""
 
     @property
     @gather_metrics("context.headers")
     def headers(self) -> StreamlitHeaders:
-        """Websocket request headers."""
+        """A read-only, dict-like access to headers sent in the initial session
+        websocket request. Keys are case-insensitive. Use get_all() to see all values
+        if the same header is set multiple times.
+        """
         session_client_request = _get_request()
 
         if session_client_request is None:
@@ -138,7 +143,8 @@ class ContextProxy:
     @property
     @gather_metrics("context.cookies")
     def cookies(self) -> StreamlitCookies:
-        """Websocket request cookies."""
+        """A read-only, dict-like access to cookies sent in the initial session
+        websocket request."""
         session_client_request = _get_request()
 
         if session_client_request is None:
