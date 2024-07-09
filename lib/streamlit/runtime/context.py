@@ -129,10 +129,7 @@ class ContextProxy:
     @property
     @gather_metrics("context.headers")
     def headers(self) -> StreamlitHeaders:
-        """A read-only, dict-like access to headers sent in the initial session web
-        socket request. Keys are case-insensitive. Use get_all() to see all values if
-        the same header is set multiple times.
-        """
+        """A read-only, dict-like access to headers sent in the initial session websocket request. Keys are case-insensitive. Use get_all() to see all values if the same header is set multiple times."""
         session_client_request = _get_request()
 
         if session_client_request is None:
@@ -143,8 +140,7 @@ class ContextProxy:
     @property
     @gather_metrics("context.cookies")
     def cookies(self) -> StreamlitCookies:
-        """A read-only, dict-like access to cookies sent in the initial session
-        websocket request."""
+        """A read-only, dict-like access to cookies sent in the initial session websocket request."""
         session_client_request = _get_request()
 
         if session_client_request is None:
