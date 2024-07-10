@@ -227,8 +227,8 @@ def _fragment(
 
             return result
 
-        if not ctx.fragment_storage.contains(fragment_id):
-            ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        # if not ctx.fragment_storage.contains(fragment_id):
+        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()
