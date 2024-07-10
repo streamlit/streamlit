@@ -17,7 +17,6 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import inspect
-import threading
 from abc import abstractmethod
 from copy import deepcopy
 from functools import wraps
@@ -186,7 +185,6 @@ def _fragment(
 
                 ctx.new_fragment_ids.add(fragment_id)
             else:
-                print(f"[{threading.get_ident()}] ADD NEW FRAGMENT IDS {fragment_id}")
                 # Otherwise, we must be in a full script run. We keep track of all
                 # fragments defined in this script run to ensure that we don't
                 # delete them when we clean up this session's fragment storage.
@@ -211,9 +209,16 @@ def _fragment(
                 )
                 with active_hash_context:
                     with st.container():
+                        # use dg_stack instead of active_dg to have correct copy during
+                        # execution (otherwise we can run into concurrency issues with
+                        # multiple fragments). Use [:-1] of the delta path because thats
+                        # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
+                        # fragment elements start with [0, 3].
                         ctx.current_fragment_delta_path = (
-                            active_dg._cursor.delta_path if active_dg._cursor else []
-                        )
+                            dg_stack.get()[-1]._cursor.delta_path
+                            if dg_stack.get()[-1]._cursor
+                            else []
+                        )[:-1]
                         try:
                             result = non_optional_func(*args, **kwargs)
                         except Exception as ex:
