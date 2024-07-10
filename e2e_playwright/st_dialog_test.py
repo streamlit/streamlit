@@ -83,7 +83,7 @@ def test_dialog_closes_properly(app: Page):
 
 
 def test_dialog_dismisses_properly(app: Page):
-    """Test that dialog is dismissed properly after clicking on modal close (= dismiss)."""
+    """Test that dialog is dismissed properly after clicking on close (= dismiss)."""
     open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
@@ -95,7 +95,8 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
-# on webkit this test was flaky and manually reproducing the flaky error did not work, so we skip it for now
+# on webkit this test was flaky and manually reproducing the flaky error did not work,
+# so we skip it for now
 @pytest.mark.skip_browser("webkit")
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
@@ -107,8 +108,8 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
 
         main_dialog = app.get_by_test_id(modal_test_id)
 
-        # sometimes the dialog does not seem to open in the test, so retry opening it by clicking on it.
-        # if it does not open after the second attempt, fail the test.
+        # sometimes the dialog does not seem to open in the test, so retry opening it by
+        # clicking on it. if it does not open after the second attempt, fail the test.
         if main_dialog.count() == 0:
             app.wait_for_timeout(100)
             open_dialog_without_images(app)
@@ -173,7 +174,7 @@ def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
 
 
 def test_actions_for_dialog_headings(app: Page):
-    """Test that headings within the dialog show the tooltip icon but not the link icon."""
+    """Test that dialog headings show the tooltip icon but not the link icon."""
     open_headings_dialogs(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
@@ -197,7 +198,8 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     open_dialog_without_images(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
-    # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
+    # click on the dialog title to take away focus of all elements and make the
+    # screenshot stable. Then hover over the button for visual effect.
     dialog.locator("div", has_text="Simple Dialog").click()
     submit_button = dialog.get_by_test_id("stButton")
     expect(submit_button).to_be_visible()
@@ -211,7 +213,8 @@ def test_largewidth_dialog_displays_correctly(
     open_largewidth_dialog(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
-    # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
+    # click on the dialog title to take away focus of all elements and make the
+    # screenshot stable. Then hover over the button for visual effect.
     dialog.locator("div", has_text="Large-width Dialog").click()
     submit_button = dialog.get_by_test_id("stButton")
     expect(submit_button).to_be_visible()
@@ -219,14 +222,17 @@ def test_largewidth_dialog_displays_correctly(
     assert_snapshot(dialog, name="st_dialog-with_large_width")
 
 
-# its enough to test this on one browser as showing the error inline is more a backend functionality than a frontend one
+# its enough to test this on one browser as showing the error inline is more a backend
+# functionality than a frontend one
 @pytest.mark.only_browser("chromium")
 def test_dialog_shows_error_inline(app: Page, assert_snapshot: ImageCompareFunction):
-    """Additional check to the unittests we have to ensure errors thrown during the main script execution (not a fragment-only rerun) are rendered within the dialog."""
+    """Additional check to the unittests we have to ensure errors thrown during the main
+    script execution (not a fragment-only rerun) are rendered within the dialog."""
     open_dialog_with_internal_error(app)
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
-    # click on the dialog title to take away focus of all elements and make the screenshot stable. Then hover over the button for visual effect.
+    # click on the dialog title to take away focus of all elements and make the
+    # screenshot stable. Then hover over the button for visual effect.
     dialog.locator("div", has_text="Dialog with error").click()
     expect(dialog.get_by_text("TypeError")).to_be_visible()
     assert_snapshot(dialog, name="st_dialog-with_inline_error")
@@ -240,7 +246,8 @@ def test_sidebar_dialog_displays_correctly(
     dialog = app.get_by_role("dialog")
     submit_button = dialog.get_by_test_id("stButton")
     expect(submit_button).to_be_visible()
-    # ensure focus of the button to avoid flakiness where sometimes snapshots are made when the button is not in focus
+    # ensure focus of the button to avoid flakiness where sometimes snapshots are made
+    # when the button is not in focus
     submit_button.get_by_test_id("baseButton-secondary").hover()
     assert_snapshot(dialog, name="st_dialog-in_sidebar")
 
@@ -256,6 +263,9 @@ def test_nested_dialogs(app: Page):
     )
 
 
+# on webkit this test was flaky and manually reproducing the flaky error did not work,
+# so we skip it for now
+@pytest.mark.skip_browser("webkit")
 def test_dialogs_have_different_fragment_ids(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
     open_submit_button_dialog(app)

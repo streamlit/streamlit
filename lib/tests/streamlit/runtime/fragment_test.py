@@ -395,21 +395,21 @@ class FragmentTest(unittest.TestCase):
     def test_fragment_additional_hash_info_param_used_for_generating_id(
         self, patched_get_script_run_ctx
     ):
-        ctx = MagicMock()
-        patched_get_script_run_ctx.return_value = ctx
         """Test that the internal function can be called with an
         additional hash info parameter."""
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
 
         def my_function():
             return ctx.current_fragment_id
 
         fragment_id1 = _fragment(my_function)()
         fragment_id2 = _fragment(my_function, additional_hash_info="some_hash_info")()
-        self.assertNotEqual(fragment_id1, fragment_id2)
+        assert fragment_id1 != fragment_id2
 
         # countercheck
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
-        self.assertEqual(fragment_id1, fragment_id2)
+        assert fragment_id1 == fragment_id2
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
