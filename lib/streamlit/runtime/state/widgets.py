@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Final, Mapping
 from typing_extensions import TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
@@ -243,20 +244,31 @@ def coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
-    trigger_value_types = [("trigger_value", False), ("string_trigger_value", None)]
+    trigger_value_types = [
+        ("trigger_value", False),
+        ("string_trigger_value", StringTriggerValueProto(data=None)),
+    ]
     for old_state in old_states.widgets:
         for trigger_value_type, unset_value in trigger_value_types:
             if (
                 old_state.WhichOneof("value") == trigger_value_type
-                and old_state.trigger_value != unset_value
+                and getattr(old_state, trigger_value_type) != unset_value
             ):
-                # Ensure the corresponding new_state is also a trigger;
-                # otherwise, a widget that was previously a button but no longer is
-                # could get a bad value.
                 new_trigger_val = states_by_id.get(old_state.id)
-                if (
-                    new_trigger_val
-                    and new_trigger_val.WhichOneof("value") == trigger_value_type
+                # It should nearly always be the case that new_trigger_val is None
+                # here as trigger values are deleted from the client's WidgetStateManager
+                # as soon as a rerun_script BackMsg is sent to the server. Since it's
+                # impossible to test that the client sends us state in the expected
+                # format in a unit test, we test for this behavior in
+                # e2e_playwright/test_fragment_queue_test.py
+                if not new_trigger_val or (
+                    # Ensure the corresponding new_state is also a trigger;
+                    # otherwise, a widget that was previously a button/chat_input but no
+                    # longer is could get a bad value.
+                    new_trigger_val.WhichOneof("value") == trigger_value_type
+                    # We only want to take the value of old_state if new_trigger_val is
+                    # unset as the old value may be stale if a newer one was entered.
+                    and getattr(new_trigger_val, trigger_value_type) == unset_value
                 ):
                     states_by_id[old_state.id] = old_state
 
