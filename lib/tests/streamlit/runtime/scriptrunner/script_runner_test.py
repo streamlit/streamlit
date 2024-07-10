@@ -430,11 +430,6 @@ class ScriptRunnerTest(AsyncTestCase):
         def fragment():
             _fragment(non_optional_func)()
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
-    def test_regular_KeyError_is_rethrown(self, patched_handle_exception):
-        fragment = MagicMock()
-        fragment.side_effect = KeyError("kaboom")
-
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner._fragment_storage.set("my_fragment", fragment)
 

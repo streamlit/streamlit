@@ -243,10 +243,10 @@ def _fragment(
                             # raise here again in case we are in full app execution
                             # and some flags have to be set
                             raise FragmentHandledException(e)
+                    return result
             finally:
                 ctx.current_fragment_id = None
                 ctx.current_fragment_delta_path = []
-            return result
 
         if not ctx.fragment_storage.contains(fragment_id):
             ctx.fragment_storage.set(fragment_id, wrapped_fragment)
