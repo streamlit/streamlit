@@ -953,7 +953,8 @@ export class App extends PureComponent<Props, State> {
   maybeUpdatePageUrl = (
     mainPageName: string,
     newPageName: string,
-    isViewingMainPage: boolean
+    isViewingMainPage: boolean,
+    queryString?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (baseUriParts) {
@@ -971,13 +972,11 @@ export class App extends PureComponent<Props, State> {
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
         const pagePath = isViewingMainPage ? "" : newPageName
-        const queryString = preserveEmbedQueryParams()
-        const qs = queryString ? `?${queryString}` : ""
-
+        const newQueryString =
+          preserveEmbedQueryParams() + (queryString ? `&${queryString}` : "")
         const basePathPrefix = basePath ? `/${basePath}` : ""
-
+        const qs = newQueryString ? `?${newQueryString}` : ""
         const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
-
         window.history.pushState({}, "", pageUrl)
       }
     }
@@ -1793,15 +1792,6 @@ export class App extends PureComponent<Props, State> {
 
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
-
-  // queryParamsToString = (queryParams: Map<string, string[]>): string => {
-  //   return params URLSearchParams()
-
-  //   return [...queryParams.entries()]
-  //     .flatMap(([k, vs]) => vs.map(v => [k, v]))
-  //     .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
-  //     .join("&")
-  // }
 
   queryStringToParams = (queryParams: string): URLSearchParams => {
     return new URLSearchParams(queryParams)

@@ -476,6 +476,7 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
                 clear_forward_msg_queue=clear_forward_msg_queue,
+                query_string=ctx.query_string,
             )
 
             # Compile the script. Any errors thrown here will be surfaced

@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import os
 from itertools import dropwhile
-from typing import Final, Literal, NoReturn
+from typing import Final, Iterable, Literal, Mapping, NoReturn
 
-import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.logger import get_logger
@@ -56,7 +55,7 @@ def stop() -> NoReturn:  # type: ignore[misc]
     if ctx and ctx.script_requests:
         ctx.script_requests.request_stop()
         # Force a yield point so the runner can stop
-        st.empty()
+        ctx.session_state._yield_callback()
 
 
 def _new_fragment_id_queue(
@@ -147,11 +146,14 @@ def rerun(  # type: ignore[misc]
             )
         )
         # Force a yield point so the runner can do the rerun
-        st.empty()
+        ctx.session_state._yield_callback()
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
+def switch_page(
+    page: str | StreamlitPage,
+    query_params: Mapping[str, str | Iterable[str]] | None = None,
+) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
@@ -218,8 +220,22 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
         page_script_hash = matched_pages[0]["page_script_hash"]
 
     # We want to reset query params (with exception of embed) when switching pages
+    # but also allow the user to update the query_params explicitly.
+    # Any changes to session_state qp here will be automatically reflected in
+    # ctx.query_string when QueryParams sends a forward message.
     with ctx.session_state.query_params() as qp:
-        qp.clear()
+        if query_params is not None:
+            if hasattr(query_params, "get_all"):
+                query_params = {k: query_params.get_all(k) for k in query_params}
+            # PROBLEM: This (and clear) both send a forward message; this results in TWO items being put in
+            # browser history. We really want just ONE item in browser history for this switch, which
+            # means we need to update query params WITHOUT sending anything to the frontend, however
+            # that currently (with the present implementation of QueryParams) bypasses all the value
+            # validation that we perform against user input.
+            # hmm.....
+            qp.from_dict(query_params)
+        else:
+            qp.clear()
 
     ctx.script_requests.request_rerun(
         RerunData(
@@ -228,4 +244,4 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
         )
     )
     # Force a yield point so the runner can do the rerun
-    st.empty()
+    ctx.session_state._yield_callback()
