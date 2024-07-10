@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_markdown
 
 modal_test_id = "stModal"
 
@@ -44,6 +45,14 @@ def open_sidebar_dialog(app: Page):
 
 def open_dialog_with_internal_error(app: Page):
     app.get_by_role("button").filter(has_text="Open Dialog with Key Error").click()
+
+
+def open_nested_dialogs(app: Page):
+    app.get_by_role("button").filter(has_text="Open Nested Dialogs").click()
+
+
+def open_submit_button_dialog(app: Page):
+    app.get_by_role("button").filter(has_text="Open submit-button Dialog").click()
 
 
 def click_to_dismiss(app: Page):
@@ -238,10 +247,44 @@ def test_sidebar_dialog_displays_correctly(
 
 def test_nested_dialogs(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
-    app.get_by_text("Open Nested Dialogs").click()
+    open_nested_dialogs(app)
     wait_for_app_run(app)
     exception_message = app.get_by_test_id("stException")
 
     expect(exception_message).to_contain_text(
         "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
     )
+
+
+def test_dialogs_have_different_fragment_ids(app: Page):
+    """Test that st.dialog may not be nested inside other dialogs."""
+    open_submit_button_dialog(app)
+    wait_for_app_run(app)
+    large_width_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
+    dialog = app.get_by_role("dialog")
+    submit_button = dialog.get_by_test_id("stButton")
+    expect(submit_button).to_be_visible()
+    submit_button.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+
+    open_nested_dialogs(app)
+    wait_for_app_run(app)
+    nested_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
+    exception_message = app.get_by_test_id("stException")
+    expect(exception_message).to_contain_text(
+        "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
+    )
+    click_to_dismiss(app)
+
+    open_submit_button_dialog(app)
+    wait_for_app_run(app)
+    dialog = app.get_by_role("dialog")
+    submit_button = dialog.get_by_test_id("stButton")
+    expect(submit_button).to_be_visible()
+    submit_button.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+
+    exception_message = app.get_by_test_id("stException")
+    expect(exception_message).not_to_be_attached()
+
+    assert large_width_dialog_fragment_id != nested_dialog_fragment_id
