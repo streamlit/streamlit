@@ -361,7 +361,10 @@ class FragmentTest(unittest.TestCase):
     def test_fragment_raises_rerun_exception_in_main_execution_context(
         self, patched_get_script_run_ctx
     ):
-        """Ensure that a rerun exception raised in a fragment when executed in the main execution context (meaning first execution in the app flow, not via a fragment-only rerun) is raised in the main execution context."""
+        """Ensure that a rerun exception raised in a fragment when executed in the main
+        execution context (meaning first execution in the app flow, not via a
+        fragment-only rerun) is raised in the main execution context.
+        """
         ctx = MagicMock()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -377,7 +380,8 @@ class FragmentTest(unittest.TestCase):
     def test_fragment_handles_non_rerun_exceptions_in_fragment_execution_context(
         self, exception_type: Exception
     ):
-        """Ensures that all non-rerun exceptions are caught by the fragment code and not raised."""
+        """Ensures that all non-rerun exceptions are caught by the fragment code and not
+        raised."""
         with patch(
             "streamlit.runtime.fragment.get_script_run_ctx"
         ) as patched_get_script_run_ctx:
