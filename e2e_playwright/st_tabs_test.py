@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -22,8 +23,8 @@ def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFu
     st_tabs = themed_app.get_by_test_id("stTabs")
     expect(st_tabs).to_have_count(3)
 
-    st_tabs.nth(2).filter(has_text="Tab 2").click(delay=10)
-    st_tabs.nth(2).filter(has_text="Tab 0").click()
+    st_tabs.nth(2).get_by_text("Tab 1", exact=True).click()
+    st_tabs.nth(2).get_by_text("Tab 0", exact=True).click()
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
