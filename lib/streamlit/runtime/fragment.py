@@ -212,8 +212,8 @@ def _fragment(
                     # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
                     # fragment elements start with [0, 3].
                     ctx.current_fragment_delta_path = (
-                        dg_stack_snapshot[-1]._cursor.delta_path
-                        if dg_stack_snapshot[-1]._cursor
+                        dg_stack.get()[-1]._cursor.delta_path
+                        if dg_stack.get()[-1]._cursor
                         else []
                     )[:-1]
                     try:
@@ -227,8 +227,8 @@ def _fragment(
 
             return result
 
-        # if not ctx.fragment_storage.contains(fragment_id):
-        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        if not ctx.fragment_storage.contains(fragment_id):
+            ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()
