@@ -154,10 +154,9 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(dg_stack.get())
-        active_dg = dg_stack_snapshot[-1]
         h = hashlib.new("md5")
         h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode()
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}".encode()
         )
         fragment_id = h.hexdigest()
 
@@ -181,12 +180,12 @@ def _fragment(
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)
                 dg_stack.set(deepcopy(dg_stack_snapshot))
-            else:
-                # Otherwise, we must be in a full script run. We keep track of all
-                # fragments defined in this script run to ensure that we don't
-                # delete them when we clean up this session's fragment storage.
-                ctx.new_fragment_ids.add(fragment_id)
 
+            # Always add the fragment id to new_fragment_ids. For full app runs
+            # we need to add them anyways and for fragment runs we add them
+            # in case the to-be-executed fragment id was cleared from the storage
+            # by the full app run.
+            ctx.new_fragment_ids.add(fragment_id)
             # Set ctx.current_fragment_id so that elements corresponding to this
             # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
             # reset after the fragment function finishes running.
@@ -206,9 +205,16 @@ def _fragment(
                 )
                 with active_hash_context:
                     with st.container():
+                        # use dg_stack instead of active_dg to have correct copy during
+                        # execution (otherwise we can run into concurrency issues with
+                        # multiple fragments). Use dg_stack because we just entered a
+                        # container and [:-1] of the delta path because thats
+                        # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
+                        # fragment elements start with [0, 3].
+                        active_dg = dg_stack.get()[-1]
                         ctx.current_fragment_delta_path = (
                             active_dg._cursor.delta_path if active_dg._cursor else []
-                        )
+                        )[:-1]
                         result = non_optional_func(*args, **kwargs)
             finally:
                 ctx.current_fragment_id = None
