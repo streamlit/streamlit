@@ -27,12 +27,23 @@ def get_uuids(app: Page):
 
 
 def test_fragments_rerun_correctly_during_full_app_run(app: Page):
-    # Click the first button and verify that only the uuid in the first fragment
-    # changed.
+    """Test that fragments can send fragment-bound reruns during full app runs.
+
+    Click on the full app rerun button and immediately click on the second
+    fragment button. This will send a rerun message bound to the fragment while
+    the full app run is still executing. The expectation is that the full app
+    run is still continuing and the following fragments are also registered
+    and executing correctly.
+    """
 
     app.get_by_test_id("stButton").locator("button").filter(
         has_text="Full app rerun"
     ).click()
+
+    # wait until first fragment is finished
+    sleep_time_of_fragment = 3500
+    app.wait_for_timeout(sleep_time_of_fragment)
+
     app.get_by_test_id("stButton").locator("button").nth(1).click()
     wait_for_app_run(app)
 
