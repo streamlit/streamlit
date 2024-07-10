@@ -686,8 +686,7 @@ def _get_opacity_encoding(
 ) -> alt.OpacityValue | None:
     import altair as alt
 
-    # Since opacity set to 0.7 for all area charts previously, avoid
-    # changing visual behavior despite new stack param
+    # Opacity set to 0.7 for all area charts
     if color_column and chart_type == ChartType.AREA:
         return alt.OpacityValue(0.7)
 
