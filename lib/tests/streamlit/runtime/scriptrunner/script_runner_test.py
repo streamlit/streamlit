@@ -27,8 +27,8 @@ from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.errors import FragmentStorageKeyError
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
