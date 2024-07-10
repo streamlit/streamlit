@@ -158,6 +158,7 @@ def check_fragment_path_policy(dg: DeltaGenerator):
 
     # all path indices of the fragment-path must occur in the inner-elements delta path,
     # otherwise it is outside of the fragment container
+    print(f"policy: {current_fragment_delta_path} | {current_cursor_delta_path}")
     for index, path_index in enumerate(current_fragment_delta_path):
         if current_cursor_delta_path[index] != path_index:
             raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)

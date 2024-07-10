@@ -23,6 +23,7 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
+from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -195,7 +196,7 @@ def _fragment(
             # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
             # reset after the fragment function finishes running.
             ctx.current_fragment_id = fragment_id
-
+            result: Any = None
             try:
                 # Make sure we set the active script hash to the same value
                 # for the fragment run as when defined upon initialization
@@ -213,10 +214,14 @@ def _fragment(
                         ctx.current_fragment_delta_path = (
                             active_dg._cursor.delta_path if active_dg._cursor else []
                         )
-                        ctx.fragment_inner_container_dg = dg_stack.get()[-1]
-                        result = non_optional_func(*args, **kwargs)
+                        try:
+                            result = non_optional_func(*args, **kwargs)
+                        except Exception as ex:
+                            handle_uncaught_app_exception(ex)
+                            raise ex
             finally:
                 ctx.current_fragment_id = None
+                ctx.current_fragment_delta_path = []
 
             return result
 
@@ -235,8 +240,9 @@ def _fragment(
         # fragment appear in the fragment path also for the first execution here in
         # context of a full app run.
         result, _, _, _ = exec_func_with_error_handling(
-            wrapped_fragment, ctx, reraise_rerun_exception=True
+            wrapped_fragment, ctx, reraise_rerun_exception=True, handle_exception=False
         )
+        # ctx.current_fragment_id = None
         return result
 
     with contextlib.suppress(AttributeError):

@@ -572,9 +572,9 @@ class ScriptRunner:
                             raise RuntimeError(
                                 f"Could not find fragment with id {fragment_id}"
                             )
-                        self._session_state.maybe_check_serializable()
-                        # check for control requests, e.g. rerun requests have arrived
-                        self._maybe_handle_execution_control_request()
+                        # self._session_state.maybe_check_serializable()
+                        # # check for control requests, e.g. rerun requests have arrived
+                        # self._maybe_handle_execution_control_request()
 
                     return exec_code_callback
 
@@ -610,9 +610,9 @@ class ScriptRunner:
                             fragment_rerun_exception_data,
                             fragment_premature_stop,
                         ) = exec_func_with_error_handling(
-                            exec_fragment(fragment_id),
-                            ctx,
+                            exec_fragment(fragment_id), ctx, handle_exception=True
                         )
+                        # ctx.current_fragment_id = None
                         if (
                             not at_least_one_fragment_error
                             and fragment_run_without_errors

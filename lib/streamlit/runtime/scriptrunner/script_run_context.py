@@ -28,7 +28,6 @@ from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
     from streamlit.cursor import RunningCursor
-    from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
@@ -79,7 +78,6 @@ class ScriptRunContext:
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
-    fragment_inner_container_dg: DeltaGenerator | None = None
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     # If true, it indicates that we are in a cached function that disallows

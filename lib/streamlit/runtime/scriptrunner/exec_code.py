@@ -29,6 +29,7 @@ def exec_func_with_error_handling(
     ctx: ScriptRunContext,
     *,
     reraise_rerun_exception: bool = False,
+    handle_exception: bool = True,
 ) -> tuple[Any | None, bool, RerunData | None, bool]:
     """Execute the passed function wrapped in a try/except block.
 
@@ -107,9 +108,12 @@ def exec_func_with_error_handling(
 
     except Exception as ex:
         run_without_errors = False
-        uncaught_exception = ex
-        fragment_inner_container_dg = ctx.fragment_inner_container_dg
-        handle_uncaught_app_exception(uncaught_exception, fragment_inner_container_dg)
         premature_stop = True
+        if handle_exception:
+            uncaught_exception = ex
+            handle_uncaught_app_exception(uncaught_exception)
+    finally:
+        ctx.current_fragment_id = None
+        ctx.current_fragment_delta_path = None
 
     return result, run_without_errors, rerun_exception_data, premature_stop

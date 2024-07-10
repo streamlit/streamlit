@@ -149,7 +149,7 @@ class FragmentTest(unittest.TestCase):
 
         ctx.current_fragment_id = "my_fragment_id"
         with patch(
-            "streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception"
+            "streamlit.runtime.fragment.handle_uncaught_app_exception"
         ) as mock_handle_uncaught_app_exception:
             my_exploding_fragment()
             mock_handle_uncaught_app_exception.assert_called_once()
@@ -551,7 +551,7 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _element_producer: ELEMENT_PRODUCER,
     ):
         with patch(
-            "streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception"
+            "streamlit.runtime.fragment.handle_uncaught_app_exception"
         ) as mock_handle_uncaught_app_exception:
             _app(_element_producer)
             mock_handle_uncaught_app_exception.assert_called_once()
@@ -560,8 +560,6 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
                 str(call_args[0])
                 == "Fragments cannot write to elements outside of their container."
             )
-            # assert that the fragment's dg was passed to handle_exception
-            assert isinstance(call_args[1], DeltaGenerator)
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)
