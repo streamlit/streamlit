@@ -72,7 +72,12 @@ def _dialog_decorator(
             return None
 
         # the fragment decorator has multiple return types so that you can pass arguments to it. Here we know the return type, so we cast
-        fragmented_dialog_content = cast(Callable[[], None], _fragment(dialog_content))
+        fragmented_dialog_content = cast(
+            Callable[[], None],
+            _fragment(
+                dialog_content, additional_hash_info=non_optional_func.__qualname__
+            ),
+        )
         with dialog:
             fragmented_dialog_content()
             return None

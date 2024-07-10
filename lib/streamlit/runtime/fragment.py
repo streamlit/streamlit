@@ -123,7 +123,10 @@ class MemoryFragmentStorage(FragmentStorage):
 
 
 def _fragment(
-    func: F | None = None, *, run_every: int | float | timedelta | str | None = None
+    func: F | None = None,
+    *,
+    run_every: int | float | timedelta | str | None = None,
+    additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -156,7 +159,7 @@ def _fragment(
         dg_stack_snapshot = deepcopy(dg_stack.get())
         h = hashlib.new("md5")
         h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}".encode()
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}".encode()
         )
         fragment_id = h.hexdigest()
 
