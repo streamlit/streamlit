@@ -547,7 +547,9 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if rerun_data.fragment_id_queue:
-                        for fragment_id in rerun_data.fragment_id_queue:
+                        for index, fragment_id in enumerate(
+                            rerun_data.fragment_id_queue
+                        ):
                             try:
                                 wrapped_fragment = self._fragment_storage.get(
                                     fragment_id
@@ -558,6 +560,29 @@ class ScriptRunner:
                                 raise RuntimeError(
                                     f"Could not find fragment with id {fragment_id}"
                                 )
+                            except RerunException as e:
+                                print(f"fragment rerun exception: {e}")
+                                ex_rerun_data = e.rerun_data
+                                new_rerun_data = RerunData(
+                                    query_string=ex_rerun_data.query_string,
+                                    widget_states=ex_rerun_data.widget_states,
+                                    page_script_hash=ex_rerun_data.page_script_hash,
+                                    page_name=ex_rerun_data.page_name,
+                                    fragment_id_queue=rerun_data.fragment_id_queue[
+                                        index:
+                                    ]
+                                    if ex_rerun_data.is_fragment_scoped_rerun
+                                    else [],
+                                    is_fragment_scoped_rerun=ex_rerun_data.is_fragment_scoped_rerun,
+                                )
+                                rerun_exception = RerunException(
+                                    rerun_data=new_rerun_data
+                                )
+                                raise rerun_exception
+                            # except Exception as e:
+                            #     print(f"fragment exception {e}")
+                            #     handle_uncaught_app_exception(e)
+
                     else:
                         exec(code, module.__dict__)
                         self._fragment_storage.clear(

@@ -194,6 +194,7 @@ def _fragment(
             # reset after the fragment function finishes running.
             ctx.current_fragment_id = fragment_id
 
+            result = None
             try:
                 # Make sure we set the active script hash to the same value
                 # for the fragment run as when defined upon initialization
@@ -208,19 +209,53 @@ def _fragment(
                 )
                 with active_hash_context:
                     with st.container():
-                        # use dg_stack instead of active_dg to have correct copy during
-                        # execution (otherwise we can run into concurrency issues with
-                        # multiple fragments). Use dg_stack because we just entered a
-                        # container and [:-1] of the delta path because thats
-                        # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
-                        # fragment elements start with [0, 3].
-                        active_dg = dg_stack.get()[-1]
-                        ctx.current_fragment_delta_path = (
-                            active_dg._cursor.delta_path if active_dg._cursor else []
-                        )[:-1]
-                        result = non_optional_func(*args, **kwargs)
+                        try:
+                            from streamlit.error_util import (
+                                handle_uncaught_app_exception,
+                            )
+                            from streamlit.runtime.scriptrunner.exceptions import (
+                                RerunException,
+                            )
+                            from streamlit.runtime.scriptrunner.script_requests import (
+                                RerunData,
+                            )
+
+                            # use dg_stack instead of active_dg to have correct copy during
+                            # execution (otherwise we can run into concurrency issues with
+                            # multiple fragments). Use dg_stack because we just entered a
+                            # container and [:-1] of the delta path because thats
+                            # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
+                            # fragment elements start with [0, 3].
+                            active_dg = dg_stack.get()[-1]
+                            ctx.current_fragment_delta_path = (
+                                active_dg._cursor.delta_path
+                                if active_dg._cursor
+                                else []
+                            )[:-1]
+                            result = non_optional_func(*args, **kwargs)
+                        # except RerunException as e:
+                        #     print(f"fragment rerun exception: {e}")
+                        #     ex_rerun_data = e.rerun_data
+                        #     new_rerun_data = RerunData(
+                        #         query_string=ex_rerun_data.query_string,
+                        #         widget_states=ex_rerun_data.widget_states,
+                        #         page_script_hash=ex_rerun_data.page_script_hash,
+                        #         page_name=ex_rerun_data.page_name,
+                        #         fragment_id_queue=[
+                        #             ctx.current_fragment_id
+                        #         ]  # rerun_data.fragment_id_queue[index:]
+                        #         if ex_rerun_data.is_fragment_scoped_rerun
+                        #         else [],
+                        #         is_fragment_scoped_rerun=ex_rerun_data.is_fragment_scoped_rerun,
+                        #     )
+                        #     rerun_exception = RerunException(rerun_data=new_rerun_data)
+                        #     raise rerun_exception
+                        except Exception as e:
+                            print(f"fragment exception {e}")
+                            handle_uncaught_app_exception(e)
             finally:
                 ctx.current_fragment_id = None
+                ctx.current_fragment_delta_path = []
 
             return result
 
@@ -239,7 +274,7 @@ def _fragment(
         # fragment appear in the fragment path also for the first execution here in
         # context of a full app run.
         result, _, _, _ = exec_func_with_error_handling(
-            wrapped_fragment, ctx, reraise_rerun_exception=True
+            wrapped_fragment, ctx, reraise_rerun_exception=False
         )
         return result
 
