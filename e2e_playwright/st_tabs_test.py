@@ -22,6 +22,7 @@ def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFu
     st_tabs = themed_app.get_by_test_id("stTabs")
     expect(st_tabs).to_have_count(3)
 
+    st_tabs.nth(2).filter(has_text="Tab 2").click()
     st_tabs.nth(2).filter(has_text="Tab 0").click()
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
