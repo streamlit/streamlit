@@ -195,38 +195,35 @@ def _fragment(
             # reset after the fragment function finishes running.
             ctx.current_fragment_id = fragment_id
             result: Any = None
-            try:
-                # Make sure we set the active script hash to the same value
-                # for the fragment run as when defined upon initialization
-                # This ensures that elements (especially widgets) are tied
-                # to a consistent active script hash
-                active_hash_context = (
-                    ctx.pages_manager.run_with_active_hash(
-                        initialized_active_script_hash
-                    )
-                    if initialized_active_script_hash != ctx.active_script_hash
-                    else contextlib.nullcontext()
-                )
-                with active_hash_context:
-                    with st.container():
-                        # use dg_stack instead of active_dg to have correct copy during
-                        # execution (otherwise we can run into concurrency issues with
-                        # multiple fragments). Use [:-1] of the delta path because thats
-                        # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
-                        # fragment elements start with [0, 3].
-                        ctx.current_fragment_delta_path = (
-                            dg_stack.get()[-1]._cursor.delta_path
-                            if dg_stack.get()[-1]._cursor
-                            else []
-                        )[:-1]
-                        try:
-                            result = non_optional_func(*args, **kwargs)
-                        except Exception as ex:
-                            handle_uncaught_app_exception(ex)
-                            raise ex
-            finally:
-                ctx.current_fragment_id = None
-                ctx.current_fragment_delta_path = []
+            # Make sure we set the active script hash to the same value
+            # for the fragment run as when defined upon initialization
+            # This ensures that elements (especially widgets) are tied
+            # to a consistent active script hash
+            active_hash_context = (
+                ctx.pages_manager.run_with_active_hash(initialized_active_script_hash)
+                if initialized_active_script_hash != ctx.active_script_hash
+                else contextlib.nullcontext()
+            )
+            with active_hash_context:
+                with st.container():
+                    # use dg_stack instead of active_dg to have correct copy during
+                    # execution (otherwise we can run into concurrency issues with
+                    # multiple fragments). Use [:-1] of the delta path because thats
+                    # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
+                    # fragment elements start with [0, 3].
+                    ctx.current_fragment_delta_path = (
+                        dg_stack_snapshot[-1]._cursor.delta_path
+                        if dg_stack_snapshot[-1]._cursor
+                        else []
+                    )[:-1]
+                    try:
+                        result = non_optional_func(*args, **kwargs)
+                    except Exception as ex:
+                        handle_uncaught_app_exception(ex)
+                        raise ex
+                    finally:
+                        ctx.current_fragment_id = None
+                        ctx.current_fragment_delta_path = []
 
             return result
 

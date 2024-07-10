@@ -112,8 +112,8 @@ def exec_func_with_error_handling(
         if handle_exception:
             uncaught_exception = ex
             handle_uncaught_app_exception(uncaught_exception)
-    finally:
-        ctx.current_fragment_id = None
-        ctx.current_fragment_delta_path = None
+    # finally:
+    #     ctx.current_fragment_id = None
+    #     ctx.current_fragment_delta_path = None
 
     return result, run_without_errors, rerun_exception_data, premature_stop

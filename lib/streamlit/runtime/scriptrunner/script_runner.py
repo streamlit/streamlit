@@ -610,7 +610,7 @@ class ScriptRunner:
                             fragment_rerun_exception_data,
                             fragment_premature_stop,
                         ) = exec_func_with_error_handling(
-                            exec_fragment(fragment_id), ctx, handle_exception=True
+                            exec_fragment(fragment_id), ctx, handle_exception=False
                         )
                         # ctx.current_fragment_id = None
                         if (
