@@ -157,6 +157,7 @@ date_input = _main.date_input
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
+feedback = _main.feedback
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error

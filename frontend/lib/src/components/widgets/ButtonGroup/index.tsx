@@ -14,6 +14,4 @@
  * limitations under the License.
  */
 
-export { default, EmojiIcon } from "./Icon"
-export { DynamicIcon, isMaterialIcon } from "./DynamicIcon"
-export { StyledIcon, StyledSpinnerIcon } from "./styled-components"
+export { default } from "./ButtonGroup"

@@ -39,6 +39,12 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   return { pack: iconPack, icon: iconNameInPack }
 }
 
+export function isMaterialIcon(option: string): boolean {
+  const materialIconRegexp = /^:material\/(.+):$/
+  const materialIconMatch = materialIconRegexp.exec(option)
+  return materialIconMatch !== null
+}
+
 export interface DynamicIconProps {
   iconValue: string
   size?: IconSize
