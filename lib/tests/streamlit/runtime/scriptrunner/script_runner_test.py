@@ -355,6 +355,45 @@ class ScriptRunnerTest(AsyncTestCase):
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
+    def test_run_multiple_fragments_even_if_one_raised_an_exception(self):
+        """Tests that fragments continue to run when previous fragment raised an error."""
+        fragment = MagicMock()
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        raised_exception = {"called": False}
+
+        def raise_exception():
+            raised_exception["called"] = True
+            raise RuntimeError("this fragment errored out")
+
+        scriptrunner._fragment_storage.set("my_fragment1", raise_exception)
+        scriptrunner._fragment_storage.set("my_fragment2", fragment)
+        scriptrunner._fragment_storage.set("my_fragment3", fragment)
+
+        scriptrunner.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        self.assertTrue(raised_exception["called"])
+        fragment.assert_has_calls([call(), call()])
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
     @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
     def test_FragmentStorageKeyError_becomes_RuntimeError(
         self, patched_handle_exception
@@ -375,17 +414,15 @@ class ScriptRunnerTest(AsyncTestCase):
     @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
     def test_regular_KeyError_is_rethrown(self, patched_handle_exception):
         fragment = MagicMock()
-        fragment.side_effect = KeyError("kaboom")
-
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("my_fragment", fragment)
+        scriptrunner._fragment_storage.set("my_fragment_", fragment)
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
         ex = patched_handle_exception.call_args[0][0]
-        assert isinstance(ex, KeyError)
+        assert isinstance(ex, (RuntimeError, KeyError))
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""

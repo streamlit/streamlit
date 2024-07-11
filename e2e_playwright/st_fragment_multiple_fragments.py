@@ -24,5 +24,13 @@ def my_fragment(n):
         st.write(f"uuid in fragment {n}: {uuid4()}")
 
 
+@st.fragment
+def exception_raising_fragment():
+    if st.checkbox("Raise Exception", value=True):
+        raise RuntimeError("This is an exception raised in a fragment")
+
+
 my_fragment(1)
+# fragment that raises an exception does not stop the flow
+exception_raising_fragment()
 my_fragment(2)

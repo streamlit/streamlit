@@ -22,10 +22,12 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
+from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.time_util import time_to_seconds
 
@@ -210,16 +212,6 @@ def _fragment(
                 with active_hash_context:
                     with st.container():
                         try:
-                            from streamlit.error_util import (
-                                handle_uncaught_app_exception,
-                            )
-                            from streamlit.runtime.scriptrunner.exceptions import (
-                                RerunException,
-                            )
-                            from streamlit.runtime.scriptrunner.script_requests import (
-                                RerunData,
-                            )
-
                             # use dg_stack instead of active_dg to have correct copy during
                             # execution (otherwise we can run into concurrency issues with
                             # multiple fragments). Use dg_stack because we just entered a
@@ -233,26 +225,16 @@ def _fragment(
                                 else []
                             )[:-1]
                             result = non_optional_func(*args, **kwargs)
-                        # except RerunException as e:
-                        #     print(f"fragment rerun exception: {e}")
-                        #     ex_rerun_data = e.rerun_data
-                        #     new_rerun_data = RerunData(
-                        #         query_string=ex_rerun_data.query_string,
-                        #         widget_states=ex_rerun_data.widget_states,
-                        #         page_script_hash=ex_rerun_data.page_script_hash,
-                        #         page_name=ex_rerun_data.page_name,
-                        #         fragment_id_queue=[
-                        #             ctx.current_fragment_id
-                        #         ]  # rerun_data.fragment_id_queue[index:]
-                        #         if ex_rerun_data.is_fragment_scoped_rerun
-                        #         else [],
-                        #         is_fragment_scoped_rerun=ex_rerun_data.is_fragment_scoped_rerun,
-                        #     )
-                        #     rerun_exception = RerunException(rerun_data=new_rerun_data)
-                        #     raise rerun_exception
+                        except (
+                            RerunException,
+                            StopException,
+                        ) as e:
+                            raise e
                         except Exception as e:
-                            print(f"fragment exception {e}")
+                            # render error here so that the delta path is correct
                             handle_uncaught_app_exception(e)
+                            # raise here again in case we are in full app execution
+                            raise e
             finally:
                 ctx.current_fragment_id = None
                 ctx.current_fragment_delta_path = []
@@ -274,7 +256,16 @@ def _fragment(
         # fragment appear in the fragment path also for the first execution here in
         # context of a full app run.
         result, _, _, _ = exec_func_with_error_handling(
-            wrapped_fragment, ctx, reraise_rerun_exception=False
+            wrapped_fragment,
+            ctx,
+            # reraise rerun exception because at this point,
+            # we are in a full app run and it need to be handled
+            # by the script runner exception block
+            reraise_rerun_exception=True,
+            # we handle the exception ourselves inside the wrapped fragment
+            # for full app runs. This allows us to render the exception
+            # in the correct delta path.
+            enable_handle_uncaught_exception=False,
         )
         return result
 

@@ -29,6 +29,7 @@ def exec_func_with_error_handling(
     ctx: ScriptRunContext,
     *,
     reraise_rerun_exception: bool = False,
+    enable_handle_uncaught_exception: bool = True,
 ) -> tuple[Any | None, bool, RerunData | None, bool]:
     """Execute the passed function wrapped in a try/except block.
 
@@ -107,8 +108,10 @@ def exec_func_with_error_handling(
 
     except Exception as ex:
         run_without_errors = False
-        uncaught_exception = ex
-        handle_uncaught_app_exception(uncaught_exception)
         premature_stop = True
+
+        if enable_handle_uncaught_exception:
+            uncaught_exception = ex
+            handle_uncaught_app_exception(uncaught_exception)
 
     return result, run_without_errors, rerun_exception_data, premature_stop

@@ -138,7 +138,7 @@ def rerun(  # type: ignore[misc]
                 query_string=query_string,
                 page_script_hash=page_script_hash,
                 fragment_id_queue=_new_fragment_id_queue(ctx, scope),
-                is_fragment_scoped_rerun=True if scope == "fragment" else False,
+                is_fragment_scoped_rerun=True,
             )
         )
         # Force a yield point so the runner can do the rerun
