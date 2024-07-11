@@ -43,6 +43,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.Checkbox_pb2 import Checkbox
@@ -74,6 +75,7 @@ WidgetProto: TypeAlias = Union[
     Arrow,
     ArrowVegaLiteChart,
     Button,
+    ButtonGroup,
     CameraInput,
     ChatInput,
     Checkbox,

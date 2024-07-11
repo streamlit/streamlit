@@ -294,6 +294,37 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.max_selections, 2)
 
+    @parameterized.expand(
+        [
+            (["a", "b", "c"], 3),
+            (["a"], 1),
+            ([], 0),
+            ("a", 1),
+            (None, 0),
+            (("a", "b", "c"), 3),
+        ]
+    )
+    def test_get_default_count(self, default, expected_count):
+        assert _get_default_count(default) == expected_count
+
+    def test_placeholder(self):
+        """Test that it can be called with placeholder params."""
+        st.multiselect(
+            "the label", ["Coffee", "Tea", "Water"], placeholder="Select your beverage"
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.placeholder, "Select your beverage")
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.multiselect("the label", ["Coffee", "Tea", "Water"]))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
     def test_over_max_selections_initialization(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.multiselect(
@@ -309,19 +340,6 @@ the latter can happen before the line indicated in the traceback.
 Please select at most 2 options.
 """,
         )
-
-    @parameterized.expand(
-        [
-            (["a", "b", "c"], 3),
-            (["a"], 1),
-            ([], 0),
-            ("a", 1),
-            (None, 0),
-            (("a", "b", "c"), 3),
-        ]
-    )
-    def test_get_default_count(self, default, expected_count):
-        self.assertEqual(_get_default_count(default), expected_count)
 
     @parameterized.expand(
         [
@@ -378,24 +396,6 @@ Please select at most 2 options.
             _get_over_max_options_message(current_selections, max_selections),
             expected_msg,
         )
-
-    def test_placeholder(self):
-        """Test that it can be called with placeholder params."""
-        st.multiselect(
-            "the label", ["Coffee", "Tea", "Water"], placeholder="Select your beverage"
-        )
-
-        c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.placeholder, "Select your beverage")
-
-    def test_shows_cached_widget_replay_warning(self):
-        """Test that a warning is shown when this widget is used inside a cached function."""
-        st.cache_data(lambda: st.multiselect("the label", ["Coffee", "Tea", "Water"]))()
-
-        # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
 
 
 def test_multiselect_enum_coercion():

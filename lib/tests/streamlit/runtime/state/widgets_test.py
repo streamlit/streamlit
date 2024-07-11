@@ -421,6 +421,16 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (
+                # define a lambda that matches the signature of what button_group is
+                # passing to compute_widget_id, because st.feedback doesn't take a label
+                lambda key,
+                options,
+                disabled=False,
+                default=[],
+                click_mode=0: st.feedback(options, disabled=disabled),
+                "button_group",
+            ),
             (st.multiselect, "multiselect"),
             (st.radio, "radio"),
             (st.select_slider, "select_slider"),
