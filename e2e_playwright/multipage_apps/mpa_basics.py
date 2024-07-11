@@ -17,6 +17,8 @@ import streamlit as st
 st.header("Main Page")
 st.slider("x")
 
+st.write("Query Params:", st.query_params)
+
 if st.button("`pages/02_page2.py`"):
     st.switch_page("pages/02_page2.py")
 

@@ -136,12 +136,11 @@ def get_streamlit_file_path(*filepath) -> str:
 
     This doesn't guarantee that the file (or its directory) exists.
     """
-    # os.path.expanduser works on OSX, Linux and Windows
-    home = os.path.expanduser("~")
+    home = Path.home()
     if home is None:
         raise RuntimeError("No home directory.")
 
-    return os.path.join(home, CONFIG_FOLDER_NAME, *filepath)
+    return str(home / CONFIG_FOLDER_NAME / Path(*filepath))
 
 
 def get_project_streamlit_file_path(*filepath):
@@ -149,7 +148,7 @@ def get_project_streamlit_file_path(*filepath):
 
     This doesn't guarantee that the file (or its directory) exists.
     """
-    return os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, *filepath)
+    return str(Path.cwd() / CONFIG_FOLDER_NAME / Path(*filepath))
 
 
 def file_is_in_folder_glob(filepath: str, folderpath_glob: str) -> bool:
