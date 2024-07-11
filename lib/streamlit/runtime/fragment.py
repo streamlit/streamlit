@@ -212,12 +212,13 @@ def _fragment(
                 with active_hash_context:
                     with st.container():
                         try:
-                            # use dg_stack instead of active_dg to have correct copy during
-                            # execution (otherwise we can run into concurrency issues with
-                            # multiple fragments). Use dg_stack because we just entered a
-                            # container and [:-1] of the delta path because thats
-                            # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
-                            # fragment elements start with [0, 3].
+                            # use dg_stack instead of active_dg to have correct copy
+                            # during execution (otherwise we can run into concurrency
+                            # issues with multiple fragments). Use dg_stack because we
+                            # just entered a container and [:-1] of the delta path
+                            # because thats the prefix of the fragment,
+                            # e.g. [0, 3, 0] -> [0, 3].
+                            # All fragment elements start with [0, 3].
                             active_dg = dg_stack.get()[-1]
                             ctx.current_fragment_delta_path = (
                                 active_dg._cursor.delta_path
@@ -229,11 +230,15 @@ def _fragment(
                             RerunException,
                             StopException,
                         ) as e:
+                            # The wrapped_fragment function is executed
+                            # inside of a exec_func_with_error_handling call, so
+                            # there is a correct handler for these exceptions.
                             raise e
                         except Exception as e:
                             # render error here so that the delta path is correct
                             handle_uncaught_app_exception(e)
                             # raise here again in case we are in full app execution
+                            # and some flags have to be set
                             raise e
             finally:
                 ctx.current_fragment_id = None

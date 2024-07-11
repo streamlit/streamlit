@@ -559,6 +559,9 @@ class ScriptRunner:
                                     f"Could not find fragment with id {fragment_id}"
                                 )
                             except (RerunException, StopException) as e:
+                                # The wrapped_fragment function is executed
+                                # inside of a exec_func_with_error_handling call, so
+                                # there is a correct handler for these exceptions.
                                 raise e
                             except Exception:
                                 # Ignore exceptions raised by fragments here as we don't

@@ -48,6 +48,10 @@ def exec_func_with_error_handling(
         If True, an occuring RerunException will be raised instead of handled. This can
         be used if this function is called outside of the script_run context and we want
         the script_runner to react on the rerun exception.
+    enable_handle_uncaught_exception : bool, default True
+        If True, generic exceptions will be passed to handle_uncaught_app_exception. Set
+        to False if there was already an exception handling mechanism in place so that
+        the error is not rendered multiple times.
 
     Returns
     -------
@@ -111,7 +115,6 @@ def exec_func_with_error_handling(
         premature_stop = True
 
         if enable_handle_uncaught_exception:
-            uncaught_exception = ex
-            handle_uncaught_app_exception(uncaught_exception)
+            handle_uncaught_app_exception(ex)
 
     return result, run_without_errors, rerun_exception_data, premature_stop
