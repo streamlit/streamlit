@@ -63,7 +63,7 @@ class WebSocketHeadersTest(ServerTestCase):
 
     @patch("streamlit.web.server.websocket_headers.show_deprecation_warning")
     def test_deprecation_warnings(self, show_warning_mock: Mock):
-        """We show deprecation warnings when using `@st.cache`."""
+        """We show deprecation warnings when using `_get_websocket_headers()`."""
 
         websocket_headers._get_websocket_headers()
 
