@@ -34,6 +34,7 @@ from streamlit.time_util import time_to_seconds
 if TYPE_CHECKING:
     from datetime import timedelta
 
+
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
 

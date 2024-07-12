@@ -32,7 +32,10 @@ from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.fragment import (
+    MemoryFragmentStorage,
+    _fragment,
+)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -411,18 +414,34 @@ class ScriptRunnerTest(AsyncTestCase):
         ex = patched_handle_exception.call_args[0][0]
         assert isinstance(ex, RuntimeError)
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
-    def test_regular_KeyError_is_rethrown(self, patched_handle_exception):
-        fragment = MagicMock()
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    def test_regular_KeyError_is_rethrown(
+        self, patched_handle_exception, patched_get_script_run_ctx
+    ):
+        """Test that regular key-errors within a fragment are surfaced
+        as such and not caught by the FragmentStorageKeyError.
+        """
+
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+        ctx.current_fragment_id = "my_fragment_id"
+
+        def non_optional_func():
+            raise KeyError("kaboom")
+
+        def fragment():
+            _fragment(non_optional_func)()
+
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("my_fragment_", fragment)
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
         ex = patched_handle_exception.call_args[0][0]
-        assert isinstance(ex, (RuntimeError, KeyError))
+        assert isinstance(ex, KeyError)
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
