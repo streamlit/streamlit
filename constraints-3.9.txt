@@ -15,7 +15,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==2.2.1
 contourpy==1.2.1
-coverage==7.5.4
+coverage==7.6.0
 cryptography==42.0.8
 cycler==0.12.1
 dataclasses-json==0.6.7
@@ -31,7 +31,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.105.1
+hypothesis==6.106.0
 identify==2.6.0
 idna==3.7
 importlib_metadata==8.0.0
@@ -50,7 +50,7 @@ keyring==25.2.1
 kiwisolver==1.4.5
 langchain==0.2.7
 langchain-community==0.2.7
-langchain-core==0.2.13
+langchain-core==0.2.16
 langchain-text-splitters==0.2.2
 langsmith==0.1.85
 markdown-it-py==3.0.0
