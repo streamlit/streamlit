@@ -23,7 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.errors import FragmentStorageKeyError
+from streamlit.errors import FragmentStorageKeyError, StreamlitAPIException
 from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment, fragment
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.exceptions import RerunException
@@ -148,10 +148,10 @@ class FragmentTest(unittest.TestCase):
             raise Exception(exception_message)
 
         ctx.current_fragment_id = "my_fragment_id"
-        with patch("streamlit.exception") as mock_st_exception:
+        with pytest.raises(Exception) as ex:
             my_exploding_fragment()
-            mock_st_exception.assert_called_once()
-            assert str(mock_st_exception.call_args[0][0]) == exception_message
+
+        assert str(ex.value) == exception_message
 
         assert ctx.current_fragment_id is None
 
@@ -377,11 +377,10 @@ class FragmentTest(unittest.TestCase):
             my_fragment()
 
     @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
-    def test_fragment_handles_non_rerun_exceptions_in_fragment_execution_context(
-        self, exception_type: Exception
+    def test_fragment_raises_exceptions_in_full_app_run(
+        self, exception_type: type[Exception]
     ):
-        """Ensures that all non-rerun exceptions are caught by the fragment code and not
-        raised."""
+        """Ensures that during full-app run the exceptions are raised."""
         with patch(
             "streamlit.runtime.fragment.get_script_run_ctx"
         ) as patched_get_script_run_ctx:
@@ -393,7 +392,8 @@ class FragmentTest(unittest.TestCase):
             def my_fragment():
                 raise exception_type()
 
-            my_fragment()
+            with pytest.raises(exception_type):
+                my_fragment()
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_fragment_additional_hash_info_param_used_for_generating_id(
@@ -569,13 +569,13 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with patch("streamlit.exception") as mock_st_exception:
+        with pytest.raises(StreamlitAPIException) as ex:
             _app(_element_producer)
-            mock_st_exception.assert_called_once()
-            assert (
-                str(mock_st_exception.call_args[0][0])
-                == "Fragments cannot write to elements outside of their container."
-            )
+
+        assert (
+            str(ex.value)
+            == "Fragments cannot write to elements outside of their container."
+        )
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)

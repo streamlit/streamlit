@@ -32,7 +32,11 @@ from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handli
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
+    from contextvars import ContextVar
     from datetime import timedelta
+
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -125,6 +129,46 @@ class MemoryFragmentStorage(FragmentStorage):
         return key in self._fragments
 
 
+def _exec_wrapped_func_in_try_except_block(
+    dg_stack: ContextVar[tuple[DeltaGenerator, ...]],
+    ctx: ScriptRunContext,
+    is_full_app_run: bool,
+    non_optional_func: F,
+    *args,
+    **kwargs,
+):
+    try:
+        # use dg_stack instead of active_dg to have correct copy
+        # during execution (otherwise we can run into concurrency
+        # issues with multiple fragments). Use dg_stack because we
+        # just entered a container and [:-1] of the delta path
+        # because thats the prefix of the fragment,
+        # e.g. [0, 3, 0] -> [0, 3].
+        # All fragment elements start with [0, 3].
+        active_dg = dg_stack.get()[-1]
+        ctx.current_fragment_delta_path = (
+            active_dg._cursor.delta_path if active_dg._cursor else []
+        )[:-1]
+        return non_optional_func(*args, **kwargs)
+    except (
+        RerunException,
+        StopException,
+    ) as e:
+        # The wrapped_fragment function is executed
+        # inside of a exec_func_with_error_handling call, so
+        # there is a correct handler for these exceptions.
+        raise e
+    except Exception as e:
+        # render error here so that the delta path is correct
+        # for full app runs, the error will be displayed by the
+        # main code handler
+        if not is_full_app_run:
+            handle_uncaught_app_exception(e)
+        # raise here again in case we are in full app execution
+        # and some flags have to be set
+        raise e
+
+
 def _fragment(
     func: F | None = None,
     *,
@@ -170,7 +214,7 @@ def _fragment(
         # that the fragment is associated with the correct script running.
         initialized_active_script_hash = ctx.active_script_hash
 
-        def wrapped_fragment():
+        def wrapped_fragment(is_full_app_run: bool = False):
             import streamlit as st
 
             # NOTE: We need to call get_script_run_ctx here again and can't just use the
@@ -212,35 +256,14 @@ def _fragment(
                 )
                 with active_hash_context:
                     with st.container():
-                        try:
-                            # use dg_stack instead of active_dg to have correct copy
-                            # during execution (otherwise we can run into concurrency
-                            # issues with multiple fragments). Use dg_stack because we
-                            # just entered a container and [:-1] of the delta path
-                            # because thats the prefix of the fragment,
-                            # e.g. [0, 3, 0] -> [0, 3].
-                            # All fragment elements start with [0, 3].
-                            active_dg = dg_stack.get()[-1]
-                            ctx.current_fragment_delta_path = (
-                                active_dg._cursor.delta_path
-                                if active_dg._cursor
-                                else []
-                            )[:-1]
-                            result = non_optional_func(*args, **kwargs)
-                        except (
-                            RerunException,
-                            StopException,
-                        ) as e:
-                            # The wrapped_fragment function is executed
-                            # inside of a exec_func_with_error_handling call, so
-                            # there is a correct handler for these exceptions.
-                            raise e
-                        except Exception as e:
-                            # render error here so that the delta path is correct
-                            handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
-                            raise e
+                        return _exec_wrapped_func_in_try_except_block(
+                            dg_stack,
+                            ctx,
+                            is_full_app_run,
+                            non_optional_func,
+                            *args,
+                            **kwargs,
+                        )
             finally:
                 ctx.current_fragment_id = None
                 ctx.current_fragment_delta_path = []
@@ -262,16 +285,15 @@ def _fragment(
         # fragment appear in the fragment path also for the first execution here in
         # context of a full app run.
         result, _, _, _ = exec_func_with_error_handling(
-            wrapped_fragment,
+            lambda: wrapped_fragment(True),
             ctx,
             # reraise rerun exception because at this point,
             # we are in a full app run and it need to be handled
             # by the script runner exception block
             reraise_rerun_exception=True,
-            # we handle the exception ourselves inside the wrapped fragment
-            # for full app runs. This allows us to render the exception
-            # in the correct delta path.
-            enable_handle_uncaught_exception=False,
+            # for full app runs, we want to raise the exception to the
+            # main app handler to stop app execution
+            reraise_exception=True,
         )
         return result
 
