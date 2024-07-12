@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import copy
 import os
+import sys
 import textwrap
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
@@ -326,6 +327,7 @@ class ConfigTest(unittest.TestCase):
                 "magic",
                 "mapbox",
                 "runner",
+                "secrets",
                 "server",
                 "ui",
             ]
@@ -369,6 +371,7 @@ class ConfigTest(unittest.TestCase):
                 "magic.displayRootDocString",
                 "magic.displayLastExprIfNoSemicolon",
                 "mapbox.token",
+                "secrets.files",
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
@@ -575,6 +578,24 @@ class ConfigTest(unittest.TestCase):
 
             disconnect_callback()
             patched_disconnect.assert_called_once()
+
+    def test_secret_files_default_values(self):
+        """Verify that we're looking for secrets.toml in the right place."""
+        if "win32" not in sys.platform:
+            # conftest.py sets the HOME envvar to "/mock/home/folder".
+            expected_global_path = "/mock/home/folder/.streamlit/secrets.toml"
+        else:
+            # On windows systems, HOME does not work so we look in the user's directory instead.
+            expected_global_path = os.path.join(
+                os.path.expanduser("~"), ".streamlit", "secrets.toml"
+            )
+        self.assertEqual(
+            [
+                expected_global_path,
+                os.path.abspath("./.streamlit/secrets.toml"),
+            ],
+            config.get_option("secrets.files"),
+        )
 
 
 class ConfigLoadingTest(unittest.TestCase):

@@ -333,7 +333,7 @@ class AppTest:
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
-            new_secrets = Secrets([])
+            new_secrets = Secrets()
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
