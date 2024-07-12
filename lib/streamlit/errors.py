@@ -45,6 +45,14 @@ class FragmentStorageKeyError(Error, KeyError):
     pass
 
 
+class FragmentHandledException(Exception):
+    """An exception that is raised by the fragment
+    when it has handled the exception itself.
+    """
+
+    pass
+
+
 class NoStaticFiles(Error):
     pass
 

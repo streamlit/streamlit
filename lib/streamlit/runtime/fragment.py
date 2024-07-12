@@ -22,15 +22,17 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
-from streamlit.errors import FragmentStorageKeyError
+from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
+from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
@@ -206,23 +208,45 @@ def _fragment(
                     if initialized_active_script_hash != ctx.active_script_hash
                     else contextlib.nullcontext()
                 )
+                result = None
                 with active_hash_context:
                     with st.container():
-                        # use dg_stack instead of active_dg to have correct copy during
-                        # execution (otherwise we can run into concurrency issues with
-                        # multiple fragments). Use dg_stack because we just entered a
-                        # container and [:-1] of the delta path because thats
-                        # the prefix of the fragment, e.g. [0, 3, 0] -> [0, 3]. All
-                        # fragment elements start with [0, 3].
-                        active_dg = dg_stack.get()[-1]
-                        ctx.current_fragment_delta_path = (
-                            active_dg._cursor.delta_path if active_dg._cursor else []
-                        )[:-1]
-                        result = non_optional_func(*args, **kwargs)
+                        try:
+                            # use dg_stack instead of active_dg to have correct copy
+                            # during execution (otherwise we can run into concurrency
+                            # issues with multiple fragments). Use dg_stack because we
+                            # just entered a container and [:-1] of the delta path
+                            # because thats the prefix of the fragment,
+                            # e.g. [0, 3, 0] -> [0, 3].
+                            # All fragment elements start with [0, 3].
+                            active_dg = dg_stack.get()[-1]
+                            ctx.current_fragment_delta_path = (
+                                active_dg._cursor.delta_path
+                                if active_dg._cursor
+                                else []
+                            )[:-1]
+                            result = non_optional_func(*args, **kwargs)
+                        except (
+                            RerunException,
+                            StopException,
+                        ) as e:
+                            # The wrapped_fragment function is executed
+                            # inside of a exec_func_with_error_handling call, so
+                            # there is a correct handler for these exceptions.
+                            raise e
+                        except Exception as e:
+                            # render error here so that the delta path is correct
+                            # for full app runs, the error will be displayed by the
+                            # main code handler
+                            # if not is_full_app_run:
+                            handle_uncaught_app_exception(e)
+                            # raise here again in case we are in full app execution
+                            # and some flags have to be set
+                            raise FragmentHandledException(e)
+                    return result
             finally:
                 ctx.current_fragment_id = None
-
-            return result
+                ctx.current_fragment_delta_path = []
 
         if not ctx.fragment_storage.contains(fragment_id):
             ctx.fragment_storage.set(fragment_id, wrapped_fragment)
@@ -233,15 +257,8 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        # Wrap the fragment function in the same try-except block as in a normal
-        # script_run so that for a main-app run (this execution) and a fragment-rerun
-        # the same execution and error-handling logic is used. This makes errors in the
-        # fragment appear in the fragment path also for the first execution here in
-        # context of a full app run.
-        result, _, _, _ = exec_func_with_error_handling(
-            wrapped_fragment, ctx, reraise_rerun_exception=True
-        )
-        return result
+        # Immediate execute the wrapped fragment since we are in a full app run
+        return wrapped_fragment()
 
     with contextlib.suppress(AttributeError):
         # Make this a well-behaved decorator by preserving important function

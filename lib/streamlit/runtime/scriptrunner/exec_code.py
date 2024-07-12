@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable
 
 from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 
 if TYPE_CHECKING:
@@ -25,10 +26,7 @@ if TYPE_CHECKING:
 
 
 def exec_func_with_error_handling(
-    func: Callable[[], None],
-    ctx: ScriptRunContext,
-    *,
-    reraise_rerun_exception: bool = False,
+    func: Callable[[], None], ctx: ScriptRunContext
 ) -> tuple[Any | None, bool, RerunData | None, bool]:
     """Execute the passed function wrapped in a try/except block.
 
@@ -43,10 +41,6 @@ def exec_func_with_error_handling(
         The function to execute wrapped in the try/except block.
     ctx : ScriptRunContext
         The context in which the script is being run.
-    reraise_rerun_exception : bool, default False
-        If True, an occuring RerunException will be raised instead of handled. This can
-        be used if this function is called outside of the script_run context and we want
-        the script_runner to react on the rerun exception.
 
     Returns
     -------
@@ -80,9 +74,6 @@ def exec_func_with_error_handling(
     try:
         result = func()
     except RerunException as e:
-        if reraise_rerun_exception:
-            raise e
-
         rerun_exception_data = e.rerun_data
 
         # Since the script is about to rerun, we may need to reset our cursors/dg_stack
@@ -104,11 +95,12 @@ def exec_func_with_error_handling(
         # This is thrown when the script executes `st.stop()`.
         # We don't have to do anything here.
         premature_stop = True
-
+    except FragmentHandledException:
+        run_without_errors = False
+        premature_stop = True
     except Exception as ex:
         run_without_errors = False
-        uncaught_exception = ex
-        handle_uncaught_app_exception(uncaught_exception)
         premature_stop = True
+        handle_uncaught_app_exception(ex)
 
     return result, run_without_errors, rerun_exception_data, premature_stop

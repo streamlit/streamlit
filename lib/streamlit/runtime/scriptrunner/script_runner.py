@@ -558,6 +558,18 @@ class ScriptRunner:
                                 raise RuntimeError(
                                     f"Could not find fragment with id {fragment_id}"
                                 )
+                            except (RerunException, StopException) as e:
+                                # The wrapped_fragment function is executed
+                                # inside of a exec_func_with_error_handling call, so
+                                # there is a correct handler for these exceptions.
+                                raise e
+                            except Exception:
+                                # Ignore exceptions raised by fragments here as we don't
+                                # want to stop the execution of other fragments. The
+                                # error itself is already rendered within the wrapped
+                                # fragment.
+                                pass
+
                     else:
                         exec(code, module.__dict__)
                         self._fragment_storage.clear(

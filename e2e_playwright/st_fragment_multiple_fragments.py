@@ -16,6 +16,8 @@ from uuid import uuid4
 
 import streamlit as st
 
+raise_exception = st.checkbox("Raise Exception in Fragment", value=False)
+
 
 @st.fragment
 def my_fragment(n):
@@ -24,5 +26,13 @@ def my_fragment(n):
         st.write(f"uuid in fragment {n}: {uuid4()}")
 
 
+@st.fragment
+def exception_raising_fragment():
+    if st.checkbox("Raise Exception", value=raise_exception):
+        raise RuntimeError("This is an exception raised in a fragment")
+
+
 my_fragment(1)
+# fragment that raises an exception during full app run stops the execution
+exception_raising_fragment()
 my_fragment(2)

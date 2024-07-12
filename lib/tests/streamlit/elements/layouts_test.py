@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch
-
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import FragmentHandledException, StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -567,13 +566,9 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with patch("streamlit.exception") as mock_st_exception:
+        with pytest.raises(FragmentHandledException) as e:
             level1_dialog()
-            mock_st_exception.assert_called_once()
-            assert (
-                str(mock_st_exception.call_args[0][0])
-                == "Dialogs may not be nested inside other dialogs."
-            )
+        assert str(e.value) == "Dialogs may not be nested inside other dialogs."
 
     def test_only_one_dialog_can_be_opened_at_same_time(self):
         @st.experimental_dialog("Dialog1")
