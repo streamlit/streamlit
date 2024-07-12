@@ -33,6 +33,6 @@ def exception_raising_fragment():
 
 
 my_fragment(1)
-# fragment that raises an exception does not stop the flow
+# fragment that raises an exception during full app run stops the execution
 exception_raising_fragment()
 my_fragment(2)

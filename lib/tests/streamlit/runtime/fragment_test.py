@@ -23,7 +23,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.errors import FragmentStorageKeyError, StreamlitAPIException
+from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment, fragment
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.exceptions import RerunException
@@ -377,7 +377,7 @@ class FragmentTest(unittest.TestCase):
             my_fragment()
 
     @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
-    def test_fragment_raises_exceptions_in_full_app_run(
+    def test_fragment_raises_FragmentHandledException_in_full_app_run(
         self, exception_type: type[Exception]
     ):
         """Ensures that during full-app run the exceptions are raised."""
@@ -392,7 +392,7 @@ class FragmentTest(unittest.TestCase):
             def my_fragment():
                 raise exception_type()
 
-            with pytest.raises(exception_type):
+            with pytest.raises(FragmentHandledException):
                 my_fragment()
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
@@ -569,7 +569,7 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with pytest.raises(StreamlitAPIException) as ex:
+        with pytest.raises(FragmentHandledException) as ex:
             _app(_element_producer)
 
         assert (

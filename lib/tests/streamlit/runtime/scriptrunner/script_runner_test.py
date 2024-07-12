@@ -32,10 +32,7 @@ from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import (
-    MemoryFragmentStorage,
-    _exec_wrapped_func_in_try_except_block,
-)
+from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -431,9 +428,7 @@ class ScriptRunnerTest(AsyncTestCase):
             raise KeyError("kaboom")
 
         def fragment():
-            _exec_wrapped_func_in_try_except_block(
-                MagicMock(), MagicMock(), False, non_optional_func
-            )
+            _fragment(non_optional_func)()
 
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner._fragment_storage.set("my_fragment", fragment)
