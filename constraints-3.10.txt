@@ -22,7 +22,7 @@ dataclasses-json==0.6.7
 distlib==0.3.8
 docutils==0.21.2
 emoji==2.12.1
-exceptiongroup==1.2.1
+exceptiongroup==1.2.2
 execnet==2.1.1
 filelock==3.15.4
 fonttools==4.53.1
@@ -31,7 +31,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.106.0
+hypothesis==6.107.0
 identify==2.6.0
 idna==3.7
 importlib_metadata==8.0.0
@@ -49,7 +49,7 @@ keyring==25.2.1
 kiwisolver==1.4.5
 langchain==0.2.7
 langchain-community==0.2.7
-langchain-core==0.2.16
+langchain-core==0.2.17
 langchain-text-splitters==0.2.2
 langsmith==0.1.85
 markdown-it-py==3.0.0
