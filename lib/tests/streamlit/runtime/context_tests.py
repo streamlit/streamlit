@@ -39,7 +39,7 @@ class StContextTest(ServerTestCase):
     )
     def test_context_headers(self):
         """Test that `st.context.headers` returns headers from ScriptRunContext"""
-        self.assertEqual(st.context.headers.to_dict(), {"The-Header": "header-value"})
+        assert st.context.headers.to_dict(), {"The-Header": "header-value"}
 
     @patch(
         "streamlit.runtime.context._get_session_client",
@@ -51,7 +51,7 @@ class StContextTest(ServerTestCase):
     )
     def test_context_cookies(self):
         """Test that `st.context.cookies` returns cookies from ScriptRunContext"""
-        self.assertEqual(st.context.cookies.to_dict(), {"cookieName": "cookieValue"})
+        assert st.context.cookies.to_dict() == {"cookieName": "cookieValue"}
 
     @parameterized.expand(
         [
@@ -70,4 +70,4 @@ class StContextTest(ServerTestCase):
     )
     def test_normalize_header(self, name, expected):
         """Test that `_normalize_header` normalizes header names"""
-        self.assertEqual(_normalize_header(name), expected)
+        assert _normalize_header(name) == expected
