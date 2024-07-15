@@ -272,7 +272,7 @@ selection = st.altair_chart(
 st.header("Selections in fragment:")
 
 
-@st.experimental_fragment
+@st.fragment
 def test_fragment():
     selection = st.altair_chart(
         histogram_point,

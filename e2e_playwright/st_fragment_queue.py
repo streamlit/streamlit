@@ -12,14 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from uuid import uuid4
+import time
 
 import streamlit as st
 
 
-@st.experimental_fragment(run_every=1.0)
-def my_auto_updating_fragment():
-    st.write(f"uuid in fragment: {uuid4()}")
+@st.fragment
+def my_fragment1():
+    st.button("rerun fragment 1")
+    time.sleep(3)
+    st.write("fragment 1 done!")
 
 
-my_auto_updating_fragment()
+@st.fragment
+def my_fragment2():
+    if st.button("rerun fragment 2"):
+        st.write("ran fragment 2")
+    st.write("fragment 2 done!")
+
+
+@st.fragment
+def my_fragment3():
+    st.button("rerun fragment 3")
+    st.write("fragment 3 done!")
+
+
+with st.container(border=True):
+    my_fragment1()
+with st.container(border=True):
+    my_fragment2()
+with st.container(border=True):
+    my_fragment3()

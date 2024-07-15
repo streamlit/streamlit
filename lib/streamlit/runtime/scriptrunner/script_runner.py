@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Callable, Final
 from blinker import Signal
 
 from streamlit import config, runtime, util
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -432,8 +433,6 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
-            fragment_ids_this_run = set(rerun_data.fragment_id_queue)
-
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
@@ -458,9 +457,17 @@ class ScriptRunner:
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
-                fragment_ids_this_run=fragment_ids_this_run,
             )
             self._pages_manager.reset_active_script_hash()
+
+            # We want to clear the forward_msg_queue during full script runs and
+            # fragment-scoped fragment reruns. For normal fragment runs, clearing the
+            # forward_msg_queue may cause us to drop messages either corresponding to
+            # other, unrelated fragments or that this fragment run depends on.
+            fragment_ids_this_run = rerun_data.fragment_id_queue
+            clear_forward_msg_queue = (
+                not fragment_ids_this_run or rerun_data.is_fragment_scoped_rerun
+            )
 
             self.on_event.send(
                 self,
@@ -468,6 +475,7 @@ class ScriptRunner:
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                clear_forward_msg_queue=clear_forward_msg_queue,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -544,16 +552,29 @@ class ScriptRunner:
                                 wrapped_fragment = self._fragment_storage.get(
                                     fragment_id
                                 )
-                                ctx.current_fragment_id = fragment_id
                                 wrapped_fragment()
 
-                            except KeyError:
+                            except FragmentStorageKeyError:
                                 raise RuntimeError(
                                     f"Could not find fragment with id {fragment_id}"
                                 )
+                            except (RerunException, StopException) as e:
+                                # The wrapped_fragment function is executed
+                                # inside of a exec_func_with_error_handling call, so
+                                # there is a correct handler for these exceptions.
+                                raise e
+                            except Exception:
+                                # Ignore exceptions raised by fragments here as we don't
+                                # want to stop the execution of other fragments. The
+                                # error itself is already rendered within the wrapped
+                                # fragment.
+                                pass
+
                     else:
-                        self._fragment_storage.clear()
                         exec(code, module.__dict__)
+                        self._fragment_storage.clear(
+                            new_fragment_ids=ctx.new_fragment_ids
+                        )
 
                     self._session_state.maybe_check_serializable()
                     # check for control requests, e.g. rerun requests have arrived
