@@ -98,6 +98,7 @@ class StreamlitTest(unittest.TestCase):
                 "checkbox",
                 "code",
                 "columns",
+                "context",
                 "tabs",
                 "container",
                 "dataframe",
