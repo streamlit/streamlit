@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 
 
 @st.experimental_dialog("Test Dialog with Images")
@@ -90,6 +91,19 @@ with st.sidebar:
         dialog_in_sidebar()
 
 
+@st.experimental_dialog("Submit-button Dialog")
+def submit_button_dialog():
+    st.write("This dialog has a submit button.")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
+
+    if st.button("Submit", key="dialog6-btn"):
+        st.rerun()
+
+
+if st.button("Open submit-button Dialog"):
+    submit_button_dialog()
+
+
 @st.experimental_dialog("Level2 Dialog")
 def level2_dialog():
     st.write("Second level dialog")
@@ -98,6 +112,7 @@ def level2_dialog():
 @st.experimental_dialog("Level1 Dialog")
 def level1_dialog():
     st.write("First level dialog")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
     level2_dialog()
 
 

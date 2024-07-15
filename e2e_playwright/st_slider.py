@@ -100,7 +100,7 @@ with st.form(key="my_form", clear_on_submit=True):
 st.write("slider-in-form selection:", str(selection))
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     selection = st.slider(
         "Label 10",

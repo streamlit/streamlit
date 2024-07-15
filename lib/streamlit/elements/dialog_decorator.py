@@ -72,7 +72,12 @@ def _dialog_decorator(
             return None
 
         # the fragment decorator has multiple return types so that you can pass arguments to it. Here we know the return type, so we cast
-        fragmented_dialog_content = cast(Callable[[], None], _fragment(dialog_content))
+        fragmented_dialog_content = cast(
+            Callable[[], None],
+            _fragment(
+                dialog_content, additional_hash_info=non_optional_func.__qualname__
+            ),
+        )
         with dialog:
             fragmented_dialog_content()
             return None
@@ -115,7 +120,7 @@ def dialog_decorator(
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
     dialog function.
 
-    ``st.experimental_dialog`` inherits behavior from |st.experimental_fragment|_.
+    ``st.experimental_dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
     Streamlit only reruns the dialog function instead of the full script.
 
@@ -133,8 +138,8 @@ def dialog_decorator(
         fragments, and fragments can't contain dialogs. Using dialogs in widget
         callback functions is not supported.
 
-    .. |st.experimental_fragment| replace:: ``st.experimental_fragment``
-    .. _st.experimental_fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
+    .. |st.fragment| replace:: ``st.fragment``
+    .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
 
     Parameters
     ----------

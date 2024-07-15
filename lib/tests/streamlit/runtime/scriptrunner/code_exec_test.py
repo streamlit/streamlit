@@ -71,20 +71,6 @@ class TestWrapInTryAndExec(unittest.TestCase):
         assert rerun_exception_data == rerun_data
         assert premature_stop is False
 
-    def test_func_throws_and_reraises_rerun_exception(self):
-        rerun_data = RerunData(query_string="foo")
-
-        def test_func():
-            """Test function that raises a RerunException."""
-            raise RerunException(rerun_data)
-
-        with self.assertRaises(RerunException) as rerun_exception_data:
-            exec_func_with_error_handling(
-                test_func, self.ctx, reraise_rerun_exception=True
-            )
-
-        assert rerun_exception_data.exception.rerun_data == rerun_data
-
     def test_func_throws_stop_exception(self):
         def test_func():
             """Test function that raises a StopException."""
