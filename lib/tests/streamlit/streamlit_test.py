@@ -104,6 +104,7 @@ class StreamlitTest(unittest.TestCase):
                 "dataframe",
                 "data_editor",
                 "date_input",
+                "dialog",
                 "divider",
                 "download_button",
                 "expander",

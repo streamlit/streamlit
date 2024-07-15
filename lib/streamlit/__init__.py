@@ -72,7 +72,10 @@ from streamlit.delta_generator import (
     bottom_dg as _bottom_dg,
 )
 
-from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
+from streamlit.elements.dialog_decorator import (
+    dialog_decorator as _dialog_decorator,
+    experimental_dialog_decorator as _experimental_dialog_decorator,
+)
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -239,10 +242,16 @@ column_config = _column_config
 connection = _connection
 
 # Fragment and dialog
+dialog = _dialog_decorator
 fragment = _fragment
 
 # Experimental APIs
-experimental_dialog = _dialog_decorator
+experimental_dialog = _deprecate_func_name(
+    _experimental_dialog_decorator,
+    "experimental_dialog",
+    "2025-01-01",
+    name_override="dialog",
+)
 experimental_fragment = _deprecate_func_name(
     _experimental_fragment,
     "experimental_fragment",
