@@ -5,7 +5,7 @@ mypy>=1.4, <1.7
 mypy-protobuf>=3.2
 # semver 3 renames VersionInfo so temporarily pin until we deal with it
 semver<3
-setuptools>=65.5.1
+setuptools>=70.0.0
 twine
 wheel
 pytz
