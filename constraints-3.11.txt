@@ -6,7 +6,7 @@ attrs==23.2.0
 backports.tarfile==1.2.0
 blinker==1.8.2
 bokeh==2.4.3
-cachetools==5.3.3
+cachetools==5.4.0
 certifi==2024.7.4
 cffi==1.16.0
 cfgv==3.4.0
@@ -45,11 +45,11 @@ jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.1
 kiwisolver==1.4.5
-langchain==0.2.7
+langchain==0.2.8
 langchain-community==0.2.7
-langchain-core==0.2.18
+langchain-core==0.2.19
 langchain-text-splitters==0.2.2
-langsmith==0.1.85
+langsmith==0.1.86
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -80,7 +80,7 @@ pyarrow==16.1.0
 pycparser==2.22
 pydantic==1.10.17
 pydeck==0.9.1
-pydot==2.0.0
+pydot==3.0.0
 pyee==11.1.0
 Pygments==2.18.0
 PyJWT==2.8.0
@@ -137,7 +137,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.24
+uv==0.2.25
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1

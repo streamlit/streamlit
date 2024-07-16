@@ -4,7 +4,7 @@ altair==5.3.0
 attrs==23.2.0
 blinker==1.8.2
 bokeh==2.4.3
-cachetools==5.3.3
+cachetools==5.4.0
 certifi==2024.7.4
 cffi==1.16.0
 cfgv==3.4.0
@@ -77,7 +77,7 @@ pyarrow==16.1.0
 pycparser==2.22
 pydantic==1.10.17
 pydeck==0.9.1
-pydot==2.0.0
+pydot==3.0.0
 pyee==11.1.0
 Pygments==2.18.0
 pyparsing==3.1.2
@@ -130,7 +130,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.24
+uv==0.2.25
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
