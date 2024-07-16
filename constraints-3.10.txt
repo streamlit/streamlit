@@ -51,7 +51,7 @@ langchain==0.2.8
 langchain-community==0.2.7
 langchain-core==0.2.19
 langchain-text-splitters==0.2.2
-langsmith==0.1.86
+langsmith==0.1.87
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -78,11 +78,11 @@ plotly==5.22.0
 pluggy==1.5.0
 pre-commit==3.7.1
 protobuf==5.27.2
-pyarrow==16.1.0
+pyarrow==17.0.0
 pycparser==2.22
 pydantic==1.10.17
 pydeck==0.9.1
-pydot==3.0.0
+pydot==3.0.1
 pyee==11.1.0
 Pygments==2.18.0
 PyJWT==2.8.0
