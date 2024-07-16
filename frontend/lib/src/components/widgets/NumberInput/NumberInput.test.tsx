@@ -249,6 +249,74 @@ describe("NumberInput widget", () => {
 
       expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15.0)
     })
+
+    describe("Formatting", () => {
+      it("allows explicit formatting string", () => {
+        const props = getFloatProps({
+          default: 1.11111,
+          format: "%0.4f",
+        })
+        render(<NumberInput {...props} />)
+
+        expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+        expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue(
+          "1.1111"
+        )
+      })
+    })
+
+    it("allows formatting a float as an integer", () => {
+      const props = getFloatProps({
+        default: 1.11111,
+        format: "%d",
+      })
+
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue("1")
+    })
+
+    it("automatically sets formatting when none provided based on step", () => {
+      const props = getFloatProps({
+        default: 1.0,
+        step: 0.005,
+      })
+
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue(
+        "1.000"
+      )
+    })
+
+    it("does not automatically format when a format is explicitly provided", () => {
+      const props = getFloatProps({
+        default: 1.0,
+        step: 0.1,
+        format: "%0.2f",
+      })
+
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue(
+        "1.00"
+      )
+    })
+
+    it("does not automatically format when the step size is integer", () => {
+      const props = getFloatProps({
+        default: 1.0,
+        step: 1,
+      })
+
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveDisplayValue("1")
+    })
   })
 
   describe("IntData", () => {

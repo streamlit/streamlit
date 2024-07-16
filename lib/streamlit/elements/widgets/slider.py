@@ -303,9 +303,7 @@ class SliderMixin:
 
         >>> import streamlit as st
         >>>
-        >>> values = st.slider(
-        ...     "Select a range of values",
-        ...     0.0, 100.0, (25.0, 75.0))
+        >>> values = st.slider("Select a range of values", 0.0, 100.0, (25.0, 75.0))
         >>> st.write("Values:", values)
 
         This is a range time slider:
@@ -314,8 +312,8 @@ class SliderMixin:
         >>> from datetime import time
         >>>
         >>> appointment = st.slider(
-        ...     "Schedule your appointment:",
-        ...     value=(time(11, 30), time(12, 45)))
+        ...     "Schedule your appointment:", value=(time(11, 30), time(12, 45))
+        ... )
         >>> st.write("You're scheduled for:", appointment)
 
         Finally, a datetime slider:
@@ -326,7 +324,8 @@ class SliderMixin:
         >>> start_time = st.slider(
         ...     "When do you start?",
         ...     value=datetime(2020, 1, 1, 9, 30),
-        ...     format="MM/DD/YY - hh:mm")
+        ...     format="MM/DD/YY - hh:mm",
+        ... )
         >>> st.write("Start time:", start_time)
 
         .. output::

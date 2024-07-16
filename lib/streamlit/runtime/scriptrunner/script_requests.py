@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import TYPE_CHECKING, cast
 
@@ -48,7 +48,12 @@ class RerunData:
     widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
+
+    # A single fragment_id to append to fragment_id_queue.
+    fragment_id: str | None = None
+    # The queue of fragment_ids waiting to be run.
     fragment_id_queue: list[str] = field(default_factory=list)
+    is_fragment_scoped_rerun: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -71,6 +76,20 @@ class ScriptRequest:
         return util.repr_(self)
 
 
+def _fragment_run_should_not_preempt_script(
+    fragment_id_queue: list[str],
+    is_fragment_scoped_rerun: bool,
+) -> bool:
+    """Returns whether the currently running script should be preempted due to a
+    fragment rerun.
+
+    Reruns corresponding to fragment runs that weren't caused by calls to
+    `st.rerun(scope="fragment")` should *not* cancel the current script run
+    as doing so will affect elements outside of the fragment.
+    """
+    return bool(fragment_id_queue) and not is_fragment_scoped_rerun
+
+
 class ScriptRequests:
     """An interface for communicating with a ScriptRunner. Thread-safe.
 
@@ -82,6 +101,13 @@ class ScriptRequests:
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
+
+    @property
+    def fragment_id_queue(self) -> list[str]:
+        if not self._rerun_data:
+            return []
+
+        return self._rerun_data.fragment_id_queue
 
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
@@ -110,6 +136,15 @@ class ScriptRequests:
                 # rerun it as of yet. We can handle a rerun request unconditionally so
                 # just change self._state and set self._rerun_data.
                 self._state = ScriptRequestType.RERUN
+
+                # Convert from a single fragment_id into fragment_id_queue.
+                if new_data.fragment_id:
+                    new_data = replace(
+                        new_data,
+                        fragment_id=None,
+                        fragment_id_queue=[new_data.fragment_id],
+                    )
+
                 self._rerun_data = new_data
                 return True
 
@@ -121,17 +156,17 @@ class ScriptRequests:
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
-                if new_data.fragment_id_queue:
-                    # This RERUN request corresponds to a fragment run. We append the
-                    # new fragment ID to the end of the current fragment_id_queue if it
-                    # isn't already contained in it.
+                if new_data.fragment_id:
+                    # This RERUN request corresponds to a new fragment run. We append
+                    # the new fragment ID to the end of the current fragment_id_queue if
+                    # it isn't already contained in it.
                     fragment_id_queue = [*self._rerun_data.fragment_id_queue]
-                    if (
-                        # new_data.fragment_id_queue is always a singleton
-                        (new_fragment_id := new_data.fragment_id_queue[0])
-                        not in fragment_id_queue
-                    ):
-                        fragment_id_queue.append(new_fragment_id)
+
+                    if new_data.fragment_id not in fragment_id_queue:
+                        fragment_id_queue.append(new_data.fragment_id)
+                elif new_data.fragment_id_queue:
+                    # new_data contains a new fragment_id_queue, so we just use it.
+                    fragment_id_queue = new_data.fragment_id_queue
                 else:
                     # Otherwise, this is a request to rerun the full script, so we want
                     # to clear out any fragments we have queued to run since they'll all
@@ -144,6 +179,7 @@ class ScriptRequests:
                     page_script_hash=new_data.page_script_hash,
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
+                    is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
                 )
 
                 return True
@@ -154,30 +190,35 @@ class ScriptRequests:
     def on_scriptrunner_yield(self) -> ScriptRequest | None:
         """Called by the ScriptRunner when it's at a yield point.
 
-        If we have no request or a RERUN request corresponding to one or more fragments,
-        return None.
+        If we have no request or a RERUN request corresponding to one or more fragments
+        (that is not a fragment-scoped rerun), return None.
 
-        If we have a (full script) RERUN request, return the request and set our internal
-        state to CONTINUE.
+        If we have a (full script or fragment-scoped) RERUN request, return the request
+        and set our internal state to CONTINUE.
 
         If we have a STOP request, return the request and remain stopped.
         """
         if self._state == ScriptRequestType.CONTINUE or (
-            # Reruns corresponding to fragments should *not* cancel the current script
-            # run as doing so will affect elements outside of the fragment.
             self._state == ScriptRequestType.RERUN
-            and self._rerun_data.fragment_id_queue
+            and _fragment_run_should_not_preempt_script(
+                self._rerun_data.fragment_id_queue,
+                self._rerun_data.is_fragment_scoped_rerun,
+            )
         ):
-            # We avoid taking the lock in the common cases of having no request and
-            # having a RERUN request corresponding to >=1 fragments. If a STOP or
-            # (full script) RERUN request is received between the `if` and `return`, it
+            # We avoid taking the lock in the common cases described above. If a STOP or
+            # preempting RERUN request is received after we've taken this code path, it
             # will be handled at the next `on_scriptrunner_yield`, or when
             # `on_scriptrunner_ready` is called.
             return None
 
         with self._lock:
             if self._state == ScriptRequestType.RERUN:
-                if self._rerun_data.fragment_id_queue:
+                # We already made this check in the fast-path above but need to do so
+                # again in case our state changed while we were waiting on the lock.
+                if _fragment_run_should_not_preempt_script(
+                    self._rerun_data.fragment_id_queue,
+                    self._rerun_data.is_fragment_scoped_rerun,
+                ):
                     return None
 
                 self._state = ScriptRequestType.CONTINUE

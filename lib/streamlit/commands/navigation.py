@@ -126,14 +126,14 @@ def navigation(
     >>> import streamlit as st
     >>>
     >>> pages = {
-    ...     "Your account" : [
+    ...     "Your account": [
     ...         st.Page("create_account.py", title="Create your account"),
-    ...         st.Page("manage_account.py", title="Manage your account")
+    ...         st.Page("manage_account.py", title="Manage your account"),
     ...     ],
-    ...     "Resources" : [
+    ...     "Resources": [
     ...         st.Page("learn.py", title="Learn about us"),
-    ...         st.Page("trial.py", title="Try it out")
-    ...     ]
+    ...         st.Page("trial.py", title="Try it out"),
+    ...     ],
     ... }
     >>>
     >>> pg = st.navigation(pages)

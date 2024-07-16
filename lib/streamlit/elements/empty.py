@@ -66,7 +66,7 @@ class EmptyMixin:
         >>> with placeholder.container():
         ...     st.write("This is one element")
         ...     st.write("This is another")
-        ...
+        >>>
         >>> # Clear all those elements:
         >>> placeholder.empty()
 

@@ -467,7 +467,7 @@ class CacheDataAPI:
         ... def fetch_and_clean_data(url):
         ...     # Fetch data from URL here, and then clean it up.
         ...     return data
-        ...
+        >>>
         >>> d1 = fetch_and_clean_data(DATA_URL_1)
         >>> # Actually executes the function, since this is the first time it was
         >>> # encountered.
@@ -498,7 +498,7 @@ class CacheDataAPI:
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
-        ...
+        >>>
         >>> connection = make_database_connection()
         >>> d1 = fetch_and_clean_data(connection, num_rows=10)
         >>> # Actually executes the function, since this is the first time it was
@@ -518,7 +518,7 @@ class CacheDataAPI:
         ... def fetch_and_clean_data(_db_connection, num_rows):
         ...     # Fetch data from _db_connection here, and then clean it up.
         ...     return data
-        ...
+        >>>
         >>> fetch_and_clean_data.clear(_db_connection, 50)
         >>> # Clear the cached entry for the arguments provided.
         >>>

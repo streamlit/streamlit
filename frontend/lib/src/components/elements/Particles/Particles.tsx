@@ -17,6 +17,7 @@
 import React, { FC, memo } from "react"
 import range from "lodash/range"
 import classNames from "classnames"
+import { StyledParticles } from "./styled-components"
 
 export interface ParticleProps {
   particleType: number
@@ -39,7 +40,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
 }: Props) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  <div
+  <StyledParticles
     className={classNames(className, "stHidden")}
     data-testid={`${className}`}
   >
@@ -48,7 +49,7 @@ const Particles: FC<React.PropsWithChildren<Props>> = ({
 
       return <ParticleComponent key={scriptRunId + i} particleType={randNum} />
     })}
-  </div>
+  </StyledParticles>
 )
 
 export default memo(Particles)

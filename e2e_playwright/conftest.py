@@ -652,7 +652,7 @@ def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 10
     or times out.
 
     For example:
-    >>> wait_until(lambda: x.values() == ['x'], page)
+    >>> wait_until(lambda: x.values() == ["x"], page)
 
     Parameters
     ----------

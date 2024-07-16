@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, Lis
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import (
@@ -35,7 +36,6 @@ from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Special methods:
 HELP_TYPES: Final[tuple[type[Any], ...]] = (
@@ -302,7 +302,7 @@ class WriteMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.write('Hello, *World!* :sunglasses:')
+        >>> st.write("Hello, *World!* :sunglasses:")
 
         ..  output::
             https://doc-write1.streamlit.app/
@@ -315,10 +315,14 @@ class WriteMixin:
         >>> import pandas as pd
         >>>
         >>> st.write(1234)
-        >>> st.write(pd.DataFrame({
-        ...     'first column': [1, 2, 3, 4],
-        ...     'second column': [10, 20, 30, 40],
-        ... }))
+        >>> st.write(
+        ...     pd.DataFrame(
+        ...         {
+        ...             "first column": [1, 2, 3, 4],
+        ...             "second column": [10, 20, 30, 40],
+        ...         }
+        ...     )
+        ... )
 
         ..  output::
             https://doc-write2.streamlit.app/
@@ -328,8 +332,8 @@ class WriteMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.write('1 + 1 = ', 2)
-        >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
+        >>> st.write("1 + 1 = ", 2)
+        >>> st.write("Below is a DataFrame:", data_frame, "Above is a dataframe.")
 
         ..  output::
             https://doc-write3.streamlit.app/
@@ -342,12 +346,12 @@ class WriteMixin:
         >>> import numpy as np
         >>> import altair as alt
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
+        >>> df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+        >>> c = (
+        ...     alt.Chart(df)
+        ...     .mark_circle()
+        ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
+        ... )
         >>>
         >>> st.write(c)
 
@@ -437,7 +441,16 @@ class WriteMixin:
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
             elif isinstance(
-                arg, (dict, list, SessionStateProxy, UserInfoProxy, QueryParamsProxy)
+                arg,
+                (
+                    dict,
+                    list,
+                    SessionStateProxy,
+                    UserInfoProxy,
+                    QueryParamsProxy,
+                    StreamlitHeaders,
+                    StreamlitCookies,
+                ),
             ):
                 flush_buffer()
                 self.dg.json(arg)

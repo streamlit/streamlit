@@ -18,7 +18,15 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    BinaryIO,
+    Final,
+    Literal,
+    TextIO,
+    Union,
+    cast,
+)
 
 from typing_extensions import TypeAlias
 
@@ -331,11 +339,11 @@ class ButtonMixin:
         >>>
         >>> with open("flower.png", "rb") as file:
         ...     btn = st.download_button(
-        ...             label="Download image",
-        ...             data=file,
-        ...             file_name="flower.png",
-        ...             mime="image/png"
-        ...           )
+        ...         label="Download image",
+        ...         data=file,
+        ...         file_name="flower.png",
+        ...         mime="image/png",
+        ...     )
 
         .. output::
            https://doc-download-buton.streamlit.app/

@@ -19,7 +19,7 @@ import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
-import { DynamicIcon, DynamicIconProps } from "./DynamicIcon"
+import { DynamicIcon, DynamicIconProps, isMaterialIcon } from "./DynamicIcon"
 
 const getProps = (
   props: Partial<DynamicIconProps> = {}
@@ -49,5 +49,15 @@ describe("Dynamic icon", () => {
     expect(testId).toBeInTheDocument()
     expect(icon).toBeInTheDocument()
     expect(testId.textContent).toEqual(icon.textContent)
+  })
+
+  it("isMaterialIcon returns correct results", () => {
+    expect(isMaterialIcon(":material/test:")).toBeTruthy()
+    expect(isMaterialIcon(":material/test-hyphen:")).toBeTruthy()
+    expect(isMaterialIcon(":material/test_underscore:")).toBeTruthy()
+    expect(isMaterialIcon(":material/test")).toBeFalsy()
+    expect(isMaterialIcon("material/test:")).toBeFalsy()
+    expect(isMaterialIcon("material/test")).toBeFalsy()
+    expect(isMaterialIcon(":materialtest:")).toBeFalsy()
   })
 })

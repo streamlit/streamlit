@@ -15,5 +15,5 @@
  */
 
 export { default, EmojiIcon } from "./Icon"
-export { DynamicIcon } from "./DynamicIcon"
+export { DynamicIcon, isMaterialIcon } from "./DynamicIcon"
 export { StyledIcon, StyledSpinnerIcon } from "./styled-components"

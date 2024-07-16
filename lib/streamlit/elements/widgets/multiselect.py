@@ -14,12 +14,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
-from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
+from streamlit.dataframe_util import OptionSequence
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.options_selector_utils import (
+    check_and_convert_to_indices,
+    convert_to_sequence_and_check_comparable,
+    get_default_indices,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -35,75 +40,41 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import (
-    WidgetArgs,
-    WidgetCallback,
-    WidgetKwargs,
-    register_widget,
-)
+from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     T,
-    check_python_comparable,
     is_iterable,
-    is_type,
 )
 
 if TYPE_CHECKING:
+    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state import (
+        WidgetArgs,
+        WidgetCallback,
+        WidgetKwargs,
+    )
 
 
-@overload
-def _check_and_convert_to_indices(  # type: ignore[misc]
-    opt: Sequence[Any], default_values: None
-) -> list[int] | None: ...
+@dataclass
+class MultiSelectSerde(Generic[T]):
+    options: Sequence[T]
+    default_value: list[int] = field(default_factory=list)
 
+    def serialize(self, value: list[T]) -> list[int]:
+        indices = check_and_convert_to_indices(self.options, value)
+        return indices if indices is not None else []
 
-@overload
-def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Sequence[Any] | Any
-) -> list[int]: ...
-
-
-def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Sequence[Any] | Any | None
-) -> list[int] | None:
-    """Perform validation checks and return indices based on the default values."""
-    if default_values is None and None not in opt:
-        return None
-
-    if not isinstance(default_values, list):
-        # This if is done before others because calling if not x (done
-        # right below) when x is of type pd.Series() or np.array() throws a
-        # ValueError exception.
-        if is_type(default_values, "numpy.ndarray") or is_type(
-            default_values, "pandas.core.series.Series"
-        ):
-            default_values = list(cast(Sequence[Any], default_values))
-        elif (
-            isinstance(default_values, (tuple, set))
-            or default_values
-            and default_values not in opt
-        ):
-            default_values = list(default_values)
-        else:
-            default_values = [default_values]
-    for value in default_values:
-        if value not in opt:
-            raise StreamlitAPIException(
-                f"The default value '{value}' is part of the options. "
-                "Please make sure that every default values also exists in the options."
-            )
-
-    return [opt.index(value) for value in default_values]
-
-
-def _get_default_count(default: Sequence[Any] | Any | None) -> int:
-    if default is None:
-        return 0
-    if not is_iterable(default):
-        return 1
-    return len(cast(Sequence[Any], default))
+    def deserialize(
+        self,
+        ui_value: list[int] | None,
+        widget_id: str = "",
+    ) -> list[T]:
+        current_value: list[int] = (
+            ui_value if ui_value is not None else self.default_value
+        )
+        return [self.options[i] for i in current_value]
 
 
 def _get_over_max_options_message(current_selections: int, max_selections: int):
@@ -118,23 +89,25 @@ Please select at most {max_selections} {max_selections_noun}.
 """
 
 
-@dataclass
-class MultiSelectSerde(Generic[T]):
-    options: Sequence[T]
-    default_value: list[int]
+def _get_default_count(default: Sequence[Any] | Any | None) -> int:
+    if default is None:
+        return 0
+    if not is_iterable(default):
+        return 1
+    return len(cast(Sequence[Any], default))
 
-    def serialize(self, value: list[T]) -> list[int]:
-        return _check_and_convert_to_indices(self.options, value)
 
-    def deserialize(
-        self,
-        ui_value: list[int] | None,
-        widget_id: str = "",
-    ) -> list[T]:
-        current_value: list[int] = (
-            ui_value if ui_value is not None else self.default_value
+def _check_max_selections(
+    selections: Sequence[Any] | Any | None, max_selections: int | None
+):
+    if max_selections is None:
+        return
+
+    default_count = _get_default_count(selections)
+    if default_count > max_selections:
+        raise StreamlitAPIException(
+            _get_over_max_options_message(default_count, max_selections)
         )
-        return [self.options[i] for i in current_value]
 
 
 class MultiSelectMixin:
@@ -177,14 +150,15 @@ class MultiSelectMixin:
               at https://katex.org/docs/supported.html.
 
             * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
+              ``:color[text to be colored]`` and
+              ``:color-background[text to be colored]``, respectively.
+              ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
               For example, you can use ``:orange[your text here]`` or
               ``:blue-background[your text here]``.
 
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
@@ -218,7 +192,8 @@ class MultiSelectMixin:
         max_selections : int
             The max selections that can be selected at a time.
         placeholder : str
-            A string to display when no options are selected. Defaults to 'Choose an option'.
+            A string to display when no options are selected.
+            Defaults to 'Choose an option'.
         disabled : bool
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
@@ -241,7 +216,8 @@ class MultiSelectMixin:
         >>> options = st.multiselect(
         ...     "What are your favorite colors",
         ...     ["Green", "Yellow", "Red", "Blue"],
-        ...     ["Yellow", "Red"])
+        ...     ["Yellow", "Red"],
+        ... )
         >>>
         >>> st.write("You selected:", options)
 
@@ -288,6 +264,7 @@ class MultiSelectMixin:
     ) -> list[T]:
         key = to_key(key)
 
+        widget_name = "multiselect"
         check_widget_policies(
             self.dg,
             key,
@@ -296,48 +273,44 @@ class MultiSelectMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = convert_anything_to_sequence(options)
-        check_python_comparable(opt)
+        indexable_options = convert_to_sequence_and_check_comparable(options)
+        formatted_options = [format_func(option) for option in indexable_options]
+        default_values = get_default_indices(indexable_options, default)
 
-        indices = _check_and_convert_to_indices(opt, default)
-
-        id = compute_widget_id(
-            "multiselect",
+        form_id = current_form_id(self.dg)
+        widget_id = compute_widget_id(
+            widget_name,
             user_key=key,
             label=label,
-            options=[str(format_func(option)) for option in opt],
-            default=indices,
+            options=formatted_options,
+            default=default_values,
             key=key,
             help=help,
             max_selections=max_selections,
             placeholder=placeholder,
-            form_id=current_form_id(self.dg),
+            form_id=form_id,
             page=ctx.active_script_hash if ctx else None,
         )
 
-        default_value: list[int] = [] if indices is None else indices
-
-        multiselect_proto = MultiSelectProto()
-        multiselect_proto.id = id
-        multiselect_proto.label = label
-        multiselect_proto.default[:] = default_value
-        multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
-        multiselect_proto.form_id = current_form_id(self.dg)
-        multiselect_proto.max_selections = max_selections or 0
-        multiselect_proto.placeholder = placeholder
-        multiselect_proto.disabled = disabled
-        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
+        proto = MultiSelectProto()
+        proto.id = widget_id
+        proto.default[:] = default_values
+        proto.form_id = form_id
+        proto.disabled = disabled
+        proto.label = label
+        proto.max_selections = max_selections or 0
+        proto.placeholder = placeholder
+        proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-
+        proto.options[:] = formatted_options
         if help is not None:
-            multiselect_proto.help = dedent(help)
+            proto.help = dedent(help)
 
-        serde = MultiSelectSerde(opt, default_value)
-
+        serde = MultiSelectSerde(indexable_options, default_values)
         widget_state = register_widget(
             "multiselect",
-            multiselect_proto,
+            proto,
             user_key=key,
             on_change_handler=on_change,
             args=args,
@@ -346,20 +319,21 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        default_count = _get_default_count(widget_state.value)
-        if max_selections and default_count > max_selections:
-            raise StreamlitAPIException(
-                _get_over_max_options_message(default_count, max_selections)
-            )
-        widget_state = maybe_coerce_enum_sequence(widget_state, options, opt)
+
+        _check_max_selections(widget_state.value, max_selections)
+        widget_state = maybe_coerce_enum_sequence(
+            widget_state, options, indexable_options
+        )
 
         if widget_state.value_changed:
-            multiselect_proto.value[:] = serde.serialize(widget_state.value)
-            multiselect_proto.set_value = True
+            proto.value[:] = serde.serialize(widget_state.value)
+            proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
-        self.dg._enqueue("multiselect", multiselect_proto)
+            save_for_app_testing(ctx, widget_id, format_func)
+
+        self.dg._enqueue(widget_name, proto)
+
         return widget_state.value
 
     @property

@@ -42,6 +42,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     ChartStackType,
     ChartType,
     generate_chart,
+    maybe_raise_stack_warning,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.policies import check_widget_policies
@@ -185,7 +186,9 @@ class VegaLiteState(TypedDict, total=False):
     ...     },
     ... }
     >>>
-    >>> event = st.vega_lite_chart(st.session_state.data, spec, key="vega_chart", on_select="rerun")
+    >>> event = st.vega_lite_chart(
+    ...     st.session_state.data, spec, key="vega_chart", on_select="rerun"
+    ... )
     >>>
     >>> event
 
@@ -682,11 +685,11 @@ class VegaChartsMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame(
-        ...    {
-        ...        "col1": np.random.randn(20),
-        ...        "col2": np.random.randn(20),
-        ...        "col3": np.random.choice(["A", "B", "C"], 20),
-        ...    }
+        ...     {
+        ...         "col1": np.random.randn(20),
+        ...         "col2": np.random.randn(20),
+        ...         "col3": np.random.choice(["A", "B", "C"], 20),
+        ...     }
         ... )
         >>>
         >>> st.line_chart(chart_data, x="col1", y="col2", color="col3")
@@ -703,10 +706,15 @@ class VegaChartsMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["col1", "col2", "col3"])
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3), columns=["col1", "col2", "col3"]
+        ... )
         >>>
         >>> st.line_chart(
-        ...    chart_data, x="col1", y=["col2", "col3"], color=["#FF0000", "#0000FF"]  # Optional
+        ...     chart_data,
+        ...     x="col1",
+        ...     y=["col2", "col3"],
+        ...     color=["#FF0000", "#0000FF"],  # Optional
         ... )
 
         .. output::
@@ -747,6 +755,7 @@ class VegaChartsMixin:
         x_label: str | None = None,
         y_label: str | None = None,
         color: str | Color | list[Color] | None = None,
+        stack: bool | ChartStackType | None = None,
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = True,
@@ -830,6 +839,13 @@ class VegaChartsMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
+        stack : bool, "normalize", "center", or None
+            Whether to stack the areas. If this is ``None`` (default), uses
+            Vega's default. If ``True``, stacks the areas on top of one another.
+            If ``False``, overlays the areas without stacking. If "normalize",
+            the areas are stacked and normalized to 100%. If "center", the areas
+            are stacked and shifted to center their baseline (produces steamgraph).
+
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
             ``None`` (default), Streamlit sets the width of the chart to fit
@@ -875,11 +891,11 @@ class VegaChartsMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame(
-        ...    {
-        ...        "col1": np.random.randn(20),
-        ...        "col2": np.random.randn(20),
-        ...        "col3": np.random.choice(["A", "B", "C"], 20),
-        ...    }
+        ...     {
+        ...         "col1": np.random.randn(20),
+        ...         "col2": np.random.randn(20),
+        ...         "col3": np.random.choice(["A", "B", "C"], 20),
+        ...     }
         ... )
         >>>
         >>> st.area_chart(chart_data, x="col1", y="col2", color="col3")
@@ -896,10 +912,15 @@ class VegaChartsMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["col1", "col2", "col3"])
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3), columns=["col1", "col2", "col3"]
+        ... )
         >>>
         >>> st.area_chart(
-        ...    chart_data, x="col1", y=["col2", "col3"], color=["#FF0000", "#0000FF"]  # Optional
+        ...     chart_data,
+        ...     x="col1",
+        ...     y=["col2", "col3"],
+        ...     color=["#FF0000", "#0000FF"],  # Optional
         ... )
 
         .. output::
@@ -907,6 +928,18 @@ class VegaChartsMixin:
            height: 440px
 
         """
+
+        # Check that the stack parameter is valid, raise more informative error message if not
+        maybe_raise_stack_warning(
+            stack,
+            "st.area_chart",
+            "https://docs.streamlit.io/develop/api-reference/charts/st.area_chart",
+        )
+
+        # st.area_chart's stack=False option translates to a "layered" area chart for vega. We reserve stack=False for
+        # grouped/non-stacked bar charts, so we need to translate False to "layered" here.
+        if stack is False:
+            stack = "layered"
 
         chart, add_rows_metadata = generate_chart(
             chart_type=ChartType.AREA,
@@ -919,6 +952,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
+            stack=stack,
         )
         return cast(
             "DeltaGenerator",
@@ -1033,8 +1067,8 @@ class VegaChartsMixin:
 
         stack : bool, "normalize", "center", "layered", or None
             Whether to stack the bars. If this is ``None`` (default), uses Vega's
-            default. If this is ``True``, the bars are stacked on top of each other.
-            If this is ``False``, the bars are displayed side by side. If "normalize",
+            default. If ``True``, the bars are stacked on top of each other.
+            If ``False``, the bars are displayed side by side. If "normalize",
             the bars are stacked and normalized to 100%. If "center", the bars are
             stacked around a central axis. If "layered", the bars are stacked on top
             of one another.
@@ -1084,11 +1118,11 @@ class VegaChartsMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame(
-        ...    {
-        ...        "col1": list(range(20)) * 3,
-        ...        "col2": np.random.randn(60),
-        ...        "col3": ["A"] * 20 + ["B"] * 20 + ["C"] * 20,
-        ...    }
+        ...     {
+        ...         "col1": list(range(20)) * 3,
+        ...         "col2": np.random.randn(60),
+        ...         "col3": ["A"] * 20 + ["B"] * 20 + ["C"] * 20,
+        ...     }
         ... )
         >>>
         >>> st.bar_chart(chart_data, x="col1", y="col2", color="col3")
@@ -1106,11 +1140,18 @@ class VegaChartsMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame(
-        ...    {"col1": list(range(20)), "col2": np.random.randn(20), "col3": np.random.randn(20)}
+        ...     {
+        ...         "col1": list(range(20)),
+        ...         "col2": np.random.randn(20),
+        ...         "col3": np.random.randn(20),
+        ...     }
         ... )
         >>>
         >>> st.bar_chart(
-        ...    chart_data, x="col1", y=["col2", "col3"], color=["#FF0000", "#0000FF"]  # Optional
+        ...     chart_data,
+        ...     x="col1",
+        ...     y=["col2", "col3"],
+        ...     color=["#FF0000", "#0000FF"],  # Optional
         ... )
 
         .. output::
@@ -1132,18 +1173,17 @@ class VegaChartsMixin:
 
         """
 
+        # Check that the stack parameter is valid, raise more informative error message if not
+        maybe_raise_stack_warning(
+            stack,
+            "st.bar_chart",
+            "https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart",
+        )
+
         # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
                 "Streamlit does not support non-stacked (grouped) bar charts with Altair 4.x. Please upgrade to Version 5."
-            )
-
-        # Check that the stack parameter is valid, raise more informative error message if not
-        VALID_STACK_TYPES = (None, True, False, "normalize", "center", "layered")
-        if stack not in VALID_STACK_TYPES:
-            raise StreamlitAPIException(
-                f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
-                "See documentation for `st.bar_chart` [here](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart) for more information."
             )
 
         bar_chart_type = (
@@ -1320,15 +1360,17 @@ class VegaChartsMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["col1", "col2", "col3"])
-        >>> chart_data['col4'] = np.random.choice(['A','B','C'], 20)
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3), columns=["col1", "col2", "col3"]
+        ... )
+        >>> chart_data["col4"] = np.random.choice(["A", "B", "C"], 20)
         >>>
         >>> st.scatter_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col4',
-        ...     size='col3',
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col4",
+        ...     size="col3",
         ... )
 
         .. output::
@@ -1343,14 +1385,16 @@ class VegaChartsMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(np.random.randn(20, 4), columns=["col1", "col2", "col3", "col4"])
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4), columns=["col1", "col2", "col3", "col4"]
+        ... )
         >>>
         >>> st.scatter_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     size='col4',
-        ...     color=['#FF0000', '#0000FF'],  # Optional
+        ...     x="col1",
+        ...     y=["col2", "col3"],
+        ...     size="col4",
+        ...     color=["#FF0000", "#0000FF"],  # Optional
         ... )
 
         .. output::

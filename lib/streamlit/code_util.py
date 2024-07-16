@@ -73,7 +73,7 @@ def get_method_args_from_code(args: list[Any], line: str) -> list[str]:
 
     Example
     -------
-    >>> line = 'foo(bar, baz, my(func, tion))'
+    >>> line = "foo(bar, baz, my(func, tion))"
     >>>
     >>> get_method_args_from_code(range(0, 3), line)
     ['bar', 'baz', 'my(func, tion)']
