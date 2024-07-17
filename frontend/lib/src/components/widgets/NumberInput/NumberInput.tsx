@@ -234,7 +234,7 @@ export const NumberInput: React.FC<Props> = ({
     setIsFocused(true)
   }
 
-  const updateFromProtobuf = () => {
+  const updateFromProtobuf = (): void => {
     const { value } = element
     element.setValue = false
     setValue(value ?? null)
@@ -244,6 +244,7 @@ export const NumberInput: React.FC<Props> = ({
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   React.useEffect(() => {
+    const formClearHelperCopy = formClearHelper.current
     if (element.setValue) {
       updateFromProtobuf()
     } else {
@@ -251,8 +252,13 @@ export const NumberInput: React.FC<Props> = ({
     }
 
     return () => {
-      formClearHelper.current.disconnect()
+      formClearHelperCopy.disconnect()
     }
+
+    // I don't want to run this effect on every render, only on mount.
+    // Additionally, it's okay if commitValue changes, because we only call
+    // it once in the beginning anyways.
+    /* eslint-disable react-hooks/exhaustive-deps */
   }, [])
 
   // update from protobuf whenever component updates if element.setValue is truthy
