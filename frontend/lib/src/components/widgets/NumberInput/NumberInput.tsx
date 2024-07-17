@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useRef, useState } from "react"
+import React from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
@@ -61,39 +61,6 @@ export interface Props {
   fragmentId?: string
 }
 
-export interface State {
-  /**
-   * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
-   */
-  dirty: boolean
-
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: number | null
-
-  /**
-   * The value with applied format that is going to be shown to the user
-   */
-  formattedValue: string | null
-
-  /**
-   * True if the input is selected
-   */
-  isFocused: boolean
-}
-
-/**
- * Return a string property from an element. If the string is
- * null or empty, return undefined instead.
- */
-function getNonEmptyString(
-  value: string | null | undefined
-): string | undefined {
-  return value == null || value === "" ? undefined : value
-}
-
 export const NumberInput = ({
   disabled,
   element,
@@ -106,14 +73,12 @@ export const NumberInput = ({
   const [dirty, setDirty] = React.useState(false)
   const [value, setValue] = React.useState<number | null>(initialValue)
   const [formattedValue, setFormattedValue] = React.useState<string | null>(
-    formatValue(initialValue, element)
+    formatValue({ value: initialValue, ...element })
   )
   const [isFocused, setIsFocused] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const formClearHelper = React.useRef(new FormClearHelper())
   const id = React.useRef(uniqueId("number_input_"))
-
-  console.log({ value, dirty, formattedValue })
 
   const getStep = () => {
     const { step } = element
@@ -141,70 +106,28 @@ export const NumberInput = ({
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
 
-  // /** Commit state.value to the WidgetStateManager. */
-  // private commitWidgetValue = (source: Source): void => {
-  //   const { value } = this.state
-  //   const { element, widgetMgr, fragmentId } = this.props
-  //   const data = this.props.element
-
-  //   const min = this.getMin()
-  //   const max = this.getMax()
-
-  //   if (notNullOrUndefined(value) && (min > value || value > max)) {
-  //     const node = this.inputRef.current
-  //     if (node) {
-  //       node.reportValidity()
-  //     }
-  //   } else {
-  //     const valueToBeSaved = value ?? data.default ?? null
-
-  //     if (this.isIntData()) {
-  //       widgetMgr.setIntValue(element, valueToBeSaved, source, fragmentId)
-  //     } else {
-  //       widgetMgr.setDoubleValue(element, valueToBeSaved, source, fragmentId)
-  //     }
-
-  //     this.setState({
-  //       dirty: false,
-  //       value: valueToBeSaved,
-  //       formattedValue: this.formatValue(valueToBeSaved),
-  //     })
-  //   }
-  // }
-
   const commitValue = React.useCallback(
     ({ value, source }: { value: number | null; source: Source }) => {
-      // console.log("committing valueee")
       console.log({ value })
       if (notNullOrUndefined(value) && (min > value || value > max)) {
-        // console.log("value is not null or undefined")
-        const node = inputRef.current
-        if (node) {
-          node.reportValidity()
-        }
+        inputRef.current?.reportValidity()
       } else {
-        // console.log("value is null or undefined")
-        const valueToBeSaved = value ?? element.default ?? null
+        const newValue = value ?? element.default ?? null
 
         switch (element.dataType) {
           case NumberInputProto.DataType.INT:
-            widgetMgr.setIntValue(element, valueToBeSaved, source, fragmentId)
+            widgetMgr.setIntValue(element, newValue, source, fragmentId)
             break
           case NumberInputProto.DataType.FLOAT:
-            widgetMgr.setDoubleValue(
-              element,
-              valueToBeSaved,
-              source,
-              fragmentId
-            )
+            widgetMgr.setDoubleValue(element, newValue, source, fragmentId)
             break
           default:
             throw new Error("Invalid data type")
         }
 
         setDirty(false)
-        setValue(valueToBeSaved)
-        setFormattedValue(formatValue(valueToBeSaved, element))
+        setValue(newValue)
+        setFormattedValue(formatValue({ value: newValue, ...element }))
       }
     },
     [value, min, max, inputRef, element, widgetMgr, fragmentId]
@@ -221,6 +144,7 @@ export const NumberInput = ({
     setIsFocused(true)
   }
 
+  // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   React.useEffect(() => {
     if (element.setValue) {
       updateFromProtobuf()
@@ -233,6 +157,7 @@ export const NumberInput = ({
     }
   }, [])
 
+  // update from protobuf whenever component updates if element.setValue is truthy
   React.useEffect(() => {
     if (element.setValue) {
       updateFromProtobuf()
@@ -243,13 +168,12 @@ export const NumberInput = ({
     const { value } = element
     element.setValue = false
     setValue(value ?? null)
-    setFormattedValue(formatValue(value ?? null, element))
+    setFormattedValue(formatValue({ value: value ?? null, ...element }))
     commitValue({ value: value ?? null, source: { fromUi: false } })
   }
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
-  // todo what should this be behind?
   formClearHelper.current.manageFormClearListener(
     widgetMgr,
     element.formId,
@@ -283,42 +207,19 @@ export const NumberInput = ({
     }
   }
 
-  const modifyValueUsingStep = (modifier: "increment" | "decrement") => {
-    return () => {
-      console.log("modifier", modifier)
-      console.log({ modifier, value, step, min, max, canDec, canInc })
-      switch (modifier) {
-        case "increment":
-          if (canInc) {
-            console.log("incrementing!!!")
-            setDirty(true)
-            setValue(prevValue => {
-              console.log("settingValue")
-              console.log({ prevValue })
-              const newValue = (prevValue ?? min) + step
-              console.log({ newValue })
-              commitValue({ value: newValue, source: { fromUi: true } })
-              return newValue
-            })
-          }
-          break
-        case "decrement":
-          if (canDec) {
-            setDirty(true)
-            setValue(prevValue => {
-              console.log("settingValue")
-              console.log({ prevValue })
-              const newValue = (prevValue ?? max) - step
-              console.log({ newValue })
-              commitValue({ value: newValue, source: { fromUi: true } })
-              return newValue
-            })
-          }
-          break
-        default:
-      }
+  const increment = React.useCallback(() => {
+    if (canInc) {
+      setDirty(true)
+      commitValue({ value: (value ?? min) + step, source: { fromUi: true } })
     }
-  }
+  }, [value, min, step, canInc])
+
+  const decrement = React.useCallback(() => {
+    if (canDec) {
+      setDirty(true)
+      commitValue({ value: (value ?? max) - step, source: { fromUi: true } })
+    }
+  }, [value, max, step, canDec])
 
   const onKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -328,11 +229,11 @@ export const NumberInput = ({
     switch (key) {
       case "ArrowUp":
         e.preventDefault()
-        modifyValueUsingStep("increment")()
+        increment()
         break
       case "ArrowDown":
         e.preventDefault()
-        modifyValueUsingStep("decrement")()
+        decrement()
         break
       default:
     }
@@ -450,7 +351,7 @@ export const NumberInput = ({
             <StyledInputControl
               className="step-down"
               data-testid="stNumberInput-StepDown"
-              onClick={modifyValueUsingStep("decrement")}
+              onClick={decrement}
               disabled={!canDec || disabled}
               tabIndex={-1}
             >
@@ -463,7 +364,7 @@ export const NumberInput = ({
             <StyledInputControl
               className="step-up"
               data-testid="stNumberInput-StepUp"
-              onClick={modifyValueUsingStep("increment")}
+              onClick={increment}
               disabled={!canInc || disabled}
               tabIndex={-1}
             >
@@ -489,6 +390,20 @@ export const NumberInput = ({
   )
 }
 
+/**
+ * Return a string property from an element. If the string is
+ * null or empty, return undefined instead.
+ */
+function getNonEmptyString(
+  value: string | null | undefined
+): string | undefined {
+  return value == null || value === "" ? undefined : value
+}
+
+/**
+ * This function returns the initial value for the NumberInput widget
+ * via the widget manager.
+ */
 function getInitialValue(
   props: Pick<Props, "element" | "widgetMgr">
 ): number | null {
@@ -499,21 +414,31 @@ function getInitialValue(
   return storedValue ?? props.element.default ?? null
 }
 
-const formatValue = (
-  value: number | null,
-  element: NumberInputProto
-): string | null => {
+/**
+ * Utilizes the sprintf library to format a number value
+ * according to a given format string.
+ */
+export const formatValue = ({
+  value,
+  format,
+  step,
+  dataType,
+}: {
+  value: number | null
+  format?: string | null
+  step?: number
+  dataType: NumberInputProto.DataType
+}): string | null => {
   if (isNullOrUndefined(value)) {
     return null
   }
 
-  const { format, step } = element
   let formatString = getNonEmptyString(format)
 
-  if (formatString == null) {
+  if (formatString == null && step != null) {
     const strStep = step.toString()
     if (
-      element.dataType === NumberInputProto.DataType.FLOAT &&
+      dataType === NumberInputProto.DataType.FLOAT &&
       step !== 0 &&
       strStep.includes(".")
     ) {
@@ -534,7 +459,7 @@ const formatValue = (
   }
 }
 
-const canDecrement = (
+export const canDecrement = (
   value: number | null,
   step: number,
   min: number
@@ -545,7 +470,7 @@ const canDecrement = (
   return value - step >= min
 }
 
-const canIncrement = (
+export const canIncrement = (
   value: number | null,
   step: number,
   max: number
