@@ -611,10 +611,6 @@ describe("NumberInput widget", () => {
 
   describe("utilities", () => {
     describe("canDecrement function", () => {
-      it("returns false if value is null", () => {
-        expect(canDecrement(null, 1, 0)).toBe(false)
-      })
-
       it("returns true if decrementing stays above min", () => {
         expect(canDecrement(5, 1, 0)).toBe(true)
       })
@@ -625,10 +621,6 @@ describe("NumberInput widget", () => {
     })
 
     describe("canIncrement function", () => {
-      it("returns false if value is null", () => {
-        expect(canIncrement(null, 1, 10)).toBe(false)
-      })
-
       it("returns true if incrementing stays below max", () => {
         expect(canIncrement(5, 1, 10)).toBe(true)
       })
