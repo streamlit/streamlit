@@ -34,7 +34,8 @@ import BaseButton, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import {
   DynamicIcon,
-  isMaterialIcon,
+  getFilledStarIcon,
+  isFilledStarIcon,
 } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
@@ -91,21 +92,20 @@ function syncWithWidgetManager(
 
 function getContentElement(content: string): ReactElement {
   const fontSize = "lg"
-  if (isMaterialIcon(content)) {
-    return <DynamicIcon size={fontSize} iconValue={content} />
+  if (isFilledStarIcon(content)) {
+    return (
+      <StreamlitMarkdown
+        source={getFilledStarIcon()}
+        allowHTML={true}
+        style={{
+          marginBottom: 0,
+          width: iconSizes[fontSize],
+          display: "inline-flex",
+        }}
+      />
+    )
   }
-
-  return (
-    <StreamlitMarkdown
-      source={content}
-      allowHTML={true}
-      style={{
-        marginBottom: 0,
-        width: iconSizes[fontSize],
-        display: "inline-flex",
-      }}
-    />
-  )
+  return <DynamicIcon size={fontSize} iconValue={content} />
 }
 
 /**
