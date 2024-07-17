@@ -73,11 +73,11 @@ plotly==5.22.0
 pluggy==1.5.0
 pre-commit==3.7.1
 protobuf==5.27.2
-pyarrow==16.1.0
+pyarrow==17.0.0
 pycparser==2.22
 pydantic==1.10.17
 pydeck==0.9.1
-pydot==3.0.0
+pydot==3.0.1
 pyee==11.1.0
 Pygments==2.18.0
 pyparsing==3.1.2
@@ -118,7 +118,7 @@ toml==0.10.2
 toolz==0.12.1
 tornado==6.4.1
 twine==5.1.1
-types-cachetools==5.3.0.7
+types-cachetools==5.4.0.20240717
 types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417

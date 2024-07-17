@@ -47,9 +47,9 @@ keyring==25.2.1
 kiwisolver==1.4.5
 langchain==0.2.8
 langchain-community==0.2.7
-langchain-core==0.2.19
+langchain-core==0.2.20
 langchain-text-splitters==0.2.2
-langsmith==0.1.87
+langsmith==0.1.88
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -125,7 +125,7 @@ tomlkit==0.13.0
 toolz==0.12.1
 tornado==6.4.1
 twine==5.1.1
-types-cachetools==5.3.0.7
+types-cachetools==5.4.0.20240717
 types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417
