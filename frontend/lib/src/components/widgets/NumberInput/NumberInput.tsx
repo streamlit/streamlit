@@ -69,42 +69,28 @@ export const NumberInput = ({
   theme,
   fragmentId,
 }: Props) => {
+  const min = element.hasMin ? element.min : -Infinity
+  const max = element.hasMax ? element.max : +Infinity
+
+  const [step, setStep] = React.useState<number>(getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
   const [dirty, setDirty] = React.useState(false)
   const [value, setValue] = React.useState<number | null>(initialValue)
   const [formattedValue, setFormattedValue] = React.useState<string | null>(
-    formatValue({ value: initialValue, ...element })
+    formatValue({ value: initialValue, ...element, step })
   )
   const [isFocused, setIsFocused] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const formClearHelper = React.useRef(new FormClearHelper())
   const id = React.useRef(uniqueId("number_input_"))
 
-  const getStep = () => {
-    const { step } = element
-
-    if (step) {
-      return step
-    }
-    if (element.dataType === NumberInputProto.DataType.INT) {
-      return 1
-    }
-    return 0.01
-  }
-
-  const getMin = () => {
-    return element.hasMin ? element.min : -Infinity
-  }
-
-  const getMax = () => {
-    return element.hasMax ? element.max : +Infinity
-  }
-
-  const step = getStep()
-  const min = getMin()
-  const max = getMax()
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
+
+  // update the step if the props change
+  React.useEffect(() => {
+    setStep(getStep(element))
+  }, [element.dataType, element.step])
 
   const commitValue = React.useCallback(
     ({ value, source }: { value: number | null; source: Source }) => {
@@ -127,7 +113,7 @@ export const NumberInput = ({
 
         setDirty(false)
         setValue(newValue)
-        setFormattedValue(formatValue({ value: newValue, ...element }))
+        setFormattedValue(formatValue({ value: newValue, ...element, step }))
       }
     },
     [value, min, max, inputRef, element, widgetMgr, fragmentId]
@@ -168,7 +154,7 @@ export const NumberInput = ({
     const { value } = element
     element.setValue = false
     setValue(value ?? null)
-    setFormattedValue(formatValue({ value: value ?? null, ...element }))
+    setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
     commitValue({ value: value ?? null, source: { fromUi: false } })
   }
 
@@ -404,14 +390,27 @@ function getNonEmptyString(
  * This function returns the initial value for the NumberInput widget
  * via the widget manager.
  */
-function getInitialValue(
+const getInitialValue = (
   props: Pick<Props, "element" | "widgetMgr">
-): number | null {
+): number | null => {
   const isIntData = props.element.dataType === NumberInputProto.DataType.INT
   const storedValue = isIntData
     ? props.widgetMgr.getIntValue(props.element)
     : props.widgetMgr.getDoubleValue(props.element)
   return storedValue ?? props.element.default ?? null
+}
+
+const getStep = ({
+  step,
+  dataType,
+}: Pick<NumberInputProto, "step" | "dataType">) => {
+  if (step) {
+    return step
+  }
+  if (dataType === NumberInputProto.DataType.INT) {
+    return 1
+  }
+  return 0.01
 }
 
 /**
