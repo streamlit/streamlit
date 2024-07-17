@@ -302,7 +302,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
 
   useEffect(() => {
     if (wrapperElement.current) {
-      setWidth(wrapperElement.current.getBoundingClientRect().width)
       observer.observe(wrapperElement.current)
     }
     return () => {
