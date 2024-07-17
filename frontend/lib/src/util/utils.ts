@@ -344,6 +344,10 @@ export function setCookie(
 
 /** Return an Element's widget ID if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
+  // TODO: make this more broadly apply to any non-widget.
+  if (notNull(element.deckGlJsonChart)) {
+    return undefined
+  }
   return get(element as any, [requireNonNull(element.type), "id"])
 }
 
