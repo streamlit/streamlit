@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
@@ -79,7 +79,7 @@ const getInitialValue = (
 const getStep = ({
   step,
   dataType,
-}: Pick<NumberInputProto, "step" | "dataType">) => {
+}: Pick<NumberInputProto, "step" | "dataType">): number => {
   if (step) {
     return step
   }
@@ -165,14 +165,14 @@ export interface Props {
   fragmentId?: string
 }
 
-export const NumberInput = ({
+export const NumberInput: React.FC<Props> = ({
   disabled,
   element,
   widgetMgr,
   width,
   theme,
   fragmentId,
-}: Props) => {
+}: Props): ReactElement => {
   const min = element.hasMin ? element.min : -Infinity
   const max = element.hasMax ? element.max : +Infinity
 
@@ -193,7 +193,7 @@ export const NumberInput = ({
 
   // update the step if the props change
   React.useEffect(() => {
-    setStep(getStep(element))
+    setStep(getStep({ step: element.step, dataType: element.dataType }))
   }, [element.dataType, element.step])
 
   const commitValue = React.useCallback(
@@ -220,18 +220,26 @@ export const NumberInput = ({
         setFormattedValue(formatValue({ value: newValue, ...element, step }))
       }
     },
-    [value, min, max, inputRef, element, widgetMgr, fragmentId]
+    [min, max, inputRef, element, widgetMgr, fragmentId, step]
   )
 
-  const onBlur = () => {
+  const onBlur = (): void => {
     if (dirty) {
       commitValue({ value, source: { fromUi: true } })
     }
     setIsFocused(false)
   }
 
-  const onFocus = () => {
+  const onFocus = (): void => {
     setIsFocused(true)
+  }
+
+  const updateFromProtobuf = () => {
+    const { value } = element
+    element.setValue = false
+    setValue(value ?? null)
+    setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
+    commitValue({ value: value ?? null, source: { fromUi: false } })
   }
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
@@ -254,14 +262,6 @@ export const NumberInput = ({
     }
   })
 
-  const updateFromProtobuf = () => {
-    const { value } = element
-    element.setValue = false
-    setValue(value ?? null)
-    setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
-    commitValue({ value: value ?? null, source: { fromUi: false } })
-  }
-
   const clearable = isNullOrUndefined(element.default) && !disabled
 
   formClearHelper.current.manageFormClearListener(
@@ -275,7 +275,7 @@ export const NumberInput = ({
 
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  ): void => {
     const { value } = e.target
 
     if (value === "") {
@@ -313,7 +313,7 @@ export const NumberInput = ({
 
   const onKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  ): void => {
     const { key } = e
 
     switch (key) {
@@ -331,7 +331,7 @@ export const NumberInput = ({
 
   const onKeyPress = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  ): void => {
     if (e.key === "Enter") {
       if (dirty) {
         commitValue({ value, source: { fromUi: true } })
@@ -411,6 +411,7 @@ export const NumberInput = ({
               },
               style: {
                 lineHeight: theme.lineHeights.inputWidget,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
                 paddingLeft: theme.spacing.sm,
                 paddingBottom: theme.spacing.sm,
@@ -425,6 +426,7 @@ export const NumberInput = ({
             },
             Root: {
               style: () => ({
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
                 borderLeftWidth: 0,
@@ -435,7 +437,7 @@ export const NumberInput = ({
             },
           }}
         />
-
+        {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
         {width > breakpoints.hideNumberInputControls && (
           <StyledInputControls>
             <StyledInputControl
@@ -467,6 +469,7 @@ export const NumberInput = ({
           </StyledInputControls>
         )}
       </StyledInputContainer>
+      {/* Hide the "Please enter to apply" text in small widget sizes */}
       {width > breakpoints.hideWidgetDetails && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions
