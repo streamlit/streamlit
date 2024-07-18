@@ -23,14 +23,20 @@ const AudioInput: React.FC<Props> = (): ReactElement => {
   return (
     <div
       style={{
-        width: 400,
-        height: 400,
-        background: "papayawhip",
-        color: "red",
+        width: 650,
+        height: 250,
+        background: "gray",
+        color: "black",
         fontSize: 48,
+        padding: 20,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        textAlign: "center",
+        border: "1px solid white",
       }}
     >
-      SUCCESS
+      Super High Fidelity <br /> Audio Input
     </div>
   )
 }
