@@ -234,6 +234,23 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
+    def test_cached_st_method_clear_args(self):
+        self.x = 0
+
+        class ExampleClass:
+            @st.cache_data
+            def foo(_self, y):
+                self.x += y
+                return self.x
+
+        example_instance = ExampleClass()
+
+        assert example_instance.foo(1) == 1
+        example_instance.foo.clear(2)
+        assert example_instance.foo(1) == 1
+        example_instance.foo.clear(1)
+        assert example_instance.foo(1) == 2
+
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
