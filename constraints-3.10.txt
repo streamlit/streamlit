@@ -47,11 +47,11 @@ jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.1
 kiwisolver==1.4.5
-langchain==0.2.8
+langchain==0.2.9
 langchain-community==0.2.7
-langchain-core==0.2.20
+langchain-core==0.2.21
 langchain-text-splitters==0.2.2
-langsmith==0.1.88
+langsmith==0.1.90
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -115,7 +115,7 @@ semver==2.13.0
 six==1.16.0
 smmap==5.0.1
 snowflake-connector-python==3.11.0
-snowflake-snowpark-python==1.19.0
+snowflake-snowpark-python==1.20.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.52
 sqlalchemy2-stubs==0.0.2a38
@@ -140,7 +140,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.25
+uv==0.2.26
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1

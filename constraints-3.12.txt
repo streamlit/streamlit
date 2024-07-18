@@ -105,7 +105,7 @@ scipy==1.14.0
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
-setuptools==70.3.0
+setuptools==71.0.1
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
@@ -130,7 +130,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.25
+uv==0.2.26
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
