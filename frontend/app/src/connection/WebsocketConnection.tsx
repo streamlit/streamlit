@@ -563,6 +563,8 @@ export class WebsocketConnection {
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
 
+    console.log({ msg })
+
     PerformanceEvents.record({
       name: "DecodedMessage",
       messageIndex,
