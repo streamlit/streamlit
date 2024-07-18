@@ -48,6 +48,7 @@ ElementType: TypeAlias = str
 ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
     MappingProxyType(
         {
+            "audio_input": "file_uploader_state_value",
             "button": "trigger_value",
             "button_group": "int_array_value",
             "camera_input": "file_uploader_state_value",

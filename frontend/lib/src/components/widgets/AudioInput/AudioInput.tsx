@@ -21,8 +21,16 @@ interface Props {}
 
 const AudioInput: React.FC<Props> = (): ReactElement => {
   return (
-    <div style={{ width: 400, height: 400, background: "papayawhip" }}>
-      AudioInput
+    <div
+      style={{
+        width: 400,
+        height: 400,
+        background: "papayawhip",
+        color: "red",
+        fontSize: 48,
+      }}
+    >
+      SUCCESS
     </div>
   )
 }
