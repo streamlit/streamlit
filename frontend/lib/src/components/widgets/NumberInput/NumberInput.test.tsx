@@ -226,7 +226,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
-        props.element,
+        { id: props.element.id, formId: props.element.formId },
         props.element.default,
         {
           fromUi: false,
@@ -340,7 +340,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        { id: props.element.id, formId: props.element.formId },
         props.element.default,
         {
           fromUi: false,
