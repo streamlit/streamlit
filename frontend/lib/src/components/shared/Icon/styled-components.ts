@@ -90,6 +90,7 @@ export interface StyledDynamicIconProps {
 
 export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
   ({ size = "lg", margin = "", padding = "", theme }) => {
+    console.log("Props - padding", padding)
     return {
       fill: "currentColor",
       display: "inline-flex",

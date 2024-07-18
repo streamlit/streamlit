@@ -27,6 +27,7 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
@@ -138,6 +139,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               data-testid="stPopoverButton"
               onClick={() => setOpen(!open)}
             >
+              {element.icon && (
+                <DynamicIcon
+                  size="lg"
+                  margin="0 sm 0 0"
+                  color={theme.colors.bodyText}
+                  iconValue={element.icon}
+                />
+              )}
               <StreamlitMarkdown
                 source={element.label}
                 allowHTML={false}

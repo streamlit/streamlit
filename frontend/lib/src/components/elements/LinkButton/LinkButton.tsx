@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement, MouseEvent } from "react"
+import { useTheme } from "@emotion/react"
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
 import {
   BaseButtonTooltip,
@@ -23,8 +24,9 @@ import {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 
 import BaseLinkButton from "./BaseLinkButton"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 export interface Props {
   disabled: boolean
   element: LinkButtonProto
@@ -32,6 +34,7 @@ export interface Props {
 }
 
 function LinkButton(props: Props): ReactElement {
+  const { colors }: EmotionTheme = useTheme()
   const { disabled, element, width } = props
   const style = { width }
 
@@ -71,6 +74,14 @@ function LinkButton(props: Props): ReactElement {
           rel="noreferrer"
           aria-disabled={disabled}
         >
+          {element.icon && (
+            <DynamicIcon
+              size="lg"
+              margin="0 sm 0 0"
+              color={colors.bodyText}
+              iconValue={element.icon}
+            />
+          )}
           <StreamlitMarkdown
             source={element.label}
             allowHTML={false}

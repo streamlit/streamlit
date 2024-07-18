@@ -15,16 +15,19 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "@emotion/react"
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
   BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -53,6 +56,7 @@ export function createDownloadLink(
 }
 
 function DownloadButton(props: Props): ReactElement {
+  const { colors }: EmotionTheme = useTheme()
   const { disabled, element, widgetMgr, width, endpoints, fragmentId } = props
   const style = { width }
   const {
@@ -94,6 +98,14 @@ function DownloadButton(props: Props): ReactElement {
           onClick={handleDownloadClick}
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
         >
+          {element.icon && (
+            <DynamicIcon
+              size="lg"
+              margin="0 sm 0 0"
+              color={colors.bodyText}
+              iconValue={element.icon}
+            />
+          )}
           <StreamlitMarkdown
             source={element.label}
             allowHTML={false}

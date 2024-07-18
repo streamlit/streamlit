@@ -86,6 +86,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -136,6 +137,22 @@ class ButtonMixin:
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
@@ -189,6 +206,7 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -207,6 +225,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -280,6 +299,22 @@ class ButtonMixin:
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False.
@@ -370,6 +405,7 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -382,6 +418,7 @@ class ButtonMixin:
         *,
         help: str | None = None,
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -426,6 +463,22 @@ class ButtonMixin:
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
@@ -462,6 +515,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
         )
 
@@ -517,7 +571,7 @@ class ButtonMixin:
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
             string, the following options are valid:
@@ -597,6 +651,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
@@ -640,6 +695,9 @@ class ButtonMixin:
         )
         download_button_proto.disabled = disabled
 
+        if icon is not None:
+            download_button_proto.icon = validate_icon_or_emoji(icon)
+
         if help is not None:
             download_button_proto.help = dedent(help)
 
@@ -667,6 +725,7 @@ class ButtonMixin:
         help: str | None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -679,6 +738,9 @@ class ButtonMixin:
 
         if help is not None:
             link_button_proto.help = dedent(help)
+
+        if icon is not None:
+            link_button_proto.icon = validate_icon_or_emoji(icon)
 
         return self.dg._enqueue("link_button", link_button_proto)
 
@@ -765,6 +827,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
@@ -819,6 +882,9 @@ class ButtonMixin:
 
         if help is not None:
             button_proto.help = dedent(help)
+
+        if icon is not None:
+            button_proto.icon = validate_icon_or_emoji(icon)
 
         serde = ButtonSerde()
 
