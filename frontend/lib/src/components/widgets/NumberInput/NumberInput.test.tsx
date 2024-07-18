@@ -192,7 +192,7 @@ describe("NumberInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
+      { id: props.element.id, formId: props.element.formId },
       props.element.default,
       {
         fromUi: true,
