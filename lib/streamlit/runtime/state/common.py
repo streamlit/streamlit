@@ -39,6 +39,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
+from streamlit.proto.AudioInput_pb2 import AudioInput
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup
 from streamlit.proto.CameraInput_pb2 import CameraInput
@@ -63,6 +64,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput
 WidgetProto: TypeAlias = Union[
     Arrow,
     ArrowVegaLiteChart,
+    AudioInput,
     Button,
     ButtonGroup,
     CameraInput,
