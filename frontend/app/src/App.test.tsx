@@ -30,7 +30,7 @@ import {
   mockWindowLocation,
   ScriptRunState,
   SessionInfo,
-  createAutoTheme,
+  getHostSpecifiedTheme,
   CUSTOM_THEME_NAME,
   lightTheme,
   toExportedTheme,
@@ -621,7 +621,9 @@ describe("App", () => {
 
       expect(props.theme.setTheme).toHaveBeenCalledTimes(2)
       // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(createAutoTheme())
+      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(
+        getHostSpecifiedTheme()
+      )
     })
 
     it("updates the custom theme if the one received from server has different hash", () => {
