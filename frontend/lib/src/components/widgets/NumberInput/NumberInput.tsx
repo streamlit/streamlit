@@ -297,9 +297,11 @@ export const NumberInput: React.FC<Props> = ({
   }, [])
 
   // update from protobuf whenever component updates if element.setValue is truthy
-  if (element.setValue) {
-    updateFromProtobuf()
-  }
+  React.useEffect(() => {
+    if (element.setValue) {
+      updateFromProtobuf()
+    }
+  })
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
