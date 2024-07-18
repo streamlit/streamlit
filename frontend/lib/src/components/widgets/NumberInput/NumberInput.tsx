@@ -173,6 +173,13 @@ export const NumberInput: React.FC<Props> = ({
   theme,
   fragmentId,
 }: Props): ReactElement => {
+  const {
+    dataType: elementDataType,
+    id: elementId,
+    formId: elementFormId,
+    default: elementDefault,
+    format: elementFormat,
+  } = element
   const min = element.hasMin ? element.min : -Infinity
   const max = element.hasMax ? element.max : +Infinity
 
@@ -198,18 +205,27 @@ export const NumberInput: React.FC<Props> = ({
 
   const commitValue = React.useCallback(
     ({ value, source }: { value: number | null; source: Source }) => {
-      console.log({ value })
       if (notNullOrUndefined(value) && (min > value || value > max)) {
         inputRef.current?.reportValidity()
       } else {
-        const newValue = value ?? element.default ?? null
+        const newValue = value ?? elementDefault ?? null
 
-        switch (element.dataType) {
+        switch (elementDataType) {
           case NumberInputProto.DataType.INT:
-            widgetMgr.setIntValue(element, newValue, source, fragmentId)
+            widgetMgr.setIntValue(
+              { id: elementId, formId: elementFormId },
+              newValue,
+              source,
+              fragmentId
+            )
             break
           case NumberInputProto.DataType.FLOAT:
-            widgetMgr.setDoubleValue(element, newValue, source, fragmentId)
+            widgetMgr.setDoubleValue(
+              { id: elementId, formId: elementFormId },
+              newValue,
+              source,
+              fragmentId
+            )
             break
           default:
             throw new Error("Invalid data type")
@@ -217,10 +233,29 @@ export const NumberInput: React.FC<Props> = ({
 
         setDirty(false)
         setValue(newValue)
-        setFormattedValue(formatValue({ value: newValue, ...element, step }))
+        setFormattedValue(
+          formatValue({
+            value: newValue,
+            dataType: elementDataType,
+            format: elementFormat,
+            step,
+          })
+        )
       }
     },
-    [min, max, inputRef, element, widgetMgr, fragmentId, step]
+    [
+      min,
+      max,
+      inputRef,
+      widgetMgr,
+      fragmentId,
+      step,
+      elementDataType,
+      elementId,
+      elementFormId,
+      elementDefault,
+      elementFormat,
+    ]
   )
 
   const onBlur = (): void => {
@@ -262,11 +297,9 @@ export const NumberInput: React.FC<Props> = ({
   }, [])
 
   // update from protobuf whenever component updates if element.setValue is truthy
-  React.useEffect(() => {
-    if (element.setValue) {
-      updateFromProtobuf()
-    }
-  })
+  if (element.setValue) {
+    updateFromProtobuf()
+  }
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
@@ -317,36 +350,38 @@ export const NumberInput: React.FC<Props> = ({
     }
   }, [value, max, step, canDec])
 
-  const onKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
-  ): void => {
-    const { key } = e
+  const onKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      const { key } = e
 
-    switch (key) {
-      case "ArrowUp":
-        e.preventDefault()
-        increment()
-        break
-      case "ArrowDown":
-        e.preventDefault()
-        decrement()
-        break
-      default:
-    }
-  }
+      switch (key) {
+        case "ArrowUp":
+          e.preventDefault()
+          increment()
+          break
+        case "ArrowDown":
+          e.preventDefault()
+          decrement()
+          break
+        default:
+      }
+    },
+    [increment, decrement]
+  )
 
-  const onKeyPress = (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
-  ): void => {
-    if (e.key === "Enter") {
-      if (dirty) {
-        commitValue({ value, source: { fromUi: true } })
+  const onKeyPress = React.useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+      if (e.key === "Enter") {
+        if (dirty) {
+          commitValue({ value, source: { fromUi: true } })
+        }
+        if (isInForm({ formId: elementFormId })) {
+          widgetMgr.submitForm(elementFormId, fragmentId)
+        }
       }
-      if (isInForm(element)) {
-        widgetMgr.submitForm(element.formId, fragmentId)
-      }
-    }
-  }
+    },
+    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
+  )
 
   return (
     <div
@@ -397,6 +432,9 @@ export const NumberInput: React.FC<Props> = ({
                   Svg: {
                     style: {
                       color: theme.colors.darkGray,
+                      // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                      // Let's use a scale transform effect to make it bigger.
+                      // The width property only enlarges its bounding box, so it's easier to click.
                       transform: "scale(1.4)",
                       width: theme.spacing.twoXL,
                       marginRight: "-1.25em",
