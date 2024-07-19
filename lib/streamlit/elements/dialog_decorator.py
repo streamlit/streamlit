@@ -222,4 +222,5 @@ def experimental_dialog_decorator(title: F, *, width: DialogWidth = "small") -> 
 def experimental_dialog_decorator(
     title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
+    """Deprecated alias for @st.dialog. See the docstring for the decorator's new name."""
     return dialog_decorator(title, width=width)
