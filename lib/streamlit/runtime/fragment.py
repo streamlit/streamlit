@@ -324,8 +324,7 @@ def fragment(
     responsible for handling any side effects of that behavior.
 
     .. warning::
-        - Fragments can't contain other fragments. Additionally, using
-          fragments in widget callback functions is not supported.
+        - Fragments can't contain other fragments.
 
         - Fragments can only contain widgets in their main body. Fragments
           can't render widgets to externally created containers.
