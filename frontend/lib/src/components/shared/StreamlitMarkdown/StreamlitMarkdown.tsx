@@ -464,12 +464,7 @@ export function RenderedMarkdown({
   // :material/ is detected as an directive by remark directive logic.
   // However, the directive logic ignores emoji shortcodes. As a workaround,
   // we can make it look like an emoji shortcode by replacing the `/` with `_`.
-  // We want this to apply to all `:material/` occurrences in markdown,
-  // except cases when markdown used to render StreamlitAPIException.
-  let processedSource = source
-  if (!source.includes("StreamlitAPIException")) {
-    processedSource = source.replaceAll(":material/", ":material_")
-  }
+  const processedSource = source.replaceAll(":material/", ":material_")
 
   // Sets disallowed markdown for widget labels
   const disallowed = [
