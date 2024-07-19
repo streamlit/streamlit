@@ -35,7 +35,7 @@ const expectHighlightStyle = (
   if (!should_exist) {
     expectCheck = expect.not
   }
-  expectCheck.toHaveStyle("background-color: rgb(230, 234, 241);")
+  expectCheck.toHaveStyle("color: rgb(49, 51, 63);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {

@@ -308,6 +308,7 @@ export const StyledBorderlessIconButton = styled(
 
   return {
     backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText60,
     padding: iconPadding[size],
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
@@ -321,12 +322,10 @@ export const StyledBorderlessIconButton = styled(
       outline: "none",
     },
     "&:hover": {
-      backgroundColor: theme.colors.lightGray,
+      color: theme.colors.text,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.transparent,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray50,
+      color: theme.colors.fadedText20,
     },
   }
 })
@@ -335,8 +334,7 @@ export const StyledBorderlessIconButtonActive = styled(
   StyledBorderlessIconButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    backgroundColor: theme.colors.lightGray,
-    color: theme.colors.black,
+    color: theme.colors.bodyText,
   }
 })
 
