@@ -222,8 +222,9 @@ export type AppConfig = {
 
   /**
    * Whether the script should be rerun after a websocket disconnect/reconnect.
-   * If false, the script will never be rerun. If true, the script will be
-   * rerun if the previous script run was interrupted by the disconnect.
+   * If false, the script will not rerun while reconnecting. If true, the
+   * script will be rerun if the previous script run was interrupted by the
+   * disconnect.
    *
    * NOTE: This config option exists as some deployment platforms may choose to
    * implement more advanced websocket reconnect behavior than we do right now

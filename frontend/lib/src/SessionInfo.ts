@@ -52,7 +52,15 @@ export class SessionInfo {
    * An ID uniquely identifying the last ForwardMsg that we received from the
    * server.
    */
-  private _lastForwardMsgID?: string
+  private _lastForwardMsgId?: string
+
+  // FIXME(vdonato): Either switch to client-tracked sequence numbers or get
+  // rid of this.
+  private _forwardMsgSequenceNumber: number = 0
+
+  public nextForwardMsgSequenceNumber(): number {
+    return this._forwardMsgSequenceNumber++
+  }
 
   /** Return the current SessionInfo props. Throw an error if the props are undefined. */
   public get current(): Props {
@@ -67,14 +75,14 @@ export class SessionInfo {
     return this._last
   }
 
-  /** Set this._lastForwardMsgID */
-  public setLastForwardMsgID(id: string): void {
-    this._lastForwardMsgID = id
+  /** Set this._lastForwardMsgId */
+  public setlastForwardMsgId(id: string): void {
+    this._lastForwardMsgId = id
   }
 
-  /** Return this._lastForwardMsgID */
-  public get lastForwardMsgID(): string | undefined {
-    return this._lastForwardMsgID
+  /** Return this._lastForwardMsgId */
+  public get lastForwardMsgId(): string | undefined {
+    return this._lastForwardMsgId
   }
 
   /**

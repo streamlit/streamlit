@@ -664,13 +664,13 @@ describe("WebsocketConnection auth token handling", () => {
 
   it("sets third and fourth Sec-WebSocket-Protocol options if available", async () => {
     // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
-    // and sessionInfo.lastForwardMsgID == "some_forward_msg_hash+0"
+    // and sessionInfo.lastForwardMsgId == "some_forward_msg_hash+0"
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(
       mockSessionInfoProps({ sessionId: "lastSessionId" })
     )
     sessionInfo.setCurrent(mockSessionInfoProps())
-    sessionInfo.setLastForwardMsgID("some_forward_msg_hash+0")
+    sessionInfo.setlastForwardMsgId("some_forward_msg_hash+0")
     expect(sessionInfo.last?.sessionId).toBe("lastSessionId")
 
     const ws = new WebsocketConnection(createMockArgs({ sessionInfo }))
@@ -697,7 +697,7 @@ describe("WebsocketConnection auth token handling", () => {
       mockSessionInfoProps({ sessionId: "lastSessionId" })
     )
     sessionInfo.setCurrent(mockSessionInfoProps())
-    sessionInfo.setLastForwardMsgID("some_forward_msg_hash+0")
+    sessionInfo.setlastForwardMsgId("some_forward_msg_hash+0")
 
     expect(sessionInfo.last?.sessionId).toBe("lastSessionId")
 

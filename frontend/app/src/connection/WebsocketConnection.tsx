@@ -404,8 +404,8 @@ export class WebsocketConnection {
         ? [
             this.args.sessionInfo.last?.sessionId,
             // If this.args.sessionInfo.last?.sessionId is set, then it must be
-            // the case that this.args.sessionInfo.lastForwardMsgID is as well.
-            this.args.sessionInfo.lastForwardMsgID as string,
+            // the case that this.args.sessionInfo.lastForwardMsgId is as well.
+            this.args.sessionInfo.lastForwardMsgId as string,
           ]
         : []),
     ]
@@ -568,8 +568,21 @@ export class WebsocketConnection {
 
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
-    this.args.sessionInfo.setLastForwardMsgID(
-      `${msg.hash}+${msg.metadata?.sequenceNumber}`
+
+    // FIXME(vdonato): We need to determine whether it's safe to have the
+    // client count its own ForwardMsg sequence numbers and assume that these
+    // will always match sequence numbers independently counted on the server.
+    // We do this for now as it's more convenient for testing/prototyping as
+    // it allows us to not have to build new versions of the Python package,
+    // but we may have to switch to using the server-provided sequence numbers
+    // before this PR is merged.
+    //
+    // this.args.sessionInfo.setlastForwardMsgId(
+    //   `${msg.hash}+${msg.metadata?.sequenceNumber}`
+    // )
+
+    this.args.sessionInfo.setlastForwardMsgId(
+      `${msg.hash}+${this.args.sessionInfo.nextForwardMsgSequenceNumber()}`
     )
 
     PerformanceEvents.record({
