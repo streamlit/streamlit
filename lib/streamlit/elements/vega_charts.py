@@ -1085,12 +1085,17 @@ class VegaChartsMixin:
             horizontally.
 
         stack : bool, "normalize", "center", "layered", or None
-            Whether to stack the bars. If this is ``None`` (default), uses Vega's
-            default. If ``True``, the bars are stacked on top of each other.
-            If ``False``, the bars are displayed side by side. If "normalize",
-            the bars are stacked and normalized to 100%. If "center", the bars are
-            stacked around a central axis. If "layered", the bars are stacked on top
-            of one another.
+            Whether to stack the bars. If this is ``None`` (default),
+            Streamlit uses Vega's default. Other values can be as follows:
+
+            - ``True``: The bars form a non-overlapping, additive stack within
+              the chart.
+            - ``False``: The bars display side by side.
+            - ``"layered"``: The bars overlap each other with stacking.
+            - ``"normalize"``: The bars are stacked and the total height is
+              normalized to 100% of the height of the chart.
+            - ``"center"``: The bars are stacked and shifted to center the
+              total height around an axis.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
