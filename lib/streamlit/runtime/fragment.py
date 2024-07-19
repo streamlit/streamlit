@@ -193,7 +193,10 @@ def _fragment(
             ctx.new_fragment_ids.add(fragment_id)
             # Set ctx.current_fragment_id so that elements corresponding to this
             # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
-            # reset after the fragment function finishes running.
+            # reset after the fragment function finishes running to either return to the
+            # script (outside of any fragments) or to the outer fragment this one is
+            # nested in.
+            prev_fragment_id = ctx.current_fragment_id
             ctx.current_fragment_id = fragment_id
 
             try:
@@ -245,7 +248,7 @@ def _fragment(
                             raise FragmentHandledException(e)
                     return result
             finally:
-                ctx.current_fragment_id = None
+                ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
         if not ctx.fragment_storage.contains(fragment_id):

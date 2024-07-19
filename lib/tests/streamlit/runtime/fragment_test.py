@@ -130,11 +130,11 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_fragment():
-            pass
+            assert ctx.current_fragment_id != "my_fragment_id"
 
         ctx.current_fragment_id = "my_fragment_id"
         my_fragment()
-        assert ctx.current_fragment_id is None
+        assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
@@ -145,6 +145,7 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_exploding_fragment():
+            assert ctx.current_fragment_id != "my_fragment_id"
             raise Exception(exception_message)
 
         ctx.current_fragment_id = "my_fragment_id"
@@ -153,7 +154,7 @@ class FragmentTest(unittest.TestCase):
 
         assert str(ex.value) == exception_message
 
-        assert ctx.current_fragment_id is None
+        assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_wrapped_fragment_saved_in_FragmentStorage(
