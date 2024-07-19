@@ -112,6 +112,9 @@ finally:
 """
         self._testCode(CODE_TRY_STATEMENT, 9)
 
+    @unittest.skipIf(
+        not magic.TRY_STAR_SYNTAX_AVAILABLE, "Not supported in this Python version"
+    )
     def test_try_star_statement(self):
         """Test try statements with except* clauses"""
         CODE_TRY_STAR_STATEMENT = """
@@ -138,6 +141,9 @@ finally:
 """
         self._testCode(CODE_TRY_STAR_STATEMENT, 9)
 
+    @unittest.skipIf(
+        not magic.TRY_STAR_SYNTAX_AVAILABLE, "Not supported in this Python version"
+    )
     def test_match_statement(self):
         """Test match statements"""
         CODE_IF_STATEMENT = """
