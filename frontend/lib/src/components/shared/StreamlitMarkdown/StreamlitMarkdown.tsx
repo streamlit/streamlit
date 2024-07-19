@@ -467,10 +467,7 @@ export function RenderedMarkdown({
   // We want this to apply to all `:material/` occurrences in markdown,
   // except cases when markdown used to render StreamlitAPIException.
   let processedSource = source
-  if (
-    !source.includes("StreamlitAPIException") &&
-    !source.includes("Traceback")
-  ) {
+  if (!source.includes("StreamlitAPIException")) {
     processedSource = source.replaceAll(":material/", ":material_")
   }
 
