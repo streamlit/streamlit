@@ -87,50 +87,49 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain Github-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False.
+
         use_container_width : bool
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
@@ -219,62 +218,64 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain Github-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.
+
         file_name: str
             An optional string to use as the name of the file to be downloaded,
             such as 'my_file.csv'. If not specified, the name will be
             automatically generated.
+
         mime : str or None
             The MIME type of the data. If None, defaults to "text/plain"
             (if data is of type *str* or is a textual *file*) or
             "application/octet-stream" (if data is of type *bytes* or is a
             binary *file*).
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
+
         on_click : callable
             An optional callback invoked when this button is clicked.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False.
+
         use_container_width : bool
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
@@ -386,41 +387,37 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain Github-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         url : str
             The url to be opened on user click
+
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
+
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
+
         use_container_width : bool
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes
@@ -484,32 +481,25 @@ class ButtonMixin:
             The file path (relative to the main script) or an st.Page indicating
             the page to switch to. Alternatively, this can be the URL to an
             external page (must start with "http://" or "https://").
+
         label : str
             The label for the page link. Labels are required for external pages.
-            Labels can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+            The label can optionally contain Github-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
-        icon : str, None
+        icon : str or None
             An optional emoji or icon to display next to the button label. If ``icon``
             is ``None`` (default), no icon is displayed. If ``icon`` is a
             string, the following options are valid:
@@ -525,12 +515,15 @@ class ButtonMixin:
               Thumb Up icon. Find additional icons in the `Material Symbols \
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
+
         help : str
             An optional tooltip that gets displayed when the link is
             hovered over.
+
         disabled : bool
             An optional boolean, which disables the page link if set to
             ``True``. The default is ``False``.
+
         use_container_width : bool
             Whether to expand the link's width to fill its parent container.
             The default is ``True`` for page links in the sidebar and ``False``

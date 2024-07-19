@@ -146,73 +146,77 @@ class NumberInputMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain Github-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         min_value : int, float, or None
             The minimum permitted value.
             If None, there will be no minimum.
+
         max_value : int, float, or None
             The maximum permitted value.
             If None, there will be no maximum.
+
         value : int, float, "min" or None
             The value of this widget when it first renders. If ``None``, will initialize
             empty and return ``None`` until the user provides input.
             If "min" (default), will initialize with min_value, or 0.0 if
             min_value is None.
+
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
+
         format : str or None
             A printf-style format string controlling how the interface should
             display numbers. Output must be purely numeric. This does not impact
             the return value. Formatting is handled by [sprintf.js](https://github.com/alexei/sprintf.js).
             This can be used to adjust decimal precision in the displayed result. For example,
             ``'%0.1f'`` to only show 1 digit after the decimal.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
         help : str
             An optional tooltip that gets displayed next to the input.
+
         on_change : callable
             An optional callback invoked when this number_input's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         placeholder : str or None
             An optional string displayed when the number input is empty.
             If None, no placeholder is displayed.
+
         disabled : bool
             An optional boolean, which disables the number input if set to
             True. The default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
