@@ -94,11 +94,15 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
 
     icon_regex = r"^\s*:(.+)\/(.+):\s*$"
     icon_match = re.match(icon_regex, maybe_material_icon)
+    # Since our markdown processing needs to change the `/` to `_` in order to
+    # correctly render the icon, we need to add a zero-width space before the
+    # `/` to avoid this transformation here.
+    invisible_white_space = "\u200b"
 
     if not icon_match:
         raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon}"` is not a valid Material icon. '
-            f"Please use a Material icon shortcode like **`:material/thumb_up:`**"
+            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon. '
+            f"Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**"
         )
 
     pack_name, icon_name = icon_match.groups()
@@ -109,8 +113,8 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         or not is_material_icon(icon_name)
     ):
         raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material/thumb_up:`**. "
+            f'The value `"{maybe_material_icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. "
         )
 
     return f":{pack_name}/{icon_name}:"
