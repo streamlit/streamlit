@@ -219,6 +219,18 @@ export type AppConfig = {
    * Enables custom string messages to be sent to the host
    */
   enableCustomParentMessages?: boolean
+
+  /**
+   * Whether the script should be rerun after a websocket disconnect/reconnect.
+   * If false, the script will never be rerun. If true, the script will be
+   * rerun if the previous script run was interrupted by the disconnect.
+   *
+   * NOTE: This config option exists as some deployment platforms may choose to
+   * implement more advanced websocket reconnect behavior than we do right now
+   * in the Open Source world. If these reconnect improvements are later added
+   * to open source, we'll get rid of this option.
+   */
+  runScriptOnReconnect?: boolean
 }
 
 /**

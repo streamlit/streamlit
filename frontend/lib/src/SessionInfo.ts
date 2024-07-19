@@ -48,6 +48,12 @@ export class SessionInfo {
    */
   private _last?: Props
 
+  /**
+   * An ID uniquely identifying the last ForwardMsg that we received from the
+   * server.
+   */
+  private _lastForwardMsgID?: string
+
   /** Return the current SessionInfo props. Throw an error if the props are undefined. */
   public get current(): Props {
     if (!this._current) {
@@ -59,6 +65,16 @@ export class SessionInfo {
   /** Return the previous SessionInfo props. They may be undefined! */
   public get last(): Props | undefined {
     return this._last
+  }
+
+  /** Set this._lastForwardMsgID */
+  public setLastForwardMsgID(id: string): void {
+    this._lastForwardMsgID = id
+  }
+
+  /** Return this._lastForwardMsgID */
+  public get lastForwardMsgID(): string | undefined {
+    return this._lastForwardMsgID
   }
 
   /**

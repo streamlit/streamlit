@@ -26,6 +26,7 @@ export type { ElementNodeRendererProps } from "./components/core/Block/ElementNo
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export type { StreamlitEndpoints, JWTHeader } from "./StreamlitEndpoints"
 export { SessionInfo } from "./SessionInfo"
+export type { Props as SessionInfoProps } from "./SessionInfo"
 export { ScriptRunState } from "./ScriptRunState"
 export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"

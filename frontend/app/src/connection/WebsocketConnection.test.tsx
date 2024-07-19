@@ -662,13 +662,15 @@ describe("WebsocketConnection auth token handling", () => {
     )
   })
 
-  it("sets third Sec-WebSocket-Protocol option to lastSessionId if available", async () => {
+  it("sets third and fourth Sec-WebSocket-Protocol options if available", async () => {
     // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
+    // and sessionInfo.lastForwardMsgID == "some_forward_msg_hash+0"
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(
       mockSessionInfoProps({ sessionId: "lastSessionId" })
     )
     sessionInfo.setCurrent(mockSessionInfoProps())
+    sessionInfo.setLastForwardMsgID("some_forward_msg_hash+0")
     expect(sessionInfo.last?.sessionId).toBe("lastSessionId")
 
     const ws = new WebsocketConnection(createMockArgs({ sessionInfo }))
@@ -679,7 +681,12 @@ describe("WebsocketConnection auth token handling", () => {
     // "lastSessionId" should be the WebSocket's session token
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "PLACEHOLDER_AUTH_TOKEN", "lastSessionId"]
+      [
+        "streamlit",
+        "PLACEHOLDER_AUTH_TOKEN",
+        "lastSessionId",
+        "some_forward_msg_hash+0",
+      ]
     )
   })
 
@@ -690,6 +697,8 @@ describe("WebsocketConnection auth token handling", () => {
       mockSessionInfoProps({ sessionId: "lastSessionId" })
     )
     sessionInfo.setCurrent(mockSessionInfoProps())
+    sessionInfo.setLastForwardMsgID("some_forward_msg_hash+0")
+
     expect(sessionInfo.last?.sessionId).toBe("lastSessionId")
 
     const resetHostAuthToken = jest.fn()
@@ -706,7 +715,12 @@ describe("WebsocketConnection auth token handling", () => {
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "iAmAnAuthToken", "lastSessionId"]
+      [
+        "streamlit",
+        "iAmAnAuthToken",
+        "lastSessionId",
+        "some_forward_msg_hash+0",
+      ]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })

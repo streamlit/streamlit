@@ -86,6 +86,7 @@ import {
   ScriptRunState,
   SessionEvent,
   SessionInfo,
+  SessionInfoProps,
   SessionStatus,
   setCookie,
   StreamlitEndpoints,
@@ -443,12 +444,14 @@ export class App extends PureComponent<Props, State> {
           enableCustomParentMessages,
           mapboxToken,
           enforceDownloadInNewTab,
+          runScriptOnReconnect,
         } = response
 
         const appConfig: AppConfig = {
           allowedOrigins,
           useExternalAuthToken,
           enableCustomParentMessages,
+          runScriptOnReconnect,
         }
         const libConfig: LibConfig = {
           mapboxToken,
@@ -630,7 +633,10 @@ export class App extends PureComponent<Props, State> {
       //      server, or
       //   2. our last script run attempt was interrupted by the websocket
       //      connection dropping.
-      if (!this.sessionInfo.last || lastRunWasInterrupted) {
+      if (
+        !this.sessionInfo.last ||
+        (this.state.appConfig.runScriptOnReconnect && lastRunWasInterrupted)
+      ) {
         logMessage("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
         this.setState({ dialog: null })
@@ -828,13 +834,18 @@ export class App extends PureComponent<Props, State> {
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     const pageProfileObj = PageProfile.toObject(pageProfile)
+
+    const { appId, sessionId, pythonVersion } = (
+      this.sessionInfo.isSet ? this.sessionInfo.current : this.sessionInfo.last
+    ) as SessionInfoProps
+
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
+      appId,
+      sessionId,
+      pythonVersion,
       isFragmentRun: Boolean(pageProfileObj.isFragmentRun),
-      appId: this.sessionInfo.current.appId,
       numPages: this.state.appPages?.length,
-      sessionId: this.sessionInfo.current.sessionId,
-      pythonVersion: this.sessionInfo.current.pythonVersion,
       pageScriptHash: this.state.currentPageScriptHash,
       activeTheme: this.props.theme?.activeTheme?.name,
       totalLoadTime: Math.round(

@@ -123,6 +123,11 @@ message ForwardMsgMetadata {
   // For multipage apps v1, this will always be the page file running
   // For multipage apps v2, this can be the main script or the page script
   string active_script_hash = 4;
+
+  // Counter for the number of ForwardMsgs sent by a given AppSession. We don't
+  // currently do anything with this information, but we may eventually use it
+  // to allow us to replay ForwardMsgs dropped during a websocket disconnect.
+  uint64 sequence_number = 5;
 }
 
 // DEPRECATED: This is not used anymore.

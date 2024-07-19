@@ -379,14 +379,19 @@ export class WebsocketConnection {
   /**
    * Get the session tokens to use to initialize a WebSocket connection.
    *
-   * This method returns an array containing either one or two elements:
+   * This method returns an array containing either one or three elements:
    *   1. The first element contains an auth token to be used in environments
    *      where the parent frame of this app needs to pass down an external
    *      auth token. If no token is provided, a placeholder is used.
    *   2. The second element is the session ID to attempt to reconnect to if
    *      one is available (that is, if this websocket has disconnected and is
    *      reconnecting). On the initial connection attempt, this is unset and
-   *      the return value of this method is a singleton array.
+   *      the return value of this method is a singleton array. NOTE: the
+   *      second and third elements are either set together or not at all.
+   *   3. The third is a unique identifier of the last ForwardMsg received by
+   *      the client. This may be used by the deployment platform (and maybe
+   *      eventually by improved reconnect handling in the Open Source world)
+   *      to re-send ForwardMsgs dropped due to a websocket disconnect.
    */
   private async getSessionTokens(): Promise<Array<string>> {
     const hostAuthToken = await this.args.claimHostAuthToken()
@@ -396,7 +401,12 @@ export class WebsocketConnection {
       // not provided since the empty string is an invalid protocol option.
       hostAuthToken ?? "PLACEHOLDER_AUTH_TOKEN",
       ...(this.args.sessionInfo.last?.sessionId
-        ? [this.args.sessionInfo.last?.sessionId]
+        ? [
+            this.args.sessionInfo.last?.sessionId,
+            // If this.args.sessionInfo.last?.sessionId is set, then it must be
+            // the case that this.args.sessionInfo.lastForwardMsgID is as well.
+            this.args.sessionInfo.lastForwardMsgID as string,
+          ]
         : []),
     ]
   }
@@ -558,6 +568,9 @@ export class WebsocketConnection {
 
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
+    this.args.sessionInfo.setLastForwardMsgID(
+      `${msg.hash}+${msg.metadata?.sequenceNumber}`
+    )
 
     PerformanceEvents.record({
       name: "DecodedMessage",

@@ -472,6 +472,19 @@ class AppSessionTest(unittest.TestCase):
 
         assert msg.debug_last_backmsg_id == "some backmsg id"
 
+    def test_sets_sequence_number_and_increments_fwd_msg_counter(self):
+        session = _create_test_session()
+        msg = ForwardMsg()
+        assert session._forward_msg_counter == 0
+
+        session._enqueue_forward_msg(msg)
+        assert msg.metadata.sequence_number == 0
+        assert session._forward_msg_counter == 1
+
+        session._enqueue_forward_msg(msg)
+        assert msg.metadata.sequence_number == 1
+        assert session._forward_msg_counter == 2
+
     @patch("streamlit.runtime.app_session.config.on_config_parsed")
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
@@ -918,6 +931,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     session._create_exception_message(FAKE_EXCEPTION),
                 ]
             )
+
+        for i, event in enumerate([e for e in expected_events if e is not CLEAR_QUEUE]):
+            event.metadata.sequence_number = i
 
         assert expected_events == forward_msg_queue_events
 

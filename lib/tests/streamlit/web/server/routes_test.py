@@ -215,6 +215,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 # Default host configuration settings:
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
+                "runScriptOnReconnect": True,
             },
             response_body,
         )

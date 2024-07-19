@@ -167,6 +167,11 @@ class AppSession:
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
+        # Counter for the number of ForwardMsgs sent by this AppSession. We don't
+        # currently do anything with this information, but we may eventually use it to
+        # allow us to replay ForwardMsgs dropped during a websocket disconnect.
+        self._forward_msg_counter = 0
+
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def __del__(self) -> None:
@@ -274,6 +279,9 @@ class AppSession:
 
         if self._debug_last_backmsg_id:
             msg.debug_last_backmsg_id = self._debug_last_backmsg_id
+
+        msg.metadata.sequence_number = self._forward_msg_counter
+        self._forward_msg_counter += 1
 
         self._browser_queue.enqueue(msg)
         if self._message_enqueued_callback:
