@@ -32,16 +32,11 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import {
-  DynamicIcon,
-  isMaterialIcon,
-} from "@streamlit/lib/src/components/shared/Icon"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
 
 export interface Props {
@@ -90,22 +85,7 @@ function syncWithWidgetManager(
 }
 
 function getContentElement(content: string): ReactElement {
-  const fontSize = "lg"
-  if (isMaterialIcon(content)) {
-    return <DynamicIcon size={fontSize} iconValue={content} />
-  }
-
-  return (
-    <StreamlitMarkdown
-      source={content}
-      allowHTML={true}
-      style={{
-        marginBottom: 0,
-        width: iconSizes[fontSize],
-        display: "inline-flex",
-      }}
-    />
-  )
+  return <DynamicIcon size="lg" iconValue={content} />
 }
 
 /**

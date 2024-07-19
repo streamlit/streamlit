@@ -19,7 +19,11 @@ import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
-import { DynamicIcon, DynamicIconProps, isMaterialIcon } from "./DynamicIcon"
+import {
+  DynamicIcon,
+  DynamicIconProps,
+  getFilledStarIconSrc,
+} from "./DynamicIcon"
 
 const getProps = (
   props: Partial<DynamicIconProps> = {}
@@ -51,13 +55,13 @@ describe("Dynamic icon", () => {
     expect(testId.textContent).toEqual(icon.textContent)
   })
 
-  it("isMaterialIcon returns correct results", () => {
-    expect(isMaterialIcon(":material/test:")).toBeTruthy()
-    expect(isMaterialIcon(":material/test-hyphen:")).toBeTruthy()
-    expect(isMaterialIcon(":material/test_underscore:")).toBeTruthy()
-    expect(isMaterialIcon(":material/test")).toBeFalsy()
-    expect(isMaterialIcon("material/test:")).toBeFalsy()
-    expect(isMaterialIcon("material/test")).toBeFalsy()
-    expect(isMaterialIcon(":materialtest:")).toBeFalsy()
+  it("renders without crashing Styled image", () => {
+    const props = getProps({ iconValue: ":material/star_filled:" })
+    render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stImageIcon")
+    const srcAttr = testId.getAttribute("src")
+
+    expect(testId).toBeInTheDocument()
+    expect(srcAttr).toEqual(getFilledStarIconSrc())
   })
 })
