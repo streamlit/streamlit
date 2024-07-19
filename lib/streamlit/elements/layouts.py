@@ -349,14 +349,15 @@ class LayoutsMixin:
             Creates a tab for each string in the list. The first tab is selected
             by default. The string is used as the name of the tab and can
             optionally contain GitHub-flavored Markdown of the following types:
-            Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            Bold, Italics, Strikethroughs, Inline Code, and Links.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
