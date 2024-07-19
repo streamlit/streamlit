@@ -1091,7 +1091,7 @@ class VegaChartsMixin:
             - ``True``: The bars form a non-overlapping, additive stack within
               the chart.
             - ``False``: The bars display side by side.
-            - ``"layered"``: The bars overlap each other with stacking.
+            - ``"layered"``: The bars overlap each other without stacking.
             - ``"normalize"``: The bars are stacked and the total height is
               normalized to 100% of the height of the chart.
             - ``"center"``: The bars are stacked and shifted to center the

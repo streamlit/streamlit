@@ -182,8 +182,8 @@ class ButtonGroupMixin:
         """Display a feedback widget.
 
         A feedback widget is an icon-based button group available in three
-        styles as described in ``options``. Feedback widgets are commonly used
-        in chat and AI apps to allow users to rate responses.
+        styles, as described in ``options``. It is commonly used in chat and AI
+        apps to allow users to rate responses.
 
         Parameters
         ----------
@@ -191,12 +191,12 @@ class ButtonGroupMixin:
             The feedback options displayed to the user. ``options`` can be one
             of the following:
 
-            - ``"thumbs"`` (default): Streamlit displays a pair of thumbs-up
-              and thumbs-down buttons.
+            - ``"thumbs"`` (default): Streamlit displays a thumb-up and
+              thumb-down button group.
             - ``"faces"``: Streamlit displays a row of five buttons with
               facial expressions depicting increasing satisfaction from left to
               right.
-            - ``"stars"``: Streamlit displays a row of star icons allowing the
+            - ``"stars"``: Streamlit displays a row of star iconsm allowing the
               user to select a rating from one to five stars.
 
         key : str or int
@@ -224,17 +224,17 @@ class ButtonGroupMixin:
         -------
         int or None
             An integer indicating the user's selection, where ``0`` is the
-            lowest feedback and higher values indicate more positive feedback.
+            lowest feedback. Higher values indicate more positive feedback.
             If no option was selected, the widget returns ``None``.
 
-            - For ``options="thumbs"``, a return value of ``0`` is for
-              thumbs-down and ``1`` for thumbs-up.
+            - For ``options="thumbs"``, a return value of ``0`` indicates
+              thumbs-down, and ``1`` indicates thumbs-up.
             - For ``options="faces"`` and ``options="stars"``, return values
               range from ``0`` (least satisfied) to ``4`` (most satisfied).
 
         Examples
         --------
-        Display a feedback widget with stars and show the selected sentiment:
+        Display a feedback widget with stars, and show the selected sentiment:
 
         >>> import streamlit as st
         >>>
@@ -247,7 +247,7 @@ class ButtonGroupMixin:
             https://doc-feedback-stars.streamlit.app/
             height: 350px
 
-        Display a feedback widget with thumbs and show the selected sentiment:
+        Display a feedback widget with thumbs, and show the selected sentiment:
 
         >>> import streamlit as st
         >>>
