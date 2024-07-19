@@ -324,7 +324,6 @@ def fragment(
     responsible for handling any side effects of that behavior.
 
     .. warning::
-        - Fragments can't contain other fragments.
 
         - Fragments can only contain widgets in their main body. Fragments
           can't render widgets to externally created containers.
