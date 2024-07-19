@@ -19,8 +19,15 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "AudioInputProto";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 
 message AudioInput {
-    string id = 1;
+  string id = 1;
+  string label = 2;
+  string help = 3;
+  string form_id = 4;
+  bool disabled = 5;
+  LabelVisibilityMessage label_visibility = 6;
 }
 

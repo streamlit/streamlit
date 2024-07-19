@@ -504,6 +504,7 @@ const RawElementNodeRenderer = (
 
     case "audioInput": {
       const audioInputProto = node.element.audioInput as AudioInputProto
+      widgetProps.disabled = widgetProps.disabled || audioInputProto.disabled
       return (
         <AudioInput key={audioInputProto.id} {...widgetProps}></AudioInput>
       )
