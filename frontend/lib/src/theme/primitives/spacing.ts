@@ -25,6 +25,7 @@ export const spacing = {
   twoXS: "0.25rem",
   xs: "0.375rem",
   sm: "0.5rem",
+  sMed: "0.625rem",
   md: "0.75rem",
   lg: "1rem",
   xl: "1.25rem",

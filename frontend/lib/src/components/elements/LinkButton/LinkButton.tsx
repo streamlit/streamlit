@@ -46,6 +46,10 @@ function LinkButton(props: Props): ReactElement {
   // When useContainerWidth true & has help tooltip,
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
+  // Material icons (prefixed with ':') need to be larger to render approx size of emojis
+  const isMaterialIcon = element.icon && element.icon.startsWith(":")
+  const iconSizing = isMaterialIcon ? "lg" : "md"
+  const iconSpacing = isMaterialIcon ? "xs" : "sMed"
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>): void => {
     // Prevent the link from being followed if the button is disabled.
@@ -76,8 +80,8 @@ function LinkButton(props: Props): ReactElement {
         >
           {element.icon && (
             <DynamicIcon
-              size="lg"
-              margin="0 sm 0 0"
+              size={iconSizing}
+              margin={`0 ${iconSpacing} 0 0`}
               color={colors.bodyText}
               iconValue={element.icon}
             />
