@@ -1372,6 +1372,19 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(output_df, expected_df)
 
+    @parameterized.expand([True, False, "normalize", "center"])
+    def test_area_chart_stack_param(self, stack: bool | str):
+        """Test that the stack parameter is passed to the chart."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        st.area_chart(df, x="a", y=["b", "c"], stack=stack)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        self.assertIn(chart_spec["mark"], ["area", {"type": "area"}])
+        self.assertEqual(chart_spec["encoding"]["y"]["stack"], stack)
+
 
 class VegaUtilitiesTest(unittest.TestCase):
     """Test vega chart utility methods."""

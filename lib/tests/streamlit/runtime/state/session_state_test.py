@@ -405,6 +405,10 @@ class SessionStateSerdeTest(DeltaGeneratorTestCase):
         )
         check_roundtrip("date_interval", date_interval)
 
+    def test_feedback_serde(self):
+        feedback = st.feedback("stars", key="feedback")
+        check_roundtrip("feedback", feedback)
+
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_file_uploader_serde(self, get_upload_files_patch):
         file_rec = UploadedFileRec("file1", "file1", "type", b"123")
@@ -684,6 +688,10 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not self.session_state._widget_changed("foo")
 
     def test_remove_stale_widgets(self):
+        ctx = get_script_run_ctx()
+        ctx.script_requests = MagicMock()
+        ctx.script_requests.fragment_id_queue = []
+
         existing_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-existing_widget"
         generated_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-removed_widget"
 

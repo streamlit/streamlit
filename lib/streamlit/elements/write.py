@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, Lis
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
+from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import (
@@ -35,7 +36,6 @@ from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Special methods:
 HELP_TYPES: Final[tuple[type[Any], ...]] = (
@@ -441,7 +441,16 @@ class WriteMixin:
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
             elif isinstance(
-                arg, (dict, list, SessionStateProxy, UserInfoProxy, QueryParamsProxy)
+                arg,
+                (
+                    dict,
+                    list,
+                    SessionStateProxy,
+                    UserInfoProxy,
+                    QueryParamsProxy,
+                    StreamlitHeaders,
+                    StreamlitCookies,
+                ),
             ):
                 flush_buffer()
                 self.dg.json(arg)

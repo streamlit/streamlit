@@ -15,6 +15,7 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
+from vega_datasets import data as vega_data
 
 import streamlit as st
 
@@ -69,3 +70,12 @@ st.area_chart(df, x="a", y=["b", "c"])
 st.area_chart(utc_df)
 st.area_chart(color_df, x="a", y="b", color="e")
 st.area_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
+
+# Additional tests for stacking options
+np.random.seed(5)
+df = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+st.area_chart(df, color=["#ffaa00", "#3399ff", "#009900"], stack=False)
+source = vega_data.unemployment_across_industries()
+st.area_chart(source, x="date", y="count", color="series", stack=True)
+st.area_chart(source, x="date", y="count", color="series", stack="normalize")
+st.area_chart(source, x="date", y="count", color="series", stack="center")

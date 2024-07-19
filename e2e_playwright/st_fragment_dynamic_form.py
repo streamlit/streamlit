@@ -24,7 +24,7 @@ states = {
 }
 
 
-@st.experimental_fragment
+@st.fragment
 def get_location():
     with st.container(border=True):
         st.subheader("Enter your location")

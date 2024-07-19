@@ -18,7 +18,15 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    BinaryIO,
+    Final,
+    Literal,
+    TextIO,
+    Union,
+    cast,
+)
 
 from typing_extensions import TypeAlias
 
