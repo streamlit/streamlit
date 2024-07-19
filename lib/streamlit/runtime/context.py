@@ -122,16 +122,48 @@ class StreamlitCookies(Mapping[str, str]):
 
 
 class ContextProxy:
-    """An interface to context about the current user session. Context is exposed as
-    properties on `st.context`, such as `st.context.headers` or `st.context.cookies`.
-    Each property description explains more about the contents."""
+    """An interface to access user session context.
+
+    ``st.context`` provides a read-only interface to access headers and cookies
+    for the current user session.
+
+    Each property (``st.context.headers`` and ``st.context.cookies``) returns
+    a dictionary of named values.
+
+    """
 
     @property
     @gather_metrics("context.headers")
     def headers(self) -> StreamlitHeaders:
-        """A read-only, dict-like access to headers sent in the initial request.
-        Keys are case-insensitive. Use get_all() to see all values if the same header
-        is set multiple times.
+        """A read-only, dict-like object containing headers sent in the initial request.
+
+        Keys are case-insensitive and may be repeated. When keys are repeated,
+        dict-like methods will only return the last instance of each key. Use
+        ``.get_all(key="your_repeated_key")`` to see all values if the same
+        header is set multiple times.
+
+        Examples
+        --------
+        Show a dictionary of headers (with only the last instance of any
+        repeated key):
+
+        >>> import streamlit as st
+        >>>
+        >>> st.context.headers
+
+        Show the value of a specific header (or the last instance if its
+        repeated):
+
+        >>> import streamlit as st
+        >>>
+        >>> st.context.headers["host"]
+
+        Show of list of all headers for a given key:
+
+        >>> import streamlit as st
+        >>>
+        >>> st.context.headers.get_all("pragma")
+
         """
         # We have a docstring in line above as one-liner, to have a correct docstring
         # in the st.write(st,context) call.
@@ -145,7 +177,23 @@ class ContextProxy:
     @property
     @gather_metrics("context.cookies")
     def cookies(self) -> StreamlitCookies:
-        """A read-only, dict-like access to cookies sent in the initial request."""
+        """A read-only, dict-like object containing cookies sent in the initial request.
+
+        Examples
+        --------
+        Show a dictionary of cookies:
+
+        >>> import streamlit as st
+        >>>
+        >>> st.context.cookies
+
+        Show the value of a specific cookie:
+
+        >>> import streamlit as st
+        >>>
+        >>> st.context.cookies["_ga"]
+
+        """
         # We have a docstring in line above as one-liner, to have a correct docstring
         # in the st.write(st,context) call.
         session_client_request = _get_request()
