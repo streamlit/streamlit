@@ -105,6 +105,13 @@ export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
   }
 )
 
+export const StyledImageIcon = styled.img(({}) => {
+  return {
+    width: "100%",
+    height: "100%",
+  }
+})
+
 interface StyledEmojiIconProps {
   size: IconSize
   margin: string

@@ -22,8 +22,7 @@ import "@testing-library/jest-dom"
 import {
   DynamicIcon,
   DynamicIconProps,
-  isFilledStarIcon,
-  getFilledStarIcon,
+  getFilledStarIconSrc,
 } from "./DynamicIcon"
 
 const getProps = (
@@ -56,18 +55,13 @@ describe("Dynamic icon", () => {
     expect(testId.textContent).toEqual(icon.textContent)
   })
 
-  it("isFilledStarIcon returns correct results", () => {
-    expect(isFilledStarIcon(":material/star_filled:")).toBeTruthy()
-    expect(isFilledStarIcon(":material/star_fille:")).toBeFalsy()
-    expect(isFilledStarIcon(":material/star-filled:")).toBeFalsy()
-    expect(isFilledStarIcon(":material/star_filled")).toBeFalsy()
-    expect(isFilledStarIcon("material/star_filled:")).toBeFalsy()
-    expect(isFilledStarIcon("material/star_filled")).toBeFalsy()
-    expect(isFilledStarIcon(":materialstar_filled:")).toBeFalsy()
-  })
+  it("renders without crashing Styled image", () => {
+    const props = getProps({ iconValue: ":material/star_filled:" })
+    render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stImageIcon")
+    const srcAttr = testId.getAttribute("src")
 
-  it("getFilledStarIcon returns correct base64 data", () => {
-    const base64Data = getFilledStarIcon()
-    expect(base64Data).toContain("data:image/svg+xml;base64")
+    expect(testId).toBeInTheDocument()
+    expect(srcAttr).toEqual(getFilledStarIconSrc())
   })
 })
