@@ -95,6 +95,7 @@ class RunWarningTest(unittest.TestCase):
                 "altair_chart",
                 "area_chart",
                 "audio",
+                "audio_input",
                 "balloons",
                 "bar_chart",
                 "bokeh_chart",
