@@ -15,9 +15,13 @@
 from __future__ import annotations
 
 import ast
+import sys
 from typing import Any, Final
 
 from streamlit import config
+
+MATCH_SYNTAX_AVAILABLE = sys.version_info >= (3, 10)
+TRY_STAR_SYNTAX_AVAILABLE = sys.version_info >= (3, 11)
 
 # When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
 # its module's AST:
@@ -46,9 +50,11 @@ def add_magic(code: str, script_path: str) -> Any:
 
     file_ends_in_semicolon = _does_file_end_in_semicolon(tree, code)
 
-    return _modify_ast_subtree(
+    _modify_ast_subtree(
         tree, is_root=True, file_ends_in_semicolon=file_ends_in_semicolon
     )
+
+    return tree
 
 
 def _modify_ast_subtree(
@@ -65,18 +71,24 @@ def _modify_ast_subtree(
         node_type = type(node)
 
         # Recursively parses the content of the statements
-        # `with`, `for` and `while`, as well as function definitions.
+        # `with` as well as function definitions.
         # Also covers their async counterparts
         if (
             node_type is ast.FunctionDef
             or node_type is ast.With
-            or node_type is ast.For
-            or node_type is ast.While
             or node_type is ast.AsyncFunctionDef
             or node_type is ast.AsyncWith
-            or node_type is ast.AsyncFor
         ):
             _modify_ast_subtree(node)
+
+        # Recursively parses the content of the statements
+        # `for` and `while`.
+        # Also covers their async counterparts
+        elif (
+            node_type is ast.For or node_type is ast.While or node_type is ast.AsyncFor
+        ):
+            _modify_ast_subtree(node)
+            _modify_ast_subtree(node, "orelse")
 
         # Recursively parses methods in a class.
         elif node_type is ast.ClassDef:
@@ -86,12 +98,14 @@ def _modify_ast_subtree(
 
         # Recursively parses the contents of try statements,
         # all their handlers (except and else) and the finally body
-        elif node_type is ast.Try:
-            for j, inner_node in enumerate(node.handlers):
-                node.handlers[j] = _modify_ast_subtree(inner_node)
-            finally_node = _modify_ast_subtree(node, body_attr="finalbody")
-            node.finalbody = finally_node.finalbody
+        elif node_type is ast.Try or (
+            TRY_STAR_SYNTAX_AVAILABLE and node_type is ast.TryStar
+        ):
             _modify_ast_subtree(node)
+            _modify_ast_subtree(node, body_attr="finalbody")
+            _modify_ast_subtree(node, body_attr="orelse")
+            for handler_node in node.handlers:
+                _modify_ast_subtree(handler_node)
 
         # Recursively parses if blocks, as well as their else/elif blocks
         # (else/elif are both mapped to orelse)
@@ -99,6 +113,10 @@ def _modify_ast_subtree(
         elif node_type is ast.If:
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
+
+        elif MATCH_SYNTAX_AVAILABLE and node_type is ast.Match:
+            for case_node in node.cases:
+                _modify_ast_subtree(case_node)
 
         # Convert standalone expression nodes to st.write
         elif node_type is ast.Expr:
@@ -118,8 +136,6 @@ def _modify_ast_subtree(
         _insert_import_statement(tree)
 
     ast.fix_missing_locations(tree)
-
-    return tree
 
 
 def _insert_import_statement(tree: Any) -> None:
