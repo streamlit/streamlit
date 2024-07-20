@@ -240,12 +240,13 @@ class ExpanderTest(DeltaGeneratorTestCase):
     def test_invalid_material_icon(self):
         """Test that it throws an error on invalid material icon"""
         icon = ":material/invalid:"
+        invisible_white_space = "\u200b"
         with self.assertRaises(StreamlitAPIException) as e:
             st.expander("label", icon=icon)
         self.assertEqual(
             str(e.exception),
-            f'The value `"{icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material/thumb_up:`**. ",
+            f'The value `"{icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. ",
         )
 
 
