@@ -88,7 +88,7 @@ pydot==3.0.1
 pyee==11.1.0
 Pygments==2.18.0
 PyJWT==2.8.0
-pyOpenSSL==24.1.0
+pyOpenSSL==24.2.1
 pyparsing==3.1.2
 pytest==8.1.2
 pytest-base-url==2.1.0

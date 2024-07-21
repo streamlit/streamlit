@@ -12,7 +12,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.1
 coverage==7.6.0
-cryptography==42.0.8
+cryptography==43.0.0
 cycler==0.12.1
 dataclasses-json==0.6.7
 distlib==0.3.8
