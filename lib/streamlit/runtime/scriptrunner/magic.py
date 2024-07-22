@@ -20,9 +20,6 @@ from typing import Any, Final
 
 from streamlit import config
 
-MATCH_SYNTAX_AVAILABLE = sys.version_info >= (3, 10)
-TRY_STAR_SYNTAX_AVAILABLE = sys.version_info >= (3, 11)
-
 # When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
 # its module's AST:
 # import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
@@ -99,7 +96,7 @@ def _modify_ast_subtree(
         # Recursively parses the contents of try statements,
         # all their handlers (except and else) and the finally body
         elif node_type is ast.Try or (
-            TRY_STAR_SYNTAX_AVAILABLE and node_type is ast.TryStar
+            sys.version_info >= (3, 11) and node_type is ast.TryStar
         ):
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, body_attr="finalbody")
@@ -114,7 +111,7 @@ def _modify_ast_subtree(
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
 
-        elif MATCH_SYNTAX_AVAILABLE and node_type is ast.Match:
+        elif sys.version_info >= (3, 10) and node_type is ast.Match:
             for case_node in node.cases:
                 _modify_ast_subtree(case_node)
 
