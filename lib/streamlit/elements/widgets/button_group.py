@@ -196,7 +196,7 @@ class ButtonGroupMixin:
             - ``"faces"``: Streamlit displays a row of five buttons with
               facial expressions depicting increasing satisfaction from left to
               right.
-            - ``"stars"``: Streamlit displays a row of star iconsm allowing the
+            - ``"stars"``: Streamlit displays a row of star icons, allowing the
               user to select a rating from one to five stars.
 
         key : str or int
