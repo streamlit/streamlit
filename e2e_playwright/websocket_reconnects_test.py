@@ -15,7 +15,7 @@
 from typing import Final
 
 import pytest
-from playwright.sync_api import Error, FilePayload, Page, expect
+from playwright.sync_api import FilePayload, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     click_button,
@@ -35,14 +35,15 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
     Uses the browser's MutationObserver API to observe changes to the DOM. This way,
     we will never have a race condition between calling disconnect and checking the
     status.
-    If the status is not observed within 1 second, the promise will reject with a
-    timeout which raises an exception in Playwright.
-    Otherwise, the status is returned as a value.
+    If the status is not observed within 1 second, the promise will resolved with an
+    error message. We don't use reject because on Firefox this seem to cause an
+    undefined error which is not as precise as our error message.
+    Otherwise, the promise is resolved with the status.
     """
 
     return app.evaluate(
         """async ([expectedStatus]) => {
-                const p = new Promise((resolve, reject) => {
+                const p = new Promise((resolve) => {
                     // Define a timeoutId so that we can cancel the timeout in the
                     // callback upon success
                     let timeoutId = null
@@ -74,7 +75,7 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
                     // Observe toolbar for changes, which includes status widget
                     const targetNode = document.querySelector('[data-testid=stToolbar]')
                     if (!targetNode) {
-                        reject("toolbar not found")
+                        resolve("toolbar not found")
                         return
                     }
                     const config = { childList: true, subtree: true };
@@ -85,7 +86,7 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
         + """
                     timeoutId = setTimeout(() => {
                         if (observer) observer.disconnect()
-                        reject(`timeout: did not observe status '${expectedStatus}'`)
+                        resolve(`timeout: did not observe status '${expectedStatus}'`)
                         return
                     }, 3000);
                 })
@@ -121,9 +122,8 @@ def test_dont_observe_invalid_status(
     app: Page,
 ):
     """Test that unknown status is not observed and raises an error."""
-    with pytest.raises(Error) as e:
-        _get_status(app, "Connecting2", DISCONNECT_WEBSOCKET_ACTION)
-    assert "timeout: did not observe status 'Connecting2'" in e.value.message
+    status = _get_status(app, "Connecting2", DISCONNECT_WEBSOCKET_ACTION)
+    assert "timeout: did not observe status 'Connecting2'" in status
 
 
 def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
@@ -159,24 +159,29 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     )
 
 
+# skip webkit because the camera permission cannot be set programmatically
+@pytest.mark.skip_browser("webkit")
 def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects(
-    app: Page,
+    app: Page, app_port: int
 ):
-    expect(app.get_by_test_id("stToolbar")).to_be_attached()
-    camera_input_button = app.get_by_test_id("stCameraInputButton").nth(0)
-    expect(camera_input_button).to_be_visible()
-    expect(camera_input_button).to_contain_text("Take Photo")
-    camera_input_button.click()
+    # wait for the media call that is made when the image is returned
+    with app.expect_event(
+        "response",
+        predicate=lambda response: response.url.startswith(
+            f"http://localhost:{app_port}/media/"
+        ),
+    ):
+        expect(app.get_by_test_id("stToolbar")).to_be_attached()
+        camera_input_button = app.get_by_test_id("stCameraInputButton").nth(0)
+        expect(camera_input_button).to_be_visible()
+        expect(camera_input_button).to_contain_text("Take Photo")
+        camera_input_button.click()
 
-    app.wait_for_function("document.querySelectorAll('img').length >= 2")
-    app.wait_for_function(
-        "document.querySelectorAll('[data-testid=\"stImage\"]').length >= 1"
-    )
+    app.wait_for_function("document.querySelectorAll('img').length == 2")
+    expect(app.get_by_test_id("stImage")).to_have_count(1)
 
     # Wait for the image to be displayed
     expect(app.get_by_test_id("stImage")).to_be_visible()
-
-    wait_for_app_run(app)
 
     # Disconnect
     status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
