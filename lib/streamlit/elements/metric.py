@@ -69,7 +69,7 @@ class MetricMixin:
         ----------
         label : str
             The header or title for the metric. The label can optionally
-            contain Github-flavored Markdown of the following types: Bold, Italics,
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
             Strikethroughs, Inline Code, and Links.
 
             Unsupported Markdown elements are unwrapped so only their children

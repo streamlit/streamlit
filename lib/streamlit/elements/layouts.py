@@ -455,7 +455,7 @@ class LayoutsMixin:
         ----------
         label : str
             A string to use as the header for the expander. The label can optionally
-            contain Github-flavored Markdown of the following types: Bold, Italics,
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
             Strikethroughs, Inline Code, and Links.
 
             Unsupported Markdown elements are unwrapped so only their children
@@ -573,7 +573,7 @@ class LayoutsMixin:
         ----------
         label : str
             The label of the button that opens the popover container.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 
@@ -688,7 +688,7 @@ class LayoutsMixin:
 
         label : str
             The initial label of the status container. The label can optionally
-            contain Github-flavored Markdown of the following types: Bold, Italics,
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
             Strikethroughs, Inline Code, and Links.
 
             Unsupported Markdown elements are unwrapped so only their children

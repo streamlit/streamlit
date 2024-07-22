@@ -311,7 +311,7 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this time input is for.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 
@@ -540,7 +540,7 @@ class TimeWidgetsMixin:
         ----------
         label : str
             A short label explaining to the user what this date input is for.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 

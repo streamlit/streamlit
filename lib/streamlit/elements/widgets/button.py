@@ -95,7 +95,7 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 
@@ -226,7 +226,7 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 
@@ -395,7 +395,7 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 
@@ -492,7 +492,7 @@ class ButtonMixin:
 
         label : str
             The label for the page link. Labels are required for external pages.
-            The label can optionally contain Github-flavored Markdown of the
+            The label can optionally contain GitHub-flavored Markdown of the
             following types: Bold, Italics, Strikethroughs, Inline Code, and
             Links.
 

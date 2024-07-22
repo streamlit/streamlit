@@ -54,7 +54,7 @@ class ToastMixin:
         Parameters
         ----------
         body : str
-            The string to display as Github-flavored Markdown. Syntax
+            The string to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
