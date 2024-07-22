@@ -143,7 +143,7 @@ finally:
         self._testCode(CODE_TRY_STAR_STATEMENT, 9)
 
     @unittest.skipIf(
-        not sys.version_info >= (3, 11), "Not supported in this Python version"
+        not sys.version_info >= (3, 10), "Not supported in this Python version"
     )
     def test_match_statement(self):
         """Test match statements"""
