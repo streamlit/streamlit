@@ -147,7 +147,7 @@ finally:
     )
     def test_match_statement(self):
         """Test match statements"""
-        CODE_IF_STATEMENT = """
+        CODE_MATCH_STATEMENT = """
 a = 1
 match a:
     case 1:
@@ -157,7 +157,7 @@ match a:
     case _:
         a
 """
-        self._testCode(CODE_IF_STATEMENT, 3)
+        self._testCode(CODE_MATCH_STATEMENT, 3)
 
     def test_function_call_statement(self):
         """Test with function calls"""
