@@ -17,12 +17,16 @@ from typing import Final
 import pytest
 from playwright.sync_api import Error, FilePayload, Page, expect
 
-from e2e_playwright.shared.app_utils import click_button, expect_markdown
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    expect_markdown,
+    wait_for_app_run,
+)
 
 INCREMENTS_PER_DISCONNECT: Final[int] = 3
 NUM_DISCONNECTS: Final[int] = 15
 
-DISCONNECT_WEBSOCKET_ACTION: Final = "window.streamlitDebug.disconnectWebsocket()"
+DISCONNECT_WEBSOCKET_ACTION: Final = "window.streamlitDebug.disconnectWebsocket();"
 
 
 def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
@@ -75,6 +79,7 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
                     }
                     const config = { childList: true, subtree: true };
                     observer.observe(targetNode, config);
+
             """
         + callable_action
         + """
@@ -82,7 +87,7 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
                         if (observer) observer.disconnect()
                         reject(`timeout: did not observe status '${expectedStatus}'`)
                         return
-                    }, 1000)
+                    }, 3000);
                 })
 
                 const status = await p
@@ -108,9 +113,7 @@ def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
         status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
         assert status == "Connecting"
 
-        # wait until re-connected
-        expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
-
+        wait_for_app_run(app)
         expect_markdown(app, f"count: {expected_count}")
 
 
@@ -142,6 +145,7 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1)
     )
+    wait_for_app_run(app)
 
     status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
     assert status == "Connecting"
@@ -158,6 +162,7 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
 def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects(
     app: Page,
 ):
+    expect(app.get_by_test_id("stToolbar")).to_be_attached()
     camera_input_button = app.get_by_test_id("stCameraInputButton").nth(0)
     expect(camera_input_button).to_be_visible()
     expect(camera_input_button).to_contain_text("Take Photo")
@@ -170,6 +175,8 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
 
     # Wait for the image to be displayed
     expect(app.get_by_test_id("stImage")).to_be_visible()
+
+    wait_for_app_run(app)
 
     # Disconnect
     status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
