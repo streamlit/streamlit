@@ -129,22 +129,17 @@ def test_dont_observe_invalid_status(
 def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     app: Page,
 ):
-    file_name1 = "file1.txt"
-    file_content1 = b"blob"
-    uploader_index = 0
+    file_name = "file1.txt"
+    file_content = b"blob"
 
-    app.get_by_test_id("stFileUploaderDropzoneInput").nth(
-        uploader_index
-    ).set_input_files(
+    app.get_by_test_id("stFileUploaderDropzoneInput").set_input_files(
         [
-            FilePayload(name=file_name1, buffer=file_content1, mimeType="text/plain"),
+            FilePayload(name=file_name, buffer=file_content, mimeType="text/plain"),
         ],
     )
 
-    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(file_name1)
-    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
-        str(file_content1)
-    )
+    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(file_name)
+    expect(app.get_by_test_id("stText").first).to_have_text(str(file_content))
     wait_for_app_run(app)
 
     status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
@@ -154,9 +149,7 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
 
     # Confirm that our uploaded file is still there.
-    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
-        str(file_content1)
-    )
+    expect(app.get_by_test_id("stText").first).to_have_text(str(file_content))
 
 
 # skip webkit because the camera permission cannot be set programmatically
