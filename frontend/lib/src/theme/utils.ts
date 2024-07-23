@@ -41,7 +41,10 @@ import {
   ThemeSpacing,
 } from "@streamlit/lib/src/theme"
 
-import { isLightTheme, isDarkTheme } from "@streamlit/lib/src/util/utils"
+import {
+  isLightThemeInQueryParams,
+  isDarkThemeInQueryParams,
+} from "@streamlit/lib/src/util/utils"
 
 import { fonts } from "./primitives/typography"
 import {
@@ -378,10 +381,8 @@ const deleteOldCachedThemes = (): void => {
   // `stActiveTheme-${window.location.pathname}` with no version number.
   localStorage.removeItem(CACHED_THEME_BASE_KEY)
 
-  for (let i = 1; i < CACHED_THEME_VERSION; i++) {
-    localStorage.removeItem(
-      `${CACHED_THEME_BASE_KEY}-v${CACHED_THEME_VERSION}`
-    )
+  for (let i = 1; i <= CACHED_THEME_VERSION; i++) {
+    localStorage.removeItem(`${CACHED_THEME_BASE_KEY}-v${i}`)
   }
 }
 
@@ -391,6 +392,11 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
   }
 
   deleteOldCachedThemes()
+
+  // Do not set the theme if the app has a pre-defined theme from the embedder
+  if (isLightThemeInQueryParams() || isDarkThemeInQueryParams()) {
+    return
+  }
 
   const cachedTheme: CachedTheme = {
     name: themeConfig.name,
@@ -413,28 +419,29 @@ export const removeCachedTheme = (): void => {
   window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
 }
 
+export const getHostSpecifiedTheme = (): ThemeConfig => {
+  if (isLightThemeInQueryParams()) {
+    return getMergedLightTheme()
+  }
+
+  if (isDarkThemeInQueryParams()) {
+    return getMergedDarkTheme()
+  }
+
+  return createAutoTheme()
+}
+
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
   const cachedTheme = getCachedTheme()
 
-  // 1. Previous user preference
   // We shouldn't ever have auto saved in our storage in case
   // OS theme changes but we explicitly check in case!
   if (cachedTheme && cachedTheme.name !== AUTO_THEME_NAME) {
     return cachedTheme
   }
 
-  // 2. Embed Parameter preference
-  if (isLightTheme()) {
-    return getMergedLightTheme()
-  }
-
-  if (isDarkTheme()) {
-    return getMergedDarkTheme()
-  }
-
-  // 3. OS preference
-  return createAutoTheme()
+  return getHostSpecifiedTheme()
 }
 
 const whiteSpace = /\s+/
