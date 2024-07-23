@@ -43,6 +43,9 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
 
     return app.evaluate(
         """async ([expectedStatus]) => {
+                // the first call to resolve will be the one returned to the caller
+                // so its either the observed status or the timeout. Subsequent
+                // calls are no-ops.
                 const p = new Promise((resolve) => {
                     // Define a timeoutId so that we can cancel the timeout in the
                     // callback upon success
@@ -50,7 +53,6 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
 
                     const callback = (mutationList, observer) => {
                         for (const mutation of mutationList) {
-                            console.log(mutation)
                             if (mutation.type !== "childList") {
                                 continue
                             }
@@ -88,7 +90,7 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
                         if (observer) observer.disconnect()
                         resolve(`timeout: did not observe status '${expectedStatus}'`)
                         return
-                    }, 3000);
+                    }, 1000);
                 })
 
                 const status = await p
@@ -142,10 +144,11 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     expect(app.get_by_test_id("stText").first).to_have_text(str(file_content))
     wait_for_app_run(app)
 
+    # Disconnect
     status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
     assert status == "Connecting"
 
-    # wait until re-connected
+    # Wait until re-connected
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
 
     # Confirm that our uploaded file is still there.
@@ -180,10 +183,8 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
     status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
     assert status == "Connecting"
 
-    # wait until re-connected
+    # Wait until re-connected
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
 
     # Confirm that our picture is still there.
-    app.wait_for_function(
-        "document.querySelectorAll('[data-testid=\"stImage\"]').length >= 1"
-    )
+    expect(app.get_by_test_id("stImage")).to_have_count(1)
