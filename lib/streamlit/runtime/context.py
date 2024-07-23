@@ -151,7 +151,7 @@ class ContextProxy:
         >>>
         >>> st.context.headers
 
-        Show the value of a specific header (or the last instance if its
+        Show the value of a specific header (or the last instance if it's
         repeated):
 
         >>> import streamlit as st

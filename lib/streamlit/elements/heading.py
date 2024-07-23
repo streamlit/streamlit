@@ -83,12 +83,17 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.header("This is a header with a divider", divider="rainbow")
         >>> st.header("_Streamlit_ is :blue[cool] :sunglasses:")
+        >>> st.header("This is a header with a divider", divider="gray")
+        >>> st.header("These headers have rotating dividers", divider=True)
+        >>> st.header("One", divider=True)
+        >>> st.header("Two", divider=True)
+        >>> st.header("Three", divider=True)
+        >>> st.header("Four", divider=True)
 
         .. output::
            https://doc-header.streamlit.app/
-           height: 220px
+           height: 600px
 
         """
         return self.dg._enqueue(
@@ -145,12 +150,17 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.subheader("This is a subheader with a divider", divider="rainbow")
         >>> st.subheader("_Streamlit_ is :blue[cool] :sunglasses:")
+        >>> st.subheader("This is a subheader with a divider", divider="gray")
+        >>> st.subheader("These subheaders have rotating dividers", divider=True)
+        >>> st.subheader("One", divider=True)
+        >>> st.subheader("Two", divider=True)
+        >>> st.subheader("Three", divider=True)
+        >>> st.subheader("Four", divider=True)
 
         .. output::
            https://doc-subheader.streamlit.app/
-           height: 220px
+           height: 500px
 
         """
         return self.dg._enqueue(
