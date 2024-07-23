@@ -344,7 +344,9 @@ export function setCookie(
 
 /** Return an Element's widget ID if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
-  // TODO: make this more broadly apply to any non-widget.
+  // NOTE: This is a temporary fix until the selections in maps work is done.
+  // We believe that this will be easier to fix when we get to that point so in
+  // the meantime we will be doing this simple fix to prevent this error: https://github.com/streamlit/streamlit/issues/8329
   if (notNull(element.deckGlJsonChart)) {
     return undefined
   }
