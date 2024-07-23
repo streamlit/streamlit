@@ -840,11 +840,16 @@ class VegaChartsMixin:
               for three lines).
 
         stack : bool, "normalize", "center", or None
-            Whether to stack the areas. If this is ``None`` (default), uses
-            Vega's default. If ``True``, stacks the areas on top of one another.
-            If ``False``, overlays the areas without stacking. If "normalize",
-            the areas are stacked and normalized to 100%. If "center", the areas
-            are stacked and shifted to center their baseline (produces steamgraph).
+            Whether to stack the areas. If this is ``None`` (default),
+            Streamlit uses Vega's default. Other values can be as follows:
+
+            - ``True``: The areas form a non-overlapping, additive stack within
+              the chart.
+            - ``False``: The areas overlap each other without stacking.
+            - ``"normalize"``: The areas are stacked and the total height is
+              normalized to 100% of the height of the chart.
+            - ``"center"``: The areas are stacked and shifted to center their
+              baseline, which creates a steamgraph.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -904,7 +909,7 @@ class VegaChartsMixin:
            https://doc-area-chart1.streamlit.app/
            height: 440px
 
-        Finally, if your dataframe is in wide format, you can group multiple
+        If your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
         colors:
 
@@ -925,6 +930,20 @@ class VegaChartsMixin:
 
         .. output::
            https://doc-area-chart2.streamlit.app/
+           height: 440px
+
+        You can adjust the stacking behavior by setting ``stack``. Create a
+        steamgraph:
+
+        >>> import streamlit as st
+        >>> from vega_datasets import data
+        >>>
+        >>> source = data.unemployment_across_industries()
+        >>>
+        >>> st.area_chart(source, x="date", y="count", color="series", stack="center")
+
+        .. output::
+           https://doc-area-chart-steamgraph.streamlit.app/
            height: 440px
 
         """
@@ -1066,12 +1085,17 @@ class VegaChartsMixin:
             horizontally.
 
         stack : bool, "normalize", "center", "layered", or None
-            Whether to stack the bars. If this is ``None`` (default), uses Vega's
-            default. If ``True``, the bars are stacked on top of each other.
-            If ``False``, the bars are displayed side by side. If "normalize",
-            the bars are stacked and normalized to 100%. If "center", the bars are
-            stacked around a central axis. If "layered", the bars are stacked on top
-            of one another.
+            Whether to stack the bars. If this is ``None`` (default),
+            Streamlit uses Vega's default. Other values can be as follows:
+
+            - ``True``: The bars form a non-overlapping, additive stack within
+              the chart.
+            - ``False``: The bars display side by side.
+            - ``"layered"``: The bars overlap each other without stacking.
+            - ``"normalize"``: The bars are stacked and the total height is
+              normalized to 100% of the height of the chart.
+            - ``"center"``: The bars are stacked and shifted to center the
+              total height around an axis.
 
         width : int or None
             Desired width of the chart expressed in pixels. If ``width`` is
@@ -1169,6 +1193,19 @@ class VegaChartsMixin:
 
         .. output::
            https://doc-bar-chart-horizontal.streamlit.app/
+           height: 440px
+
+        You can unstack your bar charts.
+
+        >>> import streamlit as st
+        >>> from vega_datasets import data
+        >>>
+        >>> source = data.barley()
+        >>>
+        >>> st.bar_chart(source, x="year", y="yield", color="site", stack=False)
+
+        .. output::
+           https://doc-bar-chart-unstacked.streamlit.app/
            height: 440px
 
         """
