@@ -33,7 +33,11 @@ class CopyButton extends PureComponent<Props> {
     const node = this.button.current
 
     if (node !== null) {
-      this.clipboard = new Clipboard(node)
+      this.clipboard = new Clipboard(node, {
+        // we set the container here so that copying also works in dialogs.
+        // otherwise, the copy event is swallowed somehow.
+        container: node.parentElement ?? undefined,
+      })
     }
   }
 

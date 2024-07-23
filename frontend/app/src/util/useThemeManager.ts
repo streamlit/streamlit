@@ -28,6 +28,7 @@ import {
   createTheme,
   CustomThemeConfig,
   ICustomThemeConfig,
+  getHostSpecifiedTheme,
 } from "@streamlit/lib"
 
 export interface ThemeManager {
@@ -70,7 +71,7 @@ export function useThemeManager(): [ThemeManager, object[]] {
 
   const updateAutoTheme = useCallback((): void => {
     if (theme.name === AUTO_THEME_NAME) {
-      updateTheme(createAutoTheme())
+      updateTheme(getHostSpecifiedTheme())
     }
     const constantThemes = availableThemes.filter(
       theme => theme.name !== AUTO_THEME_NAME
