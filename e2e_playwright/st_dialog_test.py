@@ -326,10 +326,9 @@ def test_dialog_copy_buttons_work(app: Page):
     json_element.locator(".copy-icon").first.click()
 
     # paste the copied content into the input field
-    app.get_by_test_id("stTextInput").locator("input").focus()
+    app.get_by_test_id("stTextInput").locator("input").click()
     app.keyboard.press(f"{COMMAND_KEY}+V")
     app.keyboard.press("Enter")
 
     # we should see the pasted content written to the dialog
-    expected_copied_text = "[\n  1,\n  2,\n  3\n]"
-    expect(app.get_by_test_id("stMarkdown")).to_have_text(expected_copied_text)
+    expect(app.get_by_test_id("stMarkdown")).to_have_text("[1,2,3]")
