@@ -16,7 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_markdown
+from e2e_playwright.shared.app_utils import COMMAND_KEY, get_markdown
 
 modal_test_id = "stModal"
 
@@ -53,6 +53,10 @@ def open_nested_dialogs(app: Page):
 
 def open_submit_button_dialog(app: Page):
     app.get_by_role("button").filter(has_text="Open submit-button Dialog").click()
+
+
+def open_dialog_with_copy_buttons(app: Page):
+    app.get_by_role("button").filter(has_text="Open Dialog with Copy Buttons").click()
 
 
 def click_to_dismiss(app: Page):
@@ -300,3 +304,32 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     expect(exception_message).not_to_be_attached()
 
     assert large_width_dialog_fragment_id != nested_dialog_fragment_id
+
+
+def test_dialog_copy_buttons_work(app: Page):
+    """Test that the copy buttons in the dialog work as expected.
+
+    We paste the copied content into an input field. We could use
+    playwright's app.evaluate("navigator.clipboard.readText()") to get
+    the copied text, but then we have to grant permission to the user
+    agent to allow accessing the clipboard.
+    """
+
+    open_dialog_with_copy_buttons(app)
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stMarkdown")).to_have_text("")
+
+    # click icon button
+    json_element = app.get_by_test_id("stJson")
+    json_element.hover()
+    json_element.locator(".copy-icon").first.click()
+
+    # paste the copied content into the input field
+    app.get_by_test_id("stTextInput").locator("input").focus()
+    app.keyboard.press(f"{COMMAND_KEY}+V")
+    app.keyboard.press("Enter")
+
+    # we should see the pasted content written to the dialog
+    expected_copied_text = "[\n  1,\n  2,\n  3\n]"
+    expect(app.get_by_test_id("stMarkdown")).to_have_text(expected_copied_text)
