@@ -60,7 +60,7 @@ import {
   AppRoot,
   ComponentRegistry,
   handleFavicon,
-  createAutoTheme,
+  getHostSpecifiedTheme,
   createTheme,
   CUSTOM_THEME_NAME,
   getCachedTheme,
@@ -74,6 +74,7 @@ import {
   AutoRerun,
   BackMsg,
   Config,
+  ICustomThemeConfig,
   CustomThemeConfig,
   Delta,
   FileURLsResponse,
@@ -107,6 +108,8 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  createPresetThemes,
+  PresetThemeName,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -326,7 +329,7 @@ export class App extends PureComponent<Props, State> {
       setInputsDisabled: inputsDisabled => {
         this.setState({ inputsDisabled })
       },
-      themeChanged: this.props.theme.setImportedTheme,
+      themeChanged: this.handleThemeMessage,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
@@ -594,6 +597,21 @@ export class App extends PureComponent<Props, State> {
     }
 
     return false
+  }
+
+  handleThemeMessage = (
+    themeName?: PresetThemeName,
+    theme?: ICustomThemeConfig
+  ): void => {
+    const [, lightTheme, darkTheme] = createPresetThemes()
+    const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+    if (themeName === lightTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(lightTheme)
+    } else if (themeName === darkTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(darkTheme)
+    } else if (theme) {
+      this.props.theme.setImportedTheme(theme)
+    }
   }
 
   /**
@@ -1141,7 +1159,9 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        this.setAndSendTheme(createAutoTheme())
+        // Reset to the auto theme taking into account any host preferences
+        // aka embed query params.
+        this.setAndSendTheme(getHostSpecifiedTheme())
       }
     }
   }

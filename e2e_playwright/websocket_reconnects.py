@@ -13,20 +13,18 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import runtime
 
 # st.session_state can only be accessed while running with streamlit
-if runtime.exists():
-    if "counter" not in st.session_state:
-        st.session_state.counter = 0
+if "counter" not in st.session_state:
+    st.session_state.counter = 0
 
-    if st.button("click me!"):
-        st.session_state.counter += 1
+if st.button("click me!"):
+    st.session_state.counter += 1
 
-    st.write(f"count: {st.session_state.counter}")
+st.write(f"count: {st.session_state.counter}")
 
-    if f := st.file_uploader("Upload a file"):
-        st.text(f.read())
+if f := st.file_uploader("Upload a file"):
+    st.text(f.read())
 
-    if img := st.camera_input("Take a picture"):
-        st.image(img)
+if img := st.camera_input("Take a picture"):
+    st.image(img)

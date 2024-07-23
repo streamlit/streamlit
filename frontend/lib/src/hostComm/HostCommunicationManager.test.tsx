@@ -433,7 +433,45 @@ describe("HostCommunicationManager messaging", () => {
     expect(
       // @ts-expect-error - props are private
       hostCommunicationMgr.props.themeChanged
-    ).toHaveBeenCalledWith(mockCustomThemeConfig)
+    ).toHaveBeenCalledWith(undefined, mockCustomThemeConfig)
+  })
+
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a dark theme name", async () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_CUSTOM_THEME_CONFIG",
+          themeName: "Dark",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.themeChanged
+    ).toHaveBeenCalledWith("Dark", undefined)
+  })
+
+  it("can process a received SET_CUSTOM_THEME_CONFIG message with a light theme name", async () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_CUSTOM_THEME_CONFIG",
+          themeName: "Light",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.themeChanged
+    ).toHaveBeenCalledWith("Light", undefined)
   })
 
   it("can process a received SET_AUTH_TOKEN message with JWT pair", () => {

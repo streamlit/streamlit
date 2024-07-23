@@ -19,7 +19,7 @@ import React, { Suspense } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
-import { StyledDynamicIcon } from "./styled-components"
+import { StyledDynamicIcon, StyledImageIcon } from "./styled-components"
 
 interface IconPackEntry {
   pack: string
@@ -39,10 +39,12 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   return { pack: iconPack, icon: iconNameInPack }
 }
 
-export function isMaterialIcon(option: string): boolean {
-  const materialIconRegexp = /^:material\/(.+):$/
-  const materialIconMatch = materialIconRegexp.exec(option)
-  return materialIconMatch !== null
+/**
+ *
+ * @returns returns an img tag with a yellow filled star icon svg as base64 data
+ */
+export function getFilledStarIconSrc(): string {
+  return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBjbGlwLXBhdGg9InVybCgjY2xpcDBfMTg2MF84NDMpIj48cGF0aCBkPSJNOS45OTk5NCAxNC4zOTE2TDEzLjQ1ODMgMTYuNDgzM0MxNC4wOTE2IDE2Ljg2NjYgMTQuODY2NiAxNi4zIDE0LjY5OTkgMTUuNTgzM0wxMy43ODMzIDExLjY1TDE2Ljg0MTYgOC45OTk5N0MxNy4zOTk5IDguNTE2NjMgMTcuMDk5OSA3LjU5OTk3IDE2LjM2NjYgNy41NDE2M0wxMi4zNDE2IDcuMTk5OTdMMTAuNzY2NiAzLjQ4MzNDMTAuNDgzMyAyLjgwODMgOS41MTY2MSAyLjgwODMgOS4yMzMyNyAzLjQ4MzNMNy42NTgyNyA3LjE5MTYzTDMuNjMzMjcgNy41MzMzQzIuODk5OTQgNy41OTE2MyAyLjU5OTk0IDguNTA4MyAzLjE1ODI3IDguOTkxNjNMNi4yMTY2MSAxMS42NDE2TDUuMjk5OTQgMTUuNTc1QzUuMTMzMjcgMTYuMjkxNiA1LjkwODI3IDE2Ljg1ODMgNi41NDE2MSAxNi40NzVMOS45OTk5NCAxNC4zOTE2WiIgZmlsbD0iI0ZBQ0EyQiIvPjwvZz48ZGVmcz48Y2xpcFBhdGggaWQ9ImNsaXAwXzE4NjBfODQzIj48cmVjdCB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIGZpbGw9IndoaXRlIi8+PC9jbGlwUGF0aD48L2RlZnM+PC9zdmc+"
 }
 
 export interface DynamicIconProps {
@@ -61,11 +63,23 @@ const DynamicIconDispatcher = ({
   const { pack, icon } = parseIconPackEntry(iconValue)
   switch (pack) {
     case "material":
-      return (
-        <StyledDynamicIcon {...props}>
-          <MaterialFontIcon pack={pack} iconName={icon} {...props} />
-        </StyledDynamicIcon>
-      )
+      switch (icon) {
+        case "star_filled":
+          return (
+            <StyledDynamicIcon {...props}>
+              <StyledImageIcon
+                src={getFilledStarIconSrc()}
+                data-testid={props.testid || "stImageIcon"}
+              />
+            </StyledDynamicIcon>
+          )
+        default:
+          return (
+            <StyledDynamicIcon {...props}>
+              <MaterialFontIcon pack={pack} iconName={icon} {...props} />
+            </StyledDynamicIcon>
+          )
+      }
     case "emoji":
     default:
       return (

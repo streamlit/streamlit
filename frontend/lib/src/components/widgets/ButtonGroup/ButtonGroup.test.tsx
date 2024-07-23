@@ -35,7 +35,7 @@ const expectHighlightStyle = (
   if (!should_exist) {
     expectCheck = expect.not
   }
-  expectCheck.toHaveStyle("background-color: rgb(230, 234, 241);")
+  expectCheck.toHaveStyle("color: rgb(49, 51, 63);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {
@@ -100,27 +100,6 @@ describe("ButtonGroup widget", () => {
       const icon = within(button).getByTestId("stIconMaterial")
       expect(icon.textContent).toContain(materialIconNames[index])
     })
-  })
-
-  it("option-children with markdown render correctly", () => {
-    const markdownOptions = [
-      ButtonGroupProto.Option.create({ content: "Some text" }),
-      ButtonGroupProto.Option.create({
-        content: "Some text 2",
-      }),
-    ]
-    const props = getProps({ options: markdownOptions })
-    render(<ButtonGroup {...props} />)
-
-    const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-    const buttons = within(buttonGroupWidget).getAllByRole("button")
-    expect(buttons).toHaveLength(2)
-    buttons.forEach(button => {
-      expect(button).toHaveAttribute("kind", "borderlessIcon")
-      within(button).getByTestId("stMarkdownContainer")
-    })
-    expect(buttons[0].textContent).toContain("Some text")
-    expect(buttons[1].textContent).toContain("Some text 2")
   })
 
   it("sets widget value on mount", () => {

@@ -78,16 +78,7 @@ _NUMBER_STARS: Final = 5
 _STAR_ICON: Final = ":material/star:"
 # we don't have the filled-material icon library as a dependency. Hence, we have it here
 # in base64 format and send it over the wire as an image.
-_SELECTED_STAR_ICON: Final = (
-    "<img src='data:image/svg+xml;base64,"
-    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMjRweCIgdmlld0JveD0i"
-    "MCAtOTYwIDk2MCA5NjAiIHdpZHRoPSIyNHB4IiBmaWxsPSIjNWY2MzY4Ij48cGF0aCBkPSJNNDgwLTI2OSAz"
-    "MTQtMTY5cS0xMSA3LTIzIDZ0LTIxLThxLTktNy0xNC0xNy41dC0yLTIzLjVsNDQtMTg5LTE0Ny0xMjdxLTEwL"
-    "TktMTIuNS0yMC41VDE0MC01NzFxNC0xMSAxMi0xOHQyMi05bDE5NC0xNyA3NS0xNzhxNS0xMiAxNS41LTE4dDI"
-    "xLjUtNnExMSAwIDIxLjUgNnQxNS41IDE4bDc1IDE3OCAxOTQgMTdxMTQgMiAyMiA5dDEyIDE4cTQgMTEgMS41I"
-    "DIyLjVUODA5LTUyOEw2NjItNDAxbDQ0IDE4OXEzIDEzLTIgMjMuNVQ2OTAtMTcxcS05IDctMjEgOHQtMjMtNkw"
-    "0ODAtMjY5WiIvPjwvc3ZnPg=='/>"
-)
+_SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
 _FeedbackOptions: TypeAlias = Literal["thumbs", "faces", "stars"]
 
@@ -190,57 +181,85 @@ class ButtonGroupMixin:
     ) -> int | None:
         """Display a feedback widget.
 
-        This is useful to collect user feedback, especially in chat-based apps.
+        A feedback widget is an icon-based button group available in three
+        styles, as described in ``options``. It is commonly used in chat and AI
+        apps to allow users to rate responses.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         options: "thumbs", "faces", or "stars"
-            The feedback options displayed to the user. The options are:
-            - "thumbs" (default): displays a row of thumbs-up and thumbs-down buttons.
-            - "faces": displays a row of five buttons with facial expressions, each
-                depicting increasing satisfaction from left to right.
-            - "stars": displays a row of star icons typically used for ratings.
+            The feedback options displayed to the user. ``options`` can be one
+            of the following:
+
+            - ``"thumbs"`` (default): Streamlit displays a thumb-up and
+              thumb-down button group.
+            - ``"faces"``: Streamlit displays a row of five buttons with
+              facial expressions depicting increasing satisfaction from left to
+              right.
+            - ``"stars"``: Streamlit displays a row of star icons, allowing the
+              user to select a rating from one to five stars.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
         disabled : bool
-            An optional boolean, which disables the multiselect widget if set
+            An optional boolean, which disables the feedback widget if set
             to True. The default is False. This argument can only be supplied
             by keyword.
+
         on_change : callable
-            An optional callback invoked when this multiselect's value changes.
+            An optional callback invoked when this feedback widget's value
+            changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
-        An integer indicating the user's selection, where 0 is the lowest
-        feedback and higher values indicate more positive feedback.
-        If no option was selected, returns None.
-            - For "thumbs": a return value of 0 is for thumbs-down and 1 for thumbs-up.
-            - For "faces" and "stars":
-                values range from 0 (least satisfied) to 4 (most satisfied).
+        int or None
+            An integer indicating the user's selection, where ``0`` is the
+            lowest feedback. Higher values indicate more positive feedback.
+            If no option was selected, the widget returns ``None``.
 
+            - For ``options="thumbs"``, a return value of ``0`` indicates
+              thumbs-down, and ``1`` indicates thumbs-up.
+            - For ``options="faces"`` and ``options="stars"``, return values
+              range from ``0`` (least satisfied) to ``4`` (most satisfied).
 
         Examples
         --------
-        Example 1: Display a feedback widget with stars and show the selected sentiment
+        Display a feedback widget with stars, and show the selected sentiment:
 
         >>> import streamlit as st
-        >>> sentiment_mapping: = [0.0, 0.25, 0.5, 0.75, 1.0]
+        >>>
+        >>> sentiment_mapping = ["one", "two", "three", "four", "five"]
         >>> selected = st.feedback("stars")
-        >>> st.write(f"You selected: {sentiment_mapping[selected]}")
+        >>> if selected is not None:
+        >>>     st.markdown(f"You selected {sentiment_mapping[selected]} star(s).")
 
-        Example 2: Display a feedback widget with thumbs and show the selected sentiment
+        .. output ::
+            https://doc-feedback-stars.streamlit.app/
+            height: 350px
+
+        Display a feedback widget with thumbs, and show the selected sentiment:
 
         >>> import streamlit as st
-        >>> sentiment_mapping: = [0.0, 1.0]
+        >>>
+        >>> sentiment_mapping = [":material/thumb_down:", ":material/thumb_up:"]
         >>> selected = st.feedback("thumbs")
-        >>> st.write(f"You selected: {sentiment_mapping[selected]}")
+        >>> if selected is not None:
+        >>>     st.markdown(f"You selected: {sentiment_mapping[selected]}")
+
+        .. output ::
+            https://doc-feedback-thumbs.streamlit.app/
+            height: 350px
+
         """
 
         if not isinstance(options, list) and options not in get_args(_FeedbackOptions):
