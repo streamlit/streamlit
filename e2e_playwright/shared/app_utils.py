@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import re
-from typing import Pattern
+from typing import Literal, Pattern
 
 from playwright.sync_api import Locator, Page, expect
 
@@ -406,3 +406,38 @@ def expect_help_tooltip(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
     expect(tooltip_content).not_to_be_attached()
+
+
+def expect_script_state(
+    page: Page,
+    state: Literal[
+        "initia",
+        "running",
+        "notRunning",
+        "rerunRequested",
+        "stopRequested",
+        "compilationError",
+    ],
+) -> None:
+    """Expect the app to be in a specific script state.
+
+    Parameters
+    ----------
+    page : Page
+        The page to search for the script state.
+
+    state : Literal[
+        "initia",
+        "running",
+        "notRunning",
+        "rerunRequested",
+        "stopRequested",
+        "compilationError",
+    ]
+        The expected script state.
+    """
+    page.wait_for_selector(
+        f"[data-testid='stApp'][data-teststate='{state}']",
+        timeout=10000,
+        state="attached",
+    )

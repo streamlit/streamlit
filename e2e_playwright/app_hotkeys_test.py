@@ -14,6 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
+from shared.app_utils import expect_script_state
+
 
 def test_shows_clear_cache_dialog_when_c_is_pressed(app: Page):
     app.keyboard.type("c")
@@ -41,11 +43,11 @@ def test_does_not_clear_cache_dialog_when_c_is_pressed_inside_text_input(app: Pa
 
 def test_reruns_when_r_is_pressed(app: Page):
     app.keyboard.type("r")
-    expect(app.get_by_test_id("stStatusWidget")).to_be_visible()
+    expect_script_state(app, "running")
 
 
 def test_does_not_clear_cache_dialog_when_r_is_pressed_inside_text_input(
     app: Page,
 ):
     app.get_by_test_id("stTextInput").press("r")
-    expect(app.get_by_test_id("stStatusWidget")).not_to_be_visible()
+    expect_script_state(app, "running")
