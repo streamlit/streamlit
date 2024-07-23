@@ -1879,6 +1879,7 @@ export class App extends PureComponent<Props, State> {
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>
