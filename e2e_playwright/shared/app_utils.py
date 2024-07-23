@@ -437,7 +437,7 @@ def expect_script_state(
         The expected script state.
     """
     page.wait_for_selector(
-        f"[data-testid='stApp'][data-teststate='{state}']",
+        f"[data-testid='stApp'][data-test-script-state='{state}']",
         timeout=10000,
         state="attached",
     )
