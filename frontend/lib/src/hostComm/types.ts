@@ -115,7 +115,7 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_CUSTOM_THEME_CONFIG"
       themeName?: PresetThemeName
-      // TODO: Consider removing this once stakeholders no longer use it
+      // TODO: Consider removing themeInfo once stakeholders no longer use it
       themeInfo?: ICustomThemeConfig
     }
   | {
