@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from shared.app_utils import expect_script_state
+from e2e_playwright.shared.app_utils import expect_script_state
 
 
 def test_shows_clear_cache_dialog_when_c_is_pressed(app: Page):
