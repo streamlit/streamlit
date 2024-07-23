@@ -619,8 +619,8 @@ def wait_for_app_run(page: Page, wait_delay: int = 100):
         state="attached",
     )
     # Wait until we know the script has started. We determine this by checking
-    # whether the app is in notRunning state. (The data-teststate attribute goes
-    # through the sequence "initial" -> "running" -> "notRunning").
+    # whether the app is in notRunning state. (The data-test-connection-state attribute
+    # goes through the sequence "initial" -> "running" -> "notRunning").
     page.wait_for_selector(
         "[data-testid='stApp'][data-test-script-state='notRunning']",
         timeout=20000,

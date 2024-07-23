@@ -168,8 +168,8 @@ Cypress.Commands.add("loadApp", (appUrl, timeout) => {
 
 Cypress.Commands.add("waitForScriptFinish", (timeout = 20000) => {
   // Wait until we know the script has started. We determine this by checking
-  // whether the app is in notRunning state. (The data-teststate attribute goes
-  // through the sequence "initial" -> "running" -> "notRunning")
+  // whether the app is in notRunning state. (The data-test-connection-state attribute
+  // goes through the sequence "initial" -> "running" -> "notRunning")
   cy.get("[data-testid='stApp'][data-test-script-state='notRunning']", {
     timeout,
   }).should("exist")
