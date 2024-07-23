@@ -81,7 +81,6 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       closeable={dismissible}
       onClose={() => setIsOpen(false)}
       size={size}
-      focusLock={false}
     >
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>
