@@ -421,25 +421,22 @@ class DataEditorTest(DeltaGeneratorTestCase):
         self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
         self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
 
-        # Some data formats are converted to DataFrames instead of
-        # the original data type/structure.
-        if metadata.expected_data_format in [
-            DataFormat.EMPTY,
-            DataFormat.MODIN_OBJECT,
-            DataFormat.PANDAS_INDEX,
-            DataFormat.PANDAS_STYLER,
-            DataFormat.PYSPARK_OBJECT,
-            DataFormat.SNOWPANDAS_OBJECT,
-            DataFormat.SNOWPARK_OBJECT,
-        ]:
-            assert isinstance(return_data, pd.DataFrame)
+        self.assertEqual(
+            type(return_data),
+            type(input_data)
+            if metadata.expected_type is None
+            else metadata.expected_type,
+        )
+
+        if isinstance(return_data, pd.DataFrame):
             self.assertEqual(return_data.shape[0], metadata.expected_rows)
             self.assertEqual(return_data.shape[1], metadata.expected_cols)
-        else:
-            self.assertEqual(type(return_data), type(input_data))
+        elif (
             # Sets in python are unordered, so we can't compare them this way.
-            if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
-                self.assertEqual(str(return_data), str(input_data))
+            metadata.expected_data_format != DataFormat.SET_OF_VALUES
+            and metadata.expected_type is None
+        ):
+            self.assertEqual(str(return_data), str(input_data))
 
     @parameterized.expand(
         [

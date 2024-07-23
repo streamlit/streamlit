@@ -502,32 +502,26 @@ class DataframeUtilTest(unittest.TestCase):
                 converted_df, metadata.expected_data_format
             )
 
-            # Some data formats are converted to DataFrames instead of
-            # the original data type/structure.
-            if metadata.expected_data_format in [
-                dataframe_util.DataFormat.SNOWPARK_OBJECT,
-                dataframe_util.DataFormat.PYSPARK_OBJECT,
-                dataframe_util.DataFormat.PANDAS_INDEX,
-                dataframe_util.DataFormat.PANDAS_STYLER,
-                dataframe_util.DataFormat.SNOWPANDAS_OBJECT,
-                dataframe_util.DataFormat.MODIN_OBJECT,
-                dataframe_util.DataFormat.EMPTY,
-            ]:
-                assert isinstance(converted_data, pd.DataFrame)
+            self.assertEqual(
+                type(converted_data),
+                type(input_data)
+                if metadata.expected_type is None
+                else metadata.expected_type,
+            )
+
+            if isinstance(converted_data, pd.DataFrame):
                 self.assertEqual(converted_data.shape[0], metadata.expected_rows)
                 self.assertEqual(converted_data.shape[1], metadata.expected_cols)
-            else:
-                self.assertEqual(type(converted_data), type(input_data))
+            elif (
                 # Sets in python are unordered, so we can't compare them this way.
-                if (
-                    metadata.expected_data_format
-                    != dataframe_util.DataFormat.SET_OF_VALUES
-                ):
-                    self.assertEqual(str(converted_data), str(input_data))
-                    pd.testing.assert_frame_equal(
-                        converted_df,
-                        dataframe_util.convert_anything_to_pandas_df(converted_data),
-                    )
+                metadata.expected_data_format != dataframe_util.DataFormat.SET_OF_VALUES
+                and metadata.expected_type is None
+            ):
+                self.assertEqual(str(converted_data), str(input_data))
+                pd.testing.assert_frame_equal(
+                    converted_df,
+                    dataframe_util.convert_anything_to_pandas_df(converted_data),
+                )
 
     def test_convert_pandas_df_to_data_format_with_unknown_data_format(self):
         """Test that `convert_df_to_data_format` raises a ValueError when

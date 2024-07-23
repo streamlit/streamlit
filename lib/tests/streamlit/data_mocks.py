@@ -38,6 +38,7 @@ class TestCaseMetadata(NamedTuple):
     expected_rows: int
     expected_cols: int
     expected_data_format: DataFormat
+    expected_type: type | None = None
 
     # Tell pytest this is not a TestClass despite having "Test" in the name.
     __test__ = False
@@ -45,7 +46,7 @@ class TestCaseMetadata(NamedTuple):
 
 SHARED_TEST_CASES = [
     # None:
-    (None, TestCaseMetadata(0, 0, DataFormat.EMPTY)),
+    (None, TestCaseMetadata(0, 0, DataFormat.EMPTY, pd.DataFrame)),
     # Empty list:
     ([], TestCaseMetadata(0, 0, DataFormat.LIST_OF_VALUES)),
     # Empty tuple:
@@ -133,12 +134,12 @@ SHARED_TEST_CASES = [
     # Pandas Styler (pd.Styler):
     (
         pd.DataFrame(["st.text_area", "st.markdown"]).style,
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_STYLER),
+        TestCaseMetadata(2, 1, DataFormat.PANDAS_STYLER, pd.DataFrame),
     ),
     # Pandas Index (pd.Index):
     (
         pd.Index(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX),
+        TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
     ),
     # Pyarrow Table (pyarrow.Table):
     (
@@ -190,28 +191,47 @@ SHARED_TEST_CASES = [
     # Snowpark DataFrame:
     (
         SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
-        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
     ),
     # Snowpark Table:
     (
         SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),
-        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
     ),
     # Snowpark Pandas DataFrame:
     (
         SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),
-        TestCaseMetadata(2, 2, DataFormat.SNOWPANDAS_OBJECT),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
     ),
     # Snowpark Pandas Series:
     (
         SnowpandasSeries(pd.Series(np.random.randn(2))),
-        TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT),
+        TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
     ),
     # Pyspark Dataframe:
     (
         PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
-        TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT),
+        TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT, pd.DataFrame),
     ),
+    # Range:
+    (
+        range(3),
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Dict Keys:
+    (
+        {
+            "st.number_input": "number",
+            "st.text_area": "text",
+            "st.text_input": "text",
+        }.keys(),
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # TODO: Counter
+    # (
+    #     Counter({"red": 4, "blue": 2}),
+    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    # ),
 ]
 
 
