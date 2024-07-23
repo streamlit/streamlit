@@ -51,6 +51,7 @@
     "@loaders.gl/gltf": "^3.2.13",
     "apache-arrow": "^17.0.0",
     "axios": "^1.7.4",
+    "@wavesurfer/react": "^1.0.7",
     "baseui": "12.2.0",
     "camelcase": "^7.0.1",
     "classnames": "^2.3.2",
@@ -88,6 +89,7 @@
     "react-json-view": "^1.19.1",
     "react-map-gl": "^5.3.21",
     "react-markdown": "^8.0.7",
+    "react-media-recorder": "^1.6.6",
     "react-plotly.js": "^2.6.0",
     "react-responsive-carousel": "^3.2.23",
     "react-syntax-highlighter": "^15.5.0",
@@ -109,6 +111,7 @@
     "vega-embed": "^6.25.0",
     "vega-interpreter": "^1.0.5",
     "vega-lite": "5.14.0",
+    "wavesurfer.js": "^7.8.2",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
