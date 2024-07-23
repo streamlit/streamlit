@@ -63,8 +63,7 @@ def _is_watchdog_available() -> bool:
 
 def report_watchdog_availability():
     if (
-        not config.get_option("global.disableWatchdogWarning")
-        and config.get_option("server.fileWatcherType") not in ["poll", "none"]
+        config.get_option("server.fileWatcherType") not in ["poll", "none"]
         and not _is_watchdog_available()
     ):
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""

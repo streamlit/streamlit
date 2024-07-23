@@ -14,6 +14,8 @@
 
 """Streamlit Unit test."""
 
+from __future__ import annotations
+
 import os
 import re
 import subprocess
@@ -96,11 +98,13 @@ class StreamlitTest(unittest.TestCase):
                 "checkbox",
                 "code",
                 "columns",
+                "context",
                 "tabs",
                 "container",
                 "dataframe",
                 "data_editor",
                 "date_input",
+                "dialog",
                 "divider",
                 "download_button",
                 "expander",
@@ -108,6 +112,7 @@ class StreamlitTest(unittest.TestCase):
                 "empty",
                 "error",
                 "exception",
+                "feedback",
                 "file_uploader",
                 "form",
                 "form_submit_button",
@@ -171,6 +176,7 @@ class StreamlitTest(unittest.TestCase):
                 "cache_resource",
                 "navigation",
                 "Page",
+                "fragment",
                 # Experimental APIs:
                 "experimental_dialog",
                 "experimental_fragment",

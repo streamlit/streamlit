@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 

@@ -38,22 +38,17 @@ from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib
@@ -467,11 +462,15 @@ class PlotlyMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            check_fragment_path_policy(self.dg)
-            check_cache_replay_rules()
-            if callable(on_select):
-                check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
 
         if type_util.is_type(figure_or_data, "matplotlib.figure.Figure"):
             # Convert matplotlib figure to plotly figure:

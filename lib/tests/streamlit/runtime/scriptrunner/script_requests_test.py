@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
-from typing import Optional
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner.script_requests import (
@@ -30,7 +31,7 @@ def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     return states.widgets[-1]
 
 
-def _get_widget(id: str, states: WidgetStates) -> Optional[WidgetState]:
+def _get_widget(id: str, states: WidgetStates) -> WidgetState | None:
     """Return the widget with the given ID."""
     for state in states.widgets:
         if state.id == id:
@@ -166,15 +167,15 @@ class ScriptRequestsTest(unittest.TestCase):
     def test_request_rerun_appends_new_fragment_ids_to_queue(self):
         reqs = ScriptRequests()
 
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+        reqs.request_rerun(RerunData(fragment_id="my_fragment1"))
 
         # Sanity check
         self.assertEqual(reqs._rerun_data.fragment_id_queue, ["my_fragment1"])
 
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        reqs.request_rerun(RerunData(fragment_id="my_fragment2"))
+        reqs.request_rerun(RerunData(fragment_id="my_fragment3"))
         # Test that duplicate fragment_id isn't appended to queue.
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+        reqs.request_rerun(RerunData(fragment_id="my_fragment1"))
 
         self.assertEqual(
             reqs._rerun_data.fragment_id_queue,
@@ -187,9 +188,15 @@ class ScriptRequestsTest(unittest.TestCase):
 
     def test_request_rerun_appends_clears_fragment_queue_on_full_rerun(self):
         reqs = ScriptRequests()
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
-        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        reqs.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
 
         # Sanity check
         self.assertEqual(
@@ -221,6 +228,24 @@ class ScriptRequestsTest(unittest.TestCase):
         self.assertEqual(ScriptRequestType.RERUN, reqs._state)
         self.assertEqual(
             reqs._rerun_data, RerunData(fragment_id_queue=["my_fragment_id"])
+        )
+
+    def test_on_script_yield_with_is_fragment_scoped_rerun(self):
+        """Return RERUN; transition to the CONTINUE state."""
+        rerun_data = RerunData(
+            fragment_id_queue=["my_fragment_id"], is_fragment_scoped_rerun=True
+        )
+        reqs = ScriptRequests()
+        reqs.request_rerun(rerun_data)
+
+        result = reqs.on_scriptrunner_yield()
+        self.assertEqual(ScriptRequest(ScriptRequestType.RERUN, rerun_data), result)
+        self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)
+        self.assertEqual(
+            reqs._rerun_data,
+            RerunData(
+                fragment_id_queue=["my_fragment_id"], is_fragment_scoped_rerun=True
+            ),
         )
 
     def test_on_script_yield_with_stop_request(self):

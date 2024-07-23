@@ -30,7 +30,7 @@ import {
   mockWindowLocation,
   ScriptRunState,
   SessionInfo,
-  createAutoTheme,
+  getHostSpecifiedTheme,
   CUSTOM_THEME_NAME,
   lightTheme,
   toExportedTheme,
@@ -547,6 +547,36 @@ describe("App", () => {
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
+    it("removes the cached custom theme from theme options", () => {
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
+      )
+      const props = getProps({
+        theme: {
+          activeTheme: {
+            ...lightTheme,
+            name: CUSTOM_THEME_NAME,
+          },
+          availableThemes: [],
+          setTheme: jest.fn(),
+          addThemes: jest.fn(),
+          setImportedTheme: jest.fn(),
+        },
+      })
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: null,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+    })
+
     it("Does not change dark/light/auto user preferences when removing a custom theme", () => {
       const props = getProps()
       renderApp(props)
@@ -591,7 +621,9 @@ describe("App", () => {
 
       expect(props.theme.setTheme).toHaveBeenCalledTimes(2)
       // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(createAutoTheme())
+      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(
+        getHostSpecifiedTheme()
+      )
     })
 
     it("updates the custom theme if the one received from server has different hash", () => {

@@ -14,6 +14,8 @@
 
 """Unit tests for PagesManager"""
 
+from __future__ import annotations
+
 import os
 import unittest
 from unittest.mock import MagicMock, patch
@@ -28,7 +30,9 @@ class PagesManagerTest(unittest.TestCase):
         """Test that the pages changed callback is correctly registered and unregistered"""
         pages_manager = PagesManager("main_script_path")
         with patch.object(source_util, "_on_pages_changed", MagicMock()):
-            callback = lambda: None
+
+            def callback():
+                return None
 
             disconnect = pages_manager.register_pages_changed_callback(callback)
 

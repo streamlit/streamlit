@@ -40,13 +40,14 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
+    ValueFieldName,
     WidgetMetadata,
+    is_array_value_field_name,
     is_keyed_widget_id,
     is_widget_id,
 )
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -578,9 +579,13 @@ class SessionState:
         if ctx is None:
             return
 
+        fragment_ids_this_run = (
+            set(ctx.script_requests.fragment_id_queue) if ctx.script_requests else set()
+        )
+
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
-            ctx.fragment_ids_this_run,
+            fragment_ids_this_run,
         )
 
         # Remove entries from _old_state corresponding to
@@ -593,7 +598,7 @@ class SessionState:
                 or not _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(k),
                     active_widget_ids,
-                    ctx.fragment_ids_this_run,
+                    fragment_ids_this_run,
                 )
             )
         }

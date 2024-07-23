@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class DataFrame:
@@ -35,7 +39,7 @@ class DataFrame:
     def to_pandas(self) -> pd.DataFrame:
         return self._data
 
-    def limit(self, n: int) -> "DataFrame":
+    def limit(self, n: int) -> DataFrame:
         """Returns the top n element of a mock version of Snowpark Dataframe"""
         return DataFrame(self._data.head(n))
 
@@ -59,7 +63,7 @@ class Table:
     def to_pandas(self) -> pd.DataFrame:
         return self._data
 
-    def limit(self, n: int) -> "Table":
+    def limit(self, n: int) -> Table:
         """Returns the top n element of a mock version of Snowpark Table"""
         return Table(self._data.head(n))
 

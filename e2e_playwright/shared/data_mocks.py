@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.type_util import DataFormat
+from streamlit.dataframe_util import DataFormat
 
 np.random.seed(0)
 random.seed(0)

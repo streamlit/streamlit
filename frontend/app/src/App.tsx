@@ -60,11 +60,12 @@ import {
   AppRoot,
   ComponentRegistry,
   handleFavicon,
-  createAutoTheme,
+  getHostSpecifiedTheme,
   createTheme,
   CUSTOM_THEME_NAME,
   getCachedTheme,
   isPresetTheme,
+  toThemeInput,
   ThemeConfig,
   toExportedTheme,
   StreamlitEndpoints,
@@ -73,6 +74,7 @@ import {
   AutoRerun,
   BackMsg,
   Config,
+  ICustomThemeConfig,
   CustomThemeConfig,
   Delta,
   FileURLsResponse,
@@ -106,6 +108,8 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  createPresetThemes,
+  PresetThemeName,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -248,6 +252,16 @@ export class App extends PureComponent<Props, State> {
     // Initialize immerjs
     enableImmerPlugins()
 
+    // Theme hashes are only created for custom theme, and the custom theme
+    // may come from localStorage. We need to create the hash here to ensure
+    // that the theme is correctly represented.
+    let themeHash = this.createThemeHash()
+    if (!isPresetTheme(props.theme.activeTheme)) {
+      themeHash = this.createThemeHash(
+        toThemeInput(props.theme.activeTheme.emotion) as CustomThemeConfig
+      )
+    }
+
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
@@ -265,7 +279,7 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash: this.createThemeHash(),
+      themeHash,
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
@@ -315,7 +329,7 @@ export class App extends PureComponent<Props, State> {
       setInputsDisabled: inputsDisabled => {
         this.setState({ inputsDisabled })
       },
-      themeChanged: this.props.theme.setImportedTheme,
+      themeChanged: this.handleThemeMessage,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
@@ -583,6 +597,21 @@ export class App extends PureComponent<Props, State> {
     }
 
     return false
+  }
+
+  handleThemeMessage = (
+    themeName?: PresetThemeName,
+    theme?: ICustomThemeConfig
+  ): void => {
+    const [, lightTheme, darkTheme] = createPresetThemes()
+    const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+    if (themeName === lightTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(lightTheme)
+    } else if (themeName === darkTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(darkTheme)
+    } else if (theme) {
+      this.props.theme.setImportedTheme(theme)
+    }
   }
 
   /**
@@ -1130,7 +1159,9 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        this.setAndSendTheme(createAutoTheme())
+        // Reset to the auto theme taking into account any host preferences
+        // aka embed query params.
+        this.setAndSendTheme(getHostSpecifiedTheme())
       }
     }
   }

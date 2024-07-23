@@ -185,7 +185,7 @@ This is a test
         self.assertTrue(el.is_warning)
 
 
-class SomeObj(object):
+class SomeObj:
     pass
 
 

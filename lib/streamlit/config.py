@@ -95,8 +95,6 @@ def set_user_option(key: str, value: Any) -> None:
 
     Currently, only the following config options can be set within the script itself:
         * client.caching
-        * client.displayEnabled
-        * deprecation.*
 
     Calling with any other options will raise StreamlitAPIException.
 
@@ -270,23 +268,6 @@ def _delete_option(key: str) -> None:
 
 _create_section("global", "Global options that apply across all of Streamlit.")
 
-_create_option(
-    "global.disableWatchdogWarning",
-    description="""
-        By default, Streamlit checks if the Python watchdog module is available
-        and, if not, prints a warning asking for you to install it. The watchdog
-        module is not required, but highly recommended. It improves Streamlit's
-        ability to detect changes to files in your filesystem.
-
-        If you'd like to turn off this warning, set this to True.
-        """,
-    default_val=False,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
-)
-
 
 _create_option(
     "global.disableWidgetStateDuplicationWarning",
@@ -327,18 +308,6 @@ def _global_development_mode() -> bool:
         and "__pypackages__" not in __file__
     )
 
-
-_create_option(
-    "global.logLevel",
-    description="""Level of logging: 'error', 'warning', 'info', or 'debug'.
-
-    Default: 'info'
-    """,
-    deprecated=True,
-    deprecation_text="global.logLevel has been replaced with logger.level",
-    expiration_date="2020-11-30",
-    replaced_by="logger.level",
-)
 
 _create_option(
     "global.e2eTest",
@@ -401,21 +370,6 @@ _create_option(
     type_=bool,
 )
 
-_create_option(
-    "global.dataFrameSerialization",
-    description="""
-        DataFrame serialization.
-
-        Acceptable values:
-        - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
-          but battle-tested.
-        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
-    default_val="arrow",
-    type_=str,
-    deprecated=True,
-    deprecation_text="Legacy serialization has been removed. All dataframes will be serialized using Apache Arrow.",
-    expiration_date="2023-11-01",
-)
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -427,9 +381,7 @@ def _logger_log_level() -> str:
 
     Default: 'info'
     """
-    if get_option("global.logLevel"):
-        return str(get_option("global.logLevel"))
-    elif get_option("global.developmentMode"):
+    if get_option("global.developmentMode"):
         return "debug"
     else:
         return "info"
@@ -471,17 +423,6 @@ _create_option(
 
 _create_section("client", "Settings for scripts that use Streamlit.")
 
-_create_option(
-    "client.displayEnabled",
-    description="""If false, makes your Streamlit script not draw to a
-        Streamlit app.""",
-    default_val=True,
-    type_=bool,
-    scriptable=True,
-    deprecated=True,
-    deprecation_text="client.displayEnabled has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
-)
 
 _create_option(
     "client.showErrorDetails",
@@ -516,7 +457,7 @@ _create_option(
         * "minimal"   : Show only options set externally (e.g. through
                         Streamlit Community Cloud) or through st.set_page_config.
                         If there are no options left, hide the menu.
-""",
+    """,
     default_val="auto",
     type_=str,
     scriptable=True,
@@ -524,7 +465,11 @@ _create_option(
 
 _create_option(
     "client.showSidebarNavigation",
-    description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
+    description="""
+        Controls whether to display the default sidebar page navigation in a
+        multi-page app. This only applies when app's pages are defined by the
+        `pages/` directory.
+    """,
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -539,35 +484,8 @@ _create_option(
     description="""
         Allows you to type a variable or string by itself in a single line of
         Python code to write it to the app.
-        """,
+    """,
     default_val=True,
-    type_=bool,
-)
-
-_create_option(
-    "runner.installTracer",
-    description="""
-        Install a Python tracer to allow you to stop or pause your script at
-        any point and introspect it. As a side-effect, this slows down your
-        script's execution.
-        """,
-    default_val=False,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="runner.installTracer has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
-)
-
-_create_option(
-    "runner.fixMatplotlib",
-    description="""
-        Sets the MPLBACKEND environment variable to Agg inside Streamlit to
-        prevent Python crashing.
-        """,
-    default_val=True,
-    deprecated=True,
-    deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in a future version.",
-    expiration_date="2024-01-20",
     type_=bool,
 )
 
@@ -578,7 +496,7 @@ _create_option(
         can help avoid excess memory use in Streamlit apps, but could
         introduce delay in rerunning the app script for high-memory-use
         applications.
-        """,
+    """,
     default_val=True,
     type_=bool,
     visibility="hidden",
@@ -925,17 +843,6 @@ _create_option(
     visibility="hidden",
 )
 
-_create_option(
-    "ui.hideSidebarNav",
-    description="Flag to hide the sidebar page navigation component.",
-    default_val=False,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
-    expiration_date="2024-01-20",
-    visibility="hidden",
-)
-
 
 # Config Section: Mapbox #
 
@@ -978,44 +885,6 @@ _create_option(
         """,
     visibility="hidden",
     default_val=False,
-    type_=bool,
-)
-
-
-# Config Section: deprecations
-
-_create_section("deprecation", "Configuration to show or hide deprecation warnings.")
-
-_create_option(
-    "deprecation.showfileUploaderEncoding",
-    description="Set to false to disable the deprecation warning for the file uploader encoding.",
-    default_val=True,
-    scriptable=True,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="deprecation.showfileUploaderEncoding has been deprecated and will be removed in a future version.",
-    expiration_date="2021-01-06",
-)
-
-_create_option(
-    "deprecation.showImageFormat",
-    description="Set to false to disable the deprecation warning for the image format parameter.",
-    default_val=True,
-    scriptable=True,
-    type_=bool,
-    deprecated=True,
-    deprecation_text="The format parameter for st.image has been removed.",
-    expiration_date="2021-03-24",
-)
-
-_create_option(
-    "deprecation.showPyplotGlobalUse",
-    description="Set to false to disable the deprecation warning for using the global pyplot instance.",
-    default_val=True,
-    scriptable=True,
-    deprecated=True,
-    deprecation_text="The support for global pyplot instances is planned to be removed soon.",
-    expiration_date="2024-04-15",
     type_=bool,
 )
 

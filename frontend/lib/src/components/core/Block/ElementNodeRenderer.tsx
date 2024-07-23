@@ -20,6 +20,7 @@ import {
   Audio as AudioProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
+  ButtonGroup as ButtonGroupProto,
   DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
   ChatInput as ChatInputProto,
@@ -154,6 +155,9 @@ const Video = React.lazy(
 // Lazy-load widgets.
 const Button = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Button")
+)
+const ButtonGroup = React.lazy(
+  () => import("@streamlit/lib/src/components/widgets/ButtonGroup")
 )
 const DownloadButton = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/DownloadButton")
@@ -507,6 +511,18 @@ const RawElementNodeRenderer = (
         )
       }
       return <Button element={buttonProto} {...widgetProps} />
+    }
+
+    case "buttonGroup": {
+      const buttonGroupProto = node.element.buttonGroup as ButtonGroupProto
+      widgetProps.disabled = widgetProps.disabled || buttonGroupProto.disabled
+      return (
+        <ButtonGroup
+          key={buttonGroupProto.id}
+          element={buttonGroupProto}
+          {...widgetProps}
+        />
+      )
     }
 
     case "downloadButton": {

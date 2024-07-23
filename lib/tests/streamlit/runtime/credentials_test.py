@@ -14,6 +14,8 @@
 
 """streamlit.runtime.credentials unit test."""
 
+from __future__ import annotations
+
 import os
 import textwrap
 import unittest

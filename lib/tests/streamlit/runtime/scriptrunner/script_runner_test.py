@@ -19,21 +19,20 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
+from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -52,8 +51,12 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.delta_generator import DeltaGenerator, dg_stack
 from tests import testutil
+
+if TYPE_CHECKING:
+    from streamlit.proto.Delta_pb2 import Delta
+    from streamlit.proto.Element_pb2 import Element
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -88,6 +91,7 @@ class ScriptRunnerTest(AsyncTestCase):
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        mock_runtime.media_file_mgr.clear_session_refs = MagicMock()
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
@@ -109,48 +113,36 @@ class ScriptRunnerTest(AsyncTestCase):
         self._assert_control_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
-    @parameterized.expand(
-        [
-            ("installTracer=False", False),
-            ("installTracer=True", True),
-        ]
-    )
-    def test_yield_on_enqueue(self, _, install_tracer: bool):
+    def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever
-        our _enqueue_forward_msg function is called, unless "runner.installTracer" is set.
+        our _enqueue_forward_msg function is called.
         """
-        with testutil.patch_config_options({"runner.installTracer": install_tracer}):
-            # Create a TestScriptRunner. We won't actually be starting its
-            # script thread - instead, we'll manually call _enqueue_forward_msg on it, and
-            # pretend we're in the script thread.
-            runner = TestScriptRunner("not_a_script.py")
-            runner._is_in_script_thread = MagicMock(return_value=True)
+        # Create a TestScriptRunner. We won't actually be starting its
+        # script thread - instead, we'll manually call _enqueue_forward_msg on it, and
+        # pretend we're in the script thread.
+        runner = TestScriptRunner("not_a_script.py")
+        runner._is_in_script_thread = MagicMock(return_value=True)
 
-            # Mock the call to _maybe_handle_execution_control_request.
-            # This is what we're testing gets called or not.
-            maybe_handle_execution_control_request_mock = MagicMock()
-            runner._maybe_handle_execution_control_request = (
-                maybe_handle_execution_control_request_mock
-            )
+        # Mock the call to _maybe_handle_execution_control_request.
+        # This is what we're testing gets called or not.
+        maybe_handle_execution_control_request_mock = MagicMock()
+        runner._maybe_handle_execution_control_request = (
+            maybe_handle_execution_control_request_mock
+        )
 
-            # Enqueue a ForwardMsg on the runner
-            mock_msg = MagicMock()
-            runner._enqueue_forward_msg(mock_msg)
+        # Enqueue a ForwardMsg on the runner
+        mock_msg = MagicMock()
+        runner._enqueue_forward_msg(mock_msg)
 
-            # Ensure the ForwardMsg was delivered to event listeners.
-            self._assert_forward_msgs(runner, [mock_msg])
+        # Ensure the ForwardMsg was delivered to event listeners.
+        self._assert_forward_msgs(runner, [mock_msg])
 
-            # If "install_tracer" is true, maybe_handle_execution_control_request
-            # should not be called by the enqueue function. (In reality, it will
-            # still be called once in the tracing callback But in this test
-            # we're not actually installing a tracer - the script is not being
-            # run.) If "install_tracer" is false, the function should be called
-            # once.
-            expected_call_count = 0 if install_tracer else 1
-            self.assertEqual(
-                expected_call_count,
-                maybe_handle_execution_control_request_mock.call_count,
-            )
+        # maybe_handle_execution_control_request should be called by the
+        # enqueue function.
+        self.assertEqual(
+            1,
+            maybe_handle_execution_control_request_mock.call_count,
+        )
 
     def test_dont_enqueue_with_pending_script_request(self):
         """No ForwardMsgs are enqueued when the ScriptRunner has
@@ -280,6 +272,8 @@ class ScriptRunnerTest(AsyncTestCase):
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_called_once()
+
     @patch("streamlit.exception")
     def test_run_nonexistent_fragment(self, patched_st_exception):
         """Tests that we raise an exception when trying to run a nonexistent fragment."""
@@ -337,11 +331,15 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner._fragment_storage.set("my_fragment2", fragment)
         scriptrunner._fragment_storage.set("my_fragment3", fragment)
 
-        # scriptrunner.request_rerun assumes that fragments will only ever be enqueued
-        # one at a time as that's what happens with real rerun requests.
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        scriptrunner.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
         scriptrunner.start()
         scriptrunner.join()
 
@@ -355,6 +353,92 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
         fragment.assert_has_calls([call(), call(), call()])
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
+    def test_run_multiple_fragments_even_if_one_raised_an_exception(self):
+        """Tests that fragments continue to run when previous fragment raised an error."""
+        fragment = MagicMock()
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        raised_exception = {"called": False}
+
+        def raise_exception():
+            raised_exception["called"] = True
+            raise RuntimeError("this fragment errored out")
+
+        scriptrunner._fragment_storage.set("my_fragment1", raise_exception)
+        scriptrunner._fragment_storage.set("my_fragment2", fragment)
+        scriptrunner._fragment_storage.set("my_fragment3", fragment)
+
+        scriptrunner.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        self.assertTrue(raised_exception["called"])
+        fragment.assert_has_calls([call(), call()])
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_FragmentStorageKeyError_becomes_RuntimeError(
+        self, patched_handle_exception
+    ):
+        fragment = MagicMock()
+        fragment.side_effect = FragmentStorageKeyError("kaboom")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        ex = patched_handle_exception.call_args[0][0]
+        assert isinstance(ex, RuntimeError)
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    def test_regular_KeyError_is_rethrown(
+        self, patched_handle_exception, patched_get_script_run_ctx
+    ):
+        """Test that regular key-errors within a fragment are surfaced
+        as such and not caught by the FragmentStorageKeyError.
+        """
+
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+        ctx.current_fragment_id = "my_fragment_id"
+
+        def non_optional_func():
+            raise KeyError("kaboom")
+
+        def fragment():
+            _fragment(non_optional_func)()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        ex = patched_handle_exception.call_args[0][0]
+        assert isinstance(ex, KeyError)
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
@@ -1009,21 +1093,21 @@ class ScriptRunnerTest(AsyncTestCase):
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
-    def _assert_no_exceptions(self, scriptrunner: "TestScriptRunner") -> None:
+    def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
         """Assert that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
         """
         self.assertEqual([], scriptrunner.script_thread_exceptions)
 
     def _assert_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+        self, scriptrunner: TestScriptRunner, expected_events: list[ScriptRunnerEvent]
     ) -> None:
         """Assert that the ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect."""
         self.assertEqual(expected_events, scriptrunner.events)
 
     def _assert_control_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+        self, scriptrunner: TestScriptRunner, expected_events: list[ScriptRunnerEvent]
     ) -> None:
         """Assert the non-data ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect. ("Non-data" refers to all events except
@@ -1035,7 +1119,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(expected_events, control_events)
 
     def _assert_forward_msgs(
-        self, scriptrunner: "TestScriptRunner", messages: List[ForwardMsg]
+        self, scriptrunner: TestScriptRunner, messages: list[ForwardMsg]
     ) -> None:
         """Assert that the ScriptRunner's ForwardMsgQueue contains the
         given list of ForwardMsgs.
@@ -1043,7 +1127,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(messages, scriptrunner.forward_msgs())
 
     def _assert_num_deltas(
-        self, scriptrunner: "TestScriptRunner", num_deltas: int
+        self, scriptrunner: TestScriptRunner, num_deltas: int
     ) -> None:
         """Assert that the given number of delta ForwardMsgs were enqueued
         during script execution.
@@ -1057,7 +1141,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(num_deltas, len(scriptrunner.deltas()))
 
     def _assert_text_deltas(
-        self, scriptrunner: "TestScriptRunner", text_deltas: List[str]
+        self, scriptrunner: TestScriptRunner, text_deltas: list[str]
     ) -> None:
         """Assert that the scriptrunner's ForwardMsgQueue contains text deltas
         with the given contents.
@@ -1097,14 +1181,14 @@ class TestScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: List[BaseException] = []
+        self.script_thread_exceptions: list[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
-        self.events: List[ScriptRunnerEvent] = []
-        self.event_data: List[Any] = []
+        self.events: list[ScriptRunnerEvent] = []
+        self.event_data: list[Any] = []
 
         def record_event(
-            sender: Optional[ScriptRunner], event: ScriptRunnerEvent, **kwargs
+            sender: ScriptRunner | None, event: ScriptRunnerEvent, **kwargs
         ) -> None:
             # Assert that we're not getting unexpected `sender` params
             # from ScriptRunner.on_event
@@ -1144,21 +1228,21 @@ class TestScriptRunner(ScriptRunner):
         """Clear all messages from our ForwardMsgQueue."""
         self.forward_msg_queue.clear()
 
-    def forward_msgs(self) -> List[ForwardMsg]:
+    def forward_msgs(self) -> list[ForwardMsg]:
         """Return all messages in our ForwardMsgQueue."""
         return self.forward_msg_queue._queue
 
-    def deltas(self) -> List[Delta]:
+    def deltas(self) -> list[Delta]:
         """Return the delta messages in our ForwardMsgQueue."""
         return [
             msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
         ]
 
-    def elements(self) -> List[Element]:
+    def elements(self) -> list[Element]:
         """Return the delta.new_element messages in our ForwardMsgQueue."""
         return [delta.new_element for delta in self.deltas()]
 
-    def text_deltas(self) -> List[str]:
+    def text_deltas(self) -> list[str]:
         """Return the string contents of text deltas in our ForwardMsgQueue"""
         return [
             element.text.body
@@ -1166,7 +1250,7 @@ class TestScriptRunner(ScriptRunner):
             if element.WhichOneof("type") == "text"
         ]
 
-    def get_widget_id(self, widget_type: str, label: str) -> Optional[str]:
+    def get_widget_id(self, widget_type: str, label: str) -> str | None:
         """Returns the id of the widget with the specified type and label"""
         for delta in self.deltas():
             new_element = getattr(delta, "new_element", None)
@@ -1182,7 +1266,7 @@ class TestScriptRunner(ScriptRunner):
 
 
 def require_widgets_deltas(
-    runners: List[TestScriptRunner], timeout: float = 15
+    runners: list[TestScriptRunner], timeout: float = 15
 ) -> None:
     """Wait for the given ScriptRunners to each produce the appropriate
     number of deltas for widgets_script.py before a timeout. If the timeout

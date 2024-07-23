@@ -14,9 +14,10 @@
 
 """Unit test of ForwardMsgQueue.py."""
 
+from __future__ import annotations
+
 import copy
 import unittest
-from typing import Tuple
 
 from parameterized import parameterized
 
@@ -173,7 +174,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         fmq.enqueue(NEW_SESSION_MSG)
 
-        def enqueue_deltas(container: int, path: Tuple[int, ...]):
+        def enqueue_deltas(container: int, path: tuple[int, ...]):
             # We deep-copy the protos because we mutate each one
             # multiple times.
             msg = copy.deepcopy(TEXT_DELTA_MSG1)
@@ -191,7 +192,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         enqueue_deltas(RootContainer.MAIN, ())
         enqueue_deltas(RootContainer.SIDEBAR, (0, 0, 1))
 
-        def assert_deltas(container: int, path: Tuple[int, ...], idx: int):
+        def assert_deltas(container: int, path: tuple[int, ...], idx: int):
             # Text delta
             self.assertEqual(
                 make_delta_path(container, path, 0), queue[idx].metadata.delta_path
@@ -226,6 +227,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         fmq.clear(retain_lifecycle_msgs=True)
         assert fmq._queue == [
+            NEW_SESSION_MSG,
             script_finished_msg,
             session_status_changed_msg,
             parent_msg,

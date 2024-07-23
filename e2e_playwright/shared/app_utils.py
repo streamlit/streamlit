@@ -14,12 +14,16 @@
 
 from __future__ import annotations
 
+import platform
 import re
 from typing import Pattern
 
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
+
+# Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
+COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
 
 
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
@@ -256,13 +260,32 @@ def expect_exception(
     locator : Locator
         The locator to search for the exception element.
 
-    expected_markdown : str or Pattern[str]
+    expected_message : str or Pattern[str]
         The expected message to be displayed in the exception.
     """
     exception_el = locator.get_by_test_id("stException").filter(
         has_text=expected_message
     )
     expect(exception_el).to_be_visible()
+
+
+def expect_warning(
+    locator: Locator | Page,
+    expected_message: str | Pattern[str],
+) -> None:
+    """Expect a warning to be displayed in the app.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the warning element.
+
+    expected_message : str or Pattern[str]
+        The expected message to be displayed in the warning.
+    """
+    warning_el = locator.get_by_test_id("stAlert").filter(has_text=expected_message)
+    expect(warning_el).to_be_visible()
 
 
 def click_checkbox(

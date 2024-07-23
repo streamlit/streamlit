@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import unittest
-from typing import Callable, List, Tuple
+from typing import Callable, Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,7 +23,8 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator, dg_stack
-from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
+from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment, fragment
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.exceptions import RerunException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -48,8 +49,8 @@ class MemoryFragmentStorageTest(unittest.TestCase):
     def test_get(self):
         assert self._storage.get("some_key") == "some_fragment"
 
-    def test_get_KeyError(self):
-        with pytest.raises(KeyError):
+    def test_get_FragmentStorageKeyError(self):
+        with pytest.raises(FragmentStorageKeyError):
             self._storage.get("nonexistent_key")
 
     def test_set(self):
@@ -61,11 +62,11 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
     def test_delete(self):
         self._storage.delete("some_key")
-        with pytest.raises(KeyError):
+        with pytest.raises(FragmentStorageKeyError):
             self._storage.get("nonexistent_key")
 
-    def test_del_KeyError(self):
-        with pytest.raises(KeyError):
+    def test_del_FragmentStorageKeyError(self):
+        with pytest.raises(FragmentStorageKeyError):
             self._storage.delete("nonexistent_key")
 
     def test_clear(self):
@@ -74,6 +75,18 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         self._storage.clear()
         assert len(self._storage._fragments) == 0
+
+    def test_clear_with_new_fragment_ids(self):
+        self._storage._fragments["some_other_key"] = "some_other_fragment"
+        assert len(self._storage._fragments) == 2
+
+        self._storage.clear(new_fragment_ids={"some_key"})
+        assert len(self._storage._fragments) == 1
+        assert self._storage._fragments["some_key"] == "some_fragment"
+
+    def test_contains(self):
+        assert self._storage.contains("some_key")
+        assert not self._storage.contains("some_other_key")
 
 
 class FragmentTest(unittest.TestCase):
@@ -117,11 +130,11 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_fragment():
-            pass
+            assert ctx.current_fragment_id != "my_fragment_id"
 
         ctx.current_fragment_id = "my_fragment_id"
         my_fragment()
-        assert ctx.current_fragment_id is None
+        assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
@@ -132,38 +145,43 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_exploding_fragment():
+            assert ctx.current_fragment_id != "my_fragment_id"
             raise Exception(exception_message)
 
         ctx.current_fragment_id = "my_fragment_id"
-        with patch("streamlit.exception") as mock_st_exception:
+        with pytest.raises(Exception) as ex:
             my_exploding_fragment()
-            mock_st_exception.assert_called_once()
-            assert str(mock_st_exception.call_args[0][0]) == exception_message
 
-        assert ctx.current_fragment_id is None
+        assert str(ex.value) == exception_message
+
+        assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_wrapped_fragment_saved_in_FragmentStorage(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage.set = MagicMock(wraps=ctx.fragment_storage.set)
+
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
         def my_fragment():
             pass
 
+        # Call the fragment-decorated function twice, and verify that we only save the
+        # fragment a single time.
         my_fragment()
-
+        my_fragment()
         ctx.fragment_storage.set.assert_called_once()
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sets_dg_stack_and_cursor_to_snapshots_if_current_fragment_id_set(
+    def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_id_queue(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = {"my_fragment_id"}
-        ctx.current_fragment_id = "my_fragment_id"
+        ctx.script_requests.fragment_id_queue = ["my_fragment_id"]
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -178,6 +196,8 @@ class FragmentTest(unittest.TestCase):
         @fragment
         def my_fragment():
             nonlocal call_count
+
+            assert ctx.current_fragment_id is not None
 
             curr_dg_stack = dg_stack.get()
             # Verify that mutations made in previous runs of my_fragment aren't
@@ -200,9 +220,7 @@ class FragmentTest(unittest.TestCase):
         # Verify that we can't mutate our dg_stack from within my_fragment. If a
         # mutation is persisted between fragment runs, the assert on `my_random_field`
         # will fail.
-        ctx.current_fragment_id = "my_fragment_id"
         saved_fragment()
-        ctx.current_fragment_id = "my_fragment_id"
         saved_fragment()
 
         # Called once when calling my_fragment and three times calling the saved
@@ -210,9 +228,12 @@ class FragmentTest(unittest.TestCase):
         assert call_count == 3
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sets_current_fragment_id_if_not_set(self, patched_get_script_run_ctx):
+    def test_sets_current_fragment_id_in_full_script_runs(
+        self, patched_get_script_run_ctx
+    ):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = {}
+        ctx.script_requests.fragment_id_queue = []
+        ctx.new_fragment_ids = set()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -228,7 +249,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
+        assert len(ctx.new_fragment_ids) == 0
         my_fragment()
+
+        # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
+        assert len(ctx.new_fragment_ids) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -337,7 +362,10 @@ class FragmentTest(unittest.TestCase):
     def test_fragment_raises_rerun_exception_in_main_execution_context(
         self, patched_get_script_run_ctx
     ):
-        """Ensure that a rerun exception raised in a fragment when executed in the main execution context (meaning first execution in the app flow, not via a fragment-only rerun) is raised in the main execution context."""
+        """Ensure that a rerun exception raised in a fragment when executed in the main
+        execution context (meaning first execution in the app flow, not via a
+        fragment-only rerun) is raised in the main execution context.
+        """
         ctx = MagicMock()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -350,10 +378,10 @@ class FragmentTest(unittest.TestCase):
             my_fragment()
 
     @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
-    def test_fragment_handles_non_rerun_exceptions_in_fragment_execution_context(
-        self, exception_type: Exception
+    def test_fragment_raises_FragmentHandledException_in_full_app_run(
+        self, exception_type: type[Exception]
     ):
-        """Ensures that all non-rerun exceptions are caught by the fragment code and not raised."""
+        """Ensures that during full-app run the exceptions are raised."""
         with patch(
             "streamlit.runtime.fragment.get_script_run_ctx"
         ) as patched_get_script_run_ctx:
@@ -365,7 +393,28 @@ class FragmentTest(unittest.TestCase):
             def my_fragment():
                 raise exception_type()
 
-            my_fragment()
+            with pytest.raises(FragmentHandledException):
+                my_fragment()
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_fragment_additional_hash_info_param_used_for_generating_id(
+        self, patched_get_script_run_ctx
+    ):
+        """Test that the internal function can be called with an
+        additional hash info parameter."""
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+
+        def my_function():
+            return ctx.current_fragment_id
+
+        fragment_id1 = _fragment(my_function)()
+        fragment_id2 = _fragment(my_function, additional_hash_info="some_hash_info")()
+        assert fragment_id1 != fragment_id2
+
+        # countercheck
+        fragment_id2 = _fragment(my_function, additional_hash_info="")()
+        assert fragment_id1 == fragment_id2
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
@@ -476,14 +525,14 @@ def _run_fragment_writes_to_nested_inside_container_app(
     _some_method()
 
 
-outside_container_writing_apps: List[APP_FUNCTION] = [
+outside_container_writing_apps: list[APP_FUNCTION] = [
     _run_fragment_writes_to_outside_container_app,
     _run_fragment_writes_to_nested_outside_container_app,
     _run_fragment_writes_to_nested_outside_container_app2,
     _run_fragment_writes_to_nested_outside_container_app3,
 ]
 
-inside_container_writing_apps: List[APP_FUNCTION] = [
+inside_container_writing_apps: list[APP_FUNCTION] = [
     _run_fragment_writes_to_inside_container_app,
     _run_fragment_writes_to_nested_inside_container_app,
 ]
@@ -492,9 +541,9 @@ TEST_TUPLE = Tuple[str, APP_FUNCTION, ELEMENT_PRODUCER]
 
 
 def get_test_tuples(
-    app_functions: List[APP_FUNCTION],
-    elements: List[Tuple[str, Callable[[], DeltaGenerator]]],
-) -> List[TEST_TUPLE]:
+    app_functions: list[APP_FUNCTION],
+    elements: list[tuple[str, Callable[[], DeltaGenerator]]],
+) -> list[TEST_TUPLE]:
     """Create a tuple of (name, app-to-run, element-producer), so that each passed app runs with every passed element.
 
     Parameters
@@ -521,13 +570,13 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app: Callable[[Callable[[], DeltaGenerator]], None],
         _element_producer: ELEMENT_PRODUCER,
     ):
-        with patch("streamlit.exception") as mock_st_exception:
+        with pytest.raises(FragmentHandledException) as ex:
             _app(_element_producer)
-            mock_st_exception.assert_called_once()
-            assert (
-                str(mock_st_exception.call_args[0][0])
-                == "Fragments cannot write to elements outside of their container."
-            )
+
+        assert (
+            str(ex.value)
+            == "Fragments cannot write to elements outside of their container."
+        )
 
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, NON_WIDGET_ELEMENTS)
