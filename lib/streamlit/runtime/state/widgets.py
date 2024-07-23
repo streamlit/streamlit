@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Final, Mapping
 from typing_extensions import TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
+from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import (
@@ -56,7 +57,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
             "button_group": "int_array_value",
             "camera_input": "file_uploader_state_value",
             "checkbox": "bool_value",
-            "chat_input": "string_trigger_value",
+            "chat_input": "chat_input_value",
             "color_picker": "string_value",
             "component_instance": "json_value",
             "data_editor": "string_value",
@@ -248,6 +249,7 @@ def coalesce_widget_states(
     trigger_value_types = [
         ("trigger_value", False),
         ("string_trigger_value", StringTriggerValueProto(data=None)),
+        ("chat_input_value", ChatInputValueProto(data=None)),
     ]
     for old_state in old_states.widgets:
         for trigger_value_type, unset_value in trigger_value_types:

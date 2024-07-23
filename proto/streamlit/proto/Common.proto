@@ -94,3 +94,10 @@ message FileUploaderState {
 
   repeated UploadedFileInfo uploaded_file_info = 2;
 }
+
+
+message ChatInputValue {
+  optional string data = 1;
+  optional FileUploaderState file_uploader_state = 2;
+
+}

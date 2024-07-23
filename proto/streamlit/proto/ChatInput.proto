@@ -33,4 +33,5 @@ message ChatInput {
     BOTTOM = 0;
   }
   Position position = 8;
+  bool accept_file = 9;
 }

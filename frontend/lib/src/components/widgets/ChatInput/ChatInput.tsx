@@ -111,12 +111,7 @@ function ChatInput({
       return
     }
 
-    widgetMgr.setStringTriggerValue(
-      element,
-      value,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setChatInputValue(element, value, { fromUi: true }, fragmentId)
     setDirty(false)
     setValue("")
     setScrollHeight(0)
