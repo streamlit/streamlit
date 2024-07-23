@@ -110,21 +110,26 @@ def rerun(  # type: ignore[misc]
 ) -> NoReturn:
     """Rerun the script immediately.
 
-    When ``st.rerun()`` is called, the script is halted - no more statements will
-    be run, and the script will be queued to re-run.
+    When ``st.rerun()`` is called, Streamlit halts the current script run and
+    executes no further statements. Streamlit immediately queues the script to
+    rerun.
+
+    When using ``st.rerun`` in a fragment, you can scope the rerun to the
+    fragment. However, if a fragment is running as part of a full-app rerun,
+    a fragment-scoped rerun is not allowed.
 
     Parameters
     ----------
-    scope : Literal["app", "fragment"]
-        Specifies what part of the app should rerun. Setting scope="app" reruns the
-        full script; scope="fragment" limits the rerun to only the fragment from which
-        this function is called. If unspecified, defaults to "app".
+    scope : "app" or "fragment"
+        Specifies what part of the app should rerun. If ``scope`` is ``"app"``
+        (default), the full app reruns. If ``scope`` is ``"fragment"``,
+        Streamlit only reruns the fragment from which this command is called.
 
-        Note that setting scope="fragment" is only valid
-            * inside of a fragment
-            * *not* during a full script run.
-        Passing this argument to ``st.rerun()`` from outside of a fragment or within a
-        fragment but when the full script is running raises a ``StreamlitAPIException``.
+        Setting ``scope="fragment"`` is only valid inside a fragment during a
+        fragment rerun. If ``st.rerun(scope="fragment")`` is called during a
+        full-app rerun or outside of a fragment, Streamlit will raise a
+        ``StreamlitAPIException``.
+
     """
 
     ctx = get_script_run_ctx()
