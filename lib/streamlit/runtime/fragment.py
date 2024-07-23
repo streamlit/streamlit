@@ -306,8 +306,9 @@ def fragment(
     interacting with your app.
 
     To trigger an app rerun from inside a fragment, call ``st.rerun()``
-    directly. Any values from the fragment that need to be accessed from
-    the wider app should generally be stored in Session State.
+    directly. To trigger a fragment rerun from within itself, call
+    ``st.rerun(scope="fragment")``. Any values from the fragment that need to
+    be accessed from the wider app should generally be stored in Session State.
 
     When Streamlit element commands are called directly in a fragment, the
     elements are cleared and redrawn on each fragment rerun, just like all
@@ -327,8 +328,6 @@ def fragment(
     responsible for handling any side effects of that behavior.
 
     .. warning::
-        - Fragments can't contain other fragments. Additionally, using
-          fragments in widget callback functions is not supported.
 
         - Fragments can only contain widgets in their main body. Fragments
           can't render widgets to externally created containers.
