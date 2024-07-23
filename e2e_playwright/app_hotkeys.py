@@ -19,4 +19,4 @@ import streamlit as st
 st.text_input("text_input")
 
 # Add sleep to allow capturing the running state more reliably:
-time.sleep(1000)
+time.sleep(1)
