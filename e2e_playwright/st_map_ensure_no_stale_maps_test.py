@@ -14,8 +14,6 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
-
 
 def test_st_map_has_no_stale_elements(
     themed_app: Page,
@@ -23,14 +21,14 @@ def test_st_map_has_no_stale_elements(
     maps = themed_app.get_by_test_id("stDeckGlJsonChart")
     expect(maps).to_have_count(3)
 
-    wait_for_app_run(themed_app, 15000)
+    # wait_for_app_run(themed_app)
 
     selectbox = themed_app.get_by_test_id("stSelectbox").first
     selectbox.locator("input").first.click()
     selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
     selection_dropdown.locator("li").nth(1).click()
 
-    wait_for_app_run(themed_app, 15000)
+    # wait_for_app_run(themed_app)
 
     expect(maps).to_have_count(3)
 
@@ -38,6 +36,6 @@ def test_st_map_has_no_stale_elements(
     selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
     selection_dropdown.locator("li").nth(0).click()
 
-    wait_for_app_run(themed_app, 15000)
+    # wait_for_app_run(themed_app)
 
     expect(maps).to_have_count(3)
