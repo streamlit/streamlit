@@ -132,9 +132,7 @@ const MediaStreamVisualizer: React.FC<MediaStreamVisualizerProps> = ({
   return <canvas ref={canvasRef} style={{ width: "100%", height: heightPx }} />
 }
 
-export default MediaStreamVisualizer
-
-const AlternateMediaStreamVisualizer: React.FC<MediaStreamVisualizerProps> = ({
+const altMediaStreamVisualizer: React.FC<MediaStreamVisualizerProps> = ({
   mediaStream,
   heightPx,
 }): ReactElement => {
@@ -200,3 +198,5 @@ const AlternateMediaStreamVisualizer: React.FC<MediaStreamVisualizerProps> = ({
 
   return <canvas ref={canvasRef} style={{ width: "100%", height: heightPx }} />
 }
+
+export default MediaStreamVisualizer
