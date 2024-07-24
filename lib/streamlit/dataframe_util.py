@@ -660,6 +660,12 @@ def convert_anything_to_arrow_bytes(
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
         return convert_pandas_df_to_arrow_bytes(df)
 
+    if is_polars_dataframe(data):
+        return convert_pandas_df_to_arrow_bytes(data.to_arrow())
+
+    if is_polars_series(data):
+        return convert_pandas_df_to_arrow_bytes(data.to_frame().to_arrow())
+
     if is_huggingface_dataset(data) and hasattr(data, "data"):
         return convert_arrow_table_to_arrow_bytes(data.data)
 
@@ -1095,7 +1101,6 @@ def convert_pandas_df_to_data_format(
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
-        DataFormat.HUGGINGFACE_DATASET,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
