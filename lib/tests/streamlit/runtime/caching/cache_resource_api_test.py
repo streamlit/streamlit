@@ -194,6 +194,31 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
+    def test_cached_st_method_clear_args(self):
+        self.x = 0
+
+        class ExampleClass:
+            @st.cache_resource()
+            def foo(_self, y):
+                self.x += y
+                return self.x
+
+        example_instance = ExampleClass()
+        # Calling method foo produces the side effect of incrementing self.x
+        # and returning it as the result.
+
+        # calling foo(1) should return 1
+        assert example_instance.foo(1) == 1
+        # calling foo.clear(2) should clear the cache for the argument 2,
+        # and keep the cache for the argument 1, therefore calling foo(1) should return
+        # cached value 1
+        example_instance.foo.clear(2)
+        assert example_instance.foo(1) == 1
+        # calling foo.clear(1) should clear the cache for the argument 1,
+        # therefore calling foo(1) should return the new value 2
+        example_instance.foo.clear(1)
+        assert example_instance.foo(1) == 2
+
 
 class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:
