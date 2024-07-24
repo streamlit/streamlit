@@ -20,7 +20,9 @@ from typing import TYPE_CHECKING, Any, cast
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+from streamlit.type_util import is_namedtuple
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
@@ -87,9 +89,16 @@ class JsonMixin:
                 QueryParamsProxy,
                 StreamlitHeaders,
                 StreamlitCookies,
+                Secrets,
             ),
         ):
             body = body.to_dict()
+
+        if is_namedtuple(body):
+            body = body._asdict()
+
+        if isinstance(body, map):
+            body = list(body)
 
         if not isinstance(body, str):
             try:

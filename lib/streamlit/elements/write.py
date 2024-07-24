@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-import json
 import types
 from io import StringIO
 from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
@@ -26,6 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import (
     is_mem_address_str,
@@ -445,18 +445,17 @@ class WriteMixin:
                 (
                     dict,
                     list,
+                    map,
                     SessionStateProxy,
                     UserInfoProxy,
                     QueryParamsProxy,
                     StreamlitHeaders,
                     StreamlitCookies,
+                    Secrets,
                 ),
-            ):
+            ) or type_util.is_namedtuple(arg):
                 flush_buffer()
                 self.dg.json(arg)
-            elif type_util.is_namedtuple(arg):
-                flush_buffer()
-                self.dg.json(json.dumps(arg._asdict()))
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
@@ -489,9 +488,6 @@ class WriteMixin:
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_streamlit_secrets_class(arg):
-                flush_buffer()
-                self.dg.json(arg.to_dict())
             else:
                 stringified_arg = str(arg)
 

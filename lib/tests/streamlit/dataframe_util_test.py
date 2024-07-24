@@ -815,6 +815,11 @@ class DataframeUtilTest(unittest.TestCase):
                 ),
                 ["st.number_input", "st.text_area", "st.text_input"],
             ),
+            # Pyarrow Array:
+            (
+                pa.array(["st.number_input", "st.text_area", "st.text_input"]),
+                ["st.number_input", "st.text_area", "st.text_input"],
+            ),
             # Snowpark Table:
             (
                 SnowparkTable(

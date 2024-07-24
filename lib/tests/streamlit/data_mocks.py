@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import enum
 import random
+from collections import ChainMap, Counter, OrderedDict, deque
+from dataclasses import dataclass
 from datetime import date
 from typing import NamedTuple
 
@@ -24,6 +26,10 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.dataframe_util import DataFormat
+from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
+from tests.streamlit.dask_mocks import Series as DaskSeries
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
@@ -42,6 +48,42 @@ class TestCaseMetadata(NamedTuple):
 
     # Tell pytest this is not a TestClass despite having "Test" in the name.
     __test__ = False
+
+
+@dataclass
+class ElementDataClass:
+    name: str
+    is_widget: bool
+    usage: float
+
+
+class ElementNamedTuple(NamedTuple):
+    name: str
+    is_widget: bool
+    usage: float
+
+
+class TestObject:
+    def __str__(self):
+        return "TestObject"
+
+
+class StrTestEnum(str, enum.Enum):
+    NUMBER_INPUT = "st.number_input"
+    TEXT_AREA = "st.text_area"
+    TEXT_INPUT = "st.text_input"
+
+
+class TestEnum(enum.Enum):
+    NUMBER_INPUT = "st.number_input"
+    TEXT_AREA = "st.text_area"
+    TEXT_INPUT = "st.text_input"
+
+
+def data_generator():
+    yield "st.number_input"
+    yield "st.text_area"
+    yield "st.text_input"
 
 
 SHARED_TEST_CASES = [
@@ -99,6 +141,17 @@ SHARED_TEST_CASES = [
         {"st.number_input", "st.number_input"},  # noqa: B033
         TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
     ),
+    # Frozenset of strings (FrozenSet[str]):
+    # Set does not have a stable order across different Python version.
+    # Therefore, we are only testing this with one item.
+    (
+        frozenset({"st.number_input", "st.number_input"}),  # noqa: B033
+        TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES, set),
+    ),
+    (
+        frozenset(),
+        TestCaseMetadata(0, 0, DataFormat.SET_OF_VALUES, set),
+    ),
     # Tuple of strings (Tuple[str]):
     (
         ("st.text_area", "st.number_input", "st.text_input"),
@@ -114,6 +167,16 @@ SHARED_TEST_CASES = [
     # Multi-dimensional numpy array (np.array[List[Scalar]])
     (
         np.array(
+            [
+                ["st.text_area", "widget"],
+                ["st.markdown", "element"],
+            ]
+        ),
+        TestCaseMetadata(2, 2, DataFormat.NUMPY_MATRIX),
+    ),
+    # np.matrix:
+    (
+        np.matrix(
             [
                 ["st.text_area", "widget"],
                 ["st.markdown", "element"],
@@ -145,6 +208,11 @@ SHARED_TEST_CASES = [
     (
         pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
         TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
+    ),
+    # Pyarrow Array (pyarrow.Array):
+    (
+        pa.array(["st.number_input", "st.text_area", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.PYARROW_ARRAY),
     ),
     # List of rows (List[List[Scalar]]):
     (
@@ -208,10 +276,30 @@ SHARED_TEST_CASES = [
         SnowpandasSeries(pd.Series(np.random.randn(2))),
         TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
     ),
+    # Modin DataFrame:
+    (
+        ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        TestCaseMetadata(2, 2, DataFormat.MODIN_OBJECT, pd.DataFrame),
+    ),
+    # Modin Series:
+    (
+        ModinSeries(pd.Series(np.random.randn(2))),
+        TestCaseMetadata(2, 1, DataFormat.MODIN_OBJECT, pd.DataFrame),
+    ),
     # Pyspark Dataframe:
     (
         PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
         TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT, pd.DataFrame),
+    ),
+    # Dask Dataframe:
+    (
+        DaskDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        TestCaseMetadata(2, 2, DataFormat.DASK_OBJECT, pd.DataFrame),
+    ),
+    # Dask Series:
+    (
+        DaskSeries(pd.Series(np.random.randn(2))),
+        TestCaseMetadata(2, 1, DataFormat.DASK_OBJECT, pd.DataFrame),
     ),
     # Range:
     (
@@ -227,32 +315,96 @@ SHARED_TEST_CASES = [
         }.keys(),
         TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
     ),
-    # TODO: Counter
-    # (
-    #     Counter({"red": 4, "blue": 2}),
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
+    # Dict Values:
+    (
+        {
+            "st.number_input": "number",
+            "st.text_area": "text",
+            "st.text_input": "text",
+        }.values(),
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Dict Items:
+    (
+        {
+            "st.number_input": "number",
+            "st.text_area": "text",
+            "st.text_input": "text",
+        }.items(),
+        TestCaseMetadata(3, 2, DataFormat.PANDAS_DATAFRAME, pd.DataFrame),
+    ),
+    # Counter
+    (
+        Counter({"st.number_input": 4, "st.text_area": 2}),
+        TestCaseMetadata(2, 2, DataFormat.KEY_VALUE_DICT, dict),
+    ),
+    # Reversed list:
+    (
+        reversed(["st.number_input", "st.text_area", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # OrderedDict:
+    (
+        OrderedDict(
+            [
+                ("st.number_input", "number"),
+                ("st.text_area", "text"),
+            ]
+        ),
+        TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT, dict),
+    ),
+    # Pandas Categorical (pd.Categorical):
+    (
+        pd.Categorical(["st.number_input", "st.text_area", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Pandas DatetimeIndex (pd.DatetimeIndex):
+    (
+        pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
+        TestCaseMetadata(3, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
+    ),
+    # Pandas RangeIndex (pd.RangeIndex):
+    (
+        pd.RangeIndex(start=0, stop=3, step=1),
+        TestCaseMetadata(3, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
+    ),
+    # Deque (collections.deque):
+    (
+        deque(["st.number_input", "st.text_area", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # ChainMap (collections.ChainMap):
+    (
+        ChainMap(
+            {"st.number_input": "number", "st.text_area": "text"},
+            {"st.text_input": "text"},
+        ),
+        TestCaseMetadata(3, 2, DataFormat.KEY_VALUE_DICT, dict),
+    ),
+    # Dataclass:
+    (
+        ElementDataClass("st.number_input", is_widget=True, usage=0.32),
+        TestCaseMetadata(3, 1, DataFormat.KEY_VALUE_DICT, dict),
+    ),
+    # NamedTuple:
+    (
+        ElementNamedTuple("st.number_input", is_widget=True, usage=0.32),
+        TestCaseMetadata(3, 1, DataFormat.KEY_VALUE_DICT, dict),
+    ),
+    # String Enum:
+    (
+        StrTestEnum,
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Test Enum:
+    (
+        TestEnum,
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Generator Functions:
+    (
+        data_generator,
+        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Map, Generator Instance, Ray Dataset,
 ]
-
-
-class TestObject:
-    def __str__(self):
-        return "TestObject"
-
-
-class StrTestEnum(str, enum.Enum):
-    NUMBER_INPUT = "st.number_input"
-    TEXT_AREA = "st.text_area"
-    TEXT_INPUT = "st.text_input"
-
-
-class TestEnum(enum.Enum):
-    NUMBER_INPUT = "st.number_input"
-    TEXT_AREA = "st.text_area"
-    TEXT_INPUT = "st.text_input"
-
-
-def data_generator():
-    yield "st.number_input"
-    yield "st.text_area"
-    yield "st.text_input"

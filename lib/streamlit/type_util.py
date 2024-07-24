@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
-    from streamlit.runtime.secrets import Secrets
 
 T = TypeVar("T")
 
@@ -247,14 +246,8 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
 
 
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
-    t = type(x)
-    b = t.__bases__
-    if len(b) != 1 or b[0] is not tuple:
-        return False
-    f = getattr(t, "_fields", None)
-    if not isinstance(f, tuple):
-        return False
-    return all(type(n).__name__ == "str" for n in f)
+    """True if obj is an instance of a namedtuple."""
+    return isinstance(x, tuple) and hasattr(x, "_asdict")
 
 
 def is_pydeck(obj: object) -> TypeGuard[Deck]:
@@ -270,11 +263,6 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     except TypeError:
         return False
     return True
-
-
-def is_streamlit_secrets_class(obj: object) -> TypeGuard[Secrets]:
-    """True if obj is a Streamlit Secrets object."""
-    return is_type(obj, "streamlit.runtime.secrets.Secrets")
 
 
 def is_sequence(seq: Any) -> bool:

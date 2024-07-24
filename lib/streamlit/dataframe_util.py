@@ -17,9 +17,11 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import math
 import re
-from collections.abc import KeysView
+from collections import ChainMap, deque
+from collections.abc import ItemsView, KeysView, ValuesView
 from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
@@ -38,7 +40,7 @@ from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors, logger, string_util
-from streamlit.type_util import is_pandas_version_less_than, is_type
+from streamlit.type_util import is_namedtuple, is_pandas_version_less_than, is_type
 
 if TYPE_CHECKING:
     import numpy as np
@@ -65,7 +67,11 @@ _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
-
+_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
+_DASK_SERIES: Final = "dask.dataframe.core.Series"
+_DASK_INDEX: Final = "dask.dataframe.core.Index"
+_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
+_RAY_DATASET: Final = "ray.data.dataset.Dataset"
 
 V_co = TypeVar(
     "V_co",
@@ -119,6 +125,7 @@ class DataFormat(Enum):
     NUMPY_LIST = auto()  # np.array[Scalar]
     NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
     PYARROW_TABLE = auto()  # pyarrow.Table
+    PYARROW_ARRAY = auto()  # pyarrow.Array
     SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
     PYSPARK_OBJECT = auto()  # pyspark.DataFrame
     MODIN_OBJECT = auto()  # Modin DataFrame, Series
@@ -126,6 +133,8 @@ class DataFormat(Enum):
     PANDAS_STYLER = auto()  # pandas Styler
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
+    RAY_DATASET = auto()  # ray.data.dataset.Dataset
+    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -158,12 +167,15 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.NUMPY_LIST,
         DataFormat.NUMPY_MATRIX,
         DataFormat.PYARROW_TABLE,
+        DataFormat.PYARROW_ARRAY,
         DataFormat.SNOWPARK_OBJECT,
         DataFormat.PYSPARK_OBJECT,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.XARRAY_DATASET,
         DataFormat.XARRAY_DATA_ARRAY,
+        DataFormat.DASK_OBJECT,
+        DataFormat.RAY_DATASET,
     ]
 
 
@@ -175,6 +187,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series
+    - Dask DataFrame / Series
+    - Ray Dataset
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -185,6 +199,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
+        or is_dask_object(obj)
+        or is_ray_dataset(obj)
     )
 
 
@@ -235,14 +251,33 @@ def is_xarray_dataset(obj: object) -> bool:
     return is_type(obj, _XARRAY_DATASET_TYPE_STR)
 
 
+def is_ray_dataset(obj: object) -> bool:
+    """True if obj is a Ray Dataset."""
+    return is_type(obj, _RAY_DATASET) or is_type(obj, _RAY_MATERIALIZED_DATASET)
+
+
 def is_xarray_data_array(obj: object) -> bool:
     """True if obj is a Xarray DataArray."""
     return is_type(obj, _XARRAY_DATA_ARRAY_TYPE_STR)
 
 
+def is_dask_object(obj: object) -> bool:
+    """True if obj is a Dask DataFrame or Series."""
+    return (
+        is_type(obj, _DASK_DATAFRAME)
+        or is_type(obj, _DASK_SERIES)
+        or is_type(obj, _DASK_INDEX)
+    )
+
+
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
+
+
+def _is_dataclass_instance(obj: object) -> bool:
+    """True if obj is an instance of a dataclass."""
+    return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 
 def _fix_column_naming(data_df: DataFrame) -> DataFrame:
@@ -279,6 +314,8 @@ def convert_anything_to_pandas_df(
     pandas.DataFrame
 
     """
+    import inspect
+
     import numpy as np
     import pandas as pd
 
@@ -307,6 +344,29 @@ def convert_anything_to_pandas_df(
         if ensure_copy:
             data = data.copy(deep=True)
         return pd.DataFrame(data.to_series())
+
+    if is_ray_dataset(data):
+        data = data.limit(max_unevaluated_rows).to_pandas()
+
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_dask_object(data):
+        data = data.head(max_unevaluated_rows, compute=True)
+
+        if isinstance(data, (pd.Series, pd.Index)):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `compute()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
@@ -365,9 +425,34 @@ def convert_anything_to_pandas_df(
         data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
-    if isinstance(data, (EnumMeta)):
+    if isinstance(data, EnumMeta):
         # Support for enum classes
         return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
+
+    # Support for some list like objects
+    if isinstance(data, (deque, map)):
+        return _fix_column_naming(pd.DataFrame(list(data)))
+
+    # Support for ChainMap:
+    if isinstance(data, ChainMap):
+        return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
+
+    # Support for named tuples
+    if is_namedtuple(data):
+        return _fix_column_naming(
+            pd.DataFrame.from_dict(data._asdict(), orient="index")
+        )
+
+    # Support for dataclass instances
+    if _is_dataclass_instance(data):
+        return _fix_column_naming(
+            pd.DataFrame.from_dict(dataclasses.asdict(data), orient="index")
+        )
+
+    # Support for generator functions
+    if inspect.isgeneratorfunction(data):
+        # TODO: only retrieve the first 10000 rows?
+        return _fix_column_naming(pd.DataFrame(list(data())))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -557,7 +642,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     if obj is None:
         return []  # type: ignore
 
-    if isinstance(obj, (str, list, tuple, set, range, EnumMeta)):
+    if isinstance(obj, (str, list, tuple, set, range, EnumMeta, deque, map)):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
@@ -806,6 +891,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.NUMPY_MATRIX
     elif isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
+    elif isinstance(input_data, pa.Array):
+        return DataFormat.PYARROW_ARRAY
     elif isinstance(input_data, pd.Series):
         return DataFormat.PANDAS_SERIES
     elif isinstance(input_data, pd.Index):
@@ -824,14 +911,26 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATASET
     elif is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
-    elif isinstance(input_data, (range, EnumMeta, KeysView)):
+    elif is_ray_dataset(input_data):
+        return DataFormat.RAY_DATASET
+    elif is_dask_object(input_data):
+        return DataFormat.DASK_OBJECT
+    elif isinstance(input_data, (range, EnumMeta, KeysView, ValuesView, deque, map)):
         return DataFormat.LIST_OF_VALUES
-    elif isinstance(input_data, (list, tuple, set)):
+    elif (
+        isinstance(input_data, (ChainMap))
+        or _is_dataclass_instance(input_data)
+        or is_namedtuple(input_data)
+    ):
+        return DataFormat.KEY_VALUE_DICT
+    elif isinstance(input_data, ItemsView):
+        return DataFormat.LIST_OF_ROWS
+    elif isinstance(input_data, (list, tuple, set, frozenset)):
         if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure
             if isinstance(input_data, tuple):
                 return DataFormat.TUPLE_OF_VALUES
-            if isinstance(input_data, set):
+            if isinstance(input_data, (set, frozenset)):
                 return DataFormat.SET_OF_VALUES
             return DataFormat.LIST_OF_VALUES
         else:
@@ -841,7 +940,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
             first_element = next(iter(input_data))
             if isinstance(first_element, dict):
                 return DataFormat.LIST_OF_RECORDS
-            if isinstance(first_element, (list, tuple, set)):
+            if isinstance(first_element, (list, tuple, set, frozenset)):
                 return DataFormat.LIST_OF_ROWS
     elif isinstance(input_data, dict):
         if not input_data:
@@ -889,6 +988,7 @@ def convert_pandas_df_to_data_format(
     DataFrame
     | Series[Any]
     | pa.Table
+    | pa.Array
     | np.ndarray[Any, np.dtype[Any]]
     | tuple[Any]
     | list[Any]
@@ -920,6 +1020,8 @@ def convert_pandas_df_to_data_format(
         DataFormat.PANDAS_STYLER,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.DASK_OBJECT,
+        DataFormat.RAY_DATASET,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
@@ -938,6 +1040,10 @@ def convert_pandas_df_to_data_format(
         import pyarrow as pa
 
         return pa.Table.from_pandas(df)
+    elif data_format == DataFormat.PYARROW_ARRAY:
+        import pyarrow as pa
+
+        return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
     elif data_format == DataFormat.XARRAY_DATASET:
