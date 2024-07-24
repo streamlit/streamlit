@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+import xarray as xr
 
 from streamlit.dataframe_util import DataFormat
 from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
@@ -461,8 +462,8 @@ SHARED_TEST_CASES = [
     ),
     # Polars Series:
     (
-        pl.Series("Foo", ["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.POLARS_SERIES),
+        pl.Series(["st.number_input", "st.text_area", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.POLARS_SERIES),
     ),
     # Polars LazyFrame:
     (
@@ -473,6 +474,27 @@ SHARED_TEST_CASES = [
             }
         ),
         TestCaseMetadata(2, 2, DataFormat.POLARS_LAZYFRAME, pl.DataFrame),
+    ),
+    # xarray Dataset:
+    (
+        xr.Dataset.from_dataframe(
+            pd.DataFrame(
+                {
+                    "name": ["st.text_area", "st.markdown"],
+                    "type": ["widget", "element"],
+                }
+            )
+        ),
+        TestCaseMetadata(2, 2, DataFormat.XARRAY_DATASET),
+    ),
+    # xarray DataArray:
+    (
+        xr.DataArray.from_series(
+            pd.Series(
+                ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
+            )
+        ),
+        TestCaseMetadata(3, 1, DataFormat.XARRAY_DATA_ARRAY),
     ),
     # Map, Generator Instance, Ray Dataset,
 ]
