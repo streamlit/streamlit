@@ -131,6 +131,7 @@ class DataFormat(Enum):
     PANDAS_DATAFRAME = auto()  # pd.DataFrame
     PANDAS_SERIES = auto()  # pd.Series
     PANDAS_INDEX = auto()  # pd.Index
+    PANDAS_ARRAY = auto()  # pd.array
     NUMPY_LIST = auto()  # np.array[Scalar]
     NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
     PYARROW_TABLE = auto()  # pyarrow.Table
@@ -177,6 +178,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PANDAS_SERIES,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
+        DataFormat.PANDAS_ARRAY,
         DataFormat.NUMPY_LIST,
         DataFormat.NUMPY_MATRIX,
         DataFormat.PYARROW_TABLE,
@@ -361,7 +363,7 @@ def convert_anything_to_pandas_df(
     if isinstance(data, pd.DataFrame):
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
-    if isinstance(data, (pd.Series, pd.Index)):
+    if isinstance(data, (pd.Series, pd.Index, pd.api.extensions.ExtensionArray)):
         return pd.DataFrame(data)
 
     if is_pandas_styler(data):
@@ -970,6 +972,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.PANDAS_INDEX
     elif is_pandas_styler(input_data):
         return DataFormat.PANDAS_STYLER
+    elif isinstance(input_data, pd.api.extensions.ExtensionArray):
+        return DataFormat.PANDAS_ARRAY
     elif is_polars_series(input_data):
         return DataFormat.POLARS_SERIES
     elif is_polars_dataframe(input_data):
@@ -1097,6 +1101,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.PYSPARK_OBJECT,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
+        DataFormat.PANDAS_ARRAY,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import enum
 import random
-from collections import ChainMap, Counter, OrderedDict, deque
+from collections import ChainMap, Counter, OrderedDict, defaultdict, deque
 from dataclasses import dataclass
 from datetime import date
 from typing import NamedTuple
@@ -495,6 +495,19 @@ SHARED_TEST_CASES = [
             )
         ),
         TestCaseMetadata(3, 1, DataFormat.XARRAY_DATA_ARRAY),
+    ),
+    # defaultdict:
+    (
+        defaultdict(
+            lambda: "Not Present",
+            {"st.text_area": "widget", "st.markdown": "element"},
+        ),
+        TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT, dict),
+    ),
+    # Pandas Array:
+    (
+        pd.array(["st.number_input", "st.text_area", "st.text_input"]),
+        TestCaseMetadata(3, 1, DataFormat.PANDAS_ARRAY, pd.DataFrame),
     ),
     # Map, Generator Instance, Ray Dataset,
 ]
