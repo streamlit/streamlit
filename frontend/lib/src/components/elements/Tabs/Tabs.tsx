@@ -181,6 +181,7 @@ function Tabs(props: TabProps): ReactElement {
                 />
               }
               key={index}
+              data-testid={"stTab"}
               disabled={widgetsDisabled}
               overrides={{
                 TabPanel: {

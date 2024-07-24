@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
 import os
 import tempfile
@@ -43,7 +45,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /_stcore/health endpoint"""
 
     def setUp(self):
-        super(HealthHandlerTest, self).setUp()
+        super().setUp()
         self._is_healthy = True
 
     async def is_healthy(self):
@@ -189,7 +191,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self):
-        super(HostConfigHandlerTest, self).setUp()
+        super().setUp()
 
     def get_app(self):
         return tornado.web.Application(

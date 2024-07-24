@@ -23,7 +23,6 @@ from __future__ import annotations
 import threading
 from collections import ChainMap
 from contextlib import contextmanager
-from datetime import timedelta
 from typing import TYPE_CHECKING, Iterator, cast
 
 from streamlit.connections import BaseConnection
@@ -36,6 +35,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
     from pandas import DataFrame
     from snowflake.snowpark.session import Session  # type:ignore[import]
 
@@ -204,7 +205,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         >>> conn = st.connection("snowpark")
         >>> with conn.safe_session() as session:
         ...     df = session.table("mytable").limit(10).to_pandas()
-        ...
+        >>>
         >>> st.dataframe(df)
         """
         with self._lock:

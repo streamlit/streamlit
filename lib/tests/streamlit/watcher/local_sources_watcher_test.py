@@ -14,6 +14,8 @@
 
 """streamlit.LocalSourcesWatcher unit test."""
 
+from __future__ import annotations
+
 import os
 import sys
 import unittest
@@ -60,12 +62,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         for name in modules:
             try:
                 del sys.modules[the_globals[name].__name__]
-            except:
+            except Exception:
                 pass
 
             try:
                 del sys.modules[name]
-            except:
+            except Exception:
                 pass
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
@@ -419,7 +421,9 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         assert lsw._watched_pages == {"page1.py", "page2.py"}
 
-        isfile_mock = lambda x: True
+        def isfile_mock(x):
+            return True
+
         with patch("os.path.isfile", wraps=isfile_mock):
             lsw.update_watched_pages()
             assert lsw._watched_pages == {"page1.py", "page2.py", "page3.py"}
@@ -456,7 +460,9 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         assert lsw._watched_pages == {"page1.py", "page2.py"}
 
-        isfile_mock = lambda x: x != "page2.py"
+        def isfile_mock(x):
+            return x != "page2.py"
+
         with patch("os.path.isfile", wraps=isfile_mock):
             lsw.update_watched_pages()
             assert lsw._watched_pages == {"page1.py", "page3.py"}

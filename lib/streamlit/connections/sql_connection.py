@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from collections import ChainMap
 from copy import deepcopy
-from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
 from streamlit.connections import BaseConnection
@@ -25,6 +24,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
     from pandas import DataFrame
     from sqlalchemy.engine import Connection as SQLAlchemyConnection
     from sqlalchemy.engine.base import Engine
@@ -185,7 +186,11 @@ class SQLConnection(BaseConnection["Engine"]):
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("sql")
-        >>> df = conn.query("select * from pet_owners where owner = :owner", ttl=3600, params={"owner":"barbara"})
+        >>> df = conn.query(
+        ...     "select * from pet_owners where owner = :owner",
+        ...     ttl=3600,
+        ...     params={"owner": "barbara"},
+        ... )
         >>> st.dataframe(df)
         """
 

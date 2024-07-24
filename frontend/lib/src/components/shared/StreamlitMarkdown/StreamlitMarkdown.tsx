@@ -39,6 +39,8 @@ import rehypeKatex from "rehype-katex"
 import { Link2 as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
+import { findAndReplace } from "mdast-util-find-and-replace"
+
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
@@ -327,7 +329,7 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   disableLinks,
-}: RenderedMarkdownProps): ReactElement {
+}: Readonly<RenderedMarkdownProps>): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
     code: CustomCodeTag,
@@ -379,40 +381,90 @@ export function RenderedMarkdown({
   )
   function remarkColoring() {
     return (tree: any) => {
-      visit(tree, node => {
-        if (node.type === "textDirective") {
-          const nodeName = String(node.name)
-          if (colorMapping.has(nodeName)) {
-            const data = node.data || (node.data = {})
-            const style = colorMapping.get(nodeName)
-            data.hName = "span"
-            data.hProperties = data.hProperties || {}
-            data.hProperties.style = style
-            // Add class for background color for custom styling
-            if (
-              style &&
-              (/background-color:/.test(style) || /background:/.test(style))
-            ) {
-              data.hProperties.className =
-                (data.hProperties.className || "") + " has-background-color"
-            }
+      visit(tree, "textDirective", (node, _index, _parent) => {
+        const nodeName = String(node.name)
+        if (colorMapping.has(nodeName)) {
+          const data = node.data || (node.data = {})
+          const style = colorMapping.get(nodeName)
+          data.hName = "span"
+          data.hProperties = data.hProperties || {}
+          data.hProperties.style = style
+          // Add class for background color for custom styling
+          if (
+            style &&
+            (/background-color:/.test(style) || /background:/.test(style))
+          ) {
+            data.hProperties.className =
+              (data.hProperties.className || "") + " has-background-color"
           }
+        } else {
+          // Workaround to convert unsupported text directives to plain text to avoid them being
+          // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
+          // https://github.com/streamlit/streamlit/issues/5968
+          node.type = "text"
+          node.value = `:${nodeName}`
+          node.data = {}
         }
       })
     }
   }
+
+  function remarkMaterialIcons() {
+    return (tree: any) => {
+      function replace(fullMatch: string, iconName: string): any {
+        return {
+          type: "text",
+          value: fullMatch,
+          data: {
+            hName: "span",
+            hProperties: {
+              role: "img",
+              ariaLabel: iconName + " icon",
+              style: {
+                display: "inline-block",
+                fontFamily: "Material Symbols Rounded",
+                // Disable selection for copying it as text.
+                // Allowing this leads to copying the underlying icon name,
+                // which can be confusing / unexpected.
+                userSelect: "none",
+                verticalAlign: "bottom",
+                fontWeight: "normal",
+                whiteSpace: "nowrap",
+                wordWrap: "normal",
+              },
+            },
+            hChildren: [{ type: "text", value: iconName }],
+          },
+        }
+      }
+      // We replace all `:material/` occurrences with `:material_` to avoid
+      // conflicts with the directive plugin.
+      // Since all `:material/` already got replaced with `:material_`
+      // within the markdown text (see below), we need to use `:material_`
+      // within the regex.
+      findAndReplace(tree, [[/:material_(\w+):/g, replace]])
+      return tree
+    }
+  }
+
   const plugins = [
     remarkMathPlugin,
     remarkEmoji,
     remarkGfm,
     remarkDirective,
     remarkColoring,
+    remarkMaterialIcons,
   ]
 
   const rehypePlugins: PluggableList = [
     rehypeKatex,
     ...(allowHTML ? [rehypeRaw] : []),
   ]
+
+  // :material/ is detected as an directive by remark directive logic.
+  // However, the directive logic ignores emoji shortcodes. As a workaround,
+  // we can make it look like an emoji shortcode by replacing the `/` with `_`.
+  const processedSource = source.replaceAll(":material/", ":material_")
 
   // Sets disallowed markdown for widget labels
   const disallowed = [
@@ -448,7 +500,7 @@ export function RenderedMarkdown({
         // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
       >
-        {source}
+        {processedSource}
       </ReactMarkdown>
     </ErrorBoundary>
   )

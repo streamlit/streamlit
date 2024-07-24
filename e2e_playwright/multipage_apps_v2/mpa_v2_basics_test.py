@@ -20,6 +20,7 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import click_checkbox
 
 
 def main_heading(app: Page):
@@ -33,16 +34,14 @@ def page_heading(app: Page):
 def check_field(
     app: Page, *, hide_sidebarnav=False, dynamic_pages=False, add_sidebar_elements=False
 ):
-    checkboxes = app.get_by_test_id("stCheckbox")
-
     if hide_sidebarnav:
-        checkboxes.nth(0).click(delay=50)
+        click_checkbox(app, "Hide sidebar")
 
     if dynamic_pages:
-        checkboxes.nth(1).click(delay=50)
+        click_checkbox(app, "Change navigation dynamically")
 
     if add_sidebar_elements:
-        checkboxes.nth(2).click(delay=50)
+        click_checkbox(app, "Show sidebar elements")
 
 
 expected_page_order = [

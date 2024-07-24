@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
-from typing import Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Callable
 from unittest import IsolatedAsyncioTestCase, mock
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -26,15 +27,18 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.script_data import ScriptData
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     SessionClient,
     SessionInfo,
     SessionManager,
     SessionStorage,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+if TYPE_CHECKING:
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.runtime.script_data import ScriptData
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 class MockSessionManager(SessionManager):
@@ -49,22 +53,22 @@ class MockSessionManager(SessionManager):
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
-        message_enqueued_callback: Optional[Callable[[], None]],
+        message_enqueued_callback: Callable[[], None] | None,
     ) -> None:
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
         self._message_enqueued_callback = message_enqueued_callback
 
         # Mapping of AppSession.id -> SessionInfo.
-        self._session_info_by_id: Dict[str, SessionInfo] = {}
+        self._session_info_by_id: dict[str, SessionInfo] = {}
 
     def connect_session(
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         with mock.patch(
             "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
@@ -93,10 +97,10 @@ class MockSessionManager(SessionManager):
             del self._session_info_by_id[session_id]
             session_info.session.shutdown()
 
-    def get_session_info(self, session_id: str) -> Optional[SessionInfo]:
+    def get_session_info(self, session_id: str) -> SessionInfo | None:
         return self._session_info_by_id.get(session_id, None)
 
-    def list_sessions(self) -> List[SessionInfo]:
+    def list_sessions(self) -> list[SessionInfo]:
         return list(self._session_info_by_id.values())
 
 

@@ -123,7 +123,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
             (np.array([]),),
             (pd.Series(np.array([])),),
             (set(),),
-            (list(),),
+            ([],),
         ]
     )
     def test_no_options(self, options):
@@ -135,7 +135,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
 
-    @parameterized.expand([(15, TypeError), ("str", TypeError)])
+    @parameterized.expand([(15, TypeError)])
     def test_invalid_options(self, options, expected):
         """Test that it handles invalid options."""
         with self.assertRaises(expected):
@@ -294,22 +294,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.max_selections, 2)
 
-    def test_over_max_selections_initialization(self):
-        with self.assertRaises(StreamlitAPIException) as e:
-            st.multiselect(
-                "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
-            )
-        self.assertEqual(
-            str(e.exception),
-            """
-Multiselect has 3 options selected but `max_selections`
-is set to 2. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 2 options.
-""",
-        )
-
     @parameterized.expand(
         [
             (["a", "b", "c"], 3),
@@ -321,63 +305,7 @@ Please select at most 2 options.
         ]
     )
     def test_get_default_count(self, default, expected_count):
-        self.assertEqual(_get_default_count(default), expected_count)
-
-    @parameterized.expand(
-        [
-            (
-                1,
-                1,
-                f"""
-Multiselect has 1 option selected but `max_selections`
-is set to 1. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 1 option.
-""",
-            ),
-            (
-                1,
-                0,
-                f"""
-Multiselect has 1 option selected but `max_selections`
-is set to 0. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 0 options.
-""",
-            ),
-            (
-                2,
-                1,
-                f"""
-Multiselect has 2 options selected but `max_selections`
-is set to 1. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 1 option.
-""",
-            ),
-            (
-                3,
-                2,
-                f"""
-Multiselect has 3 options selected but `max_selections`
-is set to 2. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 2 options.
-""",
-            ),
-        ]
-    )
-    def test_get_over_max_options_message(
-        self, current_selections, max_selections, expected_msg
-    ):
-        self.assertEqual(
-            _get_over_max_options_message(current_selections, max_selections),
-            expected_msg,
-        )
+        assert _get_default_count(default) == expected_count
 
     def test_placeholder(self):
         """Test that it can be called with placeholder params."""
@@ -396,6 +324,78 @@ Please select at most 2 options.
         el = self.get_delta_from_queue(-2).new_element.exception
         self.assertEqual(el.type, "CachedWidgetWarning")
         self.assertTrue(el.is_warning)
+
+    def test_over_max_selections_initialization(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.multiselect(
+                "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
+            )
+        self.assertEqual(
+            str(e.exception),
+            """
+Multiselect has 3 options selected but `max_selections`
+is set to 2. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most 2 options.
+""",
+        )
+
+    @parameterized.expand(
+        [
+            (
+                1,
+                1,
+                """
+Multiselect has 1 option selected but `max_selections`
+is set to 1. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most 1 option.
+""",
+            ),
+            (
+                1,
+                0,
+                """
+Multiselect has 1 option selected but `max_selections`
+is set to 0. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most 0 options.
+""",
+            ),
+            (
+                2,
+                1,
+                """
+Multiselect has 2 options selected but `max_selections`
+is set to 1. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most 1 option.
+""",
+            ),
+            (
+                3,
+                2,
+                """
+Multiselect has 3 options selected but `max_selections`
+is set to 2. This happened because you either gave too many options to `default`
+or you manipulated the widget's state through `st.session_state`. Note that
+the latter can happen before the line indicated in the traceback.
+Please select at most 2 options.
+""",
+            ),
+        ]
+    )
+    def test_get_over_max_options_message(
+        self, current_selections, max_selections, expected_msg
+    ):
+        self.assertEqual(
+            _get_over_max_options_message(current_selections, max_selections),
+            expected_msg,
+        )
 
 
 def test_multiselect_enum_coercion():

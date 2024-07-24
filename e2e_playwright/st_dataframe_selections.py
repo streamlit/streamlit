@@ -137,7 +137,7 @@ st.dataframe(
 st.header("Selections in fragment:")
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     selection = st.dataframe(
         df,

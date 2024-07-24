@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import gc
 import threading
 import unittest
 from asyncio import AbstractEventLoop
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, Callable, cast
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import DEFAULT, MagicMock, patch
 
@@ -64,8 +66,8 @@ def del_path(monkeypatch):
 
 
 def _create_test_session(
-    event_loop: Optional[AbstractEventLoop] = None,
-    session_id_override: Optional[str] = None,
+    event_loop: AbstractEventLoop | None = None,
+    session_id_override: str | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -761,7 +763,8 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            fragment_ids_this_run={"my_fragment_id"},
+            fragment_ids_this_run=["my_fragment_id"],
+            clear_forward_msg_queue=False,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -775,6 +778,26 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         assert new_session_msg.fragment_ids_this_run == ["my_fragment_id"]
 
         add_script_run_ctx(ctx=orig_ctx)
+
+    async def test_clears_forward_msg_queue_by_default(self):
+        session = _create_test_session(asyncio.get_running_loop())
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run=["my_fragment_id"],
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        session._clear_queue.assert_called_once()
 
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
@@ -843,7 +866,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         # Create a mocked ForwardMsgQueue that tracks "enqueue" and "clear"
         # function calls together in a list. We'll assert the content
         # and order of these calls.
-        forward_msg_queue_events: List[Any] = []
+        forward_msg_queue_events: list[Any] = []
         CLEAR_QUEUE = object()
 
         mock_queue = MagicMock(spec=ForwardMsgQueue)

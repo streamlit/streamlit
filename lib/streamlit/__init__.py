@@ -72,20 +72,25 @@ from streamlit.delta_generator import (
     bottom_dg as _bottom_dg,
 )
 
-from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
+from streamlit.elements.dialog_decorator import (
+    dialog_decorator as _dialog_decorator,
+    experimental_dialog_decorator as _experimental_dialog_decorator,
+)
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
     cache as _cache,
-    experimental_singleton as _experimental_singleton,
-    experimental_memo as _experimental_memo,
 )
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
-from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.fragment import (
+    experimental_fragment as _experimental_fragment,
+    fragment as _fragment,
+)
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
+from streamlit.runtime.context import ContextProxy as _ContextProxy
 from streamlit.runtime.state import (
     SessionStateProxy as _SessionStateProxy,
     QueryParamsProxy as _QueryParamsProxy,
@@ -97,7 +102,6 @@ from streamlit.commands.experimental_query_params import (
 )
 
 import streamlit.column_config as _column_config
-
 
 # Modules that the user should have access to. These are imported with the "as" syntax and the same name; note that renaming the import with "as" does not make it an explicit export.
 # In this case, you should import it with an underscore to make clear that it is internal and then assign it to a variable with the new intended name.
@@ -113,7 +117,6 @@ from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
     rerun as rerun,
-    experimental_rerun as _experimental_rerun,
     switch_page as switch_page,
 )
 
@@ -128,7 +131,6 @@ def _update_logger() -> None:
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
 _config.on_config_parsed(_update_logger, True)
-
 
 secrets = _secrets_singleton
 
@@ -160,6 +162,7 @@ date_input = _main.date_input
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
+feedback = _main.feedback
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error
@@ -224,6 +227,8 @@ session_state = _SessionStateProxy()
 
 query_params = _QueryParamsProxy()
 
+context = _ContextProxy()
+
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
@@ -236,15 +241,26 @@ column_config = _column_config
 # Connection
 connection = _connection
 
+# Fragment and dialog
+dialog = _dialog_decorator
+fragment = _fragment
+
 # Experimental APIs
-experimental_dialog = _dialog_decorator
-experimental_fragment = _fragment
-experimental_memo = _experimental_memo
-experimental_singleton = _experimental_singleton
+experimental_dialog = _deprecate_func_name(
+    _experimental_dialog_decorator,
+    "experimental_dialog",
+    "2025-01-01",
+    name_override="dialog",
+)
+experimental_fragment = _deprecate_func_name(
+    _experimental_fragment,
+    "experimental_fragment",
+    "2025-01-01",
+    name_override="fragment",
+)
 experimental_user = _UserInfoProxy()
 
-
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
@@ -260,8 +276,9 @@ experimental_set_query_params = _deprecate_func_name(
     _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
-experimental_rerun = _experimental_rerun
-experimental_data_editor = _main.experimental_data_editor
-experimental_connection = _deprecate_func_name(
-    connection, "experimental_connection", "2024-04-01", name_override="connection"
-)
+
+
+# make it possible to call streamlit.components.v1.html etc. by importing it here
+# import in the very end to avoid partially-initialized module import errors, because
+# streamlit.components.v1 also uses some streamlit imports
+import streamlit.components.v1  # noqa: F401

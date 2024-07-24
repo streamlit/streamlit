@@ -14,17 +14,18 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Mapping, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Iterator, Mapping, NoReturn, Union
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
-from streamlit.runtime.scriptrunner.script_run_context import UserInfo
-from streamlit.runtime.secrets import secrets_singleton
+
+if TYPE_CHECKING:
+    from streamlit.runtime.scriptrunner.script_run_context import UserInfo
 
 
-def generate_login_redirect_url(provider: Optional[str] = None) -> str:
+def generate_login_redirect_url(provider: str | None = None) -> str:
     base_url = "/authliblogin"
     if provider is not None:
         base_url += f"?provider={provider}"
@@ -39,8 +40,6 @@ def _get_user_info() -> UserInfo:
     return ctx.user_info
 
 
-# Class attributes are listed as "Parameters" in the docstring as a workaround
-# for the docstring parser for docs.strreamlit.io
 class UserInfoProxy(Mapping[str, Union[str, None]]):
     """
     A read-only, dict-like object for accessing information about current user.
@@ -52,9 +51,9 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
     Properties can by accessed via key or attribute notation. For example,
     ``st.experimental_user["email"]`` or ``st.experimental_user.email``.
 
-    Parameters
+    Attributes
     ----------
-    email:str
+    email : str
         If running locally, this property returns the string literal
         ``"test@example.com"``.
 
@@ -71,18 +70,15 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
     """
 
     def login(
-        self, send_redirect_to_host: bool = False, provider: Optional[str] = None
+        self, send_redirect_to_host: bool = False, provider: str | None = None
     ) -> None:
         context = _get_script_run_ctx()
         if context is not None:
-
             fwd_msg = ForwardMsg()
             fwd_msg.auth_redirect.url = generate_login_redirect_url(provider=provider)
             fwd_msg.auth_redirect.action_type = "login"
             if send_redirect_to_host:
                 fwd_msg.auth_redirect.send_redirect_to_host = True
-            print("IN USER LOGIN CALL!!!!")
-            print(fwd_msg.auth_redirect)
             context.enqueue(fwd_msg)
 
     def logout(self) -> None:
@@ -100,8 +96,6 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
             fwd_msg = ForwardMsg()
             fwd_msg.auth_redirect.url = "/authliblogout"
             fwd_msg.auth_redirect.action_type = "logout"
-            print("IN USER LOGOUT CALL!!!!")
-            print(fwd_msg.auth_redirect)
             context.enqueue(fwd_msg)
 
     def __getitem__(self, key: str) -> str | None:

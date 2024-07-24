@@ -30,12 +30,15 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           path: e2e_playwright
-          files: "**/*_test.py"
+          # Exclude all files in custom_components folder as they require external dependencies
+          files: |
+            **/*_test.py
+            !custom_components/**
       - name: Check changed files
         id: check_changed_files
         env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_and_modified_files }}
-          CHANGED_FILES_COUNT: ${{ steps.changed-files.outputs.all_changed_and_modified_files_count }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          CHANGED_FILES_COUNT: ${{ steps.changed-files.outputs.all_changed_files_count }}
         run: |
           echo "Changed files count: ${CHANGED_FILES_COUNT}"
           echo "$CHANGED_FILES"
@@ -71,7 +74,7 @@ jobs:
         run: |
           cd e2e_playwright;
           rm -rf ./test-results;
-          pytest ${{ steps.changed-files.outputs.all_changed_and_modified_files }} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --full-page-screenshot --tracing retain-on-failure --output ./test-results/ -n auto --durations=5 -r aR -v
+          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --full-page-screenshot --tracing retain-on-failure --output ./test-results/ -n auto --durations=5 -r aR -v
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()

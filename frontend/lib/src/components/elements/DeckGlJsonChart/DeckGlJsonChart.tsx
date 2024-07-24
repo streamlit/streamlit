@@ -260,10 +260,12 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   render(): ReactNode {
     const deck = DeckGlJsonChart.getDeckObject(this.props, this.state)
     const { viewState } = this.state
+    const { width } = this.props
+
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
-        width={deck.initialViewState.width}
+        width={width}
         height={deck.initialViewState.height}
         data-testid="stDeckGlJsonChart"
       >
@@ -271,7 +273,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           viewState={viewState}
           onViewStateChange={this.onViewStateChange}
           height={deck.initialViewState.height}
-          width={deck.initialViewState.width}
+          width={width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
           ContextProvider={MapContext.Provider}
@@ -279,7 +281,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         >
           <StaticMap
             height={deck.initialViewState.height}
-            width={deck.initialViewState.width}
+            width={width}
             mapStyle={
               deck.mapStyle &&
               (typeof deck.mapStyle === "string"

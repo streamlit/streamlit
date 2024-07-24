@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, cast
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.type_util import SupportsStr
 
 
 class CodeMixin:
@@ -58,7 +58,7 @@ class CodeMixin:
         >>>
         >>> code = '''def hello():
         ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
+        >>> st.code(code, language="python")
 
         """
         code_proto = CodeProto()

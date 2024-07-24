@@ -362,7 +362,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         exec_start = timer()
         # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
-        from streamlit.runtime.scriptrunner.script_runner import RerunException
+        from streamlit.runtime.scriptrunner.exceptions import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
 
@@ -482,6 +482,8 @@ def create_page_profile_message(
         page_profile.uncaught_exception = uncaught_exception
 
     if ctx := get_script_run_ctx():
-        page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
+        page_profile.is_fragment_run = bool(
+            ctx.script_requests and ctx.script_requests.fragment_id_queue
+        )
 
     return msg

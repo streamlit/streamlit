@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.35.0"  # PEP-440
+VERSION = "1.36.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -33,7 +33,7 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    "numpy>=1.20, <2",
+    "numpy>=1.20, <3",
     "packaging>=20, <25",
     # Lowest version with available wheel for 3.7 + amd64 + linux
     "pandas>=1.3.0, <3",
@@ -110,7 +110,7 @@ setup(
     project_urls={
         "Source Code": "https://github.com/streamlit/streamlit",
         "Bug Tracker": "https://github.com/streamlit/streamlit/issues",
-        "Release notes": "https://docs.streamlit.io/library/changelog",
+        "Release notes": "https://docs.streamlit.io/develop/quick-reference/changelog",
         "Documentation": "https://docs.streamlit.io/",
         "Community": "https://discuss.streamlit.io/",
         "Twitter": "https://twitter.com/streamlit",

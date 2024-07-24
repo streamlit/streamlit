@@ -204,6 +204,18 @@ Usage:
       },
     })
   }
+
+  function restartWebsocketConnection() {
+    sendMessage({
+      type: "RESTART_WEBSOCKET_CONNECTION",
+    })
+  }
+
+  function terminateWebsocketConnection() {
+    sendMessage({
+      type: "TERMINATE_WEBSOCKET_CONNECTION",
+    })
+  }
 </script>
 
 <style>
@@ -257,6 +269,8 @@ Usage:
   <button onclick="setHideSidebarNav()">Hide Sidebar Nav</button>
   <button onclick="setSidebarDownshift()">Sidebar Chevron Downshift</button>
   <button onclick="setAuthToken()">Set Auth Token</button>
+  <button onclick="restartWebsocketConnection()">Restart Websocket</button>
+  <button onclick="terminateWebsocketConnection()">Terminate Websocket</button>
 </div>
 
 <iframe id="guest" src="http://localhost:3000" />

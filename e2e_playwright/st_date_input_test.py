@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -36,6 +37,17 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     assert_snapshot(date_widgets.nth(11), name="st_date_input-single_date_callback")
     assert_snapshot(date_widgets.nth(12), name="st_date_input-empty_value")
     assert_snapshot(date_widgets.nth(13), name="st_date_input-value_from_state")
+
+
+def test_help_tooltip_works(app: Page):
+    leading_indent_regular_text_tooltip = """
+    This is a regular text block!
+    Test1
+    Test2
+
+    """
+    element_with_help = app.get_by_test_id("stDateInput").nth(0)
+    expect_help_tooltip(app, element_with_help, leading_indent_regular_text_tooltip)
 
 
 def test_date_input_has_correct_initial_values(app: Page):

@@ -14,8 +14,26 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import click_button
+
 
 def test_st_rerun_restarts_the_session_when_invoked(app: Page):
     expect(app.get_by_test_id("stText")).to_have_text(
         "Being able to rerun a session is awesome!"
     )
+
+
+def test_fragment_scoped_st_rerun(app: Page):
+    expect(app.get_by_test_id("stText")).to_have_text(
+        "Being able to rerun a session is awesome!"
+    )
+
+    click_button(app, "rerun fragment")
+    expect(app.get_by_test_id("stMarkdown").first).to_have_text("fragment run count: 5")
+    expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 4")
+
+    click_button(app, "rerun fragment")
+    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
+        "fragment run count: 10"
+    )
+    expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 4")

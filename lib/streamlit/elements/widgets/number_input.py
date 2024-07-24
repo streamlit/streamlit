@@ -23,12 +23,15 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -42,7 +45,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -144,71 +146,79 @@ class NumberInputMixin:
         ----------
         label : str
             A short label explaining to the user what this input is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
         min_value : int, float, or None
             The minimum permitted value.
             If None, there will be no minimum.
+
         max_value : int, float, or None
             The maximum permitted value.
             If None, there will be no maximum.
+
         value : int, float, "min" or None
             The value of this widget when it first renders. If ``None``, will initialize
             empty and return ``None`` until the user provides input.
             If "min" (default), will initialize with min_value, or 0.0 if
             min_value is None.
+
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
+
         format : str or None
             A printf-style format string controlling how the interface should
-            display numbers. Output must be purely numeric. This does not impact
-            the return value. Valid formatters: %d %e %f %g %i %u
+            display numbers. The output must be purely numeric. This does not
+            impact the return value of the widget. Formatting is handled by
+            `sprintf.js <https://github.com/alexei/sprintf.js>`_.
+
+            For example, ``format="%0.1f"`` adjusts the displayed decimal
+            precision to only show one digit after the decimal.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
         help : str
             An optional tooltip that gets displayed next to the input.
+
         on_change : callable
             An optional callback invoked when this number_input's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
         placeholder : str or None
             An optional string displayed when the number input is empty.
             If None, no placeholder is displayed.
+
         disabled : bool
             An optional boolean, which disables the number input if set to
             True. The default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -236,7 +246,9 @@ class NumberInputMixin:
 
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
+        >>> number = st.number_input(
+        ...     "Insert a number", value=None, placeholder="Type a number..."
+        ... )
         >>> st.write("The current number is ", number)
 
         .. output::
@@ -284,11 +296,11 @@ class NumberInputMixin:
     ) -> Number | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=value if value != "min" else None, key=key
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=value if value != "min" else None,
         )
         maybe_raise_label_warnings(label, label_visibility)
 

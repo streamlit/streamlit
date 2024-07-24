@@ -41,29 +41,30 @@ def cache(
     max_entries: int | None = None,
     ttl: float | None = None,
 ):
-    """Function decorator to memoize function executions.
+    """Legacy caching decorator (deprecated).
+
+    Legacy caching with ``st.cache`` has been removed from Streamlit. This is
+    now an alias for ``st.cache_data`` and ``st.cache_resource``.
 
     Parameters
     ----------
     func : callable
-        The function to cache. Streamlit hashes the function and dependent code.
+        The function to cache. Streamlit hashes the function's source code.
 
     persist : bool
         Whether to persist the cache on disk.
 
     allow_output_mutation : bool
-        Streamlit shows a warning when return values are mutated, as that
-        can have unintended consequences. This is done by hashing the return value internally.
-
-        If you know what you're doing and would like to override this warning, set this to True.
+        Whether to use ``st.cache_data`` or ``st.cache_resource``. If this is
+        ``False`` (default), the arguments are passed to ``st.cache_data``. If
+        this is ``True``, the arguments are passed to ``st.cache_resource``.
 
     show_spinner : bool
-        Enable the spinner. Default is True to show a spinner when there is
-        a cache miss.
+        Enable the spinner. Default is ``True`` to show a spinner when there is
+        a "cache miss" and the cached data is being created.
 
     suppress_st_warning : bool
-        Suppress warnings about calling Streamlit commands from within
-        the cached function.
+        This is not used.
 
     hash_funcs : dict or None
         Mapping of types or fully qualified names to hash functions. This is used to override
@@ -73,9 +74,9 @@ def cache(
         for an example of how this can be used.
 
     max_entries : int or None
-        The maximum number of entries to keep in the cache, or None
+        The maximum number of entries to keep in the cache, or ``None``
         for an unbounded cache. (When a new entry is added to a full cache,
-        the oldest cached entry will be removed.) The default is None.
+        the oldest cached entry will be removed.) The default is ``None``.
 
     ttl : float or None
         The maximum number of seconds to keep an entry in the cache, or
@@ -89,7 +90,7 @@ def cache(
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
-    ...
+    >>>
     >>> d1 = fetch_and_clean_data(DATA_URL_1)
     >>> # Actually executes the function, since this is the first time it was
     >>> # encountered.

@@ -14,6 +14,8 @@
 
 """Streamlit Unit test."""
 
+from __future__ import annotations
+
 import dataclasses
 import time
 import unittest
@@ -46,7 +48,7 @@ from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 class StreamlitWriteTest(unittest.TestCase):
     """Test st.write.
 
-    Unit tests for https://docs.streamlit.io/library/api-reference/write-magic/st.write
+    Unit tests for https://docs.streamlit.io/develop/api-reference/write-magic/st.write
 
     Because we're going to test st.markdown, st.pyplot, st.altair_chart
     later on, we don't have to test it in st.write In st.write, all we're
@@ -56,7 +58,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_repr_html(self):
         """Test st.write with an object that defines _repr_html_."""
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             def _repr_html_(self):
                 return "<strong>hello world</strong>"
 
@@ -70,7 +72,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with an object that defines _repr_html_ and allows
         unsafe HTML explicitly."""
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             def _repr_html_(self):
                 return "<strong>hello world</strong>"
 
@@ -86,7 +88,7 @@ class StreamlitWriteTest(unittest.TestCase):
         html tags in the returned string.
         """
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             def _repr_html_(self):
                 return "hello **world**"
 
@@ -98,7 +100,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_repr_html_not_callable(self):
         """Test st.write with an object that defines _repr_html_ but is not callable"""
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             _repr_html_ = "hello **world**"
 
         with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
@@ -145,7 +147,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with altair_chart."""
         is_type.side_effect = make_is_type_mock(type_util._ALTAIR_RE)
 
-        class FakeChart(object):
+        class FakeChart:
             pass
 
         with patch("streamlit.delta_generator.DeltaGenerator.altair_chart") as p:
@@ -158,7 +160,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with matplotlib."""
         is_type.side_effect = make_is_type_mock("matplotlib.figure.Figure")
 
-        class FakePyplot(object):
+        class FakePyplot:
             pass
 
         with patch("streamlit.delta_generator.DeltaGenerator.pyplot") as p:
@@ -213,7 +215,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with openai.Stream."""
         is_type.side_effect = make_is_type_mock("openai.Stream")
 
-        class FakeOpenaiStream(object):
+        class FakeOpenaiStream:
             pass
 
         with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
@@ -231,7 +233,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_namedtuple(self):
         """Test st.write with list."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            Boy = namedtuple("Boy", ("name", "age"))
+            Boy = namedtuple("Boy", ("name", "age"))  # noqa: PYI024
             John = Boy("John", 29)
             st.write(John)
 
@@ -304,7 +306,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_default_object(self):
         """Test st.write with default clause ie some object."""
 
-        class SomeObject(object):
+        class SomeObject:
             def __str__(self):
                 return "1 * 2 - 3 = 4 `ok` !"
 
@@ -318,7 +320,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_default_object_multiline(self):
         """Test st.write with default clause ie some object with multiline string."""
 
-        class SomeObject(object):
+        class SomeObject:
             def __str__(self):
                 return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
 
@@ -395,7 +397,7 @@ class StreamlitWriteTest(unittest.TestCase):
         ):
             m.side_effect = Exception("some exception")
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 st.write("some text")
 
     def test_unknown_arguments(self):

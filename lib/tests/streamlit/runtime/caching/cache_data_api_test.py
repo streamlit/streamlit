@@ -125,63 +125,6 @@ class CacheDataTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [0, 1])
 
-    def test_multiple_api_names(self):
-        """`st.experimental_memo` is effectively an alias for `st.cache_data`, and we
-        support both APIs while experimental_memo is being deprecated.
-        """
-        num_calls = [0]
-
-        def foo():
-            num_calls[0] += 1
-            return 42
-
-        # Annotate a function with both `cache_data` and `experimental_memo`.
-        cache_data_func = st.cache_data(foo)
-        memo_func = st.experimental_memo(foo)
-
-        # Call both versions of the function and assert the results.
-        self.assertEqual(42, cache_data_func())
-        self.assertEqual(42, memo_func())
-
-        # Because these decorators share the same cache, calling both functions
-        # results in just a single call to the decorated function.
-        self.assertEqual(1, num_calls[0])
-
-    @parameterized.expand(
-        [
-            ("cache_data", st.cache_data, False),
-            ("experimental_memo", st.experimental_memo, True),
-        ]
-    )
-    @patch("streamlit.runtime.caching.cache_data_api.show_deprecation_warning")
-    def test_deprecation_warnings(
-        self, _, decorator: Any, should_show_warning: bool, show_warning_mock: Mock
-    ):
-        """We show deprecation warnings when using `@st.experimental_memo`, but not `@st.cache_data`."""
-        warning_str = (
-            "`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
-            "which has the same behavior. More information [in our docs](https://docs.streamlit.io/library/advanced-features/caching)."
-        )
-
-        # We show the deprecation warning at declaration time:
-        @decorator
-        def foo():
-            return 42
-
-        if should_show_warning:
-            show_warning_mock.assert_called_once_with(warning_str)
-        else:
-            show_warning_mock.assert_not_called()
-
-        # And also when clearing the cache:
-        show_warning_mock.reset_mock()
-        decorator.clear()
-
-        if should_show_warning:
-            show_warning_mock.assert_called_once_with(warning_str)
-        else:
-            show_warning_mock.assert_not_called()
-
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
         with corresponding hash_func.
@@ -290,6 +233,31 @@ If you think this is actually a Streamlit bug, please
         assert foo(1) == 1
         foo.clear(1)
         assert foo(1) == 2
+
+    def test_cached_st_method_clear_args(self):
+        self.x = 0
+
+        class ExampleClass:
+            @st.cache_data
+            def foo(_self, y):
+                self.x += y
+                return self.x
+
+        example_instance = ExampleClass()
+        # Calling method foo produces the side effect of incrementing self.x
+        # and returning it as the result.
+
+        # calling foo(1) should return 1
+        assert example_instance.foo(1) == 1
+        # calling foo.clear(2) should clear the cache for the argument 2,
+        # and keep the cache for the argument 1, therefore calling foo(1) should return
+        # cached value 1
+        example_instance.foo.clear(2)
+        assert example_instance.foo(1) == 1
+        # calling foo.clear(1) should clear the cache for the argument 1,
+        # therefore calling foo(1) should return the new value 2
+        example_instance.foo.clear(1)
+        assert example_instance.foo(1) == 2
 
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):

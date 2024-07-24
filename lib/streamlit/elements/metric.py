@@ -20,12 +20,15 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.policies import maybe_raise_label_warnings
+from streamlit.elements.lib.utils import (
+    LabelVisibility,
+    get_label_visibility_proto_value,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
-from streamlit.type_util import LabelVisibility, maybe_raise_label_warnings
 
 if TYPE_CHECKING:
     import numpy as np
@@ -65,46 +68,41 @@ class MetricMixin:
         Parameters
         ----------
         label : str
-            The header or title for the metric. The label can optionally contain
-            Markdown and supports the following elements: Bold, Italics,
-            Strikethroughs, Inline Code, Emojis, and Links.
+            The header or title for the metric. The label can optionally
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         value : int, float, str, or None
              Value of the metric. None is rendered as a long dash.
+
         delta : int, float, str, or None
             Indicator of how the metric changed, rendered with an arrow below
             the metric. If delta is negative (int/float) or starts with a minus
             sign (str), the arrow points down and the text is red; else the
             arrow points up and the text is green. If None (default), no delta
             indicator is shown.
+
         delta_color : "normal", "inverse", or "off"
              If "normal" (default), the delta indicator is shown as described
              above. If "inverse", it is red when positive and green when
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
+
         help : str
             An optional tooltip that gets displayed next to the metric label.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it (equivalent to label="").
@@ -138,11 +136,11 @@ class MetricMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.metric(label="Gas price", value=4, delta=-0.5,
-        ...     delta_color="inverse")
+        >>> st.metric(label="Gas price", value=4, delta=-0.5, delta_color="inverse")
         >>>
-        >>> st.metric(label="Active developers", value=123, delta=123,
-        ...     delta_color="off")
+        >>> st.metric(
+        ...     label="Active developers", value=123, delta=123, delta_color="off"
+        ... )
 
         .. output::
             https://doc-metric-example3.streamlit.app/

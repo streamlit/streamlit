@@ -38,13 +38,12 @@ from streamlit import (
     cli_util,
     config,
     cursor,
+    dataframe_util,
     env_util,
     logger,
     runtime,
-    type_util,
     util,
 )
-from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
@@ -74,6 +73,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
 from streamlit.elements.widgets.button import ButtonMixin
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.elements.widgets.camera_input import CameraInputMixin
 from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
@@ -100,7 +100,8 @@ if TYPE_CHECKING:
     from numpy import typing as npt
     from pandas import DataFrame
 
-    from streamlit.elements.arrow import Data
+    from streamlit.cursor import Cursor
+    from streamlit.dataframe_util import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
 
@@ -148,6 +149,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    ButtonGroupMixin,
     CameraInputMixin,
     ChatMixin,
     CheckboxMixin,
@@ -439,9 +441,9 @@ class DeltaGenerator(
         ctx = get_script_run_ctx()
         if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
             raise StreamlitAPIException(
-                "Calling `st.sidebar` in a function wrapped with `st.experimental_fragment` "
-                "is not supported. To write elements to the sidebar with a fragment, "
-                "call your fragment function inside a `with st.sidebar` context manager."
+                "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
+                "supported. To write elements to the sidebar with a fragment, call your "
+                "fragment function inside a `with st.sidebar` context manager."
             )
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
@@ -577,15 +579,13 @@ class DeltaGenerator(
         >>> import numpy as np
         >>>
         >>> df1 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+        ... )
         >>> my_table = st.table(df1)
         >>>
         >>> df2 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+        ... )
         >>> my_table.add_rows(df2)
         >>> # Now the table shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
@@ -602,14 +602,16 @@ class DeltaGenerator(
         And for plots whose datasets are named, you can pass the data with a
         keyword argument where the key is the name:
 
-        >>> my_chart = st.vega_lite_chart({
-        ...     'mark': 'line',
-        ...     'encoding': {'x': 'a', 'y': 'b'},
-        ...     'datasets': {
-        ...       'some_fancy_name': df1,  # <-- named dataset
-        ...      },
-        ...     'data': {'name': 'some_fancy_name'},
-        ... }),
+        >>> my_chart = st.vega_lite_chart(
+        ...     {
+        ...         "mark": "line",
+        ...         "encoding": {"x": "a", "y": "b"},
+        ...         "datasets": {
+        ...             "some_fancy_name": df1,  # <-- named dataset
+        ...         },
+        ...         "data": {"name": "some_fancy_name"},
+        ...     }
+        ... )
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
@@ -673,11 +675,16 @@ sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg
 event_dg = DeltaGenerator(root_container=RootContainer.EVENT, parent=main_dg)
 bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
 
+
 # The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
 # a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
 # so that different threads or async tasks can have their own stacks.
+def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
+    return (main_dg,)
+
+
 dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
-    "dg_stack", default=(main_dg,)
+    "dg_stack", default=get_default_dg_stack()
 )
 
 
@@ -700,8 +707,10 @@ def _prep_data_for_add_rows(
     add_rows_metadata: AddRowsMetadata | None,
 ) -> tuple[Data, AddRowsMetadata | None]:
     if not add_rows_metadata:
-        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-        return type_util.convert_anything_to_df(data, allow_styler=True), None
+        if dataframe_util.is_pandas_styler(data):
+            # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+            return data, None
+        return dataframe_util.convert_anything_to_pandas_df(data), None
 
     # If add_rows_metadata is set, it indicates that the add_rows used called
     # on a chart based on our built-in chart commands.

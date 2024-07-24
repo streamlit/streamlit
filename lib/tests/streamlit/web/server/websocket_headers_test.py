@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest import mock
-from unittest.mock import MagicMock
+from __future__ import annotations
+
+from unittest.mock import MagicMock, Mock, patch
 
 import tornado.testing
 import tornado.websocket
@@ -45,7 +46,7 @@ class WebSocketHeadersTest(ServerTestCase):
             # Mock get_script_run_ctx() to return our session_id
             mock_script_run_ctx = MagicMock(spec=ScriptRunContext)
             mock_script_run_ctx.session_id = session_id
-            with mock.patch(
+            with patch(
                 "streamlit.web.server.websocket_headers.get_script_run_ctx",
                 return_value=mock_script_run_ctx,
             ):
@@ -59,3 +60,13 @@ class WebSocketHeadersTest(ServerTestCase):
                 self.assertIn("Host", headers)
                 self.assertIn("Upgrade", headers)
                 self.assertIn("Connection", headers)
+
+    @patch("streamlit.web.server.websocket_headers.show_deprecation_warning")
+    def test_deprecation_warnings(self, show_warning_mock: Mock):
+        """We show deprecation warnings when using `_get_websocket_headers()`."""
+
+        websocket_headers._get_websocket_headers()
+
+        show_warning_mock.assert_called_once_with(
+            websocket_headers._GET_WEBSOCKET_HEADERS_DEPRECATE_MSG
+        )

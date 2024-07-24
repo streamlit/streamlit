@@ -22,11 +22,11 @@ from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import source_util
 from streamlit.logger import get_logger
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.util import calc_md5
 from streamlit.watcher import watch_dir
 
 if TYPE_CHECKING:
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
 
 _LOGGER: Final = get_logger(__name__)

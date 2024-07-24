@@ -34,7 +34,7 @@ class VideoTest(DeltaGeneratorTestCase):
         """Test st.video using fake bytes data."""
         # Make up some bytes to pretend we have a video.  The server should not vet
         # the video before sending it to the browser.
-        fake_video_data = "\x12\x10\x35\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x12\x10\x35\x44\x55\x66"
 
         st.video(fake_video_data)
 
@@ -97,13 +97,13 @@ class VideoTest(DeltaGeneratorTestCase):
     def test_st_video_other_inputs(self):
         """Test that our other data types don't result in an error."""
         st.video(b"bytes_data")
-        st.video("str_data".encode("utf-8"))
+        st.video(b"str_data")
         st.video(BytesIO(b"bytesio_data"))
         st.video(np.array([0, 1, 2, 3]))
 
     def test_st_video_options(self):
         """Test st.video with options."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         st.video(
             fake_video_data,
             format="video/mp4",
@@ -125,7 +125,7 @@ class VideoTest(DeltaGeneratorTestCase):
 
     def test_st_video_just_data(self):
         """Test st.video with just data specified."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         st.video(fake_video_data)
 
         el = self.get_delta_from_queue().new_element
@@ -139,7 +139,7 @@ class VideoTest(DeltaGeneratorTestCase):
 
     def test_st_video_subtitles(self):
         """Test st.video with subtitles."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         fake_subtitle_data = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
         st.video(fake_video_data, subtitles=fake_subtitle_data)
 
@@ -156,7 +156,7 @@ class VideoTest(DeltaGeneratorTestCase):
 
     def test_st_video_empty_subtitles(self):
         """Test st.video with subtitles, empty subtitle label, content allowed."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         fake_subtitle_data = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
         st.video(
             fake_video_data,
@@ -184,7 +184,7 @@ class VideoTest(DeltaGeneratorTestCase):
         self.assertIn(expected_english_subtitle_url, el.video.subtitles[1].url)
 
     def test_st_video_subtitles_path(self):
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
 
         with NamedTemporaryFile(suffix=".vtt", mode="wb") as tmp_file:
@@ -205,7 +205,7 @@ class VideoTest(DeltaGeneratorTestCase):
 
     def test_singe_subtitle_exception(self):
         """Test that an error is raised if invalid subtitles is provided."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
 
         with self.assertRaises(StreamlitAPIException) as e:
             st.video(fake_video_data, subtitles="invalid_subtitles")
@@ -216,7 +216,7 @@ class VideoTest(DeltaGeneratorTestCase):
 
     def test_dict_subtitle_video_exception(self):
         """Test that an error is raised if invalid subtitles in dict is provided."""
-        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
         fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
 
         with self.assertRaises(StreamlitAPIException) as e:

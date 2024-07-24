@@ -26,6 +26,7 @@ export enum BaseButtonKind {
   LINK = "link",
   ICON = "icon",
   BORDERLESS_ICON = "borderlessIcon",
+  BORDERLESS_ICON_ACTIVE = "borderlessIconActive",
   MINIMAL = "minimal",
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
@@ -307,18 +308,33 @@ export const StyledBorderlessIconButton = styled(
 
   return {
     backgroundColor: theme.colors.transparent,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
+    color: theme.colors.fadedText60,
     padding: iconPadding[size],
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
+
+    border: "none",
+    display: "flex",
+    minHeight: "unset",
 
     "&:focus": {
       boxShadow: "none",
       outline: "none",
     },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
+    "&:hover": {
+      color: theme.colors.text,
     },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      color: theme.colors.fadedText20,
+    },
+  }
+})
+
+export const StyledBorderlessIconButtonActive = styled(
+  StyledBorderlessIconButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    color: theme.colors.bodyText,
   }
 })
 

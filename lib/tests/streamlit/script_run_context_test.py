@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 
 from parameterized import parameterized
@@ -29,7 +31,9 @@ class ScriptRunContextTest(unittest.TestCase):
     def test_set_page_config_immutable(self):
         """st.set_page_config must be called at most once"""
 
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -53,7 +57,9 @@ class ScriptRunContextTest(unittest.TestCase):
         """st.set_page_config must be called before other st commands
         when the script has been marked as started"""
 
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -81,7 +87,9 @@ class ScriptRunContextTest(unittest.TestCase):
     def test_disallow_set_page_config_twice(self):
         """st.set_page_config cannot be called twice"""
 
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -108,7 +116,9 @@ class ScriptRunContextTest(unittest.TestCase):
     def test_set_page_config_reset(self):
         """st.set_page_config should be allowed after a rerun"""
 
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -140,7 +150,9 @@ class ScriptRunContextTest(unittest.TestCase):
         fake_path = "my/custom/script/path"
         pg_mgr = PagesManager(fake_path)
 
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -182,7 +194,9 @@ class ScriptRunContextTest(unittest.TestCase):
     def test_both_query_params_used(
         self, experimental_used, production_used, should_raise
     ):
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -204,7 +218,9 @@ class ScriptRunContextTest(unittest.TestCase):
             ctx.ensure_single_query_api_used()
 
     def test_mark_experimental_query_params_used_sets_true(self):
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -217,10 +233,12 @@ class ScriptRunContextTest(unittest.TestCase):
             pages_manager=PagesManager(""),
         )
         ctx.mark_experimental_query_params_used()
-        assert ctx._experimental_query_params_used == True
+        assert ctx._experimental_query_params_used is True
 
     def test_mark_production_query_params_used_sets_true(self):
-        fake_enqueue = lambda msg: None
+        def fake_enqueue(msg):
+            return None
+
         ctx = ScriptRunContext(
             session_id="TestSessionID",
             _enqueue=fake_enqueue,
@@ -233,4 +251,4 @@ class ScriptRunContextTest(unittest.TestCase):
             pages_manager=PagesManager(""),
         )
         ctx.mark_production_query_params_used()
-        assert ctx._production_query_params_used == True
+        assert ctx._production_query_params_used is True

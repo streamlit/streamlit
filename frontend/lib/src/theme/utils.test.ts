@@ -44,6 +44,7 @@ import {
   removeCachedTheme,
   setCachedTheme,
   hasLightBackgroundColor,
+  getHostSpecifiedTheme,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -408,6 +409,67 @@ describe("getSystemTheme", () => {
   })
 })
 
+describe("getHostSpecifiedTheme", () => {
+  let windowSpy: jest.SpyInstance
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+    window.localStorage.clear()
+  })
+
+  it("sets default to the auto theme when there is no theme preference", () => {
+    windowSpy = mockWindow()
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("sets the auto theme correctly when the OS preference is dark", () => {
+    mockWindow(windowSpy, windowMatchMedia("dark"))
+
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("sets default to the light theme when an embed query parameter is set", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe("Light")
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("sets default to the dark theme when an embed query parameter is set", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=dark_theme")
+    )
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe("Dark")
+    // Also verify that the theme is our darkTheme.
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("respects embed query parameter is set over system theme", () => {
+    windowSpy = mockWindow(
+      windowMatchMedia("dark"),
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe("Light")
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+})
+
 describe("getDefaultTheme", () => {
   let windowSpy: jest.SpyInstance
 
@@ -652,5 +714,46 @@ describe("getWrappedHeadersStyle", () => {
       expect(themeFontSizes).toContain(headerStyle.fontSize)
       expect(headerStyle.fontWeight).toBe(600)
     })
+  })
+})
+
+describe("theme overrides", () => {
+  beforeEach(async () => {
+    jest.resetModules()
+    window.__streamlit = undefined
+  })
+
+  afterEach(() => {
+    jest.resetModules()
+    window.__streamlit = undefined
+  })
+
+  it("honors the window variables set", async () => {
+    window.__streamlit = {
+      LIGHT_THEME: {
+        primaryColor: "purple",
+      },
+      DARK_THEME: {
+        primaryColor: "yellow",
+      },
+    }
+
+    const module = await import("./utils")
+    // Ensure we are not working with the same object
+    expect(module.getMergedLightTheme()).not.toEqual(lightTheme)
+    expect(module.getMergedDarkTheme()).not.toEqual(darkTheme)
+
+    expect(module.getMergedLightTheme().emotion.colors.primary).toEqual(
+      "purple"
+    )
+    expect(module.getMergedDarkTheme().emotion.colors.primary).toEqual(
+      "yellow"
+    )
+  })
+
+  it("maintains original theme if no global themes are specified", async () => {
+    const module = await import("./utils")
+    expect(module.getMergedLightTheme()).toEqual(lightTheme)
+    expect(module.getMergedDarkTheme()).toEqual(darkTheme)
   })
 })

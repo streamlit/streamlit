@@ -15,16 +15,19 @@
 from __future__ import annotations
 
 import time
-from types import TracebackType
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
 
-from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from streamlit.cursor import Cursor
 
 States: TypeAlias = Literal["running", "complete", "error"]
 
@@ -44,9 +47,9 @@ class StatusContainer(DeltaGenerator):
         if state == "running":
             expandable_proto.icon = "spinner"
         elif state == "complete":
-            expandable_proto.icon = "check"
+            expandable_proto.icon = ":material/check:"
         elif state == "error":
-            expandable_proto.icon = "error"
+            expandable_proto.icon = ":material/error:"
         else:
             raise StreamlitAPIException(
                 f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
@@ -137,9 +140,9 @@ class StatusContainer(DeltaGenerator):
             if state == "running":
                 msg.delta.add_block.expandable.icon = "spinner"
             elif state == "complete":
-                msg.delta.add_block.expandable.icon = "check"
+                msg.delta.add_block.expandable.icon = ":material/check:"
             elif state == "error":
-                msg.delta.add_block.expandable.icon = "error"
+                msg.delta.add_block.expandable.icon = ":material/error:"
             else:
                 raise StreamlitAPIException(
                     f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."

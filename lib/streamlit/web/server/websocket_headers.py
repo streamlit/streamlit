@@ -15,9 +15,15 @@
 from __future__ import annotations
 
 from streamlit import runtime
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+
+_GET_WEBSOCKET_HEADERS_DEPRECATE_MSG = (
+    "The `_get_websocket_headers` function is deprecated and will be removed "
+    "in a future version of Streamlit. Please use `st.context.headers` instead."
+)
 
 
 @gather_metrics("_get_websocket_headers")
@@ -31,6 +37,9 @@ def _get_websocket_headers() -> dict[str, str] | None:
     to remove it without a replacement, but we don't consider this a production-ready
     function, and its signature may change without a deprecation warning.)
     """
+
+    show_deprecation_warning(_GET_WEBSOCKET_HEADERS_DEPRECATE_MSG)
+
     ctx = get_script_run_ctx()
     if ctx is None:
         return None

@@ -33,22 +33,25 @@ from io import BytesIO
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from types import ModuleType
-from typing import Any, Callable, Generator, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Generator, Literal, Protocol
 from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import (
-    ElementHandle,
-    FrameLocator,
-    Locator,
-    Page,
-    Response,
-    Route,
-)
 from pytest import FixtureRequest
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+    from playwright.sync_api import (
+        ElementHandle,
+        FrameLocator,
+        Locator,
+        Page,
+        Response,
+        Route,
+    )
 
 
 def reorder_early_fixtures(metafunc: pytest.Metafunc):
@@ -607,6 +610,9 @@ def assert_snapshot(
 
 def wait_for_app_run(page: Page, wait_delay: int = 100):
     """Wait for the given page to finish running."""
+    # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+    page.wait_for_timeout(155)
+
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
@@ -646,7 +652,7 @@ def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 10
     or times out.
 
     For example:
-    >>> wait_until(lambda: x.values() == ['x'], page)
+    >>> wait_until(lambda: x.values() == ["x"], page)
 
     Parameters
     ----------

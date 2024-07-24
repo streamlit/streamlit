@@ -19,22 +19,27 @@ import hashlib
 import inspect
 from abc import abstractmethod
 from copy import deepcopy
-from datetime import timedelta
 from functools import wraps
-from typing import Any, Callable, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
+from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.time_util import time_to_seconds
+
+if TYPE_CHECKING:
+    from datetime import timedelta
+
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
 
 
 class FragmentStorage(Protocol):
-    """A key-value store for Fragments. Used to implement the @st.experimental_fragment
-    decorator.
+    """A key-value store for Fragments. Used to implement the @st.fragment decorator.
 
     We intentionally define this as its own protocol despite how generic it appears to
     be at first glance. The reason why is that, in any case where fragments aren't just
@@ -43,6 +48,14 @@ class FragmentStorage(Protocol):
     to implementing FragmentStorages that won't generally appear with our other *Storage
     protocols.
     """
+
+    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
+    # with the `set` type of `new_fragments_ids`.
+    @abstractmethod
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+        """Remove all fragments saved in this FragmentStorage unless listed in
+        new_fragment_ids."""
+        raise NotImplementedError
 
     @abstractmethod
     def get(self, key: str) -> Fragment:
@@ -60,8 +73,8 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def clear(self) -> None:
-        """Remove all fragments saved in this FragmentStorage."""
+    def contains(self, key: str) -> bool:
+        """Return whether the given key is present in this FragmentStorage."""
         raise NotImplementedError
 
 
@@ -80,26 +93,48 @@ class MemoryFragmentStorage(FragmentStorage):
     def __init__(self):
         self._fragments: dict[str, Fragment] = {}
 
+    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
+    # with the `set` type of `new_fragments_ids`.
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+        if new_fragment_ids is None:
+            new_fragment_ids = set()
+
+        fragment_ids = list(self._fragments.keys())
+
+        for fid in fragment_ids:
+            if fid not in new_fragment_ids:
+                del self._fragments[fid]
+
     def get(self, key: str) -> Fragment:
-        return self._fragments[key]
+        try:
+            return self._fragments[key]
+        except KeyError as e:
+            raise FragmentStorageKeyError(str(e))
 
     def set(self, key: str, value: Fragment) -> None:
         self._fragments[key] = value
 
     def delete(self, key: str) -> None:
-        del self._fragments[key]
+        try:
+            del self._fragments[key]
+        except KeyError as e:
+            raise FragmentStorageKeyError(str(e))
 
-    def clear(self) -> None:
-        self._fragments.clear()
+    def contains(self, key: str) -> bool:
+        return key in self._fragments
 
 
 def _fragment(
-    func: F | None = None, *, run_every: int | float | timedelta | str | None = None
+    func: F | None = None,
+    *,
+    run_every: int | float | timedelta | str | None = None,
+    additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
-    This function should be used by our internal functions that use fragments under-the-hood,
-    so that fragment metrics are not tracked for those elements (note that the @gather_metrics annotation is only on the publicly exposed function)
+    This function should be used by our internal functions that use fragments
+    under-the-hood, so that fragment metrics are not tracked for those elements
+    (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
 
     if func is None:
@@ -124,10 +159,9 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(dg_stack.get())
-        active_dg = dg_stack_snapshot[-1]
         h = hashlib.new("md5")
         h.update(
-            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode()
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}".encode()
         )
         fragment_id = h.hexdigest()
 
@@ -145,18 +179,25 @@ def _fragment(
             ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
-            if ctx.fragment_ids_this_run:
+            if ctx.script_requests and ctx.script_requests.fragment_id_queue:
                 # This script run is a run of one or more fragments. We restore the
                 # state of ctx.cursors and dg_stack to the snapshots we took when this
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)
                 dg_stack.set(deepcopy(dg_stack_snapshot))
-            else:
-                # Otherwise, we must be in a full script run. We need to temporarily set
-                # ctx.current_fragment_id so that elements corresponding to this
-                # fragment get tagged with the appropriate ID. ctx.current_fragment_id
-                # gets reset after the fragment function finishes running.
-                ctx.current_fragment_id = fragment_id
+
+            # Always add the fragment id to new_fragment_ids. For full app runs
+            # we need to add them anyways and for fragment runs we add them
+            # in case the to-be-executed fragment id was cleared from the storage
+            # by the full app run.
+            ctx.new_fragment_ids.add(fragment_id)
+            # Set ctx.current_fragment_id so that elements corresponding to this
+            # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
+            # reset after the fragment function finishes running to either return to the
+            # script (outside of any fragments) or to the outer fragment this one is
+            # nested in.
+            prev_fragment_id = ctx.current_fragment_id
+            ctx.current_fragment_id = fragment_id
 
             try:
                 # Make sure we set the active script hash to the same value
@@ -170,18 +211,48 @@ def _fragment(
                     if initialized_active_script_hash != ctx.active_script_hash
                     else contextlib.nullcontext()
                 )
+                result = None
                 with active_hash_context:
                     with st.container():
-                        ctx.current_fragment_delta_path = (
-                            active_dg._cursor.delta_path if active_dg._cursor else []
-                        )
-                        result = non_optional_func(*args, **kwargs)
+                        try:
+                            # use dg_stack instead of active_dg to have correct copy
+                            # during execution (otherwise we can run into concurrency
+                            # issues with multiple fragments). Use dg_stack because we
+                            # just entered a container and [:-1] of the delta path
+                            # because thats the prefix of the fragment,
+                            # e.g. [0, 3, 0] -> [0, 3].
+                            # All fragment elements start with [0, 3].
+                            active_dg = dg_stack.get()[-1]
+                            ctx.current_fragment_delta_path = (
+                                active_dg._cursor.delta_path
+                                if active_dg._cursor
+                                else []
+                            )[:-1]
+                            result = non_optional_func(*args, **kwargs)
+                        except (
+                            RerunException,
+                            StopException,
+                        ) as e:
+                            # The wrapped_fragment function is executed
+                            # inside of a exec_func_with_error_handling call, so
+                            # there is a correct handler for these exceptions.
+                            raise e
+                        except Exception as e:
+                            # render error here so that the delta path is correct
+                            # for full app runs, the error will be displayed by the
+                            # main code handler
+                            # if not is_full_app_run:
+                            handle_uncaught_app_exception(e)
+                            # raise here again in case we are in full app execution
+                            # and some flags have to be set
+                            raise FragmentHandledException(e)
+                    return result
             finally:
-                ctx.current_fragment_id = None
+                ctx.current_fragment_id = prev_fragment_id
+                ctx.current_fragment_delta_path = []
 
-            return result
-
-        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        if not ctx.fragment_storage.contains(fragment_id):
+            ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()
@@ -189,6 +260,7 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
+        # Immediate execute the wrapped fragment since we are in a full app run
         return wrapped_fragment()
 
     with contextlib.suppress(AttributeError):
@@ -218,40 +290,47 @@ def fragment(
 ) -> Callable[[F], F]: ...
 
 
-@gather_metrics("experimental_fragment")
+@gather_metrics("fragment")
 def fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
-    of the full script.
+    of the full app.
 
-    When a user interacts with an input widget created by a fragment, Streamlit
-    only reruns the fragment instead of the full script. If ``run_every`` is set,
-    Streamlit will also rerun the fragment at the specified interval while the
-    session is active, even if the user is not interacting with your app.
+    When a user interacts with an input widget created inside a fragment,
+    Streamlit only reruns the fragment instead of the full app. If
+    ``run_every`` is set, Streamlit will also rerun the fragment at the
+    specified interval while the session is active, even if the user is not
+    interacting with your app.
 
-    To trigger a full script rerun from inside a fragment, call ``st.rerun()``
-    directly. Any values from the fragment that need to be accessed from
-    the wider app should generally be stored in Session State.
+    To trigger an app rerun from inside a fragment, call ``st.rerun()``
+    directly. To trigger a fragment rerun from within itself, call
+    ``st.rerun(scope="fragment")``. Any values from the fragment that need to
+    be accessed from the wider app should generally be stored in Session State.
 
     When Streamlit element commands are called directly in a fragment, the
     elements are cleared and redrawn on each fragment rerun, just like all
-    elements are redrawn on each full-script rerun. The rest of the app is
-    persisted during a fragment rerun. When a fragment renders elements into
-    externally created containers, the elements will not be cleared with each
-    fragment rerun. In this case, elements will accumulate in those containers
-    with each fragment rerun, until the next full-script rerun.
+    elements are redrawn on each app rerun. The rest of the app is persisted
+    during a fragment rerun. When a fragment renders elements into externally
+    created containers, the elements will not be cleared with each fragment
+    rerun. Instead, elements will accumulate in those containers with each
+    fragment rerun, until the next app rerun.
 
-    Calling `st.sidebar` in a fragment is not supported. To write elements to
+    Calling ``st.sidebar`` in a fragment is not supported. To write elements to
     the sidebar with a fragment, call your fragment function inside a
-    `with st.sidebar` context manager.
+    ``with st.sidebar`` context manager.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
     interactions are additive across multiple fragment reruns. You are
     responsible for handling any side effects of that behavior.
+
+    .. warning::
+
+        - Fragments can only contain widgets in their main body. Fragments
+          can't render widgets to externally created containers.
 
     Parameters
     ----------
@@ -276,37 +355,59 @@ def fragment(
 
     Examples
     --------
-    The following example demonstrates basic usage of ``@st.experimental_fragment``. In
-    this app, clicking "Rerun full script" will increment both counters and
-    update all values displayed in the app. In contrast, clicking "Rerun fragment"
-    will only increment the counter within the fragment. In this case, the
-    ``st.write`` command inside the fragment will update the app's frontend,
-    but the two ``st.write`` commands outside the fragment will not update the
-    frontend.
+    The following example demonstrates basic usage of
+    ``@st.fragment``. As an analogy, "inflating balloons" is a slow process that happens
+    outside of the fragment. "Releasing balloons" is a quick process that happens inside
+    of the fragment.
+
+    >>> import streamlit as st
+    >>> import time
+    >>>
+    >>> @st.fragment
+    >>> def release_the_balloons():
+    >>>     st.button("Release the balloons", help="Fragment rerun")
+    >>>     st.balloons()
+    >>>
+    >>> with st.spinner("Inflating balloons..."):
+    >>>     time.sleep(5)
+    >>> release_the_balloons()
+    >>> st.button("Inflate more balloons", help="Full rerun")
+
+    .. output::
+        https://doc-fragment-balloons.streamlit.app/
+        height: 220px
+
+    This next example demonstrates how elements both inside and outside of a
+    fragement update with each app or fragment rerun. In this app, clicking
+    "Rerun full app" will increment both counters and update all values
+    displayed in the app. In contrast, clicking "Rerun fragment" will only
+    increment the counter within the fragment. In this case, the ``st.write``
+    command inside the fragment will update the app's frontend, but the two
+    ``st.write`` commands outside the fragment will not update the frontend.
 
     >>> import streamlit as st
     >>>
-    >>> if "script_runs" not in st.session_state:
-    >>>     st.session_state.script_runs = 0
+    >>> if "app_runs" not in st.session_state:
+    >>>     st.session_state.app_runs = 0
     >>>     st.session_state.fragment_runs = 0
     >>>
-    >>> @st.experimental_fragment
-    >>> def fragment():
+    >>> @st.fragment
+    >>> def my_fragment():
     >>>     st.session_state.fragment_runs += 1
     >>>     st.button("Rerun fragment")
     >>>     st.write(f"Fragment says it ran {st.session_state.fragment_runs} times.")
     >>>
-    >>> st.session_state.script_runs += 1
-    >>> fragment()
-    >>> st.button("Rerun full script")
-    >>> st.write(f"Full script says it ran {st.session_state.script_runs} times.")
-    >>> st.write(f"Full script sees that fragment ran {st.session_state.fragment_runs} times.")
+    >>> st.session_state.app_runs += 1
+    >>> my_fragment()
+    >>> st.button("Rerun full app")
+    >>> st.write(f"Full app says it ran {st.session_state.app_runs} times.")
+    >>> st.write(f"Full app sees that fragment ran {st.session_state.fragment_runs} times.")
 
     .. output::
         https://doc-fragment.streamlit.app/
         height: 400px
 
-    You can also trigger a full-script rerun from inside a fragment by calling
+    You can also trigger an app rerun from inside a fragment by calling
     ``st.rerun``.
 
     >>> import streamlit as st
@@ -314,7 +415,7 @@ def fragment(
     >>> if "clicks" not in st.session_state:
     >>>     st.session_state.clicks = 0
     >>>
-    >>> @st.experimental_fragment
+    >>> @st.fragment
     >>> def count_to_five():
     >>>     if st.button("Plus one!"):
     >>>         st.session_state.clicks += 1
@@ -333,4 +434,32 @@ def fragment(
         height: 400px
 
     """
+    return _fragment(func, run_every=run_every)
+
+
+@overload
+def experimental_fragment(
+    func: F,
+    *,
+    run_every: int | float | timedelta | str | None = None,
+) -> F: ...
+
+
+# Support being able to pass parameters to this decorator (that is, being able to write
+# `@fragment(run_every=5.0)`).
+@overload
+def experimental_fragment(
+    func: None = None,
+    *,
+    run_every: int | float | timedelta | str | None = None,
+) -> Callable[[F], F]: ...
+
+
+@gather_metrics("experimental_fragment")
+def experimental_fragment(
+    func: F | None = None,
+    *,
+    run_every: int | float | timedelta | str | None = None,
+) -> Callable[[F], F] | F:
+    """Deprecated alias for @st.fragment. See the docstring for the decorator's new name."""
     return _fragment(func, run_every=run_every)

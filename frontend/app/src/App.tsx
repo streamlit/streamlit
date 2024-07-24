@@ -60,11 +60,12 @@ import {
   AppRoot,
   ComponentRegistry,
   handleFavicon,
-  createAutoTheme,
+  getHostSpecifiedTheme,
   createTheme,
   CUSTOM_THEME_NAME,
   getCachedTheme,
   isPresetTheme,
+  toThemeInput,
   ThemeConfig,
   toExportedTheme,
   StreamlitEndpoints,
@@ -73,6 +74,7 @@ import {
   AutoRerun,
   BackMsg,
   Config,
+  ICustomThemeConfig,
   CustomThemeConfig,
   Delta,
   FileURLsResponse,
@@ -107,6 +109,8 @@ import {
   LibConfig,
   AppConfig,
   AuthRedirect,
+  createPresetThemes,
+  PresetThemeName,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -249,6 +253,16 @@ export class App extends PureComponent<Props, State> {
     // Initialize immerjs
     enableImmerPlugins()
 
+    // Theme hashes are only created for custom theme, and the custom theme
+    // may come from localStorage. We need to create the hash here to ensure
+    // that the theme is correctly represented.
+    let themeHash = this.createThemeHash()
+    if (!isPresetTheme(props.theme.activeTheme)) {
+      themeHash = this.createThemeHash(
+        toThemeInput(props.theme.activeTheme.emotion) as CustomThemeConfig
+      )
+    }
+
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: AppRoot.empty("", true), // Blank Main Script Hash for initial render
@@ -266,7 +280,7 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash: this.createThemeHash(),
+      themeHash,
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
@@ -316,7 +330,7 @@ export class App extends PureComponent<Props, State> {
       setInputsDisabled: inputsDisabled => {
         this.setState({ inputsDisabled })
       },
-      themeChanged: this.props.theme.setImportedTheme,
+      themeChanged: this.handleThemeMessage,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
@@ -347,6 +361,15 @@ export class App extends PureComponent<Props, State> {
       },
       deployedAppMetadataChanged: deployedAppMetadata => {
         this.setState({ deployedAppMetadata })
+      },
+      restartWebsocketConnection: () => {
+        if (!this.connectionManager) {
+          this.initializeConnectionManager()
+        }
+      },
+      terminateWebsocketConnection: () => {
+        this.connectionManager?.disconnect()
+        this.connectionManager = null
       },
     })
 
@@ -408,9 +431,7 @@ export class App extends PureComponent<Props, State> {
     STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
-  componentDidMount(): void {
-    // Initialize connection manager here, to avoid
-    // "Can't call setState on a component that is not yet mounted." error.
+  initializeConnectionManager(): void {
     this.connectionManager = new ConnectionManager({
       sessionInfo: this.sessionInfo,
       endpoints: this.endpoints,
@@ -448,6 +469,17 @@ export class App extends PureComponent<Props, State> {
         this.setLibConfig(libConfig)
       },
     })
+  }
+
+  componentDidMount(): void {
+    // Initialize connection manager here, to avoid
+    // "Can't call setState on a component that is not yet mounted." error.
+    this.initializeConnectionManager()
+
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: this.state.scriptRunState,
+    })
 
     if (isScrollingHidden()) {
       document.body.classList.add("embedded")
@@ -478,11 +510,6 @@ export class App extends PureComponent<Props, State> {
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
-    })
-
-    this.hostCommunicationMgr.sendMessageToHost({
-      type: "SCRIPT_RUN_STATE_CHANGED",
-      scriptRunState: this.state.scriptRunState,
     })
 
     this.metricsMgr.enqueue("viewReport")
@@ -573,6 +600,21 @@ export class App extends PureComponent<Props, State> {
     return false
   }
 
+  handleThemeMessage = (
+    themeName?: PresetThemeName,
+    theme?: ICustomThemeConfig
+  ): void => {
+    const [, lightTheme, darkTheme] = createPresetThemes()
+    const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
+    if (themeName === lightTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(lightTheme)
+    } else if (themeName === darkTheme.name && isUsingPresetTheme) {
+      this.props.theme.setTheme(darkTheme)
+    } else if (theme) {
+      this.props.theme.setImportedTheme(theme)
+    }
+  }
+
   /**
    * Called by ConnectionManager when our connection state changes
    */
@@ -581,20 +623,46 @@ export class App extends PureComponent<Props, State> {
       `Connection state changed from ${this.state.connectionState} to ${newState}`
     )
 
-    this.setState({ connectionState: newState })
-
     if (newState === ConnectionState.CONNECTED) {
-      logMessage("Reconnected to server; requesting a script run")
-      // Trigger a full app rerun:
-      this.widgetMgr.sendUpdateWidgetsMessage(undefined)
-      this.setState({ dialog: null })
+      logMessage("Reconnected to server.")
+
+      const lastRunWasInterrupted =
+        this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED ||
+        this.state.scriptRunState === ScriptRunState.RUNNING
+
+      // We request a script rerun if:
+      //   1. this is the first time we establish a websocket connection to the
+      //      server, or
+      //   2. our last script run attempt was interrupted by the websocket
+      //      connection dropping.
+      if (!this.sessionInfo.last || lastRunWasInterrupted) {
+        logMessage("Requesting a script run.")
+        this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+        this.setState({ dialog: null })
+      }
+
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "WEBSOCKET_CONNECTED",
+      })
     } else {
+      // If we're starting from the CONNECTED state and going to any other
+      // state, we must be disconnecting.
+      if (this.state.connectionState === ConnectionState.CONNECTED) {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "WEBSOCKET_DISCONNECTED",
+          attemptingToReconnect:
+            newState !== ConnectionState.DISCONNECTED_FOREVER,
+        })
+      }
+
       setCookie("_streamlit_xsrf", "")
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
       }
     }
+
+    this.setState({ connectionState: newState })
   }
 
   handleGitInfoChanged = (gitInfo: IGitInfo): void => {
@@ -1114,7 +1182,9 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        this.setAndSendTheme(createAutoTheme())
+        // Reset to the auto theme taking into account any host preferences
+        // aka embed query params.
+        this.setAndSendTheme(getHostSpecifiedTheme())
       }
     }
   }

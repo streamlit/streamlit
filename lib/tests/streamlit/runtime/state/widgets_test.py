@@ -110,7 +110,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state.set_widgets_from_proto(prev_states)
 
         mock_callback = MagicMock()
-        deserializer = lambda x, s: x
+
+        def deserializer(x, s):
+            return x
 
         callback_cases = [
             ("trigger", "trigger_value", None, None, None),
@@ -226,6 +228,9 @@ class WidgetManagerTests(unittest.TestCase):
         ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
         _create_widget("missing_in_new", old_states).int_value = 123
         _create_widget("shape_changing_trigger", old_states).trigger_value = True
+        _create_widget(
+            "overwritten_string_trigger", old_states
+        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data="old string"))
 
         session_state._set_widget_metadata(
             create_metadata("old_set_trigger", "trigger_value")
@@ -248,6 +253,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state._set_widget_metadata(
             create_metadata("shape changing trigger", "trigger_value")
         )
+        session_state._set_widget_metadata(
+            create_metadata("overwritten_string_trigger", "string_trigger_value")
+        )
 
         new_states = WidgetStates()
 
@@ -266,6 +274,12 @@ class WidgetManagerTests(unittest.TestCase):
         )
         _create_widget("added_in_new", new_states).int_value = 456
         _create_widget("shape_changing_trigger", new_states).int_value = 3
+        _create_widget(
+            "overwritten_string_trigger", new_states
+        ).string_trigger_value.CopyFrom(
+            StringTriggerValueProto(data="Overwritten string")
+        )
+
         session_state._set_widget_metadata(
             create_metadata("new_set_trigger", "trigger_value")
         )
@@ -292,6 +306,9 @@ class WidgetManagerTests(unittest.TestCase):
         self.assertEqual("", session_state["old_set_empty_string_trigger"].data)
         self.assertEqual(
             "Some other string", session_state["new_set_string_trigger"].data
+        )
+        self.assertEqual(
+            "Overwritten string", session_state["overwritten_string_trigger"].data
         )
 
         # Widgets that were triggers before, but no longer are, will *not*
@@ -419,6 +436,16 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
+            (
+                # define a lambda that matches the signature of what button_group is
+                # passing to compute_widget_id, because st.feedback doesn't take a label
+                lambda key,
+                options,
+                disabled=False,
+                default=[],
+                click_mode=0: st.feedback(options, disabled=disabled),
+                "button_group",
+            ),
             (st.multiselect, "multiselect"),
             (st.radio, "radio"),
             (st.select_slider, "select_slider"),
@@ -446,7 +473,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     def test_widget_id_computation_data_editor(self):
         with patch(
-            f"streamlit.elements.widgets.data_editor.compute_widget_id",
+            "streamlit.elements.widgets.data_editor.compute_widget_id",
             wraps=compute_widget_id,
         ) as patched_compute_widget_id:
             st.data_editor(data=[])
@@ -497,4 +524,4 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Incorrectly inidcates no user key
-        assert user_key_from_widget_id(k) == None
+        assert user_key_from_widget_id(k) is None
