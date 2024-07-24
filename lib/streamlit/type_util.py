@@ -245,9 +245,14 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
     return isinstance(x, types.FunctionType)
 
 
+def has_callable_attr(obj: object, name: str) -> bool:
+    """True if obj has the specified attribute that is callable."""
+    return hasattr(obj, name) and callable(getattr(obj, name))
+
+
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     """True if obj is an instance of a namedtuple."""
-    return isinstance(x, tuple) and hasattr(x, "_asdict")
+    return isinstance(x, tuple) and has_callable_attr(x, "_asdict")
 
 
 def is_pydeck(obj: object) -> TypeGuard[Deck]:

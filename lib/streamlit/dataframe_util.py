@@ -40,7 +40,12 @@ from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors, logger, string_util
-from streamlit.type_util import is_namedtuple, is_pandas_version_less_than, is_type
+from streamlit.type_util import (
+    has_callable_attr,
+    is_namedtuple,
+    is_pandas_version_less_than,
+    is_type,
+)
 
 if TYPE_CHECKING:
     import numpy as np
@@ -75,6 +80,7 @@ _RAY_DATASET: Final = "ray.data.dataset.Dataset"
 _POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
 _POLARS_SERIES: Final = "polars.series.series.Series"
 _POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
+_HUGGINGFACE_DATASET: Final = "datasets.arrow_dataset.Dataset"
 
 V_co = TypeVar(
     "V_co",
@@ -140,6 +146,7 @@ class DataFormat(Enum):
     DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series
     POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
     POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
+    HUGGINGFACE_DATASET = auto()  # datasets.arrow_dataset.Dataset
     POLARS_SERIES = auto()  # polars.series.series.Series
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
@@ -185,6 +192,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.POLARS_SERIES,
         DataFormat.POLARS_DATAFRAME,
         DataFormat.POLARS_LAZYFRAME,
+        DataFormat.HUGGINGFACE_DATASET,
     ]
 
 
@@ -243,6 +251,11 @@ def is_pyspark_data_object(obj: object) -> bool:
         and hasattr(obj, "toPandas")
         and callable(obj.toPandas)
     )
+
+
+def is_huggingface_dataset(obj: object) -> bool:
+    """True if obj is a HuggingFace Dataset."""
+    return is_type(obj, _HUGGINGFACE_DATASET)
 
 
 def is_modin_data_object(obj: object) -> bool:
@@ -378,6 +391,9 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
+    if is_huggingface_dataset(data):
+        return data.to_pandas()
+
     if is_xarray_dataset(data):
         if ensure_copy:
             data = data.copy(deep=True)
@@ -455,16 +471,18 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
-    if hasattr(data, "to_pandas") and callable(data.to_pandas):
+    if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
 
-    if hasattr(data, "toPandas") and callable(data.toPandas):
+    if has_callable_attr(data, "toPandas"):
         return pd.DataFrame(data.toPandas())
 
     # Check for dataframe interchange protocol
     # Only available in pandas >= 1.5.0
     # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
-    if is_pandas_version_less_than("1.5.0") is False and hasattr(data, "__dataframe__"):
+    if is_pandas_version_less_than("1.5.0") is False and has_callable_attr(
+        data, "__dataframe__"
+    ):
         data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
@@ -642,8 +660,11 @@ def convert_anything_to_arrow_bytes(
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
         return convert_pandas_df_to_arrow_bytes(df)
 
+    if is_huggingface_dataset(data) and hasattr(data, "data"):
+        return convert_arrow_table_to_arrow_bytes(data.data)
+
     # Check for dataframe interchange protocol
-    if hasattr(data, "__dataframe__"):
+    if has_callable_attr(data, "__dataframe__"):
         from pyarrow import interchange as pa_interchange
 
         arrow_table = pa_interchange.from_dataframe(data)
@@ -651,11 +672,11 @@ def convert_anything_to_arrow_bytes(
 
     # Check if data structure supports to_arrow or to_pyarrow methods
     # and assume that it is converting to a pyarrow.Table
-    if hasattr(data, "to_arrow"):
+    if has_callable_attr(data, "to_arrow"):
         arrow_table = cast(pa.Table, data.to_arrow())
         return convert_arrow_table_to_arrow_bytes(arrow_table)
 
-    if hasattr(data, "to_pyarrow"):
+    if has_callable_attr(data, "to_pyarrow"):
         arrow_table = cast(pa.Table, data.to_pyarrow())
         return convert_arrow_table_to_arrow_bytes(arrow_table)
 
@@ -805,6 +826,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         "period[ns]",
         "period[U]",
         "period[us]",
+        "geometry",
     }:
         return True
 
@@ -948,6 +970,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.POLARS_DATAFRAME
     elif is_polars_lazyframe(input_data):
         return DataFormat.POLARS_LAZYFRAME
+    elif is_huggingface_dataset(input_data):
+        return DataFormat.HUGGINGFACE_DATASET
     elif is_snowpark_data_object(input_data):
         return DataFormat.SNOWPARK_OBJECT
     elif is_modin_data_object(input_data):
@@ -1071,6 +1095,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
+        DataFormat.HUGGINGFACE_DATASET,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
@@ -1114,6 +1139,10 @@ def convert_pandas_df_to_data_format(
         import xarray as xr
 
         return xr.DataArray.from_series(_pandas_df_to_series(df))
+    elif data_format == DataFormat.HUGGINGFACE_DATASET:
+        from datasets import Dataset
+
+        return Dataset.from_pandas(df)
     elif data_format == DataFormat.LIST_OF_RECORDS:
         return _unify_missing_values(df).to_dict(orient="records")
     elif data_format == DataFormat.LIST_OF_ROWS:

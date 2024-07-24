@@ -252,7 +252,7 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame)     : Displays the DataFrame as a table.
+            - write(data_frame)     : Displays any dataframe-compatible value as table.
             - write(error)          : Prints an exception specially.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
@@ -481,13 +481,22 @@ class WriteMixin:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
             elif (
-                hasattr(arg, "_repr_html_")
-                and callable(arg._repr_html_)
+                type_util.has_callable_attr(arg, "_repr_html_")
                 and (repr_html := arg._repr_html_())
                 and (unsafe_allow_html or not probably_contains_html_tags(repr_html))
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
+            elif (
+                type_util.has_callable_attr(arg, "to_pandas")
+                or type_util.has_callable_attr(arg, "to_arrow")
+                or type_util.has_callable_attr(arg, "__dataframe__")
+            ):
+                # This object can very likely be converted to a DataFrame
+                # using the to_pandas, to_arrow, or the dataframe interchange
+                # protocol.
+                flush_buffer()
+                self.dg.dataframe(arg)
             else:
                 stringified_arg = str(arg)
 
