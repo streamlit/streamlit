@@ -103,25 +103,23 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
-            cookie_value = self.get_signed_cookie("_streamlit_uzer")
-            if cookie_value:
-                email = json.loads(cookie_value).get("email", email)
-
         user_info: dict[str, str | None] = {
             "email": None if is_public_cloud_app else email
         }
 
-        cookie_value = self.get_signed_cookie("_streamlit_uzer")
+        raw_cookie_value = self.get_signed_cookie("_streamlit_uzer")
         if self.get_signed_cookie("_streamlit_uzer", None):
-            if cookie_value:
-                user_info["email"] = json.loads(cookie_value).get("email", email)
-                if not json.loads(cookie_value).get("email", None) and json.loads(
-                    cookie_value
-                ).get("access_token"):
-                    user_info["access_token"] = json.loads(cookie_value).get(
-                        "access_token"
-                    )
-                    user_info["provider"] = json.loads(cookie_value).get("provider")
+            if raw_cookie_value:
+                cookie_value = json.loads(raw_cookie_value)
+
+                user_info["email"] = cookie_value.get("email", email)
+                if not cookie_value.get("email", None) and cookie_value.get(
+                    "access_token"
+                ):
+                    user_info["access_token"] = cookie_value.get("access_token")
+                    user_info["provider"] = cookie_value.get("provider")
+
+                user_info["userinfo"] = cookie_value
 
         existing_session_id = None
         try:

@@ -21,7 +21,7 @@ from streamlit.web.server.oidc_mixin import TornadoOAuth
 
 class AuthCache:
     def __init__(self):
-        self.cache = dict()
+        self.cache = {}
 
     def get(self, key):
         return self.cache.get(key)
@@ -44,10 +44,10 @@ if secrets_singleton.load_if_toml_exists():
         redirect_uri = auth_section.get("redirect_uri", None)
         config = dict(auth_section)
     else:
-        config = dict()
+        config = {}
         redirect_uri = "/"
 else:
-    config = dict()
+    config = {}
     redirect_uri = "/"
 
 oauth = TornadoOAuth(config, cache=my_cache)
@@ -81,7 +81,6 @@ class AuthlibLoginHandler(tornado.web.RequestHandler):
 
 class LogoutHandler(tornado.web.RequestHandler):
     def get(self):
-        print("IN LOGOUT HANDLER!!!")
         self.clear_cookie("_streamlit_uzer")
         self.redirect("/")
 
@@ -90,8 +89,8 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
     async def get(self):
         state_code_from_url = self.get_argument("state")
 
-        current_cache_keys = [x for x in my_cache.get_dict().keys()]
-        state_provider_mapping = dict()
+        current_cache_keys = list(my_cache.get_dict().keys())
+        state_provider_mapping = {}
         for key in current_cache_keys:
             _, _, provider, code = key.split("_")
             state_provider_mapping[code] = provider
