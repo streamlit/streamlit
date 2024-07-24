@@ -316,6 +316,35 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
+def _iterable_to_list(
+    iterable: Iterable[Any], max_iterations: int | None = None
+) -> list[Any]:
+    """Convert an iterable to a list.
+
+    Parameters
+    ----------
+    iterable : Iterable
+        The iterable to convert to a list.
+
+    max_iterations : int or None
+        The maximum number of iterations to perform. If None, all iterations are performed.
+
+    Returns
+    -------
+    list
+        The converted list.
+    """
+    if max_iterations is None:
+        return list(iterable)
+
+    result = []
+    for i, item in enumerate(iterable):
+        result.append(item)
+        if i >= max_iterations:
+            break
+    return result
+
+
 def _is_dataclass_instance(obj: object) -> bool:
     """True if obj is an instance of a dataclass."""
     return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
@@ -514,8 +543,16 @@ def convert_anything_to_pandas_df(
 
     # Support for generator functions
     if inspect.isgeneratorfunction(data):
-        # TODO: only retrieve the first 10000 rows?
-        return _fix_column_naming(pd.DataFrame(list(data())))
+        data = _fix_column_naming(
+            pd.DataFrame(_iterable_to_list(data(), max_iterations=max_unevaluated_rows))
+        )
+
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Convert the data to a list to show more."
+            )
+        return data
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.

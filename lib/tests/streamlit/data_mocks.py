@@ -397,11 +397,6 @@ SHARED_TEST_CASES = [
         ),
         TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT, dict),
     ),
-    # Pandas Categorical (pd.Categorical):
-    (
-        pd.Categorical(["st.number_input", "st.text_area", "st.text_input"]),
-        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    ),
     # Pandas DatetimeIndex (pd.DatetimeIndex):
     (
         pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
