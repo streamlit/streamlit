@@ -23,6 +23,7 @@ from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pyarrow as pa
 
 from streamlit.dataframe_util import DataFormat
@@ -258,47 +259,89 @@ SHARED_TEST_CASES = [
     ),
     # Snowpark DataFrame:
     (
-        SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        SnowparkDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
     ),
     # Snowpark Table:
     (
-        SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),
+        SnowparkTable(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
     ),
     # Snowpark Pandas DataFrame:
     (
-        SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        SnowpandasDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
         TestCaseMetadata(2, 2, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
     ),
     # Snowpark Pandas Series:
     (
-        SnowpandasSeries(pd.Series(np.random.randn(2))),
+        SnowpandasSeries(pd.Series(["st.text_area", "st.markdown"])),
         TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
     ),
     # Modin DataFrame:
     (
-        ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        ModinDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
         TestCaseMetadata(2, 2, DataFormat.MODIN_OBJECT, pd.DataFrame),
     ),
     # Modin Series:
     (
-        ModinSeries(pd.Series(np.random.randn(2))),
+        ModinSeries(pd.Series(["st.text_area", "st.markdown"])),
         TestCaseMetadata(2, 1, DataFormat.MODIN_OBJECT, pd.DataFrame),
     ),
     # Pyspark Dataframe:
     (
-        PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        PysparkDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
         TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT, pd.DataFrame),
     ),
     # Dask Dataframe:
     (
-        DaskDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        DaskDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
         TestCaseMetadata(2, 2, DataFormat.DASK_OBJECT, pd.DataFrame),
     ),
     # Dask Series:
     (
-        DaskSeries(pd.Series(np.random.randn(2))),
+        DaskSeries(pd.Series(["st.text_area", "st.markdown"])),
         TestCaseMetadata(2, 1, DataFormat.DASK_OBJECT, pd.DataFrame),
     ),
     # Range:
@@ -405,6 +448,31 @@ SHARED_TEST_CASES = [
     (
         data_generator,
         TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
+    ),
+    # Polars DataFrame:
+    (
+        pl.DataFrame(
+            [
+                {"name": "st.text_area", "type": "widget"},
+                {"name": "st.markdown", "type": "element"},
+            ]
+        ),
+        TestCaseMetadata(2, 2, DataFormat.POLARS_DATAFRAME),
+    ),
+    # Polars Series:
+    (
+        pl.Series("Foo", ["st.text_area", "st.markdown"]),
+        TestCaseMetadata(2, 1, DataFormat.POLARS_SERIES),
+    ),
+    # Polars LazyFrame:
+    (
+        pl.LazyFrame(
+            {
+                "name": ["st.text_area", "st.markdown"],
+                "type": ["widget", "element"],
+            }
+        ),
+        TestCaseMetadata(2, 2, DataFormat.POLARS_LAZYFRAME, pl.DataFrame),
     ),
     # Map, Generator Instance, Ray Dataset,
 ]

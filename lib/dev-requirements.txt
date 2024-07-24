@@ -11,6 +11,9 @@ wheel
 pytz
 # Used for updating emojis via: scripts/update_emojis.py
 emoji
+# Additional dataframe formats for testing:
+polars
+xarray
 
 # mypy types
 types-click
