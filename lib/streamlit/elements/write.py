@@ -23,16 +23,12 @@ from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, Lis
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.secrets import Secrets
-from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import (
     is_mem_address_str,
     max_char_sequence,
     probably_contains_html_tags,
 )
-from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -440,20 +436,18 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(
-                arg,
-                (
-                    dict,
-                    list,
-                    map,
-                    SessionStateProxy,
-                    UserInfoProxy,
-                    QueryParamsProxy,
-                    StreamlitHeaders,
-                    StreamlitCookies,
-                    Secrets,
-                ),
-            ) or type_util.is_namedtuple(arg):
+            elif (
+                isinstance(
+                    arg,
+                    (
+                        dict,
+                        list,
+                        map,
+                    ),
+                )
+                or type_util.is_custom_dict(args)
+                or type_util.is_namedtuple(arg)
+            ):
                 flush_buffer()
                 self.dg.json(arg)
             elif type_util.is_pydeck(arg):

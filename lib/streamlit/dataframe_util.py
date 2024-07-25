@@ -42,6 +42,7 @@ import streamlit as st
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     has_callable_attr,
+    is_custom_dict,
     is_namedtuple,
     is_pandas_version_less_than,
     is_type,
@@ -359,6 +360,24 @@ def _fix_column_naming(data_df: DataFrame) -> DataFrame:
     return data_df
 
 
+def _dict_to_pandas_df(data: dict[Any, Any]) -> DataFrame:
+    """Convert a key-value dict to a Pandas DataFrame.
+
+    Parameters
+    ----------
+    data : dict
+        The dict to convert to a Pandas DataFrame.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The converted Pandas DataFrame.
+    """
+    import pandas as pd
+
+    return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
+
+
 def convert_anything_to_pandas_df(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
@@ -517,30 +536,6 @@ def convert_anything_to_pandas_df(
         data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
-    if isinstance(data, EnumMeta):
-        # Support for enum classes
-        return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
-
-    # Support for some list like objects
-    if isinstance(data, (deque, map)):
-        return _fix_column_naming(pd.DataFrame(list(data)))
-
-    # Support for ChainMap:
-    if isinstance(data, ChainMap):
-        return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
-
-    # Support for named tuples
-    if is_namedtuple(data):
-        return _fix_column_naming(
-            pd.DataFrame.from_dict(data._asdict(), orient="index")
-        )
-
-    # Support for dataclass instances
-    if _is_dataclass_instance(data):
-        return _fix_column_naming(
-            pd.DataFrame.from_dict(dataclasses.asdict(data), orient="index")
-        )
-
     # Support for generator functions
     if inspect.isgeneratorfunction(data):
         data = _fix_column_naming(
@@ -554,6 +549,30 @@ def convert_anything_to_pandas_df(
             )
         return data
 
+    if isinstance(data, EnumMeta):
+        # Support for enum classes
+        return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
+
+    # Support for some list like objects
+    if isinstance(data, (deque, map)):
+        return _fix_column_naming(pd.DataFrame(list(data)))
+
+    # Support for ChainMap
+    if isinstance(data, ChainMap):
+        return _dict_to_pandas_df(dict(data))
+
+    # Support for named tuples
+    if is_namedtuple(data):
+        return _dict_to_pandas_df(data._asdict())
+
+    # Support for Streamlit's custom dict-like objects
+    if is_custom_dict(data):
+        return _dict_to_pandas_df(data.to_dict())
+
+    # Support for dataclass instances
+    if _is_dataclass_instance(data):
+        return _dict_to_pandas_df(dataclasses.asdict(data))
+
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
@@ -562,7 +581,7 @@ def convert_anything_to_pandas_df(
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
+                return _dict_to_pandas_df(data)
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.

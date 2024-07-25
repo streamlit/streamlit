@@ -50,6 +50,10 @@ class SupportsStr(Protocol):
     def __str__(self) -> str: ...
 
 
+class CustomDict(Protocol):
+    def to_dict(self) -> dict[str, Any]: ...
+
+
 @overload
 def is_type(
     obj: object, fqn_type_pattern: Literal["pydeck.bindings.deck.Deck"]
@@ -258,6 +262,26 @@ def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
 def is_pydeck(obj: object) -> TypeGuard[Deck]:
     """True if input looks like a pydeck chart."""
     return is_type(obj, "pydeck.bindings.deck.Deck")
+
+
+def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
+    """True if input looks like one of the Streamlit custom dictionaries."""
+    from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
+    from streamlit.runtime.secrets import Secrets
+    from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+    from streamlit.user_info import UserInfoProxy
+
+    return isinstance(
+        obj,
+        (
+            SessionStateProxy,
+            UserInfoProxy,
+            QueryParamsProxy,
+            StreamlitHeaders,
+            StreamlitCookies,
+            Secrets,
+        ),
+    ) and has_callable_attr(obj, "to_dict")
 
 
 def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:

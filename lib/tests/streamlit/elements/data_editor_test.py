@@ -48,7 +48,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
+from tests.streamlit.data_mocks import SHARED_TEST_CASES, CaseMetadata
 
 
 def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
@@ -410,10 +410,16 @@ class DataEditorTest(DeltaGeneratorTestCase):
     @parameterized.expand(SHARED_TEST_CASES)
     def test_with_compatible_data(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that it can be called with compatible data."""
+        if metadata.expected_data_format == DataFormat.UNKNOWN:
+            # We can skip formats where the expected format is unknown
+            # since these cases are not expected to work.
+            return
+
         return_data = st.data_editor(input_data)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame

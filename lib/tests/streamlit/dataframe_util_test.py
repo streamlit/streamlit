@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import enum
 import unittest
-from collections import OrderedDict
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -32,13 +31,12 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
+from tests.streamlit.dask_mocks import Series as DaskSeries
 from tests.streamlit.data_mocks import (
     SHARED_TEST_CASES,
-    StrTestEnum,
-    TestCaseMetadata,
-    TestEnum,
+    CaseMetadata,
     TestObject,
-    data_generator,
 )
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
@@ -66,8 +64,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_convert_anything_to_pandas_df(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_anything_to_pandas_df` correctly converts
         a variety of types to a DataFrame.
@@ -86,6 +85,9 @@ class DataframeUtilTest(unittest.TestCase):
             (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
             (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
             (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
+            (DaskDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (DaskSeries(pd.Series(np.random.randn(2000))),),
+            # TODO: Polars lazy frame, generator
         ]
     )
     def test_convert_anything_to_pandas_df_show_warning_for_unevaluated_df(
@@ -138,7 +140,9 @@ class DataframeUtilTest(unittest.TestCase):
         """
         data = {"a": 1, "b": 2}
         df = dataframe_util.convert_anything_to_pandas_df(data)
-        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
+        pd.testing.assert_frame_equal(
+            df, pd.DataFrame.from_dict(data, orient="index", columns=["value"])
+        )
 
     def test_convert_anything_to_pandas_df_converts_stylers(self):
         """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF, without cloning the
@@ -194,8 +198,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_convert_anything_to_arrow_bytes(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_anything_to_arrow_bytes` correctly converts
         a variety of types to Arrow bytes.
@@ -463,8 +468,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_determine_data_format(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `determine_data_format` correctly determines the
         data format of a variety of data structures/types.
@@ -481,8 +487,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_convert_pandas_df_to_data_format(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_pandas_df_to_data_format` correctly converts a
         DataFrame to the specified data format.
@@ -637,242 +644,13 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertEqual(list(StrOpt), converted_list)
 
     @parameterized.expand(
-        [
-            (None, []),
-            # List:
-            ([], []),
-            (
-                ["st.number_input", "st.text_area", "st.text_input"],
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            (
-                [1, 2, 3],
-                [1, 2, 3],
-            ),
-            # Reversed list:
-            (
-                reversed(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.text_input", "st.text_area", "st.number_input"],
-            ),
-            # Set:
-            (set(), []),
-            (
-                {"st.number_input", "st.text_area", "st.text_input"},
-                ["st.text_input", "st.number_input", "st.text_area"],
-            ),
-            # Tuple:
-            ((), []),
-            (
-                ("st.number_input", "st.text_area", "st.text_input"),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dict:
-            ({}, []),
-            (
-                {
-                    "st.number_input": "number",
-                    "st.text_area": "text",
-                    "st.text_input": "text",
-                },
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dict keys:
-            (
-                {
-                    "st.number_input": "number",
-                    "st.text_area": "text",
-                    "st.text_input": "text",
-                }.keys(),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dict values:
-            (
-                {
-                    "st.number_input": "number",
-                    "st.text_area": "text",
-                    "st.text_input": "text",
-                }.values(),
-                ["number", "text", "text"],
-            ),
-            # OrderedDict:
-            (
-                OrderedDict(
-                    [
-                        ("st.number_input", "number"),
-                        ("st.text_area", "text"),
-                        ("st.text_input", "text"),
-                    ]
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Enum:
-            (
-                TestEnum,
-                [TestEnum.NUMBER_INPUT, TestEnum.TEXT_AREA, TestEnum.TEXT_INPUT],
-            ),
-            (StrTestEnum, ["st.number_input", "st.text_area", "st.text_input"]),
-            # Generator:
-            (data_generator(), ["st.number_input", "st.text_area", "st.text_input"]),
-            # String:
-            ("abc", ["a", "b", "c"]),
-            # Enumerate:
-            (
-                enumerate(["st.number_input", "st.text_area", "st.text_input"]),
-                [0, 1, 2],
-            ),
-            # Range:
-            (range(3), [0, 1, 2]),
-            # Pandas Dataframe:
-            (
-                pd.DataFrame(),
-                [],
-            ),
-            (
-                pd.DataFrame(
-                    columns=["name", "type"], index=pd.RangeIndex(start=0, step=1)
-                ),
-                [],
-            ),
-            (
-                pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dataframe with multiple columns (widgets & types)
-            # The first column is expected to be selected as the sequence.
-            (
-                pd.DataFrame(
-                    {
-                        "widgets": ["st.number_input", "st.text_area", "st.text_input"],
-                        "types": ["number", "text", "text"],
-                    }
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Series (pd.Series):
-            (
-                pd.Series(
-                    ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Index (pd.Index):
-            (
-                pd.Index(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Styler (pd.Styler):
-            (
-                pd.DataFrame(
-                    ["st.number_input", "st.text_area", "st.text_input"]
-                ).style,
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Categorical (pd.Categorical):
-            (
-                pd.Categorical(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas DatetimeIndex (pd.DatetimeIndex):
-            (
-                pd.DatetimeIndex(
-                    ["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]
-                ),
-                [
-                    pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
-                    pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
-                ],
-            ),
-            # Pandas DatetimeArrayå:
-            (
-                pd.arrays.DatetimeArray(
-                    pd.DatetimeIndex(
-                        ["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]
-                    ),
-                ),
-                [
-                    pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
-                    pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
-                ],
-            ),
-            # Pandas RangeIndex (pd.RangeIndex):
-            (
-                pd.RangeIndex(start=0, stop=3, step=1),
-                [0, 1, 2],
-            ),
-            # Numpy array:
-            (
-                np.array([]),
-                [],
-            ),
-            (
-                np.array(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pyarrow Table:
-            (
-                pa.Table.from_pandas(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pyarrow Array:
-            (
-                pa.array(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark Table:
-            (
-                SnowparkTable(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark DataFrame:
-            (
-                SnowparkDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark Pandas DataFrame:
-            (
-                SnowpandasDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark Pandas Series:
-            (
-                SnowpandasSeries(
-                    pd.Series(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pyspark Dataframe:
-            (
-                PysparkDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Modin Dataframe:
-            (
-                ModinDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Modin Series:
-            (
-                ModinSeries(
-                    pd.Series(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-        ]
+        SHARED_TEST_CASES,
     )
     def test_convert_anything_to_sequence(
-        self, input_data: Any, result_sequence: list[Any]
+        self,
+        name: str,
+        input_data: Any,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_anything_to_sequence` correctly converts
         a variety of types to a sequence.
@@ -880,7 +658,7 @@ class DataframeUtilTest(unittest.TestCase):
         converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
         # We convert to a set for the check since some of the formats don't
         # have a guaranteed order.
-        self.assertEqual(set(converted_sequence), set(result_sequence))
+        self.assertEqual(set(converted_sequence), set(metadata.expected_sequence))
         # Check that it is a new object and not the same as the input:
         assert converted_sequence is not input_data
 
