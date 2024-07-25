@@ -43,6 +43,7 @@ from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     has_callable_attr,
     is_custom_dict,
+    is_dataclass_instance,
     is_namedtuple,
     is_pandas_version_less_than,
     is_type,
@@ -317,6 +318,15 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
+def _is_list_of_scalars(data: Iterable[Any]) -> bool:
+    """Check if the list only contains scalar values."""
+    from pandas.api.types import infer_dtype
+
+    # Overview on all value that are interpreted as scalar:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
+    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
+
+
 def _iterable_to_list(
     iterable: Iterable[Any], max_iterations: int | None = None
 ) -> list[Any]:
@@ -344,11 +354,6 @@ def _iterable_to_list(
         if i >= max_iterations:
             break
     return result
-
-
-def _is_dataclass_instance(obj: object) -> bool:
-    """True if obj is an instance of a dataclass."""
-    return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 
 def _fix_column_naming(data_df: DataFrame) -> DataFrame:
@@ -570,7 +575,7 @@ def convert_anything_to_pandas_df(
         return _dict_to_pandas_df(data.to_dict())
 
     # Support for dataclass instances
-    if _is_dataclass_instance(data):
+    if is_dataclass_instance(data):
         return _dict_to_pandas_df(dataclasses.asdict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -982,15 +987,6 @@ def fix_arrow_incompatible_column_types(
     return df_copy if df_copy is not None else df
 
 
-def _is_list_of_scalars(data: Iterable[Any]) -> bool:
-    """Check if the list only contains scalar values."""
-    from pandas.api.types import infer_dtype
-
-    # Overview on all value that are interpreted as scalar:
-    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
-
-
 def determine_data_format(input_data: Any) -> DataFormat:
     """Determine the data format of the input data.
 
@@ -1058,7 +1054,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.LIST_OF_VALUES
     elif (
         isinstance(input_data, (ChainMap))
-        or _is_dataclass_instance(input_data)
+        or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT

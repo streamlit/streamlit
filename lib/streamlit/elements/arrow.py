@@ -594,8 +594,10 @@ class ArrowMixin:
 
         """
 
-        # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
-        # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
+        # Check if data is uncollected, and collect it but with 100 rows max, instead of
+        # 10k rows, which is done in all other cases.
+        # We usse 100 rows in st.table, because large tables render slowly,
+        # take too much screen space, and can crush the app.
         if dataframe_util.is_unevaluated_data_object(data):
             data = dataframe_util.convert_anything_to_pandas_df(
                 data, max_unevaluated_rows=100

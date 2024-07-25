@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import types
 from typing import (
@@ -51,6 +52,7 @@ class SupportsStr(Protocol):
 
 
 class CustomDict(Protocol):
+    # All our custom dictionary implementation should provide a to_dict method.
     def to_dict(self) -> dict[str, Any]: ...
 
 
@@ -257,6 +259,11 @@ def has_callable_attr(obj: object, name: str) -> bool:
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     """True if obj is an instance of a namedtuple."""
     return isinstance(x, tuple) and has_callable_attr(x, "_asdict")
+
+
+def is_dataclass_instance(obj: object) -> bool:
+    """True if obj is an instance of a dataclass."""
+    return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 
 def is_pydeck(obj: object) -> TypeGuard[Deck]:
