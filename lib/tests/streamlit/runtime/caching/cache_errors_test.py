@@ -136,7 +136,9 @@ def unhashable_type_func(_lock, ...):
 
         self.assertEqual(ep.type, "UnevaluatedDataFrameError")
 
-        expected_message = "Please call `collect()` or `to_pandas()` on the dataframe before returning it"
+        expected_message = (
+            "Please convert the object to a Pandas DataFrame before returning"
+        )
         self.assertTrue(expected_message in ep.message)
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)

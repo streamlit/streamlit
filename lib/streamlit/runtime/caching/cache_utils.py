@@ -294,12 +294,11 @@ class CachedFunc:
                     # Unevaluated dataframes are not yet in the local memory, which also
                     # means they cannot be properly cached (serialized).
                     raise UnevaluatedDataFrameError(
-                        f"""
-                        The function {get_cached_func_name_md(self._info.func)} is
-                        decorated with `st.cache_data` but it returns an unevaluated
-                        dataframe of type `{type_util.get_fqn_type(computed_value)}`.
-                        Please convert the object to a Pandas DataFrame before returning
-                        it, so `st.cache_data` can serialize and cache it."""
+                        f"The function {get_cached_func_name_md(self._info.func)} is "
+                        "decorated with `st.cache_data` but it returns an unevaluated "
+                        f"dataframe of type `{type_util.get_fqn_type(computed_value)}`. "
+                        "Please convert the object to a Pandas DataFrame before "
+                        "returning it, so `st.cache_data` can serialize and cache it."
                     ) from ex
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
