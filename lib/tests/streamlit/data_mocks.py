@@ -45,11 +45,18 @@ random.seed(0)
 
 
 class CaseMetadata(NamedTuple):
+    # The expected number of rows
     expected_rows: int
+    # The expected number of columns (doesn't include index columns)
     expected_cols: int
+    # The expected data format
     expected_data_format: DataFormat
+    # The expected sequence when the data is converted to a sequence
     expected_sequence: list[Any]
+    # The expected command used when the data is written via `st.write`
     expected_write_command: Literal["markdown", "dataframe", "json"]
+    # The expected return type of the data when it is
+    # returned from the `st.data_editor` function.
     expected_type: type | None = None
 
 
@@ -100,7 +107,11 @@ def data_generator():
 
 
 SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
-    ("None", None, CaseMetadata(0, 0, DataFormat.EMPTY, [], "markdown", pd.DataFrame)),
+    (
+        "None",
+        None,
+        CaseMetadata(0, 0, DataFormat.EMPTY, [], "markdown", pd.DataFrame),
+    ),
     (
         "Empty list",
         [],
@@ -111,8 +122,16 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         (),
         CaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES, [], "markdown"),
     ),
-    ("Empty dict", {}, CaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT, [], "json")),
-    ("Empty set", set(), CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown")),
+    (
+        "Empty dict",
+        {},
+        CaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT, [], "json"),
+    ),
+    (
+        "Empty set",
+        set(),
+        CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown"),
+    ),
     (
         "Empty np.array",
         # For unknown reasons, pd.DataFrame initializes empty numpy arrays with a single column
@@ -202,7 +221,12 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         # Therefore, we are only testing this with one item.
         frozenset({"st.number_input", "st.number_input"}),  # noqa: B033
         CaseMetadata(
-            1, 1, DataFormat.SET_OF_VALUES, ["st.number_input"], "markdown", set
+            1,
+            1,
+            DataFormat.SET_OF_VALUES,
+            ["st.number_input"],
+            "markdown",
+            set,
         ),
     ),
     (
@@ -283,7 +307,10 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     ),
     (
         "pd.Series[str]",
-        pd.Series(["st.text_area", "st.number_input", "st.text_input"], name="widgets"),
+        pd.Series(
+            ["st.text_area", "st.number_input", "st.text_input"],
+            name="widgets",
+        ),
         CaseMetadata(
             3,
             1,
@@ -897,7 +924,8 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         "Xarray DataArray",
         xr.DataArray.from_series(
             pd.Series(
-                ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
+                ["st.number_input", "st.text_area", "st.text_input"],
+                name="widgets",
             )
         ),
         CaseMetadata(
