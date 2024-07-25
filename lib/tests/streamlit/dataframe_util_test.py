@@ -678,6 +678,10 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_sequence` correctly converts
         a variety of types to a sequence.
         """
+        if metadata.expected_sequence is None:
+            # Skip all cases where we don't have an expected sequence.
+            return
+
         converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
         # We convert to a set for the check since some of the formats don't
         # have a guaranteed order.

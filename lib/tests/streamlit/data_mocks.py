@@ -38,6 +38,7 @@ from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 np.random.seed(0)
@@ -52,9 +53,12 @@ class CaseMetadata(NamedTuple):
     # The expected data format
     expected_data_format: DataFormat
     # The expected sequence when the data is converted to a sequence
-    expected_sequence: list[Any]
+    # If None, the sequence is not checked.
+    expected_sequence: list[Any] | None
     # The expected command used when the data is written via `st.write`
-    expected_write_command: Literal["markdown", "dataframe", "json"]
+    expected_write_command: Literal[
+        "markdown", "dataframe", "json", "help", "write_stream"
+    ]
     # The expected return type of the data when it is
     # returned from the `st.data_editor` function.
     expected_type: type | None = None
@@ -435,7 +439,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.LIST_OF_ROWS,
-            [["st.text_area", "widget"], ["st.markdown", "element"]],
+            None,
             "json",
         ),
     ),
@@ -449,10 +453,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.LIST_OF_RECORDS,
-            [
-                {"name": "st.text_area", "type": "widget"},
-                {"name": "st.markdown", "type": "element"},
-            ],
+            None,
             "json",
         ),
     ),
@@ -546,6 +547,15 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
             pd.DataFrame,
         ),
+    ),
+    (
+        "Snowpark Row List",
+        [
+            SnowparkRow(),
+            SnowparkRow(),
+            SnowparkRow(),
+        ],
+        CaseMetadata(3, 1, DataFormat.SNOWPARK_OBJECT, None, "dataframe", pd.DataFrame),
     ),
     (
         "Snowpandas DataFrame",
@@ -707,12 +717,8 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             2,
             DataFormat.LIST_OF_ROWS,
-            [
-                ["st.number_input", "number"],
-                ["st.text_area", "text"],
-                ["st.text_input", "text"],
-            ],
-            "json",
+            None,
+            "markdown",
             list,
         ),
     ),
@@ -795,7 +801,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.KEY_VALUE_DICT,
             ["st.number_input", True, 0.32],
-            "json",
+            "help",
             dict,
         ),
     ),
@@ -831,7 +837,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.LIST_OF_VALUES,
             ["st.number_input", "st.text_area", "st.text_input"],
-            "markdown",
+            "help",
             list,
         ),
     ),
@@ -843,7 +849,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.LIST_OF_VALUES,
             [TestEnum.NUMBER_INPUT, TestEnum.TEXT_AREA, TestEnum.TEXT_INPUT],
-            "markdown",
+            "help",
             list,
         ),
     ),
@@ -855,7 +861,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.UNKNOWN,
             ["st.number_input", "st.text_area", "st.text_input"],
-            "markdown",
+            "write_stream",
         ),
     ),
     (

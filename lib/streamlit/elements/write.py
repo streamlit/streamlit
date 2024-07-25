@@ -440,7 +440,7 @@ class WriteMixin:
                     arg,
                     (dict, list, map, types.MappingProxyType, UserDict, ChainMap),
                 )
-                or type_util.is_custom_dict(args)
+                or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
             ):
                 flush_buffer()
