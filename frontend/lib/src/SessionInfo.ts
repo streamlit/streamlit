@@ -56,7 +56,7 @@ export class SessionInfo {
 
   // FIXME(vdonato): Either switch to client-tracked sequence numbers or get
   // rid of this.
-  private _forwardMsgSequenceNumber: number = 0
+  private _forwardMsgSequenceNumber = 0
 
   public nextForwardMsgSequenceNumber(): number {
     return this._forwardMsgSequenceNumber++
