@@ -1066,7 +1066,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         or is_custom_dict(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
-    elif isinstance(input_data, ItemsView):
+    elif isinstance(input_data, (ItemsView, enumerate)):
         return DataFormat.LIST_OF_ROWS
     elif isinstance(input_data, (list, tuple, set, frozenset)):
         if _is_list_of_scalars(input_data):

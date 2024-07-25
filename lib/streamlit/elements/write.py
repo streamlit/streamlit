@@ -438,7 +438,15 @@ class WriteMixin:
             elif (
                 isinstance(
                     arg,
-                    (dict, list, map, types.MappingProxyType, UserDict, ChainMap),
+                    (
+                        dict,
+                        list,
+                        map,
+                        enumerate,
+                        types.MappingProxyType,
+                        UserDict,
+                        ChainMap,
+                    ),
                 )
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)

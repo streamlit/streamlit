@@ -360,6 +360,23 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
     (
+        "pd.arrays.DatetimeArray",
+        pd.arrays.DatetimeArray(
+            pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
+        ),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.PANDAS_ARRAY,
+            [
+                pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
+                pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
+            ],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
         "pd.DatetimeIndex",
         pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
         CaseMetadata(
@@ -670,7 +687,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
     (
-        "range",
+        "Range",
         range(3),
         CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [0, 1, 2], "markdown", list),
     ),
@@ -943,5 +960,3 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
 ]
-
-# # Map, Generator Instance, Ray Dataset

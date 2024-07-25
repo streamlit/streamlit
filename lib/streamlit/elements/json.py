@@ -85,7 +85,7 @@ class JsonMixin:
         if is_namedtuple(body):
             body = body._asdict()
 
-        if isinstance(body, map):
+        if isinstance(body, (map, enumerate)):
             body = list(body)
 
         if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
