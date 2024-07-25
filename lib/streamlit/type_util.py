@@ -271,7 +271,7 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
-def is_pydantic_model(obj):
+def is_pydantic_model(obj) -> bool:
     """True if input looks like a Pydantic model instance."""
 
     if isinstance(obj, type):
@@ -291,6 +291,8 @@ def is_pydantic_model(obj):
     }
     if all(hasattr(obj, method) for method in pydantic_methods):
         return True
+
+    return False
 
 
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
