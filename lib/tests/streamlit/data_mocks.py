@@ -14,16 +14,21 @@
 
 from __future__ import annotations
 
+import array
 import enum
 import random
+from collections import UserDict
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Literal, NamedTuple
+from types import MappingProxyType
+from typing import Any, Literal, NamedTuple, TypedDict
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from streamlit.dataframe_util import DataFormat
+from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 
 np.random.seed(0)
 random.seed(0)
@@ -49,6 +54,16 @@ class ElementNamedTuple(NamedTuple):
     name: str
     is_widget: bool
     usage: float
+
+
+class ElementTypedDict(TypedDict):
+    name: str
+    is_widget: bool
+    usage: float
+
+
+class UserDictExample(UserDict[Any, Any]):
+    pass
 
 
 class TestObject:
@@ -390,26 +405,95 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             pd.DataFrame,
         ),
     ),
+    (
+        "array.array",
+        array.array("i", [1, 2, 3]),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "markdown"),
+    ),
+    (
+        "MappingProxyType",
+        MappingProxyType({"st.text_area": "widget", "st.markdown": "element"}),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.text_area", "st.markdown"],
+            "json",
+            dict,
+        ),
+    ),
+    (
+        "UserDict",
+        UserDictExample({"st.text_area": "widget", "st.markdown": "element"}),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.text_area", "st.markdown"],
+            "json",
+            dict,
+        ),
+    ),
     # # Pandas Index (pd.Index):
     # (
     #     pd.Index(["st.text_area", "st.markdown"]),
     #     TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
     # ),
+    (
+        "pd.Index",
+        pd.Index(["st.text_area", "st.markdown"]),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.PANDAS_INDEX,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
     # # Pyarrow Table (pyarrow.Table):
     # (
     #     pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
     #     TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
     # ),
+    (
+        "Pyarrow Table",
+        pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.PYARROW_TABLE,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+        ),
+    ),
     # # Pyarrow Array (pyarrow.Array):
     # (
     #     pa.array(["st.number_input", "st.text_area", "st.text_input"]),
     #     TestCaseMetadata(3, 1, DataFormat.PYARROW_ARRAY),
     # ),
-    # # List of rows (List[List[Scalar]]):
-    # (
-    #     [["st.text_area", "widget"], ["st.markdown", "element"]],
-    #     TestCaseMetadata(2, 2, DataFormat.LIST_OF_ROWS),
-    # ),
+    (
+        "Pyarrow Array",
+        pa.array(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.PYARROW_ARRAY,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "dataframe",
+        ),
+    ),
+    (
+        "List of rows",  # List[list[scalar]]
+        [["st.text_area", "widget"], ["st.markdown", "element"]],
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.LIST_OF_ROWS,
+            [["st.text_area", "widget"], ["st.markdown", "element"]],
+            "json",
+        ),
+    ),
     # # List of records (List[Dict[str, Scalar]]):
     # (
     #     [
@@ -418,6 +502,23 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     #     ],
     #     TestCaseMetadata(2, 2, DataFormat.LIST_OF_RECORDS),
     # ),
+    (
+        "List of records",
+        [
+            {"name": "st.text_area", "type": "widget"},
+            {"name": "st.markdown", "type": "element"},
+        ],
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.LIST_OF_RECORDS,
+            [
+                {"name": "st.text_area", "type": "widget"},
+                {"name": "st.markdown", "type": "element"},
+            ],
+            "json",
+        ),
+    ),
     # # Column-index mapping ({column: {index: value}}):
     # (
     #     {
@@ -426,6 +527,20 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     #     },
     #     TestCaseMetadata(2, 2, DataFormat.COLUMN_INDEX_MAPPING),
     # ),
+    (
+        "Column-index mapping",  # ({column: {index: value}})
+        {
+            "type": {"st.text_area": "widget", "st.markdown": "element"},
+            "usage": {"st.text_area": 4.92, "st.markdown": 47.22},
+        },
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.COLUMN_INDEX_MAPPING,
+            ["type", "usage"],
+            "json",
+        ),
+    ),
     # # Column-value mapping ({column: List[values]}}):
     # (
     #     {
@@ -434,6 +549,20 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     #     },
     #     TestCaseMetadata(2, 2, DataFormat.COLUMN_VALUE_MAPPING),
     # ),
+    (
+        "Column-value mapping",  # ({column: List[values]}})
+        {
+            "name": ["st.text_area", "st.markdown"],
+            "type": ["widget", "element"],
+        },
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.COLUMN_VALUE_MAPPING,
+            ["name", "type"],
+            "json",
+        ),
+    ),
     # # Column-series mapping ({column: Series(values)}):
     # (
     #     {
@@ -442,11 +571,36 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     #     },
     #     TestCaseMetadata(2, 2, DataFormat.COLUMN_SERIES_MAPPING),
     # ),
+    (
+        "Column-series mapping",  # ({column: Series(values)})
+        {
+            "name": pd.Series(["st.text_area", "st.markdown"], name="name"),
+            "type": pd.Series(["widget", "element"], name="type"),
+        },
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.COLUMN_SERIES_MAPPING,
+            ["name", "type"],
+            "dataframe",
+        ),
+    ),
     # # Key-value dict ({index: value}):
     # (
     #     {"st.text_area": "widget", "st.markdown": "element"},
     #     TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT),
     # ),
+    (
+        "Key-value dict",  # ({index: value})
+        {"st.text_area": "widget", "st.markdown": "element"},
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.text_area", "st.markdown"],
+            "json",
+        ),
+    ),
     # # Snowpark DataFrame:
     # (
     #     SnowparkDataFrame(
@@ -459,6 +613,25 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     #     ),
     #     TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
     # ),
+    (
+        "Snowpark DataFrame",
+        SnowparkDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.SNOWPARK_OBJECT,
+            ["name", "type"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
     # # Snowpark Table:
     # (
     #     SnowparkTable(
@@ -609,11 +782,30 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     #     ElementDataClass("st.number_input", is_widget=True, usage=0.32),
     #     TestCaseMetadata(3, 1, DataFormat.KEY_VALUE_DICT, dict),
     # ),
-    # # NamedTuple:
-    # (
-    #     ElementNamedTuple("st.number_input", is_widget=True, usage=0.32),
-    #     TestCaseMetadata(3, 1, DataFormat.KEY_VALUE_DICT, dict),
-    # ),
+    (
+        "TypedDict",
+        ElementTypedDict(name="st.number_input", is_widget=True, usage=0.32),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["name", "is_widget", "usage"],
+            "json",
+            dict,
+        ),
+    ),
+    (
+        "NamedTuple",
+        ElementNamedTuple("st.number_input", is_widget=True, usage=0.32),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["name", "is_widget", "usage"],
+            "json",
+            dict,
+        ),
+    ),
     # # String Enum:
     # (
     #     StrTestEnum,

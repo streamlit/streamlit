@@ -17,6 +17,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import types
+from collections import ChainMap, UserDict
 from io import StringIO
 from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
 
@@ -404,9 +405,7 @@ class WriteMixin:
             elif isinstance(arg, Exception):
                 flush_buffer()
                 self.dg.exception(arg)
-            elif dataframe_util.is_dataframe_like(
-                arg
-            ) or dataframe_util.is_snowpark_row_list(arg):
+            elif dataframe_util.is_dataframe_like(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_altair_chart(arg):
@@ -439,11 +438,7 @@ class WriteMixin:
             elif (
                 isinstance(
                     arg,
-                    (
-                        dict,
-                        list,
-                        map,
-                    ),
+                    (dict, list, map, types.MappingProxyType, UserDict, ChainMap),
                 )
                 or type_util.is_custom_dict(args)
                 or type_util.is_namedtuple(arg)

@@ -20,9 +20,10 @@ import contextlib
 import dataclasses
 import math
 import re
-from collections import ChainMap, deque
+from collections import ChainMap, UserDict, deque
 from collections.abc import ItemsView, KeysView, ValuesView
 from enum import Enum, EnumMeta, auto
+from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -168,9 +169,9 @@ def is_dataframe_like(obj: object) -> bool:
     This does not include basic collection types like list, dict, tuple, etc.
     """
 
-    if obj is None or isinstance(
-        obj, (list, tuple, set, dict, str, bytes, int, float, bool)
-    ):
+    # We exclude list and dict here since there are some cases where a list or dict is
+    # considered a dataframe-like object.
+    if obj is None or isinstance(obj, (tuple, set, str, bytes, int, float, bool)):
         # Basic types are not considered dataframe-like, so we can
         # return False early to avoid unnecessary checks.
         return False
@@ -197,6 +198,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.POLARS_DATAFRAME,
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.HUGGINGFACE_DATASET,
+        DataFormat.COLUMN_SERIES_MAPPING,
     ]
 
 
@@ -408,6 +410,7 @@ def convert_anything_to_pandas_df(
     pandas.DataFrame
 
     """
+    import array
     import inspect
 
     import numpy as np
@@ -559,24 +562,24 @@ def convert_anything_to_pandas_df(
         return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
 
     # Support for some list like objects
-    if isinstance(data, (deque, map)):
+    if isinstance(data, (deque, map, array.ArrayType)):
         return _fix_column_naming(pd.DataFrame(list(data)))
-
-    # Support for ChainMap
-    if isinstance(data, ChainMap):
-        return _dict_to_pandas_df(dict(data))
-
-    # Support for named tuples
-    if is_namedtuple(data):
-        return _dict_to_pandas_df(data._asdict())
 
     # Support for Streamlit's custom dict-like objects
     if is_custom_dict(data):
         return _dict_to_pandas_df(data.to_dict())
 
+    # Support for named tuples
+    if is_namedtuple(data):
+        return _dict_to_pandas_df(data._asdict())
+
     # Support for dataclass instances
     if is_dataclass_instance(data):
         return _dict_to_pandas_df(dataclasses.asdict(data))
+
+    # Support for dict-like objects:
+    if isinstance(data, (ChainMap, MappingProxyType, UserDict)):
+        return _dict_to_pandas_df(dict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -1000,6 +1003,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
+    import array
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
@@ -1034,8 +1039,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.POLARS_LAZYFRAME
     elif is_huggingface_dataset(input_data):
         return DataFormat.HUGGINGFACE_DATASET
-    elif is_snowpark_data_object(input_data):
-        return DataFormat.SNOWPARK_OBJECT
     elif is_modin_data_object(input_data):
         return DataFormat.MODIN_OBJECT
     elif is_snowpandas_data_object(input_data):
@@ -1050,12 +1053,17 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.RAY_DATASET
     elif is_dask_object(input_data):
         return DataFormat.DASK_OBJECT
-    elif isinstance(input_data, (range, EnumMeta, KeysView, ValuesView, deque, map)):
+    elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
+        return DataFormat.SNOWPARK_OBJECT
+    elif isinstance(
+        input_data, (range, EnumMeta, KeysView, ValuesView, deque, map, array.ArrayType)
+    ):
         return DataFormat.LIST_OF_VALUES
     elif (
-        isinstance(input_data, (ChainMap))
+        isinstance(input_data, (ChainMap, MappingProxyType, UserDict))
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
+        or is_custom_dict(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
     elif isinstance(input_data, ItemsView):
@@ -1082,16 +1090,16 @@ def determine_data_format(input_data: Any) -> DataFormat:
             return DataFormat.KEY_VALUE_DICT
         if len(input_data) > 0:
             first_value = next(iter(input_data.values()))
+            # In the future, we could potentially also support tight & split formats
             if isinstance(first_value, dict):
                 return DataFormat.COLUMN_INDEX_MAPPING
             if isinstance(first_value, (list, tuple)):
                 return DataFormat.COLUMN_VALUE_MAPPING
             if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
-            # In the future, we could potentially also support tight & split formats
-            if _is_list_of_scalars(input_data.values()):
-                # Only use the key-value dict format if the values are only scalar
-                return DataFormat.KEY_VALUE_DICT
+            # Use key-value dict as fallback. However, if the values of the dict
+            # contains mixed types, it will become non-editable in the frontend.
+            return DataFormat.KEY_VALUE_DICT
     return DataFormat.UNKNOWN
 
 

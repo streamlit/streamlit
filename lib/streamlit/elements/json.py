@@ -15,6 +15,8 @@
 from __future__ import annotations
 
 import json
+import types
+from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -85,6 +87,9 @@ class JsonMixin:
 
         if isinstance(body, map):
             body = list(body)
+
+        if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
+            body = dict(body)
 
         if not isinstance(body, str):
             try:
