@@ -14,6 +14,7 @@ emoji
 # Additional dataframe formats for testing:
 polars
 xarray
+pydantic
 
 # mypy types
 types-click

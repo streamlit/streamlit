@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.type_util import is_custom_dict, is_namedtuple
+from streamlit.type_util import is_custom_dict, is_namedtuple, is_pydantic_model
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -88,7 +88,9 @@ class JsonMixin:
         if isinstance(body, (map, enumerate)):
             body = list(body)
 
-        if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
+        if isinstance(
+            body, (ChainMap, types.MappingProxyType, UserDict)
+        ) or is_pydantic_model(body):
             body = dict(body)
 
         if not isinstance(body, str):

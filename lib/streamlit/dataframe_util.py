@@ -47,6 +47,7 @@ from streamlit.type_util import (
     is_dataclass_instance,
     is_namedtuple,
     is_pandas_version_less_than,
+    is_pydantic_model,
     is_type,
 )
 
@@ -577,8 +578,10 @@ def convert_anything_to_pandas_df(
     if is_dataclass_instance(data):
         return _dict_to_pandas_df(dataclasses.asdict(data))
 
-    # Support for dict-like objects:
-    if isinstance(data, (ChainMap, MappingProxyType, UserDict)):
+    # Support for dict-like objects
+    if isinstance(data, (ChainMap, MappingProxyType, UserDict)) or is_pydantic_model(
+        data
+    ):
         return _dict_to_pandas_df(dict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -1064,6 +1067,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
+        or is_pydantic_model(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
     elif isinstance(input_data, (ItemsView, enumerate)):

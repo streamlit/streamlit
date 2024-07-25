@@ -81,6 +81,16 @@ class TypeUtilTest(unittest.TestCase):
         res = type_util.is_namedtuple(John)
         self.assertTrue(res)
 
+    def test_is_pydantic_model(self):
+        from pydantic import BaseModel
+
+        class BarModel(BaseModel):
+            foo: int
+            bar: str
+
+        self.assertTrue(type_util.is_pydantic_model(BarModel(foo=1, bar="test")))
+        self.assertFalse(type_util.is_pydantic_model(BarModel))
+
     def test_to_bytes(self):
         bytes_obj = b"some bytes"
         self.assertTrue(type_util.is_bytes_like(bytes_obj))

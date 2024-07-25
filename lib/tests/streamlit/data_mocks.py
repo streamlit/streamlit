@@ -28,6 +28,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import xarray as xr
+from pydantic import BaseModel
 
 from streamlit.dataframe_util import DataFormat
 from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
@@ -78,6 +79,12 @@ class ElementNamedTuple(NamedTuple):
 
 
 class ElementTypedDict(TypedDict):
+    name: str
+    is_widget: bool
+    usage: float
+
+
+class ElementPydanticModel(BaseModel):
     name: str
     is_widget: bool
     usage: float
@@ -957,6 +964,18 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.XARRAY_DATA_ARRAY,
             ["st.number_input", "st.text_area", "st.text_input"],
             "dataframe",
+        ),
+    ),
+    (
+        "Pydantic Model",
+        ElementPydanticModel(name="st.number_input", is_widget=True, usage=0.32),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.number_input", True, 0.32],
+            "json",
+            dict,
         ),
     ),
 ]
