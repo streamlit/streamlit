@@ -101,7 +101,7 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
 
 def _is_type_instance(obj: object, type_to_check: str) -> bool:
     """Check if instance of type without importing expensive modules."""
-    return type_to_check in [t.__name__ for t in type(obj).__mro__]
+    return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
 
 
 def get_fqn(the_type: type) -> str:
@@ -283,7 +283,7 @@ def is_pydantic_model(obj) -> bool:
         # Should be an instance, not a class.
         return False
 
-    return _is_type_instance(obj, "pydantic.main.BaseModel'")
+    return _is_type_instance(obj, "pydantic.main.BaseModel")
 
 
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:

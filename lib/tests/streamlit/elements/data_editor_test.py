@@ -458,6 +458,26 @@ class DataEditorTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.data_editor(input_data)
 
+    def test_disables_columns_when_incompatible(self):
+        """Test that Arrow incompatible columns are disabled (configured as non-editable)."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+                "c": pd.Series([1, "foo"]),  # Incompatible
+                "d": pd.Series([1 + 2j, 3 + 4j]),  # Incompatible
+            }
+        )
+        st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        columns_config = json.loads(proto.columns)
+
+        self.assertNotIn("a", columns_config)
+        self.assertNotIn("b", columns_config)
+        self.assertTrue(columns_config["c"]["disabled"])
+        self.assertTrue(columns_config["d"]["disabled"])
+
     @parameterized.expand(
         [
             (pd.CategoricalIndex(["a", "b", "c"]),),
