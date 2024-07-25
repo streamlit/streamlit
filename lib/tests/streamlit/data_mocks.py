@@ -90,7 +90,7 @@ class ElementPydanticModel(BaseModel):
     usage: float
 
 
-class UserDictExample(UserDict):
+class UserDictExample(UserDict):  # type: ignore
     pass
 
 
