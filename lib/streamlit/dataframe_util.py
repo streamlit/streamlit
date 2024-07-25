@@ -727,10 +727,10 @@ def convert_anything_to_arrow_bytes(
         return convert_pandas_df_to_arrow_bytes(df)
 
     if is_polars_dataframe(data):
-        return convert_pandas_df_to_arrow_bytes(data.to_arrow())
+        return convert_arrow_table_to_arrow_bytes(data.to_arrow())
 
     if is_polars_series(data):
-        return convert_pandas_df_to_arrow_bytes(data.to_frame().to_arrow())
+        return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
 
     if is_huggingface_dataset(data) and hasattr(data, "data"):
         return convert_arrow_table_to_arrow_bytes(data.data)

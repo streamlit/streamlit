@@ -375,6 +375,29 @@ class DataframeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_convert_pandas_df_to_data_format(
+        self,
+        name: str,
+        input_data: Any,
+        metadata: CaseMetadata,
+    ):
+        """Test that `convert_pandas_df_to_data_format` correctly converts
+        the data to the specified data format.
+        """
+        data_df = dataframe_util.convert_anything_to_pandas_df(input_data)
+        converted_format = dataframe_util.convert_pandas_df_to_data_format(
+            data_df, metadata.expected_data_format
+        )
+        self.assertEqual(
+            type(converted_format),
+            type(input_data)
+            if metadata.expected_type is None
+            else metadata.expected_type,
+        )
+
     def test_is_snowpandas_data_object(self):
         df = pd.DataFrame([1, 2, 3])
 

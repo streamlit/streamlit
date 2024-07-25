@@ -17,7 +17,7 @@ from __future__ import annotations
 import array
 import enum
 import random
-from collections import UserDict
+from collections import ChainMap, Counter, OrderedDict, UserDict, defaultdict, deque
 from dataclasses import dataclass
 from datetime import date
 from types import MappingProxyType
@@ -25,10 +25,20 @@ from typing import Any, Literal, NamedTuple, TypedDict
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pyarrow as pa
+import xarray as xr
 
 from streamlit.dataframe_util import DataFormat
+from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
+from tests.streamlit.dask_mocks import Series as DaskSeries
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
+from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 np.random.seed(0)
 random.seed(0)
@@ -148,58 +158,26 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # (
-    #     [1, 2, 3],
-    #     TestCaseMetadata("List[int]", 3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3]),
-    # ),
     (
         "List[int]",
         [1, 2, 3],
         CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "json"),
     ),
-    # (
-    #     [1.1, 2.2, 3.3],
-    #     TestCaseMetadata(
-    #         "List[float]", 3, 1, DataFormat.LIST_OF_VALUES, [1.1, 2.2, 3.3]
-    #     ),
-    # ),
     (
         "List[float]",
         [1.1, 2.2, 3.3],
         CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1.1, 2.2, 3.3], "json"),
     ),
-    # (
-    #     [True, False, True],
-    #     TestCaseMetadata(
-    #         "List[bool]", 3, 1, DataFormat.LIST_OF_VALUES, [True, False, True]
-    #     ),
-    # ),
     (
         "List[bool]",
         [True, False, True],
         CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [True, False, True], "json"),
     ),
-    # (
-    #     [None, None, None],
-    #     TestCaseMetadata(
-    #         "List[None]", 3, 1, DataFormat.LIST_OF_VALUES, [None, None, None]
-    #     ),
-    # ),
     (
         "List[None]",
         [None, None, None],
         CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [None, None, None], "json"),
     ),
-    # (
-    #     [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
-    #     TestCaseMetadata(
-    #         "List[date]",
-    #         3,
-    #         1,
-    #         DataFormat.LIST_OF_VALUES,
-    #         [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
-    #     ),
-    # ),
     (
         "List[date]",
         [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
@@ -211,14 +189,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # (
-    #     # Set does not have a stable order across different Python version.
-    #     # Therefore, we are only testing this with one item.
-    #     {"st.number_input", "st.number_input"},
-    #     TestCaseMetadata(
-    #         "Set[str]", 1, 1, DataFormat.SET_OF_VALUES, {"st.number_input"}
-    #     ),
-    # ),
     (
         "Set[str]",
         # Set does not have a stable order across different Python version.
@@ -226,14 +196,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         {"st.number_input", "st.number_input"},  # noqa: B033
         CaseMetadata(1, 1, DataFormat.SET_OF_VALUES, ["st.number_input"], "markdown"),
     ),
-    # (
-    #     # Set does not have a stable order across different Python version.
-    #     # Therefore, we are only testing this with one item.
-    #     frozenset({"st.number_input", "st.number_input"}),
-    #     TestCaseMetadata(
-    #         "FrozenSet[str])", 1, 1, DataFormat.SET_OF_VALUES, set, {"st.number_input"}
-    #     ),
-    # ),
     (
         "Frozenset[str]",
         # Set does not have a stable order across different Python version.
@@ -243,25 +205,11 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1, 1, DataFormat.SET_OF_VALUES, ["st.number_input"], "markdown", set
         ),
     ),
-    # (
-    #     frozenset(),
-    #     TestCaseMetadata("Empty FrozenSet", 0, 0, DataFormat.SET_OF_VALUES, set, set()),
-    # ),
     (
         "Empty frozenset",
         frozenset(),
         CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown", set),
     ),
-    # (
-    #     ("st.text_area", "st.number_input", "st.text_input"),
-    #     TestCaseMetadata(
-    #         "Tuple[str]",
-    #         3,
-    #         1,
-    #         DataFormat.TUPLE_OF_VALUES,
-    #         ["st.text_area", "st.number_input", "st.text_input"],
-    #     ),
-    # ),
     (
         "Tuple[str]",
         ("st.text_area", "st.number_input", "st.text_input"),
@@ -273,10 +221,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "markdown",
         ),
     ),
-    # (
-    #     np.array(["st.text_area", "st.number_input", "st.text_input"]),
-    #     TestCaseMetadata("np.array[str]", 3, 1, DataFormat.NUMPY_LIST),
-    # ),
     (
         "np.array[str]",
         np.array(["st.text_area", "st.number_input", "st.text_input"]),
@@ -288,30 +232,11 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
         ),
     ),
-    # (
-    #     np.array([1, 2, 3]),
-    #     TestCaseMetadata("np.array[int]", 3, 1, DataFormat.NUMPY_LIST, [1, 2, 3]),
-    # ),
     (
         "np.array[int]",
         np.array([1, 2, 3]),
         CaseMetadata(3, 1, DataFormat.NUMPY_LIST, [1, 2, 3], "dataframe"),
     ),
-    # (
-    #     np.array(
-    #         [
-    #             ["st.text_area", "widget"],
-    #             ["st.markdown", "element"],
-    #         ]
-    #     ),
-    #     TestCaseMetadata(
-    #         "np.array[List[Scalar]]",
-    #         2,
-    #         2,
-    #         DataFormat.NUMPY_MATRIX,
-    #         ["st.text_area", "st.markdown"],
-    #     ),
-    # ),
     (
         "np.array[list[scalar]]",
         np.array(
@@ -328,17 +253,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
         ),
     ),
-    # (
-    #     np.matrix(
-    #         [
-    #             ["st.text_area", "widget"],
-    #             ["st.markdown", "element"],
-    #         ]
-    #     ),
-    #     TestCaseMetadata(
-    #         "np.matrix", 2, 2, DataFormat.NUMPY_MATRIX, ["st.text_area", "st.markdown"]
-    #     ),
-    # ),
     (
         "np.matrix",
         np.matrix(
@@ -356,11 +270,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             np.ndarray,
         ),
     ),
-    # # np.array[List[str]]:
-    # (
-    #     np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
-    #     TestCaseMetadata(3, 1, DataFormat.NUMPY_MATRIX),
-    # ),
     (
         "np.array[list[str]]",
         np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
@@ -372,11 +281,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
         ),
     ),
-    # # Pandas Series (pd.Series):
-    # (
-    #     pd.Series(["st.text_area", "st.number_input", "st.text_input"], name="widgets"),
-    #     TestCaseMetadata(3, 1, DataFormat.PANDAS_SERIES),
-    # ),
     (
         "pd.Series[str]",
         pd.Series(["st.text_area", "st.number_input", "st.text_input"], name="widgets"),
@@ -388,11 +292,18 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
         ),
     ),
-    # # Pandas Styler (pd.Styler):
-    # (
-    #     pd.DataFrame(["st.text_area", "st.markdown"]).style,
-    #     TestCaseMetadata(2, 1, DataFormat.PANDAS_STYLER, pd.DataFrame),
-    # ),
+    (
+        "pd.Index",
+        pd.Index(["st.text_area", "st.markdown"]),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.PANDAS_INDEX,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
     (
         "Pandas Styler",
         pd.DataFrame(["st.text_area", "st.markdown"]).style,
@@ -406,9 +317,43 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
     (
+        "pd.array",
+        pd.array(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.PANDAS_ARRAY,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "pd.DatetimeIndex",
+        pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.PANDAS_INDEX,
+            [
+                pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
+                pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
+            ],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "pd.RangeIndex",
+        pd.RangeIndex(start=0, stop=3, step=1),
+        CaseMetadata(
+            3, 1, DataFormat.PANDAS_INDEX, [0, 1, 2], "dataframe", pd.DataFrame
+        ),
+    ),
+    (
         "array.array",
         array.array("i", [1, 2, 3]),
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "markdown"),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "markdown", list),
     ),
     (
         "MappingProxyType",
@@ -417,7 +362,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["st.text_area", "st.markdown"],
+            ["widget", "element"],
             "json",
             dict,
         ),
@@ -429,33 +374,11 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["st.text_area", "st.markdown"],
+            ["widget", "element"],
             "json",
             dict,
         ),
     ),
-    # # Pandas Index (pd.Index):
-    # (
-    #     pd.Index(["st.text_area", "st.markdown"]),
-    #     TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
-    # ),
-    (
-        "pd.Index",
-        pd.Index(["st.text_area", "st.markdown"]),
-        CaseMetadata(
-            2,
-            1,
-            DataFormat.PANDAS_INDEX,
-            ["st.text_area", "st.markdown"],
-            "dataframe",
-            pd.DataFrame,
-        ),
-    ),
-    # # Pyarrow Table (pyarrow.Table):
-    # (
-    #     pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
-    #     TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
-    # ),
     (
         "Pyarrow Table",
         pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
@@ -467,11 +390,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
         ),
     ),
-    # # Pyarrow Array (pyarrow.Array):
-    # (
-    #     pa.array(["st.number_input", "st.text_area", "st.text_input"]),
-    #     TestCaseMetadata(3, 1, DataFormat.PYARROW_ARRAY),
-    # ),
     (
         "Pyarrow Array",
         pa.array(["st.number_input", "st.text_area", "st.text_input"]),
@@ -494,16 +412,8 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # # List of records (List[Dict[str, Scalar]]):
-    # (
-    #     [
-    #         {"name": "st.text_area", "type": "widget"},
-    #         {"name": "st.markdown", "type": "element"},
-    #     ],
-    #     TestCaseMetadata(2, 2, DataFormat.LIST_OF_RECORDS),
-    # ),
     (
-        "List of records",
+        "List of records",  # List[Dict[str, Scalar]]
         [
             {"name": "st.text_area", "type": "widget"},
             {"name": "st.markdown", "type": "element"},
@@ -519,14 +429,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # # Column-index mapping ({column: {index: value}}):
-    # (
-    #     {
-    #         "type": {"st.text_area": "widget", "st.markdown": "element"},
-    #         "usage": {"st.text_area": 4.92, "st.markdown": 47.22},
-    #     },
-    #     TestCaseMetadata(2, 2, DataFormat.COLUMN_INDEX_MAPPING),
-    # ),
     (
         "Column-index mapping",  # ({column: {index: value}})
         {
@@ -541,14 +443,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # # Column-value mapping ({column: List[values]}}):
-    # (
-    #     {
-    #         "name": ["st.text_area", "st.markdown"],
-    #         "type": ["widget", "element"],
-    #     },
-    #     TestCaseMetadata(2, 2, DataFormat.COLUMN_VALUE_MAPPING),
-    # ),
     (
         "Column-value mapping",  # ({column: List[values]}})
         {
@@ -563,14 +457,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # # Column-series mapping ({column: Series(values)}):
-    # (
-    #     {
-    #         "name": pd.Series(["st.text_area", "st.markdown"], name="name"),
-    #         "type": pd.Series(["widget", "element"], name="type"),
-    #     },
-    #     TestCaseMetadata(2, 2, DataFormat.COLUMN_SERIES_MAPPING),
-    # ),
     (
         "Column-series mapping",  # ({column: Series(values)})
         {
@@ -585,11 +471,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
         ),
     ),
-    # # Key-value dict ({index: value}):
-    # (
-    #     {"st.text_area": "widget", "st.markdown": "element"},
-    #     TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT),
-    # ),
     (
         "Key-value dict",  # ({index: value})
         {"st.text_area": "widget", "st.markdown": "element"},
@@ -601,18 +482,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
         ),
     ),
-    # # Snowpark DataFrame:
-    # (
-    #     SnowparkDataFrame(
-    #         pd.DataFrame(
-    #             [
-    #                 {"name": "st.text_area", "type": "widget"},
-    #                 {"name": "st.markdown", "type": "element"},
-    #             ]
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
-    # ),
     (
         "Snowpark DataFrame",
         SnowparkDataFrame(
@@ -627,161 +496,282 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.SNOWPARK_OBJECT,
-            ["name", "type"],
+            ["st.text_area", "st.markdown"],
             "dataframe",
             pd.DataFrame,
         ),
     ),
-    # # Snowpark Table:
-    # (
-    #     SnowparkTable(
-    #         pd.DataFrame(
-    #             [
-    #                 {"name": "st.text_area", "type": "widget"},
-    #                 {"name": "st.markdown", "type": "element"},
-    #             ]
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT, pd.DataFrame),
-    # ),
-    # # Snowpark Pandas DataFrame:
-    # (
-    #     SnowpandasDataFrame(
-    #         pd.DataFrame(
-    #             [
-    #                 {"name": "st.text_area", "type": "widget"},
-    #                 {"name": "st.markdown", "type": "element"},
-    #             ]
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
-    # ),
-    # # Snowpark Pandas Series:
-    # (
-    #     SnowpandasSeries(pd.Series(["st.text_area", "st.markdown"])),
-    #     TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT, pd.DataFrame),
-    # ),
-    # # Modin DataFrame:
-    # (
-    #     ModinDataFrame(
-    #         pd.DataFrame(
-    #             [
-    #                 {"name": "st.text_area", "type": "widget"},
-    #                 {"name": "st.markdown", "type": "element"},
-    #             ]
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.MODIN_OBJECT, pd.DataFrame),
-    # ),
-    # # Modin Series:
-    # (
-    #     ModinSeries(pd.Series(["st.text_area", "st.markdown"])),
-    #     TestCaseMetadata(2, 1, DataFormat.MODIN_OBJECT, pd.DataFrame),
-    # ),
-    # # Pyspark Dataframe:
-    # (
-    #     PysparkDataFrame(
-    #         pd.DataFrame(
-    #             [
-    #                 {"name": "st.text_area", "type": "widget"},
-    #                 {"name": "st.markdown", "type": "element"},
-    #             ]
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT, pd.DataFrame),
-    # ),
-    # # Dask Dataframe:
-    # (
-    #     DaskDataFrame(
-    #         pd.DataFrame(
-    #             [
-    #                 {"name": "st.text_area", "type": "widget"},
-    #                 {"name": "st.markdown", "type": "element"},
-    #             ]
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.DASK_OBJECT, pd.DataFrame),
-    # ),
-    # # Dask Series:
-    # (
-    #     DaskSeries(pd.Series(["st.text_area", "st.markdown"])),
-    #     TestCaseMetadata(2, 1, DataFormat.DASK_OBJECT, pd.DataFrame),
-    # ),
-    # # Range:
-    # (
-    #     range(3),
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
-    # # Dict Keys:
-    # (
-    #     {
-    #         "st.number_input": "number",
-    #         "st.text_area": "text",
-    #         "st.text_input": "text",
-    #     }.keys(),
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
-    # # Dict Values:
-    # (
-    #     {
-    #         "st.number_input": "number",
-    #         "st.text_area": "text",
-    #         "st.text_input": "text",
-    #     }.values(),
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
-    # # Dict Items:
-    # (
-    #     {
-    #         "st.number_input": "number",
-    #         "st.text_area": "text",
-    #         "st.text_input": "text",
-    #     }.items(),
-    #     TestCaseMetadata(3, 2, DataFormat.LIST_OF_ROWS, list),
-    # ),
-    # # Counter
-    # (
-    #     Counter({"st.number_input": 4, "st.text_area": 2}),
-    #     TestCaseMetadata(2, 2, DataFormat.KEY_VALUE_DICT, dict),
-    # ),
-    # # OrderedDict:
-    # (
-    #     OrderedDict(
-    #         [
-    #             ("st.number_input", "number"),
-    #             ("st.text_area", "text"),
-    #         ]
-    #     ),
-    #     TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT, dict),
-    # ),
-    # # Pandas DatetimeIndex (pd.DatetimeIndex):
-    # (
-    #     pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
-    #     TestCaseMetadata(3, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
-    # ),
-    # # Pandas RangeIndex (pd.RangeIndex):
-    # (
-    #     pd.RangeIndex(start=0, stop=3, step=1),
-    #     TestCaseMetadata(3, 1, DataFormat.PANDAS_INDEX, pd.DataFrame),
-    # ),
-    # # Deque (collections.deque):
-    # (
-    #     deque(["st.number_input", "st.text_area", "st.text_input"]),
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
-    # # ChainMap (collections.ChainMap):
-    # (
-    #     ChainMap(
-    #         {"st.number_input": "number", "st.text_area": "text"},
-    #         {"st.text_input": "text"},
-    #     ),
-    #     TestCaseMetadata(3, 2, DataFormat.KEY_VALUE_DICT, dict),
-    # ),
-    # # Dataclass:
-    # (
-    #     ElementDataClass("st.number_input", is_widget=True, usage=0.32),
-    #     TestCaseMetadata(3, 1, DataFormat.KEY_VALUE_DICT, dict),
-    # ),
+    (
+        "Snowpark Table",
+        SnowparkTable(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.SNOWPARK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Snowpandas DataFrame",
+        SnowpandasDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.SNOWPANDAS_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Snowpandas Series",
+        SnowpandasSeries(pd.Series(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.SNOWPANDAS_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Modin DataFrame",
+        ModinDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.MODIN_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Modin Series",
+        ModinSeries(pd.Series(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.MODIN_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Pyspark DataFrame",
+        PySparkDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.PYSPARK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask DataFrame",
+        DaskDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask Series",
+        DaskSeries(pd.Series(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "range",
+        range(3),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [0, 1, 2], "markdown", list),
+    ),
+    (
+        "Dict Keys",
+        {
+            "st.number_input": "number",
+            "st.text_area": "text",
+            "st.text_input": "text",
+        }.keys(),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "markdown",
+            list,
+        ),
+    ),
+    (
+        "Dict Values",
+        {
+            "st.number_input": "number",
+            "st.text_area": "text",
+            "st.text_input": "text",
+        }.values(),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["number", "text", "text"],
+            "markdown",
+            list,
+        ),
+    ),
+    (
+        "Dict Items",
+        {
+            "st.number_input": "number",
+            "st.text_area": "text",
+            "st.text_input": "text",
+        }.items(),
+        CaseMetadata(
+            3,
+            2,
+            DataFormat.LIST_OF_ROWS,
+            [
+                ["st.number_input", "number"],
+                ["st.text_area", "text"],
+                ["st.text_input", "text"],
+            ],
+            "json",
+            list,
+        ),
+    ),
+    (
+        "collections.OrderedDict",
+        OrderedDict(
+            [
+                ("st.number_input", "number"),
+                ("st.text_area", "text"),
+            ]
+        ),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.number_input", "st.text_area"],
+            "json",
+            dict,
+        ),
+    ),
+    (
+        "collections.defaultdict",
+        defaultdict(
+            lambda: "Not Present",
+            {"st.text_area": "widget", "st.markdown": "element"},
+        ),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.text_area", "st.markdown"],
+            "json",
+            dict,
+        ),
+    ),
+    (
+        "collections.Counter",
+        Counter({"st.number_input": 4, "st.text_area": 2}),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.number_input", "st.text_area"],
+            "json",
+            dict,
+        ),
+    ),
+    (
+        "collections.deque",
+        deque(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "markdown",
+            list,
+        ),
+    ),
+    (
+        "collections.ChainMap",
+        ChainMap(
+            {"st.number_input": "number", "st.text_area": "text"},
+            {"st.text_input": "text"},
+        ),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["number", "text", "text"],
+            "json",
+            dict,
+        ),
+    ),
+    (
+        "Dataclass",
+        ElementDataClass("st.number_input", is_widget=True, usage=0.32),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.KEY_VALUE_DICT,
+            ["st.number_input", True, 0.32],
+            "json",
+            dict,
+        ),
+    ),
     (
         "TypedDict",
         ElementTypedDict(name="st.number_input", is_widget=True, usage=0.32),
@@ -801,84 +791,123 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["name", "is_widget", "usage"],
+            ["st.number_input", True, 0.32],
             "json",
             dict,
         ),
     ),
-    # # String Enum:
-    # (
-    #     StrTestEnum,
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
-    # # Test Enum:
-    # (
-    #     TestEnum,
-    #     TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, list),
-    # ),
-    # # Generator Functions:
-    # (
-    #     data_generator,
-    #     TestCaseMetadata(3, 1, DataFormat.UNKNOWN),
-    # ),
-    # # Polars DataFrame:
-    # (
-    #     pl.DataFrame(
-    #         [
-    #             {"name": "st.text_area", "type": "widget"},
-    #             {"name": "st.markdown", "type": "element"},
-    #         ]
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.POLARS_DATAFRAME),
-    # ),
-    # # Polars Series:
-    # (
-    #     pl.Series(["st.number_input", "st.text_area", "st.text_input"]),
-    #     TestCaseMetadata(3, 1, DataFormat.POLARS_SERIES),
-    # ),
-    # # Polars LazyFrame:
-    # (
-    #     pl.LazyFrame(
-    #         {
-    #             "name": ["st.text_area", "st.markdown"],
-    #             "type": ["widget", "element"],
-    #         }
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.POLARS_LAZYFRAME, pl.DataFrame),
-    # ),
-    # # xarray Dataset:
-    # (
-    #     xr.Dataset.from_dataframe(
-    #         pd.DataFrame(
-    #             {
-    #                 "name": ["st.text_area", "st.markdown"],
-    #                 "type": ["widget", "element"],
-    #             }
-    #         )
-    #     ),
-    #     TestCaseMetadata(2, 2, DataFormat.XARRAY_DATASET),
-    # ),
-    # # xarray DataArray:
-    # (
-    #     xr.DataArray.from_series(
-    #         pd.Series(
-    #             ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
-    #         )
-    #     ),
-    #     TestCaseMetadata(3, 1, DataFormat.XARRAY_DATA_ARRAY),
-    # ),
-    # # defaultdict:
-    # (
-    #     defaultdict(
-    #         lambda: "Not Present",
-    #         {"st.text_area": "widget", "st.markdown": "element"},
-    #     ),
-    #     TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT, dict),
-    # ),
-    # # Pandas Array:
-    # (
-    #     pd.array(["st.number_input", "st.text_area", "st.text_input"]),
-    #     TestCaseMetadata(3, 1, DataFormat.PANDAS_ARRAY, pd.DataFrame),
-    # ),
-    # # Map, Generator Instance, Ray Dataset,
+    (
+        "String Enum",
+        StrTestEnum,
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "markdown",
+            list,
+        ),
+    ),
+    (
+        "Test Enum",
+        TestEnum,
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            [TestEnum.NUMBER_INPUT, TestEnum.TEXT_AREA, TestEnum.TEXT_INPUT],
+            "markdown",
+            list,
+        ),
+    ),
+    (
+        "Generator Function",
+        data_generator,
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.UNKNOWN,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "markdown",
+        ),
+    ),
+    (
+        "Polars DataFrame",
+        pl.DataFrame(
+            [
+                {"name": "st.text_area", "type": "widget"},
+                {"name": "st.markdown", "type": "element"},
+            ]
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.POLARS_DATAFRAME,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+        ),
+    ),
+    (
+        "Polars Series",
+        pl.Series(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.POLARS_SERIES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "dataframe",
+        ),
+    ),
+    (
+        "Polars LazyFrame",
+        pl.LazyFrame(
+            {
+                "name": ["st.text_area", "st.markdown"],
+                "type": ["widget", "element"],
+            }
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.POLARS_LAZYFRAME,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pl.DataFrame,
+        ),
+    ),
+    (
+        "Xarray Dataset",
+        xr.Dataset.from_dataframe(
+            pd.DataFrame(
+                {
+                    "name": ["st.text_area", "st.markdown"],
+                    "type": ["widget", "element"],
+                }
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.XARRAY_DATASET,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+        ),
+    ),
+    (
+        "Xarray DataArray",
+        xr.DataArray.from_series(
+            pd.Series(
+                ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
+            )
+        ),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.XARRAY_DATA_ARRAY,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "dataframe",
+        ),
+    ),
 ]
+
+# # Map, Generator Instance, Ray Dataset
