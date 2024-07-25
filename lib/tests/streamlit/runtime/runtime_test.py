@@ -57,6 +57,12 @@ class MockSessionClient(SessionClient):
         self.forward_msgs: list[ForwardMsg] = []
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
+        if len(self.forward_msgs):
+            assert (
+                msg.metadata.sequence_number
+                == self.forward_msgs[-1].metadata.sequence_number + 1
+            )
+
         self.forward_msgs.append(msg)
 
 
@@ -541,7 +547,13 @@ class RuntimeTest(RuntimeTestCase):
             # We should have the *hash* of msg1 and msg2:
             self.assertEqual(msg1.hash, cached.ref_hash)
             self.assertEqual(msg2.hash, cached.ref_hash)
-            # And the same *metadata* as msg2:
+
+            # And the same *metadata* as msg2, aside from the message sequence_number:
+            self.assertEqual(
+                cached.metadata.sequence_number, msg2.metadata.sequence_number + 1
+            )
+            msg2.metadata.sequence_number = 0
+            cached.metadata.sequence_number = 0
             self.assertEqual(msg2.metadata, cached.metadata)
 
     async def test_forwardmsg_cache_clearing(self):

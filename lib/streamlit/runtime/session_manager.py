@@ -54,6 +54,7 @@ class ActiveSessionInfo:
     client: SessionClient
     session: AppSession
     script_run_count: int = 0
+    forward_msg_count: int = 0
 
 
 @dataclass
@@ -68,6 +69,11 @@ class SessionInfo:
     client: SessionClient | None
     session: AppSession
     script_run_count: int = 0
+
+    # Counter for the number of ForwardMsgs sent by this session. We don't currently do
+    # anything with this information, but we may eventually use it to allow us to replay
+    # ForwardMsgs dropped during a websocket disconnect.
+    forward_msg_count: int = 0
 
     def is_active(self) -> bool:
         return self.client is not None

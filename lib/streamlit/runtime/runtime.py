@@ -739,6 +739,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 session_info.session, session_info.script_run_count
             )
 
+        msg_to_send.metadata.sequence_number = session_info.forward_msg_count
+        session_info.forward_msg_count += 1
+
         # Ship it off!
         session_info.client.write_forward_msg(msg_to_send)
 
