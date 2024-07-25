@@ -99,6 +99,11 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
         return fqn_type_pattern.match(fqn_type) is not None
 
 
+def _is_type_instance(obj: object, type_to_check: str) -> bool:
+    """Check if instance of type without importing expensive modules."""
+    return type_to_check in [t.__name__ for t in type(obj).__mro__]
+
+
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
     return f"{the_type.__module__}.{the_type.__qualname__}"
@@ -278,21 +283,7 @@ def is_pydantic_model(obj) -> bool:
         # Should be an instance, not a class.
         return False
 
-    # Check for specific methods that Pydantic models have.
-    pydantic_methods = {
-        "dict",
-        "json",
-        "parse_obj",
-        "parse_raw",
-        "schema",
-        "schema_json",
-        "copy",
-        "Config",
-    }
-    if all(hasattr(obj, method) for method in pydantic_methods):
-        return True
-
-    return False
+    return _is_type_instance(obj, "pydantic.main.BaseModel'")
 
 
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
