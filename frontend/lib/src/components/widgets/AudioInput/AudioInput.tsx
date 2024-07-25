@@ -21,7 +21,8 @@ import WaveSurfer from "wavesurfer.js"
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import { FileUploadClient, WidgetStateManager } from "@streamlit/lib"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
 import MediaStreamVisualizer from "./MediaStreamVisualizer"
 
@@ -45,6 +46,7 @@ const AudioInput: React.FC<Props> = ({
     stopRecording,
     mediaBlobUrl,
     pauseRecording,
+    clearBlobUrl,
     previewAudioStream,
   } = useReactMediaRecorder({ audio: true, video: false })
 
@@ -76,69 +78,71 @@ const AudioInput: React.FC<Props> = ({
   }
 
   return (
-    <div>
+    <div data-testid="stAudioInput">
+      <div
+        style={{
+          height: 128,
+          width: "100%",
+          paddingTop: 4,
+          paddingBottom: 4,
+          border: `1px solid gray`,
+          borderRadius: 8,
+          marginBottom: 2,
+        }}
+      >
+        {isRecording && previewAudioStream ? (
+          <MediaStreamVisualizer
+            mediaStream={previewAudioStream}
+            heightPx={120}
+          />
+        ) : (
+          <WaveSurferVisualization
+            setWavesurfer={setWavesurfer}
+            setIsPlaying={setIsPlaying}
+            mediaBlobUrl={mediaBlobUrl}
+          ></WaveSurferVisualization>
+        )}
+      </div>
+      <p style={{ position: "absolute", top: 20, right: 20 }}>{status}</p>
+
       <div>
         <div
           style={{
-            height: 128,
-            width: "100%",
-            paddingTop: 4,
-            paddingBottom: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: 4,
             border: `1px solid gray`,
             borderRadius: 8,
-            marginBottom: 2,
           }}
         >
-          {isRecording && previewAudioStream ? (
-            <MediaStreamVisualizer
-              mediaStream={previewAudioStream}
-              heightPx={120}
-            />
+          {isRecording ? (
+            <BaseButton kind={BaseButtonKind.PRIMARY} onClick={stopRecording}>
+              Stop Recording
+            </BaseButton>
           ) : (
-            <WaveSurferVisualization
-              setWavesurfer={setWavesurfer}
-              setIsPlaying={setIsPlaying}
-              mediaBlobUrl={mediaBlobUrl}
-            ></WaveSurferVisualization>
+            <BaseButton kind={BaseButtonKind.PRIMARY} onClick={startRecording}>
+              Start Recording
+            </BaseButton>
           )}
-        </div>
-        <p style={{ position: "absolute", top: 20, right: 20 }}>{status}</p>
 
-        <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: 4,
-              border: `1px solid gray`,
-              borderRadius: 8,
-            }}
+          <BaseButton kind={BaseButtonKind.SECONDARY} onClick={onPlayPause}>
+            {isPlaying ? "Pause" : "Play"}
+          </BaseButton>
+          <BaseButton
+            kind={BaseButtonKind.SECONDARY}
+            disabled={!mediaBlobUrl}
+            onClick={clearBlobUrl}
           >
-            {isRecording ? (
-              <BaseButton
-                kind={BaseButtonKind.PRIMARY}
-                onClick={stopRecording}
-              >
-                Stop Recording
-              </BaseButton>
-            ) : (
-              <BaseButton
-                kind={BaseButtonKind.PRIMARY}
-                onClick={startRecording}
-              >
-                Start Recording
-              </BaseButton>
-            )}
-
-            <BaseButton kind={BaseButtonKind.SECONDARY} onClick={onPlayPause}>
-              {isPlaying ? "Pause" : "Play"}
-            </BaseButton>
-            <BaseButton kind={BaseButtonKind.SECONDARY}>Buttons</BaseButton>
-            <BaseButton kind={BaseButtonKind.SECONDARY} onClick={onSubmit}>
-              Submit
-            </BaseButton>
-          </div>
+            Clear
+          </BaseButton>
+          <BaseButton
+            kind={BaseButtonKind.SECONDARY}
+            onClick={onSubmit}
+            disabled={!mediaBlobUrl}
+          >
+            Submit
+          </BaseButton>
         </div>
       </div>
     </div>

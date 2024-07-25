@@ -15,7 +15,8 @@
  */
 
 import _ from "lodash"
-import { WidgetStateManager, FileUploadClient } from "@streamlit/lib"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   FileUploaderState as FileUploaderStateProto,
   IFileURLs,
@@ -76,8 +77,7 @@ export const uploadFiles = async ({
         await uploadClient.uploadFile(
           { id: fileUrl.fileId, formId: widgetInfo.formId || "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
           fileUrl.uploadUrl,
-          file,
-          e => console.log(e)
+          file
         )
         successfulUploads.push({ fileUrl, file })
       } catch (e) {
