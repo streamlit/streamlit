@@ -29,7 +29,7 @@ greenlet==3.0.3
 hypothesis==6.108.4
 identify==2.6.0
 idna==3.7
-importlib_metadata==8.1.0
+importlib_metadata==8.2.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
 jaraco.context==5.3.0
@@ -99,7 +99,7 @@ requests-mock==1.12.1
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
-rpds-py==0.19.0
+rpds-py==0.19.1
 ruff==0.5.0
 scipy==1.14.0
 seaborn==0.13.2
@@ -130,7 +130,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.28
+uv==0.2.29
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
