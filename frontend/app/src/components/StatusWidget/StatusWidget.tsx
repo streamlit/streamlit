@@ -15,6 +15,10 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
@@ -231,13 +235,13 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     const prevView = this.curView
     this.curView = this.renderWidget()
-    if (prevView == null && this.curView == null) {
+    if (isNullOrUndefined(prevView) && isNullOrUndefined(this.curView)) {
       return null
     }
 
     let animateIn: boolean
     let renderView: ReactNode
-    if (this.curView != null) {
+    if (notNullOrUndefined(this.curView)) {
       animateIn = true
       renderView = this.curView
     } else {

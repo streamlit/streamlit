@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { ForwardMsg } from "./proto"
 import { logMessage } from "./util/log"
 import { ensureError } from "./util/ErrorHandling"
@@ -97,7 +101,7 @@ export class ForwardMsgCache {
     }
 
     let newMsg = this.getCachedMessage(msg.refHash as string, true)
-    if (newMsg != null) {
+    if (notNullOrUndefined(newMsg)) {
       logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
       // Cache miss: fetch from the server
@@ -170,7 +174,7 @@ export class ForwardMsgCache {
     updateScriptRunCount: boolean
   ): ForwardMsg | undefined {
     const cached = this.messages.get(hash)
-    if (cached == null) {
+    if (isNullOrUndefined(cached)) {
       return undefined
     }
 

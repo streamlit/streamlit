@@ -15,6 +15,10 @@
  */
 
 import React, { Fragment } from "react"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import styled from "@emotion/styled"
 import axios from "axios"
@@ -406,7 +410,7 @@ export class WebsocketConnection {
       WEBSOCKET_STREAM_PATH
     )
 
-    if (this.websocket != null) {
+    if (notNullOrUndefined(this.websocket)) {
       // This should never happen. We set the websocket to null in both FSM
       // nodes that lead to this one.
       throw new Error("Websocket already exists")
@@ -470,7 +474,7 @@ export class WebsocketConnection {
   }
 
   private setConnectionTimeout(uri: string): void {
-    if (this.wsConnectionTimeoutId != null) {
+    if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
       // This should never happen. We set the timeout ID to null in both FSM
       // nodes that lead to this one.
       throw new Error("WS timeout is already set")
@@ -483,13 +487,13 @@ export class WebsocketConnection {
         return
       }
 
-      if (this.wsConnectionTimeoutId == null) {
+      if (isNullOrUndefined(this.wsConnectionTimeoutId)) {
         // Sometimes the clearTimeout doesn't work. No idea why :-/
         logWarning(LOG, "Timeout fired after cancellation")
         return
       }
 
-      if (this.websocket == null) {
+      if (isNullOrUndefined(this.websocket)) {
         // This should never happen! The only place we call
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
@@ -519,7 +523,7 @@ export class WebsocketConnection {
       this.websocket = undefined
     }
 
-    if (this.wsConnectionTimeoutId != null) {
+    if (notNullOrUndefined(this.wsConnectionTimeoutId)) {
       logMessage(LOG, `Clearing WS timeout ${this.wsConnectionTimeoutId}`)
       window.clearTimeout(this.wsConnectionTimeoutId)
       this.wsConnectionTimeoutId = undefined

@@ -18,10 +18,10 @@
 /* eslint-disable no-underscore-dangle */
 
 import {
-  Schema as ArrowSchema,
-  Dictionary,
   Field,
+  Schema as ArrowSchema,
   Null,
+  Dictionary,
   Struct,
   StructRow,
   Table,
@@ -36,9 +36,12 @@ import zip from "lodash/zip"
 import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib/src/util/log"
 
 /** Data types used by ArrowJS. */
@@ -463,7 +466,7 @@ export class Quiver {
   /** Parse Arrow table's schema from a JSON string to an object. */
   private static parseSchema(table: Table): Schema {
     const schema = table.schema.metadata.get("pandas")
-    if (schema == null) {
+    if (isNullOrUndefined(schema)) {
       // This should never happen!
       throw new Error("Table schema is missing.")
     }
@@ -1056,7 +1059,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
 
-    if (x == null) {
+    if (isNullOrUndefined(x)) {
       return "<NA>"
     }
 
@@ -1185,7 +1188,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
    * the Styler CSS with the styled data.
    */
   public get cssId(): string | undefined {
-    if (this._styler?.uuid == null) {
+    if (isNullOrUndefined(this._styler?.uuid)) {
       return undefined
     }
 

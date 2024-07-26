@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
@@ -48,7 +48,7 @@ interface StackTraceProps {
  * Return true if the string is non-null and non-empty.
  */
 function isNonEmptyString(value: string | null | undefined): boolean {
-  return value != null && value !== ""
+  return notNullOrUndefined(value) && value !== ""
 }
 
 function ExceptionMessage({

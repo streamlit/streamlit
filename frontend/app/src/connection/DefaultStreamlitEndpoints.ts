@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+
 import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
 import {
   BaseUriParts,
@@ -93,7 +95,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const urlPath = page.urlPathname || pageName
     const navigateTo = page.isDefault ? "" : urlPath
 
-    if (pageLinkBaseURL != null && pageLinkBaseURL.length > 0) {
+    if (notNullOrUndefined(pageLinkBaseURL) && pageLinkBaseURL.length > 0) {
       return `${pageLinkBaseURL}/${navigateTo}`
     }
 
@@ -168,12 +170,12 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    */
   private requireServerUri(): BaseUriParts {
     const serverUri = this.getServerUri()
-    if (serverUri != null) {
+    if (notNullOrUndefined(serverUri)) {
       this.cachedServerUri = serverUri
       return serverUri
     }
 
-    if (this.cachedServerUri != null) {
+    if (notNullOrUndefined(this.cachedServerUri)) {
       return this.cachedServerUri
     }
 
@@ -192,7 +194,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_streamlit_xsrf")
-      if (xsrfCookie != null) {
+      if (notNullOrUndefined(xsrfCookie)) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
           ...(params.headers || {}),

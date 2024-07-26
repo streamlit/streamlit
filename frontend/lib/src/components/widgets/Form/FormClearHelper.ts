@@ -15,7 +15,10 @@
  */
 
 import { SignalConnection } from "typed-signals"
-import { isValidFormId } from "@streamlit/lib/src/util/utils"
+import {
+  isValidFormId,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 export class FormClearHelper {
@@ -41,7 +44,7 @@ export class FormClearHelper {
   ): void {
     // If we're already subscribed and our params haven't changed, early-out.
     if (
-      this.formClearListener != null &&
+      notNullOrUndefined(this.formClearListener) &&
       this.lastWidgetMgr === widgetMgr &&
       this.lastFormId === formId
     ) {

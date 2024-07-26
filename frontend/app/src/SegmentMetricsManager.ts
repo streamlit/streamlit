@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
+
 import pick from "lodash/pick"
 import {
   Delta,
@@ -119,7 +124,7 @@ export class SegmentMetricsManager {
       // Track component instance name.
       if (element.type === "componentInstance") {
         const componentName = element.componentInstance?.componentName
-        if (componentName != null) {
+        if (notNullOrUndefined(componentName)) {
           this.incrementCustomComponentCounter(componentName)
         }
       }
@@ -134,7 +139,9 @@ export class SegmentMetricsManager {
    * periodically, and enqueue an event with the result.
    */
   private incrementCustomComponentCounter(customInstanceName: string): void {
-    if (this.pendingCustomComponentCounter[customInstanceName] == null) {
+    if (
+      isNullOrUndefined(this.pendingCustomComponentCounter[customInstanceName])
+    ) {
       this.pendingCustomComponentCounter[customInstanceName] = 1
     } else {
       this.pendingCustomComponentCounter[customInstanceName]++

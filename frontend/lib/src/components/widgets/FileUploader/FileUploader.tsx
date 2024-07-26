@@ -20,6 +20,10 @@ import axios from "axios"
 import isEqual from "lodash/isEqual"
 import zip from "lodash/zip"
 import { FileRejection } from "react-dropzone"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+} from "@streamlit/lib/src/util/utils"
 
 import {
   FileUploader as FileUploaderProto,
@@ -42,8 +46,6 @@ import {
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
-
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
@@ -101,12 +103,12 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { widgetMgr, element } = this.props
 
     const widgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (widgetValue == null) {
+    if (isNullOrUndefined(widgetValue)) {
       return emptyState
     }
 
     const { uploadedFileInfo } = widgetValue
-    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
+    if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -360,7 +362,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     fileUrls: IFileURLs
   ): void => {
     const curFile = this.getFile(localFileId)
-    if (curFile == null || curFile.status.type !== "uploading") {
+    if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
       // The file may have been canceled right before the upload
       // completed. In this case, we just bail.
       return
@@ -407,7 +409,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   public deleteFile = (fileId: number): void => {
     const file = this.getFile(fileId)
-    if (file == null) {
+    if (isNullOrUndefined(file)) {
       return
     }
 
@@ -466,7 +468,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
     const file = this.getFile(fileId)
-    if (file == null || file.status.type !== "uploading") {
+    if (isNullOrUndefined(file) || file.status.type !== "uploading") {
       return
     }
 
@@ -493,7 +495,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState({ files: [] }, () => {
       const newWidgetValue = this.createWidgetValue()
-      if (newWidgetValue == null) {
+      if (isNullOrUndefined(newWidgetValue)) {
         return
       }
 

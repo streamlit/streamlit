@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+
 import { logWarning } from "@streamlit/lib"
 
 const BLOB_TYPE = "video/webm"
@@ -38,9 +40,9 @@ class ScreenCastRecorder {
   public static isSupportedBrowser(): boolean {
     try {
       return (
-        navigator.mediaDevices != null &&
-        navigator.mediaDevices.getUserMedia != null &&
-        navigator.mediaDevices.getDisplayMedia != null &&
+        notNullOrUndefined(navigator.mediaDevices) &&
+        notNullOrUndefined(navigator.mediaDevices.getUserMedia) &&
+        notNullOrUndefined(navigator.mediaDevices.getDisplayMedia) &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
     } catch (e) {

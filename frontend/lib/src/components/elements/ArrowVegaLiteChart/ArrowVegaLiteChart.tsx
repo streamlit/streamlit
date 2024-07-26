@@ -22,16 +22,16 @@ import * as vega from "vega"
 import { SignalValue } from "vega"
 import { expressionInterpreter } from "vega-interpreter"
 import isEqual from "lodash/isEqual"
-
-import {
-  WidgetInfo,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
 import {
   debounce,
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
+
+import {
+  WidgetInfo,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
 import { logMessage, logWarning } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
@@ -299,7 +299,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       spec.padding = {}
     }
 
-    if (spec.padding.bottom == null) {
+    if (isNullOrUndefined(spec.padding.bottom)) {
       spec.padding.bottom = BOTTOM_PADDING
     }
 

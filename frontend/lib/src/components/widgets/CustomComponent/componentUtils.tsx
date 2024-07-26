@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import {
   ArrowDataframe,
@@ -247,7 +248,7 @@ export function sendRenderMessage(
     return
   }
 
-  if (iframe.contentWindow == null) {
+  if (isNullOrUndefined(iframe.contentWindow)) {
     // Nor should this!
     logWarning("Can't send ForwardMsg; iframe has no contentWindow!")
     return

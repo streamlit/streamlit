@@ -16,7 +16,7 @@
 
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   ArrowNamedDataSet,
   Block as BlockProto,
@@ -1250,7 +1250,7 @@ declare global {
 expect.extend({
   toBeTextNode(received, text): jest.CustomMatcherResult {
     const elementNode = received as ElementNode
-    if (elementNode == null) {
+    if (isNullOrUndefined(elementNode)) {
       return {
         message: () => `expected ${received} to be an instance of ElementNode`,
         pass: false,

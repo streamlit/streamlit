@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
 import { StatefulMenu } from "baseui/menu"
@@ -261,7 +263,7 @@ function getDevMenuItems(coreDevMenuItems: Record<string, any>): any[] {
     }
   }
 
-  if (devLastMenuItem != null) {
+  if (notNullOrUndefined(devLastMenuItem)) {
     devLastMenuItem.styleProps = {
       margin: "0 0 -.5rem 0",
       padding: ".25rem 0 .25rem 1.5rem",
