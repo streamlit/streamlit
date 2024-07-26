@@ -15,13 +15,13 @@
  */
 
 import { logWarning } from "@streamlit/lib"
-import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
-import React, { PureComponent, ComponentType, ReactNode } from "react"
+import React, { ComponentType, PureComponent, ReactNode } from "react"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 
 import {
-  UnsupportedBrowserDialog,
   ScreencastDialog,
+  UnsupportedBrowserDialog,
   VideoRecordedDialog,
 } from "@streamlit/app/src/hocs/withScreencast/components"
 import Countdown from "@streamlit/app/src/components/Countdown"

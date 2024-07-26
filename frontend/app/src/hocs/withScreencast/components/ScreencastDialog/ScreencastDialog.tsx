@@ -18,10 +18,10 @@ import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import {
   BaseButtonKind,
   Modal,
-  ModalHeader,
   ModalBody,
-  ModalFooter,
   ModalButton,
+  ModalFooter,
+  ModalHeader,
 } from "@streamlit/lib"
 import { StyledInstruction, StyledRecordAudioLabel } from "./styled-components"
 

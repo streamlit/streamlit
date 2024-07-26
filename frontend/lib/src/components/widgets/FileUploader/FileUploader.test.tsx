@@ -17,16 +17,16 @@
 import "@testing-library/jest-dom"
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
 import userEvent from "@testing-library/user-event"
+import { render } from "@streamlit/lib/src/test_util"
 
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
+  IFileURLs,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  IFileURLs,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import FileUploader, { Props } from "./FileUploader"

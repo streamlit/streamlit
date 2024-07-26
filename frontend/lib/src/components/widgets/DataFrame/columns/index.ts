@@ -25,9 +25,9 @@ import ImageColumn from "./ImageColumn"
 import ProgressColumn from "./ProgressColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import {
-  LineChartColumn,
-  BarChartColumn,
   AreaChartColumn,
+  BarChartColumn,
+  LineChartColumn,
 } from "./ChartColumn"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"

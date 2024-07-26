@@ -16,29 +16,29 @@
 
 import React, {
   ReactElement,
-  useState,
-  useEffect,
   useCallback,
+  useEffect,
   useMemo,
+  useState,
 } from "react"
 import { withTheme } from "@emotion/react"
 import { toaster, ToastOverrides } from "baseui/toast"
 
 import {
-  hasLightBackgroundColor,
   EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
-import {
-  StyledViewButton,
-  StyledToastWrapper,
-  StyledMessageWrapper,
-} from "./styled-components"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
+import {
+  StyledMessageWrapper,
+  StyledToastWrapper,
+  StyledViewButton,
+} from "./styled-components"
 
 export interface ToastProps {
   theme: EmotionTheme

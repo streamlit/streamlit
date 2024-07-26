@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
-import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
+import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 
 import {
   DeckGlJsonChart,
@@ -27,6 +26,7 @@ import {
 
 import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import MapboxTokenError from "./MapboxTokenError"
 
 interface InjectedProps {
   mapboxToken: string

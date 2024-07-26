@@ -24,9 +24,9 @@ import {
   StyledDocSummary,
   StyledDocType,
   StyledDocValue,
-  StyledMembersSummaryCell,
   StyledMembersDetailsCell,
   StyledMembersRow,
+  StyledMembersSummaryCell,
   StyledMembersTable,
 } from "./styled-components"
 

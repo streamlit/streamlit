@@ -16,11 +16,10 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, within, waitFor } from "@testing-library/react"
-import { render, IMenuItem, mockSessionInfo, Config } from "@streamlit/lib"
-import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
-
+import { screen, waitFor, within } from "@testing-library/react"
+import { Config, IMenuItem, mockSessionInfo, render } from "@streamlit/lib"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
 
 import MainMenu, { Props } from "./MainMenu"
 

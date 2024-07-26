@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { FC, useState, useEffect, memo } from "react"
+import React, { FC, memo, useEffect, useState } from "react"
 
 import {
-  StyledSkeleton,
-  TitleSkeleton,
   ParagraphSkeleton,
-  TextLineSkeleton,
   SquareSkeleton,
+  StyledSkeleton,
+  TextLineSkeleton,
+  TitleSkeleton,
 } from "./styled-components"
 
 const SHOW_DELAY_MS = 500

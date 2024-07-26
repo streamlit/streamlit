@@ -15,9 +15,9 @@
  */
 
 import {
-  Primitives as ThemePrimitives,
   createTheme as createBaseTheme,
   lightThemePrimitives as lightBaseThemePrimitives,
+  Primitives as ThemePrimitives,
 } from "baseui"
 import { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"

@@ -165,6 +165,26 @@ module.exports = {
     "lodash/prefer-is-nil": "off",
     "lodash/prefer-matches": "off",
     "lodash/path-style": "off",
+    "sort-imports": [
+      "error",
+      {
+        ignoreCase: true,
+        ignoreDeclarationSort: true,
+      },
+    ],
+    "import/order": [
+      1,
+      {
+        groups: [
+          "external",
+          "builtin",
+          "internal",
+          "sibling",
+          "parent",
+          "index",
+        ],
+      },
+    ],
   },
   settings: {
     react: {

@@ -17,18 +17,18 @@
 import produce, { Draft } from "immer"
 import { Long, util } from "protobufjs"
 
+import { Signal, SignalConnection } from "typed-signals"
 import {
   DoubleArray,
   IArrowTable,
   IFileUploaderState,
   SInt64Array,
   StringArray,
-  Button as SubmitButtonProto,
   StringTriggerValue,
+  Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
 } from "./proto"
-import { Signal, SignalConnection } from "typed-signals"
 import { isValidFormId, notNullOrUndefined } from "./util/utils"
 
 export interface Source {

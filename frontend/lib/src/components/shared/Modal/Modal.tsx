@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement, FunctionComponent } from "react"
+import React, { FunctionComponent, ReactElement, ReactNode } from "react"
 import { useTheme } from "@emotion/react"
 import {
+  ModalProps,
   Modal as UIModal,
-  ModalHeader as UIModalHeader,
   ModalBody as UIModalBody,
   ModalFooter as UIModalFooter,
-  ModalProps,
+  ModalHeader as UIModalHeader,
 } from "baseui/modal"
+import merge from "lodash/merge"
 import BaseButton, {
   BaseButtonProps,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import merge from "lodash/merge"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { StyledModalButton } from "./styled-components"
 

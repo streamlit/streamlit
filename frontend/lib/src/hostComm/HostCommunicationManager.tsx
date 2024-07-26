@@ -16,19 +16,18 @@
 
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
 
-import {
-  IGuestToHostMessage,
-  IHostToGuestMessage,
-  VersionedMessage,
-  IMenuItem,
-  IToolbarItem,
-  DeployedAppMetadata,
-  AppConfig,
-} from "./types"
-
 import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
 import { PresetThemeName } from "@streamlit/lib/src/theme/types"
 import Resolver from "@streamlit/lib/src/util/Resolver"
+import {
+  AppConfig,
+  DeployedAppMetadata,
+  IGuestToHostMessage,
+  IHostToGuestMessage,
+  IMenuItem,
+  IToolbarItem,
+  VersionedMessage,
+} from "./types"
 
 export const HOST_COMM_VERSION = 1
 

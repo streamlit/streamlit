@@ -15,17 +15,17 @@
  */
 import "@testing-library/jest-dom"
 
-import {
-  parseLassoPath,
-  parseBoxSelection,
-  sendEmptySelection,
-  handleSelection,
-  applyTheming,
-} from "./PlotlyChart"
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
+import {
+  applyTheming,
+  handleSelection,
+  parseBoxSelection,
+  parseLassoPath,
+  sendEmptySelection,
+} from "./PlotlyChart"
 
 jest.mock("./CustomTheme", () => ({
   replaceTemporaryColors: jest.fn().mockReturnValue("{}"),

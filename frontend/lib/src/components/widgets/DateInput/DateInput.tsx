@@ -17,17 +17,17 @@
 import React from "react"
 import moment from "moment"
 import { withTheme } from "@emotion/react"
-import { Datepicker as UIDatePicker, DENSITY } from "baseui/datepicker"
+import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"

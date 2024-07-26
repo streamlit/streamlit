@@ -17,17 +17,17 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen, fireEvent, within } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import {
-  TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
+  TextInput as TextInputProto,
 } from "@streamlit/lib/src/proto"
-import TextInput, { Props } from "./TextInput"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import TextInput, { Props } from "./TextInput"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},

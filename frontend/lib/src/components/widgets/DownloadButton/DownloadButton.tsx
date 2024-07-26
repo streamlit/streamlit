@@ -17,9 +17,9 @@
 import React, { ReactElement } from "react"
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
-  BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
+  BaseButtonTooltip,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"

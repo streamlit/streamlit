@@ -15,10 +15,9 @@
  */
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
-
+import { fireEvent, screen } from "@testing-library/react"
 import { enableAllPlugins } from "immer"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 

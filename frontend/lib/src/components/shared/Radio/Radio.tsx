@@ -16,10 +16,10 @@
 
 import React from "react"
 import { withTheme } from "@emotion/react"
-import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
+import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelpInline,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"

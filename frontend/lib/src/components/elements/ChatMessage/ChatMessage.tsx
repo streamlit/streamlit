@@ -24,11 +24,11 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 import {
+  StyledAvatarBackground,
+  StyledAvatarIcon,
+  StyledAvatarImage,
   StyledChatMessageContainer,
   StyledMessageContent,
-  StyledAvatarImage,
-  StyledAvatarIcon,
-  StyledAvatarBackground,
 } from "./styled-components"
 
 interface ChatMessageAvatarProps {

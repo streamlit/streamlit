@@ -21,20 +21,20 @@ import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
 import {
   AppRoot,
-  VerticalBlock,
   ComponentRegistry,
+  createFormsData,
+  Delta as DeltaProto,
+  Element as ElementProto,
   FileUploadClient,
+  FormsData,
+  ForwardMsgMetadata as ForwardMsgMetadataProto,
+  render,
   ScriptRunState,
   SessionInfo,
   StreamlitEndpoints,
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-  Delta as DeltaProto,
-  Element as ElementProto,
-  ForwardMsgMetadata as ForwardMsgMetadataProto,
   Text as TextProto,
-  render,
+  VerticalBlock,
+  WidgetStateManager,
 } from "@streamlit/lib"
 
 /**

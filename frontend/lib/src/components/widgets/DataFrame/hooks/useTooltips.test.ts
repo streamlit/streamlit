@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-import { renderHook, act } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react-hooks"
+import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 import {
   BaseColumn,
-  TextColumn,
   NumberColumn,
+  TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useTooltips, {
   DEBOUNCE_TIME_MS,
   REQUIRED_CELL_TOOLTIP,
 } from "./useTooltips"
-import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 
 const TOOLTIP_CONTENT = "This is a **number** column."
 const MOCK_COLUMNS: BaseColumn[] = [

@@ -18,7 +18,7 @@ import React, { ReactElement, ReactNode } from "react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 
-import { StyledIcon, StyledEmojiIcon } from "./styled-components"
+import { StyledEmojiIcon, StyledIcon } from "./styled-components"
 
 interface GetDefaultPropsArgs {
   size?: IconSize

@@ -20,7 +20,7 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
-import { WidgetLabel, LabelProps } from "./WidgetLabel"
+import { LabelProps, WidgetLabel } from "./WidgetLabel"
 
 const getProps = (props?: Partial<LabelProps>): LabelProps => ({
   label: "Label",

@@ -19,20 +19,20 @@ import pick from "lodash/pick"
 import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
+import moment from "moment"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import { Slider as SliderProto } from "@streamlit/lib/src/proto"
 import {
   debounce,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import moment from "moment"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"

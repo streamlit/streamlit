@@ -17,20 +17,19 @@
 import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 
+import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
-  BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
+  BaseButtonTooltip,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
-
-import { Popover as UIPopover, TRIGGER_TYPE, PLACEMENT } from "baseui/popover"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
 

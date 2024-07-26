@@ -16,21 +16,21 @@
 
 import React, { ReactElement } from "react"
 import {
-  screen,
   fireEvent,
+  RenderResult,
+  screen,
   waitFor,
   within,
-  RenderResult,
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
-import { ToasterContainer, PLACEMENT } from "baseui/toast"
+import { PLACEMENT, ToasterContainer } from "baseui/toast"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { Toast as ToastProto } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import { Toast, ToastProps, shortenMessage } from "./Toast"
+import { shortenMessage, Toast, ToastProps } from "./Toast"
 
 // A Toaster Container is required to render Toasts
 // Don't import the actual one from EventContainer as that lives on app side

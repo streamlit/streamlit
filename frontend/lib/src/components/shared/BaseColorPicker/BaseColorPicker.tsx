@@ -18,19 +18,19 @@ import React from "react"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelpInline,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import {
-  StyledColorPicker,
   StyledChromePicker,
+  StyledColorBlock,
+  StyledColorPicker,
   StyledColorPreview,
   StyledColorValue,
-  StyledColorBlock,
 } from "./styled-components"
 
 export interface BaseColorPickerProps {

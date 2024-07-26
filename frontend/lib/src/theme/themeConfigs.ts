@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { lightThemePrimitives, darkThemePrimitives } from "baseui"
-import { baseuiLightTheme, baseuiDarkTheme } from "./baseui"
+import { darkThemePrimitives, lightThemePrimitives } from "baseui"
+import { baseuiDarkTheme, baseuiLightTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
 import emotionLightTheme from "./emotionLightTheme"
 import emotionDarkTheme from "./emotionDarkTheme"

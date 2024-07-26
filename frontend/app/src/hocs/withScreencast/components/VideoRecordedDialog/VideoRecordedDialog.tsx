@@ -19,17 +19,17 @@ import {
   BaseButton,
   BaseButtonKind,
   Modal,
-  ModalHeader,
   ModalBody,
+  ModalHeader,
 } from "@streamlit/lib"
 import {
   StyledDialogContainer,
-  StyledRow,
+  StyledDownloadButtonContainer,
   StyledFirstColumn,
+  StyledRow,
   StyledSecondColumn,
   StyledVideo,
   StyledVideoFormatInstructions,
-  StyledDownloadButtonContainer,
 } from "./styled-components"
 
 export interface Props {

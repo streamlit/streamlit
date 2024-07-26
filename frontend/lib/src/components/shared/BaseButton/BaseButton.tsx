@@ -16,22 +16,22 @@
 
 import React, { ReactElement } from "react"
 import {
-  BaseButtonProps as BaseButtonPropsT,
   BaseButtonKind,
+  BaseButtonProps as BaseButtonPropsT,
   BaseButtonSize,
   StyledBorderlessIconButton,
   StyledBorderlessIconButtonActive,
+  StyledElementToolbarButton,
+  StyledHeaderButton,
+  StyledHeaderNoPaddingButton,
   StyledIconButton,
   StyledLinkButton,
   StyledMinimalButton,
   StyledPrimaryButton,
-  StyledSecondaryButton,
-  StyledTertiaryButton,
   StyledPrimaryFormSubmitButton,
+  StyledSecondaryButton,
   StyledSecondaryFormSubmitButton,
-  StyledHeaderButton,
-  StyledHeaderNoPaddingButton,
-  StyledElementToolbarButton,
+  StyledTertiaryButton,
 } from "./styled-components"
 
 function BaseButton({

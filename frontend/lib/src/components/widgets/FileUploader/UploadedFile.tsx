@@ -30,11 +30,11 @@ import ProgressBar, {
 import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import { FileSize, getSizeDisplay } from "@streamlit/lib/src/util/FileHelper"
 import {
-  StyledUploadedFile,
-  StyledFileErrorIcon,
   StyledErrorMessage,
   StyledFileError,
+  StyledFileErrorIcon,
   StyledFileIcon,
+  StyledUploadedFile,
   StyledUploadedFileData,
   StyledUploadedFileName,
 } from "./styled-components"

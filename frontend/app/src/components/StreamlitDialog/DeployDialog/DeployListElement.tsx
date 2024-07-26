@@ -15,8 +15,8 @@
  */
 
 import React, { ReactElement } from "react"
-import { StyledElement } from "./styled-components"
 import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
+import { StyledElement } from "./styled-components"
 
 export interface IDeployListElementProps {
   children?: React.ReactNode

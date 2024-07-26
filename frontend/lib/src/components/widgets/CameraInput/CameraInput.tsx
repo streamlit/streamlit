@@ -48,8 +48,8 @@ import { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
-  StyledSpan,
   StyledImg,
+  StyledSpan,
 } from "./styled-components"
 import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 

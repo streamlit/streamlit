@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState, useRef } from "react"
+import React, { ReactElement, useEffect, useRef, useState } from "react"
 
 import { withTheme } from "@emotion/react"
 import queryString from "query-string"
@@ -45,9 +45,9 @@ import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { ComponentRegistry } from "./ComponentRegistry"
 import {
   Args,
+  createIframeMessageHandler,
   DataframeArg,
   IframeMessageHandlerProps,
-  createIframeMessageHandler,
   parseArgs,
   sendRenderMessage,
 } from "./componentUtils"

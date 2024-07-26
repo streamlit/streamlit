@@ -16,14 +16,14 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, fireEvent, within } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 import {
+  CustomThemeConfig,
   darkTheme,
+  fonts,
+  LibContextProps,
   lightTheme,
   toThemeInput,
-  fonts,
-  CustomThemeConfig,
-  LibContextProps,
 } from "@streamlit/lib"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 

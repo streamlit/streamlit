@@ -18,8 +18,8 @@ import React from "react"
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import BaseColorPicker from "@streamlit/lib/src/components/shared/BaseColorPicker"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"

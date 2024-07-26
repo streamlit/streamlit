@@ -15,7 +15,7 @@
  */
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -28,11 +28,11 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import {
-  NumberInput,
-  Props,
   canDecrement,
   canIncrement,
   formatValue,
+  NumberInput,
+  Props,
 } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({

@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
+import React, { ReactElement, Suspense } from "react"
+import debounceRender from "react-debounce-render"
 import {
-  Arrow as ArrowProto,
   Alert as AlertProto,
+  Arrow as ArrowProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
-  Button as ButtonProto,
   ButtonGroup as ButtonGroupProto,
-  DownloadButton as DownloadButtonProto,
+  Button as ButtonProto,
   CameraInput as CameraInputProto,
   ChatInput as ChatInputProto,
   Checkbox as CheckboxProto,
@@ -29,39 +30,37 @@ import {
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
-  FileUploader as FileUploaderProto,
-  Html as HtmlProto,
-  MultiSelect as MultiSelectProto,
-  NumberInput as NumberInputProto,
-  Radio as RadioProto,
-  Skeleton as SkeletonProto,
-  Selectbox as SelectboxProto,
-  Slider as SliderProto,
-  Spinner as SpinnerProto,
-  TextArea as TextAreaProto,
-  TextInput as TextInputProto,
-  TimeInput as TimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
+  DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
+  Heading as HeadingProto,
+  Html as HtmlProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
+  MultiSelect as MultiSelectProto,
+  NumberInput as NumberInputProto,
   PageLink as PageLinkProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
+  Radio as RadioProto,
+  Selectbox as SelectboxProto,
+  Skeleton as SkeletonProto,
+  Slider as SliderProto,
+  Spinner as SpinnerProto,
+  TextArea as TextAreaProto,
+  TextInput as TextInputProto,
   Text as TextProto,
+  TimeInput as TimeInputProto,
   Toast as ToastProto,
   Video as VideoProto,
-  Heading as HeadingProto,
 } from "@streamlit/lib/src/proto"
-
-import React, { ReactElement, Suspense } from "react"
-import debounceRender from "react-debounce-render"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 
@@ -87,8 +86,8 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import {
   BaseBlockProps,
-  shouldComponentBeEnabled,
   isComponentStale,
+  shouldComponentBeEnabled,
 } from "./utils"
 
 import { StyledElementContainer } from "./styled-components"

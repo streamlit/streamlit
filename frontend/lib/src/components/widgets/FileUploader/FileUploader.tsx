@@ -37,8 +37,8 @@ import {
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -46,7 +46,7 @@ import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
-import { UploadFileInfo, UploadedStatus } from "./UploadFileInfo"
+import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   disabled: boolean

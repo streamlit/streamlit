@@ -23,19 +23,19 @@ import { withTheme } from "@emotion/react"
 import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
-  labelVisibilityProtoValueToEnum,
   isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
 
 import { StyledClearIconContainer } from "./styled-components"

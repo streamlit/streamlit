@@ -18,16 +18,16 @@ import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 import {
-  RERUN_PROMPT_MODAL_DIALOG,
   BaseButton,
   BaseButtonKind,
-  Tooltip,
-  Placement,
-  ScriptRunState,
-  Timer,
-  Icon,
   EmotionTheme,
+  Icon,
+  Placement,
+  RERUN_PROMPT_MODAL_DIALOG,
+  ScriptRunState,
   SessionEvent,
+  Timer,
+  Tooltip,
 } from "@streamlit/lib"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
@@ -45,12 +45,12 @@ import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 
 import {
-  StyledConnectionStatus,
-  StyledConnectionStatusLabel,
-  StyledAppStatus,
   StyledAppButtonContainer,
   StyledAppRunningIcon,
+  StyledAppStatus,
   StyledAppStatusLabel,
+  StyledConnectionStatus,
+  StyledConnectionStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"

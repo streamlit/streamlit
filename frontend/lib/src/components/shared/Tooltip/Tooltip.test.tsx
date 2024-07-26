@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 import { render } from "@streamlit/lib/src/test_util"
 

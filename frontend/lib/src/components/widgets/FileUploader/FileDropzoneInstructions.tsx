@@ -22,9 +22,9 @@ import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 
 import {
   StyledFileDropzoneInstructions,
+  StyledFileDropzoneInstructionsColumn,
   StyledFileDropzoneInstructionsFileUploaderIcon,
   StyledFileDropzoneInstructionsStyledSpan,
-  StyledFileDropzoneInstructionsColumn,
 } from "./styled-components"
 
 export interface Props {

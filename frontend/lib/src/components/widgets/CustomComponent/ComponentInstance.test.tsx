@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { act, screen, fireEvent } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import {
   ComponentInstance as ComponentInstanceProto,

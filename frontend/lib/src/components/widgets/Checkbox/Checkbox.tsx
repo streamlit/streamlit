@@ -16,18 +16,18 @@
 
 import React from "react"
 import { withTheme } from "@emotion/react"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import {
-  Checkbox as UICheckbox,
-  STYLE_TYPE,
   LABEL_PLACEMENT,
+  STYLE_TYPE,
+  Checkbox as UICheckbox,
 } from "baseui/checkbox"
-import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
 import { transparentize } from "color2k"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import {
   EmotionTheme,
@@ -38,7 +38,7 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
-import { StyledContent, StyledCheckbox } from "./styled-components"
+import { StyledCheckbox, StyledContent } from "./styled-components"
 
 export interface OwnProps {
   disabled: boolean

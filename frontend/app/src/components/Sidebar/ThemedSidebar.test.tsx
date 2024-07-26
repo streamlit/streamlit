@@ -17,7 +17,7 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { emotionLightTheme, render, mockEndpoints } from "@streamlit/lib"
+import { emotionLightTheme, mockEndpoints, render } from "@streamlit/lib"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
 

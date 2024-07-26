@@ -28,22 +28,22 @@ import {
 } from "@streamlit/lib/src/proto"
 import { logError } from "@streamlit/lib/src/util/log"
 import {
-  LocalStore,
   localStorageAvailable,
+  LocalStore,
 } from "@streamlit/lib/src/util/storageUtils"
 import {
   baseTheme,
   CachedTheme,
   darkTheme,
-  lightTheme,
   EmotionTheme,
+  lightTheme,
   ThemeConfig,
   ThemeSpacing,
 } from "@streamlit/lib/src/theme"
 
 import {
-  isLightThemeInQueryParams,
   isDarkThemeInQueryParams,
+  isLightThemeInQueryParams,
 } from "@streamlit/lib/src/util/utils"
 
 import { fonts } from "./primitives/typography"

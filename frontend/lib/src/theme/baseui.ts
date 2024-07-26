@@ -15,8 +15,8 @@
  */
 
 import {
-  lightThemePrimitives as baseuiLightThemePrimitives,
   darkThemePrimitives as baseuiDarkThemePrimitives,
+  lightThemePrimitives as baseuiLightThemePrimitives,
 } from "baseui"
 import emotionLightTheme from "./emotionLightTheme"
 import emotionDarkTheme from "./emotionDarkTheme"

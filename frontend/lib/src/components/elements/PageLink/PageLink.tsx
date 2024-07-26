@@ -28,8 +28,8 @@ import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContex
 
 import {
   StyledNavLink,
-  StyledNavLinkText,
   StyledNavLinkContainer,
+  StyledNavLinkText,
 } from "./styled-components"
 
 export interface Props {

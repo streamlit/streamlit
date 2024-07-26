@@ -20,19 +20,19 @@ import "@testing-library/jest-dom"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import {
-  CUSTOM_COMPONENT_API_VERSION,
-  IframeMessage,
-  IframeMessageHandlerProps,
-  createIframeMessageHandler,
-  parseArgs,
-  sendRenderMessage,
-} from "./componentUtils"
-import { ComponentMessageType, StreamlitMessageType } from "./enums"
-import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import {
+  createIframeMessageHandler,
+  CUSTOM_COMPONENT_API_VERSION,
+  IframeMessage,
+  IframeMessageHandlerProps,
+  parseArgs,
+  sendRenderMessage,
+} from "./componentUtils"
+import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock our WidgetStateManager
 jest.mock("@streamlit/lib/src/WidgetStateManager")

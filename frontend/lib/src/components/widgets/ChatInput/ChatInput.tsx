@@ -15,11 +15,11 @@
  */
 
 import React, {
+  ChangeEvent,
+  KeyboardEvent,
   useEffect,
   useRef,
   useState,
-  ChangeEvent,
-  KeyboardEvent,
 } from "react"
 import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
@@ -33,8 +33,8 @@ import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 
 import {
-  StyledChatInputContainer,
   StyledChatInput,
+  StyledChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,

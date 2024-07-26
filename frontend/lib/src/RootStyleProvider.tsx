@@ -19,8 +19,8 @@ import { BaseProvider } from "baseui"
 import createCache from "@emotion/cache"
 import {
   CacheProvider,
-  Global,
   ThemeProvider as EmotionThemeProvider,
+  Global,
 } from "@emotion/react"
 import { globalStyles, ThemeConfig } from "./theme"
 

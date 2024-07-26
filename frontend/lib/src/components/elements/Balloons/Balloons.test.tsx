@@ -15,11 +15,11 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
 
-import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
+import Balloons, { NUM_BALLOONS, Props } from "./Balloons"
 
 const getProps = (): Props => ({
   scriptRunId: "51522269",

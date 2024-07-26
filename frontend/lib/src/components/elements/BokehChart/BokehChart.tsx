@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useCallback } from "react"
+import React, { ReactElement, useCallback, useEffect } from "react"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 

@@ -19,13 +19,13 @@ import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { BaseColumnProps, isErrorCell } from "./utils"
 import {
-  ChartColumnParams,
-  LineChartColumn,
-  BarChartColumn,
-  AreaChartColumn,
-  LINE_CHART_TYPE,
   AREA_CHART_TYPE,
+  AreaChartColumn,
   BAR_CHART_TYPE,
+  BarChartColumn,
+  ChartColumnParams,
+  LINE_CHART_TYPE,
+  LineChartColumn,
 } from "./ChartColumn"
 
 const CHART_COLUMN_TEMPLATE = {

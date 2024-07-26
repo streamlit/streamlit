@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Writer } from "protobufjs"
+import { vectorFromArray } from "apache-arrow"
 import {
   ArrowNamedDataSet,
   Block as BlockProto,
@@ -22,11 +24,9 @@ import {
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
 } from "./proto"
-import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
+import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
 import { IndexTypeName } from "./dataframes/Quiver"
 import { UNICODE } from "./mocks/arrow"
-import { Writer } from "protobufjs"
-import { vectorFromArray } from "apache-arrow"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 const FAKE_SCRIPT_HASH = "fake_script_hash"

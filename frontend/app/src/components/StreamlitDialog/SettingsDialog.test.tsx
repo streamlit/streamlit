@@ -21,14 +21,14 @@ import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 
 import {
   createPresetThemes,
-  lightTheme,
   darkTheme,
-  mockSessionInfo,
   LibContextProps,
+  lightTheme,
+  mockSessionInfo,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
-import { SettingsDialog, Props } from "./SettingsDialog"
+import { Props, SettingsDialog } from "./SettingsDialog"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()

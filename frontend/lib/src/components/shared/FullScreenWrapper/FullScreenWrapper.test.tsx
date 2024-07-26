@@ -19,7 +19,7 @@ import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import { render, customRenderLibContext } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
 
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
 

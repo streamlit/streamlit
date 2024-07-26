@@ -15,11 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
-import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
+import { OptionListProps, StyledEmptyState, StyledList } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 import {
-  Placement,
   OverflowTooltip,
+  Placement,
 } from "@streamlit/lib/src/components/shared/Tooltip"
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
