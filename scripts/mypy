@@ -32,11 +32,6 @@ import click
 import mypy.main as mypy_main
 
 PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
-EXCLUDE_FILES = {
-    os.path.join("scripts", "add_license_headers.py"),
-    os.path.join("e2e", "scripts", "st_reuse_label.py"),
-    os.path.join("scripts", "license-template.txt"),
-}
 
 
 def shlex_join(split_command: Iterable[str]):
