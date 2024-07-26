@@ -7892,6 +7892,9 @@ eslint-plugin-react@^7.27.1, eslint-plugin-react@^7.32.2:
     semver "^6.3.0"
     string.prototype.matchall "^4.0.8"
 
+"eslint-plugin-streamlit-custom@file:./eslint-plugin-streamlit-custom":
+  version "1.0.0"
+
 eslint-plugin-testing-library@^5.0.1:
   version "5.10.0"
   resolved "https://registry.yarnpkg.com/eslint-plugin-testing-library/-/eslint-plugin-testing-library-5.10.0.tgz#7fc5fec639ae7f84f434562560cf26cfc0ab329d"
