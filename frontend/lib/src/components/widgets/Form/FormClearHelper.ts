@@ -15,7 +15,6 @@
  */
 
 import { SignalConnection } from "typed-signals"
-
 import { isValidFormId } from "@streamlit/lib/src/util/utils"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 

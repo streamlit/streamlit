@@ -18,12 +18,10 @@ import React, { ReactElement, ReactNode } from "react"
 
 import { useTheme } from "@emotion/react"
 import { ACCESSIBILITY_TYPE, PLACEMENT, StatefulTooltip } from "baseui/tooltip"
-
 import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-
 import { StyledTooltipContentWrapper } from "./styled-components"
 
 export enum Placement {

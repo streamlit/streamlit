@@ -17,6 +17,12 @@
 import get from "lodash/get"
 import xxhash from "xxhashjs"
 import decamelize from "decamelize"
+import {
+  Alert as AlertProto,
+  Element,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Skeleton as SkeletonProto,
+} from "@streamlit/lib/src/proto"
 
 import {
   Alert as AlertProto,

@@ -15,7 +15,6 @@
  */
 
 import React, { ReactElement } from "react"
-
 import { css, Global } from "@emotion/react"
 
 export interface FontFaceDeclarationProps {

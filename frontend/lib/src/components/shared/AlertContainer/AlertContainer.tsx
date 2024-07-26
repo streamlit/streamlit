@@ -17,9 +17,7 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { KIND, Notification } from "baseui/notification"
-
 import { radii } from "@streamlit/lib/src/theme/primitives"
-
 import { StyledAlertContent } from "./styled-components"
 
 export enum Kind {

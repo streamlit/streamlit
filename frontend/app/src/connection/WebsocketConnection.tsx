@@ -35,7 +35,6 @@ import {
   SessionInfo,
   StreamlitEndpoints,
 } from "@streamlit/lib"
-
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 
 /**

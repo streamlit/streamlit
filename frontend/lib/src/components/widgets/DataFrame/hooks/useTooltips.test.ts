@@ -16,7 +16,6 @@
 
 import { act, renderHook } from "@testing-library/react-hooks"
 import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
-
 import {
   BaseColumn,
   NumberColumn,

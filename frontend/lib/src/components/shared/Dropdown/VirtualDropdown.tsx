@@ -15,7 +15,6 @@
  */
 
 import React, { ReactElement } from "react"
-
 import { OptionListProps, StyledEmptyState, StyledList } from "baseui/menu"
 import { FixedSizeList } from "react-window"
 

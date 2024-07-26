@@ -26,6 +26,7 @@ import {
   Source,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
+import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 

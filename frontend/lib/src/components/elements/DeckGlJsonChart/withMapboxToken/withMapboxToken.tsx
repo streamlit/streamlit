@@ -26,7 +26,6 @@ import {
 } from "@streamlit/lib/src/proto"
 import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-
 import MapboxTokenError from "./MapboxTokenError"
 
 interface InjectedProps {

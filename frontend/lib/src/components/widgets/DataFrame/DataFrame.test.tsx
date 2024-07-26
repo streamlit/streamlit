@@ -18,7 +18,6 @@ import React from "react"
 
 import { screen } from "@testing-library/react"
 import * as glideDataGridModule from "@glideapps/glide-data-grid"
-
 import { TEN_BY_TEN } from "@streamlit/lib/src/mocks/arrow"
 import { render } from "@streamlit/lib/src/test_util"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"

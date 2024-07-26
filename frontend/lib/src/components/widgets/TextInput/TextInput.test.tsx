@@ -27,6 +27,7 @@ import {
   TextInput as TextInputProto,
 } from "@streamlit/lib/src/proto"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import TextInput, { Props } from "./TextInput"
 
 import TextInput, { Props } from "./TextInput"
 

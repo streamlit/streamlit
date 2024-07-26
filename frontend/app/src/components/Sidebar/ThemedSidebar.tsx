@@ -22,9 +22,7 @@ import {
   ThemeConfig,
   ThemeProvider,
 } from "@streamlit/lib"
-
 import { AppContext } from "@streamlit/app/src/components/AppContext"
-
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {

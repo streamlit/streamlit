@@ -20,6 +20,8 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
+
+// Other local imports.
 import {
   AppConfig,
   AppRoot,
@@ -96,8 +98,11 @@ import {
   WidgetStates,
 } from "@streamlit/lib"
 import without from "lodash/without"
-import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
-
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+  preserveEmbedQueryParams,
+} from "@streamlit/lib/src/util/utils"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"
@@ -113,10 +118,14 @@ import {
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
+
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
+
 import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+
 import { StyledApp } from "@streamlit/app/src/styled-components"
+
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -585,8 +594,8 @@ export class App extends PureComponent<Props, State> {
       const { environmentInfo } = initializeMsg
 
       if (
-        environmentInfo != null &&
-        environmentInfo.streamlitVersion != null
+        notNullOrUndefined(environmentInfo) &&
+        notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
         return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
@@ -876,7 +885,7 @@ export class App extends PureComponent<Props, State> {
         // If the scriptCompileError dialog is open and the script starts
         // running, close it.
         if (
-          dialog != null &&
+          notNullOrUndefined(dialog) &&
           dialog.type === DialogType.SCRIPT_COMPILE_ERROR
         ) {
           dialog = undefined
@@ -1106,7 +1115,7 @@ export class App extends PureComponent<Props, State> {
     const hasAnchor = document.location.toString().includes("#")
     const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
-    if (targetAppPage == null || (hasAnchor && isSamePage)) {
+    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
     this.onPageChange(targetAppPage.pageScriptHash as string)

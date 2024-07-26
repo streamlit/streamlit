@@ -15,7 +15,6 @@
  */
 
 import React, { ReactElement, ReactNode, useEffect } from "react"
-
 import { PLACEMENT, toaster, ToasterContainer } from "baseui/toast"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib"

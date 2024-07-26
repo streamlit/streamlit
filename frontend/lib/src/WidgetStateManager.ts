@@ -18,6 +18,7 @@ import produce, { Draft } from "immer"
 import { Long, util } from "protobufjs"
 import { Signal, SignalConnection } from "typed-signals"
 
+import { Signal, SignalConnection } from "typed-signals"
 import {
   DoubleArray,
   IArrowTable,

@@ -54,7 +54,6 @@ import {
 } from "@streamlit/lib/src/theme"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
-
 import {
   StyledHeadingActionElements,
   StyledHeadingWithActionElements,

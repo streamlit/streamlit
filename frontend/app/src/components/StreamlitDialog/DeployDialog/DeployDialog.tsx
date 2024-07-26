@@ -15,8 +15,8 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback, useContext } from "react"
-
 import { StyledAction, StyledBody } from "baseui/card"
+
 import { BaseButton, BaseButtonKind, GitInfo, IGitInfo } from "@streamlit/lib"
 
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
