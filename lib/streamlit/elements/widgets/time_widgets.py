@@ -522,8 +522,7 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: DateValue
-        | Literal["today"]
-        | Literal["default_value_today"] = "default_value_today",
+        | Literal["today", "default_value_today"] = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
