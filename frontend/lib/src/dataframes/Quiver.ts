@@ -1188,7 +1188,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
    * the Styler CSS with the styled data.
    */
   public get cssId(): string | undefined {
-    if (isNullOrUndefined(this._styler?.uuid)) {
+    if (
+      isNullOrUndefined(this._styler) ||
+      isNullOrUndefined(this._styler.uuid)
+    ) {
       return undefined
     }
 
