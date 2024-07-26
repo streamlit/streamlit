@@ -113,7 +113,7 @@ def main(report: bool = False, verbose: bool = False) -> None:
     for path in PATHS:
         if "*" in path:
             for filename in glob.glob(path):
-                if not (filename in EXCLUDE_FILES or filename.endswith(".sh")):
+                if not filename.endswith(".sh"): #TODO: should this also exclude .txt?
                     paths.append(filename)
         else:
             paths.append(path)
