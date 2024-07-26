@@ -147,7 +147,7 @@
     "babel-jest": "^27.4.3",
     "babel-plugin-emotion": "^11.0.0",
     "babel-plugin-module-resolver": "^5.0.0",
-    "eslint-plugin-streamlit-custom": "file:./eslint-plugin-streamlit-custom",
+    "eslint-plugin-streamlit-custom": "file:../eslint-plugin-streamlit-custom",
     "jest": "^27.4.3",
     "jest-environment-jsdom": "^27.4.3",
     "jest-fetch-mock": "^3.0.3",
