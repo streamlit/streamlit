@@ -18,10 +18,10 @@
 /* eslint-disable no-underscore-dangle */
 
 import {
-  Field,
   Schema as ArrowSchema,
-  Null,
   Dictionary,
+  Field,
+  Null,
   Struct,
   StructRow,
   Table,
