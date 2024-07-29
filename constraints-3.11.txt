@@ -115,7 +115,7 @@ smmap==5.0.1
 snowflake-connector-python==3.12.0
 snowflake-snowpark-python==1.20.0
 sortedcontainers==2.4.0
-SQLAlchemy==1.4.52
+SQLAlchemy==1.4.53
 sqlalchemy2-stubs==0.0.2a38
 tenacity==8.5.0
 testfixtures==8.3.0
@@ -137,7 +137,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.30
+uv==0.2.31
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
