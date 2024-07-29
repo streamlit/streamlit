@@ -20,7 +20,6 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
-// Other local imports.
 import {
   AppConfig,
   AppRoot,
