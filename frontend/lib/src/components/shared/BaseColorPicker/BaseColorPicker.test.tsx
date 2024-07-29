@@ -15,11 +15,13 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+
 import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
 
 const getProps = (

@@ -15,8 +15,10 @@
  */
 
 import { MouseEvent, ReactNode } from "react"
+
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface CameraInputButtonProps {

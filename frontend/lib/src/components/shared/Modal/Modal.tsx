@@ -15,6 +15,7 @@
  */
 
 import React, { FunctionComponent, ReactElement, ReactNode } from "react"
+
 import { useTheme } from "@emotion/react"
 import {
   ModalProps,
@@ -24,10 +25,12 @@ import {
   ModalHeader as UIModalHeader,
 } from "baseui/modal"
 import merge from "lodash/merge"
+
 import BaseButton, {
   BaseButtonProps,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {

@@ -21,12 +21,13 @@ import React, {
   useRef,
   useState,
 } from "react"
+
 import { Video } from "@emotion-icons/open-iconic"
 import { useTheme } from "@emotion/react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
-import { debounce } from "@streamlit/lib/src/util/utils"
 
+import { debounce } from "@streamlit/lib/src/util/utils"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"

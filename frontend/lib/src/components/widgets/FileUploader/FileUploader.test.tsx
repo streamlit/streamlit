@@ -16,10 +16,11 @@
 
 import "@testing-library/jest-dom"
 import React from "react"
+
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
@@ -29,6 +30,7 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import FileUploader, { Props } from "./FileUploader"
 
 const createFile = (filename = "filename.txt"): File => {

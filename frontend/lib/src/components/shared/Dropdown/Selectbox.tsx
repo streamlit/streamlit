@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
 import { OnChangeParams, Option, Select as UISelect } from "baseui/select"

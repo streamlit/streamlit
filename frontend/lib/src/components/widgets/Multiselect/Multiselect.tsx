@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { isMobile } from "react-device-detect"
 import without from "lodash/without"
 import { withTheme } from "@emotion/react"
@@ -25,6 +26,7 @@ import {
   TYPE,
   Select as UISelect,
 } from "baseui/select"
+
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
   Source,

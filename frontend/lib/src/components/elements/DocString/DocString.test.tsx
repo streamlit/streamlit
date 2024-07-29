@@ -15,11 +15,13 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 
 import { DocString as DocStringProto } from "@streamlit/lib/src/proto"
 import { render } from "@streamlit/lib/src/test_util"
+
 import DocString, { DocStringProps, Member } from "./DocString"
 
 const getProps = (

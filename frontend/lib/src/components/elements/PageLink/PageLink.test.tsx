@@ -15,12 +15,14 @@
  */
 
 import React from "react"
+
 import { fireEvent, screen } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
-
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
+
 import PageLink, { Props } from "./PageLink"
 
 const getProps = (

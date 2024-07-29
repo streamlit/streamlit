@@ -21,6 +21,7 @@ import React, {
   useMemo,
   useState,
 } from "react"
+
 import { withTheme } from "@emotion/react"
 import { toaster, ToastOverrides } from "baseui/toast"
 
@@ -28,12 +29,11 @@ import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
-
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
+
 import {
   StyledMessageWrapper,
   StyledToastWrapper,

@@ -16,6 +16,7 @@
 
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
+
 import {
   ArrowNamedDataSet,
   Block as BlockProto,

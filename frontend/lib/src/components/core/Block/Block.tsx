@@ -22,7 +22,9 @@ import React, {
   useMemo,
   useRef,
 } from "react"
+
 import { useTheme } from "@emotion/react"
+
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
@@ -45,7 +47,6 @@ import {
   shouldComponentBeEnabled,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
-
 import {
   StyledColumn,
   StyledHorizontalBlock,

@@ -15,10 +15,12 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
+
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
 

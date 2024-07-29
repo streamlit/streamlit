@@ -16,6 +16,7 @@
 
 import { css, SerializedStyles } from "@emotion/react"
 import { darken, readableColor, transparentize } from "color2k"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`

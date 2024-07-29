@@ -15,11 +15,13 @@
  */
 
 import React from "react"
+
 import pick from "lodash/pick"
 import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
 import moment from "moment"
+
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
   Source,
@@ -37,6 +39,7 @@ import {
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import {
   StyledThumb,
   StyledThumbValue,

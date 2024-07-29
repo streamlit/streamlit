@@ -15,6 +15,7 @@
  */
 
 import React, { createRef, PureComponent, ReactNode } from "react"
+
 import Clipboard from "clipboard"
 import { Copy as CopyIcon } from "react-feather"
 

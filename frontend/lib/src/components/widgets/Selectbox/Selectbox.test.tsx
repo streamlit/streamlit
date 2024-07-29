@@ -15,13 +15,15 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import { Props, Selectbox } from "./Selectbox"
 
 const getProps = (

@@ -15,14 +15,15 @@
  */
 
 import React, { MouseEvent, ReactElement } from "react"
+
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
 import {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {

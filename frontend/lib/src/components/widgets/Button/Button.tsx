@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
   BaseButtonKind,

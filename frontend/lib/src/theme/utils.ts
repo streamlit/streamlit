@@ -40,7 +40,6 @@ import {
   ThemeConfig,
   ThemeSpacing,
 } from "@streamlit/lib/src/theme"
-
 import {
   isDarkThemeInQueryParams,
   isLightThemeInQueryParams,

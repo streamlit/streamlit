@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
@@ -43,6 +44,7 @@ import {
   UploadFileInfo,
   UploadingStatus,
 } from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
+
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {

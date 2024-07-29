@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {

@@ -25,7 +25,6 @@ import React, {
 
 import { useTheme } from "@emotion/react"
 import isEqual from "lodash/isEqual"
-
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
 import BaseButton, {
@@ -34,7 +33,6 @@ import BaseButton, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"

@@ -15,12 +15,13 @@
  */
 
 import React, { ReactElement, useRef } from "react"
+
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import Clipboard from "clipboard"
-import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import {
   EmotionTheme,

@@ -26,7 +26,6 @@ import {
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { logError, logWarning } from "@streamlit/lib/src/util/log"
-
 import {
   getAllColumnsFromArrow,
   getColumnTypeFromArrow,

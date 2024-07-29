@@ -15,6 +15,7 @@
  */
 
 import React, { ComponentType, PureComponent, ReactNode } from "react"
+
 import hoistNonReactStatics from "hoist-non-react-statics"
 
 import FullScreenWrapper from "./FullScreenWrapper"

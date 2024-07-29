@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement, Suspense } from "react"
+
 import debounceRender from "react-debounce-render"
+
 import {
   Alert as AlertProto,
   Arrow as ArrowProto,
@@ -78,7 +80,6 @@ import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
-
 import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
@@ -89,7 +90,6 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-
 import { StyledElementContainer } from "./styled-components"
 
 // Lazy-load elements.

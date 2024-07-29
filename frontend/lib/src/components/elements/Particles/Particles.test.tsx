@@ -15,7 +15,9 @@
  */
 
 import React, { FC } from "react"
+
 import { screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
 

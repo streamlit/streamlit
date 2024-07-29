@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { BaseProvider } from "baseui"
 import createCache from "@emotion/cache"
 import {
@@ -22,6 +23,7 @@ import {
   ThemeProvider as EmotionThemeProvider,
   Global,
 } from "@emotion/react"
+
 import { globalStyles, ThemeConfig } from "./theme"
 
 export interface RootStyleProviderProps {

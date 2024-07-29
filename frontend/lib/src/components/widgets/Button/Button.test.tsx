@@ -15,12 +15,14 @@
  */
 
 import React from "react"
+
 import { fireEvent, screen } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
+
 import Button, { Props } from "./Button"
 
 jest.mock("@streamlit/lib/src/WidgetStateManager")

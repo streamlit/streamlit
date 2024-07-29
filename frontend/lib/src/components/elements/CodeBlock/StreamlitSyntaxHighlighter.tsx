@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"

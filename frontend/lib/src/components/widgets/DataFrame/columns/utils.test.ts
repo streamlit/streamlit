@@ -37,6 +37,7 @@ import {
   toSafeString,
   truncateDecimals,
 } from "./utils"
+
 import { TextColumn } from "./index"
 
 const MOCK_TEXT_COLUMN_PROPS = {

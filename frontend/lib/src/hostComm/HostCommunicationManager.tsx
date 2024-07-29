@@ -15,10 +15,10 @@
  */
 
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
-
 import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
 import { PresetThemeName } from "@streamlit/lib/src/theme/types"
 import Resolver from "@streamlit/lib/src/util/Resolver"
+
 import {
   AppConfig,
   DeployedAppMetadata,

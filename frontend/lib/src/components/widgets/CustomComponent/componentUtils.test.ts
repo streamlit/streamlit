@@ -18,12 +18,12 @@ import { RefObject } from "react"
 import "@testing-library/jest-dom"
 
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import {
   createIframeMessageHandler,
   CUSTOM_COMPONENT_API_VERSION,

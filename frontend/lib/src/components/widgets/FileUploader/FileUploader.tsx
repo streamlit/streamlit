@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import axios from "axios"
 import isEqual from "lodash/isEqual"
 import zip from "lodash/zip"
@@ -28,7 +29,6 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-
 import {
   FileSize,
   getSizeDisplay,
@@ -43,6 +43,7 @@ import {
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"

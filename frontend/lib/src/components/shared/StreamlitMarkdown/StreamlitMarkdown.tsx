@@ -22,6 +22,7 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
+
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
 import ReactMarkdown from "react-markdown"
@@ -51,9 +52,9 @@ import {
   getMarkdownBgColors,
   getMarkdownTextColors,
 } from "@streamlit/lib/src/theme"
-
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+
 import {
   StyledHeadingActionElements,
   StyledHeadingWithActionElements,

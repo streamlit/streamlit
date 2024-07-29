@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { withTheme } from "@emotion/react"
 import {
   LABEL_PLACEMENT,
@@ -22,6 +23,7 @@ import {
   Checkbox as UICheckbox,
 } from "baseui/checkbox"
 import { transparentize } from "color2k"
+
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
