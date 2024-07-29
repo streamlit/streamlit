@@ -623,10 +623,22 @@ export class App extends PureComponent<Props, State> {
     )
 
     if (newState === ConnectionState.CONNECTED) {
-      logMessage("Reconnected to server; requesting a script run")
-      // Trigger a full app rerun:
-      this.widgetMgr.sendUpdateWidgetsMessage(undefined)
-      this.setState({ dialog: null })
+      logMessage("Reconnected to server.")
+
+      const lastRunWasInterrupted =
+        this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED ||
+        this.state.scriptRunState === ScriptRunState.RUNNING
+
+      // We request a script rerun if:
+      //   1. this is the first time we establish a websocket connection to the
+      //      server, or
+      //   2. our last script run attempt was interrupted by the websocket
+      //      connection dropping.
+      if (!this.sessionInfo.last || lastRunWasInterrupted) {
+        logMessage("Requesting a script run.")
+        this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+        this.setState({ dialog: null })
+      }
 
       this.hostCommunicationMgr.sendMessageToHost({
         type: "WEBSOCKET_CONNECTED",

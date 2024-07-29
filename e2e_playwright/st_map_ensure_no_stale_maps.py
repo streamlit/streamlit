@@ -12,27 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
+import numpy as np
+import pandas as pd
 
 import streamlit as st
 
-# st.session_state can only be accessed while running with streamlit
-if "counter" not in st.session_state:
-    st.session_state.counter = 0
-    st.session_state.slow_operations_attempted = 0
+st.write(f"Streamlit version = {st.__version__}")
 
-if st.button("click me!"):
-    st.session_state.counter += 1
+df1 = pd.DataFrame(
+    np.random.randn(10, 2) / [50, 50] + [37.76, -122.4], columns=["lat", "lon"]
+)
 
-if st.checkbox("do something slow"):
-    st.session_state.slow_operations_attempted += 1
-    time.sleep(5)
+df2 = pd.DataFrame(
+    np.random.randn(10, 2) / [50, 50] + [-37.76, 122.4], columns=["lat", "lon"]
+)
 
-st.write(f"count: {st.session_state.counter}")
-st.write(f"slow operations attempted: {st.session_state.slow_operations_attempted}")
+option = st.selectbox("which dataframe to use?", ("1", "2"))
 
-if f := st.file_uploader("Upload a file"):
-    st.text(f.read())
+st.write("You selected:", option)
 
-if img := st.camera_input("Take a picture"):
-    st.image(img)
+df = df1 if option == "1" else df2
+
+st.map(df)
+st.write(df)
+
+st.write("df1")
+st.map(df1)
+
+st.write("2")
+st.map(df2)
