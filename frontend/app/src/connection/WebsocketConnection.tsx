@@ -15,9 +15,9 @@
  */
 
 import React, { Fragment } from "react"
+
 import styled from "@emotion/styled"
 import axios from "axios"
-
 import {
   BackMsg,
   BaseUriParts,
@@ -35,6 +35,7 @@ import {
   SessionInfo,
   StreamlitEndpoints,
 } from "@streamlit/lib"
+
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 
 /**

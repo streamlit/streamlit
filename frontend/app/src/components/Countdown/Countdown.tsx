@@ -15,6 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import { StyledCountdown } from "./styled-components"
 
 interface Props {

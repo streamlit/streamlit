@@ -20,6 +20,7 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
+
 import {
   BaseButton,
   BaseButtonKind,
@@ -31,6 +32,7 @@ import {
   ThemeConfig,
   UISelectbox,
 } from "@streamlit/lib"
+
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {

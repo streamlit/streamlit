@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import {
   act,
   fireEvent,
@@ -48,6 +49,7 @@ import {
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
+
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
@@ -55,6 +57,7 @@ import {
   getMenuStructure,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+
 import { App, Props, showDevelopmentOptions } from "./App"
 
 jest.mock("@streamlit/lib/src/baseconsts", () => {

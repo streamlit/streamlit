@@ -15,6 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
@@ -36,7 +37,6 @@ import { SignalConnection } from "typed-signals"
 
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
  * from a subpath.

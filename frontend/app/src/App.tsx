@@ -15,12 +15,11 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
-
-// Other local imports.
 import {
   AppConfig,
   AppRoot,
@@ -98,6 +97,7 @@ import {
 } from "@streamlit/lib"
 import without from "lodash/without"
 import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
+
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"
@@ -113,14 +113,10 @@ import {
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-
 import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-
 import { StyledApp } from "@streamlit/app/src/styled-components"
-
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"

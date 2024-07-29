@@ -15,6 +15,7 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
+
 import {
   BaseButtonKind,
   Modal,
@@ -23,6 +24,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@streamlit/lib"
+
 import { StyledInstruction, StyledRecordAudioLabel } from "./styled-components"
 
 export interface Props {

@@ -15,6 +15,7 @@
  */
 
 import React, { CSSProperties, ReactElement, ReactNode } from "react"
+
 import {
   BaseButtonKind,
   IException,
@@ -33,12 +34,12 @@ import {
   Props as ScriptChangedDialogProps,
 } from "@streamlit/app/src/components/StreamlitDialog/ScriptChangedDialog"
 import { STREAMLIT_HOME_URL } from "@streamlit/app/src/urls"
+
 import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
-
 import {
   StyledAboutInfo,
   StyledAboutLink,

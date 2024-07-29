@@ -29,10 +29,9 @@ import {
   BarChartColumn,
   LineChartColumn,
 } from "./ChartColumn"
+import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
-
-import { ColumnCreator } from "./utils"
 
 export * from "./utils"
 

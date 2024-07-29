@@ -20,7 +20,6 @@ import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import { StyledDivider, StyledStreamlitMarkdown } from "./styled-components"
-
 import "katex/dist/katex.min.css"
 import {
   HeadingWithActionElements,

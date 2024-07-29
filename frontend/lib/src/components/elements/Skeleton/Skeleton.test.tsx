@@ -20,7 +20,6 @@ import { screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
-
 import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 import { Skeleton } from "./Skeleton"

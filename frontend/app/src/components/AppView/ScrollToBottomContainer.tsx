@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
+
 import { useScrollToBottom } from "@streamlit/lib"
+
 import { StyledAppViewMain } from "./styled-components"
 
 export interface Props {

@@ -35,7 +35,6 @@ import * as geoLayers from "@deck.gl/geo-layers"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
 /* eslint-enable */
-
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"

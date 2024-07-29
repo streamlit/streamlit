@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import {
   fireEvent,
@@ -22,7 +23,6 @@ import {
   screen,
   within,
 } from "@testing-library/react"
-
 import {
   emotionLightTheme,
   Logo,
@@ -30,6 +30,7 @@ import {
   PageConfig,
   render,
 } from "@streamlit/lib"
+
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 jest.mock("@streamlit/lib/src/util/Hooks", () => ({

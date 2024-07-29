@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
 import {
@@ -23,6 +24,7 @@ import {
   ScriptRunState,
   SessionEvent,
 } from "@streamlit/lib"
+
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 

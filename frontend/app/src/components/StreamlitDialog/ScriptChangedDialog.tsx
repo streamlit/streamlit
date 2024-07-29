@@ -15,6 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import { HotKeys } from "react-hotkeys"
 import {
   BaseButtonKind,
@@ -24,6 +25,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@streamlit/lib"
+
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {

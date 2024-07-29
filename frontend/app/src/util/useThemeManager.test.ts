@@ -24,6 +24,7 @@ import {
   setCachedTheme,
   ThemeConfig,
 } from "@streamlit/lib"
+
 import { useThemeManager } from "./useThemeManager"
 
 const mockCustomThemeConfig = {

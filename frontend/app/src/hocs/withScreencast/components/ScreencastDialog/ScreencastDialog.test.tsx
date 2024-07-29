@@ -15,12 +15,12 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
-
 import { BaseProvider, LightTheme } from "baseui"
-
 import { render } from "@streamlit/lib"
+
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

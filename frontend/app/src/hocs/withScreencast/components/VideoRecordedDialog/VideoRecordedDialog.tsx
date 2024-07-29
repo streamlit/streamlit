@@ -15,6 +15,7 @@
  */
 
 import React, { FunctionComponent } from "react"
+
 import {
   BaseButton,
   BaseButtonKind,
@@ -22,6 +23,7 @@ import {
   ModalBody,
   ModalHeader,
 } from "@streamlit/lib"
+
 import {
   StyledDialogContainer,
   StyledDownloadButtonContainer,

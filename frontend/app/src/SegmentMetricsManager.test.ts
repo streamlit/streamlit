@@ -24,6 +24,7 @@ import {
   mockSessionInfoProps,
   SessionInfo,
 } from "@streamlit/lib"
+
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 
 const getSegmentMetricsManager = (

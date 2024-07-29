@@ -23,6 +23,7 @@ import {
   logAlways,
   SessionInfo,
 } from "@streamlit/lib"
+
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 
 /**

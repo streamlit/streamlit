@@ -19,7 +19,6 @@ import "@testing-library/jest-dom"
 
 import * as reactDeviceDetect from "react-device-detect"
 import { fireEvent, screen } from "@testing-library/react"
-
 import {
   IAppPage,
   mockEndpoints,

@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
   AppRoot,
   BlockNode,
@@ -39,7 +40,6 @@ import {
   StyledLogoLink,
   StyledSidebarOpenContainer,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
-
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
 import {

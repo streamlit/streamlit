@@ -15,12 +15,14 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen, waitFor, within } from "@testing-library/react"
 import { Config, IMenuItem, mockSessionInfo, render } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
 
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+
+import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
 import MainMenu, { Props } from "./MainMenu"
 
 const getProps = (extend?: Partial<Props>): Props => ({

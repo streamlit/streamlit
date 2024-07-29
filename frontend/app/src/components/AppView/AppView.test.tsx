@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen, within } from "@testing-library/react"
 import {
@@ -36,10 +37,12 @@ import {
   ScriptRunState,
   WidgetStateManager,
 } from "@streamlit/lib"
+
 import {
   AppContext,
   Props as AppContextProps,
 } from "@streamlit/app/src/components/AppContext"
+
 import AppView, { AppViewProps } from "./AppView"
 
 // Mock needed for Block.tsx
