@@ -559,6 +559,7 @@ const RawElementNodeRenderer = (
         <ChatInput
           key={chatInputProto.id}
           element={chatInputProto}
+          uploadClient={props.uploadClient}
           {...widgetProps}
         />
       )

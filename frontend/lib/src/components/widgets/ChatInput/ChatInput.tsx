@@ -31,6 +31,9 @@ import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives"
+import { useDropzone } from "react-dropzone"
+import { FileRejection } from "react-dropzone"
+import zip from "lodash/zip"
 
 import {
   StyledChatInputContainer,
@@ -40,13 +43,102 @@ import {
   StyledSendIconButtonContainer,
 } from "./styled-components"
 
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+
+import {
+  UploadedStatus,
+  UploadFileInfo,
+  UploadingStatus,
+} from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
+
+import {
+  FileUploader as FileUploaderProto,
+  FileUploaderState as FileUploaderStateProto,
+  FileURLs as FileURLsProto,
+  IFileURLs,
+  UploadedFileInfo as UploadedFileInfoProto,
+} from "@streamlit/lib/src/proto"
+
 export interface Props {
   disabled: boolean
   element: ChatInputProto
   widgetMgr: WidgetStateManager
   width: number
+  uploadClient: FileUploadClient
   fragmentId?: string
 }
+
+interface CreateDropHandlerParams {
+  acceptMultipleFiles: boolean
+  uploadClient: FileUploadClient
+  uploadFile: (fileURLs: FileURLsProto, file: File) => void
+  addFiles: (files: UploadFileInfo[]) => void
+  getNextLocalFileId: () => number
+}
+
+const createDropHandler =
+  ({
+    acceptMultipleFiles,
+    uploadClient,
+    uploadFile,
+    addFiles,
+    getNextLocalFileId,
+  }: CreateDropHandlerParams) =>
+  (acceptedFiles: File[], rejectedFiles: FileRejection[]): void => {
+    const multipleFiles = acceptMultipleFiles
+
+    // If this is a single-file uploader and multiple files were dropped,
+    // all the files will be rejected. In this case, we pull out the first
+    // valid file into acceptedFiles, and reject the rest.
+    if (
+      !multipleFiles &&
+      acceptedFiles.length === 0 &&
+      rejectedFiles.length > 1
+    ) {
+      const firstFileIndex = rejectedFiles.findIndex(
+        file =>
+          file.errors.length === 1 && file.errors[0].code === "too-many-files"
+      )
+
+      if (firstFileIndex >= 0) {
+        acceptedFiles.push(rejectedFiles[firstFileIndex].file)
+        rejectedFiles.splice(firstFileIndex, 1)
+      }
+    }
+
+    uploadClient
+      .fetchFileURLs(acceptedFiles)
+      .then((fileURLsArray: IFileURLs[]) => {
+        zip(fileURLsArray, acceptedFiles).forEach(
+          ([fileURLs, acceptedFile]) => {
+            uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
+          }
+        )
+      })
+      .catch((errorMessage: string) => {
+        addFiles(
+          acceptedFiles.map(f => {
+            return new UploadFileInfo(f.name, f.size, getNextLocalFileId(), {
+              type: "error",
+              errorMessage,
+            })
+          })
+        )
+      })
+
+    // Create an UploadFileInfo for each of our rejected files, and add them to
+    // our state.
+    if (rejectedFiles.length > 0) {
+      const rejectedInfos = rejectedFiles.map(rejected => {
+        const { file } = rejected
+        return new UploadFileInfo(file.name, file.size, getNextLocalFileId(), {
+          type: "error",
+          errorMessage: "VAY VAY VAY, MAMA JAN!",
+        })
+      })
+      addFiles(rejectedInfos)
+    }
+  }
 
 // We want to show easily that there's scrolling so we deliberately choose
 // a half size.
@@ -74,6 +166,7 @@ function ChatInput({
   element,
   widgetMgr,
   fragmentId,
+  uploadClient,
 }: Props): React.ReactElement {
   const theme = useTheme()
   // True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -84,6 +177,25 @@ function ChatInput({
   const [scrollHeight, setScrollHeight] = useState(0)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
+  const dropHandler = createDropHandler({
+    acceptMultipleFiles: false,
+    uploadClient: uploadClient,
+    uploadFile: (fileURLs: FileURLsProto, file: File) => {
+      // Do nothing
+      console.log("fileURLs", fileURLs)
+      console.log("file", file)
+    },
+    addFiles: (files: UploadFileInfo[]) => {
+      // Do nothing
+      console.log("files", files)
+    },
+    getNextLocalFileId: () => {
+      return 0
+    },
+  })
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: dropHandler,
+  })
 
   const getScrollHeight = (): number => {
     let scrollHeight = 0
@@ -179,6 +291,11 @@ function ChatInput({
       width={width}
     >
       <StyledChatInput>
+        <div {...getRootProps()}>
+          <input {...getInputProps()} />
+          <button>+</button>
+        </div>
+
         <UITextArea
           inputRef={chatInputRef}
           value={value}
