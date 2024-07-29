@@ -15,11 +15,11 @@
  */
 
 import React, { Fragment } from "react"
+
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
 import styled from "@emotion/styled"
 import axios from "axios"
 import {
@@ -39,6 +39,7 @@ import {
   SessionInfo,
   StreamlitEndpoints,
 } from "@streamlit/lib"
+
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 
 /**

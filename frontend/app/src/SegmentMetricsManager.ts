@@ -18,7 +18,6 @@ import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
 import pick from "lodash/pick"
 import {
   Delta,

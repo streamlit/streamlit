@@ -15,11 +15,11 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"

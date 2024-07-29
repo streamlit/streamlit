@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { MoreVert } from "@emotion-icons/material-rounded"

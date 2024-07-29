@@ -15,7 +15,6 @@
  */
 
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-
 import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
 import {
   BaseUriParts,
