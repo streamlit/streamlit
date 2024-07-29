@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+import React from "react"
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
-import React from "react"
 
 import {
   CameraInput as CameraInputProto,

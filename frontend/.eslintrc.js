@@ -175,6 +175,14 @@ module.exports = {
     "import/order": [
       1,
       {
+        pathGroups: [
+          {
+            pattern: "react",
+            group: "external",
+            position: "before",
+          },
+        ],
+        pathGroupsExcludedImportTypes: ["react"],
         groups: [
           "external",
           "builtin",

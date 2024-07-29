@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import React, { ComponentType, PureComponent, ReactNode } from "react"
 import { logWarning } from "@streamlit/lib"
 import hoistNonReactStatics from "hoist-non-react-statics"
-import React, { ComponentType, PureComponent, ReactNode } from "react"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 
 import {

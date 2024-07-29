@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+import React from "react"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
 import zip from "lodash/zip"
-import React from "react"
 import { FileRejection } from "react-dropzone"
 
 import {

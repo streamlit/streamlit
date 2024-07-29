@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import React, { Fragment } from "react"
 import styled from "@emotion/styled"
 import axios from "axios"
 
@@ -34,7 +35,6 @@ import {
   SessionInfo,
   StreamlitEndpoints,
 } from "@streamlit/lib"
-import React, { Fragment } from "react"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 
 /**

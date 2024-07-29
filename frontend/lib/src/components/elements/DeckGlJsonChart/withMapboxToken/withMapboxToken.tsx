@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
+import hoistNonReactStatics from "hoist-non-react-statics"
 import axios from "axios"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 

@@ -15,13 +15,13 @@
  */
 
 /* eslint-disable import/no-extraneous-dependencies */
+import React, { ReactElement } from "react"
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
 /* eslint-enable */
-import React, { ReactElement } from "react"
 import ThemeProvider from "./components/core/ThemeProvider"
 import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"

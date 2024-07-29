@@ -15,7 +15,6 @@
  */
 
 import React, { ReactElement } from "react"
-
 import {
   AppRoot,
   BlockNode,
