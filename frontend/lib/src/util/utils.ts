@@ -20,12 +20,8 @@ import decamelize from "decamelize"
 
 import {
   Alert as AlertProto,
-  Alert as AlertProto,
-  Element,
   Element,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
-  Skeleton as SkeletonProto,
   Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 

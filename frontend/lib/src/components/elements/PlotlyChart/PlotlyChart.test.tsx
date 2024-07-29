@@ -19,22 +19,12 @@ import { PlotlyChart as PlotlyChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import {
-  applyStreamlitTheme,
-  applyStreamlitTheme,
-  layoutWithThemeDefaults,
-  layoutWithThemeDefaults,
-} from "./CustomTheme"
+import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
 import {
   applyTheming,
-  applyTheming,
-  handleSelection,
   handleSelection,
   parseBoxSelection,
-  parseBoxSelection,
   parseLassoPath,
-  parseLassoPath,
-  sendEmptySelection,
   sendEmptySelection,
 } from "./PlotlyChart"
 

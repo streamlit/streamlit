@@ -28,12 +28,7 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 
-import {
-  ComponentMessageType,
-  ComponentMessageType,
-  StreamlitMessageType,
-  StreamlitMessageType,
-} from "./enums"
+import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // The custom component's value posted from the iFrame has one of the three types as defined
 // in component-lib/

@@ -28,7 +28,7 @@ import {
 } from "@streamlit/lib/src/proto"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import TextInput, { Props, Props } from "./TextInput"
+import TextInput, { Props } from "./TextInput"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},

@@ -24,7 +24,7 @@ import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import Audio, { AudioProps, AudioProps } from "./Audio"
+import Audio, { AudioProps } from "./Audio"
 
 describe("Audio Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
