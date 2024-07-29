@@ -16,11 +16,12 @@
 
 import React from "react"
 
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import { CUSTOM_THEME_NAME, RootStyleProvider } from "@streamlit/lib"
 
-import AppWithScreencast from "./App"
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import { StyledDataFrameOverlay } from "@streamlit/app/src/styled-components"
+
+import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
 
 const ThemedApp = (): JSX.Element => {

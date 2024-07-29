@@ -15,9 +15,11 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib"
+
 import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
 
 jest.mock("@streamlit/app/src/util/ScreenCastRecorder")

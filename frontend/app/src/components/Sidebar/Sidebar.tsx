@@ -15,37 +15,37 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, ChevronLeft } from "@emotion-icons/material-outlined"
+
+import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
-
 import {
-  Icon,
   BaseButton,
   BaseButtonKind,
   EmotionTheme,
-  localStorageAvailable,
-  StreamlitEndpoints,
-  IsSidebarContext,
-  isEmbed,
-  isColoredLineDisplayed,
   IAppPage,
-  PageConfig,
+  Icon,
+  isColoredLineDisplayed,
+  isEmbed,
+  IsSidebarContext,
+  localStorageAvailable,
   Logo,
+  PageConfig,
+  StreamlitEndpoints,
 } from "@streamlit/lib"
 
 import {
+  StyledCollapseSidebarButton,
+  StyledLogo,
+  StyledLogoLink,
+  StyledNoLogoSpacer,
+  StyledOpenSidebarButton,
+  StyledResizeHandle,
   StyledSidebar,
   StyledSidebarContent,
-  StyledSidebarUserContent,
-  StyledResizeHandle,
   StyledSidebarHeaderContainer,
-  StyledCollapseSidebarButton,
   StyledSidebarOpenContainer,
-  StyledOpenSidebarButton,
-  StyledLogo,
-  StyledNoLogoSpacer,
-  StyledLogoLink,
+  StyledSidebarUserContent,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 

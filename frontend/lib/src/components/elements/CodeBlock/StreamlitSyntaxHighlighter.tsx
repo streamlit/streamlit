@@ -15,13 +15,14 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
 import {
-  StyledPre,
-  StyledCopyButtonContainer,
   StyledCodeBlock,
+  StyledCopyButtonContainer,
+  StyledPre,
 } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {

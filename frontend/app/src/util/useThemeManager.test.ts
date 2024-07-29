@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import { renderHook, act } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react-hooks"
 import {
-  LocalStore,
   AUTO_THEME_NAME,
-  CUSTOM_THEME_NAME,
   createPresetThemes,
+  CUSTOM_THEME_NAME,
   darkTheme,
+  LocalStore,
   setCachedTheme,
   ThemeConfig,
 } from "@streamlit/lib"
+
 import { useThemeManager } from "./useThemeManager"
 
 const mockCustomThemeConfig = {

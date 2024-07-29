@@ -15,34 +15,35 @@
  */
 
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
+
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { MoreVert } from "@emotion-icons/material-rounded"
 import { useTheme } from "@emotion/react"
-
 import {
-  EmotionTheme,
   BaseButton,
   BaseButtonKind,
+  Config,
+  EmotionTheme,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
-  Config,
   PageConfig,
 } from "@streamlit/lib"
+
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
   StyledCoreItem,
   StyledDevItem,
+  StyledMainMenuContainer,
+  StyledMenuContainer,
   StyledMenuDivider,
   StyledMenuItem,
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
-  StyledMenuContainer,
-  StyledMainMenuContainer,
 } from "./styled-components"
 
 const SCREENCAST_LABEL: { [s: string]: string } = {

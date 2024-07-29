@@ -15,7 +15,9 @@
  */
 
 import React, { MouseEvent, ReactElement } from "react"
+
 import { BaseButton, BaseButtonKind } from "@streamlit/lib"
+
 import { DeployButtonContainer } from "./styled-components"
 
 interface IDeployButtonProps {

@@ -22,22 +22,21 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { logWarning, logError } from "@streamlit/lib/src/util/log"
-
+import { logError, logWarning } from "@streamlit/lib/src/util/log"
 import {
-  getColumnTypeFromArrow,
   getAllColumnsFromArrow,
+  getColumnTypeFromArrow,
   getEmptyIndexColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
 import {
   BaseColumn,
   BaseColumnProps,
-  ObjectColumn,
-  ColumnTypes,
   ColumnCreator,
+  ColumnTypes,
+  ObjectColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 // Using this ID for column config will apply the config to all index columns

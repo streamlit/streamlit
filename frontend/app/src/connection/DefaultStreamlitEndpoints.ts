@@ -18,10 +18,10 @@ import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
 import {
   BaseUriParts,
   buildHttpUri,
-  StreamlitEndpoints,
-  JWTHeader,
   getCookie,
   IAppPage,
+  JWTHeader,
+  StreamlitEndpoints,
 } from "@streamlit/lib"
 
 interface Props {

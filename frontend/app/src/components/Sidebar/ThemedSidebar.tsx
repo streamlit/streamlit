@@ -15,13 +15,16 @@
  */
 
 import React, { ReactElement } from "react"
-import { AppContext } from "@streamlit/app/src/components/AppContext"
+
 import {
-  ThemeProvider,
   createTheme,
-  ThemeConfig,
   LibContext,
+  ThemeConfig,
+  ThemeProvider,
 } from "@streamlit/lib"
+
+import { AppContext } from "@streamlit/app/src/components/AppContext"
+
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {

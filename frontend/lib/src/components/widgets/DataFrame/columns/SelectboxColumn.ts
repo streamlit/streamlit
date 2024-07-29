@@ -27,10 +27,10 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  toSafeString,
   mergeColumnParameters,
-  toSafeNumber,
   toSafeBoolean,
+  toSafeNumber,
+  toSafeString,
 } from "./utils"
 
 export interface SelectboxColumnParams {

@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, MouseEvent } from "react"
+import React, { MouseEvent, ReactElement } from "react"
+
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
 import {
-  BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
+  BaseButtonTooltip,
 } from "@streamlit/lib/src/components/shared/BaseButton"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import BaseLinkButton from "./BaseLinkButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 export interface Props {
   disabled: boolean

@@ -17,43 +17,42 @@
 import React, { ReactElement } from "react"
 
 import {
-  IAppPage,
-  VerticalBlock,
-  ScriptRunState,
-  FormsData,
-  WidgetStateManager,
-  FileUploadClient,
-  ComponentRegistry,
-  BlockNode,
   AppRoot,
-  SessionInfo,
+  BlockNode,
+  ComponentRegistry,
+  FileUploadClient,
+  FormsData,
+  IAppPage,
   IGuestToHostMessage,
-  StreamlitEndpoints,
   LibContext,
   Logo,
+  ScriptRunState,
+  SessionInfo,
+  StreamlitEndpoints,
+  VerticalBlock,
+  WidgetStateManager,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import {
-  StyledSidebarOpenContainer,
   StyledLogo,
   StyledLogoLink,
+  StyledSidebarOpenContainer,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
-
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
 import {
   StyledAppViewBlockContainer,
+  StyledAppViewBlockSpacer,
   StyledAppViewContainer,
   StyledAppViewMain,
-  StyledIFrameResizerAnchor,
-  StyledEventBlockContainer,
-  StyledInnerBottomContainer,
-  StyledStickyBottomContainer,
-  StyledAppViewBlockSpacer,
-  StyledSidebarBlockContainer,
   StyledBottomBlockContainer,
+  StyledEventBlockContainer,
+  StyledIFrameResizerAnchor,
+  StyledInnerBottomContainer,
+  StyledSidebarBlockContainer,
+  StyledStickyBottomContainer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 

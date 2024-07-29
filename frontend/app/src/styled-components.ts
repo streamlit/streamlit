@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-
 import { hasLightBackgroundColor } from "@streamlit/lib"
 
 export const StyledApp = styled.div(({ theme }) => {

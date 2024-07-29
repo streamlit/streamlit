@@ -22,6 +22,7 @@ import {
   IGuestToHostMessage,
   IToolbarItem,
 } from "@streamlit/lib"
+
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
