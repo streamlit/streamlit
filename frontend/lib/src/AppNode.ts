@@ -25,6 +25,7 @@ import {
   makeElementWithInfoText,
   notUndefined,
 } from "@streamlit/lib/src/util/utils"
+
 import {
   ArrowNamedDataSet,
   Arrow as ArrowProto,

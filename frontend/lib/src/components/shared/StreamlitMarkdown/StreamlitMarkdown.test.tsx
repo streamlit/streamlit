@@ -19,13 +19,13 @@ import React, { ReactElement } from "react"
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
 import { cleanup, screen } from "@testing-library/react"
-
 import { transparentize } from "color2k"
+
 import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
-
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
+
 import StreamlitMarkdown, {
   createAnchorFromText,
   CustomCodeTag,

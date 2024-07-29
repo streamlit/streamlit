@@ -18,8 +18,8 @@ import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
 import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
-
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"

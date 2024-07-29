@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 import React, { CSSProperties, ReactElement } from "react"
+
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
 import { IFrame as IFrameProto } from "@streamlit/lib/src/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,

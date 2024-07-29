@@ -36,11 +36,11 @@ import zip from "lodash/zip"
 import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
+
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
 import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
 import { logWarning } from "@streamlit/lib/src/util/log"
 

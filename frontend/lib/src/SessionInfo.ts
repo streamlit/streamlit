@@ -21,7 +21,6 @@ import {
   NewSession,
   UserInfo,
 } from "./proto"
-
 import { hashString, notNullOrUndefined } from "./util/utils"
 
 /**

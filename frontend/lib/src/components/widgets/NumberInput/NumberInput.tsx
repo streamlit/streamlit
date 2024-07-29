@@ -15,12 +15,13 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
-
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
+
 import {
   isInForm,
   isNullOrUndefined,

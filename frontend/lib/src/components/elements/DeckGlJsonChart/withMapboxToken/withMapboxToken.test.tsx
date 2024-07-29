@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import "@testing-library/jest-dom"
 import axios from "axios"
 import { screen, waitFor } from "@testing-library/react"
+
 import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 

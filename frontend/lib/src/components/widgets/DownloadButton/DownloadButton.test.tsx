@@ -23,6 +23,7 @@ import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
+
 import DownloadButton, { createDownloadLink, Props } from "./DownloadButton"
 
 jest.mock("@streamlit/lib/src/WidgetStateManager")

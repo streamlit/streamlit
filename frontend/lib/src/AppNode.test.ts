@@ -16,7 +16,9 @@
 
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
+
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+
 import {
   ArrowNamedDataSet,
   Block as BlockProto,

@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
 import {

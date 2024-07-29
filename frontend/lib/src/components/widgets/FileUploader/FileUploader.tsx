@@ -20,11 +20,11 @@ import axios from "axios"
 import isEqual from "lodash/isEqual"
 import zip from "lodash/zip"
 import { FileRejection } from "react-dropzone"
+
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
@@ -46,6 +46,7 @@ import {
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"

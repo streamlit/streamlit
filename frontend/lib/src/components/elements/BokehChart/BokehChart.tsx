@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement, useCallback, useEffect } from "react"
+
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 // We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)

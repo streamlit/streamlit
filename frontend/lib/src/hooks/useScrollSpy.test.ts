@@ -15,6 +15,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react-hooks"
+
 import useScrollSpy, { debounce } from "./useScrollSpy"
 
 describe("debounce function", () => {

@@ -23,6 +23,7 @@ import {
   ComponentInstance as ComponentInstanceProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import {
   createIframeMessageHandler,
   CUSTOM_COMPONENT_API_VERSION,

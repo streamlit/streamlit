@@ -22,12 +22,12 @@ import * as vega from "vega"
 import { SignalValue } from "vega"
 import { expressionInterpreter } from "vega-interpreter"
 import isEqual from "lodash/isEqual"
+
 import {
   debounce,
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
 import {
   WidgetInfo,
   WidgetStateManager,
