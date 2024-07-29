@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
+import React from "react"
+
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
-import React from "react"
 
 import {
   CameraInput as CameraInputProto,
@@ -43,13 +44,14 @@ import {
   UploadFileInfo,
   UploadingStatus,
 } from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
+
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
-  StyledSpan,
   StyledImg,
+  StyledSpan,
 } from "./styled-components"
 import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 

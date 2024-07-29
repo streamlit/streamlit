@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
-import { Popover, PLACEMENT, ACCESSIBILITY_TYPE } from "baseui/popover"
+import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "@streamlit/lib/src/components/shared/Tooltip/styled-components"

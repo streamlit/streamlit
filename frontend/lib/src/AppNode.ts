@@ -15,9 +15,10 @@
  */
 
 import { produce } from "immer"
+
 import {
-  Arrow as ArrowProto,
   ArrowNamedDataSet,
+  Arrow as ArrowProto,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Block as BlockProto,
   Delta,
@@ -36,9 +37,9 @@ import { ensureError } from "./util/ErrorHandling"
 import {
   getLoadingScreenType,
   LoadingScreenType,
+  makeAppSkeletonElement,
   makeElementWithErrorText,
   makeElementWithInfoText,
-  makeAppSkeletonElement,
   notUndefined,
 } from "./util/utils"
 

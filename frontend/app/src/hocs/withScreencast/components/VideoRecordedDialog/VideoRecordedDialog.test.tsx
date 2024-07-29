@@ -15,10 +15,12 @@
  */
 
 import React from "react"
+
 import { BaseProvider, LightTheme } from "baseui"
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
 import { render } from "@streamlit/lib"
+
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()

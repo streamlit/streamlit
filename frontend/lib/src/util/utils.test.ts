@@ -17,20 +17,20 @@
 import {
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
-  LoadingScreenType,
   getCookie,
   getEmbedUrlParams,
   getLoadingScreenType,
-  isEmbed,
-  setCookie,
-  preserveEmbedQueryParams,
   isColoredLineDisplayed,
-  isToolbarDisplayed,
+  isDarkThemeInQueryParams,
+  isEmbed,
+  isLightThemeInQueryParams,
   isPaddingDisplayed,
   isScrollingHidden,
-  isLightThemeInQueryParams,
-  isDarkThemeInQueryParams,
+  isToolbarDisplayed,
   keysToSnakeCase,
+  LoadingScreenType,
+  preserveEmbedQueryParams,
+  setCookie,
 } from "./utils"
 
 describe("getCookie", () => {

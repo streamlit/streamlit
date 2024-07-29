@@ -15,10 +15,11 @@
  */
 
 import React from "react"
+
 import {
+  DataEditorProps,
   EditableGridCell,
   GridCell,
-  DataEditorProps,
   GridSelection,
   Item,
   ValidatedGridCell,

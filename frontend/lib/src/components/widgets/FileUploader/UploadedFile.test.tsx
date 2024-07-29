@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import { CancelTokenSource } from "axios"
 import React from "react"
+
+import { CancelTokenSource } from "axios"
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"

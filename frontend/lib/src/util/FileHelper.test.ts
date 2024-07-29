@@ -15,10 +15,10 @@
  */
 
 import {
+  BYTE_CONVERSION_SIZE,
+  FileSize,
   getSizeDisplay,
   sizeConverter,
-  FileSize,
-  BYTE_CONVERSION_SIZE,
 } from "./FileHelper"
 
 describe("getSizeDisplay", () => {

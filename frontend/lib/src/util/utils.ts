@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import {
-  Alert as AlertProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
-  Element,
-  Skeleton as SkeletonProto,
-} from "@streamlit/lib/src/proto"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
 import decamelize from "decamelize"
+
+import {
+  Alert as AlertProto,
+  Element,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Skeleton as SkeletonProto,
+} from "@streamlit/lib/src/proto"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval

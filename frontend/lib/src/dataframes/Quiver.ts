@@ -18,16 +18,16 @@
 /* eslint-disable no-underscore-dangle */
 
 import {
+  Schema as ArrowSchema,
+  Dictionary,
+  Field,
+  Null,
+  Struct,
   StructRow,
   Table,
-  Vector,
   tableFromIPC,
-  Null,
-  Field,
-  Dictionary,
-  Struct,
-  Schema as ArrowSchema,
   util,
+  Vector,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import range from "lodash/range"

@@ -15,22 +15,23 @@
  */
 
 import React, { ReactElement } from "react"
+
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
-import { screen, cleanup } from "@testing-library/react"
+import { cleanup, screen } from "@testing-library/react"
+import { transparentize } from "color2k"
 
 import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
-import { transparentize } from "color2k"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 import StreamlitMarkdown, {
-  LinkWithTargetBlank,
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
+  LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
-import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {

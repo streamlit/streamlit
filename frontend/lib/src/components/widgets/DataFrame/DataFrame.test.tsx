@@ -16,13 +16,14 @@
 
 import React from "react"
 
+import { screen } from "@testing-library/react"
+import * as glideDataGridModule from "@glideapps/glide-data-grid"
+
 import { TEN_BY_TEN } from "@streamlit/lib/src/mocks/arrow"
 import { render } from "@streamlit/lib/src/test_util"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
-import * as glideDataGridModule from "@glideapps/glide-data-grid"
 
 jest.mock("@glideapps/glide-data-grid", () => ({
   ...jest.requireActual("@glideapps/glide-data-grid"),

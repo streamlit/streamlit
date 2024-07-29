@@ -19,8 +19,8 @@ import { showSaveFilePicker } from "native-file-system-adapter"
 
 import {
   BaseColumn,
-  TextColumn,
   NumberColumn,
+  TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useDataExporter, { toCsvRow } from "./useDataExporter"

@@ -14,28 +14,29 @@
  * limitations under the License.
  */
 
+import React, { Fragment } from "react"
+
 import styled from "@emotion/styled"
 import axios from "axios"
-
 import {
-  IHostConfigResponse,
+  BackMsg,
+  BaseUriParts,
+  buildHttpUri,
+  buildWsUri,
+  ForwardMsg,
   ForwardMsgCache,
+  IBackMsg,
+  IHostConfigResponse,
   logError,
   logMessage,
   logWarning,
   PerformanceEvents,
   Resolver,
   SessionInfo,
-  BaseUriParts,
-  buildHttpUri,
-  buildWsUri,
   StreamlitEndpoints,
-  BackMsg,
-  ForwardMsg,
-  IBackMsg,
 } from "@streamlit/lib"
+
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
-import React, { Fragment } from "react"
 
 /**
  * Name of the logger.

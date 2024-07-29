@@ -22,6 +22,7 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
+
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
 import ReactMarkdown from "react-markdown"
@@ -40,6 +41,7 @@ import { Link2 as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
+import xxhash from "xxhashjs"
 
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
@@ -47,21 +49,20 @@ import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContex
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import { InlineTooltipIcon } from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
-  getMarkdownTextColors,
   getMarkdownBgColors,
+  getMarkdownTextColors,
 } from "@streamlit/lib/src/theme"
-
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+
 import {
-  StyledLinkIcon,
   StyledHeadingActionElements,
-  StyledStreamlitMarkdown,
   StyledHeadingWithActionElements,
+  StyledLinkIcon,
+  StyledStreamlitMarkdown,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
-import xxhash from "xxhashjs"
-import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 export enum Tags {
   H1 = "h1",

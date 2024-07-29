@@ -15,6 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({

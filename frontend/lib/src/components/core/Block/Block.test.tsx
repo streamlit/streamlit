@@ -18,9 +18,10 @@ import React, { ReactElement } from "react"
 
 import "@testing-library/jest-dom"
 
+import { screen } from "@testing-library/react"
+
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { render } from "@streamlit/lib/src/test_util"
-import { screen } from "@testing-library/react"
 import { BlockNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
