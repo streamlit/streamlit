@@ -17,10 +17,18 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.shared.app_utils import click_button
 
 
-def test_st_rerun_restarts_the_session_when_invoked(app: Page):
+def _expect_initial_reruns_finished(app: Page):
     expect(app.get_by_test_id("stText")).to_have_text(
         "Being able to rerun a session is awesome!"
     )
+
+
+def _expect_initial_reruns_count_text(app: Page):
+    expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 4")
+
+
+def test_st_rerun_restarts_the_session_when_invoked(app: Page):
+    _expect_initial_reruns_finished(app)
 
 
 def test_fragment_scoped_st_rerun(app: Page):
@@ -30,10 +38,21 @@ def test_fragment_scoped_st_rerun(app: Page):
 
     click_button(app, "rerun fragment")
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("fragment run count: 5")
-    expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 4")
+    _expect_initial_reruns_count_text(app)
 
     click_button(app, "rerun fragment")
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "fragment run count: 10"
     )
-    expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 4")
+    # the main apps rerun count should not have been incremented
+    _expect_initial_reruns_count_text(app)
+
+
+def test_rerun_works_in_try_except_block(app: Page):
+    _expect_initial_reruns_finished(app)
+    _expect_initial_reruns_count_text(app)
+
+    click_button(app, "rerun try_fragment")
+    # the rerun in the try-block worked as expected, so the session_state count
+    # incremented
+    expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 5")
