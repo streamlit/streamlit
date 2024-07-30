@@ -18,6 +18,6 @@ const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 
 module.exports = {
   rules: {
-    "no-null-use-strict-null-equality-checks": useStrictNullEqualityChecks,
+    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
   },
 }
