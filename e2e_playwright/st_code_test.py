@@ -35,6 +35,8 @@ def test_code_blocks_render_correctly(
 ):
     """Test that the code blocks render as expected via screenshot matching."""
     code_blocks = themed_app.get_by_test_id("stCodeBlock")
+    # markdown-code blocks render two elements with data-testid="stCodeBlock"
+    expect(code_blocks).to_have_count(14)
 
     assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
     assert_snapshot(code_blocks.nth(1), name="st_code-empty")
@@ -42,7 +44,7 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(3), name="st_code-line_numbers")
     assert_snapshot(code_blocks.nth(4), name="st_code-no_lang")
     assert_snapshot(code_blocks.nth(5), name="st_markdown-code_block")
-    assert_snapshot(code_blocks.nth(6), name="st_code-diff_lang")
+    assert_snapshot(code_blocks.nth(7), name="st_code-diff_lang")
 
 
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
