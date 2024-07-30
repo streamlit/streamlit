@@ -105,11 +105,11 @@ scipy==1.14.0
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
-setuptools==72.0.0
+setuptools==72.1.0
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
-SQLAlchemy==1.4.52
+SQLAlchemy==1.4.53
 sqlalchemy2-stubs==0.0.2a38
 tenacity==8.5.0
 testfixtures==8.3.0
@@ -130,7 +130,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.30
+uv==0.2.31
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
