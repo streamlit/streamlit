@@ -32,6 +32,15 @@ def my_fragment():
         st.rerun(scope="fragment")
 
 
+@st.fragment
+def fragment_with_rerun_in_try_block():
+    try:
+        if st.button("rerun try_fragment"):
+            st.rerun()
+    except Exception as e:
+        st.write(f"Caught exception: {e}")
+
+
 st.session_state.count += 1
 
 if st.session_state.count < 4:
@@ -41,4 +50,5 @@ if st.session_state.count >= 4:
     st.text("Being able to rerun a session is awesome!")
 
 my_fragment()
+fragment_with_rerun_in_try_block()
 st.write(f"app run count: {st.session_state.count}")
