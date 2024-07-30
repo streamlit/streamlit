@@ -104,6 +104,19 @@ export const StyledPre = styled.pre(({ theme }) => ({
   ".token.entity": {
     cursor: "help",
   },
+
+  /**
+   * Diff syntax highlighting
+   */
+  ".token.deleted.line, .token.deleted.prefix": {
+    color: theme.colors.red70,
+  },
+  ".token.inserted.line, .token.inserted.prefix": {
+    color: theme.colors.green70,
+  },
+  ".token.unchanged.line": {
+    color: theme.colors.gray70,
+  },
 }))
 
 export const StyledCopyButtonContainer = styled.div(({ theme }) => ({

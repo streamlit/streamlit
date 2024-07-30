@@ -47,6 +47,8 @@ export default function StreamlitSyntaxHighlighter({
           language={language}
           PreTag="div"
           customStyle={{ backgroundColor: "transparent" }}
+          // We set an empty style object here because we have our own CSS styling that
+          // reacts on our theme.
           style={{}}
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}
