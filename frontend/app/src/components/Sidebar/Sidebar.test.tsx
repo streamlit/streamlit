@@ -246,6 +246,14 @@ describe("Sidebar Component", () => {
       iconImage: "https://docs.streamlit.io/logo.svg",
     })
 
+    const logoWithSize = Logo.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      link: "www.example.com",
+      iconImage: "https://docs.streamlit.io/logo.svg",
+      imageSize: "small",
+    })
+
     it("renders spacer if no logo provided", () => {
       renderSidebar({ appLogo: null })
       expect(screen.getByTestId("stLogoSpacer")).toBeInTheDocument()
@@ -306,6 +314,24 @@ describe("Sidebar Component", () => {
         "www.example.com"
       )
       expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+    })
+
+    it("renders logo - medium size by default", () => {
+      renderSidebar({ appLogo: imageWithLink })
+      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
+        "href",
+        "www.example.com"
+      )
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.5rem" })
+    })
+
+    it("renders logo - small size when specified", () => {
+      renderSidebar({ appLogo: logoWithSize })
+      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
+        "href",
+        "www.example.com"
+      )
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.25rem" })
     })
   })
 })

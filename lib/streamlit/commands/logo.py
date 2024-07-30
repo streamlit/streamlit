@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from streamlit import url_util
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
@@ -34,6 +36,8 @@ def logo(
     *,  # keyword-only args:
     link: str | None = None,
     icon_image: AtomicImage | None = None,
+    image_size: Literal["small", "medium", "large"] = "medium",
+    icon_size: Literal["small", "medium", "large"] = "medium",
 ) -> None:
     """
     Renders a logo in the upper-left corner of your app and its sidebar.
@@ -73,6 +77,12 @@ def logo(
         Streamlit scales the image to a height of 24 pixels and a maximum
         width of 240 pixels. Use images with an aspect ratio of 10:1 or less to
         avoid distortion.
+    image_size: "small", "medium", or "large"
+        The size of the image in the upper-left corner of the app and its
+        sidebar. The default is ``"medium"``.
+    icon_size: "small", "medium", or "large"
+        The size of the image in the upper-left corner of the app's main body.
+        The default is ``"medium"``.
 
     Examples
     --------
@@ -150,5 +160,21 @@ def logo(
             fwd_msg.logo.icon_image = icon_image_url
         except Exception as ex:
             raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
+
+    def sizing_check(argument: str, size):
+        if isinstance(size, str):
+            image_size = size.lower()
+            valid_sizes = ["small", "medium", "large"]
+
+            if image_size in valid_sizes:
+                return image_size
+
+        raise StreamlitAPIException(
+            f'The {argument} argument to st.logo must be "small", "medium", or "large". \n'
+            f"The argument passed was {size}."
+        )
+
+    fwd_msg.logo.image_size = sizing_check("image_size", image_size)
+    fwd_msg.logo.icon_size = sizing_check("icon_size", icon_size)
 
     ctx.enqueue(fwd_msg)

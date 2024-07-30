@@ -288,3 +288,53 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
         "href", "https://www.example.com"
     )
     assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")
+
+
+def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that small logos display properly in sidebar and main sections"""
+
+    # Go to small logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(9).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="small-sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("collapsedControl"), name="small-collapsed-logo")
+
+
+def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that large logos display properly in sidebar and main sections"""
+
+    # Go to large logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(10).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="large-sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("collapsedControl"), name="large-collapsed-logo")
