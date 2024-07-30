@@ -15,31 +15,34 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen, within } from "@testing-library/react"
+import {
+  AppRoot,
+  BlockNode,
+  Block as BlockProto,
+  ComponentRegistry,
+  createFormsData,
+  Element,
+  ElementNode,
+  FileUploadClient,
+  ForwardMsgMetadata,
+  Logo as LogoProto,
+  makeElementWithInfoText,
+  mockEndpoints,
+  mockSessionInfo,
+  PageConfig,
+  render,
+  ScriptRunState,
+  WidgetStateManager,
+} from "@streamlit/lib"
+
 import {
   AppContext,
   Props as AppContextProps,
 } from "@streamlit/app/src/components/AppContext"
-import {
-  ScriptRunState,
-  BlockNode,
-  ElementNode,
-  AppRoot,
-  FileUploadClient,
-  createFormsData,
-  WidgetStateManager,
-  ForwardMsgMetadata,
-  PageConfig,
-  Element,
-  makeElementWithInfoText,
-  ComponentRegistry,
-  mockEndpoints,
-  mockSessionInfo,
-  render,
-  Block as BlockProto,
-  Logo as LogoProto,
-} from "@streamlit/lib"
+
 import AppView, { AppViewProps } from "./AppView"
 
 // Mock needed for Block.tsx

@@ -19,12 +19,11 @@ import "@testing-library/jest-dom"
 
 import * as reactDeviceDetect from "react-device-detect"
 import { fireEvent, screen } from "@testing-library/react"
-
 import {
-  useIsOverflowing,
-  mockEndpoints,
   IAppPage,
+  mockEndpoints,
   render,
+  useIsOverflowing,
 } from "@streamlit/lib"
 
 import SidebarNav, { Props } from "./SidebarNav"

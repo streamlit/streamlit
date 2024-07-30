@@ -15,9 +15,12 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
+
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
 
 const getProps = (

@@ -15,47 +15,50 @@
  */
 
 import React from "react"
+
 import {
   act,
   fireEvent,
-  screen,
-  waitFor,
   render,
   RenderResult,
+  screen,
+  waitFor,
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import cloneDeep from "lodash/cloneDeep"
 import {
+  Config,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
+  FileUploadClient,
+  ForwardMsg,
+  getDefaultTheme,
+  getHostSpecifiedTheme,
+  HOST_COMM_VERSION,
+  HostCommunicationManager,
+  INewSession,
+  lightTheme,
   LocalStore,
+  mockEndpoints,
+  mockSessionInfoProps,
   mockWindowLocation,
+  PagesChanged,
+  RootStyleProvider,
   ScriptRunState,
   SessionInfo,
-  getHostSpecifiedTheme,
-  CUSTOM_THEME_NAME,
-  lightTheme,
   toExportedTheme,
-  mockSessionInfoProps,
-  Config,
-  CustomThemeConfig,
-  ForwardMsg,
-  INewSession,
-  HostCommunicationManager,
-  PagesChanged,
-  HOST_COMM_VERSION,
-  mockEndpoints,
   WidgetStateManager,
-  FileUploadClient,
-  RootStyleProvider,
-  getDefaultTheme,
 } from "@streamlit/lib"
+
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
-import { App, Props, showDevelopmentOptions } from "./App"
 import {
   getMenuStructure,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+
+import { App, Props, showDevelopmentOptions } from "./App"
 
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {

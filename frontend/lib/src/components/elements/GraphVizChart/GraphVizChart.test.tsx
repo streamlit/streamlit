@@ -15,12 +15,15 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
+
 import { logError } from "@streamlit/lib/src/util/log"
 import { render } from "@streamlit/lib/src/test_util"
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
+
 import { GraphVizChart, GraphVizChartProps } from "./GraphVizChart"
 
 jest.mock("d3-graphviz", () => ({

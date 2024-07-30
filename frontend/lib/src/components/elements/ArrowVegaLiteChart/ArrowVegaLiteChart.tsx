@@ -29,10 +29,10 @@ import {
 } from "@streamlit/lib/src/WidgetStateManager"
 import {
   debounce,
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { logWarning, logMessage } from "@streamlit/lib/src/util/log"
+import { logMessage, logWarning } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
@@ -43,12 +43,12 @@ import "@streamlit/lib/src/assets/css/vega-embed.css"
 import "@streamlit/lib/src/assets/css/vega-tooltip.css"
 
 import {
-  getDataSets,
-  VegaLiteChartElement,
-  getDataArray,
   dataIsAnAppendOfPrev,
+  getDataArray,
   getDataArrays,
+  getDataSets,
   getInlineData,
+  VegaLiteChartElement,
 } from "./arrowUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"

@@ -22,6 +22,7 @@ import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
+
 import { StyledAlertContent } from "./styled-components"
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {

@@ -165,6 +165,35 @@ module.exports = {
     "lodash/prefer-is-nil": "off",
     "lodash/prefer-matches": "off",
     "lodash/path-style": "off",
+    "sort-imports": [
+      "error",
+      {
+        ignoreCase: true,
+        ignoreDeclarationSort: true,
+      },
+    ],
+    "import/order": [
+      1,
+      {
+        pathGroups: [
+          {
+            pattern: "react",
+            group: "external",
+            position: "before",
+          },
+        ],
+        pathGroupsExcludedImportTypes: ["react"],
+        groups: [
+          "external",
+          "builtin",
+          "internal",
+          "parent",
+          "sibling",
+          "index",
+        ],
+        "newlines-between": "always",
+      },
+    ],
   },
   settings: {
     react: {
