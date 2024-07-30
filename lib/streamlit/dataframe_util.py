@@ -242,13 +242,12 @@ def is_snowpark_data_object(obj: object) -> bool:
 
 def is_snowpark_row_list(obj: object) -> bool:
     """True if obj is a list of snowflake.snowpark.row.Row."""
-    if not isinstance(obj, list):
-        return False
-    if len(obj) < 1:
-        return False
-    if not hasattr(obj[0], "__class__"):
-        return False
-    return is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+    return (
+        isinstance(obj, list)
+        and len(obj) > 0
+        and has_callable_attr(obj[0], "as_dict")
+        and is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+    )
 
 
 def is_pyspark_data_object(obj: object) -> bool:
@@ -508,15 +507,6 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
-    if is_snowpark_data_object(data):
-        data = data.limit(max_unevaluated_rows).to_pandas()
-        if data.shape[0] == max_unevaluated_rows:
-            st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataframe to show more."
-            )
-        return cast(pd.DataFrame, data)
-
     if is_snowpandas_data_object(data):
         data = data.head(max_unevaluated_rows).to_pandas()
 
@@ -529,6 +519,18 @@ def convert_anything_to_pandas_df(
                 "rows. Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
+
+    if is_snowpark_data_object(data):
+        data = data.limit(max_unevaluated_rows).to_pandas()
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_snowpark_row_list(data):
+        return pd.DataFrame([row.as_dict() for row in data])
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
