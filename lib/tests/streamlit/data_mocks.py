@@ -575,11 +575,18 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "Snowpark Row List",
         [
-            SnowparkRow(),
-            SnowparkRow(),
-            SnowparkRow(),
+            SnowparkRow({"name": "st.text_area", "type": "widget"}),
+            SnowparkRow({"name": "st.markdown", "type": "element"}),
+            SnowparkRow({"name": "st.text_input", "type": "text"}),
         ],
-        CaseMetadata(3, 1, DataFormat.SNOWPARK_OBJECT, None, "dataframe", pd.DataFrame),
+        CaseMetadata(
+            3,
+            2,
+            DataFormat.SNOWPARK_OBJECT,
+            ["st.text_area", "st.markdown", "st.text_input"],
+            "dataframe",
+            pd.DataFrame,
+        ),
     ),
     (
         "Snowpandas DataFrame",

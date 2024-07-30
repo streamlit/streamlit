@@ -420,7 +420,8 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertTrue(
             dataframe_util.is_snowpark_row_list(
                 [
-                    SnowparkRow(),
+                    SnowparkRow({"col1": 1, "col2": "foo"}),
+                    SnowparkRow({"col1": 2, "col2": "bar"}),
                 ]
             )
         )
