@@ -103,7 +103,7 @@ const AudioInput: React.FC<Props> = ({
           ></WaveSurferVisualization>
         )}
       </div>
-      <p style={{ position: "absolute", top: 20, right: 20 }}>{status}</p>
+      {/* <p style={{ position: "absolute", top: 20, right: 20 }}>{status}</p> */}
 
       <div>
         <div
