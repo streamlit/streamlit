@@ -763,7 +763,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            fragment_ids_this_run=["my_fragment_id"],
+            fragment_ids_this_run={"my_fragment_id"},
             clear_forward_msg_queue=False,
         )
 

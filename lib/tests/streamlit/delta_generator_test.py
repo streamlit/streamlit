@@ -397,8 +397,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.script_requests = MagicMock()
-        ctx.script_requests.fragment_id_queue = ["my_fragment_id"]
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
 
         exc = "is not supported"
         with pytest.raises(StreamlitAPIException, match=exc):
@@ -407,8 +406,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_enqueue_can_write_to_container_in_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.script_requests = MagicMock()
-        ctx.script_requests.fragment_id_queue = ["my_fragment_id"]
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
 
         delta_generator.sidebar_dg.container().write("Hello world")
 
