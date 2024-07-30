@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-const noNullEquality = require("./no-null-equality")
+const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 
 module.exports = {
   rules: {
-    "no-null-equality": noNullEquality,
+    "no-null-use-strict-null-equality-checks": useStrictNullEqualityChecks,
   },
 }

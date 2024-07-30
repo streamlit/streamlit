@@ -194,7 +194,7 @@ module.exports = {
         "newlines-between": "always",
       },
     ],
-    "streamlit-custom/no-null-equality": "error",
+    "streamlit-custom/use-strict-null-equality-checks": "error",
   },
   settings: {
     react: {

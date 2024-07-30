@@ -15,42 +15,46 @@
  */
 
 const { RuleTester } = require("eslint")
-const noNullEqualityRule = require("./no-null-equality")
+const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 
 const ruleTester = new RuleTester({})
 
 // Throws error if the tests do not pass
-ruleTester.run("no-null-equality", noNullEqualityRule, {
-  valid: [
-    {
-      code: "isNullOrUndefined(foo)",
-    },
-    {
-      code: "notNullOrUndefined(foo)",
-    },
-  ],
-  invalid: [
-    {
-      code: "foo == null",
-      output: "isNullOrUndefined(foo)",
-      errors: 1,
-    },
-    {
-      code: "foo != null",
-      output: "notNullOrUndefined(foo)",
-      errors: 1,
-    },
-    {
-      code: "foo == undefined",
-      output: "isNullOrUndefined(foo)",
-      errors: 1,
-    },
-    {
-      code: "foo != undefined",
-      output: "notNullOrUndefined(foo)",
-      errors: 1,
-    },
-  ],
-})
+ruleTester.run(
+  "use-strict-null-equality-checks",
+  useStrictNullEqualityChecks,
+  {
+    valid: [
+      {
+        code: "isNullOrUndefined(foo)",
+      },
+      {
+        code: "notNullOrUndefined(foo)",
+      },
+    ],
+    invalid: [
+      {
+        code: "foo == null",
+        output: "isNullOrUndefined(foo)",
+        errors: 1,
+      },
+      {
+        code: "foo != null",
+        output: "notNullOrUndefined(foo)",
+        errors: 1,
+      },
+      {
+        code: "foo == undefined",
+        output: "isNullOrUndefined(foo)",
+        errors: 1,
+      },
+      {
+        code: "foo != undefined",
+        output: "notNullOrUndefined(foo)",
+        errors: 1,
+      },
+    ],
+  }
+)
 
 console.log("All tests passed!")

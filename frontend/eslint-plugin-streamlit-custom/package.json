@@ -4,6 +4,6 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-      "test": "node no-null-equality.test.js"
+      "test": "node use-strict-null-equality-checks.test.js"
     }
   }
