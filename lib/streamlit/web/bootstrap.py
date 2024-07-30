@@ -314,6 +314,15 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
         if os.path.exists(filename):
             watch_file(filename, on_config_changed)
 
+def _instrument_tornado():
+    try:
+        from opentelemetry.instrumentation.tornado import TornadoInstrumentor  # type: ignore
+
+        TornadoInstrumentor().instrument()
+
+    except ImportError:
+        _LOGGER.debug("opentelemetry is not installed, skipping Tornado instrumentation")
+
 
 def run(
     main_script_path: str,
@@ -331,6 +340,7 @@ def run(
     _fix_pydeck_mapbox_api_warning()
     _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
+    _instrument_tornado()
 
     # Create the server. It won't start running yet.
     server = Server(main_script_path, is_hello)

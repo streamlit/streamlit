@@ -56,6 +56,14 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
+try:
+    from opentelemetry import context  # type: ignore
+
+    HAS_OPENTELEMETRY = True
+
+except ImportError:
+    HAS_OPENTELEMETRY = False
+
 _LOGGER: Final = get_logger(__name__)
 
 
@@ -242,9 +250,15 @@ class ScriptRunner:
         if self._script_thread is not None:
             raise Exception("ScriptRunner was already started")
 
+        if HAS_OPENTELEMETRY:
+            ctx = context.get_current()
+        else:
+            ctx = None
+
         self._script_thread = threading.Thread(
             target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
+            args=(ctx,),
         )
         self._script_thread.start()
 
@@ -275,7 +289,7 @@ class ScriptRunner:
             )
         return ctx
 
-    def _run_script_thread(self) -> None:
+    def _run_script_thread(self, ctx: context.Context | None) -> None:
         """The entry point for the script thread.
 
         Processes the ScriptRequestQueue, which will at least contain the RERUN
@@ -288,8 +302,13 @@ class ScriptRunner:
 
         _LOGGER.debug("Beginning script thread")
 
+        # Attach the context to the current thread
+        if HAS_OPENTELEMETRY:
+            assert ctx is not None
+            context.attach(ctx)
+
         # Create and attach the thread's ScriptRunContext
-        ctx = ScriptRunContext(
+        script_ctx = ScriptRunContext(
             session_id=self._session_id,
             _enqueue=self._enqueue_forward_msg,
             script_requests=self._requests,
@@ -302,7 +321,7 @@ class ScriptRunner:
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
         )
-        add_script_run_ctx(threading.current_thread(), ctx)
+        add_script_run_ctx(threading.current_thread(), script_ctx)
 
         request = self._requests.on_scriptrunner_ready()
         while request.type == ScriptRequestType.RERUN:
@@ -318,8 +337,8 @@ class ScriptRunner:
         # Send a SHUTDOWN event before exiting, so some state can be saved
         # for use in a future script run when not triggered by the client.
         client_state = ClientState()
-        client_state.query_string = ctx.query_string
-        client_state.page_script_hash = ctx.page_script_hash
+        client_state.query_string = script_ctx.query_string
+        client_state.page_script_hash = script_ctx.page_script_hash
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )

@@ -73,7 +73,12 @@ EXTRA_REQUIRES = {
     "snowflake": [
         "snowflake-snowpark-python>=0.9.0; python_version<'3.12'",
         "snowflake-connector-python>=2.8.0; python_version<'3.12'",
-    ]
+    ],
+    "opentelemetry": [
+        "opentelemetry-api>=1.1.0",
+        "opentelemetry-sdk>=1.1.0",
+        "opentelemetry-instrumentation-tornado>=0.47b0",
+    ],
 }
 
 
