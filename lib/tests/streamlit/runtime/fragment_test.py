@@ -186,7 +186,7 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = {"my_fragment_id"}
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -237,7 +237,7 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_ids_this_run = set()
+        ctx.fragment_ids_this_run = []
         ctx.new_fragment_ids = set()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()

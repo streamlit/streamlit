@@ -433,7 +433,7 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
-            fragment_ids_this_run = set(rerun_data.fragment_id_queue)
+            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
 
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly

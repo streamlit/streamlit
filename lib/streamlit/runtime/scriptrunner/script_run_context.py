@@ -77,7 +77,7 @@ class ScriptRunContext:
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
-    fragment_ids_this_run: set[str] | None = None
+    fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
@@ -101,7 +101,7 @@ class ScriptRunContext:
         self,
         query_string: str = "",
         page_script_hash: str = "",
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
     ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
