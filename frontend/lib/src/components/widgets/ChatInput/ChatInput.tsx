@@ -21,12 +21,18 @@ import React, {
   ChangeEvent,
   KeyboardEvent,
 } from "react"
+
+import axios from "axios"
+
 import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 
 import { ChatInput as ChatInputProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import {
+  WidgetInfo,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
@@ -140,6 +146,67 @@ const createDropHandler =
     }
   }
 
+interface CreateUploadFileParams {
+  getNextLocalFileId: () => number
+  addFiles: (files: UploadFileInfo[]) => void
+  updateFile: (id: number, fileInfo: UploadFileInfo) => void
+  uploadClient: FileUploadClient
+  element: WidgetInfo
+  onUploadProgress: (e: ProgressEvent, id: number) => void
+  onUploadComplete: (id: number, fileURLs: IFileURLs) => void
+}
+const createUploadFileHandler =
+  ({
+    getNextLocalFileId,
+    addFiles,
+    updateFile,
+    uploadClient,
+    element,
+    onUploadProgress,
+    onUploadComplete,
+  }: CreateUploadFileParams) =>
+  (fileURLs: IFileURLs, file: File): void => {
+    // Create an UploadFileInfo for this file and add it to our state.
+    const cancelToken = axios.CancelToken.source()
+    const uploadingFileInfo = new UploadFileInfo(
+      file.name,
+      file.size,
+      getNextLocalFileId(),
+      {
+        type: "uploading",
+        cancelToken,
+        progress: 1,
+      }
+    )
+    addFiles([uploadingFileInfo])
+
+    uploadClient
+      .uploadFile(
+        {
+          formId: "", // TODO[kajarnec] fix this probably with uploadFile refactoring
+          ...element,
+        },
+        fileURLs.uploadUrl as string,
+        file,
+        e => onUploadProgress(e, uploadingFileInfo.id),
+        cancelToken.token
+      )
+      .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
+      .catch(err => {
+        // If this was a cancel error, we don't show the user an error -
+        // the cancellation was in response to an action they took.
+        if (!axios.isCancel(err)) {
+          updateFile(
+            uploadingFileInfo.id,
+            uploadingFileInfo.setStatus({
+              type: "error",
+              errorMessage: err ? err.toString() : "Unknown error",
+            })
+          )
+        }
+      })
+  }
+
 // We want to show easily that there's scrolling so we deliberately choose
 // a half size.
 const MAX_VISIBLE_NUM_LINES = 6.5
@@ -177,24 +244,41 @@ function ChatInput({
   const [scrollHeight, setScrollHeight] = useState(0)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
+
+  const [files, setFiles] = useState<UploadFileInfo[]>([])
+  const addFiles = (filesToAdd: UploadFileInfo[]) => {
+    setFiles([...files, ...filesToAdd])
+  }
+
+  const counterRef = useRef(0)
+  const getNextLocalFileId = () => {
+    return counterRef.current++
+  }
+
   const dropHandler = createDropHandler({
     acceptMultipleFiles: false,
     uploadClient: uploadClient,
-    uploadFile: (fileURLs: FileURLsProto, file: File) => {
-      // Do nothing
-      console.log("fileURLs", fileURLs)
-      console.log("file", file)
-    },
-    addFiles: (files: UploadFileInfo[]) => {
-      // Do nothing
-      console.log("files", files)
-    },
-    getNextLocalFileId: () => {
-      return 0
-    },
+    uploadFile: createUploadFileHandler({
+      getNextLocalFileId,
+      addFiles,
+      updateFile: (id, fileInfo) => {
+        setFiles(files.map(f => (f.id === id ? fileInfo : f)))
+      },
+      uploadClient,
+      element,
+      onUploadProgress: (e, id) => {
+        console.log("PROGRESSSS....")
+      },
+      onUploadComplete: (id, fileURLs) => {
+        console.log("COMPLETE....")
+      },
+    }),
+    addFiles,
+    getNextLocalFileId,
   })
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
+    multiple: false,
   })
 
   const getScrollHeight = (): number => {
@@ -290,6 +374,12 @@ function ChatInput({
       data-testid="stChatInput"
       width={width}
     >
+      <div>
+        {files.map(file => {
+          const { id, name, status } = file
+          return <div key={id}>{name}</div>
+        })}
+      </div>
       <StyledChatInput>
         <div {...getRootProps()}>
           <input {...getInputProps()} />
