@@ -19,6 +19,11 @@ import { Long, util } from "protobufjs"
 import { Signal, SignalConnection } from "typed-signals"
 
 import {
+  isValidFormId,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
+
+import {
   DoubleArray,
   IArrowTable,
   IFileUploaderState,
@@ -29,7 +34,6 @@ import {
   WidgetState,
   WidgetStates,
 } from "./proto"
-import { isValidFormId, notNullOrUndefined } from "./util/utils"
 
 export interface Source {
   fromUi: boolean
@@ -307,7 +311,7 @@ export class WidgetStateManager {
 
   public getBoolValue(widget: WidgetInfo): boolean | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "boolValue") {
+    if (notNullOrUndefined(state) && state.value === "boolValue") {
       return state.boolValue as boolean
     }
 
@@ -326,7 +330,7 @@ export class WidgetStateManager {
 
   public getIntValue(widget: WidgetInfo): number | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "intValue") {
+    if (notNullOrUndefined(state) && state.value === "intValue") {
       return requireNumberInt(state.intValue as number)
     }
 
@@ -345,7 +349,7 @@ export class WidgetStateManager {
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "doubleValue") {
+    if (notNullOrUndefined(state) && state.value === "doubleValue") {
       return state.doubleValue as number
     }
 
@@ -364,7 +368,7 @@ export class WidgetStateManager {
 
   public getStringValue(widget: WidgetInfo): string | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "stringValue") {
+    if (notNullOrUndefined(state) && state.value === "stringValue") {
       return state.stringValue as string
     }
 
@@ -396,10 +400,10 @@ export class WidgetStateManager {
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
     const state = this.getWidgetState(widget)
     if (
-      state != null &&
+      notNullOrUndefined(state) &&
       state.value === "stringArrayValue" &&
-      state.stringArrayValue != null &&
-      state.stringArrayValue.data != null
+      notNullOrUndefined(state.stringArrayValue) &&
+      notNullOrUndefined(state.stringArrayValue.data)
     ) {
       return state.stringArrayValue.data
     }
@@ -410,10 +414,10 @@ export class WidgetStateManager {
   public getDoubleArrayValue(widget: WidgetInfo): number[] | undefined {
     const state = this.getWidgetState(widget)
     if (
-      state != null &&
+      notNullOrUndefined(state) &&
       state.value === "doubleArrayValue" &&
-      state.doubleArrayValue != null &&
-      state.doubleArrayValue.data != null
+      notNullOrUndefined(state.doubleArrayValue) &&
+      notNullOrUndefined(state.doubleArrayValue.data)
     ) {
       return state.doubleArrayValue.data
     }
@@ -436,10 +440,10 @@ export class WidgetStateManager {
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
     const state = this.getWidgetState(widget)
     if (
-      state != null &&
+      notNullOrUndefined(state) &&
       state.value === "intArrayValue" &&
-      state.intArrayValue != null &&
-      state.intArrayValue.data != null
+      notNullOrUndefined(state.intArrayValue) &&
+      notNullOrUndefined(state.intArrayValue.data)
     ) {
       return state.intArrayValue.data.map(requireNumberInt)
     }
@@ -461,7 +465,7 @@ export class WidgetStateManager {
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "jsonValue") {
+    if (notNullOrUndefined(state) && state.value === "jsonValue") {
       return state.jsonValue as string
     }
 
@@ -491,9 +495,9 @@ export class WidgetStateManager {
   public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
     const state = this.getWidgetState(widget)
     if (
-      state != null &&
+      notNullOrUndefined(state) &&
       state.value === "arrowValue" &&
-      state.arrowValue != null
+      notNullOrUndefined(state.arrowValue)
     ) {
       return state.arrowValue
     }
@@ -513,7 +517,7 @@ export class WidgetStateManager {
 
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "bytesValue") {
+    if (notNullOrUndefined(state) && state.value === "bytesValue") {
       return state.bytesValue as Uint8Array
     }
 
@@ -534,7 +538,10 @@ export class WidgetStateManager {
     widget: WidgetInfo
   ): IFileUploaderState | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "fileUploaderStateValue") {
+    if (
+      notNullOrUndefined(state) &&
+      state.value === "fileUploaderStateValue"
+    ) {
       return state.fileUploaderStateValue as IFileUploaderState
     }
 
@@ -635,7 +642,7 @@ export class WidgetStateManager {
         .get(widget.formId)
         ?.widgetStates.getState(widget.id)
 
-      if (formState != null) {
+      if (notNullOrUndefined(formState)) {
         return formState
       }
     }
@@ -653,7 +660,7 @@ export class WidgetStateManager {
   /** Return the FormState for the given form. Create it if it doesn't exist. */
   private getOrCreateFormState(formId: string): FormState {
     let form = this.forms.get(formId)
-    if (form != null) {
+    if (notNullOrUndefined(form)) {
       return form
     }
 

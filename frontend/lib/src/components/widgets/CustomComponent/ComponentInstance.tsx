@@ -41,6 +41,10 @@ import {
   COMPONENT_DEVELOPER_URL,
 } from "@streamlit/lib/src/urls"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import { ComponentRegistry } from "./ComponentRegistry"
 import {
@@ -82,7 +86,7 @@ function getSrc(
   url?: string
 ): string {
   let src: string
-  if (url != null && url !== "") {
+  if (notNullOrUndefined(url) && url !== "") {
     src = url
   } else {
     src = componentRegistry.getComponentURL(componentName, "index.html")
@@ -249,7 +253,7 @@ function ComponentInstance(props: Props): ReactElement {
         return
       }
 
-      if (iframeRef.current == null) {
+      if (isNullOrUndefined(iframeRef.current)) {
         // This should not be possible.
         logWarning(`handleSetFrameHeight: missing our iframeRef!`)
         return

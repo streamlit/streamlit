@@ -258,7 +258,7 @@ export function hashString(s: string): string {
  * if the value is null or undefined.
  */
 export function requireNonNull<T>(obj: T | null | undefined): T {
-  if (obj == null) {
+  if (isNullOrUndefined(obj)) {
     throw new Error("value is null")
   }
   return obj
@@ -275,7 +275,7 @@ export function notUndefined<T>(value: T | undefined): value is T {
  * A type predicate that is true if the given value is not null.
  */
 export function notNull<T>(value: T | null): value is T {
-  return value != null
+  return notNullOrUndefined(value)
 }
 
 /**
@@ -356,7 +356,7 @@ export function getElementWidgetID(element: Element): string | undefined {
 
 /** True if the given form ID is non-null and non-empty. */
 export function isValidFormId(formId?: string): formId is string {
-  return formId != null && formId.length > 0
+  return notNullOrUndefined(formId) && formId.length > 0
 }
 
 /** True if the given widget element is part of a form. */
