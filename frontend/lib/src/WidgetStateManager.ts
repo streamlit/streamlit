@@ -156,7 +156,9 @@ interface Props {
   /** Callback to deliver a message to the server */
   sendRerunBackMsg: (
     widgetStates: WidgetStates,
-    fragmentId: string | undefined
+    fragmentId: string | undefined,
+    pageScriptHash: string | undefined,
+    isAutoRerun: boolean | undefined
   ) => void
 
   /**
@@ -257,7 +259,7 @@ export class WidgetStateManager {
     this.widgetStates.copyFrom(form.widgetStates)
     form.widgetStates.clear()
 
-    this.sendUpdateWidgetsMessage(fragmentId)
+    this.sendUpdateWidgetsMessage(fragmentId, undefined)
     this.syncFormsWithPendingChanges()
 
     if (selectedSubmitButton) {
@@ -558,7 +560,7 @@ export class WidgetStateManager {
     if (isValidFormId(formId)) {
       this.syncFormsWithPendingChanges()
     } else if (source.fromUi) {
-      this.sendUpdateWidgetsMessage(fragmentId)
+      this.sendUpdateWidgetsMessage(fragmentId, undefined)
     }
   }
 
@@ -579,10 +581,15 @@ export class WidgetStateManager {
     })
   }
 
-  public sendUpdateWidgetsMessage(fragmentId: string | undefined): void {
+  public sendUpdateWidgetsMessage(
+    fragmentId: string | undefined,
+    isAutoRerun: boolean | undefined
+  ): void {
     this.props.sendRerunBackMsg(
       this.widgetStates.createWidgetStatesMsg(),
-      fragmentId
+      fragmentId,
+      undefined,
+      isAutoRerun
     )
   }
 

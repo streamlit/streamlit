@@ -632,7 +632,7 @@ export class App extends PureComponent<Props, State> {
       //      connection dropping.
       if (!this.sessionInfo.last || lastRunWasInterrupted) {
         logMessage("Requesting a script run.")
-        this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+        this.widgetMgr.sendUpdateWidgetsMessage(undefined, undefined)
         this.setState({ dialog: null })
       }
 
@@ -845,7 +845,7 @@ export class App extends PureComponent<Props, State> {
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
     }, autoRerun.interval * 1000)
 
     this.setState((prevState: State) => {
@@ -1417,7 +1417,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     // Trigger a full app rerun:
-    this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+    this.widgetMgr.sendUpdateWidgetsMessage(undefined, undefined)
   }
 
   sendLoadGitInfoBackMsg = (): void => {
@@ -1468,7 +1468,8 @@ export class App extends PureComponent<Props, State> {
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
     fragmentId?: string,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    isAutoRerun?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1522,6 +1523,7 @@ export class App extends PureComponent<Props, State> {
           pageScriptHash,
           pageName,
           fragmentId,
+          isAutoRerun,
         },
       })
     )

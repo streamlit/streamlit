@@ -54,6 +54,7 @@ class RerunData:
     # The queue of fragment_ids waiting to be run.
     fragment_id_queue: list[str] = field(default_factory=list)
     is_fragment_scoped_rerun: bool = False
+    is_auto_rerun: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -180,6 +181,7 @@ class ScriptRequests:
                     page_name=new_data.page_name,
                     fragment_id_queue=fragment_id_queue,
                     is_fragment_scoped_rerun=new_data.is_fragment_scoped_rerun,
+                    is_auto_rerun=new_data.is_auto_rerun,
                 )
 
                 return True
