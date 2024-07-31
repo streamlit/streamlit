@@ -488,7 +488,7 @@ def convert_anything_to_pandas_df(
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
-        if isinstance(data, pd.Series):
+        if isinstance(data, (pd.Series, pd.Index)):
             data = data.to_frame()
 
         if data.shape[0] == max_unevaluated_rows:
@@ -510,7 +510,7 @@ def convert_anything_to_pandas_df(
     if is_snowpandas_data_object(data):
         data = data.head(max_unevaluated_rows).to_pandas()
 
-        if isinstance(data, pd.Series):
+        if isinstance(data, (pd.Series, pd.Index)):
             data = data.to_frame()
 
         if data.shape[0] == max_unevaluated_rows:
