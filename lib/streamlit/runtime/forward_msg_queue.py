@@ -94,7 +94,7 @@ class ForwardMsgQueue:
             self._queue = []
         else:
             self._queue = [
-                msg
+                _update_script_finished_message(msg)
                 for msg in self._queue
                 if msg.WhichOneof("type")
                 in {
@@ -166,3 +166,20 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta | None:
         return new_delta
 
     return None
+
+
+def _update_script_finished_message(msg: ForwardMsg) -> ForwardMsg:
+    """
+    When we are here, the message queue is cleared from non-lifecycle messages
+    before they were flushed to the browser.
+
+    If there were no non-lifecycle messages in the queue, changing the type here
+    should not matter for the frontend anyways, so we optimistically change the
+    `script_finished` message to `FINISHED_EARLY_FOR_RERUN`. This indicates to
+    the frontend that the previous run was interrupted by a new script start.
+    Otherwise, a `FINISHED_SUCCESSFULLY` message might trigger a reset of widget
+    states on the frontend.
+    """
+    if msg.WhichOneof("type") == "script_finished":
+        msg.script_finished = ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    return msg
