@@ -1139,6 +1139,8 @@ describe("AppRoot.clearStaleNodes", () => {
         forwardMsgMetadata([0, 1, 1])
       )
       // New element container related to my_fragment_id, having children which will be handled individually
+      // Create a tab container with two tabs in the old session; then send new delta with the container and
+      // only one tab. The second tab with the old_session_id should be pruned.
       .applyDelta(
         "old_session_id",
         tabContainerProto,
