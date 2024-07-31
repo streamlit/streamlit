@@ -259,7 +259,7 @@ export class WidgetStateManager {
     this.widgetStates.copyFrom(form.widgetStates)
     form.widgetStates.clear()
 
-    this.sendUpdateWidgetsMessage(fragmentId, undefined)
+    this.sendUpdateWidgetsMessage(fragmentId)
     this.syncFormsWithPendingChanges()
 
     if (selectedSubmitButton) {
@@ -560,7 +560,7 @@ export class WidgetStateManager {
     if (isValidFormId(formId)) {
       this.syncFormsWithPendingChanges()
     } else if (source.fromUi) {
-      this.sendUpdateWidgetsMessage(fragmentId, undefined)
+      this.sendUpdateWidgetsMessage(fragmentId)
     }
   }
 
@@ -583,7 +583,7 @@ export class WidgetStateManager {
 
   public sendUpdateWidgetsMessage(
     fragmentId: string | undefined,
-    isAutoRerun: boolean | undefined
+    isAutoRerun: boolean | undefined = undefined
   ): void {
     this.props.sendRerunBackMsg(
       this.widgetStates.createWidgetStatesMsg(),

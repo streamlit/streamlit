@@ -632,7 +632,7 @@ export class App extends PureComponent<Props, State> {
       //      connection dropping.
       if (!this.sessionInfo.last || lastRunWasInterrupted) {
         logMessage("Requesting a script run.")
-        this.widgetMgr.sendUpdateWidgetsMessage(undefined, undefined)
+        this.widgetMgr.sendUpdateWidgetsMessage(undefined)
         this.setState({ dialog: null })
       }
 
@@ -1417,7 +1417,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     // Trigger a full app rerun:
-    this.widgetMgr.sendUpdateWidgetsMessage(undefined, undefined)
+    this.widgetMgr.sendUpdateWidgetsMessage(undefined)
   }
 
   sendLoadGitInfoBackMsg = (): void => {
