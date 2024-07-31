@@ -489,13 +489,6 @@ export class BlockNode implements AppNode {
     fragmentIdsThisRun?: Array<string>,
     fragmentIdOfBlock?: string
   ): BlockNode | undefined {
-    console.log(
-      "clearStaleNodes",
-      currentScriptRunId,
-      fragmentIdsThisRun,
-      fragmentIdOfBlock,
-      this.fragmentId
-    )
     if (!fragmentIdsThisRun || !fragmentIdsThisRun.length) {
       // If we're not currently running a fragment, then we can remove any blocks
       // that don't correspond to currentScriptRunId.
@@ -532,14 +525,6 @@ export class BlockNode implements AppNode {
     // Recursively clear our children.
     const newChildren = this.children
       .map(child => {
-        console.log(
-          "clearStaleNodes for child",
-          child,
-          currentScriptRunId,
-          fragmentIdsThisRun,
-          fragmentIdOfBlock,
-          this.fragmentId
-        )
         return child.clearStaleNodes(
           currentScriptRunId,
           fragmentIdsThisRun,
