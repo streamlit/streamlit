@@ -184,7 +184,7 @@ module.exports = {
           {
             pattern: "@streamlit/**",
             group: "internal",
-            position: "after",
+            position: "before",
           },
         ],
         pathGroupsExcludedImportTypes: ["react"],
