@@ -1064,6 +1064,20 @@ describe("AppRoot.clearStaleNodes", () => {
   })
 
   it("handles currentFragmentId correctly", () => {
+    const tabContainerProto = makeProto(DeltaProto, {
+      addBlock: { tabContainer: {}, allowEmpty: false },
+      fragmentId: "my_fragment_id",
+    })
+    const tab1 = makeProto(DeltaProto, {
+      addBlock: { tab: { label: "tab1" }, allowEmpty: true },
+      fragmentId: "my_fragment_id",
+    })
+    const tab2 = makeProto(DeltaProto, {
+      addBlock: { tab: { label: "tab2" }, allowEmpty: true },
+      fragmentId: "my_fragment_id",
+    })
+
+    // const BLOCK = block([text("1"), block([text("2")])])
     const root = AppRoot.empty(FAKE_SCRIPT_HASH)
       // Block not corresponding to my_fragment_id. Should be preserved.
       .applyDelta(
@@ -1124,6 +1138,20 @@ describe("AppRoot.clearStaleNodes", () => {
         }),
         forwardMsgMetadata([0, 1, 1])
       )
+      // New element container related to my_fragment_id, having children which will be handled individually
+      .applyDelta(
+        "old_session_id",
+        tabContainerProto,
+        forwardMsgMetadata([0, 2])
+      )
+      .applyDelta("old_session_id", tab1, forwardMsgMetadata([0, 2, 0]))
+      .applyDelta("old_session_id", tab2, forwardMsgMetadata([0, 2, 1]))
+      .applyDelta(
+        "new_session_id",
+        tabContainerProto,
+        forwardMsgMetadata([0, 2])
+      )
+      .applyDelta("new_session_id", tab1, forwardMsgMetadata([0, 2, 0]))
 
     const pruned = root.clearStaleNodes("new_session_id", ["my_fragment_id"])
 
@@ -1136,6 +1164,12 @@ describe("AppRoot.clearStaleNodes", () => {
     expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
     expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(1)
     expect(pruned.main.getIn([1, 0])).toBeTextNode("newElement!")
+
+    expect(pruned.main.getIn([2])).toBeInstanceOf(BlockNode)
+    expect((pruned.main.getIn([2]) as BlockNode).children).toHaveLength(1)
+    expect(
+      (pruned.main.getIn([2, 0]) as BlockNode).deltaBlock.tab?.label
+    ).toContain("tab1")
   })
 })
 
