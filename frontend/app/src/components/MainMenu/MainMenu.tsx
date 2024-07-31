@@ -16,6 +16,7 @@
 
 import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { StatefulMenu } from "baseui/menu"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { MoreVert } from "@emotion-icons/material-rounded"
@@ -261,7 +262,7 @@ function getDevMenuItems(coreDevMenuItems: Record<string, any>): any[] {
     }
   }
 
-  if (devLastMenuItem != null) {
+  if (notNullOrUndefined(devLastMenuItem)) {
     devLastMenuItem.styleProps = {
       margin: "0 0 -.5rem 0",
       padding: ".25rem 0 .25rem 1.5rem",

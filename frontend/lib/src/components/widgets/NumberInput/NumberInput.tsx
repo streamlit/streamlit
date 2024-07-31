@@ -22,6 +22,12 @@ import { sprintf } from "sprintf-js"
 import { Input as UIInput } from "baseui/input"
 import uniqueId from "lodash/uniqueId"
 
+import {
+  isInForm,
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
@@ -39,12 +45,6 @@ import {
   WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import {
-  isInForm,
-  isNullOrUndefined,
-  labelVisibilityProtoValueToEnum,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
 
 import {
   StyledInputContainer,
@@ -60,7 +60,7 @@ import {
 function getNonEmptyString(
   value: string | null | undefined
 ): string | undefined {
-  return value == null || value === "" ? undefined : value
+  return isNullOrUndefined(value) || value === "" ? undefined : value
 }
 
 /**
@@ -111,7 +111,7 @@ export const formatValue = ({
 
   let formatString = getNonEmptyString(format)
 
-  if (formatString == null && step != null) {
+  if (isNullOrUndefined(formatString) && notNullOrUndefined(step)) {
     const strStep = step.toString()
     if (
       dataType === NumberInputProto.DataType.FLOAT &&
@@ -123,7 +123,7 @@ export const formatValue = ({
     }
   }
 
-  if (formatString == null) {
+  if (isNullOrUndefined(formatString)) {
     return value.toString()
   }
 

@@ -62,7 +62,7 @@ module.exports = {
     "**/vendor/*",
     "**/node_modules/*",
   ],
-  plugins: ["no-relative-import-paths"],
+  plugins: ["no-relative-import-paths", "streamlit-custom"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   rules: {
@@ -194,6 +194,7 @@ module.exports = {
         "newlines-between": "always",
       },
     ],
+    "streamlit-custom/use-strict-null-equality-checks": "error",
   },
   settings: {
     react: {
