@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+import pick from "lodash/pick"
+
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import pick from "lodash/pick"
 import {
   Delta,
   DeployedAppMetadata,
@@ -27,7 +28,6 @@ import {
   logAlways,
   SessionInfo,
 } from "@streamlit/lib"
-
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 
 /**

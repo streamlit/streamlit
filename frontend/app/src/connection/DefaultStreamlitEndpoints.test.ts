@@ -16,6 +16,7 @@
 
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
+
 import { BaseUriParts, buildHttpUri, ForwardMsg } from "@streamlit/lib"
 
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"

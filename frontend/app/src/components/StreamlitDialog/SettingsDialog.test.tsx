@@ -17,6 +17,7 @@
 import React from "react"
 
 import { fireEvent, screen } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 import {
@@ -26,7 +27,6 @@ import {
   lightTheme,
   mockSessionInfo,
 } from "@streamlit/lib"
-
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import { Props, SettingsDialog } from "./SettingsDialog"

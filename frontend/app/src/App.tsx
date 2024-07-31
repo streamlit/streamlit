@@ -20,6 +20,8 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
+import without from "lodash/without"
+
 import {
   AppConfig,
   AppRoot,
@@ -95,13 +97,11 @@ import {
   WidgetStateManager,
   WidgetStates,
 } from "@streamlit/lib"
-import without from "lodash/without"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
   preserveEmbedQueryParams,
 } from "@streamlit/lib/src/util/utils"
-
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"

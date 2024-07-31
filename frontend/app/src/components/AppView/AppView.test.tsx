@@ -18,6 +18,7 @@ import React from "react"
 
 import "@testing-library/jest-dom"
 import { screen, within } from "@testing-library/react"
+
 import {
   AppRoot,
   BlockNode,
@@ -37,7 +38,6 @@ import {
   ScriptRunState,
   WidgetStateManager,
 } from "@streamlit/lib"
-
 import {
   AppContext,
   Props as AppContextProps,
