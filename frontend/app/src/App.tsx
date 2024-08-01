@@ -849,7 +849,7 @@ export class App extends PureComponent<Props, State> {
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
     }, autoRerun.interval * 1000)
 
     this.setState((prevState: State) => {
@@ -1472,7 +1472,8 @@ export class App extends PureComponent<Props, State> {
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
     fragmentId?: string,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    isAutoRerun?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1526,6 +1527,7 @@ export class App extends PureComponent<Props, State> {
           pageScriptHash,
           pageName,
           fragmentId,
+          isAutoRerun,
         },
       })
     )

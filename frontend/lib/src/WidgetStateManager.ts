@@ -160,7 +160,9 @@ interface Props {
   /** Callback to deliver a message to the server */
   sendRerunBackMsg: (
     widgetStates: WidgetStates,
-    fragmentId: string | undefined
+    fragmentId: string | undefined,
+    pageScriptHash: string | undefined,
+    isAutoRerun: boolean | undefined
   ) => void
 
   /**
@@ -586,10 +588,15 @@ export class WidgetStateManager {
     })
   }
 
-  public sendUpdateWidgetsMessage(fragmentId: string | undefined): void {
+  public sendUpdateWidgetsMessage(
+    fragmentId: string | undefined,
+    isAutoRerun: boolean | undefined = undefined
+  ): void {
     this.props.sendRerunBackMsg(
       this.widgetStates.createWidgetStatesMsg(),
-      fragmentId
+      fragmentId,
+      undefined,
+      isAutoRerun
     )
   }
 
