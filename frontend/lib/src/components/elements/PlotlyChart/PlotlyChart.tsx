@@ -445,6 +445,7 @@ export function PlotlyChart({
             }
           },
         },
+        ...(config.modeBarButtonsToAdd ?? []),
       ]
     }
 
