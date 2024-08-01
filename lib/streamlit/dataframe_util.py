@@ -39,7 +39,6 @@ from typing import (
 
 from typing_extensions import TypeAlias, TypeGuard
 
-import streamlit as st
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     has_callable_attr,
@@ -416,6 +415,8 @@ def convert_anything_to_pandas_df(
     import numpy as np
     import pandas as pd
 
+    from streamlit import caption
+
     if isinstance(data, pd.DataFrame):
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
@@ -443,7 +444,7 @@ def convert_anything_to_pandas_df(
     if is_polars_lazyframe(data):
         data = data.limit(max_unevaluated_rows).collect().to_pandas()
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `collect()` on the dataframe to show more."
             )
@@ -466,7 +467,7 @@ def convert_anything_to_pandas_df(
         data = data.limit(max_unevaluated_rows).to_pandas()
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `to_pandas()` on the dataframe to show more."
             )
@@ -479,7 +480,7 @@ def convert_anything_to_pandas_df(
             data = data.to_frame()
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `compute()` on the dataframe to show more."
             )
@@ -492,7 +493,7 @@ def convert_anything_to_pandas_df(
             data = data.to_frame()
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `_to_pandas()` on the dataframe to show more."
             )
@@ -501,7 +502,7 @@ def convert_anything_to_pandas_df(
     if is_pyspark_data_object(data):
         data = data.limit(max_unevaluated_rows).toPandas()
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `toPandas()` on the dataframe to show more."
             )
@@ -514,7 +515,7 @@ def convert_anything_to_pandas_df(
             data = data.to_frame()
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `to_pandas()` on the dataframe to show more."
             )
@@ -523,7 +524,7 @@ def convert_anything_to_pandas_df(
     if is_snowpark_data_object(data):
         data = data.limit(max_unevaluated_rows).to_pandas()
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `to_pandas()` on the dataframe to show more."
             )
@@ -554,7 +555,7 @@ def convert_anything_to_pandas_df(
         )
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Convert the data to a list to show more."
             )
@@ -878,7 +879,9 @@ def _maybe_truncate_table(
                 displayed_rows = str(table.num_rows)
                 total_rows = str(table.num_rows + truncated_rows)
 
-            st.caption(
+            from streamlit import caption
+
+            caption(
                 f"⚠️ Showing {displayed_rows} out of {total_rows} "
                 "rows due to data size limitations."
             )
