@@ -87,7 +87,7 @@ class Index:
     integration tests.
     """
 
-    __module__ = "snowflake.snowpark.modin.plugin.extensions.index.Index"
+    __module__ = "snowflake.snowpark.modin.plugin.extensions.index"
 
     def __init__(self, data: pd.Index):
         self._data: pd.Index = data
