@@ -225,7 +225,7 @@ def expect_markdown(
     locator: Locator | Page,
     expected_message: str | Pattern[str],
 ) -> None:
-    """Expect an exception to be displayed in the app.
+    """Expect markdown with the given message to be displayed in the app.
 
     Parameters
     ----------
