@@ -425,7 +425,6 @@ class ScriptRunner:
                 rerun_data.page_script_hash, rerun_data.page_name
             )
             main_page_info = self._pages_manager.get_main_page()
-            uncaught_exception = None
 
             page_script_hash = (
                 active_script["page_script_hash"]
@@ -596,6 +595,7 @@ class ScriptRunner:
                 run_without_errors,
                 rerun_exception_data,
                 premature_stop,
+                uncaught_exception,
             ) = exec_func_with_error_handling(code_to_exec, ctx)
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
