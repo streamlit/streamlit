@@ -433,6 +433,8 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
+            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
+
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
@@ -457,6 +459,7 @@ class ScriptRunner:
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
+                fragment_ids_this_run=fragment_ids_this_run,
             )
             self._pages_manager.reset_active_script_hash()
 
