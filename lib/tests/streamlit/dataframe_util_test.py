@@ -98,7 +98,7 @@ class DataframeUtilTest(unittest.TestCase):
         a variety unevaluated dataframes and shows a warning if
         the row count is > 1000.
         """
-        with patch("streamlit.caption") as mock:
+        with patch("streamlit.dataframe_util._show_data_information") as mock:
             converted_df = dataframe_util.convert_anything_to_pandas_df(
                 input_data, max_unevaluated_rows=1000
             )
