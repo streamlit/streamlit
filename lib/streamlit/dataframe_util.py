@@ -1229,7 +1229,7 @@ def convert_pandas_df_to_data_format(
 
         return xr.DataArray.from_series(_pandas_df_to_series(df))
     elif data_format == DataFormat.HUGGINGFACE_DATASET:
-        from datasets import Dataset
+        from datasets import Dataset  # type: ignore[import-not-found]
 
         return Dataset.from_pandas(df)
     elif data_format == DataFormat.LIST_OF_RECORDS:
