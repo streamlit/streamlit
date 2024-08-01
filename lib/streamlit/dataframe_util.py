@@ -247,8 +247,8 @@ def is_snowpark_row_list(obj: object) -> bool:
     return (
         isinstance(obj, list)
         and len(obj) > 0
-        and has_callable_attr(obj[0], "as_dict")
         and is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+        and has_callable_attr(obj[0], "as_dict")
     )
 
 
@@ -795,7 +795,9 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     if obj is None:
         return []  # type: ignore
 
-    if isinstance(obj, (str, list, tuple, set, range, EnumMeta, deque, map)):
+    if isinstance(
+        obj, (str, list, tuple, set, range, EnumMeta, deque, map)
+    ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
