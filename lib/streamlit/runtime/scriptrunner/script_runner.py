@@ -621,7 +621,7 @@ class ScriptRunner:
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
-                            ctx.tracked_commands,
+                            commands=ctx.tracked_commands,
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(
