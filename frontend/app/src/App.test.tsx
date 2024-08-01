@@ -1786,6 +1786,31 @@ describe("App", () => {
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
     })
+
+    it("triggers rerunScript with is_auto_rerun set to true", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      jest.advanceTimersByTime(1000)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].toJSON()
+      ).toStrictEqual({
+        rerunScript: {
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+          pageName: "",
+          pageScriptHash: "",
+          queryString: "",
+          widgetStates: {},
+        },
+      })
+    })
   })
 
   describe("App.requestFileURLs", () => {

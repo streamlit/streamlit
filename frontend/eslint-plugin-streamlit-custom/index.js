@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +14,10 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ClientStateProto";
-
-import "streamlit/proto/WidgetStates.proto";
-
-
-message ClientState {
-  string query_string = 1;
-  WidgetStates widget_states = 2;
-  string page_script_hash = 3;
-  string page_name = 4;
-  string fragment_id = 5;
-  bool is_auto_rerun = 6;
+module.exports = {
+  rules: {
+    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
+  },
 }

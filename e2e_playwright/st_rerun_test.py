@@ -14,7 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.shared.app_utils import click_button, expect_markdown
 
 
 def _expect_initial_reruns_finished(app: Page):
@@ -37,11 +38,13 @@ def test_fragment_scoped_st_rerun(app: Page):
     )
 
     click_button(app, "rerun fragment")
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text("fragment run count: 5")
+    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
+        "fragment run count: 5"
+    )
     _expect_initial_reruns_count_text(app)
 
     click_button(app, "rerun fragment")
-    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
         "fragment run count: 10"
     )
     # the main apps rerun count should not have been incremented
@@ -56,3 +59,21 @@ def test_rerun_works_in_try_except_block(app: Page):
     # the rerun in the try-block worked as expected, so the session_state count
     # incremented
     expect(app.get_by_test_id("stMarkdown").last).to_have_text("app run count: 5")
+
+
+def test_state_retained_on_app_scoped_rerun(app: Page):
+    # Sanity check 1
+    expect_markdown(app, "selectbox selection: None")
+
+    # Click on the selectbox and select the first option.
+    app.get_by_test_id("stSelectbox").first.locator("input").click()
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown.locator("li").first.click()
+    wait_for_app_run(app)
+
+    # Sanity check 2
+    expect_markdown(app, "selectbox selection: a")
+
+    # Rerun the fragment and verify that the selectbox kept its state
+    click_button(app, "rerun whole app (from fragment)")
+    expect_markdown(app, "selectbox selection: a")

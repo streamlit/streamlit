@@ -482,8 +482,6 @@ def create_page_profile_message(
         page_profile.uncaught_exception = uncaught_exception
 
     if ctx := get_script_run_ctx():
-        page_profile.is_fragment_run = bool(
-            ctx.script_requests and ctx.script_requests.fragment_id_queue
-        )
+        page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
 
     return msg

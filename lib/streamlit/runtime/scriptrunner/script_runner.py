@@ -433,6 +433,8 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
+            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
+
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
@@ -457,6 +459,7 @@ class ScriptRunner:
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
+                fragment_ids_this_run=fragment_ids_this_run,
             )
             self._pages_manager.reset_active_script_hash()
 
@@ -555,9 +558,16 @@ class ScriptRunner:
                                 wrapped_fragment()
 
                             except FragmentStorageKeyError:
-                                raise RuntimeError(
-                                    f"Could not find fragment with id {fragment_id}"
-                                )
+                                # Only raise an error if the fragment is not an
+                                # auto_rerun. If it is an auto_rerun, we might have a
+                                # race condition where the fragment_id is removed
+                                # but the webapp sends a rerun request before the
+                                # removal information has reached the web app
+                                # (see https://github.com/streamlit/streamlit/issues/9080).
+                                if not rerun_data.is_auto_rerun:
+                                    raise RuntimeError(
+                                        f"Could not find fragment with id {fragment_id}"
+                                    )
                             except (RerunException, StopException) as e:
                                 # The wrapped_fragment function is executed
                                 # inside of a exec_func_with_error_handling call, so

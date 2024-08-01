@@ -96,7 +96,11 @@ import {
   WidgetStates,
 } from "@streamlit/lib"
 import without from "lodash/without"
-import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+  preserveEmbedQueryParams,
+} from "@streamlit/lib/src/util/utils"
 
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
@@ -585,8 +589,8 @@ export class App extends PureComponent<Props, State> {
       const { environmentInfo } = initializeMsg
 
       if (
-        environmentInfo != null &&
-        environmentInfo.streamlitVersion != null
+        notNullOrUndefined(environmentInfo) &&
+        notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
         return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
@@ -845,7 +849,7 @@ export class App extends PureComponent<Props, State> {
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
     }, autoRerun.interval * 1000)
 
     this.setState((prevState: State) => {
@@ -876,7 +880,7 @@ export class App extends PureComponent<Props, State> {
         // If the scriptCompileError dialog is open and the script starts
         // running, close it.
         if (
-          dialog != null &&
+          notNullOrUndefined(dialog) &&
           dialog.type === DialogType.SCRIPT_COMPILE_ERROR
         ) {
           dialog = undefined
@@ -1106,7 +1110,7 @@ export class App extends PureComponent<Props, State> {
     const hasAnchor = document.location.toString().includes("#")
     const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
-    if (targetAppPage == null || (hasAnchor && isSamePage)) {
+    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
     this.onPageChange(targetAppPage.pageScriptHash as string)
@@ -1468,7 +1472,8 @@ export class App extends PureComponent<Props, State> {
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
     fragmentId?: string,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    isAutoRerun?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1522,6 +1527,7 @@ export class App extends PureComponent<Props, State> {
           pageScriptHash,
           pageName,
           fragmentId,
+          isAutoRerun,
         },
       })
     )
