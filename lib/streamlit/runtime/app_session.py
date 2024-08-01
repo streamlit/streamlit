@@ -363,6 +363,7 @@ class AppSession:
                 client_state.page_script_hash,
                 client_state.page_name,
                 fragment_id=fragment_id if fragment_id else None,
+                is_auto_rerun=client_state.is_auto_rerun,
             )
         else:
             rerun_data = RerunData()
