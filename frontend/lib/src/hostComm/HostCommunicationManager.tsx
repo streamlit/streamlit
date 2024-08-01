@@ -31,6 +31,14 @@ import {
 
 export const HOST_COMM_VERSION = 1
 
+// Add typing for window.HtmlLoad and window.ReactLoad
+declare global {
+  interface Window {
+    HtmlLoad: Date
+    ReactLoad: Date
+  }
+}
+
 export interface HostCommunicationProps {
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
@@ -90,7 +98,12 @@ export default class HostCommunicationManager {
    */
   public openHostCommunication = (): void => {
     window.addEventListener("message", this.receiveHostMessage)
-    this.sendMessageToHost({ type: "GUEST_READY" })
+    this.sendMessageToHost({
+      type: "GUEST_READY",
+      stHtmlLoad: window.HtmlLoad,
+      stExecutionStart: window.ReactLoad,
+      guestReadyAt: new Date(),
+    })
   }
 
   /**

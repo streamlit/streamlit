@@ -132,6 +132,9 @@ export type IHostToGuestMessage = {
 export type IGuestToHostMessage =
   | {
       type: "GUEST_READY"
+      stHtmlLoad: Date
+      stExecutionStart: Date
+      guestReadyAt: Date
     }
   | {
       type: "MENU_ITEM_CALLBACK"
