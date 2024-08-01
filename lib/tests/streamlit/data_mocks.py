@@ -37,6 +37,7 @@ from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
@@ -610,6 +611,20 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "Snowpandas Series",
         SnowpandasSeries(pd.Series(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.SNOWPANDAS_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Snowpandas Index",
+        SnowpandasIndex(
+            pd.Index(["st.text_area", "st.markdown"]),
+        ),
         CaseMetadata(
             2,
             1,

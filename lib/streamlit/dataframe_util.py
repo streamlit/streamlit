@@ -75,6 +75,9 @@ _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
+_SNOWPANDAS_INDEX_TYPE_STR: Final = (
+    "snowflake.snowpark.modin.plugin.extensions.index.Index"
+)
 _DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
 _DASK_SERIES: Final = "dask.dataframe.core.Series"
 _DASK_INDEX: Final = "dask.dataframe.core.Index"
@@ -270,8 +273,10 @@ def is_modin_data_object(obj: object) -> bool:
 
 def is_snowpandas_data_object(obj: object) -> bool:
     """True if obj is a Snowpark Pandas DataFrame or Series."""
-    return is_type(obj, _SNOWPANDAS_DF_TYPE_STR) or is_type(
-        obj, _SNOWPANDAS_SERIES_TYPE_STR
+    return (
+        is_type(obj, _SNOWPANDAS_DF_TYPE_STR)
+        or is_type(obj, _SNOWPANDAS_SERIES_TYPE_STR)
+        or is_type(obj, _SNOWPANDAS_INDEX_TYPE_STR)
     )
 
 
@@ -507,7 +512,7 @@ def convert_anything_to_pandas_df(
         return cast(pd.DataFrame, data)
 
     if is_snowpandas_data_object(data):
-        data = data.head(max_unevaluated_rows).to_pandas()
+        data = data[:max_unevaluated_rows].to_pandas()
 
         if isinstance(data, (pd.Series, pd.Index)):
             data = data.to_frame()
