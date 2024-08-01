@@ -472,7 +472,7 @@ def convert_anything_to_pandas_df(
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataframe to show more."
+                "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -485,7 +485,7 @@ def convert_anything_to_pandas_df(
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `compute()` on the dataframe to show more."
+                "rows. Call `compute()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -498,7 +498,7 @@ def convert_anything_to_pandas_df(
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `_to_pandas()` on the dataframe to show more."
+                "rows. Call `_to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -507,7 +507,7 @@ def convert_anything_to_pandas_df(
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `toPandas()` on the dataframe to show more."
+                "rows. Call `toPandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -520,7 +520,7 @@ def convert_anything_to_pandas_df(
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataframe to show more."
+                "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -529,7 +529,7 @@ def convert_anything_to_pandas_df(
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataframe to show more."
+                "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
