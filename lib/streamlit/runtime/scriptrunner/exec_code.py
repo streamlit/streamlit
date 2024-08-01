@@ -27,7 +27,13 @@ if TYPE_CHECKING:
 
 def exec_func_with_error_handling(
     func: Callable[[], None], ctx: ScriptRunContext
-) -> tuple[Any | None, bool, RerunData | None, bool]:
+) -> tuple[
+    Any | None,
+    bool,
+    RerunData | None,
+    bool,
+    Exception | None,
+]:
     """Execute the passed function wrapped in a try/except block.
 
     This function is called by the script runner to execute the user's script or
@@ -53,6 +59,7 @@ def exec_func_with_error_handling(
             interrupted by a RerunException.
         - A boolean indicating whether the script was stopped prematurely (False for
             RerunExceptions, True for all other exceptions).
+        - The uncaught exception if one occurred, None otherwise
     """
 
     # Avoid circular imports
@@ -70,6 +77,9 @@ def exec_func_with_error_handling(
 
     # The result of the passed function
     result: Any | None = None
+
+    # The uncaught exception if one occurred, None otherwise
+    uncaught_exception: Exception | None = None
 
     try:
         result = func()
@@ -102,5 +112,12 @@ def exec_func_with_error_handling(
         run_without_errors = False
         premature_stop = True
         handle_uncaught_app_exception(ex)
+        uncaught_exception = ex
 
-    return result, run_without_errors, rerun_exception_data, premature_stop
+    return (
+        result,
+        run_without_errors,
+        rerun_exception_data,
+        premature_stop,
+        uncaught_exception,
+    )
