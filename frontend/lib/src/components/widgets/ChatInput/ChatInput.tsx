@@ -64,6 +64,7 @@ import {
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
+import { set } from "lodash"
 
 export interface Props {
   disabled: boolean
@@ -193,6 +194,8 @@ const createUploadFileHandler =
       )
       .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
+        console.log("ERROR!!!")
+        console.error(err)
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
         if (!axios.isCancel(err)) {
@@ -236,6 +239,9 @@ function ChatInput({
   uploadClient,
 }: Props): React.ReactElement {
   const theme = useTheme()
+
+  const [renderTrigger, setRenderTrigger] = useState(0)
+
   // True if the user-specified state.value has not yet been synced to the WidgetStateManager.
   const [dirty, setDirty] = useState(false)
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
@@ -245,9 +251,19 @@ function ChatInput({
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
 
-  const [files, setFiles] = useState<UploadFileInfo[]>([])
+  const filesRef = useRef<UploadFileInfo[]>([])
   const addFiles = (filesToAdd: UploadFileInfo[]) => {
-    setFiles([...files, ...filesToAdd])
+    filesRef.current = [...filesRef.current, ...filesToAdd]
+    setRenderTrigger(renderTrigger + 1)
+  }
+
+  const updateFile = (id: number, fileInfo: UploadFileInfo) => {
+    filesRef.current = filesRef.current.map(f => (f.id === id ? fileInfo : f))
+    setRenderTrigger(renderTrigger + 1)
+  }
+
+  const getFile = (localFileId: number): UploadFileInfo | undefined => {
+    return filesRef.current.find(f => f.id === localFileId)
   }
 
   const counterRef = useRef(0)
@@ -261,16 +277,37 @@ function ChatInput({
     uploadFile: createUploadFileHandler({
       getNextLocalFileId,
       addFiles,
-      updateFile: (id, fileInfo) => {
-        setFiles(files.map(f => (f.id === id ? fileInfo : f)))
-      },
+      updateFile,
       uploadClient,
       element,
       onUploadProgress: (e, id) => {
         console.log("PROGRESSSS....")
       },
-      onUploadComplete: (id, fileURLs) => {
+      onUploadComplete: (id, fileUrls) => {
+        console.log("IN ON UPLOAD COMPLETE....")
+        console.log("ID: ", id)
+        console.log("FILE URL: ", fileUrls)
+
+        const curFile = getFile(id)
+        if (curFile == null || curFile.status.type !== "uploading") {
+          // The file may have been canceled right before the upload
+          // completed. In this case, we just bail.
+          console.log("JUST BEFORE BAD RETURN :( ")
+          return
+        }
+
+        updateFile(
+          curFile.id,
+          curFile.setStatus({
+            type: "uploaded",
+            fileId: fileUrls.fileId as string,
+            fileUrls,
+          })
+        )
+
         console.log("COMPLETE....")
+        console.log("AAAA")
+        console.log(filesRef.current)
       },
     }),
     addFiles,
@@ -375,7 +412,7 @@ function ChatInput({
       width={width}
     >
       <div>
-        {files.map(file => {
+        {filesRef.current.map(file => {
           const { id, name, status } = file
           return <div key={id}>{name}</div>
         })}
@@ -461,6 +498,7 @@ function ChatInput({
           </StyledSendIconButton>
         </StyledSendIconButtonContainer>
       </StyledChatInput>
+      <h1>{renderTrigger}</h1>
     </StyledChatInputContainer>
   )
 }
