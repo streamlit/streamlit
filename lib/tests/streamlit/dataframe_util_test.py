@@ -42,6 +42,7 @@ from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
@@ -145,8 +146,8 @@ class DataframeUtilTest(unittest.TestCase):
         )
 
     def test_convert_anything_to_pandas_df_converts_stylers(self):
-        """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF, without cloning the
-        data.
+        """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF,
+        without cloning the data.
         """
         original_df = pd.DataFrame(
             {
@@ -385,6 +386,7 @@ class DataframeUtilTest(unittest.TestCase):
             dataframe_util.is_snowpandas_data_object(SnowpandasDataFrame(df))
         )
         self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasSeries(df)))
+        self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasIndex(df)))
 
     def test_is_snowpark_row_list(self):
         class DummyClass:
@@ -462,6 +464,23 @@ class DataframeUtilTest(unittest.TestCase):
                 dataframe_util.is_snowpark_row_list(
                     snowpark_session.sql("SELECT 40+2 as COL1").collect()
                 )
+            )
+
+    @pytest.mark.require_snowflake
+    def test_is_snowpandas_data_object_integration(self):
+        """Integration test for `is_snowpandas_data_object` to verify that it works
+        correctly with the latest version of Snowpark.
+        """
+        from snowflake.snowpark.modin.pandas import DataFrame
+
+        with create_snowpark_session():
+            snowpandas_df = DataFrame([1, 2, 3], columns=["col1"])
+            self.assertTrue(dataframe_util.is_snowpandas_data_object(snowpandas_df))
+            self.assertTrue(
+                dataframe_util.is_snowpandas_data_object(snowpandas_df["col1"])
+            )
+            self.assertTrue(
+                dataframe_util.is_snowpandas_data_object(snowpandas_df.index)
             )
 
     @parameterized.expand(
