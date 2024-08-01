@@ -91,7 +91,7 @@ class JsonMixin:
         if isinstance(
             body, (ChainMap, types.MappingProxyType, UserDict)
         ) or is_pydantic_model(body):
-            body = dict(body)
+            body = dict(body)  # type: ignore
 
         if not isinstance(body, str):
             try:
