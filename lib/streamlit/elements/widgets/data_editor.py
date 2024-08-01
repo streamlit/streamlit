@@ -838,14 +838,13 @@ class DataEditorMixin:
             update_column_config(
                 column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
-
+        elif num_rows == "dynamic":
             # Temporary workaround: We hide range indices if num_rows is dynamic.
             # since the current way of handling this index during editing is a bit
             # confusing.
-            if num_rows == "dynamic":
-                update_column_config(
-                    column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
-                )
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
 
         if hide_index is not None:
             update_column_config(
