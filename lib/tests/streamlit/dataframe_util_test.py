@@ -467,20 +467,33 @@ class DataframeUtilTest(unittest.TestCase):
             )
 
     @pytest.mark.require_snowflake
-    def test_is_snowpandas_data_object_integration(self):
-        """Integration test for `is_snowpandas_data_object` to verify that it works
-        correctly with the latest version of Snowpark.
+    def test_verify_snowpandas_integration(self):
+        """Integration test snowpark pandas object handling.
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
         """
         from snowflake.snowpark.modin.pandas import DataFrame
 
         with create_snowpark_session():
             snowpandas_df = DataFrame([1, 2, 3], columns=["col1"])
-            self.assertTrue(dataframe_util.is_snowpandas_data_object(snowpandas_df))
-            self.assertTrue(
-                dataframe_util.is_snowpandas_data_object(snowpandas_df["col1"])
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_df) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_df),
+                pd.DataFrame,
             )
-            self.assertTrue(
-                dataframe_util.is_snowpandas_data_object(snowpandas_df.index)
+
+            snowpandas_series = snowpandas_df["col1"]
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_series) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_series),
+                pd.DataFrame,
+            )
+
+            snowpandas_index = snowpandas_df.index
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_index) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_index),
+                pd.DataFrame,
             )
 
     @parameterized.expand(
