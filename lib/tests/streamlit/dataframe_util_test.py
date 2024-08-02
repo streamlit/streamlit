@@ -31,22 +31,16 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
-from tests.streamlit.dask_mocks import Series as DaskSeries
 from tests.streamlit.data_mocks import (
     SHARED_TEST_CASES,
     CaseMetadata,
     TestObject,
 )
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
@@ -78,33 +72,33 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
     @parameterized.expand(
-        [
-            (ModinDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2000))),),
-            (PysparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
-            (DaskDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (DaskSeries(pd.Series(np.random.randn(2000))),),
-            # TODO: Polars lazy frame, generator
-        ]
+        SHARED_TEST_CASES,
     )
-    def test_convert_anything_to_pandas_df_show_warning_for_unevaluated_df(
+    def test_unevaluated_dataframe_handling(
         self,
+        name: str,
         input_data: Any,
+        metadata: CaseMetadata,
     ):
-        """Test that `convert_anything_to_pandas_df` correctly converts
-        a variety unevaluated dataframes and shows a warning if
-        the row count is > 1000.
+        """Test that unevaluated data objects are correctly detected and
+        handled by limiting the number of rows to be displayed.
         """
         with patch("streamlit.dataframe_util._show_data_information") as mock:
-            converted_df = dataframe_util.convert_anything_to_pandas_df(
-                input_data, max_unevaluated_rows=1000
-            )
-            self.assertIsInstance(converted_df, pd.DataFrame)
-            mock.assert_called_once()
+            if metadata.is_unevaluated:
+                assert dataframe_util.is_unevaluated_data_object(input_data) is True
+                converted_df = dataframe_util.convert_anything_to_pandas_df(
+                    input_data, max_unevaluated_rows=1
+                )
+                assert isinstance(converted_df, pd.DataFrame)
+                assert converted_df.shape[0] <= 1
+                mock.assert_called_once()
+            else:
+                assert dataframe_util.is_unevaluated_data_object(input_data) is False
+                converted_df = dataframe_util.convert_anything_to_pandas_df(
+                    input_data, max_unevaluated_rows=1
+                )
+                assert converted_df.shape[0] == metadata.expected_rows
+                mock.assert_not_called()
 
     def test_convert_anything_to_pandas_df_ensure_copy(self):
         """Test that `convert_anything_to_pandas_df` creates a copy of the original

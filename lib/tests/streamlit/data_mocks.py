@@ -58,6 +58,9 @@ class CaseMetadata(NamedTuple):
     expected_write_command: Literal[
         "markdown", "dataframe", "json", "help", "write_stream"
     ]
+    # Whether the data structure is unevaluated and will be truncated
+    # if it is too large.
+    is_unevaluated: bool
     # The expected return type of the data when it is
     # returned from the `st.data_editor` function.
     expected_type: type | None = None
@@ -116,27 +119,27 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "None",
         None,
-        CaseMetadata(0, 0, DataFormat.EMPTY, [], "markdown", pd.DataFrame),
+        CaseMetadata(0, 0, DataFormat.EMPTY, [], "markdown", False, pd.DataFrame),
     ),
     (
         "Empty list",
         [],
-        CaseMetadata(0, 0, DataFormat.LIST_OF_VALUES, [], "json"),
+        CaseMetadata(0, 0, DataFormat.LIST_OF_VALUES, [], "json", False),
     ),
     (
         "Empty tuple",
         (),
-        CaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES, [], "markdown"),
+        CaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES, [], "markdown", False),
     ),
     (
         "Empty dict",
         {},
-        CaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT, [], "json"),
+        CaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT, [], "json", False),
     ),
     (
         "Empty set",
         set(),
-        CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown"),
+        CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown", False),
     ),
     (
         "List[str]",
@@ -147,27 +150,32 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             ["st.text_area", "st.number_input", "st.text_input"],
             "json",
+            False,
         ),
     ),
     (
         "List[int]",
         [1, 2, 3],
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "json"),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "json", False),
     ),
     (
         "List[float]",
         [1.1, 2.2, 3.3],
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1.1, 2.2, 3.3], "json"),
+        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1.1, 2.2, 3.3], "json", False),
     ),
     (
         "List[bool]",
         [True, False, True],
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [True, False, True], "json"),
+        CaseMetadata(
+            3, 1, DataFormat.LIST_OF_VALUES, [True, False, True], "json", False
+        ),
     ),
     (
         "List[None]",
         [None, None, None],
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [None, None, None], "json"),
+        CaseMetadata(
+            3, 1, DataFormat.LIST_OF_VALUES, [None, None, None], "json", False
+        ),
     ),
     (
         "List[date]",
@@ -178,6 +186,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
             "json",
+            False,
         ),
     ),
     (
@@ -185,7 +194,9 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         # Set does not have a stable order across different Python version.
         # Therefore, we are only testing this with one item.
         {"st.number_input", "st.number_input"},  # noqa: B033
-        CaseMetadata(1, 1, DataFormat.SET_OF_VALUES, ["st.number_input"], "markdown"),
+        CaseMetadata(
+            1, 1, DataFormat.SET_OF_VALUES, ["st.number_input"], "markdown", False
+        ),
     ),
     (
         "Tuple[str]",
@@ -196,6 +207,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.TUPLE_OF_VALUES,
             ["st.text_area", "st.number_input", "st.text_input"],
             "markdown",
+            False,
         ),
     ),
     (
@@ -209,18 +221,21 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SET_OF_VALUES,
             ["st.number_input"],
             "markdown",
+            False,
             set,
         ),
     ),
     (
         "Empty frozenset",
         frozenset(),
-        CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown", set),
+        CaseMetadata(0, 0, DataFormat.SET_OF_VALUES, [], "markdown", False, set),
     ),
     (
         "Range",
         range(3),
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [0, 1, 2], "markdown", list),
+        CaseMetadata(
+            3, 1, DataFormat.LIST_OF_VALUES, [0, 1, 2], "markdown", False, list
+        ),
     ),
     (
         "Dict Keys",
@@ -235,6 +250,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             ["st.number_input", "st.text_area", "st.text_input"],
             "markdown",
+            False,
             list,
         ),
     ),
@@ -251,6 +267,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             ["number", "text", "text"],
             "markdown",
+            False,
             list,
         ),
     ),
@@ -267,6 +284,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_ROWS,
             None,
             "markdown",
+            False,
             list,
         ),
     ),
@@ -284,6 +302,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["st.number_input", "st.text_area"],
             "json",
+            False,
             dict,
         ),
     ),
@@ -299,6 +318,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["st.text_area", "st.markdown"],
             "json",
+            False,
             dict,
         ),
     ),
@@ -311,6 +331,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["st.number_input", "st.text_area"],
             "json",
+            False,
             dict,
         ),
     ),
@@ -323,6 +344,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             ["st.number_input", "st.text_area", "st.text_input"],
             "markdown",
+            False,
             list,
         ),
     ),
@@ -338,6 +360,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["number", "text", "text"],
             "json",
+            False,
             dict,
         ),
     ),
@@ -350,6 +373,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["st.number_input", True, 0.32],
             "help",
+            False,
             dict,
         ),
     ),
@@ -362,6 +386,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["name", "is_widget", "usage"],
             "json",
+            False,
             dict,
         ),
     ),
@@ -374,6 +399,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["st.number_input", True, 0.32],
             "json",
+            False,
             dict,
         ),
     ),
@@ -386,6 +412,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             ["st.number_input", "st.text_area", "st.text_input"],
             "help",
+            False,
             list,
         ),
     ),
@@ -398,6 +425,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_VALUES,
             [TestEnum.NUMBER_INPUT, TestEnum.TEXT_AREA, TestEnum.TEXT_INPUT],
             "help",
+            False,
             list,
         ),
     ),
@@ -410,17 +438,22 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.UNKNOWN,
             ["st.number_input", "st.text_area", "st.text_input"],
             "write_stream",
+            True,
         ),
     ),
     (
         "Empty column value mapping",
         {"name": [], "type": []},
-        CaseMetadata(0, 2, DataFormat.COLUMN_VALUE_MAPPING, ["name", "type"], "json"),
+        CaseMetadata(
+            0, 2, DataFormat.COLUMN_VALUE_MAPPING, ["name", "type"], "json", False
+        ),
     ),
     (
         "array.array",
         array.array("i", [1, 2, 3]),
-        CaseMetadata(3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "markdown", list),
+        CaseMetadata(
+            3, 1, DataFormat.LIST_OF_VALUES, [1, 2, 3], "markdown", False, list
+        ),
     ),
     (
         "MappingProxyType",
@@ -431,6 +464,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["widget", "element"],
             "json",
+            False,
             dict,
         ),
     ),
@@ -443,19 +477,14 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["widget", "element"],
             "json",
+            False,
             dict,
         ),
     ),
     (
         "List of rows",  # List[list[scalar]]
         [["st.text_area", "widget"], ["st.markdown", "element"]],
-        CaseMetadata(
-            2,
-            2,
-            DataFormat.LIST_OF_ROWS,
-            None,
-            "json",
-        ),
+        CaseMetadata(2, 2, DataFormat.LIST_OF_ROWS, None, "json", False),
     ),
     (
         "List of records",  # List[Dict[str, Scalar]]
@@ -469,6 +498,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.LIST_OF_RECORDS,
             None,
             "json",
+            False,
         ),
     ),
     (
@@ -483,6 +513,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.COLUMN_INDEX_MAPPING,
             ["type", "usage"],
             "json",
+            False,
         ),
     ),
     (
@@ -497,6 +528,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.COLUMN_VALUE_MAPPING,
             ["name", "type"],
             "json",
+            False,
         ),
     ),
     (
@@ -511,6 +543,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.COLUMN_SERIES_MAPPING,
             ["name", "type"],
             "dataframe",
+            False,
         ),
     ),
     (
@@ -522,6 +555,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.KEY_VALUE_DICT,
             ["st.text_area", "st.markdown"],
             "json",
+            False,
         ),
     ),
     ###################################
@@ -530,14 +564,14 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "Empty pd.Dataframe",
         pd.DataFrame(),
-        CaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME, [], "dataframe"),
+        CaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME, [], "dataframe", False),
     ),
     (
         "Empty pd.Dataframe with columns",
         pd.DataFrame(
             columns=["name", "type"], index=pd.RangeIndex(start=0, step=1)
         ),  # Explicitly set the range index to have the same behavior across versions
-        CaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME, [], "dataframe"),
+        CaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME, [], "dataframe", False),
     ),
     (
         "pd.Dataframe",
@@ -548,6 +582,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PANDAS_DATAFRAME,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            False,
         ),
     ),
     (
@@ -562,6 +597,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PANDAS_SERIES,
             ["st.text_area", "st.number_input", "st.text_input"],
             "dataframe",
+            False,
         ),
     ),
     (
@@ -573,6 +609,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PANDAS_INDEX,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            False,
             pd.DataFrame,
         ),
     ),
@@ -585,6 +622,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PANDAS_STYLER,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            False,
             pd.DataFrame,
         ),
     ),
@@ -597,6 +635,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PANDAS_ARRAY,
             ["st.number_input", "st.text_area", "st.text_input"],
             "dataframe",
+            False,
             pd.DataFrame,
         ),
     ),
@@ -612,6 +651,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
                 pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
             ],
             "dataframe",
+            False,
             pd.DataFrame,
         ),
     ),
@@ -619,7 +659,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         "pd.RangeIndex",
         pd.RangeIndex(start=0, stop=3, step=1),
         CaseMetadata(
-            3, 1, DataFormat.PANDAS_INDEX, [0, 1, 2], "dataframe", pd.DataFrame
+            3, 1, DataFormat.PANDAS_INDEX, [0, 1, 2], "dataframe", False, pd.DataFrame
         ),
     ),
     ###################################
@@ -629,7 +669,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         "Empty np.array",
         # For unknown reasons, pd.DataFrame initializes empty numpy arrays with a single column
         np.ndarray(0),
-        CaseMetadata(0, 1, DataFormat.NUMPY_LIST, [], "dataframe"),
+        CaseMetadata(0, 1, DataFormat.NUMPY_LIST, [], "dataframe", False),
     ),
     (
         "np.array[str]",
@@ -640,12 +680,13 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.NUMPY_LIST,
             ["st.text_area", "st.number_input", "st.text_input"],
             "dataframe",
+            False,
         ),
     ),
     (
         "np.array[int]",
         np.array([1, 2, 3]),
-        CaseMetadata(3, 1, DataFormat.NUMPY_LIST, [1, 2, 3], "dataframe"),
+        CaseMetadata(3, 1, DataFormat.NUMPY_LIST, [1, 2, 3], "dataframe", False),
     ),
     (
         "np.array[list[scalar]]",
@@ -661,6 +702,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.NUMPY_MATRIX,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            False,
         ),
     ),
     (
@@ -677,6 +719,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.NUMPY_MATRIX,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            False,
         ),
     ),
     ###################################
@@ -691,6 +734,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PYARROW_TABLE,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            False,
         ),
     ),
     (
@@ -702,6 +746,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PYARROW_ARRAY,
             ["st.number_input", "st.text_area", "st.text_input"],
             "dataframe",
+            False,
         ),
     ),
     ###################################
@@ -723,6 +768,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SNOWPARK_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -742,6 +788,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SNOWPARK_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -758,6 +805,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SNOWPARK_OBJECT,
             ["st.text_area", "st.markdown", "st.text_input"],
             "dataframe",
+            False,
             pd.DataFrame,
         ),
     ),
@@ -777,6 +825,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SNOWPANDAS_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -789,6 +838,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SNOWPANDAS_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -803,6 +853,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.SNOWPANDAS_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -822,6 +873,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.MODIN_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -834,6 +886,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.MODIN_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -856,6 +909,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.PYSPARK_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -875,6 +929,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.DASK_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -887,6 +942,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             DataFormat.DASK_OBJECT,
             ["st.text_area", "st.markdown"],
             "dataframe",
+            True,
             pd.DataFrame,
         ),
     ),
@@ -915,6 +971,7 @@ try:
                     DataFormat.POLARS_DATAFRAME,
                     ["st.text_area", "st.markdown"],
                     "dataframe",
+                    False,
                 ),
             ),
             (
@@ -926,6 +983,7 @@ try:
                     DataFormat.POLARS_SERIES,
                     ["st.number_input", "st.text_area", "st.text_input"],
                     "dataframe",
+                    False,
                 ),
             ),
             (
@@ -942,6 +1000,7 @@ try:
                     DataFormat.POLARS_LAZYFRAME,
                     ["st.text_area", "st.markdown"],
                     "dataframe",
+                    True,
                     pl.DataFrame,
                 ),
             ),
@@ -975,6 +1034,7 @@ try:
                     DataFormat.XARRAY_DATASET,
                     ["st.text_area", "st.markdown"],
                     "dataframe",
+                    False,
                 ),
             ),
             (
@@ -991,6 +1051,7 @@ try:
                     DataFormat.XARRAY_DATA_ARRAY,
                     ["st.number_input", "st.text_area", "st.text_input"],
                     "dataframe",
+                    False,
                 ),
             ),
         ]
@@ -1023,6 +1084,7 @@ try:
                     DataFormat.KEY_VALUE_DICT,
                     ["st.number_input", True, 0.32],
                     "json",
+                    False,
                     dict,
                 ),
             ),

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import inspect
 import math
 import re
 from collections import ChainMap, UserDict, deque
@@ -216,6 +217,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Dask DataFrame / Series
     - Ray Dataset
     - Polars LazyFrame
+    - Generator functions
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -229,6 +231,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_dask_object(obj)
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
+        or inspect.isgeneratorfunction(obj)
     )
 
 
@@ -356,9 +359,9 @@ def _iterable_to_list(
 
     result = []
     for i, item in enumerate(iterable):
-        result.append(item)
         if i >= max_iterations:
             break
+        result.append(item)
     return result
 
 
@@ -415,7 +418,6 @@ def convert_anything_to_pandas_df(
 
     """
     import array
-    import inspect
 
     import numpy as np
     import pandas as pd
