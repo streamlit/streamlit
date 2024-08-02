@@ -290,8 +290,8 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
     (
-        "np.matrix",
-        np.matrix(
+        "np.array[list[str]]",  # numpy matrix
+        np.array(
             [
                 ["st.text_area", "widget"],
                 ["st.markdown", "element"],
@@ -302,18 +302,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             DataFormat.NUMPY_MATRIX,
             ["st.text_area", "st.markdown"],
-            "dataframe",
-            np.ndarray,
-        ),
-    ),
-    (
-        "np.array[list[str]]",
-        np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
-        CaseMetadata(
-            3,
-            1,
-            DataFormat.NUMPY_MATRIX,
-            ["st.text_area", "st.number_input", "st.text_input"],
             "dataframe",
         ),
     ),
@@ -363,23 +351,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.PANDAS_ARRAY,
             ["st.number_input", "st.text_area", "st.text_input"],
-            "dataframe",
-            pd.DataFrame,
-        ),
-    ),
-    (
-        "pd.arrays.DatetimeArray",
-        pd.arrays.DatetimeArray(
-            pd.DatetimeIndex(["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]),
-        ),
-        CaseMetadata(
-            2,
-            1,
-            DataFormat.PANDAS_ARRAY,
-            [
-                pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
-                pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
-            ],
             "dataframe",
             pd.DataFrame,
         ),

@@ -450,20 +450,30 @@ class DataframeUtilTest(unittest.TestCase):
     @pytest.mark.require_snowflake
     def test_is_snowpark_dataframe_integration(self):
         with create_snowpark_session() as snowpark_session:
-            self.assertTrue(
-                dataframe_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1")
-                )
+            snowpark_df = snowpark_session.sql("SELECT 40+2 as COL1")
+
+            assert dataframe_util.is_snowpark_data_object(snowpark_df) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpark_df),
+                pd.DataFrame,
             )
-            self.assertTrue(
-                dataframe_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
-                )
+
+            snowpark_cached_result = snowpark_session.sql(
+                "SELECT 40+2 as COL1"
+            ).cache_result()
+            assert (
+                dataframe_util.is_snowpark_data_object(snowpark_cached_result) is True
             )
-            self.assertTrue(
-                dataframe_util.is_snowpark_row_list(
-                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
-                )
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpark_cached_result),
+                pd.DataFrame,
+            )
+
+            snowpark_row_list = snowpark_session.sql("SELECT 40+2 as COL1").collect()
+            assert dataframe_util.is_snowpark_row_list(snowpark_row_list) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpark_row_list),
+                pd.DataFrame,
             )
 
     @pytest.mark.require_snowflake
