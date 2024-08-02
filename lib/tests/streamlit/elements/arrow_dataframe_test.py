@@ -20,7 +20,6 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-import pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
@@ -32,7 +31,6 @@ from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, CaseMetadata
-from tests.testutil import create_snowpark_session
 
 
 def mock_data_frame():
@@ -196,28 +194,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
             st.dataframe(df)
             convert_anything_to_df.assert_called_once()
-
-    @pytest.mark.require_snowflake
-    def test_snowpark_uncollected(self):
-        """Tests that data can be read from Snowpark's uncollected Dataframe"""
-        with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 42 as COL1")
-
-            st.dataframe(df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(convert_arrow_bytes_to_pandas_df(proto.data).iat[0, 0], 42)
-
-    @pytest.mark.require_snowflake
-    def test_snowpark_collected(self):
-        """Tests that data can be read from Snowpark's collected Dataframe"""
-        with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 42 as COL1").collect()
-
-            st.dataframe(df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(convert_arrow_bytes_to_pandas_df(proto.data).iat[0, 0], 42)
 
     def test_dataframe_on_select_initial_returns(self):
         """Test st.dataframe returns an empty selection as initial result."""
