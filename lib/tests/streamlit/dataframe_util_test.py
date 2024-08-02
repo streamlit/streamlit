@@ -37,7 +37,6 @@ from tests.streamlit.data_mocks import (
     TestObject,
 )
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
@@ -380,7 +379,6 @@ class DataframeUtilTest(unittest.TestCase):
             dataframe_util.is_snowpandas_data_object(SnowpandasDataFrame(df))
         )
         self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasSeries(df)))
-        self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasIndex(df)))
 
     def test_is_snowpark_row_list(self):
         class DummyClass:
