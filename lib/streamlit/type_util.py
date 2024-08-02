@@ -52,7 +52,12 @@ class SupportsStr(Protocol):
 
 
 class CustomDict(Protocol):
-    # All our custom dictionary implementation should provide a to_dict method.
+    """Protocol for Streamlit native custom dictionaries (e.g. session state, secrets, query params).
+    that can be converted to a dict.
+
+    All these implementations should provide a to_dict method.
+    """
+
     def to_dict(self) -> dict[str, Any]: ...
 
 
@@ -97,11 +102,6 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
         return fqn_type_pattern == fqn_type
     else:
         return fqn_type_pattern.match(fqn_type) is not None
-
-
-def _is_type_instance(obj: object, type_to_check: str) -> bool:
-    """Check if instance of type without importing expensive modules."""
-    return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
 
 
 def get_fqn(the_type: type) -> str:
