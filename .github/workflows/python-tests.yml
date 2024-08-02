@@ -207,7 +207,7 @@ jobs:
       )
 
     name: >
-      py-unit-tests (snowflake)
+      Python 3.8: Python tests for Snowflake
 
     env:
       USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
@@ -220,10 +220,10 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-      - name: Set up Python 3.11
+      - name: Set up Python 3.8
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.8"
       - name: Decrypt credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
@@ -232,7 +232,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
-      - name: Install lib with snowflake dependencies
-        run: uv pip install --editable ./lib[snowflake]
+      - name: Run Type Checkers
+        run: scripts/mypy --report
       - name: Run Python Tests for Snowflake
         run: make pytest-snowflake
