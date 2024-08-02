@@ -37,7 +37,7 @@ importlib_metadata==8.2.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
 jaraco.context==5.3.0
-jaraco.functools==4.0.1
+jaraco.functools==4.0.2
 jeepney==0.8.0
 Jinja2==3.1.4
 jsonpatch==1.33
@@ -46,11 +46,11 @@ jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.1
 kiwisolver==1.4.5
-langchain==0.2.11
+langchain==0.2.12
 langchain-community==0.2.10
-langchain-core==0.2.26
+langchain-core==0.2.27
 langchain-text-splitters==0.2.2
-langsmith==0.1.95
+langsmith==0.1.96
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
@@ -84,7 +84,7 @@ pydeck==0.9.1
 pydot==3.0.1
 pyee==11.1.0
 Pygments==2.18.0
-PyJWT==2.8.0
+PyJWT==2.9.0
 pyOpenSSL==24.2.1
 pyparsing==3.1.2
 pytest==8.1.2
@@ -138,7 +138,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.32
+uv==0.2.33
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
