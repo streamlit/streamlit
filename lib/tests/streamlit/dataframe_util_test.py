@@ -482,10 +482,13 @@ class DataframeUtilTest(unittest.TestCase):
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
-        import modin.pandas as pd
+        import modin.pandas as modin_pd
+
+        # Import the Snowpark pandas plugin for modin.
+        import snowflake.snowpark.modin.plugin  # noqa: F401
 
         with create_snowpark_session():
-            snowpandas_df = pd.DataFrame([1, 2, 3], columns=["col1"])
+            snowpandas_df = modin_pd.DataFrame([1, 2, 3], columns=["col1"])
             assert dataframe_util.is_snowpandas_data_object(snowpandas_df) is True
             assert isinstance(
                 dataframe_util.convert_anything_to_pandas_df(snowpandas_df),
