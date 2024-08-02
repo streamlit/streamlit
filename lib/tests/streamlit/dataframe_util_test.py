@@ -448,7 +448,11 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
     @pytest.mark.require_snowflake
-    def test_is_snowpark_dataframe_integration(self):
+    def test_verify_snowpark_integration(self):
+        """Integration test snowpark object handling.
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
         with create_snowpark_session() as snowpark_session:
             snowpark_df = snowpark_session.sql("SELECT 40+2 as COL1")
 
