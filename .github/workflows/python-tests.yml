@@ -207,7 +207,7 @@ jobs:
       )
 
     name: >
-      Python 3.8: Python tests for Snowflake
+      py-unit-tests (snowflake)
 
     env:
       USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
@@ -220,10 +220,10 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-      - name: Set up Python 3.8
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.11"
       - name: Decrypt credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
