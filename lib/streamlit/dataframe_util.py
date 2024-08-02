@@ -46,7 +46,6 @@ from streamlit.type_util import (
     is_custom_dict,
     is_dataclass_instance,
     is_namedtuple,
-    is_pandas_version_less_than,
     is_type,
 )
 
@@ -283,6 +282,13 @@ def _iterable_to_list(
 
 
 def _fix_column_naming(data_df: DataFrame) -> DataFrame:
+    """Rename the first column to "value" if it is not named
+    and if there is only one column in the dataframe.
+
+    The default name of the first column is 0 if it is not named
+    which is not very descriptive.
+    """
+
     if len(data_df.columns) == 1 and data_df.columns[0] == 0:
         # Pandas automatically names the first column with 0 if it is not named.
         # We rename it to "value" to make it more descriptive if there is only
@@ -404,18 +410,6 @@ def convert_anything_to_pandas_df(
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
-
-    if has_callable_attr(data, "toPandas"):
-        return pd.DataFrame(data.toPandas())
-
-    # Check for dataframe interchange protocol
-    # Only available in pandas >= 1.5.0
-    # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
-    if is_pandas_version_less_than("1.5.0") is False and has_callable_attr(
-        data, "__dataframe__"
-    ):
-        data_df = pd.api.interchange.from_dataframe(data)
-        return data_df.copy() if ensure_copy else data_df
 
     # Support for generator functions
     if inspect.isgeneratorfunction(data):
@@ -607,23 +601,6 @@ def convert_anything_to_arrow_bytes(
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
         return convert_pandas_df_to_arrow_bytes(df)
 
-    # Check for dataframe interchange protocol
-    if has_callable_attr(data, "__dataframe__"):
-        from pyarrow import interchange as pa_interchange
-
-        arrow_table = pa_interchange.from_dataframe(data)
-        return convert_arrow_table_to_arrow_bytes(arrow_table)
-
-    # Check if data structure supports to_arrow or to_pyarrow methods
-    # and assume that it is converting to a pyarrow.Table
-    if has_callable_attr(data, "to_arrow"):
-        arrow_table = cast(pa.Table, data.to_arrow())
-        return convert_arrow_table_to_arrow_bytes(arrow_table)
-
-    if has_callable_attr(data, "to_pyarrow"):
-        arrow_table = cast(pa.Table, data.to_pyarrow())
-        return convert_arrow_table_to_arrow_bytes(arrow_table)
-
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
     df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
@@ -755,7 +732,8 @@ def _maybe_truncate_table(
 
 
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
-    """Return True if column type is known to cause issues during Arrow conversion."""
+    """Return True if the column type is known to cause issues during
+    Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind in [
@@ -771,7 +749,6 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         "period[ns]",
         "period[U]",
         "period[us]",
-        "geometry",
     }:
         return True
 
@@ -973,6 +950,7 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
+    """Convert a Pandas DataFrame to a Pandas Series by selecting the first column."""
     # Select first column in dataframe and create a new series based on the values
     if len(df.columns) != 1:
         raise ValueError(
@@ -1007,7 +985,7 @@ def convert_pandas_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray dataset / array, list, set, tuple, or dict.
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
         The converted dataframe.
     """
 
