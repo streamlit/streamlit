@@ -47,7 +47,6 @@ from streamlit.type_util import (
     is_dataclass_instance,
     is_namedtuple,
     is_pandas_version_less_than,
-    is_pydantic_model,
     is_type,
 )
 
@@ -184,9 +183,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series
-    - Dask DataFrame / Series
-    - Ray Dataset
-    - Polars LazyFrame
     - Generator functions
 
     Unevaluated means that the data is not yet in the local memory.
@@ -198,9 +194,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
-        or is_dask_object(obj)
-        or is_ray_dataset(obj)
-        or is_polars_lazyframe(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -458,9 +451,7 @@ def convert_anything_to_pandas_df(
         return _dict_to_pandas_df(dataclasses.asdict(data))
 
     # Support for dict-like objects
-    if isinstance(data, (ChainMap, MappingProxyType, UserDict)) or is_pydantic_model(
-        data
-    ):
+    if isinstance(data, (ChainMap, MappingProxyType, UserDict)):
         return _dict_to_pandas_df(dict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -930,7 +921,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
-        or is_pydantic_model(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
     elif isinstance(input_data, (ItemsView, enumerate)):
