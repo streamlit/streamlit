@@ -89,7 +89,7 @@ class JsonMixin:
             body = list(body)
 
         if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
-            body = dict(body)  # type: ignore
+            body = dict(body)
 
         if not isinstance(body, str):
             try:
