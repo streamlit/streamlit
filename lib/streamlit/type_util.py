@@ -276,16 +276,6 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
-def is_pydantic_model(obj) -> bool:
-    """True if input looks like a Pydantic model instance."""
-
-    if isinstance(obj, type):
-        # Should be an instance, not a class.
-        return False
-
-    return _is_type_instance(obj, "pydantic.main.BaseModel")
-
-
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
     """True if input looks like one of the Streamlit custom dictionaries."""
     from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders

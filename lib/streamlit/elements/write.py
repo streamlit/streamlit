@@ -450,7 +450,6 @@ class WriteMixin:
                 )
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
-                or type_util.is_pydantic_model(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)
@@ -485,16 +484,6 @@ class WriteMixin:
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
-            elif (
-                type_util.has_callable_attr(arg, "to_pandas")
-                or type_util.has_callable_attr(arg, "to_arrow")
-                or type_util.has_callable_attr(arg, "__dataframe__")
-            ):
-                # This object can very likely be converted to a DataFrame
-                # using the to_pandas, to_arrow, or the dataframe interchange
-                # protocol.
-                flush_buffer()
-                self.dg.dataframe(arg)
             else:
                 stringified_arg = str(arg)
 
