@@ -472,10 +472,10 @@ class DataframeUtilTest(unittest.TestCase):
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
-        from snowflake.snowpark.modin.pandas import DataFrame
+        import modin.pandas as pd
 
         with create_snowpark_session():
-            snowpandas_df = DataFrame([1, 2, 3], columns=["col1"])
+            snowpandas_df = pd.DataFrame([1, 2, 3], columns=["col1"])
             assert dataframe_util.is_snowpandas_data_object(snowpandas_df) is True
             assert isinstance(
                 dataframe_util.convert_anything_to_pandas_df(snowpandas_df),
