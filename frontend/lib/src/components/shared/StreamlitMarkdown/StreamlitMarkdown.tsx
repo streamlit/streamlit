@@ -214,7 +214,8 @@ export const HeadingWithActionElements: FunctionComponent<
 
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
-      if (window.location.hash.slice(1) === anchor) {
+      const windowHash = window.location.hash.slice(1)
+      if (windowHash && windowHash === anchor) {
         setTarget(node)
       }
     },
