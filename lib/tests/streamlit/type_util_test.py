@@ -139,3 +139,20 @@ class TypeUtilTest(unittest.TestCase):
             ),
             str(exception_message.value),
         )
+
+    def test_has_callable_attr(self):
+        class TestClass:
+            def __init__(self) -> None:
+                self.also_not_callable = "I am not callable"
+
+            def callable_attr(self):
+                pass
+
+            @property
+            def not_callable_attr(self):
+                return "I am a property"
+
+        assert type_util.has_callable_attr(TestClass, "callable_attr") is True
+        assert type_util.has_callable_attr(TestClass, "not_callable_attr") is False
+        assert type_util.has_callable_attr(TestClass, "also_not_callable") is False
+        assert type_util.has_callable_attr(TestClass, "not_a_real_attr") is False
