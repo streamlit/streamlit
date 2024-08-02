@@ -414,7 +414,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
     (
-        "Test Enum",
+        "Enum",
         TestEnum,
         CaseMetadata(
             3,
