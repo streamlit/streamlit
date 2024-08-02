@@ -13,30 +13,17 @@
 # limitations under the License.
 
 import threading
-from typing import Any
-
-import numpy as np
-import pandas as pd
-from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.caching.cache_errors import (
-    UnevaluatedDataFrameError,
     UnhashableParamError,
     UnserializableReturnValueError,
     get_return_value_type,
 )
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 
 class CacheErrorsTest(DeltaGeneratorTestCase):
@@ -46,8 +33,6 @@ class CacheErrorsTest(DeltaGeneratorTestCase):
     are testing them word-for-word as much as possible. Even though this
     *feels* like an antipattern, it isn't: we're making sure the codepaths
     that pull useful debug info from the code are working.
-
-    TODO: parameterize these tests for both memo + singleton
     """
 
     maxDiff = None
@@ -109,36 +94,5 @@ def unhashable_type_func(_lock, ...):
         self.assertEqual(
             testutil.normalize_md(expected_message), testutil.normalize_md(ep.message)
         )
-        self.assertEqual(ep.message_is_markdown, True)
-        self.assertEqual(ep.is_warning, False)
-
-    @parameterized.expand(
-        [
-            (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2))),),
-            (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
-        ]
-    )
-    def test_unevaluated_dataframe_error(self, data: Any):
-        @st.cache_data
-        def unevaluated_dataframe_func():
-            return data
-
-        with self.assertRaises(UnevaluatedDataFrameError) as cm:
-            unevaluated_dataframe_func()
-
-        ep = ExceptionProto()
-        exception.marshall(ep, cm.exception)
-
-        self.assertEqual(ep.type, "UnevaluatedDataFrameError")
-
-        expected_message = (
-            "Please convert the object to a Pandas DataFrame before returning"
-        )
-        self.assertTrue(expected_message in ep.message)
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)

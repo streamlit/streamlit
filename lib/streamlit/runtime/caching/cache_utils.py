@@ -300,9 +300,10 @@ class CachedFunc:
                 cache.write_result(value_key, computed_value, messages)
                 return computed_value
             except (CacheError, RuntimeError) as ex:
-                # An exception was thrown while we tried to write to the cache. Report it to the user.
-                # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
-                # collect dataframe before using `st.cache_data`.)
+                # An exception was thrown while we tried to write to the cache. Report
+                # it to the user. (We catch `RuntimeError` here because it will be
+                # raised by Apache Spark if we do not collect dataframe before
+                # using `st.cache_data`.)
                 if is_unevaluated_data_object(computed_value):
                     # If the returned value is an unevaluated dataframe, raise an error.
                     # Unevaluated dataframes are not yet in the local memory, which also
@@ -310,9 +311,10 @@ class CachedFunc:
                     raise UnevaluatedDataFrameError(
                         f"The function {get_cached_func_name_md(self._info.func)} is "
                         "decorated with `st.cache_data` but it returns an unevaluated "
-                        f"dataframe of type `{type_util.get_fqn_type(computed_value)}`. "
-                        "Please convert the object to a Pandas DataFrame before "
-                        "returning it, so `st.cache_data` can serialize and cache it."
+                        f"data object of type `{type_util.get_fqn_type(computed_value)}`. "
+                        "Please convert the object to a serializable format "
+                        "(e.g. Pandas DataFrame) before returning it, so "
+                        "`st.cache_data` can serialize and cache it."
                     ) from ex
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
