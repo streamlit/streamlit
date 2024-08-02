@@ -39,6 +39,7 @@ sqlalchemy[mypy]>=1.4.25, <2
 # to test the fix. Pydantic 2 should not have that issue.
 pydantic>=1.0, <2.0
 
+
 # Required for testing the langchain integration
 langchain>=0.2.0
 langchain-community>=0.2.0
