@@ -97,7 +97,7 @@ python-init-test-only: lib/test-requirements.txt
 
 .PHONY: python-init
 python-init:
-	pip_args=("--editable" "./lib[snowflake]");\
+	pip_args=("--editable" "./lib");\
 	if [ "${USE_CONSTRAINTS_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
