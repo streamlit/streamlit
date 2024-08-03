@@ -46,11 +46,11 @@ jsonpatch==1.33
 jsonpointer==3.0.0
 jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
-keyring==25.2.1
+keyring==25.3.0
 kiwisolver==1.4.5
 langchain==0.2.12
-langchain-community==0.2.10
-langchain-core==0.2.27
+langchain-community==0.2.11
+langchain-core==0.2.28
 langchain-text-splitters==0.2.2
 langsmith==0.1.96
 markdown-it-py==3.0.0
