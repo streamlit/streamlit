@@ -24,6 +24,7 @@ from typing import (
     TypeVar,
     cast,
     get_args,
+    overload,
 )
 
 from typing_extensions import TypeAlias
@@ -80,6 +81,8 @@ _STAR_ICON: Final = ":material/star:"
 # in base64 format and send it over the wire as an image.
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
+_FeedbackOptions2: TypeAlias = Literal["thumbs"]
+_FeedbackOptions5: TypeAlias = Literal["faces", "stars"]
 _FeedbackOptions: TypeAlias = Literal["thumbs", "faces", "stars"]
 
 
@@ -168,6 +171,28 @@ def _build_proto(
 
 
 class ButtonGroupMixin:
+    @overload  # These overloads are not documented in the docstring, at least not at this time, on the theory that most people won't know what it means. And the Literals here are a subclass of int anyway.
+    def feedback(
+        self,
+        options: _FeedbackOptions2 = ...,
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> Literal[0, 1] | None: ...
+    @overload
+    def feedback(
+        self,
+        options: _FeedbackOptions5 = ...,
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
         self,
