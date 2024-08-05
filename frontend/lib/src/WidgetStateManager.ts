@@ -28,6 +28,7 @@ import {
   WidgetState,
   WidgetStates,
   ChatInputValue,
+  IChatInputValue,
 } from "./proto"
 import { Signal, SignalConnection } from "typed-signals"
 import { isValidFormId, notNullOrUndefined } from "./util/utils"
@@ -294,12 +295,12 @@ export class WidgetStateManager {
 
   public setChatInputValue(
     widget: WidgetInfo,
-    value: string,
+    value: IChatInputValue,
     source: Source,
     fragmentId: string | undefined
   ): void {
     this.createWidgetState(widget, source).chatInputValue = new ChatInputValue(
-      { data: value }
+      value
     )
     this.onWidgetValueChanged(widget.formId, source, fragmentId)
     this.deleteWidgetState(widget.id)

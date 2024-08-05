@@ -28,7 +28,10 @@ import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
 
-import { ChatInput as ChatInputProto } from "@streamlit/lib/src/proto"
+import {
+  ChatInput as ChatInputProto,
+  IChatInputValue,
+} from "@streamlit/lib/src/proto"
 import {
   WidgetInfo,
   WidgetStateManager,
@@ -65,6 +68,7 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import { set } from "lodash"
+import UploadedFiles from "../FileUploader/UploadedFiles"
 
 export interface Props {
   disabled: boolean
@@ -251,7 +255,7 @@ function ChatInput({
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
 
-  const filesRef = useRef<UploadFileInfo[]>([])
+  const filesRef = useRef<UploadFileInfo[]>([]) // TODO [kajarnec] refactor this to use only state
   const addFiles = (filesToAdd: UploadFileInfo[]) => {
     filesRef.current = [...filesRef.current, ...filesToAdd]
     setRenderTrigger(renderTrigger + 1)
@@ -264,6 +268,48 @@ function ChatInput({
 
   const getFile = (localFileId: number): UploadFileInfo | undefined => {
     return filesRef.current.find(f => f.id === localFileId)
+  }
+
+  const removeFile = (idToRemove: number): void => {
+    filesRef.current = filesRef.current.filter(file => file.id !== idToRemove)
+    setRenderTrigger(renderTrigger + 1)
+  }
+
+  const deleteFile = (fileId: number): void => {
+    const file = getFile(fileId)
+    if (file == null) {
+      return
+    }
+
+    if (file.status.type === "uploading") {
+      // The file hasn't been uploaded. Let's cancel the request.
+      // However, it may have been received by the server so we'll still
+      // send out a request to delete.
+      file.status.cancelToken.cancel()
+    }
+
+    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
+    }
+
+    removeFile(fileId)
+  }
+
+  const createChatInputWidgetFilesValue = (): FileUploaderStateProto => {
+    const uploadedFileInfo: UploadedFileInfoProto[] = filesRef.current
+      .filter(f => f.status.type === "uploaded")
+      .map(f => {
+        const { name, size, status } = f
+        const { fileId, fileUrls } = status as UploadedStatus
+        return new UploadedFileInfoProto({
+          fileId,
+          fileUrls,
+          name,
+          size,
+        })
+      })
+
+    return new FileUploaderStateProto({ uploadedFileInfo })
   }
 
   const counterRef = useRef(0)
@@ -280,8 +326,28 @@ function ChatInput({
       updateFile,
       uploadClient,
       element,
-      onUploadProgress: (e, id) => {
+      onUploadProgress: (e, fileId) => {
         console.log("PROGRESSSS....")
+        const file = getFile(fileId)
+        console.log("THE FILE: ", file)
+        if (file == null || file.status.type !== "uploading") {
+          return
+        }
+
+        const newProgress = Math.round((e.loaded * 100) / e.total)
+        if (file.status.progress === newProgress) {
+          return
+        }
+
+        // Update file.progress
+        updateFile(
+          fileId,
+          file.setStatus({
+            type: "uploading",
+            cancelToken: file.status.cancelToken,
+            progress: newProgress,
+          })
+        )
       },
       onUploadComplete: (id, fileUrls) => {
         console.log("IN ON UPLOAD COMPLETE....")
@@ -344,8 +410,19 @@ function ChatInput({
       return
     }
 
-    widgetMgr.setChatInputValue(element, value, { fromUi: true }, fragmentId)
+    const composedValue: IChatInputValue = {
+      data: value,
+      fileUploaderState: createChatInputWidgetFilesValue(),
+    }
+
+    widgetMgr.setChatInputValue(
+      element,
+      composedValue,
+      { fromUi: true },
+      fragmentId
+    )
     setDirty(false)
+    filesRef.current = []
     setValue("")
     setScrollHeight(0)
   }
@@ -411,11 +488,15 @@ function ChatInput({
       data-testid="stChatInput"
       width={width}
     >
-      <div>
-        {filesRef.current.map(file => {
-          const { id, name, status } = file
-          return <div key={id}>{name}</div>
-        })}
+      <div style={{ position: "absolute", bottom: "100%" }}>
+        {filesRef.current.length > 0 && (
+          <UploadedFiles
+            items={[...filesRef.current]}
+            pageSize={3}
+            onDelete={deleteFile}
+            resetOnAdd
+          />
+        )}
       </div>
       <StyledChatInput>
         <div {...getRootProps()}>

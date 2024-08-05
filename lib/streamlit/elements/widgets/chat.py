@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, TypedDict, cast
 
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
@@ -27,6 +27,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
+from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -37,10 +38,16 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+class ChatInputValue(TypedDict):
+    text: str
+    files: list[UploadedFile]
 
 
 class PresetNames(str, Enum):
@@ -103,15 +110,62 @@ def _process_avatar_input(
             ) from ex
 
 
+def _get_upload_files(
+    files_value: FileUploaderStateProto | None,
+) -> list[UploadedFile]:
+    if files_value is None:
+        return []
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return []
+
+    uploaded_file_info = files_value.uploaded_file_info
+    if len(uploaded_file_info) == 0:
+        return []
+
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        file_ids=[f.file_id for f in uploaded_file_info],
+    )
+
+    file_recs = {f.file_id: f for f in file_recs_list}
+
+    collected_files: list[UploadedFile] = []
+
+    for f in uploaded_file_info:
+        maybe_file_rec = file_recs.get(f.file_id)
+        if maybe_file_rec is not None:
+            uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
+            collected_files.append(uploaded_file)
+
+            if hasattr(ctx.uploaded_file_mgr, "remove_file"):
+                ctx.uploaded_file_mgr.remove_file(
+                    session_id=ctx.session_id,
+                    file_id=f.file_id,
+                )
+
+    return collected_files
+
+
 @dataclass
 class ChatInputSerde:
+    accept_files: bool = False
+
     def deserialize(
-        self, ui_value: ChatInputValueProto | None, widget_id: str = ""
-    ) -> str | None:
+        self,
+        ui_value: ChatInputValueProto | None,
+        widget_id: str = "",
+    ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
-
-        return ui_value.data
+        if not self.accept_files:
+            return ui_value.data
+        else:
+            return ChatInputValue(
+                text=ui_value.data,
+                files=_get_upload_files(ui_value.file_uploader_state),
+            )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
         return ChatInputValueProto(data=v)
@@ -241,7 +295,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-    ) -> str | None:
+    ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
         Parameters
@@ -369,7 +423,7 @@ class ChatMixin:
 
         chat_input_proto.accept_file = accept_file
 
-        serde = ChatInputSerde()
+        serde = ChatInputSerde(accept_files=accept_file)
         widget_state = register_widget(
             "chat_input",
             chat_input_proto,
