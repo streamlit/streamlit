@@ -325,9 +325,13 @@ export const CustomCodeTag: FunctionComponent<
   )
 }
 
-const CustomPreTag: FunctionComponent<
+/**
+ * Renders pre tag with added margin.
+ */
+export const CustomPreTag: FunctionComponent<
   React.PropsWithChildren<ReactMarkdownProps>
 > = ({ children }) => {
+  console.log("CustomPreTag", children)
   return (
     <StyledPreWrapper data-testid="stMarkdownPre">{children}</StyledPreWrapper>
   )
