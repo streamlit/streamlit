@@ -37,18 +37,15 @@ def test_fragment_scoped_st_rerun(app: Page):
         "Being able to rerun a session is awesome!"
     )
 
-    click_button(app, "rerun fragment")
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "fragment run count: 5"
-    )
-    _expect_initial_reruns_count_text(app)
+    # perform multiple clicks to make sure that the fragment rerun works as expected
+    # and the main app content is still rendered
+    for i in range(1, 10):
+        click_button(app, "rerun fragment")
+        expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
+            f"fragment run count: {i * 5}"
+        )
+        _expect_initial_reruns_count_text(app)
 
-    click_button(app, "rerun fragment")
-    expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
-        "fragment run count: 10"
-    )
-    # wait for app run to make sure that we do not check a stale state of the app
-    wait_for_app_run(app)
     # the main apps rerun count should not have been incremented
     _expect_initial_reruns_count_text(app)
 
