@@ -17,10 +17,7 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import (
-    ImageCompareFunction,
-    wait_for_app_loaded,
-)
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
