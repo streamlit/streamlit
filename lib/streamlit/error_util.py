@@ -78,6 +78,23 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
+    from streamlit.runtime import get_instance
+
+    if user_exception_handler := get_instance().exception_handler:
+        try:
+            new_exception = user_exception_handler(ex)
+            if new_exception is None:
+                # The exception was fully handled by the user-defined handler.
+                return
+            else:
+                ex = new_exception
+        except Exception as e:
+            _LOGGER.error(
+                "User-defined exception handler raised an exception. "
+                "Falling back to default exception handling.",
+                exc_info=e,
+            )
+
     error_logged = False
 
     if config.get_option("logger.enableRich"):
