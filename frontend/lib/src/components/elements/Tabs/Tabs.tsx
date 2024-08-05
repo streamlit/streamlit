@@ -21,10 +21,11 @@ import React, {
   useRef,
   useState,
 } from "react"
-import { useTheme } from "@emotion/react"
-import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
-import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
+import { useTheme } from "@emotion/react"
+import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
+
+import { AppNode, BlockNode } from "@streamlit/lib/src/AppNode"
 import { BlockPropsWithoutWidth } from "@streamlit/lib/src/components/core/Block"
 import { isElementStale } from "@streamlit/lib/src/components/core/Block/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"

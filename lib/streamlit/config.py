@@ -457,7 +457,7 @@ _create_option(
         * "minimal"   : Show only options set externally (e.g. through
                         Streamlit Community Cloud) or through st.set_page_config.
                         If there are no options left, hide the menu.
-""",
+    """,
     default_val="auto",
     type_=str,
     scriptable=True,
@@ -465,7 +465,11 @@ _create_option(
 
 _create_option(
     "client.showSidebarNavigation",
-    description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
+    description="""
+        Controls whether to display the default sidebar page navigation in a
+        multi-page app. This only applies when app's pages are defined by the
+        `pages/` directory.
+    """,
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -480,7 +484,7 @@ _create_option(
     description="""
         Allows you to type a variable or string by itself in a single line of
         Python code to write it to the app.
-        """,
+    """,
     default_val=True,
     type_=bool,
 )
@@ -492,7 +496,7 @@ _create_option(
         can help avoid excess memory use in Streamlit apps, but could
         introduce delay in rerunning the app script for high-memory-use
         applications.
-        """,
+    """,
     default_val=True,
     type_=bool,
     visibility="hidden",
@@ -921,6 +925,21 @@ _create_option(
       Font family for all text in the app, except code blocks. One of "sans serif",
       "serif", or "monospace".
     """,
+)
+
+# Config Section: Secrets #
+
+_create_section("secrets", "Secrets configuration.")
+
+_create_option(
+    "secrets.files",
+    description="""List of locations where secrets are searched. Entries can be a path to toml file or directory path where Kubernetes style secrets will be scanned. Order is important, import is first to last, so secrets in later files will take precedence over earlier ones.""",
+    default_val=[
+        # NOTE: The order here is important! Project-level secrets should overwrite global
+        # secrets.
+        file_util.get_streamlit_file_path("secrets.toml"),
+        file_util.get_project_streamlit_file_path("secrets.toml"),
+    ],
 )
 
 

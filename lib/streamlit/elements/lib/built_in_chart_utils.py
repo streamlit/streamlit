@@ -117,6 +117,17 @@ _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFF
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
 
 
+def maybe_raise_stack_warning(
+    stack: bool | ChartStackType | None, command: str | None, docs_link: str
+):
+    # Check that the stack parameter is valid, raise more informative error message if not
+    if stack not in (None, True, False, "normalize", "center", "layered"):
+        raise StreamlitAPIException(
+            f'Invalid value for stack parameter: {stack}. Stack must be one of True, False, "normalize", "center", "layered" or None. '
+            f"See documentation for `{command}` [here]({docs_link}) for more information."
+        )
+
+
 def generate_chart(
     chart_type: ChartType,
     data: Data | None,
@@ -128,7 +139,7 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: int | None = None,
     height: int | None = None,
-    # Bar charts only:
+    # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
@@ -457,11 +468,13 @@ def _melt_data(
     --------
 
     >>> import pandas as pd
-    >>> df = pd.DataFrame({
-    ...     "a": [1, 2, 3],
-    ...     "b": [4, 5, 6],
-    ...     "c": [7, 8, 9],
-    ... })
+    >>> df = pd.DataFrame(
+    ...     {
+    ...         "a": [1, 2, 3],
+    ...         "b": [4, 5, 6],
+    ...         "c": [7, 8, 9],
+    ...     }
+    ... )
     >>> _melt_data(df, ["a"], ["b", "c"], "value", "color")
     >>>    a color  value
     >>> 0  1        b      4
@@ -673,6 +686,7 @@ def _get_opacity_encoding(
 ) -> alt.OpacityValue | None:
     import altair as alt
 
+    # Opacity set to 0.7 for all area charts
     if color_column and chart_type == ChartType.AREA:
         return alt.OpacityValue(0.7)
 
@@ -759,7 +773,7 @@ def _get_axis_encodings(
         )
         stack_encoding = y_encoding
 
-    # Handle stacking - only relevant for bar charts
+    # Handle stacking - only relevant for bar & area charts
     _update_encoding_with_stack(stack, stack_encoding)
 
     return x_encoding, y_encoding

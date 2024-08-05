@@ -28,22 +28,23 @@ import { fonts } from "@streamlit/lib/src/theme/primitives/typography"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
-  CUSTOM_THEME_NAME,
   computeSpacingStyle,
   createEmotionTheme,
   createTheme,
+  CUSTOM_THEME_NAME,
   fontEnumToString,
   fontToEnum,
+  getCachedTheme,
   getDefaultTheme,
+  getHostSpecifiedTheme,
   getSystemTheme,
   getWrappedHeadersStyle,
+  hasLightBackgroundColor,
   isColor,
   isPresetTheme,
-  toThemeInput,
-  getCachedTheme,
   removeCachedTheme,
   setCachedTheme,
-  hasLightBackgroundColor,
+  toThemeInput,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -405,6 +406,67 @@ describe("getSystemTheme", () => {
     windowSpy = mockWindow(windowMatchMedia("dark"))
 
     expect(getSystemTheme().name).toBe("Dark")
+  })
+})
+
+describe("getHostSpecifiedTheme", () => {
+  let windowSpy: jest.SpyInstance
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+    window.localStorage.clear()
+  })
+
+  it("sets default to the auto theme when there is no theme preference", () => {
+    windowSpy = mockWindow()
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("sets the auto theme correctly when the OS preference is dark", () => {
+    mockWindow(windowSpy, windowMatchMedia("dark"))
+
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("sets default to the light theme when an embed query parameter is set", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe("Light")
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
+  })
+
+  it("sets default to the dark theme when an embed query parameter is set", () => {
+    windowSpy = mockWindow(
+      windowLocationSearch("?embed=true&embed_options=dark_theme")
+    )
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe("Dark")
+    // Also verify that the theme is our darkTheme.
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
+  })
+
+  it("respects embed query parameter is set over system theme", () => {
+    windowSpy = mockWindow(
+      windowMatchMedia("dark"),
+      windowLocationSearch("?embed=true&embed_options=light_theme")
+    )
+    const defaultTheme = getHostSpecifiedTheme()
+
+    expect(defaultTheme.name).toBe("Light")
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
   })
 })
 

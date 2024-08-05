@@ -17,9 +17,9 @@
 import React from "react"
 
 import {
-  GridColumn,
-  GridCell,
   DataEditorProps,
+  GridCell,
+  GridColumn,
 } from "@glideapps/glide-data-grid"
 import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-source"
 

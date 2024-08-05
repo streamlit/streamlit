@@ -18,12 +18,13 @@
 // @ts-nocheck
 
 import {
+  Delta,
+  Element,
   mockSessionInfo,
   mockSessionInfoProps,
   SessionInfo,
-  Delta,
-  Element,
 } from "@streamlit/lib"
+
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 
 const getSegmentMetricsManager = (

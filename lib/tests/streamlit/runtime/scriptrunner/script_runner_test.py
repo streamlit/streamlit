@@ -28,10 +28,11 @@ from tornado.testing import AsyncTestCase
 
 from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -330,11 +331,15 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner._fragment_storage.set("my_fragment2", fragment)
         scriptrunner._fragment_storage.set("my_fragment3", fragment)
 
-        # scriptrunner.request_rerun assumes that fragments will only ever be enqueued
-        # one at a time as that's what happens with real rerun requests.
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        scriptrunner.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
         scriptrunner.start()
         scriptrunner.join()
 
@@ -349,6 +354,109 @@ class ScriptRunnerTest(AsyncTestCase):
 
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
+    def test_run_multiple_fragments_even_if_one_raised_an_exception(self):
+        """Tests that fragments continue to run when previous fragment raised an error."""
+        fragment = MagicMock()
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        raised_exception = {"called": False}
+
+        def raise_exception():
+            raised_exception["called"] = True
+            raise RuntimeError("this fragment errored out")
+
+        scriptrunner._fragment_storage.set("my_fragment1", raise_exception)
+        scriptrunner._fragment_storage.set("my_fragment2", fragment)
+        scriptrunner._fragment_storage.set("my_fragment3", fragment)
+
+        scriptrunner.request_rerun(
+            RerunData(
+                fragment_id_queue=[
+                    "my_fragment1",
+                    "my_fragment2",
+                    "my_fragment3",
+                ]
+            )
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        self.assertTrue(raised_exception["called"])
+        fragment.assert_has_calls([call(), call()])
+        Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_FragmentStorageKeyError_becomes_RuntimeError(
+        self, patched_handle_exception
+    ):
+        fragment = MagicMock()
+        fragment.side_effect = FragmentStorageKeyError("kaboom")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        ex = patched_handle_exception.call_args[0][0]
+        assert isinstance(ex, RuntimeError)
+
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_FragmentStorageKeyError_for_autoRerun_is_not_raised(
+        self, patched_handle_exception
+    ):
+        fragment = MagicMock()
+        fragment.side_effect = FragmentStorageKeyError("kaboom")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["my_fragment"], is_auto_rerun=True)
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert patched_handle_exception.call_args is None
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    def test_regular_KeyError_is_rethrown(
+        self, patched_handle_exception, patched_get_script_run_ctx
+    ):
+        """Test that regular key-errors within a fragment are surfaced
+        as such and not caught by the FragmentStorageKeyError.
+        """
+
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+        ctx.current_fragment_id = "my_fragment_id"
+
+        def non_optional_func():
+            raise KeyError("kaboom")
+
+        def fragment():
+            _fragment(non_optional_func)()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        ex = patched_handle_exception.call_args[0][0]
+        assert isinstance(ex, KeyError)
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
@@ -527,6 +635,24 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, [])
+
+    @patch("streamlit.runtime.metrics_util.create_page_profile_message")
+    def test_uncaught_exception_gets_tracked(self, patched_create_page_profile_message):
+        """Tests that we track uncaught exceptions."""
+        with testutil.patch_config_options({"browser.gatherUsageStats": True}):
+            scriptrunner = TestScriptRunner("runtime_error.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+            patched_create_page_profile_message.assert_called_once()
+            call_kwargs = patched_create_page_profile_message.call_args_list[0].kwargs
+
+            # Check the
+            assert len(call_kwargs["commands"]) == 2  # text & exception command
+            assert call_kwargs["exec_time"] > 0
+            assert call_kwargs["prep_time"] > 0
+            assert call_kwargs["uncaught_exception"] == "AttributeError"
 
     @parameterized.expand([(True,), (False,)])
     def test_runtime_error(self, show_error_details: bool):

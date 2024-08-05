@@ -17,16 +17,17 @@
 import React from "react"
 
 import { withTheme } from "@emotion/react"
+
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
 import {
-  labelVisibilityProtoValueToEnum,
   isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 

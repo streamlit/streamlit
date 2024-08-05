@@ -12,21 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
-from streamlit import runtime
 
-# st.session_state can only be accessed while running with streamlit
-if runtime.exists():
-    if "counter" not in st.session_state:
-        st.session_state.counter = 0
 
-    if st.button("click me!"):
-        st.session_state.counter += 1
+@st.fragment
+def my_fragment1():
+    st.button("rerun fragment 1")
+    time.sleep(3)
+    st.write("fragment 1 done!")
 
-    st.write(f"count: {st.session_state.counter}")
 
-    if f := st.file_uploader("Upload a file"):
-        st.text(f.read())
+@st.fragment
+def my_fragment2():
+    if st.button("rerun fragment 2"):
+        st.write("ran fragment 2")
+    st.write("fragment 2 done!")
 
-    if img := st.camera_input("Take a picture"):
-        st.image(img)
+
+@st.fragment
+def my_fragment3():
+    st.button("rerun fragment 3")
+    st.write("fragment 3 done!")
+
+
+with st.container(border=True):
+    my_fragment1()
+with st.container(border=True):
+    my_fragment2()
+with st.container(border=True):
+    my_fragment3()

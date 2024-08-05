@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from uuid import uuid4
-
 import streamlit as st
 
 
-@st.experimental_fragment(run_every=1.0)
-def my_auto_updating_fragment():
-    st.write(f"uuid in fragment: {uuid4()}")
+@st.fragment
+def show_page():
+    checkmark = st.checkbox("Yes or No")
+
+    if checkmark:
+        st.tabs(["Tab A", "Tab B", "Tab C"])
+    else:
+        st.tabs(["Tab 1", "Tab 2"])
 
 
-my_auto_updating_fragment()
+show_page()

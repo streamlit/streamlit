@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ComponentMessageType, StreamlitMessageType } from "./enums"
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import {
   ArrowDataframe,
@@ -27,6 +27,8 @@ import {
   Source,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
+
+import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // The custom component's value posted from the iFrame has one of the three types as defined
 // in component-lib/
@@ -245,7 +247,7 @@ export function sendRenderMessage(
     return
   }
 
-  if (iframe.contentWindow == null) {
+  if (isNullOrUndefined(iframe.contentWindow)) {
     // Nor should this!
     logWarning("Can't send ForwardMsg; iframe has no contentWindow!")
     return

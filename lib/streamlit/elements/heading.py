@@ -54,25 +54,14 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display as Github-flavored Markdown. Syntax
+            The text to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
-            This also supports:
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -94,12 +83,17 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.header('This is a header with a divider', divider='rainbow')
-        >>> st.header('_Streamlit_ is :blue[cool] :sunglasses:')
+        >>> st.header("_Streamlit_ is :blue[cool] :sunglasses:")
+        >>> st.header("This is a header with a divider", divider="gray")
+        >>> st.header("These headers have rotating dividers", divider=True)
+        >>> st.header("One", divider=True)
+        >>> st.header("Two", divider=True)
+        >>> st.header("Three", divider=True)
+        >>> st.header("Four", divider=True)
 
         .. output::
            https://doc-header.streamlit.app/
-           height: 220px
+           height: 600px
 
         """
         return self.dg._enqueue(
@@ -127,25 +121,14 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display as Github-flavored Markdown. Syntax
+            The text to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
-            This also supports:
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -167,12 +150,17 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.subheader('This is a subheader with a divider', divider='rainbow')
-        >>> st.subheader('_Streamlit_ is :blue[cool] :sunglasses:')
+        >>> st.subheader("_Streamlit_ is :blue[cool] :sunglasses:")
+        >>> st.subheader("This is a subheader with a divider", divider="gray")
+        >>> st.subheader("These subheaders have rotating dividers", divider=True)
+        >>> st.subheader("One", divider=True)
+        >>> st.subheader("Two", divider=True)
+        >>> st.subheader("Three", divider=True)
+        >>> st.subheader("Four", divider=True)
 
         .. output::
            https://doc-subheader.streamlit.app/
-           height: 220px
+           height: 500px
 
         """
         return self.dg._enqueue(
@@ -202,25 +190,14 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display as Github-flavored Markdown. Syntax
+            The text to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
-            This also supports:
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -234,8 +211,8 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.title('This is a title')
-        >>> st.title('_Streamlit_ is :blue[cool] :sunglasses:')
+        >>> st.title("This is a title")
+        >>> st.title("_Streamlit_ is :blue[cool] :sunglasses:")
 
         .. output::
            https://doc-title.streamlit.app/

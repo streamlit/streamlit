@@ -43,7 +43,7 @@ class MarkdownMixin:
         Parameters
         ----------
         body : str
-            The string to display as Github-flavored Markdown. Syntax
+            The string to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
             This also supports:
@@ -51,6 +51,12 @@ class MarkdownMixin:
             * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
               For a list of all supported codes,
               see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * Google Material Symbols (rounded style), using the syntax
+              ``:material/icon_name:``, where "icon_name" is the name of the
+              icon in snake case. For a complete list of icons, see Google's
+              `Material Symbols <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
             * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
               must be on their own lines). Supported LaTeX functions are listed
@@ -141,7 +147,7 @@ class MarkdownMixin:
         >>>
         >>> code = '''def hello():
         ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
+        >>> st.code(code, language="python")
 
         """
         code_proto = MarkdownProto()
@@ -166,25 +172,14 @@ class MarkdownMixin:
         Parameters
         ----------
         body : str
-            The text to display as Github-flavored Markdown. Syntax
+            The text to display as GitHub-flavored Markdown. Syntax
             information can be found at: https://github.github.com/gfm.
 
-            This also supports:
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         unsafe_allow_html : bool
             Whether to render HTML within ``body``. If this is ``False``
@@ -206,8 +201,8 @@ class MarkdownMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.caption('This is a string that explains something above.')
-        >>> st.caption('A caption with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.caption("This is a string that explains something above.")
+        >>> st.caption("A caption with _italics_ :blue[colors] and emojis :sunglasses:")
 
         """
         caption_proto = MarkdownProto()

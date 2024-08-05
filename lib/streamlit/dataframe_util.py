@@ -309,7 +309,7 @@ def convert_anything_to_pandas_df(
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return cast(pd.DataFrame, data.to_pandas())
+        return pd.DataFrame(data.to_pandas())
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.

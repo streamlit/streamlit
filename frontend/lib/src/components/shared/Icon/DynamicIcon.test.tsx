@@ -15,11 +15,17 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
+
 import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
 
-import { DynamicIcon, DynamicIconProps } from "./DynamicIcon"
+import {
+  DynamicIcon,
+  DynamicIconProps,
+  getFilledStarIconSrc,
+} from "./DynamicIcon"
 
 const getProps = (
   props: Partial<DynamicIconProps> = {}
@@ -49,5 +55,15 @@ describe("Dynamic icon", () => {
     expect(testId).toBeInTheDocument()
     expect(icon).toBeInTheDocument()
     expect(testId.textContent).toEqual(icon.textContent)
+  })
+
+  it("renders without crashing Styled image", () => {
+    const props = getProps({ iconValue: ":material/star_filled:" })
+    render(<DynamicIcon {...props} />)
+    const testId = screen.getByTestId("stImageIcon")
+    const srcAttr = testId.getAttribute("src")
+
+    expect(testId).toBeInTheDocument()
+    expect(srcAttr).toEqual(getFilledStarIconSrc())
   })
 })

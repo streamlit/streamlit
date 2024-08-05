@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable
 
 from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 
 if TYPE_CHECKING:
@@ -25,11 +26,14 @@ if TYPE_CHECKING:
 
 
 def exec_func_with_error_handling(
-    func: Callable[[], None],
-    ctx: ScriptRunContext,
-    *,
-    reraise_rerun_exception: bool = False,
-) -> tuple[Any | None, bool, RerunData | None, bool]:
+    func: Callable[[], None], ctx: ScriptRunContext
+) -> tuple[
+    Any | None,
+    bool,
+    RerunData | None,
+    bool,
+    Exception | None,
+]:
     """Execute the passed function wrapped in a try/except block.
 
     This function is called by the script runner to execute the user's script or
@@ -43,10 +47,6 @@ def exec_func_with_error_handling(
         The function to execute wrapped in the try/except block.
     ctx : ScriptRunContext
         The context in which the script is being run.
-    reraise_rerun_exception : bool, default False
-        If True, an occuring RerunException will be raised instead of handled. This can
-        be used if this function is called outside of the script_run context and we want
-        the script_runner to react on the rerun exception.
 
     Returns
     -------
@@ -59,6 +59,7 @@ def exec_func_with_error_handling(
             interrupted by a RerunException.
         - A boolean indicating whether the script was stopped prematurely (False for
             RerunExceptions, True for all other exceptions).
+        - The uncaught exception if one occurred, None otherwise
     """
 
     # Avoid circular imports
@@ -70,16 +71,6 @@ def exec_func_with_error_handling(
     # is interrupted by a RerunException.
     rerun_exception_data: RerunData | None = None
 
-    # Saving and restoring our original cursors/dg_stack is needed
-    # specifically to handle the case where a RerunException is raised while
-    # running a fragment. In this case, we need to restore both to their states
-    # at the start of the script run to ensure that we write to the correct
-    # places in the app during the rerun (without this, ctx.cursors and dg_stack
-    # will still be set to the snapshots they were restored from when running
-    # the fragment).
-    original_cursors = ctx.cursors
-    original_dg_stack = dg_stack.get()
-
     # If the script stops early, we don't want to remove unseen widgets,
     # so we track this to potentially skip session state cleanup later.
     premature_stop: bool = False
@@ -87,25 +78,23 @@ def exec_func_with_error_handling(
     # The result of the passed function
     result: Any | None = None
 
+    # The uncaught exception if one occurred, None otherwise
+    uncaught_exception: Exception | None = None
+
     try:
         result = func()
     except RerunException as e:
-        if reraise_rerun_exception:
-            raise e
-
         rerun_exception_data = e.rerun_data
-        if rerun_exception_data.fragment_id_queue:
-            # This is a fragment-specific rerun, so we need to restore the stack
-            ctx.cursors = original_cursors
-            dg_stack.set(original_dg_stack)
-        else:
-            # If it is a full-app rerun, the stack needs to be refreshed.
-            # We should land here when `st.rerun` is called from within a
-            # fragment. Since we re-use the same thread, we have to clear the
-            # stack or otherwise we might render the main app in the old
-            # fragment's dg_stack.
-            ctx.cursors.clear()
-            dg_stack.set(get_default_dg_stack())
+
+        # Since the script is about to rerun, we may need to reset our cursors/dg_stack
+        # so that we write to the right place in the app. For full script runs, this
+        # needs to happen in case the same thread reruns our script (a different thread
+        # would automatically come with fresh cursors/dg_stack values). For fragments,
+        # it doesn't matter either way since the fragment resets these values from its
+        # snapshot before execution.
+        ctx.cursors.clear()
+        dg_stack.set(get_default_dg_stack())
+
         # Interruption due to a rerun is usually from `st.rerun()`, which
         # we want to count as a script completion so triggers reset.
         # It is also possible for this to happen if fast reruns is off,
@@ -116,11 +105,19 @@ def exec_func_with_error_handling(
         # This is thrown when the script executes `st.stop()`.
         # We don't have to do anything here.
         premature_stop = True
-
+    except FragmentHandledException:
+        run_without_errors = False
+        premature_stop = True
     except Exception as ex:
         run_without_errors = False
-        uncaught_exception = ex
-        handle_uncaught_app_exception(uncaught_exception)
         premature_stop = True
+        handle_uncaught_app_exception(ex)
+        uncaught_exception = ex
 
-    return result, run_without_errors, rerun_exception_data, premature_stop
+    return (
+        result,
+        run_without_errors,
+        rerun_exception_data,
+        premature_stop,
+        uncaught_exception,
+    )

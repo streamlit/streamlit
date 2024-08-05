@@ -117,6 +117,7 @@ class RunWarningTest(unittest.TestCase):
                 "error",
                 "exception",
                 "expander",
+                "feedback",
                 "file_uploader",
                 "form",
                 "form_submit_button",
@@ -199,6 +200,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         """Multiple widgets with the same generated key should report an error."""
         widgets = {
             "button": lambda key=None: st.button("", key=key),
+            "button_group": lambda key=None: st.feedback([1, 2], key=key),
             "checkbox": lambda key=None: st.checkbox("", key=key),
             "multiselect": lambda key=None: st.multiselect("", options=[1, 2], key=key),
             "radio": lambda key=None: st.radio("", options=[1, 2], key=key),
@@ -246,6 +248,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         widgets = {
             "button": lambda key=None, label="": st.button(label=label, key=key),
             "checkbox": lambda key=None, label="": st.checkbox(label=label, key=key),
+            "feedback": lambda key=None, label="": st.feedback(options=[1, 2], key=key),
             "multiselect": lambda key=None, label="": st.multiselect(
                 label=label, options=[1, 2], key=key
             ),
@@ -394,7 +397,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.fragment_ids_this_run = {"my_fragment_id"}
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
 
         exc = "is not supported"
         with pytest.raises(StreamlitAPIException, match=exc):
@@ -403,7 +406,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_enqueue_can_write_to_container_in_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.fragment_ids_this_run = {"my_fragment_id"}
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
 
         delta_generator.sidebar_dg.container().write("Hello world")
 

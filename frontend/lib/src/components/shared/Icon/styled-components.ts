@@ -20,9 +20,9 @@ import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
 
 import {
+  computeSpacingStyle,
   IconSize,
   ThemeColor,
-  computeSpacingStyle,
 } from "@streamlit/lib/src/theme"
 
 interface StyledSpinnerIconProps {
@@ -104,6 +104,13 @@ export const StyledDynamicIcon = styled.span<StyledDynamicIconProps>(
     }
   }
 )
+
+export const StyledImageIcon = styled.img(({}) => {
+  return {
+    width: "100%",
+    height: "100%",
+  }
+})
 
 interface StyledEmojiIconProps {
   size: IconSize

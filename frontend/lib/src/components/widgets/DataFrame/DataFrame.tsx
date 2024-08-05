@@ -15,22 +15,23 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
-  DataEditor as GlideDataEditor,
+  CompactSelection,
   DataEditorRef,
-  GridSelection,
-  GridMouseEventArgs,
+  DataEditor as GlideDataEditor,
   GridCell,
   Item as GridCellPosition,
-  CompactSelection,
+  GridMouseEventArgs,
+  GridSelection,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
-  Delete,
   Add,
+  Close,
+  Delete,
   FileDownload,
   Search,
-  Close,
 } from "@emotion-icons/material-outlined"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -49,30 +50,30 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import EditingState, { getColumnName } from "./EditingState"
 import {
-  useCustomTheme,
-  useTableSizer,
-  useDataLoader,
-  useDataEditor,
+  useColumnLoader,
   useColumnSizer,
   useColumnSort,
-  useColumnLoader,
-  useTooltips,
   useCustomRenderer,
+  useCustomTheme,
+  useDataEditor,
   useDataExporter,
+  useDataLoader,
   useSelectionHandler,
+  useTableSizer,
+  useTooltips,
 } from "./hooks"
 import {
   BORDER_THRESHOLD,
-  MIN_COLUMN_WIDTH,
-  MAX_COLUMN_WIDTH,
   MAX_COLUMN_AUTO_WIDTH,
+  MAX_COLUMN_WIDTH,
+  MIN_COLUMN_WIDTH,
   ROW_HEIGHT,
 } from "./hooks/useTableSizer"
 import {
   BaseColumn,
-  toGlideColumn,
   getTextCell,
   ImageCellEditor,
+  toGlideColumn,
 } from "./columns"
 import Tooltip from "./Tooltip"
 import { StyledResizableContainer } from "./styled-components"

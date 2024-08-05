@@ -157,6 +157,27 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
+def test_switch_page_preserves_embed_params(page: Page, app_port: int):
+    """Test that st.switch_page only preserves embed params."""
+
+    # Start at main page with embed & other query params
+    page.goto(
+        f"http://localhost:{app_port}/?embed=true&embed_options=light_theme&bar=foo"
+    )
+    wait_for_app_loaded(page, embedded=True)
+    expect(page.get_by_test_id("stJson")).to_contain_text('{"bar":"foo"}')
+
+    # Trigger st.switch_page
+    page.get_by_test_id("stButton").nth(0).locator("button").first.click()
+    wait_for_app_loaded(page, embedded=True)
+
+    # Check that only embed query params persist
+    expect(page).to_have_url(
+        f"http://localhost:{app_port}/page2?embed=true&embed_options=light_theme"
+    )
+    expect(page.get_by_test_id("stJson")).not_to_contain_text('{"bar":"foo"}')
+
+
 def test_switch_page_removes_query_params(page: Page, app_port: int):
     """Test that query params are removed when navigating via st.switch_page"""
 

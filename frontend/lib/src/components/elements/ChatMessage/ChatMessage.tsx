@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { useTheme } from "@emotion/react"
 import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
@@ -24,11 +25,11 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 import {
+  StyledAvatarBackground,
+  StyledAvatarIcon,
+  StyledAvatarImage,
   StyledChatMessageContainer,
   StyledMessageContent,
-  StyledAvatarImage,
-  StyledAvatarIcon,
-  StyledAvatarBackground,
 } from "./styled-components"
 
 interface ChatMessageAvatarProps {

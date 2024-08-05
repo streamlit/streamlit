@@ -38,6 +38,7 @@ from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
     Button,
+    ButtonGroup,
     Caption,
     ChatInput,
     ChatMessage,
@@ -332,7 +333,7 @@ class AppTest:
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
-            new_secrets = Secrets([])
+            new_secrets = Secrets()
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
@@ -455,6 +456,20 @@ class AppTest:
             given key.
         """
         return self._tree.button
+
+    @property
+    def button_group(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.feedback`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.feedback`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key. For
+            example, ``at.button_group[0]`` for the first widget or
+            ``at.button_group(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.button_group
 
     @property
     def caption(self) -> ElementList[Caption]:

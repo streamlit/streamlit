@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-TOTAL_AREA_CHARTS = 11
+TOTAL_AREA_CHARTS = 15
 
 
 def test_area_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
