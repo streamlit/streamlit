@@ -47,6 +47,8 @@ def test_fragment_scoped_st_rerun(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(
         "fragment run count: 10"
     )
+    # wait for app run to make sure that we do not check a stale state of the app
+    wait_for_app_run(app)
     # the main apps rerun count should not have been incremented
     _expect_initial_reruns_count_text(app)
 
