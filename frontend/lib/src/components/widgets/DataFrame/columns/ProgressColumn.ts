@@ -31,13 +31,13 @@ import { isIntegerType } from "@streamlit/lib/src/components/widgets/DataFrame/i
 import {
   BaseColumn,
   BaseColumnProps,
-  getErrorCell,
-  getEmptyCell,
-  toSafeString,
-  mergeColumnParameters,
-  formatNumber,
-  toSafeNumber,
   countDecimals,
+  formatNumber,
+  getEmptyCell,
+  getErrorCell,
+  mergeColumnParameters,
+  toSafeNumber,
+  toSafeString,
 } from "./utils"
 
 export interface ProgressColumnParams {

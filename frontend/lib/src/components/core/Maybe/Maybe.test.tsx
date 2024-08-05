@@ -15,7 +15,9 @@
  */
 
 import React from "react"
+
 import { render } from "@streamlit/lib/src/test_util"
+
 import Maybe from "./Maybe"
 
 interface OuterProps {

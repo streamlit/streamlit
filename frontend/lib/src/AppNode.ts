@@ -15,9 +15,20 @@
  */
 
 import { produce } from "immer"
+
 import {
-  Arrow as ArrowProto,
+  getLoadingScreenType,
+  isNullOrUndefined,
+  LoadingScreenType,
+  makeAppSkeletonElement,
+  makeElementWithErrorText,
+  makeElementWithInfoText,
+  notUndefined,
+} from "@streamlit/lib/src/util/utils"
+
+import {
   ArrowNamedDataSet,
+  Arrow as ArrowProto,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Block as BlockProto,
   Delta,
@@ -33,14 +44,6 @@ import {
 } from "./components/elements/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
-import {
-  getLoadingScreenType,
-  LoadingScreenType,
-  makeElementWithErrorText,
-  makeElementWithInfoText,
-  makeAppSkeletonElement,
-  notUndefined,
-} from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 interface AppLogo {
@@ -277,7 +280,7 @@ export class ElementNode implements AppNode {
   }
 
   public getElements(elements?: Set<Element>): Set<Element> {
-    if (elements == null) {
+    if (isNullOrUndefined(elements)) {
       elements = new Set<Element>()
     }
     elements.add(this.element)
@@ -503,6 +506,12 @@ export class BlockNode implements AppNode {
           return this
         }
 
+        // This blocks belong to our fragment, but it was modified in a previous script run.
+        // This means it is stale now!
+        if (this.scriptRunId !== currentScriptRunId) {
+          return undefined
+        }
+
         // If this BlockNode *does* correspond to a currently running fragment,
         // we recurse into it below and set the fragmentIdOfBlock parameter to
         // keep track of which fragment this BlockNode belongs to.
@@ -515,13 +524,13 @@ export class BlockNode implements AppNode {
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child =>
-        child.clearStaleNodes(
+      .map(child => {
+        return child.clearStaleNodes(
           currentScriptRunId,
           fragmentIdsThisRun,
           fragmentIdOfBlock
         )
-      )
+      })
       .filter(notUndefined)
 
     return new BlockNode(
@@ -534,7 +543,7 @@ export class BlockNode implements AppNode {
   }
 
   public getElements(elementSet?: Set<Element>): Set<Element> {
-    if (elementSet == null) {
+    if (isNullOrUndefined(elementSet)) {
       elementSet = new Set<Element>()
     }
 
@@ -647,10 +656,10 @@ export class AppRoot {
     // a 'sidebar' block, a `bottom` block and an 'event' block.
     if (
       this.root.children.length !== 4 ||
-      this.main == null ||
-      this.sidebar == null ||
-      this.event == null ||
-      this.bottom == null
+      isNullOrUndefined(this.main) ||
+      isNullOrUndefined(this.sidebar) ||
+      isNullOrUndefined(this.event) ||
+      isNullOrUndefined(this.bottom)
     ) {
       throw new Error(`Invalid root node children! ${root}`)
     }
@@ -874,7 +883,7 @@ export class AppRoot {
     scriptRunId: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
-    if (existingNode == null) {
+    if (isNullOrUndefined(existingNode)) {
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 

@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
@@ -67,14 +69,14 @@ export class ComponentRegistry {
 
   private onMessageEvent = (event: MessageEvent): void => {
     if (
-      event.data == null ||
+      isNullOrUndefined(event.data) ||
       !event.data.hasOwnProperty("isStreamlitMessage")
     ) {
       // Disregard messages that don't come from components.
       return
     }
 
-    if (event.source == null) {
+    if (isNullOrUndefined(event.source)) {
       // This should not be possible.
       logWarning(`Received component message with no eventSource!`, event.data)
       return
@@ -82,7 +84,7 @@ export class ComponentRegistry {
 
     // Get the ComponentInstance associated with the event
     const listener = this.msgListeners.get(event.source)
-    if (listener == null || typeof listener !== "function") {
+    if (isNullOrUndefined(listener) || typeof listener !== "function") {
       logWarning(
         `Received component message for unregistered ComponentInstance!`,
         event.data
@@ -91,7 +93,7 @@ export class ComponentRegistry {
     }
 
     const { type } = event.data
-    if (type == null) {
+    if (isNullOrUndefined(type)) {
       logWarning(`Received Streamlit message with no type!`, event.data)
       return
     }

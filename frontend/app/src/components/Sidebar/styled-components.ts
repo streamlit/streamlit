@@ -16,6 +16,7 @@
 
 import { transparentize } from "color2k"
 import styled from "@emotion/styled"
+
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,

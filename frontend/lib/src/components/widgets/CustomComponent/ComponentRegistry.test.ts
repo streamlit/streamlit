@@ -15,6 +15,7 @@
  */
 
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
+
 import { ComponentRegistry } from "./ComponentRegistry"
 
 describe("ComponentRegistry", () => {

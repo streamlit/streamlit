@@ -15,10 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
-  BaseLinkButtonProps as BaseLinkButtonPropsT,
   BaseButtonKind,
   BaseButtonSize,
+  BaseLinkButtonProps as BaseLinkButtonPropsT,
   StyledPrimaryLinkButton,
   StyledSecondaryLinkButton,
 } from "./styled-components"

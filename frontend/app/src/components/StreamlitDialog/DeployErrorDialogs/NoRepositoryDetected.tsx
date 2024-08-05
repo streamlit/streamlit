@@ -15,7 +15,9 @@
  */
 
 import React from "react"
+
 import { STREAMLIT_COMMUNITY_CLOUD_DOCS_URL } from "@streamlit/app/src/urls"
+
 import { IDeployErrorDialog } from "./types"
 import { StyledParagraph } from "./styled-components"
 

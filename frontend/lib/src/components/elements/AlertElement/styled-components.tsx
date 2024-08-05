@@ -15,9 +15,10 @@
  */
 
 import styled from "@emotion/styled"
+
 import {
-  StyledIcon,
   StyledEmojiIcon,
+  StyledIcon,
 } from "@streamlit/lib/src/components/shared/Icon/styled-components"
 import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 

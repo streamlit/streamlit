@@ -15,14 +15,16 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import {
-  Metric as MetricProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Metric as MetricProto,
 } from "@streamlit/lib/src/proto"
+
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({

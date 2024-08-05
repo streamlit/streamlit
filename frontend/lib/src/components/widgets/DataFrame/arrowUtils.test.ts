@@ -15,42 +15,42 @@
  */
 
 import {
-  Quiver,
   Type as ArrowType,
   DataFrameCell,
+  Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
-  UNICODE,
-  MULTI,
   CATEGORICAL_COLUMN,
   DECIMAL,
-  STYLER,
   DISPLAY_VALUES,
   EMPTY,
+  MULTI,
+  STYLER,
+  UNICODE,
 } from "@streamlit/lib/src/mocks/arrow"
 
 import {
-  getTextCell,
-  ColumnCreator,
-  ObjectColumn,
   CheckboxColumn,
-  NumberColumn,
-  TextColumn,
-  SelectboxColumn,
-  ListColumn,
-  DateTimeColumn,
+  ColumnCreator,
   DateColumn,
+  DateTimeColumn,
+  getTextCell,
+  ListColumn,
+  NumberColumn,
+  ObjectColumn,
+  SelectboxColumn,
+  TextColumn,
   TimeColumn,
 } from "./columns"
 import {
-  extractCssProperty,
   applyPandasStylerCss,
-  getColumnTypeFromArrow,
-  getIndexFromArrow,
-  getColumnFromArrow,
+  extractCssProperty,
   getAllColumnsFromArrow,
   getCellFromArrow,
+  getColumnFromArrow,
+  getColumnTypeFromArrow,
+  getIndexFromArrow,
 } from "./arrowUtils"
 import { isIntegerType } from "./isIntegerType"
 

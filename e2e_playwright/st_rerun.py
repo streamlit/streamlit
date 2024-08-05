@@ -21,6 +21,9 @@ if "count" not in st.session_state:
 
 @st.fragment
 def my_fragment():
+    if st.button("rerun whole app (from fragment)"):
+        st.rerun(scope="app")
+
     if st.button("rerun fragment"):
         st.session_state.fragment_count += 1
         st.rerun(scope="fragment")
@@ -32,6 +35,15 @@ def my_fragment():
         st.rerun(scope="fragment")
 
 
+@st.fragment
+def fragment_with_rerun_in_try_block():
+    try:
+        if st.button("rerun try_fragment"):
+            st.rerun()
+    except Exception as e:
+        st.write(f"Caught exception: {e}")
+
+
 st.session_state.count += 1
 
 if st.session_state.count < 4:
@@ -40,5 +52,14 @@ if st.session_state.count < 4:
 if st.session_state.count >= 4:
     st.text("Being able to rerun a session is awesome!")
 
+
+s = st.selectbox(
+    "i should retain my state",
+    ["a", "b", "c"],
+    index=None,
+)
+st.write(f"selectbox selection: {s}")
+
 my_fragment()
+fragment_with_rerun_in_try_block()
 st.write(f"app run count: {st.session_state.count}")

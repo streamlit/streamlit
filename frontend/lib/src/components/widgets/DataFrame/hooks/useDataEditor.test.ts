@@ -16,15 +16,15 @@
 
 import { renderHook } from "@testing-library/react-hooks"
 import {
-  TextCell,
-  GridSelection,
   CompactSelection,
+  GridSelection,
+  TextCell,
 } from "@glideapps/glide-data-grid"
 
 import {
   BaseColumn,
-  TextColumn,
   NumberColumn,
+  TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"

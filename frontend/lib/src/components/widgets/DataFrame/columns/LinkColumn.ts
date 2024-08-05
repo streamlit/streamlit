@@ -21,9 +21,9 @@ import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseColumn,
   BaseColumnProps,
-  toSafeString,
   getErrorCell,
   getLinkDisplayValueFromRegex,
+  toSafeString,
 } from "./utils"
 
 export interface LinkColumnParams {

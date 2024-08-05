@@ -15,15 +15,17 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { useTheme } from "@emotion/react"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { EmotionTheme, isPresetTheme } from "@streamlit/lib/src/theme"
 import {
-  ProgressBar as UIProgressBar,
   ProgressBarOverrides,
+  ProgressBar as UIProgressBar,
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
+
+import { EmotionTheme, isPresetTheme } from "@streamlit/lib/src/theme"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 export enum Size {
   EXTRASMALL = "xs",

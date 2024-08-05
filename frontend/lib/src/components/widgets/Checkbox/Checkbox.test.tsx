@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"

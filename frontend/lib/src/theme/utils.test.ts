@@ -28,23 +28,23 @@ import { fonts } from "@streamlit/lib/src/theme/primitives/typography"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
-  CUSTOM_THEME_NAME,
   computeSpacingStyle,
   createEmotionTheme,
   createTheme,
+  CUSTOM_THEME_NAME,
   fontEnumToString,
   fontToEnum,
+  getCachedTheme,
   getDefaultTheme,
+  getHostSpecifiedTheme,
   getSystemTheme,
   getWrappedHeadersStyle,
+  hasLightBackgroundColor,
   isColor,
   isPresetTheme,
-  toThemeInput,
-  getCachedTheme,
   removeCachedTheme,
   setCachedTheme,
-  hasLightBackgroundColor,
-  getHostSpecifiedTheme,
+  toThemeInput,
 } from "./utils"
 
 const matchMediaFillers = {
