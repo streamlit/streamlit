@@ -415,7 +415,7 @@ def expect_help_tooltip(
 def expect_script_state(
     page: Page,
     state: Literal[
-        "initia",
+        "initial",
         "running",
         "notRunning",
         "rerunRequested",
@@ -430,14 +430,7 @@ def expect_script_state(
     page : Page
         The page to search for the script state.
 
-    state : Literal[
-        "initia",
-        "running",
-        "notRunning",
-        "rerunRequested",
-        "stopRequested",
-        "compilationError",
-    ]
+    state :
         The expected script state.
     """
     page.wait_for_selector(
