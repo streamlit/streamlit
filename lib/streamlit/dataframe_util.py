@@ -950,7 +950,13 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
-    """Convert a Pandas DataFrame to a Pandas Series by selecting the first column."""
+    """Convert a Pandas DataFrame to a Pandas Series by selecting the first column.
+
+    Raises
+    ------
+    ValueError
+        If the DataFrame has more than one column.
+    """
     # Select first column in dataframe and create a new series based on the values
     if len(df.columns) != 1:
         raise ValueError(
