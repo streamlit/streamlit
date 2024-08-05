@@ -70,7 +70,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(subheaders).to_have_count(7)
+    expect(subheaders).to_have_count(8)
 
     expect(subheaders.nth(0)).to_have_text("info This subheader is awesome!")
     expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
@@ -269,3 +269,16 @@ def test_help_tooltip_works(app: Page):
 
     title_with_help = _get_title_elements(app).nth(1)
     expect_help_tooltip(app, title_with_help, tooltip_text)
+
+
+def test_not_scrolled_on_empty_anchor_tag(app: Page):
+    """Test that the page is not scrolled when the page contains an empty
+    header/anchor tag and no window hash."""
+
+    # Check if the page is still scrolled to the top
+    # after one second timeout.
+    app.wait_for_timeout(1000)
+    scroll_position = app.evaluate("window.scrollY")
+    # Usage of assert is fine here since we just need to verify that
+    # this is still scrolled to top, no need to wait for this to happen.
+    assert scroll_position == 0
