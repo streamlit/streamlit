@@ -331,7 +331,6 @@ export const CustomCodeTag: FunctionComponent<
 export const CustomPreTag: FunctionComponent<
   React.PropsWithChildren<ReactMarkdownProps>
 > = ({ children }) => {
-  console.log("CustomPreTag", children)
   return (
     <StyledPreWrapper data-testid="stMarkdownPre">{children}</StyledPreWrapper>
   )
