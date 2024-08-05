@@ -95,6 +95,7 @@ v12 = st.number_input(
 )
 st.write("number input 12 (value from state & min=1) - value: ", v12)
 
-st.code("foo")
 
-st.number_input("number input 13 (no label)", min_value=10, max_value=5, value=7)
+st.number_input(
+    "number input 13 (raises exception)", min_value=10, max_value=5, value=7
+)
