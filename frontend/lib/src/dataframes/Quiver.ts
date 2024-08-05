@@ -438,12 +438,19 @@ export class Quiver {
 
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
+    console.log(table)
     const pandasSchema = Quiver.parsePandasSchema(table)
 
     const rawColumns = Quiver.getRawColumns(table.schema, pandasSchema)
+    console.log(rawColumns)
+
     const fields = Quiver.parseFields(table.schema)
     const columns = Quiver.parseColumns(table.schema, pandasSchema)
+    console.log("columns", columns)
+
     const data = Quiver.parseData(table, columns, rawColumns)
+    console.log("data", data)
+
     const index: Index = pandasSchema
       ? Quiver.parseIndex(table, pandasSchema)
       : []
@@ -484,6 +491,8 @@ export class Quiver {
     arrowSchema: ArrowSchema,
     pandasSchema: PandasSchema | undefined
   ): string[] {
+    console.log(arrowSchema)
+    console.log(pandasSchema)
     if (pandasSchema) {
       return (
         pandasSchema.columns
