@@ -244,8 +244,6 @@ function ChatInput({
 }: Props): React.ReactElement {
   const theme = useTheme()
 
-  const [renderTrigger, setRenderTrigger] = useState(0)
-
   // True if the user-specified state.value has not yet been synced to the WidgetStateManager.
   const [dirty, setDirty] = useState(false)
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
@@ -255,28 +253,38 @@ function ChatInput({
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const heightGuidance = useRef({ minHeight: 0, maxHeight: 0 })
 
-  const filesRef = useRef<UploadFileInfo[]>([]) // TODO [kajarnec] refactor this to use only state
+  // const filesRef = useRef<UploadFileInfo[]>([]) // TODO [kajarnec] refactor this to use only state
+  const [files, setFiles] = useState<UploadFileInfo[]>([])
   const addFiles = (filesToAdd: UploadFileInfo[]) => {
-    filesRef.current = [...filesRef.current, ...filesToAdd]
-    setRenderTrigger(renderTrigger + 1)
+    setFiles(currentFiles => [...currentFiles, ...filesToAdd])
+    // filesRef.current = [...filesRef.current, ...filesToAdd]
   }
 
   const updateFile = (id: number, fileInfo: UploadFileInfo) => {
-    filesRef.current = filesRef.current.map(f => (f.id === id ? fileInfo : f))
-    setRenderTrigger(renderTrigger + 1)
+    setFiles(files => files.map(f => (f.id === id ? fileInfo : f)))
   }
 
-  const getFile = (localFileId: number): UploadFileInfo | undefined => {
-    return filesRef.current.find(f => f.id === localFileId)
+  const getFile = (
+    localFileId: number
+  ): Promise<UploadFileInfo | undefined> => {
+    return new Promise((resolve, reject) => {
+      setFiles(files => {
+        const file = files.find(f => f.id === localFileId)
+        resolve(file)
+        return files
+      })
+    })
+    // return filesRef.current.find(f => f.id === localFileId)
   }
 
   const removeFile = (idToRemove: number): void => {
-    filesRef.current = filesRef.current.filter(file => file.id !== idToRemove)
-    setRenderTrigger(renderTrigger + 1)
+    // filesRef.current = filesRef.current.filter(file => file.id !== idToRemove)
+    setFiles(files => files.filter(file => file.id !== idToRemove))
+    // setRenderTrigger(renderTrigger + 1)
   }
 
-  const deleteFile = (fileId: number): void => {
-    const file = getFile(fileId)
+  const deleteFile = async (fileId: number): Promise<void> => {
+    const file = await getFile(fileId)
     if (file == null) {
       return
     }
@@ -296,7 +304,7 @@ function ChatInput({
   }
 
   const createChatInputWidgetFilesValue = (): FileUploaderStateProto => {
-    const uploadedFileInfo: UploadedFileInfoProto[] = filesRef.current
+    const uploadedFileInfo: UploadedFileInfoProto[] = files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
@@ -326,9 +334,9 @@ function ChatInput({
       updateFile,
       uploadClient,
       element,
-      onUploadProgress: (e, fileId) => {
+      onUploadProgress: async (e, fileId) => {
         console.log("PROGRESSSS....")
-        const file = getFile(fileId)
+        const file = await getFile(fileId)
         console.log("THE FILE: ", file)
         if (file == null || file.status.type !== "uploading") {
           return
@@ -349,12 +357,12 @@ function ChatInput({
           })
         )
       },
-      onUploadComplete: (id, fileUrls) => {
+      onUploadComplete: async (id, fileUrls) => {
         console.log("IN ON UPLOAD COMPLETE....")
         console.log("ID: ", id)
         console.log("FILE URL: ", fileUrls)
 
-        const curFile = getFile(id)
+        const curFile = await getFile(id)
         if (curFile == null || curFile.status.type !== "uploading") {
           // The file may have been canceled right before the upload
           // completed. In this case, we just bail.
@@ -373,7 +381,7 @@ function ChatInput({
 
         console.log("COMPLETE....")
         console.log("AAAA")
-        console.log(filesRef.current)
+        console.log(files)
       },
     }),
     addFiles,
@@ -422,7 +430,7 @@ function ChatInput({
       fragmentId
     )
     setDirty(false)
-    filesRef.current = []
+    setFiles([])
     setValue("")
     setScrollHeight(0)
   }
@@ -489,9 +497,9 @@ function ChatInput({
       width={width}
     >
       <div style={{ position: "absolute", bottom: "100%" }}>
-        {filesRef.current.length > 0 && (
+        {files.length > 0 && (
           <UploadedFiles
-            items={[...filesRef.current]}
+            items={[...files]}
             pageSize={3}
             onDelete={deleteFile}
             resetOnAdd
@@ -579,7 +587,6 @@ function ChatInput({
           </StyledSendIconButton>
         </StyledSendIconButtonContainer>
       </StyledChatInput>
-      <h1>{renderTrigger}</h1>
     </StyledChatInputContainer>
   )
 }
