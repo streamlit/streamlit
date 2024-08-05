@@ -43,7 +43,7 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(3), name="st_code-line_numbers")
     assert_snapshot(code_blocks.nth(4), name="st_code-no_lang")
     assert_snapshot(code_blocks.nth(5), name="st_markdown-code_block")
-    assert_snapshot(code_blocks.nth(7), name="st_code-diff_lang")
+    assert_snapshot(code_blocks.nth(6), name="st_code-diff_lang")
 
 
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
