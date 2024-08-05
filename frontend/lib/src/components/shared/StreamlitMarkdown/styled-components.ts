@@ -218,3 +218,7 @@ export const StyledDivider = styled.hr<StyledDividerProps>(
     }
   }
 )
+
+export const StyledPreWrapper = styled.div(({ theme }) => ({
+  marginBottom: theme.spacing.lg,
+}))
