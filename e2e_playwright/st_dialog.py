@@ -129,3 +129,24 @@ def dialog_with_error():
 
 if st.button("Open Dialog with Key Error"):
     dialog_with_error()
+
+
+@st.dialog("Dialog with copy buttons")
+def dialog_with_copy_buttons():
+    st.json([1, 2, 3])
+
+    copied_text = st.text_input("Enter copied text")
+    st.write(copied_text)
+
+
+if st.button("Open Dialog with Copy Buttons"):
+    dialog_with_copy_buttons()
+
+
+@st.experimental_dialog("Usage of deprecated experimental_dialog")
+def dialog_with_deprecation_warning():
+    pass  # No need to write anything in the dialog body.
+
+
+if st.button("Open Dialog with deprecation warning"):
+    dialog_with_deprecation_warning()

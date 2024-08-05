@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig, IAppPage } from "@streamlit/lib/src/proto"
+import { IAppPage, ICustomThemeConfig } from "@streamlit/lib/src/proto"
 import { ExportedTheme } from "@streamlit/lib/src/theme"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { LibConfig } from "@streamlit/lib/src/components/core/LibContext"
+import { PresetThemeName } from "@streamlit/lib/src/theme/types"
 
 export type DeployedAppMetadata = {
   hostedAt?: string
@@ -113,7 +114,9 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "SET_CUSTOM_THEME_CONFIG"
-      themeInfo: ICustomThemeConfig
+      themeName?: PresetThemeName
+      // TODO: Consider removing themeInfo once stakeholders no longer use it
+      themeInfo?: ICustomThemeConfig
     }
   | {
       type: "SEND_APP_HEARTBEAT"

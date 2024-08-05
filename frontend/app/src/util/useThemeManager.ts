@@ -15,19 +15,21 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
+
 import {
   AUTO_THEME_NAME,
-  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
+  createTheme,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
   getDefaultTheme,
+  getHostSpecifiedTheme,
+  ICustomThemeConfig,
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
-  createTheme,
-  CustomThemeConfig,
-  ICustomThemeConfig,
 } from "@streamlit/lib"
 
 export interface ThemeManager {
@@ -70,7 +72,7 @@ export function useThemeManager(): [ThemeManager, object[]] {
 
   const updateAutoTheme = useCallback((): void => {
     if (theme.name === AUTO_THEME_NAME) {
-      updateTheme(createAutoTheme())
+      updateTheme(getHostSpecifiedTheme())
     }
     const constantThemes = availableThemes.filter(
       theme => theme.name !== AUTO_THEME_NAME

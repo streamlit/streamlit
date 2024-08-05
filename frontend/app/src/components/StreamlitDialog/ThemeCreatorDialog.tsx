@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Check } from "@emotion-icons/material-outlined"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
@@ -24,26 +25,26 @@ import {
   BaseButton,
   BaseButtonKind,
   BaseColorPicker,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  UISelectbox,
-  Icon,
-  CUSTOM_THEME_NAME,
   createTheme,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
   darkTheme,
-  lightTheme,
   EmotionTheme,
+  Icon,
+  LibContext,
+  lightTheme,
+  Modal,
+  ModalBody,
+  ModalHeader,
   ThemeConfig,
   toThemeInput,
-  LibContext,
-  CustomThemeConfig,
+  UISelectbox,
 } from "@streamlit/lib"
 
 import {
+  StyledBackButton,
   StyledDialogBody,
   StyledFullRow,
-  StyledBackButton,
   StyledSmall,
 } from "./styled-components"
 

@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useRef } from "react"
+
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
-import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
+import Clipboard from "clipboard"
 
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import {
-  hasLightBackgroundColor,
   EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 
@@ -38,6 +40,8 @@ export interface JsonProps {
 export default function Json({ width, element }: JsonProps): ReactElement {
   const styleProp = { width }
   const theme: EmotionTheme = useTheme()
+
+  const elementRef = useRef<HTMLDivElement>(null)
 
   let bodyObject
   try {
@@ -59,8 +63,17 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   // theme's background is light or dark.
   const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 
+  const handleCopy = (copy: any): void => {
+    // we use ClipboardJS to do the copying, because it allows
+    // us to specify a container element. This is necessary because
+    // otherwise copying doesn't work in dialogs.
+    Clipboard.copy(JSON.stringify(copy.src), {
+      container: elementRef.current ?? undefined,
+    })
+  }
+
   return (
-    <div data-testid="stJson" style={styleProp}>
+    <div data-testid="stJson" style={styleProp} ref={elementRef}>
       <ReactJson
         src={bodyObject}
         collapsed={!element.expanded}
@@ -68,6 +81,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
         displayObjectSize={false}
         name={false}
         theme={jsonTheme}
+        enableClipboard={handleCopy}
         style={{
           fontFamily: theme.genericFonts.codeFont,
           fontSize: theme.fontSizes.sm,

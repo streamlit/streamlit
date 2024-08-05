@@ -15,22 +15,23 @@
  */
 
 import React, { ReactElement } from "react"
+
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
-import { screen, cleanup } from "@testing-library/react"
+import { cleanup, screen } from "@testing-library/react"
+import { transparentize } from "color2k"
 
 import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
-import { transparentize } from "color2k"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 import StreamlitMarkdown, {
-  LinkWithTargetBlank,
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
+  LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
-import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -235,6 +236,9 @@ describe("StreamlitMarkdown", () => {
     { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
     { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
     { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
+    { input: "#### Heading 4", tag: "h4", expected: "Heading 4" },
+    { input: "##### Heading 5", tag: "h5", expected: "Heading 5" },
+    { input: "###### Heading 6", tag: "h6", expected: "Heading 6" },
     { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
     { input: "- List Item 1", tag: "li", expected: "List Item 1" },
     { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },

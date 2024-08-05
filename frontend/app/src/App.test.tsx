@@ -15,47 +15,50 @@
  */
 
 import React from "react"
+
 import {
   act,
   fireEvent,
-  screen,
-  waitFor,
   render,
   RenderResult,
+  screen,
+  waitFor,
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import cloneDeep from "lodash/cloneDeep"
+
 import {
+  Config,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
+  FileUploadClient,
+  ForwardMsg,
+  getDefaultTheme,
+  getHostSpecifiedTheme,
+  HOST_COMM_VERSION,
+  HostCommunicationManager,
+  INewSession,
+  lightTheme,
   LocalStore,
+  mockEndpoints,
+  mockSessionInfoProps,
   mockWindowLocation,
+  PagesChanged,
+  RootStyleProvider,
   ScriptRunState,
   SessionInfo,
-  createAutoTheme,
-  CUSTOM_THEME_NAME,
-  lightTheme,
   toExportedTheme,
-  mockSessionInfoProps,
-  Config,
-  CustomThemeConfig,
-  ForwardMsg,
-  INewSession,
-  HostCommunicationManager,
-  PagesChanged,
-  HOST_COMM_VERSION,
-  mockEndpoints,
   WidgetStateManager,
-  FileUploadClient,
-  RootStyleProvider,
-  getDefaultTheme,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
-import { App, Props, showDevelopmentOptions } from "./App"
 import {
   getMenuStructure,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+
+import { App, Props, showDevelopmentOptions } from "./App"
 
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {
@@ -621,7 +624,9 @@ describe("App", () => {
 
       expect(props.theme.setTheme).toHaveBeenCalledTimes(2)
       // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(createAutoTheme())
+      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(
+        getHostSpecifiedTheme()
+      )
     })
 
     it("updates the custom theme if the one received from server has different hash", () => {
@@ -1780,6 +1785,31 @@ describe("App", () => {
 
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
+    })
+
+    it("triggers rerunScript with is_auto_rerun set to true", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      jest.advanceTimersByTime(1000)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].toJSON()
+      ).toStrictEqual({
+        rerunScript: {
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+          pageName: "",
+          pageScriptHash: "",
+          queryString: "",
+          widgetStates: {},
+        },
+      })
     })
   })
 

@@ -18,7 +18,6 @@ import React from "react"
 import "@testing-library/jest-dom"
 
 import { screen } from "@testing-library/react"
-
 import { enableFetchMocks } from "jest-fetch-mock"
 
 import { render } from "@streamlit/lib/src/test_util"

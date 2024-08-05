@@ -62,4 +62,7 @@ st.write(f"selectbox selection: {s}")
 
 my_fragment()
 fragment_with_rerun_in_try_block()
+
+# have elements in the main app after fragments to ensure that the main app elements are
+#  not cleared when rerunning fragments
 st.write(f"app run count: {st.session_state.count}")

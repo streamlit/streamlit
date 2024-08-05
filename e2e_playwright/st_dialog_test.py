@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_markdown
+from e2e_playwright.shared.app_utils import COMMAND_KEY, get_markdown
 
 modal_test_id = "stModal"
 
@@ -55,6 +57,16 @@ def open_submit_button_dialog(app: Page):
     app.get_by_role("button").filter(has_text="Open submit-button Dialog").click()
 
 
+def open_dialog_with_copy_buttons(app: Page):
+    app.get_by_role("button").filter(has_text="Open Dialog with Copy Buttons").click()
+
+
+def open_dialog_with_deprecation_warning(app: Page):
+    app.get_by_role("button").filter(
+        has_text="Open Dialog with deprecation warning"
+    ).click()
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -66,6 +78,10 @@ def test_displays_dialog_properly(app: Page):
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
+
+    # Verify that we don't print a deprecation warning for usage of @st.dialog. We check
+    # that a warning is printed for @st.experimental_dialog in a later test.
+    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
 
 
 def test_dialog_closes_properly(app: Page):
@@ -300,3 +316,44 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     expect(exception_message).not_to_be_attached()
 
     assert large_width_dialog_fragment_id != nested_dialog_fragment_id
+
+
+def test_dialog_copy_buttons_work(app: Page):
+    """Test that the copy buttons in the dialog work as expected.
+
+    We paste the copied content into an input field. We could use
+    playwright's app.evaluate("navigator.clipboard.readText()") to get
+    the copied text, but then we have to grant permission to the user
+    agent to allow accessing the clipboard.
+    """
+
+    open_dialog_with_copy_buttons(app)
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stMarkdown")).to_have_text("")
+
+    # click icon button
+    json_element = app.get_by_test_id("stJson")
+    json_element.hover()
+    json_element.locator(".copy-icon").first.click()
+
+    # paste the copied content into the input field
+    app.get_by_test_id("stTextInput").locator("input").click()
+    app.keyboard.press(f"{COMMAND_KEY}+V")
+    app.keyboard.press("Enter")
+
+    # we should see the pasted content written to the dialog
+    expect(app.get_by_test_id("stMarkdown")).to_have_text("[1,2,3]")
+
+
+def test_experimental_dialog_deprecation_warning(app: Page):
+    """Test that using @st.experimental_dialog instead of @st.dialog results in a
+    deprecation warning being displayed in the dialog.
+    """
+    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
+
+    open_dialog_with_deprecation_warning(app)
+
+    expect(app.get_by_test_id("stAlert")).to_have_text(
+        re.compile("Please replace st.experimental_dialog with st.dialog.\n.*")
+    )

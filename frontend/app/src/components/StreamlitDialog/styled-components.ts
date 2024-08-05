@@ -17,6 +17,7 @@
 import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
 import { darken } from "color2k"
+
 import { Small } from "@streamlit/lib"
 
 export const StyledRerunHeader = styled.div(({ theme }) => ({

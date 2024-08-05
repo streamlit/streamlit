@@ -15,19 +15,20 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+
 import { render } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
 } from "@streamlit/lib/src/proto"
-
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import TextArea, { Props } from "./TextArea"
-import userEvent from "@testing-library/user-event"
 
 const getProps = (
   elementProps: Partial<TextAreaProto> = {},

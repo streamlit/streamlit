@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/lib/src/proto"
-
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import { NumberInput, Props } from "./NumberInput"
+import {
+  canDecrement,
+  canIncrement,
+  formatValue,
+  NumberInput,
+  Props,
+} from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
@@ -186,7 +192,7 @@ describe("NumberInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
+      { id: props.element.id, formId: props.element.formId },
       props.element.default,
       {
         fromUi: true,
@@ -220,7 +226,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
-        props.element,
+        { id: props.element.id, formId: props.element.formId },
         props.element.default,
         {
           fromUi: false,
@@ -334,7 +340,7 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        { id: props.element.id, formId: props.element.formId },
         props.element.default,
         {
           fromUi: false,
@@ -405,6 +411,30 @@ describe("NumberInput widget", () => {
   })
 
   describe("Step", () => {
+    describe("rapid interactions", () => {
+      it("handles stepUp button clicks correctly", () => {
+        const props = getIntProps({ default: 10, step: 1 })
+        render(<NumberInput {...props} />)
+
+        const stepUpButton = screen.getByTestId("stNumberInput-StepUp")
+        for (let i = 0; i < 5; i++) {
+          fireEvent.click(stepUpButton)
+        }
+        expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15)
+      })
+
+      it("handles stepDown button clicks correctly", () => {
+        const props = getIntProps({ default: 10, step: 1 })
+        render(<NumberInput {...props} />)
+
+        const stepDownButton = screen.getByTestId("stNumberInput-StepDown")
+        for (let i = 0; i < 5; i++) {
+          fireEvent.click(stepDownButton)
+        }
+        expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(5)
+      })
+    })
+
     it("passes the step prop", () => {
       const props = getIntProps({ default: 10, step: 1 })
       render(<NumberInput {...props} />)
@@ -577,5 +607,84 @@ describe("NumberInput widget", () => {
     const forId2 = numberInputLabel2.getAttribute("for")
 
     expect(forId2).toBe(forId1)
+  })
+
+  describe("utilities", () => {
+    describe("canDecrement function", () => {
+      it("returns true if decrementing stays above min", () => {
+        expect(canDecrement(5, 1, 0)).toBe(true)
+      })
+
+      it("returns false if decrementing goes below min", () => {
+        expect(canDecrement(0, 1, 0)).toBe(false)
+      })
+    })
+
+    describe("canIncrement function", () => {
+      it("returns true if incrementing stays below max", () => {
+        expect(canIncrement(5, 1, 10)).toBe(true)
+      })
+
+      it("returns false if incrementing goes above max", () => {
+        expect(canIncrement(10, 1, 10)).toBe(false)
+      })
+    })
+
+    describe("formatValue function", () => {
+      it("returns null for null value", () => {
+        expect(
+          formatValue({
+            value: null,
+            format: null,
+            step: 1,
+            dataType: NumberInputProto.DataType.INT,
+          })
+        ).toBeNull()
+      })
+
+      it("formats integer without specified format", () => {
+        expect(
+          formatValue({
+            value: 123,
+            format: null,
+            step: 1,
+            dataType: NumberInputProto.DataType.INT,
+          })
+        ).toBe("123")
+      })
+
+      it("formats float without specified format, considering step for precision", () => {
+        expect(
+          formatValue({
+            value: 123.456,
+            format: null,
+            step: 0.01,
+            dataType: NumberInputProto.DataType.FLOAT,
+          })
+        ).toBe("123.46")
+      })
+
+      it("respects format string for integers", () => {
+        expect(
+          formatValue({
+            value: 123,
+            format: "%04d",
+            step: 1,
+            dataType: NumberInputProto.DataType.INT,
+          })
+        ).toBe("0123")
+      })
+
+      it("respects format string for floats", () => {
+        expect(
+          formatValue({
+            value: 123.456,
+            format: "%.2f",
+            step: 0.01,
+            dataType: NumberInputProto.DataType.FLOAT,
+          })
+        ).toBe("123.46")
+      })
+    })
   })
 })

@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
 import BaseButton, {
@@ -25,6 +26,7 @@ import Tooltip, {
   Placement,
 } from "@streamlit/lib/src/components/shared/Tooltip"
 import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"
+
 import { StyledSwitchFacingModeButton } from "./styled-components"
 
 export enum FacingMode {
