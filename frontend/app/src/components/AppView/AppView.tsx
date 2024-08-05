@@ -32,7 +32,6 @@ import {
   VerticalBlock,
   WidgetStateManager,
 } from "@streamlit/lib"
-
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
 import {

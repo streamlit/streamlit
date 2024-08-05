@@ -19,13 +19,13 @@ import React, { Fragment } from "react"
 import axios from "axios"
 import { WS } from "jest-websocket-mock"
 import zip from "lodash/zip"
+
 import {
   BackMsg,
   mockEndpoints,
   mockSessionInfoProps,
   SessionInfo,
 } from "@streamlit/lib"
-
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import {
   Args,

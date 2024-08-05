@@ -16,8 +16,9 @@
 
 import React, { Fragment } from "react"
 
-import { mockSessionInfo, render, SessionInfo } from "@streamlit/lib"
 import { screen } from "@testing-library/react"
+
+import { mockSessionInfo, render, SessionInfo } from "@streamlit/lib"
 
 import { DialogType, StreamlitDialog } from "./StreamlitDialog"
 import "@testing-library/jest-dom"

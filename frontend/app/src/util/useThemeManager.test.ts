@@ -15,6 +15,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react-hooks"
+
 import {
   AUTO_THEME_NAME,
   createPresetThemes,
