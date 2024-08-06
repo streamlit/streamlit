@@ -220,5 +220,6 @@ export const StyledDivider = styled.hr<StyledDividerProps>(
 )
 
 export const StyledPreWrapper = styled.div(({ theme }) => ({
+  // Set spacing between pre-elements inside of markdown similar to our gap spacing between elements
   marginBottom: theme.spacing.lg,
 }))
