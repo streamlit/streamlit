@@ -15,24 +15,22 @@
 """Arrow DataFrame tests."""
 
 import json
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
-import pytest
 from pandas.io.formats.style_render import StylerRenderer as Styler
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
-    convert_arrow_table_to_arrow_bytes,
 )
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.testutil import create_snowpark_session
+from tests.streamlit.data_mocks import SHARED_TEST_CASES, CaseMetadata
 
 
 def mock_data_frame():
@@ -67,13 +65,20 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.column_order, [])
 
-    def test_pyarrow_table_data(self):
-        df = mock_data_frame()
-        table = pa.Table.from_pandas(df)
-        st.dataframe(table)
+    @parameterized.expand(SHARED_TEST_CASES)
+    def test_with_compatible_data(
+        self,
+        name: str,
+        input_data: Any,
+        metadata: CaseMetadata,
+    ):
+        """Test that it can be called with compatible data."""
+        st.dataframe(input_data)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(proto.data, convert_arrow_table_to_arrow_bytes(table))
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.data)
+        self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
+        self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
 
     def test_hide_index_true(self):
         """Test that it can be called with hide_index=True param."""
@@ -189,28 +194,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
             st.dataframe(df)
             convert_anything_to_df.assert_called_once()
-
-    @pytest.mark.require_snowflake
-    def test_snowpark_uncollected(self):
-        """Tests that data can be read from Snowpark's uncollected Dataframe"""
-        with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 42 as COL1")
-
-            st.dataframe(df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(convert_arrow_bytes_to_pandas_df(proto.data).iat[0, 0], 42)
-
-    @pytest.mark.require_snowflake
-    def test_snowpark_collected(self):
-        """Tests that data can be read from Snowpark's collected Dataframe"""
-        with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 42 as COL1").collect()
-
-            st.dataframe(df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        self.assertEqual(convert_arrow_bytes_to_pandas_df(proto.data).iat[0, 0], 42)
 
     def test_dataframe_on_select_initial_returns(self):
         """Test st.dataframe returns an empty selection as initial result."""

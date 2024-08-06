@@ -34,7 +34,7 @@ concurrency:
 
 defaults:
   run:
-    shell: bash --login -eo pipefail {0}
+    shell: bash
 
 env:
   FORCE_COLOR: "1"

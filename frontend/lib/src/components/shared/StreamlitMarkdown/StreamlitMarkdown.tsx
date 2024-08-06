@@ -43,7 +43,7 @@ import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import xxhash from "xxhashjs"
 
-import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
+import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
@@ -53,12 +53,12 @@ import {
   getMarkdownTextColors,
 } from "@streamlit/lib/src/theme"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 import {
   StyledHeadingActionElements,
   StyledHeadingWithActionElements,
   StyledLinkIcon,
+  StyledPreWrapper,
   StyledStreamlitMarkdown,
 } from "./styled-components"
 
@@ -214,7 +214,8 @@ export const HeadingWithActionElements: FunctionComponent<
 
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
-      if (window.location.hash.slice(1) === anchor) {
+      const windowHash = window.location.hash.slice(1)
+      if (windowHash && windowHash === anchor) {
         setTarget(node)
       }
     },
@@ -324,6 +325,17 @@ export const CustomCodeTag: FunctionComponent<
   )
 }
 
+/**
+ * Renders pre tag with added margin.
+ */
+export const CustomPreTag: FunctionComponent<
+  React.PropsWithChildren<ReactMarkdownProps>
+> = ({ children }) => {
+  return (
+    <StyledPreWrapper data-testid="stMarkdownPre">{children}</StyledPreWrapper>
+  )
+}
+
 export function RenderedMarkdown({
   allowHTML,
   source,
@@ -332,7 +344,7 @@ export function RenderedMarkdown({
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const renderers: Components = {
-    pre: CodeBlock,
+    pre: CustomPreTag,
     code: CustomCodeTag,
     a: LinkWithTargetBlank,
     h1: CustomHeading,
