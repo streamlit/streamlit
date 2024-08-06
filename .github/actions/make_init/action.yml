@@ -21,7 +21,7 @@ runs:
       run: |
         pip install pre-commit
         pre-commit install-hooks
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
@@ -33,7 +33,7 @@ runs:
         # Create the cache directory if it does not exist.
         mkdir -p $(yarn cache dir)
         make react-init
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
     # Actions are running as of 2024.06.04 - doesn't have recent versions
     # of protoc in its package repository. To work around this, we
@@ -47,7 +47,7 @@ runs:
         sudo ln -s /usr/local/bin/protoc /usr/bin/protoc
         # Print out your System's protoc version:
         protoc --version
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
     #
@@ -67,7 +67,7 @@ runs:
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     - if: inputs.use_cached_venv == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
@@ -84,10 +84,10 @@ runs:
         pip install uv
         make python-init
         deactivate
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     - name: Activate virtualenv
       run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     - name: Show environment info
       run: |
         echo "Show environment info"
@@ -95,7 +95,7 @@ runs:
         python --version
         echo "Installed dependencies:"
         python -m pip list
-      shell: bash --login -eo pipefail {0}
+      shell: bash
     - name: Generate Protobufs
       run: make protobuf
-      shell: bash --login -eo pipefail {0}
+      shell: bash
