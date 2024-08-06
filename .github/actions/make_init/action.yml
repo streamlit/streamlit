@@ -45,6 +45,7 @@ runs:
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local bin/protoc
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
         sudo ln -s /usr/local/bin/protoc /usr/bin/protoc
+        echo "/usr/local/bin" >> $GITHUB_PATH
         # Print out your System's protoc version:
         protoc --version
       shell: bash
