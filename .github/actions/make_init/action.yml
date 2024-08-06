@@ -80,11 +80,9 @@ runs:
       name: Create Virtual Env
       run: |
         python -m venv venv
-        source venv/bin/activate
-        pip install --upgrade pip
         pip install uv
         uv venv
-        VIRTUAL_ENV=./.venv
+        source .venv/bin/activate
         echo "VIRTUAL_ENV=.venv" >> $GITHUB_ENV
         echo "$PWD/.venv/bin" >> $GITHUB_PATH
         make python-init
@@ -99,6 +97,5 @@ runs:
       shell: bash
     - name: Generate Protobufs
       run: |
-        source venv/bin/activate
         make protobuf
       shell: bash
