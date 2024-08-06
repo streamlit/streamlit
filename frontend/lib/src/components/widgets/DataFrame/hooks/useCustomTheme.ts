@@ -15,9 +15,9 @@
  */
 import React from "react"
 
-import { transparentize } from "color2k"
-import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
+import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
+import { lighten, transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
@@ -72,14 +72,14 @@ function useCustomTheme(): CustomThemeReturn {
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
       textLight: theme.colors.fadedText40,
-      textBubble: theme.colors.fadedText60,
       bgCell: theme.colors.bgColor,
       bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
       cellHorizontalPadding: 8,
       cellVerticalPadding: 3,
       // Special cells:
       bgBubble: theme.colors.secondaryBg,
-      bgBubbleSelected: theme.colors.secondaryBg,
+      bgBubbleSelected: lighten(theme.colors.secondaryBg, 0.1),
+      textBubble: theme.colors.bodyText,
       linkColor: theme.colors.linkText,
       drilldownBorder: theme.colors.darkenedBgMix25,
       // Unused settings:

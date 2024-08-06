@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-import ObjectColumn from "./ObjectColumn"
-import TextColumn from "./TextColumn"
-import CheckboxColumn from "./CheckboxColumn"
-import SelectboxColumn from "./SelectboxColumn"
-import ListColumn from "./ListColumn"
-import NumberColumn from "./NumberColumn"
-import LinkColumn from "./LinkColumn"
-import ImageColumn from "./ImageColumn"
-import ProgressColumn from "./ProgressColumn"
-import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import {
   AreaChartColumn,
   BarChartColumn,
   LineChartColumn,
 } from "./ChartColumn"
+import CheckboxColumn from "./CheckboxColumn"
+import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+import ImageColumn from "./ImageColumn"
+import LinkColumn from "./LinkColumn"
+import ListColumn from "./ListColumn"
+import MultiSelectColumn from "./MultiSelectColumn"
+import NumberColumn from "./NumberColumn"
+import ObjectColumn from "./ObjectColumn"
+import ProgressColumn from "./ProgressColumn"
+import SelectboxColumn from "./SelectboxColumn"
+import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
@@ -63,19 +64,20 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
 export const CustomCells = []
 
 export {
-  ObjectColumn,
-  TextColumn,
-  CheckboxColumn,
-  SelectboxColumn,
-  ListColumn,
-  NumberColumn,
-  LinkColumn,
-  DateTimeColumn,
-  DateColumn,
-  TimeColumn,
-  LineChartColumn,
-  BarChartColumn,
   AreaChartColumn,
+  BarChartColumn,
+  CheckboxColumn,
+  DateColumn,
+  DateTimeColumn,
   ImageColumn,
+  LineChartColumn,
+  LinkColumn,
+  ListColumn,
+  MultiSelectColumn,
+  NumberColumn,
+  ObjectColumn,
   ProgressColumn,
+  SelectboxColumn,
+  TextColumn,
+  TimeColumn,
 }

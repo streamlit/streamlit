@@ -41,6 +41,7 @@ ColumnType: TypeAlias = Literal[
     "area_chart",
     "image",
     "progress",
+    "multiselect",
 ]
 
 
@@ -98,6 +99,17 @@ class ImageColumnConfig(TypedDict):
 
 class ListColumnConfig(TypedDict):
     type: Literal["list"]
+
+
+class MultiselectOption(TypedDict):
+    value: str
+    label: NotRequired[str | None]
+    color: NotRequired[str | None]
+
+
+class MultiselectColumnConfig(TypedDict):
+    type: Literal["multiselect"]
+    options: NotRequired[list[str] | list[MultiselectOption] | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -189,6 +201,7 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | MultiselectColumnConfig
         | None
     )
 
@@ -1103,12 +1116,15 @@ def ListColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
 ):
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for list-like values. List columns are not editable
-    at the moment. This command needs to be used in the ``column_config`` parameter of
-    ``st.dataframe`` or ``st.data_editor``.
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
 
     Parameters
     ----------
@@ -1123,6 +1139,17 @@ def ListColumn(
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
 
     Examples
     --------
@@ -1158,7 +1185,111 @@ def ListColumn(
         height: 300px
     """
     return ColumnConfig(
-        label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=default,
+        type_config=ListColumnConfig(type="list"),
+    )
+
+
+@gather_metrics("column_config.MultiselectColumn")
+def MultiselectColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
+    options: Iterable[str] | Iterable[MultiselectOption] | None = None,
+):
+    """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
+
+    This only support string-list values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled with a multiselect widget.
+
+    Parameters
+    ----------
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    options: Iterable of str or None
+        The options that can be selected during editing.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>         ["exploration", "visualization"],
+    >>>         ["llm", "visualization"],
+    >>>         [],
+    >>>         ["exploration"],
+    >>>     ],
+    >>> }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>> (data_df,)
+    >>> column_config={
+    >>>     "category": st.column_config.MultiselectColumn(
+    >>>         "App Categories",
+    >>>         help="The categories of the app",
+    >>>         options=[
+    >>>             "exploration",
+    >>>             "visualization",
+    >>>             "llm",
+    >>>         ],
+    >>>     )
+    >>> },
+    >>> hide_index = (True,)
+    >>> )
+
+    .. output::
+        https://doc-multiselect-column.streamlit.app/
+        height: 300px
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=default,
+        type_config=MultiselectColumnConfig(
+            type="multiselect",
+            options=list(options) if options is not None else None,
+        ),
     )
 
 

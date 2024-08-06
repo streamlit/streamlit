@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { BubbleCell, GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
+  arrayToCopyValue,
   BaseColumn,
   BaseColumnProps,
-  isMissingValueCell,
   toSafeArray,
-  toSafeString,
 } from "./utils"
 
 /**
@@ -31,48 +31,62 @@ import {
  */
 function ListColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
-    kind: GridCellKind.Bubble,
-    data: [],
+    kind: GridCellKind.Custom,
+    readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-  } as BubbleCell
+    data: {
+      kind: "multi-select-cell",
+      values: [],
+      options: undefined,
+      allowCreation: true,
+      allowDuplicates: true,
+    },
+    copyData: "",
+  } as MultiSelectCellType
 
   return {
     ...props,
     kind: "list",
     sortMode: "default",
-    isEditable: false, // List column is always readonly
+    themeOverride: {
+      roundingRadius: 4,
+    },
     getCell(data?: any): GridCell {
-      const cellData = isNullOrUndefined(data) ? [] : toSafeArray(data)
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          data: {
+            ...cellTemplate.data,
+            values: null,
+          },
+          isMissingValue: true,
+          copyData: "",
+        } as MultiSelectCellType
+      }
+
+      const cellData = toSafeArray(data)
 
       return {
         ...cellTemplate,
-        data: cellData,
-        isMissingValue: isNullOrUndefined(data),
-        copyData: isNullOrUndefined(data)
-          ? ""
-          : toSafeString(
-              cellData.map((x: any) =>
-                // Replace commas with spaces since commas are used to
-                // separate the list items.
-                typeof x === "string" && x.includes(",")
-                  ? x.replace(/,/g, " ")
-                  : x
-              )
-            ),
-      } as BubbleCell
+        data: {
+          ...cellTemplate.data,
+          values: cellData,
+        },
+        copyData: arrayToCopyValue(cellData),
+      } as MultiSelectCellType
     },
-    getCellValue(cell: BubbleCell): string[] | null {
-      if (isNullOrUndefined(cell.data) || isMissingValueCell(cell)) {
+    getCellValue(cell: MultiSelectCellType): string[] | null {
+      if (isNullOrUndefined(cell.data?.values)) {
         return null
       }
 
-      return cell.data
+      return cell.data.values
     },
   }
 }
 
-ListColumn.isEditableType = false
+ListColumn.isEditableType = true
 
 export default ListColumn

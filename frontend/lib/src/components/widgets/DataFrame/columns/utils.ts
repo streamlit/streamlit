@@ -23,19 +23,19 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
-import toString from "lodash/toString"
 import merge from "lodash/merge"
-import numbro from "numbro"
-import { sprintf } from "sprintf-js"
+import toString from "lodash/toString"
 import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
+import numbro from "numbro"
+import { sprintf } from "sprintf-js"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   Type as ArrowType,
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -419,6 +419,26 @@ export function toSafeNumber(value: any): number | null {
   }
 
   return Number(value)
+}
+
+/**
+ * Converts an array to a string representation suitable for copying.
+ *
+ * @param array - The array to convert.
+ * @returns The string representation of the array.
+ */
+export function arrayToCopyValue(array?: any[] | null): string {
+  if (isNullOrUndefined(array)) {
+    return ""
+  }
+
+  return toSafeString(
+    array.map((x: any) =>
+      // Replace commas with spaces since commas are used to
+      // separate the list items.
+      typeof x === "string" && x.includes(",") ? x.replace(/,/g, " ") : x
+    )
+  )
 }
 
 /**
