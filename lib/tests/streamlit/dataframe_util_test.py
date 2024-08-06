@@ -375,6 +375,7 @@ class DataframeUtilTest(unittest.TestCase):
         assert dataframe_util.is_pandas_data_object(pd.Series()) is True
         assert dataframe_util.is_pandas_data_object(pd.Index(["a", "b"])) is True
         assert dataframe_util.is_pandas_data_object(pd.array(["a", "b"])) is True
+        assert dataframe_util.is_pandas_data_object(["a", "b"]) is False
 
     def test_is_snowpandas_data_object(self):
         df = pd.DataFrame([1, 2, 3])
