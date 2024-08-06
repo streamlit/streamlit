@@ -85,6 +85,7 @@ interface CreateDropHandlerParams {
   uploadFile: (fileURLs: FileURLsProto, file: File) => void
   addFiles: (files: UploadFileInfo[]) => void
   getNextLocalFileId: () => number
+  deleteExistingFiles: () => void
 }
 
 const createDropHandler =
@@ -94,15 +95,14 @@ const createDropHandler =
     uploadFile,
     addFiles,
     getNextLocalFileId,
+    deleteExistingFiles,
   }: CreateDropHandlerParams) =>
   (acceptedFiles: File[], rejectedFiles: FileRejection[]): void => {
-    const multipleFiles = acceptMultipleFiles
-
     // If this is a single-file uploader and multiple files were dropped,
     // all the files will be rejected. In this case, we pull out the first
     // valid file into acceptedFiles, and reject the rest.
     if (
-      !multipleFiles &&
+      !acceptMultipleFiles &&
       acceptedFiles.length === 0 &&
       rejectedFiles.length > 1
     ) {
@@ -115,6 +115,10 @@ const createDropHandler =
         acceptedFiles.push(rejectedFiles[firstFileIndex].file)
         rejectedFiles.splice(firstFileIndex, 1)
       }
+    }
+
+    if (!acceptMultipleFiles && acceptedFiles.length > 0) {
+      deleteExistingFiles()
     }
 
     uploadClient
@@ -383,6 +387,9 @@ function ChatInput({
     }),
     addFiles,
     getNextLocalFileId,
+    deleteExistingFiles: () => {
+      files.forEach(f => deleteFile(f.id))
+    },
   })
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
