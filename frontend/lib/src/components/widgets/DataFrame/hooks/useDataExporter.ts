@@ -25,55 +25,9 @@ import {
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logError, logWarning } from "@streamlit/lib/src/util/log"
 
-// Mapping of locales to delimiters
-const localeDelimiterMap = {
-  'de-DE': ';',
-  'fr-FR': ';',
-  'es-ES': ';',
-  'it-IT': ';',
-  'nl-NL': ';',
-  'pt-PT': ';',
-  'pt-BR': ';',
-  'ru-RU': ';',
-  'sv-SE': ';',
-  'da-DK': ';',
-  'fi-FI': ';',
-  'no-NO': ';',
-  'pl-PL': ';',
-  'cs-CZ': ';',
-  'hu-HU': ';',
-  'ro-RO': ';',
-  'tr-TR': ';',
-  'el-GR': ';',
-  'uk-UA': ';',
-  'bg-BG': ';',
-  'hr-HR': ';',
-  'sk-SK': ';',
-  'sl-SI': ';',
-  'lt-LT': ';',
-  'lv-LV': ';',
-  'et-EE': ';',
-  'is-IS': ';',
-  'mt-MT': ';',
-  'sq-AL': ';',
-  'sr-RS': ';',
-  'bs-BA': ';',
-  'mk-MK': ';',
-  'eu-ES': ';',
-  'ca-ES': ';',
-  'gl-ES': ';',
-  'kk-KZ': ';',
-  'uz-UZ': ';'
-}
-
-// Detect locale and set the CSV delimiter accordingly
-function getCsvDelimiter() {
-  const locale = navigator.language
-  return localeDelimiterMap[locale] || ','
-}
 
 // Delimiter between cells based on the detected locale
-const CSV_DELIMITER = getCsvDelimiter()
+const CSV_DELIMITER = ['', ''].toLocaleString()
 // Quote character for cell values containing special characters
 const CSV_QUOTE_CHAR = '"'
 // The character used to escape the quote character within a cell
