@@ -27,21 +27,17 @@ import {
 
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
-  language?: string | undefined
-  showLineNumbers?: boolean | undefined
+  language?: string
+  showLineNumbers?: boolean
 }
 
 export default function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
   children,
-}: StreamlitSyntaxHighlighterProps): ReactElement {
+}: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   return (
-    <StyledCodeBlock
-      className="stCodeBlock"
-      data-testid="stCodeBlock"
-      isMarkdown={false}
-    >
+    <StyledCodeBlock className="stCodeBlock" data-testid="stCodeBlock">
       <StyledPre>
         <SyntaxHighlighter
           language={language}
