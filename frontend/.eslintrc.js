@@ -181,6 +181,11 @@ module.exports = {
             group: "external",
             position: "before",
           },
+          {
+            pattern: "@streamlit/**",
+            group: "internal",
+            position: "before",
+          },
         ],
         pathGroupsExcludedImportTypes: ["react"],
         groups: [

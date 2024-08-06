@@ -16,6 +16,8 @@
 
 import React, { CSSProperties, ReactElement, ReactNode } from "react"
 
+import { HotKeys } from "react-hotkeys"
+
 import {
   BaseButtonKind,
   IException,
@@ -27,8 +29,6 @@ import {
   SessionInfo,
   StreamlitMarkdown,
 } from "@streamlit/lib"
-import { HotKeys } from "react-hotkeys"
-
 import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,

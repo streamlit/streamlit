@@ -26,6 +26,7 @@ import {
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import cloneDeep from "lodash/cloneDeep"
+
 import {
   Config,
   CUSTOM_THEME_NAME,
@@ -49,7 +50,6 @@ import {
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
-
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"

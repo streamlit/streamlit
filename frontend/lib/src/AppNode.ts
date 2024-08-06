@@ -508,7 +508,10 @@ export class BlockNode implements AppNode {
 
         // This blocks belong to our fragment, but it was modified in a previous script run.
         // This means it is stale now!
-        if (this.scriptRunId !== currentScriptRunId) {
+        if (
+          this.fragmentId === fragmentIdOfBlock &&
+          this.scriptRunId !== currentScriptRunId
+        ) {
           return undefined
         }
 
