@@ -58,7 +58,7 @@
     "dompurify": "^3.0.9",
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
-    "immer": "^9.0.21",
+    "immer": "^9.0.19",
     "json5": "^2.2.3",
     "katex": "^0.16.10",
     "lodash": "^4.17.21",
