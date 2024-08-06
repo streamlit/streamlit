@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import expect_help_tooltip
 
 
 def test_radio_widget_rendering(
@@ -37,6 +38,11 @@ def test_radio_widget_rendering(
     assert_snapshot(radio_widgets.nth(10), name="st_radio-horizontal_captions")
     assert_snapshot(radio_widgets.nth(11), name="st_radio-callback_help")
     assert_snapshot(radio_widgets.nth(12), name="st_radio-empty_selection")
+
+
+def test_help_tooltip_works(app: Page):
+    element_with_help = app.get_by_test_id("stRadio").nth(11)
+    expect_help_tooltip(app, element_with_help, "help text")
 
 
 def test_radio_has_correct_default_values(app: Page):

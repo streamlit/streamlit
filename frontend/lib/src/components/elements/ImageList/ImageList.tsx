@@ -18,8 +18,8 @@ import React, { ReactElement } from "react"
 
 import {
   IImage,
-  Image as ImageProto,
   ImageList as ImageListProto,
+  Image as ImageProto,
 } from "@streamlit/lib/src/proto"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"

@@ -16,29 +16,29 @@
 
 import React, {
   ReactElement,
-  useState,
-  useEffect,
   useCallback,
+  useEffect,
   useMemo,
+  useState,
 } from "react"
+
 import { withTheme } from "@emotion/react"
 import { toaster, ToastOverrides } from "baseui/toast"
 
 import {
-  hasLightBackgroundColor,
   EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 import {
-  StyledViewButton,
-  StyledToastWrapper,
   StyledMessageWrapper,
+  StyledToastWrapper,
+  StyledViewButton,
 } from "./styled-components"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
   theme: EmotionTheme
@@ -197,7 +197,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     <AlertElement
       kind={Kind.ERROR}
       body="Streamlit API Error: `st.toast` cannot be called directly on the sidebar with `st.sidebar.toast`.
-        See our `st.toast` API [docs](https://docs.streamlit.io/library/api-reference/status/st.toast) for more information."
+        See our `st.toast` API [docs](https://docs.streamlit.io/develop/api-reference/status/st.toast) for more information."
       width={width}
     />
   )

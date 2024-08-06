@@ -15,15 +15,18 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import { HotKeys } from "react-hotkeys"
+
 import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
   BaseButtonKind,
+  Modal,
+  ModalBody,
+  ModalButton,
+  ModalFooter,
+  ModalHeader,
 } from "@streamlit/lib"
+
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {

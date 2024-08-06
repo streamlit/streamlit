@@ -13,20 +13,20 @@
 # limitations under the License.
 
 """Unit tests for st.map()."""
+
 import itertools
 import json
 from unittest import mock
 
 import numpy as np
 import pandas as pd
-import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.testutil import create_snowpark_session, patch_config_options
+from tests.testutil import patch_config_options
 
 mock_df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -78,7 +78,7 @@ class StMapTest(DeltaGeneratorTestCase):
     def test_map_uses_convert_anything_to_df(self):
         """Test that st.map uses convert_anything_to_df to convert input data."""
         with mock.patch(
-            "streamlit.type_util.convert_anything_to_df"
+            "streamlit.dataframe_util.convert_anything_to_pandas_df"
         ) as convert_anything_to_df:
             convert_anything_to_df.return_value = mock_df
 
@@ -346,44 +346,6 @@ class StMapTest(DeltaGeneratorTestCase):
             st.map(df)
 
         self.assertIn("not allowed to contain null values", str(ctx.exception))
-
-    @pytest.mark.require_snowflake
-    def test_unevaluated_snowpark_table_integration(self):
-        """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
-        with create_snowpark_session() as snowpark_session:
-            table = snowpark_session.sql(
-                """
-                SELECT V1.$1 AS "lat", V1.$2 AS "lon" FROM
-                    (
-                        VALUES (1, 10), (2, 20), (3, 30), (4, 40)
-                    ) AS V1
-                """
-            ).cache_result()
-            st.map(table)
-
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        """Check if map data have 4 rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 4)
-
-    @pytest.mark.require_snowflake
-    def test_unevaluated_snowpark_dataframe_integration(self):
-        """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
-        with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql(
-                """
-                SELECT V1.$1 AS "lat", V1.$2 AS "lon" FROM
-                    (
-                        VALUES (1, 10), (2, 20), (3, 30), (4, 40)
-                    ) AS V1
-                """
-            )
-            st.map(df)
-
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        """Check if map data have 4 rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 4)
 
     def test_id_changes_when_data_changes(self):
         st.map()

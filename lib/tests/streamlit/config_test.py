@@ -13,8 +13,12 @@
 # limitations under the License.
 
 """Config System Unittest."""
+
+from __future__ import annotations
+
 import copy
 import os
+import sys
 import textwrap
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
@@ -318,17 +322,17 @@ class ConfigTest(unittest.TestCase):
                 "browser",
                 "client",
                 "theme",
-                "deprecation",
                 "global",
                 "logger",
                 "magic",
                 "mapbox",
                 "runner",
+                "secrets",
                 "server",
                 "ui",
             ]
         )
-        keys = sorted(list(config._section_descriptions.keys()))
+        keys = sorted(config._section_descriptions.keys())
         self.assertEqual(sections, keys)
 
     def test_config_option_keys(self):
@@ -337,7 +341,6 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
-                "client.displayEnabled",
                 "client.showErrorDetails",
                 "client.showSidebarNavigation",
                 "client.toolbarMode",
@@ -347,35 +350,28 @@ class ConfigTest(unittest.TestCase):
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
                 "theme.font",
-                "deprecation.showfileUploaderEncoding",
-                "deprecation.showImageFormat",
-                "deprecation.showPyplotGlobalUse",
                 "global.appTest",
                 "global.developmentMode",
-                "global.disableWatchdogWarning",
                 "global.disableWidgetStateDuplicationWarning",
                 "global.e2eTest",
-                "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",
                 "global.showWarningOnDirectExecution",
                 "global.storeCachedForwardMessagesInMemory",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
-                "global.dataFrameSerialization",
                 "logger.enableRich",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
-                "runner.installTracer",
-                "runner.fixMatplotlib",
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "runner.enumCoercion",
                 "magic.displayRootDocString",
                 "magic.displayLastExprIfNoSemicolon",
                 "mapbox.token",
+                "secrets.files",
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
@@ -396,7 +392,6 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "ui.hideTopBar",
-                "ui.hideSidebarNav",
             ]
         )
         keys = sorted(config._config_options.keys())
@@ -583,6 +578,24 @@ class ConfigTest(unittest.TestCase):
 
             disconnect_callback()
             patched_disconnect.assert_called_once()
+
+    def test_secret_files_default_values(self):
+        """Verify that we're looking for secrets.toml in the right place."""
+        if "win32" not in sys.platform:
+            # conftest.py sets the HOME envvar to "/mock/home/folder".
+            expected_global_path = "/mock/home/folder/.streamlit/secrets.toml"
+        else:
+            # On windows systems, HOME does not work so we look in the user's directory instead.
+            expected_global_path = os.path.join(
+                os.path.expanduser("~"), ".streamlit", "secrets.toml"
+            )
+        self.assertEqual(
+            [
+                expected_global_path,
+                os.path.abspath("./.streamlit/secrets.toml"),
+            ],
+            config.get_option("secrets.files"),
+        )
 
 
 class ConfigLoadingTest(unittest.TestCase):

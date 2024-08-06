@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Final
+from typing import Final, Sequence
 
 import tornado.web
 
@@ -45,7 +45,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         self,
         path: str,
         default_filename: str | None = None,
-        reserved_paths: list[str] = [],
+        reserved_paths: Sequence[str] = (),
     ):
         self._reserved_paths = reserved_paths
 
@@ -71,7 +71,12 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             # If the file is not found, and there are no reserved paths,
             # we try to serve the default file and allow the frontend to handle the issue.
             if e.status_code == 404:
-                if any([self.path.endswith(x) for x in self._reserved_paths]):
+                url_path = self.path
+                # self.path is OS specific file path, we convert it to a URL path
+                # for checking it against reserved paths.
+                if os.path.sep != "/":
+                    url_path = url_path.replace(os.path.sep, "/")
+                if any(url_path.endswith(x) for x in self._reserved_paths):
                     raise e
 
                 self.path = self.parse_url_path(self.default_filename or "index.html")

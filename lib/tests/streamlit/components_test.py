@@ -19,7 +19,7 @@ import json
 import os
 import threading
 import unittest
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -30,7 +30,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
-from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.components.v1 import component_arrow
 from streamlit.components.v1.component_registry import (
     ComponentRegistry,
@@ -46,6 +45,9 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.scriptrunner import ScriptRunContext, add_script_run_ctx
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+if TYPE_CHECKING:
+    from streamlit.components.types.base_custom_component import BaseCustomComponent
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -183,18 +185,20 @@ class DeclareComponentTest(unittest.TestCase):
         component1 = components.declare_component("test1", url=URL)
         component2 = components.declare_component("test2", url=URL)
         component3 = components.declare_component("test3", url=URL)
-        expected_registered_component_names = set(
-            [component1.name, component2.name, component3.name]
-        )
+        expected_registered_component_names = {
+            component1.name,
+            component2.name,
+            component3.name,
+        }
 
         registered_components = ComponentRegistry.instance().get_components()
         self.assertEqual(
             len(registered_components),
             3,
         )
-        registered_component_names = set(
-            [component.name for component in registered_components]
-        )
+        registered_component_names = {
+            component.name for component in registered_components
+        }
         self.assertSetEqual(
             registered_component_names, expected_registered_component_names
         )

@@ -45,7 +45,7 @@ def test_correct_number_and_content_of_title_elements(app: Page):
     titles = _get_title_elements(app)
     expect(titles).to_have_count(6)
 
-    expect(titles.nth(0)).to_have_text("This title is awesome!")
+    expect(titles.nth(0)).to_have_text("info This title is awesome!")
     expect(titles.nth(1)).to_have_text("This title is awesome too!")
     expect(titles.nth(2)).to_have_text("Code - Title with hidden Anchor")
     expect(titles.nth(3)).to_have_text("a link")
@@ -58,7 +58,7 @@ def test_correct_number_and_content_of_header_elements(app: Page):
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
     expect(headers).to_have_count(5)
 
-    expect(headers.nth(0)).to_have_text("This header is awesome!")
+    expect(headers.nth(0)).to_have_text("info This header is awesome!")
     expect(headers.nth(1)).to_have_text("This header is awesome too!")
     expect(headers.nth(2)).to_have_text(
         "This header with hidden anchor is awesome tooooo!"
@@ -70,9 +70,9 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(subheaders).to_have_count(7)
+    expect(subheaders).to_have_count(8)
 
-    expect(subheaders.nth(0)).to_have_text("This subheader is awesome!")
+    expect(subheaders.nth(0)).to_have_text("info This subheader is awesome!")
     expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
     expect(subheaders.nth(2)).to_have_text("Code - Subheader without Anchor")
     expect(subheaders.nth(3)).to_have_text("Code - Subheader with Anchor test_link")
@@ -82,7 +82,7 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
 def test_display_titles_with_anchors(app: Page):
     titles = _get_title_elements(app)
 
-    expect(titles.nth(0)).to_have_id("this-title-is-awesome")
+    expect(titles.nth(0)).to_have_id("info-this-title-is-awesome")
     expect(titles.nth(1)).to_have_id("awesome-title")
     expect(titles.nth(2)).to_have_id("code-title-with-hidden-anchor")
     expect(titles.nth(3)).to_have_id("a-link")
@@ -95,10 +95,10 @@ def test_display_headers_with_anchors_and_style_icons(app: Page):
     headers = _get_header_elements(app)
 
     first_header = headers.nth(0)
-    expect(first_header).to_have_id("this-header-is-awesome")
+    expect(first_header).to_have_id("info-this-header-is-awesome")
     expect(first_header.locator("svg")).to_be_attached()
     expect(first_header.locator("a")).to_have_attribute(
-        "href", "#this-header-is-awesome"
+        "href", "#info-this-header-is-awesome"
     )
 
     second_header = headers.nth(1)
@@ -115,10 +115,10 @@ def test_display_subheaders_with_anchors_and_style_icons(app: Page):
     headers = _get_subheader_elements(app)
 
     first_header = headers.nth(0)
-    expect(first_header).to_have_id("this-subheader-is-awesome")
+    expect(first_header).to_have_id("info-this-subheader-is-awesome")
     expect(first_header.locator("svg")).to_be_attached()
     expect(first_header.locator("a")).to_have_attribute(
-        "href", "#this-subheader-is-awesome"
+        "href", "#info-this-subheader-is-awesome"
     )
 
     second_header = headers.nth(1)
@@ -138,9 +138,9 @@ def test_clicking_on_anchor_changes_url(app: Page):
     first_header = headers.nth(0)
     first_header.hover()
     link = first_header.locator("a")
-    expect(link).to_have_attribute("href", "#this-header-is-awesome")
+    expect(link).to_have_attribute("href", "#info-this-header-is-awesome")
     link.click()
-    expect(app).to_have_url(re.compile(".*#this-header-is-awesome"))
+    expect(app).to_have_url(re.compile(".*#info-this-header-is-awesome"))
 
 
 def test_headers_snapshot_match(
@@ -269,3 +269,16 @@ def test_help_tooltip_works(app: Page):
 
     title_with_help = _get_title_elements(app).nth(1)
     expect_help_tooltip(app, title_with_help, tooltip_text)
+
+
+def test_not_scrolled_on_empty_anchor_tag(app: Page):
+    """Test that the page is not scrolled when the page contains an empty
+    header/anchor tag and no window hash."""
+
+    # Check if the page is still scrolled to the top
+    # after one second timeout.
+    app.wait_for_timeout(1000)
+    scroll_position = app.evaluate("window.scrollY")
+    # Usage of assert is fine here since we just need to verify that
+    # this is still scrolled to top, no need to wait for this to happen.
+    assert scroll_position == 0

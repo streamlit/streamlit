@@ -57,15 +57,9 @@ class HtmlMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> code = \"""
-        ... <style>
-        ...     p {
-        ...         color: red;
-        ...     }
-        ... </style>
-        ... \"""
-        >>> st.html(code)
-        >>> st.markdown("Lorem ipsum")
+        >>> st.html(
+        ...     "<p><span style='text-decoration: line-through double red;'>Oops</span>!</p>"
+        ... )
 
         .. output::
            https://doc-html.streamlit.app/
@@ -75,7 +69,7 @@ class HtmlMixin:
         html_proto = HtmlProto()
         # Check if the body is a file path
         if os.path.isfile(body):
-            with open(body, "r", encoding="utf-8") as f:
+            with open(body, encoding="utf-8") as f:
                 html_proto.body = f.read()
         else:
             html_proto.body = clean_text(body)

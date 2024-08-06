@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from unittest import mock
 
 import tornado.testing
@@ -195,7 +197,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         with mock.patch(MOCK_IS_DIR_PATH):
             declare_component("test", path=PATH)
 
-        payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload
+        payload = b"\x00\x01\x00\x00\x00\x0d\x00\x80"  # binary non utf-8 payload
 
         with mock.patch("streamlit.web.server.component_request_handler.open") as m:
             m.return_value.__enter__ = lambda _: _open_read(m, payload)

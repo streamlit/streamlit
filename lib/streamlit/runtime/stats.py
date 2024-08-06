@@ -76,7 +76,7 @@ def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
             CacheStat(
                 category_name=category_name,
                 cache_name=cache_name,
-                byte_length=sum(map(lambda item: item.byte_length, single_group_stats)),
+                byte_length=sum(item.byte_length for item in single_group_stats),
             )
         )
     return result

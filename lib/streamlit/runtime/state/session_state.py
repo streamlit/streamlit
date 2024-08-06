@@ -40,13 +40,14 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
+    ValueFieldName,
     WidgetMetadata,
+    is_array_value_field_name,
     is_keyed_widget_id,
     is_widget_id,
 )
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -185,7 +186,7 @@ class WStates(MutableMapping[str, Any]):
     def remove_stale_widgets(
         self,
         active_widget_ids: set[str],
-        fragment_ids_this_run: set[str] | None,
+        fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
         self.states = {
@@ -274,7 +275,7 @@ class WStates(MutableMapping[str, Any]):
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.session_state has no key "{key}". Did you forget to initialize it? '
-        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+        f"More info: https://docs.streamlit.io/develop/concepts/architecture/session-state#initialization"
     )
 
 
@@ -701,7 +702,7 @@ def _is_internal_key(key: str) -> bool:
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
     active_widget_ids: set[str],
-    fragment_ids_this_run: set[str] | None,
+    fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:
         return True

@@ -17,11 +17,12 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen, fireEvent, within } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
+
 import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent, { WebcamPermission, Props } from "./WebcamComponent"
+import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
 
 jest.mock("react-webcam")
 

@@ -22,7 +22,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
@@ -47,6 +47,7 @@ jobs:
       - name: Create Wheel File
         timeout-minutes: 120
         run: |
+          sudo apt update
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package
       - name: Store Whl File
@@ -120,7 +121,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     steps:
       - name: Checkout Core Previews Repo

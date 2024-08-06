@@ -24,7 +24,6 @@ import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -35,23 +34,24 @@ from streamlit.proto.NewSession_pb2 import (
     NewSession,
     UserInfo,
 )
-from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import secrets_singleton
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.source_util import PageHash, PageInfo
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
+    from streamlit.proto.BackMsg_pb2 import BackMsg
+    from streamlit.proto.PagesChanged_pb2 import PagesChanged
+    from streamlit.runtime.script_data import ScriptData
+    from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+    from streamlit.source_util import PageHash, PageInfo
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -122,6 +122,7 @@ class AppSession:
             service that a Streamlit Runtime is running in wants to tie the lifecycle of
             a Streamlit session to some other session-like object that it manages.
         """
+
         # Each AppSession has a unique string ID.
         self.id = session_id_override or str(uuid.uuid4())
 
@@ -270,8 +271,6 @@ class AppSession:
             The message to enqueue
 
         """
-        if not config.get_option("client.displayEnabled"):
-            return
 
         if self._debug_last_backmsg_id:
             msg.debug_last_backmsg_id = self._debug_last_backmsg_id
@@ -363,7 +362,8 @@ class AppSession:
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
-                fragment_id_queue=[fragment_id] if fragment_id else [],
+                fragment_id=fragment_id if fragment_id else None,
+                is_auto_rerun=client_state.is_auto_rerun,
             )
         else:
             rerun_data = RerunData()
@@ -371,7 +371,7 @@ class AppSession:
         if self._scriptrunner is not None:
             if (
                 bool(config.get_option("runner.fastReruns"))
-                and not rerun_data.fragment_id_queue
+                and not rerun_data.fragment_id
             ):
                 # If fastReruns is enabled and this is *not* a rerun of a fragment,
                 # we don't send rerun requests to our existing ScriptRunner. Instead, we
@@ -435,7 +435,9 @@ class AppSession:
         return True
 
     def _on_source_file_changed(self, filepath: str | None = None) -> None:
-        """One of our source files changed. Clear the cache and schedule a rerun if appropriate."""
+        """One of our source files changed. Clear the cache and schedule a rerun if
+        appropriate.
+        """
         self._script_cache.clear()
 
         if filepath is not None and not self._should_rerun_on_file_change(filepath):
@@ -449,11 +451,13 @@ class AppSession:
     def _on_secrets_file_changed(self, _) -> None:
         """Called when `secrets.file_change_listener` emits a Signal."""
 
-        # NOTE: At the time of writing, this function only calls `_on_source_file_changed`.
-        # The reason behind creating this function instead of just passing `_on_source_file_changed`
-        # to `connect` / `disconnect` directly is that every function that is passed to `connect` / `disconnect`
-        # must have at least one argument for `sender` (in this case we don't really care about it, thus `_`),
-        # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
+        # NOTE: At the time of writing, this function only calls
+        # `_on_source_file_changed`. The reason behind creating this function instead of
+        # just passing `_on_source_file_changed` to `connect` / `disconnect` directly is
+        # that every function that is passed to `connect` / `disconnect` must have at
+        # least one argument for `sender` (in this case we don't really care about it,
+        # thus `_`), and introducing an unnecessary argument to
+        # `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
 
     def _on_pages_changed(self, _) -> None:
@@ -475,8 +479,9 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -494,6 +499,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                clear_forward_msg_queue,
             )
         )
 
@@ -505,8 +511,9 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -538,10 +545,14 @@ class AppSession:
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
 
-        fragment_ids_this_run : set[str] | None
+        fragment_ids_this_run : list[str] | None
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
+
+        clear_forward_msg_queue : bool
+            If set (the default), clears the queue of forward messages to be sent to the
+            browser. Set only for the SCRIPT_STARTED event.
         """
 
         assert (
@@ -567,13 +578,7 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            # When running the full script, we clear the browser ForwardMsg queue since
-            # anything from a previous script run that has yet to be sent to the browser
-            # will be overwritten. For fragment runs, however, we don't want to do this
-            # as the ForwardMsgs in the queue may not correspond to the running
-            # fragment, so dropping the messages may result in the app missing
-            # information.
-            if not fragment_ids_this_run:
+            if clear_forward_msg_queue:
                 self._clear_queue()
 
             self._enqueue_forward_msg(
@@ -675,7 +680,7 @@ class AppSession:
     def _create_new_session_message(
         self,
         page_script_hash: str,
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
@@ -879,9 +884,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
-    # ui.hideSidebarNav is deprecated, will be removed in the future
-    msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
-    if config.get_option("client.showSidebarNavigation") == False:
+    if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
 

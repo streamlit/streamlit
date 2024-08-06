@@ -13,7 +13,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     permissions:
       # Additional permission needed to generate tag
@@ -142,7 +142,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
@@ -178,6 +178,7 @@ jobs:
       - name: Build Package
         timeout-minutes: 120
         run: |
+          sudo apt update
           sudo apt install rsync
           make package
       - name: Store Whl File
@@ -192,6 +193,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
         run: |
+          sudo apt update
           sudo apt install -y awscli
 
           cd lib/dist
@@ -225,7 +227,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     steps:
       - name: Checkout Core Previews Repo

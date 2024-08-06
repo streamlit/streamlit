@@ -15,22 +15,24 @@
  */
 
 import React, { ReactElement } from "react"
+
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
-import { screen, cleanup } from "@testing-library/react"
+import { cleanup, screen } from "@testing-library/react"
+import { transparentize } from "color2k"
 
 import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
-import { transparentize } from "color2k"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 import StreamlitMarkdown, {
-  LinkWithTargetBlank,
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
+  CustomPreTag,
+  LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
-import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -194,6 +196,7 @@ describe("StreamlitMarkdown", () => {
     { input: "[Link Text](www.example.com)", tag: "a", expected: "Link Text" },
     { input: "🐶", tag: "p", expected: "🐶" },
     { input: ":joy:", tag: "p", expected: "😂" },
+    { input: ":material/search:", tag: "span", expected: "search" },
   ]
 
   test.each(validCases)(
@@ -234,6 +237,9 @@ describe("StreamlitMarkdown", () => {
     { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
     { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
     { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
+    { input: "#### Heading 4", tag: "h4", expected: "Heading 4" },
+    { input: "##### Heading 5", tag: "h5", expected: "Heading 5" },
+    { input: "###### Heading 6", tag: "h6", expected: "Heading 6" },
     { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
     { input: "- List Item 1", tag: "li", expected: "List Item 1" },
     { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },
@@ -350,6 +356,25 @@ describe("StreamlitMarkdown", () => {
     })
   })
 
+  it("properly adds custom material icon", () => {
+    const source = `:material/search: Icon`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("search")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).toBe("span")
+    expect(markdown).toHaveStyle(`font-family: Material Symbols Rounded`)
+    expect(markdown).toHaveStyle(`user-select: none`)
+    expect(markdown).toHaveStyle(`vertical-align: bottom`)
+    expect(markdown).toHaveStyle(`font-weight: normal`)
+  })
+
+  it("does not remove unknown directive", () => {
+    const source = `test :foo test:test :`
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const markdown = screen.getByText("test :foo test:test :")
+    expect(markdown).toBeInTheDocument()
+  })
+
   it("properly adds background colors", () => {
     const redbg = transparentize(colors.red80, 0.9)
     const orangebg = transparentize(colors.yellow70, 0.9)
@@ -450,6 +475,22 @@ describe("CustomCodeTag Element", () => {
         "import streamlit as st\n\n" +
         'st.write("Hello")\n' +
         "</code></div>"
+    )
+  })
+})
+
+describe("CustomPreTag", () => {
+  it("should render without crashing", () => {
+    const props = getCustomCodeTagProps()
+    render(<CustomPreTag {...props} />)
+
+    const preTag = screen.getByTestId("stMarkdownPre")
+    const tagName = preTag.nodeName.toLowerCase()
+
+    expect(preTag).toBeInTheDocument()
+    expect(tagName).toBe("div")
+    expect(preTag).toHaveTextContent(
+      'import streamlit as st st.write("Hello")'
     )
   })
 })

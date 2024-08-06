@@ -13,10 +13,13 @@
 # limitations under the License.
 
 """Session state unit tests."""
+
+from __future__ import annotations
+
 import unittest
 from copy import deepcopy
 from datetime import date, datetime, timedelta
-from typing import Any, List, Tuple
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +28,10 @@ from hypothesis import strategies as hst
 
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    UnserializableSessionStateError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -43,7 +49,9 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
-identity = lambda x: x
+
+def identity(x):
+    return x
 
 
 def _raw_session_state() -> SessionState:
@@ -247,15 +255,15 @@ class SessionStateUpdateTest(DeltaGeneratorTestCase):
 
         st.checkbox("checkbox", value=True, key="c")
 
-        assert state.c == True
+        assert state.c is True
 
     def test_setting_before_widget_creation(self):
         state = st.session_state
         state.c = True
-        assert state.c == True
+        assert state.c is True
 
         c = st.checkbox("checkbox", key="c")
-        assert c == True
+        assert c is True
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -396,6 +404,10 @@ class SessionStateSerdeTest(DeltaGeneratorTestCase):
             key="date_interval",
         )
         check_roundtrip("date_interval", date_interval)
+
+    def test_feedback_serde(self):
+        feedback = st.feedback("stars", key="feedback")
+        check_roundtrip("feedback", feedback)
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_file_uploader_serde(self, get_upload_files_patch):
@@ -538,7 +550,7 @@ def _compact_copy(state: SessionState) -> SessionState:
     return state_copy
 
 
-def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
+def _sorted_items(state: SessionState) -> list[tuple[str, Any]]:
     """Return all key-value pairs in the SessionState.
     The returned list is sorted by key for easier comparison.
     """
@@ -706,7 +718,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         self.session_state._remove_stale_widgets({existing_widget_key})
 
-        assert self.session_state[existing_widget_key] == True
+        assert self.session_state[existing_widget_key] is True
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 
@@ -740,7 +752,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         lam_func = nested()
         self.session_state["unserializable"] = lam_func
-        with pytest.raises(Exception):
+        with pytest.raises(UnserializableSessionStateError):
             self.session_state._check_serializable()
 
 

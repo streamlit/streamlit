@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import snakeCase from "lodash/snakeCase"
 
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
+
 import {
   StyledMaterialIcon,
   StyledMaterialIconProps,
@@ -51,7 +52,10 @@ const MaterialFontIcon = ({
   ...props
 }: MaterialIconProps): ReactElement => {
   return (
-    <StyledMaterialIcon {...getDefaultProps(props)}>
+    <StyledMaterialIcon
+      {...getDefaultProps(props)}
+      data-testid={props.testid || "stIconMaterial"}
+    >
       {snakeCase(iconName)}
     </StyledMaterialIcon>
   )

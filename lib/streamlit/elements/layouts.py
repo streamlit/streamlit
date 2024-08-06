@@ -21,6 +21,7 @@ from typing_extensions import TypeAlias
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -72,11 +73,11 @@ class LayoutsMixin:
         >>> import streamlit as st
         >>>
         >>> with st.container():
-        ...    st.write("This is inside the container")
+        ...     st.write("This is inside the container")
         ...
-        ...    # You can call any Streamlit command, including custom components:
-        ...    st.bar_chart(np.random.randn(50, 3))
-        ...
+        ...     # You can call any Streamlit command, including custom components:
+        ...     st.bar_chart(np.random.randn(50, 3))
+        >>>
         >>> st.write("This is outside the container")
 
         .. output ::
@@ -130,6 +131,7 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+
         if height:
             # Activate scrolling container behavior:
             block_proto.allow_empty = True
@@ -144,7 +146,11 @@ class LayoutsMixin:
 
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: str | None = "small"
+        self,
+        spec: SpecType,
+        *,
+        gap: Literal["small", "medium", "large"] = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -158,7 +164,8 @@ class LayoutsMixin:
         Columns can only be placed inside other columns up to one level of nesting.
 
         .. warning::
-            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
+            Columns cannot be placed inside other columns in the sidebar. This
+            is only possible in the main area of the app.
 
         Parameters
         ----------
@@ -174,7 +181,11 @@ class LayoutsMixin:
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
-            The size of the gap between the columns. Defaults to "small".
+            The size of the gap between the columns. The default is ``"small"``.
+
+        vertical_alignment : "top", "center", or "bottom"
+            The vertical alignment of the content inside the columns. The
+            default is ``"top"``.
 
         Returns
         -------
@@ -190,16 +201,16 @@ class LayoutsMixin:
         >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg")
-        ...
+        ...     st.header("A cat")
+        ...     st.image("https://static.streamlit.io/examples/cat.jpg")
+        >>>
         >>> with col2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg")
-        ...
+        ...     st.header("A dog")
+        ...     st.image("https://static.streamlit.io/examples/dog.jpg")
+        >>>
         >>> with col3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg")
+        ...     st.header("An owl")
+        ...     st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
             https://doc-columns1.streamlit.app/
@@ -223,15 +234,40 @@ class LayoutsMixin:
             https://doc-columns2.streamlit.app/
             height: 550px
 
+        Use ``vertical_alignment="bottom"`` to align widgets.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, middle, right = st.columns(3, vertical_alignment="bottom")
+        >>>
+        >>> left.text_input("Write something")
+        >>> middle.button("Click me", use_container_width=True)
+        >>> right.checkbox("Check me")
+
+        .. output ::
+            https://doc-columns-bottom-widgets.streamlit.app/
+            height: 200px
+
+        Adjust vertical alignment to customize your grid layouts.
+
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
+        >>> vertical_alignment = st.selectbox(
+        >>>     "Vertical alignment", ["top", "center", "bottom"], index=2
+        >>> )
+        >>>
+        >>> left, middle, right = st.columns(3, vertical_alignment=vertical_alignment)
+        >>> left.image("https://static.streamlit.io/examples/cat.jpg")
+        >>> middle.image("https://static.streamlit.io/examples/dog.jpg")
+        >>> right.image("https://static.streamlit.io/examples/owl.jpg")
+
+        .. output ::
+            https://doc-columns-vertical-alignment.streamlit.app/
+            height: 600px
+
         """
         weights = spec
-        weights_exception = StreamlitAPIException(
-            "The input argument to st.columns must be either a "
-            + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
-            + "for more information."
-        )
-
         if isinstance(weights, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
@@ -239,10 +275,29 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise weights_exception
+            raise StreamlitAPIException(
+                "The input argument to st.columns must be either a "
+                "positive integer or a list of positive numeric weights. "
+                "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
+                "for more information."
+            )
+
+        vertical_alignment_mapping: dict[
+            str, BlockProto.Column.VerticalAlignment.ValueType
+        ] = {
+            "top": BlockProto.Column.VerticalAlignment.TOP,
+            "center": BlockProto.Column.VerticalAlignment.CENTER,
+            "bottom": BlockProto.Column.VerticalAlignment.BOTTOM,
+        }
+
+        if vertical_alignment not in vertical_alignment_mapping:
+            raise StreamlitAPIException(
+                'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
+                f"The argument passed was {vertical_alignment}."
+            )
 
         def column_gap(gap):
-            if type(gap) == str:
+            if isinstance(gap, str):
                 gap_size = gap.lower()
                 valid_sizes = ["small", "medium", "large"]
 
@@ -260,6 +315,9 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
+            col_proto.column.vertical_alignment = vertical_alignment_mapping[
+                vertical_alignment
+            ]
             col_proto.allow_empty = True
             return col_proto
 
@@ -288,31 +346,21 @@ class LayoutsMixin:
         Parameters
         ----------
         tabs : list of str
-            Creates a tab for each string in the list. The first tab is selected by default.
-            The string is used as the name of the tab and can optionally contain Markdown,
-            supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
-            Emojis, and Links.
+            Creates a tab for each string in the list. The first tab is selected
+            by default. The string is used as the name of the tab and can
+            optionally contain GitHub-flavored Markdown of the following types:
+            Bold, Italics, Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         Returns
         -------
@@ -328,16 +376,14 @@ class LayoutsMixin:
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
         >>>
         >>> with tab1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        ...
+        ...     st.header("A cat")
+        ...     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
         >>> with tab2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        ...
+        ...     st.header("A dog")
+        ...     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
         >>> with tab3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        ...     st.header("An owl")
+        ...     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
             https://doc-tabs1.streamlit.app/
@@ -368,7 +414,7 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
-        if any(isinstance(tab, str) == False for tab in tabs):
+        if any(not isinstance(tab, str) for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
@@ -385,7 +431,13 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(self, label: str, expanded: bool = False) -> DeltaGenerator:
+    def expander(
+        self,
+        label: str,
+        expanded: bool = False,
+        *,
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -403,32 +455,40 @@ class LayoutsMixin:
         ----------
         label : str
             A string to use as the header for the expander. The label can optionally
-            contain Markdown and supports the following elements: Bold, Italics,
-            Strikethroughs, Inline Code, Emojis, and Links.
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
+
+        icon : str, None
+            An optional emoji or icon to display next to the expander label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
         Examples
         --------
@@ -475,6 +535,8 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
+        if icon is not None:
+            expandable_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = False
@@ -490,7 +552,7 @@ class LayoutsMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Insert a popover container.
 
         Inserts a multi-element container as a popover. It consists of a button-like
@@ -511,30 +573,20 @@ class LayoutsMixin:
         ----------
         label : str
             The label of the button that opens the popover container.
-            The label can optionally contain Markdown and supports the
-            following elements: Bold, Italics, Strikethroughs, Inline Code,
-            Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-                For a list of all supported codes,
-                see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-                must be on their own lines). Supported LaTeX functions are listed
-                at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         help : str
             An optional tooltip that gets displayed when the popover button is
@@ -589,6 +641,7 @@ class LayoutsMixin:
         .. output ::
             https://doc-popover2.streamlit.app/
             height: 400px
+
         """
         if label is None:
             raise StreamlitAPIException("A label is required for a popover")
@@ -635,29 +688,19 @@ class LayoutsMixin:
 
         label : str
             The initial label of the status container. The label can optionally
-            contain Markdown and supports the following elements: Bold,
-            Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         expanded : bool
             If True, initializes the status container in "expanded" state. Defaults to
@@ -715,7 +758,9 @@ class LayoutsMixin:
         ...     time.sleep(1)
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
-        ...     status.update(label="Download complete!", state="complete", expanded=False)
+        ...     status.update(
+        ...         label="Download complete!", state="complete", expanded=False
+        ...     )
         >>>
         >>> st.button("Rerun")
 
@@ -737,7 +782,7 @@ class LayoutsMixin:
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
-    ) -> "Dialog":
+    ) -> Dialog:
         """Inserts the dialog container.
 
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.

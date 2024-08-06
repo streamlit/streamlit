@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement } from "react"
+
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
+
 import {
   MapboxTokenFetchingError,
   MapboxTokenNotProvidedError,
@@ -59,7 +61,7 @@ const MapboxTokenError = ({
 
             <p>
               See{" "}
-              <a href="https://docs.streamlit.io/library/advanced-features/configuration#view-all-configuration-options">
+              <a href="https://docs.streamlit.io/develop/api-reference/configuration/config.toml">
                 our documentation
               </a>{" "}
               for more info on how to set config options.

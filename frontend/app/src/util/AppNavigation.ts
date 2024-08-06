@@ -22,8 +22,8 @@ import {
   Navigation,
   NewSession,
   PageConfig,
-  PagesChanged,
   PageNotFound,
+  PagesChanged,
 } from "@streamlit/lib"
 
 interface AppNavigationState {
@@ -49,7 +49,7 @@ function getTitle(pageName: string): string {
     return "Streamlit"
   }
 
-  return `${pageName} · Streamlit`
+  return pageName
 }
 
 export class StrategyV1 {

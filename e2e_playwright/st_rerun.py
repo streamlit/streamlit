@@ -14,17 +14,55 @@
 
 import streamlit as st
 
+if "count" not in st.session_state:
+    st.session_state.count = 0
+    st.session_state.fragment_count = 0
 
-@st.cache_resource
-def rerun_record():
-    return [0]
+
+@st.fragment
+def my_fragment():
+    if st.button("rerun whole app (from fragment)"):
+        st.rerun(scope="app")
+
+    if st.button("rerun fragment"):
+        st.session_state.fragment_count += 1
+        st.rerun(scope="fragment")
+
+    st.write(f"fragment run count: {st.session_state.fragment_count}")
+
+    if st.session_state.fragment_count % 5 != 0:
+        st.session_state.fragment_count += 1
+        st.rerun(scope="fragment")
 
 
-count = rerun_record()
-count[0] += 1
+@st.fragment
+def fragment_with_rerun_in_try_block():
+    try:
+        if st.button("rerun try_fragment"):
+            st.rerun()
+    except Exception as e:
+        st.write(f"Caught exception: {e}")
 
-if count[0] < 4:
+
+st.session_state.count += 1
+
+if st.session_state.count < 4:
     st.rerun()
 
-if count[0] >= 4:
+if st.session_state.count >= 4:
     st.text("Being able to rerun a session is awesome!")
+
+
+s = st.selectbox(
+    "i should retain my state",
+    ["a", "b", "c"],
+    index=None,
+)
+st.write(f"selectbox selection: {s}")
+
+my_fragment()
+fragment_with_rerun_in_try_block()
+
+# have elements in the main app after fragments to ensure that the main app elements are
+#  not cleared when rerunning fragments
+st.write(f"app run count: {st.session_state.count}")

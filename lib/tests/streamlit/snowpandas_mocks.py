@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class DataFrame:
@@ -34,9 +39,13 @@ class DataFrame:
     def to_pandas(self) -> pd.DataFrame:
         return self._data
 
-    def head(self, n: int) -> "DataFrame":
+    def head(self, n: int) -> DataFrame:
         """Returns the top n element of a mock version of Snowpark Pandas DataFrame"""
-        return DataFrame(self._data.head(n))
+        return DataFrame(self[:n])
+
+    def __getitem__(self, key: slice | int) -> DataFrame:
+        # Allow slicing and integer indexing
+        return DataFrame(self._data[key])
 
 
 class Series:
@@ -58,6 +67,10 @@ class Series:
     def to_pandas(self) -> pd.Series:
         return self._data
 
-    def head(self, n: int) -> "Series":
+    def head(self, n: int) -> Series:
         """Returns the top n element of a mock version of Snowpark Pandas Series"""
-        return Series(self._data.head(n))
+        return Series(self[:n])
+
+    def __getitem__(self, key: slice | int) -> Series:
+        # Allow slicing and integer indexing
+        return Series(self._data[key])

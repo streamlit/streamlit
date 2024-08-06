@@ -15,13 +15,14 @@
  */
 
 import React, { ReactElement, useEffect, useMemo, useState } from "react"
+
 import { useTheme } from "@emotion/react"
 import { SIZE } from "baseui/modal"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import Modal, {
-  ModalHeader,
   ModalBody,
+  ModalHeader,
 } from "@streamlit/lib/src/components/shared/Modal"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
@@ -70,9 +71,14 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     [width, theme]
   )
 
+  // don't use the Modal's isOpen prop as it feels laggy when using it
+  if (!isOpen) {
+    return <></>
+  }
+
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen
       closeable={dismissible}
       onClose={() => setIsOpen(false)}
       size={size}

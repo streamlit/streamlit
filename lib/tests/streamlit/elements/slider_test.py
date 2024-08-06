@@ -197,14 +197,14 @@ class SliderTest(DeltaGeneratorTestCase):
         ret = st.slider("Slider label", 101, 100, 101)
         c = self.get_delta_from_queue().new_element.slider
 
-        self.assertEqual(ret, 101),
+        (self.assertEqual(ret, 101),)
         self.assertEqual(c.min, 100)
         self.assertEqual(c.max, 101)
 
     def test_min_equals_max(self):
         with pytest.raises(StreamlitAPIException):
             st.slider("oh no", min_value=10, max_value=10)
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitAPIException):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
 

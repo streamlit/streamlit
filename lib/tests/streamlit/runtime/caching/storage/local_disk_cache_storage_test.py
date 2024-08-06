@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Unit tests for LocalDiskCacheStorage and LocalDiskCacheStorageManager"""
+
+from __future__ import annotations
+
 import logging
 import math
 import os.path

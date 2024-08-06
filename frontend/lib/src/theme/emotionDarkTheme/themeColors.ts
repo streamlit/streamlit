@@ -15,6 +15,7 @@
  */
 
 import { transparentize } from "color2k"
+
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
 
 export default {
@@ -22,6 +23,10 @@ export default {
   bgColor: colors.gray100,
   secondaryBg: colors.gray90,
   bodyText: colors.gray10,
+  navTextColor: colors.gray50,
+  navActiveTextColor: colors.gray10,
+  navIconColor: colors.gray70,
+  sidebarControlColor: colors.gray10,
   warning: colors.yellow20,
   warningBg: transparentize(colors.yellow70, 0.8),
   success: colors.green10,

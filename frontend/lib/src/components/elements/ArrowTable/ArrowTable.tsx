@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import range from "lodash/range"
 import React, { ReactElement } from "react"
 
+import range from "lodash/range"
+
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+
 import {
   StyledEmptyTableCell,
   StyledTable,

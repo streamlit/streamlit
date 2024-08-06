@@ -15,47 +15,50 @@
  */
 
 import React from "react"
+
 import {
   act,
   fireEvent,
-  screen,
-  waitFor,
   render,
   RenderResult,
+  screen,
+  waitFor,
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import cloneDeep from "lodash/cloneDeep"
+
 import {
+  Config,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
+  FileUploadClient,
+  ForwardMsg,
+  getDefaultTheme,
+  getHostSpecifiedTheme,
+  HOST_COMM_VERSION,
+  HostCommunicationManager,
+  INewSession,
+  lightTheme,
   LocalStore,
+  mockEndpoints,
+  mockSessionInfoProps,
   mockWindowLocation,
+  PagesChanged,
+  RootStyleProvider,
   ScriptRunState,
   SessionInfo,
-  createAutoTheme,
-  CUSTOM_THEME_NAME,
-  lightTheme,
   toExportedTheme,
-  mockSessionInfoProps,
-  Config,
-  CustomThemeConfig,
-  ForwardMsg,
-  INewSession,
-  HostCommunicationManager,
-  PagesChanged,
-  HOST_COMM_VERSION,
-  mockEndpoints,
   WidgetStateManager,
-  FileUploadClient,
-  RootStyleProvider,
-  getDefaultTheme,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
-import { App, Props, showDevelopmentOptions } from "./App"
 import {
   getMenuStructure,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
+
+import { App, Props, showDevelopmentOptions } from "./App"
 
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {
@@ -272,7 +275,7 @@ function renderApp(props: Props): RenderResult {
 }
 
 function getStoredValue<T>(Type: any): T {
-  return Type.mock.results[0].value
+  return Type.mock.results[Type.mock.results.length - 1].value
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -547,6 +550,36 @@ describe("App", () => {
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
+    it("removes the cached custom theme from theme options", () => {
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
+      )
+      const props = getProps({
+        theme: {
+          activeTheme: {
+            ...lightTheme,
+            name: CUSTOM_THEME_NAME,
+          },
+          availableThemes: [],
+          setTheme: jest.fn(),
+          addThemes: jest.fn(),
+          setImportedTheme: jest.fn(),
+        },
+      })
+      renderApp(props)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: null,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+    })
+
     it("Does not change dark/light/auto user preferences when removing a custom theme", () => {
       const props = getProps()
       renderApp(props)
@@ -591,7 +624,9 @@ describe("App", () => {
 
       expect(props.theme.setTheme).toHaveBeenCalledTimes(2)
       // @ts-expect-error
-      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(createAutoTheme())
+      expect(props.theme.setTheme.mock.calls[1][0]).toEqual(
+        getHostSpecifiedTheme()
+      )
     })
 
     it("updates the custom theme if the one received from server has different hash", () => {
@@ -803,7 +838,7 @@ describe("App", () => {
       expect(navLinks[0]).toHaveStyle("font-weight: 600")
       expect(navLinks[1]).toHaveStyle("font-weight: 400")
 
-      expect(document.title).toBe("page1 · Streamlit")
+      expect(document.title).toBe("page1")
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages,
@@ -1097,7 +1132,7 @@ describe("App", () => {
         fragmentIdsThisRun: [],
       })
 
-      expect(document.title).toBe("streamlit_app · Streamlit")
+      expect(document.title).toBe("streamlit_app")
     })
 
     it("does *not* reset document title if fragment", () => {
@@ -1751,6 +1786,31 @@ describe("App", () => {
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
       expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
     })
+
+    it("triggers rerunScript with is_auto_rerun set to true", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      jest.advanceTimersByTime(1000)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].toJSON()
+      ).toStrictEqual({
+        rerunScript: {
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+          pageName: "",
+          pageScriptHash: "",
+          queryString: "",
+          widgetStates: {},
+        },
+      })
+    })
   })
 
   describe("App.requestFileURLs", () => {
@@ -1880,6 +1940,71 @@ describe("App", () => {
         expect(result).toEqual(expectedResult)
       }
     )
+  })
+
+  describe("App.handleConnectionStateChanged", () => {
+    it("Sends WEBSOCKET_CONNECTED and WEBSOCKET_DISCONNECTED messages", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_CONNECTED",
+      })
+
+      // Change the ConnectionManager state to anything other than
+      // ConnectionState.CONNECTED. Moving from CONNECTED to any other state
+      // should cause us to send a WEBSOCKET_DISCONNECTED message.
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.PINGING_SERVER
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_DISCONNECTED",
+        attemptingToReconnect: true,
+      })
+    })
+
+    it("Sets attemptingToReconnect to false if DISCONNECTED_FOREVER", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_CONNECTED",
+      })
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.DISCONNECTED_FOREVER
+        )
+      )
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "WEBSOCKET_DISCONNECTED",
+        attemptingToReconnect: false,
+      })
+    })
   })
 
   describe("handles HostCommunication messaging", () => {
@@ -2447,6 +2572,25 @@ describe("App", () => {
         type: "CUSTOM_PARENT_MESSAGE",
         message: "random string",
       })
+    })
+
+    it("properly handles TERMINATE_WEBSOCKET_CONNECTION and RESTART_WEBSOCKET_CONNECTION messages", () => {
+      prepareHostCommunicationManager()
+
+      const originalConnectionManager = getMockConnectionManager()
+
+      fireWindowPostMessage({
+        type: "TERMINATE_WEBSOCKET_CONNECTION",
+      })
+
+      expect(originalConnectionManager.disconnect).toHaveBeenCalled()
+
+      fireWindowPostMessage({
+        type: "RESTART_WEBSOCKET_CONNECTION",
+      })
+
+      const newConnectionManager = getMockConnectionManager()
+      expect(newConnectionManager).not.toBe(originalConnectionManager)
     })
   })
 })

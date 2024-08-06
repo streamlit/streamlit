@@ -140,7 +140,7 @@ class ImageMixin:
         Example
         -------
         >>> import streamlit as st
-        >>> st.image('sunrise.jpg', caption='Sunrise by the mountains')
+        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 
         .. output::
            https://doc-image.streamlit.app/
@@ -150,7 +150,7 @@ class ImageMixin:
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
             width = WidthBehaviour.AUTO
-        elif use_column_width == "always" or use_column_width == True:
+        elif use_column_width == "always" or use_column_width is True:
             width = WidthBehaviour.COLUMN
         elif width is None:
             width = WidthBehaviour.ORIGINAL
@@ -205,6 +205,7 @@ def _validate_image_format_string(
     if format == "JPG":
         return "JPEG"
 
+    pil_image: PILImage
     if isinstance(image_data, bytes):
         from PIL import Image
 
@@ -287,7 +288,7 @@ def _ensure_image_size_and_format(
     """
     from PIL import Image
 
-    pil_image = Image.open(io.BytesIO(image_data))
+    pil_image: PILImage = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = pil_image.size
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
@@ -513,7 +514,7 @@ def marshall_images(
     else:
         images = [image]
 
-    if type(caption) is list:
+    if isinstance(caption, list):
         captions: Sequence[str | None] = caption
     else:
         if isinstance(caption, str):
@@ -528,7 +529,9 @@ def marshall_images(
         else:
             captions = [str(caption)]
 
-    assert type(captions) == list, "If image is a list then caption should be as well"
+    assert isinstance(
+        captions, list
+    ), "If image is a list then caption should be as well"
     assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
         len(captions),
         len(images),

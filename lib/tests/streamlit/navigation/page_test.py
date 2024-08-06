@@ -25,6 +25,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 import streamlit as st
@@ -32,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
 class StPagesTest(DeltaGeneratorTestCase):
     """Test st.Page"""
 
@@ -104,15 +108,6 @@ class StPagesTest(DeltaGeneratorTestCase):
         page = st.Page(page_9, default=True)
         assert page.url_path == ""
 
-    def test_url_path_is_empty_string_if_default(self):
-        """Tests that url path is "" if the page is the default page"""
-
-        def page_9():
-            pass
-
-        page = st.Page(page_9, default=True)
-        assert page.url_path == ""
-
     def test_non_default_pages_cannot_have_empty_url_path(self):
         """Tests that an error is raised if the empty url path is provided for a non-default page"""
 
@@ -120,7 +115,7 @@ class StPagesTest(DeltaGeneratorTestCase):
             pass
 
         with pytest.raises(StreamlitAPIException):
-            page = st.Page(page_9, url_path="")
+            st.Page(page_9, url_path="")
 
     def test_page_run_cannot_run_standalone(self):
         """Test that a page cannot run standalone."""
@@ -138,3 +133,23 @@ class StPagesTest(DeltaGeneratorTestCase):
         page.run()
         # Provide an assertion to ensure no error
         assert True
+
+
+# NOTE: This test needs to live outside of the StPagesTest class because the class-level
+# @patch mocking the return value of `is_file` takes precedence over the method level
+# patch.
+@patch("pathlib.Path.is_file", MagicMock(return_value=False))
+def test_st_Page_throws_error_if_path_is_invalid():
+    with pytest.raises(StreamlitAPIException) as e:
+        st.Page("nonexistent.py")
+    assert (
+        str(e.value)
+        == "Unable to create Page. The file `nonexistent.py` could not be found."
+    )
+
+    with pytest.raises(StreamlitAPIException) as e:
+        st.Page(Path("nonexistent2.py"))
+    assert (
+        str(e.value)
+        == "Unable to create Page. The file `nonexistent2.py` could not be found."
+    )

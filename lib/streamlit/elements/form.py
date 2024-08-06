@@ -21,10 +21,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 
 class FormData(NamedTuple):
@@ -162,15 +162,14 @@ class FormMixin:
         >>> import streamlit as st
         >>>
         >>> with st.form("my_form"):
-        ...    st.write("Inside the form")
-        ...    slider_val = st.slider("Form slider")
-        ...    checkbox_val = st.checkbox("Form checkbox")
+        ...     st.write("Inside the form")
+        ...     slider_val = st.slider("Form slider")
+        ...     checkbox_val = st.checkbox("Form checkbox")
         ...
-        ...    # Every form must have a submit button.
-        ...    submitted = st.form_submit_button("Submit")
-        ...    if submitted:
-        ...        st.write("slider", slider_val, "checkbox", checkbox_val)
-        ...
+        ...     # Every form must have a submit button.
+        ...     submitted = st.form_submit_button("Submit")
+        ...     if submitted:
+        ...         st.write("slider", slider_val, "checkbox", checkbox_val)
         >>> st.write("Outside the form")
 
         .. output::

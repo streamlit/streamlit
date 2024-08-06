@@ -31,16 +31,6 @@ st.markdown("[link](href)")
 
 st.markdown("[][]")
 
-st.markdown("Inline math with $\KaTeX$")
-
-st.markdown(
-    """
-$$
-ax^2 + bx + c = 0
-$$
-"""
-)
-
 st.markdown(
     """
 | Col1      | Col2        |
@@ -57,7 +47,7 @@ st.markdown(
 )
 
 st.markdown(
-    """
+    r"""
 Many different markdown formats in one block:
 
 Inline math with $\KaTeX$
@@ -66,15 +56,16 @@ $$
 ax^2 + bx + c = 0
 $$
 
-# Some header 1
+## :material/home: Some header
 
 | Col1      | Col2        |
 | --------- | ----------- |
-| Some      | Data        |
+| Some      | :material/description: Data        |
 
 Some text
 - :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
+- :material/chevron_right: Markdown can contain material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
 
 :blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
 
@@ -182,16 +173,6 @@ with st.container():
 
 st.latex(r"\LaTeX")
 
-try:
-    import sympy
-
-    a, b = sympy.symbols("a b")
-    out = a + b
-except:
-    out = "a + b"
-
-st.latex(out)
-
 st.latex(
     r"""
     a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
@@ -200,6 +181,17 @@ st.latex(
     """,
     help="This is example tooltip displayed on latex.",
 )
+
+try:
+    import sympy
+
+    a, b = sympy.symbols("a b")
+    out = a + b
+except Exception:
+    out = "a + b"
+
+st.latex(out)
+
 
 st.markdown(
     "Images in markdown should stay inside the container width:\n\n![image](./app/static/streamlit-logo.png)"

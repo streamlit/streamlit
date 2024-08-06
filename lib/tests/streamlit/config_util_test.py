@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Config Util Unittest."""
+
+from __future__ import annotations
+
 import copy
 import re
 import textwrap

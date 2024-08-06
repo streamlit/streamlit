@@ -16,9 +16,10 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 
 
-@st.experimental_dialog("Test Dialog with Images")
+@st.dialog("Test Dialog with Images")
 def dialog_with_images():
     st.write("Hello!")
     st.slider("Slide me!", 0, 10)
@@ -42,7 +43,7 @@ if st.button("Open Dialog with Images"):
     dialog_with_images()
 
 
-@st.experimental_dialog("Simple Dialog")
+@st.dialog("Simple Dialog")
 def simple_dialog():
     st.write("Hello again!")
     st.text_input("Enter something!")
@@ -55,7 +56,7 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
-@st.experimental_dialog("Large-width Dialog", width="large")
+@st.dialog("Large-width Dialog", width="large")
 def large_width_dialog():
     st.write("This dialog has a large width.")
 
@@ -67,7 +68,7 @@ if st.button("Open large-width Dialog"):
     large_width_dialog()
 
 
-@st.experimental_dialog("Dialog with headings")
+@st.dialog("Dialog with headings")
 def headings_dialog():
     st.header("Header", help="Some tooltip!")
 
@@ -79,7 +80,7 @@ if st.button("Open headings Dialog"):
 # is non-deterministic
 with st.sidebar:
 
-    @st.experimental_dialog("Simple Dialog in Sidebar")
+    @st.dialog("Simple Dialog in Sidebar")
     def dialog_in_sidebar():
         st.write("Hello sidebar dialog!")
 
@@ -90,16 +91,62 @@ with st.sidebar:
         dialog_in_sidebar()
 
 
-@st.experimental_dialog("Level2 Dialog")
+@st.dialog("Submit-button Dialog")
+def submit_button_dialog():
+    st.write("This dialog has a submit button.")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
+
+    if st.button("Submit", key="dialog6-btn"):
+        st.rerun()
+
+
+if st.button("Open submit-button Dialog"):
+    submit_button_dialog()
+
+
+@st.dialog("Level2 Dialog")
 def level2_dialog():
     st.write("Second level dialog")
 
 
-@st.experimental_dialog("Level1 Dialog")
+@st.dialog("Level1 Dialog")
 def level1_dialog():
     st.write("First level dialog")
+    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")
     level2_dialog()
 
 
 if st.button("Open Nested Dialogs"):
     level1_dialog()
+
+
+@st.dialog("Dialog with error")
+def dialog_with_error():
+    with st.form(key="forecast_form"):
+        # key is an invalid argument, so this shows an error
+        st.form_submit_button("Submit", key="foo")
+
+
+if st.button("Open Dialog with Key Error"):
+    dialog_with_error()
+
+
+@st.dialog("Dialog with copy buttons")
+def dialog_with_copy_buttons():
+    st.json([1, 2, 3])
+
+    copied_text = st.text_input("Enter copied text")
+    st.write(copied_text)
+
+
+if st.button("Open Dialog with Copy Buttons"):
+    dialog_with_copy_buttons()
+
+
+@st.experimental_dialog("Usage of deprecated experimental_dialog")
+def dialog_with_deprecation_warning():
+    pass  # No need to write anything in the dialog body.
+
+
+if st.button("Open Dialog with deprecation warning"):
+    dialog_with_deprecation_warning()

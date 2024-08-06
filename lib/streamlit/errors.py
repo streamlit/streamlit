@@ -38,6 +38,21 @@ class DeprecationError(Error):
     pass
 
 
+class FragmentStorageKeyError(Error, KeyError):
+    """A KeyError raised when a KeyError is encountered during a FragmentStorage
+    operation."""
+
+    pass
+
+
+class FragmentHandledException(Exception):
+    """An exception that is raised by the fragment
+    when it has handled the exception itself.
+    """
+
+    pass
+
+
 class NoStaticFiles(Error):
     pass
 
@@ -103,40 +118,6 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
 
         f = inspect.currentframe()
         self.tacked_on_stack = traceback.extract_stack(f)
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-
-class StreamlitDeprecationWarning(StreamlitAPIWarning):
-    """Used to display a warning.
-
-    Note that this should not be "raised", but passed to st.exception
-    instead.
-    """
-
-    def __init__(self, config_option, msg, *args):
-        message = """
-{0}
-
-You can disable this warning by disabling the config option:
-`{1}`
-
-```
-st.set_option('{1}', False)
-```
-or in your `.streamlit/config.toml`
-```
-[deprecation]
-{2} = false
-```
-    """.format(
-            msg, config_option, config_option.split(".")[1]
-        )
-        # TODO: create a deprecation docs page to add to deprecation msg #1669
-        # For more details, please see: https://docs.streamlit.io/path/to/deprecation/docs.html
-
-        super().__init__(message, *args)
 
     def __repr__(self) -> str:
         return util.repr_(self)

@@ -15,9 +15,11 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import Clipboard from "clipboard"
+
 import { render } from "@streamlit/lib/src/test_util"
 
 import CopyButton from "./CopyButton"

@@ -26,6 +26,7 @@ import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/ArrowVegaLiteChart.proto";
 import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
+import "streamlit/proto/ButtonGroup.proto";
 import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/CameraInput.proto";
 import "streamlit/proto/ChatInput.proto";
@@ -82,6 +83,7 @@ message Element {
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
+    ButtonGroup button_group = 55;
     DownloadButton download_button = 43;
     CameraInput camera_input = 45;
     ChatInput chat_input = 49;
@@ -128,7 +130,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 55
+    // Next ID: 56
   }
 
   reserved 9;

@@ -20,7 +20,7 @@ concurrency:
 
 defaults:
   run:
-    shell: bash --login -eo pipefail {0}
+    shell: bash
 
 env:
   FORCE_COLOR: "1"
@@ -51,6 +51,8 @@ jobs:
           python-version: "${{ env.PYTHON_MIN_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          use_cached_venv: false
       - name: Install min dependencies (force reinstall)
         run: uv pip install -r lib/min-constraints-gen.txt --force-reinstall
       - name: Generate Protobufs

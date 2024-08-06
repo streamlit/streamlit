@@ -14,6 +14,8 @@
 
 """page_link unit tests."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 import streamlit as st
@@ -93,7 +95,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.page == "https://streamlit.io"
         assert c.external
-        assert c.use_container_width == True
+        assert c.use_container_width is True
 
     def test_use_container_width_can_be_set_to_false(self):
         """Test use_container_width can be set to false."""
@@ -105,8 +107,9 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.page == "https://streamlit.io"
         assert c.external
-        assert c.use_container_width == False
+        assert c.use_container_width is False
 
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_label(self):
         """Test that st.page_link accepts an st.Page, but does not uses its title"""
         page = st.Page("foo.py", title="Bar Test")
@@ -121,6 +124,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.icon == ""
         assert c.help == ""
 
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_without_label(self):
         """Test that st.page_link accepts an st.Page, but will use its title if necessary"""
         page = st.Page("foo.py", title="Bar Test")
@@ -135,6 +139,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.icon == ""
         assert c.help == ""
 
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_url_path(self):
         """Test that st.page_link accepts an st.Page, but will use the url_path if necessary"""
         page = st.Page("foo.py", title="Bar Test", url_path="bar")

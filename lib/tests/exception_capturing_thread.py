@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import threading
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
@@ -26,7 +28,7 @@ from streamlit.runtime.state import SafeSessionState, SessionState
 def call_on_threads(
     func: Callable[[int], Any],
     num_threads: int,
-    timeout: Optional[float] = 0.25,
+    timeout: float | None = 0.25,
     attach_script_run_ctx: bool = True,
 ) -> None:
     """Call a function on multiple threads simultaneously and assert that no
@@ -96,10 +98,10 @@ class ExceptionCapturingThread(threading.Thread):
             kwargs=kwargs,
             daemon=daemon,
         )
-        self._unhandled_exception: Optional[BaseException] = None
+        self._unhandled_exception: BaseException | None = None
 
     @property
-    def unhandled_exception(self) -> Optional[BaseException]:
+    def unhandled_exception(self) -> BaseException | None:
         """The unhandled exception raised by the thread's target, if it raised one."""
         return self._unhandled_exception
 

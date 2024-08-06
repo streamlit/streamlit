@@ -19,32 +19,30 @@ import cloneDeep from "lodash/cloneDeep"
 
 import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
-  // Types
   CATEGORICAL,
   CATEGORICAL_COLUMN,
+  CATEGORICAL_INTERVAL,
   DATE,
   DECIMAL,
   DICTIONARY,
+  DIFFERENT_COLUMN_TYPES,
+  DISPLAY_VALUES,
+  EMPTY,
+  FEWER_COLUMNS,
   FLOAT64,
   INT64,
   INTERVAL_DATETIME64,
   INTERVAL_FLOAT64,
   INTERVAL_INT64,
   INTERVAL_UINT64,
+  MULTI,
+  NAMED_INDEX,
   PERIOD,
   RANGE,
+  STYLER,
+  TIMEDELTA,
   UINT64,
   UNICODE,
-  TIMEDELTA,
-  // Special cases
-  EMPTY,
-  MULTI,
-  STYLER,
-  DISPLAY_VALUES,
-  FEWER_COLUMNS,
-  DIFFERENT_COLUMN_TYPES,
-  CATEGORICAL_INTERVAL,
-  NAMED_INDEX,
 } from "@streamlit/lib/src/mocks/arrow"
 
 describe("Quiver", () => {
@@ -708,14 +706,15 @@ describe("Quiver", () => {
         expect(q.columns).toEqual([
           ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
         ])
+
         expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
         ])
         expect(q.types).toEqual({
@@ -1234,20 +1233,20 @@ describe("Quiver", () => {
         ])
         expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
           [
-            new Date("2020-01-02T00:00:00.000Z"),
-            new Date("2020-10-20T00:00:00.000Z"),
+            new Date("2020-01-02T00:00:00.000Z").getTime(),
+            new Date("2020-10-20T00:00:00.000Z").getTime(),
           ],
         ])
         expect(qq.types).toEqual({

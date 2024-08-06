@@ -15,8 +15,12 @@
  */
 
 import React from "react"
+
 import styled from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { StyledCheckbox } from "@streamlit/lib/src/components/widgets/Checkbox/styled-components"
+import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 function translateGapWidth(gap: string, theme: EmotionTheme): string {
   let gapWidth = theme.spacing.lg
@@ -85,6 +89,23 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       marginTop: "-0.375rem",
       marginBottom: "-0.375rem",
     },
+    // Lower the min height of stacked/grouped checkboxes to have them appear visually
+    // closer together to each other.
+    // To detect & cover all grouped/stacked checkboxes, we apply a complex CSS selector
+    // that selects all checkboxes that are directly followed by another checkbox.
+    // Since the last checkbox in a group isn't followed by another checkbox, we also
+    // need to target the direct sibling (if it is a checkbox) of any of the targeted checkboxes.
+    // Examples:
+    // Smaller width is not applied because single checkbox:
+    // <text-input><checkbox><number-input>
+    // Smaller width is applied to all checkboxes:
+    // <text-input><checkbox><checkbox><checkbox><number-input>
+    // Smaller width only applied to the first two checkboxes:
+    // <text-input><checkbox><checkbox><number-input><checkbox><selectbox>
+    [`&:has(+ & > ${StyledCheckbox}) > ${StyledCheckbox}, &:has(> ${StyledCheckbox}):has(+ & > ${StyledCheckbox}) + & > ${StyledCheckbox}`]:
+      {
+        minHeight: "1.5rem",
+      },
 
     ...(isStale && elementType !== "skeleton"
       ? {
@@ -113,10 +134,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 interface StyledColumnProps {
   weight: number
   gap: string
+  verticalAlignment?: BlockProto.Column.VerticalAlignment
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, gap, theme }) => {
+  ({ weight, gap, theme, verticalAlignment }) => {
+    const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width = `calc(${percentage}% - ${gapWidth})`
@@ -130,6 +153,13 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
+      ...(verticalAlignment === VerticalAlignment.BOTTOM && {
+        marginTop: "auto",
+      }),
+      ...(verticalAlignment === VerticalAlignment.CENTER && {
+        marginTop: "auto",
+        marginBottom: "auto",
+      }),
     }
   }
 )

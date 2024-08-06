@@ -15,12 +15,13 @@
 from __future__ import annotations
 
 import json
+import types
+from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
-from streamlit.user_info import UserInfoProxy
+from streamlit.type_util import is_custom_dict, is_namedtuple
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -58,16 +59,18 @@ class JsonMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.json({
-        ...     'foo': 'bar',
-        ...     'baz': 'boz',
-        ...     'stuff': [
-        ...         'stuff 1',
-        ...         'stuff 2',
-        ...         'stuff 3',
-        ...         'stuff 5',
-        ...     ],
-        ... })
+        >>> st.json(
+        ...     {
+        ...         "foo": "bar",
+        ...         "baz": "boz",
+        ...         "stuff": [
+        ...             "stuff 1",
+        ...             "stuff 2",
+        ...             "stuff 3",
+        ...             "stuff 5",
+        ...         ],
+        ...     }
+        ... )
 
         .. output::
            https://doc-json.streamlit.app/
@@ -76,8 +79,17 @@ class JsonMixin:
         """
         import streamlit as st
 
-        if isinstance(body, (SessionStateProxy, UserInfoProxy, QueryParamsProxy)):
+        if is_custom_dict(body):
             body = body.to_dict()
+
+        if is_namedtuple(body):
+            body = body._asdict()
+
+        if isinstance(body, (map, enumerate)):
+            body = list(body)
+
+        if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
+            body = dict(body)
 
         if not isinstance(body, str):
             try:

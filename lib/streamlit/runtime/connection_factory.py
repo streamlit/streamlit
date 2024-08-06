@@ -16,8 +16,7 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import timedelta
-from typing import Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,
@@ -30,6 +29,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.secrets import secrets_singleton
+
+if TYPE_CHECKING:
+    from datetime import timedelta
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
@@ -250,21 +252,27 @@ def connection_factory(
     file.
 
     >>> import streamlit as st
-    >>> conn = st.connection("sql") # Config section defined in [connections.sql] in secrets.toml.
+    >>> conn = st.connection("sql")  # [connections.sql] section in secrets.toml.
 
     Creating a SQLConnection with a custom name requires you to explicitly specify the
     type. If type is not passed as a kwarg, it must be set in the appropriate section of
     ``secrets.toml``.
 
     >>> import streamlit as st
-    >>> conn1 = st.connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
-    >>> conn2 = st.connection("my_other_sql_connection") # type must be set in [connections.my_other_sql_connection].
+    >>> conn1 = st.connection(
+    ...     "my_sql_connection", type="sql"
+    ... )  # Config section defined in [connections.my_sql_connection].
+    >>> conn2 = st.connection(
+    ...     "my_other_sql_connection"
+    ... )  # type must be set in [connections.my_other_sql_connection].
 
     Passing the full module path to the connection class that you want to use can be
     useful, especially when working with a custom connection:
 
     >>> import streamlit as st
-    >>> conn = st.connection("my_sql_connection", type="streamlit.connections.SQLConnection")
+    >>> conn = st.connection(
+    ...     "my_sql_connection", type="streamlit.connections.SQLConnection"
+    ... )
 
     Finally, you can pass the connection class to use directly to this function. Doing
     so allows static type checking tools such as ``mypy`` to infer the exact return

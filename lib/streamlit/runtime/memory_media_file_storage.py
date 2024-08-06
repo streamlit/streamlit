@@ -171,13 +171,12 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         # with other threads that may be manipulating the cache.
         files_by_id = self._files_by_id.copy()
 
-        stats: list[CacheStat] = []
-        for file_id, file in files_by_id.items():
-            stats.append(
-                CacheStat(
-                    category_name="st_memory_media_file_storage",
-                    cache_name="",
-                    byte_length=len(file.content),
-                )
+        stats: list[CacheStat] = [
+            CacheStat(
+                category_name="st_memory_media_file_storage",
+                cache_name="",
+                byte_length=len(file.content),
             )
+            for _, file in files_by_id.items()
+        ]
         return group_stats(stats)

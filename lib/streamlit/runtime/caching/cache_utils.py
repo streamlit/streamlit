@@ -21,12 +21,12 @@ import hashlib
 import inspect
 import threading
 import time
-import types
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Any, Callable, Final
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import type_util
+from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
@@ -38,7 +38,6 @@ from streamlit.runtime.caching.cache_errors import (
     UnserializableReturnValueError,
     get_cached_func_name_md,
 )
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
@@ -46,8 +45,12 @@ from streamlit.runtime.caching.cached_message_replay import (
     replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
-from streamlit.type_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.util import HASHLIB_KWARGS
+
+if TYPE_CHECKING:
+    from types import FunctionType
+
+    from streamlit.runtime.caching.cache_type import CacheType
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -120,7 +123,7 @@ class CachedFuncInfo:
 
     def __init__(
         self,
-        func: types.FunctionType,
+        func: FunctionType,
         show_spinner: bool | str,
         allow_widgets: bool,
         hash_funcs: HashFuncsDict | None,
@@ -154,27 +157,41 @@ def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
     some or all of the wrapper's cached values.
     """
     cached_func = CachedFunc(info)
+    return functools.update_wrapper(cached_func, info.func)
 
-    # We'd like to simply return `cached_func`, which is already a Callable.
-    # But using `functools.update_wrapper` on the CachedFunc instance
-    # itself results in errors when our caching decorators are used to decorate
-    # member functions. (See https://github.com/streamlit/streamlit/issues/6109)
 
-    @functools.wraps(info.func)
-    def wrapper(*args, **kwargs):
-        return cached_func(*args, **kwargs)
+class BoundCachedFunc:
+    """A wrapper around a CachedFunc that binds it to a specific instance in case of
+    decorated function is a class method."""
 
-    # Give our wrapper its `clear` function.
-    # (This results in a spurious mypy error that we suppress.)
-    wrapper.clear = cached_func.clear  # type: ignore
+    def __init__(self, cached_func: CachedFunc, instance: Any):
+        self._cached_func = cached_func
+        self._instance = instance
 
-    return wrapper
+    def __call__(self, *args, **kwargs) -> Any:
+        return self._cached_func(self._instance, *args, **kwargs)
+
+    def __repr__(self):
+        return f"<BoundCachedFunc: {self._cached_func._info.func} of {self._instance}>"
+
+    def clear(self, *args, **kwargs):
+        self._cached_func.clear(self._instance, *args, **kwargs)
 
 
 class CachedFunc:
     def __init__(self, info: CachedFuncInfo):
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
+
+    def __repr__(self):
+        return f"<CachedFunc: {self._info.func}>"
+
+    def __get__(self, instance, owner=None):
+        """CachedFunc implements descriptor protocol to support cache methods."""
+        if instance is None:
+            return self
+
+        return functools.update_wrapper(BoundCachedFunc(self, instance), self)
 
     def __call__(self, *args, **kwargs) -> Any:
         """The wrapper. We'll only call our underlying function on a cache miss."""
@@ -282,23 +299,23 @@ class CachedFunc:
             try:
                 cache.write_result(value_key, computed_value, messages)
                 return computed_value
-            except (CacheError, RuntimeError):
-                # An exception was thrown while we tried to write to the cache. Report it to the user.
-                # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
-                # collect dataframe before using `st.cache_data`.)
-                if True in [
-                    type_util.is_type(computed_value, type_name)
-                    for type_name in UNEVALUATED_DATAFRAME_TYPES
-                ]:
+            except (CacheError, RuntimeError) as ex:
+                # An exception was thrown while we tried to write to the cache. Report
+                # it to the user. (We catch `RuntimeError` here because it will be
+                # raised by Apache Spark if we do not collect dataframe before
+                # using `st.cache_data`.)
+                if is_unevaluated_data_object(computed_value):
                     # If the returned value is an unevaluated dataframe, raise an error.
                     # Unevaluated dataframes are not yet in the local memory, which also
                     # means they cannot be properly cached (serialized).
                     raise UnevaluatedDataFrameError(
-                        f"""
-                        The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
-                        of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
-                        so `st.cache_data` can serialize and cache it."""
-                    )
+                        f"The function {get_cached_func_name_md(self._info.func)} is "
+                        "decorated with `st.cache_data` but it returns an unevaluated "
+                        f"data object of type `{type_util.get_fqn_type(computed_value)}`. "
+                        "Please convert the object to a serializable format "
+                        "(e.g. Pandas DataFrame) before returning it, so "
+                        "`st.cache_data` can serialize and cache it."
+                    ) from ex
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
                 )
@@ -354,7 +371,7 @@ class CachedFunc:
 
 def _make_value_key(
     cache_type: CacheType,
-    func: types.FunctionType,
+    func: FunctionType,
     func_args: tuple[Any, ...],
     func_kwargs: dict[str, Any],
     hash_funcs: HashFuncsDict | None,
@@ -419,7 +436,7 @@ def _make_value_key(
     return value_key
 
 
-def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
+def _make_function_key(cache_type: CacheType, func: FunctionType) -> str:
     """Create the unique key for a function's cache.
 
     A function's key is stable across reruns of the app, and changes when
@@ -458,7 +475,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     return cache_key
 
 
-def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> str | None:
+def _get_positional_arg_name(func: FunctionType, arg_index: int) -> str | None:
     """Return the name of a function's positional argument.
 
     If arg_index is out of range, or refers to a parameter that is not a

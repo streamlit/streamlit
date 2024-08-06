@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 import streamlit as st
@@ -20,6 +22,7 @@ from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
 class NavigationTest(DeltaGeneratorTestCase):
     """Test st.navigation"""
 

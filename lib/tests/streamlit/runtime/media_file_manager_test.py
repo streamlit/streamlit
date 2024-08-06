@@ -14,9 +14,10 @@
 
 """Unit tests for MediaFileManager"""
 
+from __future__ import annotations
+
 import random
 import unittest
-from typing import Optional
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, call, mock_open
 
@@ -31,11 +32,7 @@ from tests.exception_capturing_thread import call_on_threads
 
 
 def random_coordinates():
-    return "{}.{}.{}".format(
-        random.randint(1, 4),
-        (random.randint(1, 12), random.randint(1, 12)),
-        random.randint(1, 99),
-    )
+    return f"{random.randint(1, 4)}.{(random.randint(1, 12), random.randint(1, 12))}.{random.randint(1, 99)}"
 
 
 # Smallest possible "real" media files for a handful of different formats.
@@ -86,7 +83,7 @@ TEXT_FIXTURES = {
     },
 }
 
-ALL_FIXTURES = dict()
+ALL_FIXTURES = {}
 ALL_FIXTURES.update(AUDIO_FIXTURES)
 ALL_FIXTURES.update(VIDEO_FIXTURES)
 ALL_FIXTURES.update(IMAGE_FIXTURES)
@@ -105,7 +102,7 @@ class MediaFileManagerTest(TestCase):
         content: bytes,
         mimetype: str,
         coordinates: str,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> MemoryFile:
         """Add a new file to our test manager and return its MediaFile object."""
         file_id = _calculate_file_id(content, mimetype, filename)
@@ -115,9 +112,7 @@ class MediaFileManagerTest(TestCase):
     def test_calculate_file_id(self):
         """Test that file_id generation from data works as expected."""
 
-        fake_bytes = "\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00".encode(
-            "utf-8"
-        )
+        fake_bytes = "\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00".encode()
         test_hash = "2ba850426b188d25adc5a37ad313080c346f5e88e069e0807d0cdb2b"
         self.assertEqual(test_hash, _calculate_file_id(fake_bytes, "media/any"))
 

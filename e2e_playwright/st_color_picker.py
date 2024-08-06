@@ -46,7 +46,7 @@ if "color_picker_form" in st.session_state:
     )
 
 
-@st.experimental_fragment()
+@st.fragment
 def test_fragment():
     selection = st.color_picker("Fragment Color Picker")
     st.write("color_picker-in-fragment selection:", str(selection))

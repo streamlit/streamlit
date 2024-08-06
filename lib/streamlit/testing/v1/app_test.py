@@ -19,12 +19,11 @@ import tempfile
 import textwrap
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
 
 from streamlit import source_util
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -39,6 +38,7 @@ from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
     Button,
+    ButtonGroup,
     Caption,
     ChatInput,
     ChatMessage,
@@ -86,6 +86,9 @@ from streamlit.testing.v1.element_tree import (
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import HASHLIB_KWARGS, calc_md5
+
+if TYPE_CHECKING:
+    from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -330,7 +333,7 @@ class AppTest:
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
-            new_secrets = Secrets([])
+            new_secrets = Secrets()
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
@@ -372,9 +375,10 @@ class AppTest:
 
         Parameters
         ----------
-        timeout
-            The maximum number of seconds to run the script. None means
-            use the default timeout set for the instance of ``AppTest``.
+        timeout : float or None
+            The maximum number of seconds to run the script. If ``timeout`` is
+            ``None`` (default), Streamlit uses the default timeout set for the
+            instance of ``AppTest``.
 
         Returns
         -------
@@ -452,6 +456,20 @@ class AppTest:
             given key.
         """
         return self._tree.button
+
+    @property
+    def button_group(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.feedback`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.feedback`` widgets. Individual widgets can be
+            accessed from a WidgetList by index (order on the page) or key. For
+            example, ``at.button_group[0]`` for the first widget or
+            ``at.button_group(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.button_group
 
     @property
     def caption(self) -> ElementList[Caption]:

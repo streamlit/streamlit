@@ -17,18 +17,18 @@
 import React from "react"
 
 import {
+  BaseDrawArgs,
   DataEditorProps,
   DrawCellCallback,
-  Rectangle,
-  Theme as GlideTheme,
   drawTextCell,
-  BaseDrawArgs,
+  Theme as GlideTheme,
+  Rectangle,
 } from "@glideapps/glide-data-grid"
 import {
-  SparklineCell,
+  DatePickerCell,
   DropdownCell,
   RangeCell,
-  DatePickerCell,
+  SparklineCell,
 } from "@glideapps/glide-data-grid-cells"
 
 import {

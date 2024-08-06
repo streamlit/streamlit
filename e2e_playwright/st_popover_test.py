@@ -44,7 +44,9 @@ def test_popover_container_rendering(
     # Check that it is open:
     popover_container = themed_app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
+        "Hello World 👋"
+    )
 
     # Click somewhere outside the close popover container:
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
@@ -55,7 +57,9 @@ def test_popover_container_rendering(
 
     popover_container = themed_app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
+        "Hello World 👋"
+    )
     expect(popover_container.get_by_test_id("stTextInput")).to_have_count(4)
 
     assert_snapshot(popover_container, name="st_popover-container")
@@ -87,7 +91,9 @@ def test_applying_changes_from_popover_container(app: Page):
     # Check that it is open:
     popover_container = app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
+        "Hello World 👋"
+    )
 
     # Fill in the text:
     text_input_element = popover_container.get_by_test_id("stTextInput").nth(0)
@@ -111,7 +117,9 @@ def test_applying_changes_from_popover_container(app: Page):
 
     # Check that it is still open after rerun:
     expect(popover_container).to_be_visible()
-    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text(
+        "Hello World 👋"
+    )
 
     # Click somewhere outside the close popover container
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})

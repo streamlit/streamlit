@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """streamlit.black_list unit test."""
+
+from __future__ import annotations
+
 import unittest
 
 from streamlit.folder_black_list import FolderBlackList

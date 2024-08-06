@@ -52,13 +52,11 @@ class BadTimeStringError(StreamlitAPIException):
 @overload
 def time_to_seconds(
     t: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
-) -> float | None:
-    ...
+) -> float | None: ...
 
 
 @overload
-def time_to_seconds(t: float | timedelta | str | None) -> float:
-    ...
+def time_to_seconds(t: float | timedelta | str | None) -> float: ...
 
 
 def time_to_seconds(

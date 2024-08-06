@@ -15,22 +15,19 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import { DeckGL } from "deck.gl"
 import JSON5 from "json5"
 import isEqual from "lodash/isEqual"
-import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
+import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-import {
-  hasLightBackgroundColor,
-  EmotionTheme,
-} from "@streamlit/lib/src/theme"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
 import {
+  CartoLayer,
   colorBins,
   colorCategories,
   colorContinuous,
-  CartoLayer,
 } from "@deck.gl/carto"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
@@ -38,15 +35,18 @@ import * as geoLayers from "@deck.gl/geo-layers"
 import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
 /* eslint-enable */
-
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
+import {
+  EmotionTheme,
+  hasLightBackgroundColor,
+} from "@streamlit/lib/src/theme"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
-import withMapboxToken from "./withMapboxToken"
-
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+
+import withMapboxToken from "./withMapboxToken"
 import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,
@@ -260,10 +260,12 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   render(): ReactNode {
     const deck = DeckGlJsonChart.getDeckObject(this.props, this.state)
     const { viewState } = this.state
+    const { width } = this.props
+
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
-        width={deck.initialViewState.width}
+        width={width}
         height={deck.initialViewState.height}
         data-testid="stDeckGlJsonChart"
       >
@@ -271,7 +273,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           viewState={viewState}
           onViewStateChange={this.onViewStateChange}
           height={deck.initialViewState.height}
-          width={deck.initialViewState.width}
+          width={width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
           ContextProvider={MapContext.Provider}
@@ -279,7 +281,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         >
           <StaticMap
             height={deck.initialViewState.height}
-            width={deck.initialViewState.width}
+            width={width}
             mapStyle={
               deck.mapStyle &&
               (typeof deck.mapStyle === "string"
