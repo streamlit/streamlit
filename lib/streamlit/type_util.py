@@ -52,7 +52,12 @@ class SupportsStr(Protocol):
 
 
 class CustomDict(Protocol):
-    # All our custom dictionary implementation should provide a to_dict method.
+    """Protocol for Streamlit native custom dictionaries (e.g. session state, secrets, query params).
+    that can be converted to a dict.
+
+    All these implementations should provide a to_dict method.
+    """
+
     def to_dict(self) -> dict[str, Any]: ...
 
 
@@ -268,6 +273,9 @@ def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
 
 def is_dataclass_instance(obj: object) -> bool:
     """True if obj is an instance of a dataclass."""
+    # The not isinstance(obj, type) check is needed to make sure that this
+    # is an instance of a dataclass and not the class itself.
+    # dataclasses.is_dataclass returns True for either instance or class.
     return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 

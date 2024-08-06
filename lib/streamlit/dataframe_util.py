@@ -366,6 +366,13 @@ def _iterable_to_list(
 
 
 def _fix_column_naming(data_df: DataFrame) -> DataFrame:
+    """Rename the first column to "value" if it is not named
+    and if there is only one column in the dataframe.
+
+    The default name of the first column is 0 if it is not named
+    which is not very descriptive.
+    """
+
     if len(data_df.columns) == 1 and data_df.columns[0] == 0:
         # Pandas automatically names the first column with 0 if it is not named.
         # We rename it to "value" to make it more descriptive if there is only
@@ -902,7 +909,8 @@ def _maybe_truncate_table(
 
 
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
-    """Return True if column type is known to cause issues during Arrow conversion."""
+    """Return True if the column type is known to cause issues during
+    Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind in [
@@ -1137,6 +1145,13 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
+    """Convert a Pandas DataFrame to a Pandas Series by selecting the first column.
+
+    Raises
+    ------
+    ValueError
+        If the DataFrame has more than one column.
+    """
     # Select first column in dataframe and create a new series based on the values
     if len(df.columns) != 1:
         raise ValueError(

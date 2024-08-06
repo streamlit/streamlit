@@ -43,9 +43,9 @@ class DataFrame:
         """Returns the top n element of a mock version of Snowpark Pandas DataFrame"""
         return DataFrame(self[:n])
 
-    def __getitem__(self, key: slice | int) -> Index:
+    def __getitem__(self, key: slice | int) -> DataFrame:
         # Allow slicing and integer indexing
-        return Index(self._data[key])
+        return DataFrame(self._data[key])
 
 
 class Series:
@@ -71,9 +71,9 @@ class Series:
         """Returns the top n element of a mock version of Snowpark Pandas Series"""
         return Series(self[:n])
 
-    def __getitem__(self, key: slice | int) -> Index:
+    def __getitem__(self, key: slice | int) -> Series:
         # Allow slicing and integer indexing
-        return Index(self._data[key])
+        return Series(self._data[key])
 
 
 class Index:

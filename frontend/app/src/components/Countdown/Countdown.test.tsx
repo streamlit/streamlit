@@ -16,8 +16,9 @@
 
 import React from "react"
 
-import { render } from "@streamlit/lib"
 import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib"
 import "@testing-library/jest-dom"
 
 import Countdown from "./Countdown"
