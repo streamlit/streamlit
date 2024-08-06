@@ -26,23 +26,28 @@ import {
   StructRow,
   Table,
   tableFromIPC,
-  util,
   Vector,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import range from "lodash/range"
 import unzip from "lodash/unzip"
 import zip from "lodash/zip"
-import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
-import numbro from "numbro"
 
+import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
-import { logWarning } from "@streamlit/lib/src/util/log"
+
+import {
+  convertVectorToList,
+  formatDecimal,
+  formatDuration,
+  formatFloat,
+  formatPeriodField,
+  formatTime,
+} from "./arrowUtils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -127,117 +132,6 @@ export interface Type {
 type IntervalData = "int64" | "uint64" | "float64" | "datetime64[ns]"
 type IntervalClosed = "left" | "right" | "both" | "neither"
 type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
-
-// The frequency strings defined in pandas.
-// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#period-aliases
-// Not supported: "N" (nanoseconds), "U" & "us" (microseconds), and "B" (business days).
-// Reason is that these types are not supported by moment.js, but also they are not
-// very commonly used in practice.
-type SupportedPandasOffsetType =
-  // yearly frequency:
-  | "A" // deprecated alias
-  | "Y"
-  // quarterly frequency:
-  | "Q"
-  // monthly frequency:
-  | "M"
-  // weekly frequency:
-  | "W"
-  // calendar day frequency:
-  | "D"
-  // hourly frequency:
-  | "H" // deprecated alias
-  | "h"
-  // minutely frequency
-  | "T" // deprecated alias
-  | "min"
-  // secondly frequency:
-  | "S" // deprecated alias
-  | "s"
-  // milliseconds frequency:
-  | "L" // deprecated alias
-  | "ms"
-
-type PeriodFrequency =
-  | SupportedPandasOffsetType
-  | `${SupportedPandasOffsetType}-${string}`
-type PeriodType = `period[${PeriodFrequency}]`
-
-const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
-const formatMs = (duration: number): string =>
-  moment("19700101", "YYYYMMDD")
-    .add(duration, "ms")
-    .format("YYYY-MM-DD HH:mm:ss.SSS")
-
-const formatSec = (duration: number): string =>
-  moment("19700101", "YYYYMMDD")
-    .add(duration, "s")
-    .format("YYYY-MM-DD HH:mm:ss")
-
-const formatMin = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "m").format("YYYY-MM-DD HH:mm")
-
-const formatHours = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "h").format("YYYY-MM-DD HH:mm")
-
-const formatDay = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD")
-
-const formatMonth = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "M").format("YYYY-MM")
-
-const formatYear = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "y").format("YYYY")
-
-const formatWeeks = (duration: number, freqParam?: string): string => {
-  if (!freqParam) {
-    throw new Error('Frequency "W" requires parameter')
-  }
-  const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
-  if (dayIndex < 0) {
-    throw new Error(
-      `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
-        WEEKDAY_SHORT
-      )}`
-    )
-  }
-  const startDate = moment("19700101", "YYYYMMDD")
-    .add(duration, "w")
-    .day(dayIndex - 6)
-    .format("YYYY-MM-DD")
-  const endDate = moment("19700101", "YYYYMMDD")
-    .add(duration, "w")
-    .day(dayIndex)
-    .format("YYYY-MM-DD")
-
-  return `${startDate}/${endDate}`
-}
-
-const formatQuarter = (duration: number): string =>
-  moment("19700101", "YYYYMMDD")
-    .add(duration, "Q")
-    .endOf("quarter")
-    .format("YYYY[Q]Q")
-
-const PERIOD_TYPE_FORMATTERS: Record<
-  SupportedPandasOffsetType,
-  (duration: number, freqParam?: string) => string
-> = {
-  L: formatMs,
-  ms: formatMs,
-  S: formatSec,
-  s: formatSec,
-  T: formatMin,
-  min: formatMin,
-  H: formatHours,
-  h: formatHours,
-  D: formatDay,
-  M: formatMonth,
-  W: formatWeeks,
-  Q: formatQuarter,
-  Y: formatYear,
-  A: formatYear,
-}
 
 /** Interval data type. */
 interface Interval {
@@ -480,7 +374,7 @@ export class Quiver {
   /** Parse Arrow table's Pandas schema from a JSON string to an object. */
   private static parsePandasSchema(table: Table): PandasSchema | undefined {
     const schema = table.schema.metadata.get("pandas")
-    if (schema == null) {
+    if (isNullOrUndefined(schema)) {
       // No Pandas schema found. This happens if the dataset
       // did not touched Pandas during serialization.
       return undefined
@@ -661,13 +555,7 @@ export class Quiver {
     const categoricalDict =
       this._data.getChildAt(dataColumnIndex)?.data[0]?.dictionary
     if (categoricalDict) {
-      // get all values into a list
-      const values = []
-
-      for (let i = 0; i < categoricalDict.length; i++) {
-        values.push(categoricalDict.get(i))
-      }
-      return values
+      return convertVectorToList(categoricalDict)
     }
     return undefined
   }
@@ -944,139 +832,6 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
   }
 
-  /**
-   * Adjusts a time value to seconds based on the unit information in the field.
-   *
-   * The unit numbers are specified here:
-   * https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
-   */
-  public static convertToSeconds(
-    value: number | bigint,
-    unit: number
-  ): number {
-    let unitAdjustment
-
-    if (unit === 1) {
-      // Milliseconds
-      unitAdjustment = 1000
-    } else if (unit === 2) {
-      // Microseconds
-      unitAdjustment = 1000 * 1000
-    } else if (unit === 3) {
-      // Nanoseconds
-      unitAdjustment = 1000 * 1000 * 1000
-    } else {
-      // Interpret it as seconds as a fallback
-      return Number(value)
-    }
-
-    // Do the calculation based on bigints, if the value
-    // is a bigint and not safe for usage as number.
-    // This might lose some precision since it doesn't keep
-    // fractional parts.
-    if (typeof value === "bigint" && !Number.isSafeInteger(Number(value))) {
-      return Number(value / BigInt(unitAdjustment))
-    }
-
-    return Number(value) / unitAdjustment
-  }
-
-  private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.convertToSeconds(data, field?.type?.unit ?? 0)
-    return moment
-      .unix(timeInSeconds)
-      .utc()
-      .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
-  }
-
-  private static formatDuration(data: number | bigint, field?: Field): string {
-    return moment
-      .duration(
-        Quiver.convertToSeconds(data, field?.type?.unit ?? 3),
-        "seconds"
-      )
-      .humanize()
-  }
-
-  /**
-   * Formats a decimal value with a given scale to a string.
-   *
-   * This code is partly based on: https://github.com/apache/arrow/issues/35745
-   *
-   * TODO: This is only a temporary workaround until ArrowJS can format decimals correctly.
-   * This is tracked here:
-   * https://github.com/apache/arrow/issues/37920
-   * https://github.com/apache/arrow/issues/28804
-   * https://github.com/apache/arrow/issues/35745
-   */
-  private static formatDecimal(value: Uint32Array, scale: number): string {
-    // Format Uint32Array to a numerical string and pad it with zeros
-    // So that it is exactly the length of the scale.
-    let numString = util
-      .bigNumToString(new util.BN(value))
-      .padStart(scale, "0")
-
-    // ArrowJS 13 correctly adds a minus sign for negative numbers.
-    // but it doesn't handle th fractional part yet. So we can just return
-    // the value if scale === 0, but we need to do some additional processing
-    // for the fractional part if scale > 0.
-
-    if (scale === 0) {
-      return numString
-    }
-
-    let sign = ""
-    if (numString.startsWith("-")) {
-      // Check if number is negative, and if so remember the sign and remove it.
-      // We will add it back later.
-      sign = "-"
-      numString = numString.slice(1)
-    }
-    // Extract the whole number part. If the number is < 1, it doesn't
-    // have a whole number part, so we'll use "0" instead.
-    // E.g for 123450 with scale 3, we'll get "123" as the whole part.
-    const wholePart = numString.slice(0, -scale) || "0"
-    // Extract the fractional part and remove trailing zeros.
-    // E.g. for 123450 with scale 3, we'll get "45" as the fractional part.
-    const decimalPart = trimEnd(numString.slice(-scale), "0") || ""
-    // Combine the parts and add the sign.
-    return `${sign}${wholePart}` + (decimalPart ? `.${decimalPart}` : "")
-  }
-
-  public static formatPeriodType(
-    duration: bigint,
-    typeName: PeriodType
-  ): string {
-    const match = typeName.match(/period\[(.*)]/)
-    if (match === null) {
-      logWarning(`Invalid period type: ${typeName}`)
-      return String(duration)
-    }
-    const [, freq] = match
-    return this.formatPeriod(duration, freq as PeriodFrequency)
-  }
-
-  private static formatPeriod(
-    duration: bigint,
-    freq: PeriodFrequency
-  ): string {
-    const [freqName, freqParam] = freq.split("-", 2)
-    const momentConverter =
-      PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
-    if (!momentConverter) {
-      logWarning(`Unsupported period frequency: ${freq}`)
-      return String(duration)
-    }
-    const durationNumber = Number(duration)
-    if (!Number.isSafeInteger(durationNumber)) {
-      logWarning(
-        `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
-      )
-      return String(duration)
-    }
-    return momentConverter(durationNumber, freqParam)
-  }
-
   private static formatCategoricalType(
     x: number | bigint | StructRow,
     field: Field
@@ -1092,10 +847,6 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       if (extensionName === "pandas.interval") {
         const { subtype, closed } = extensionMetadata
         return Quiver.formatInterval(x as StructRow, subtype, closed)
-      }
-      if (extensionName === "pandas.Period") {
-        const { freq } = extensionMetadata
-        return Quiver.formatPeriod(x as bigint, freq)
       }
     }
     return String(x)
@@ -1115,6 +866,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
+    const extensionName = field && field.metadata.get("ARROW:extension:name")
 
     if (isNullOrUndefined(x)) {
       return "<NA>"
@@ -1127,7 +879,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
     // time
     if (typeof x === "bigint" && typeName === "time") {
-      return Quiver.formatTime(Number(x), field)
+      return formatTime(Number(x), field)
     }
 
     // datetimetz
@@ -1159,8 +911,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       )
     }
 
-    if (typeName?.startsWith("period")) {
-      return Quiver.formatPeriodType(x as bigint, typeName as PeriodType)
+    if (typeName?.startsWith("period") || extensionName === "pandas.period") {
+      return formatPeriodField(x as bigint, field)
     }
 
     if (typeName === "categorical") {
@@ -1171,11 +923,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName?.startsWith("timedelta")) {
-      return this.formatDuration(x as number | bigint, field)
+      return formatDuration(x as number | bigint, field)
     }
 
     if (typeName === "decimal") {
-      return this.formatDecimal(x as Uint32Array, field?.type?.scale || 0)
+      return formatDecimal(x as Uint32Array, field)
     }
 
     // Nested arrays and objects.
@@ -1204,7 +956,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName === "float64" && Number.isFinite(x)) {
-      return numbro(x).format("0,0.0000")
+      return formatFloat(x as number)
     }
 
     return String(x)
