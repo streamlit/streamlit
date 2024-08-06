@@ -48,6 +48,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     checkbox: CheckboxColumn,
     selectbox: SelectboxColumn,
     list: ListColumn,
+    multiselect: MultiSelectColumn,
     number: NumberColumn,
     link: LinkColumn,
     datetime: DateTimeColumn,

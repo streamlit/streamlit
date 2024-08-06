@@ -184,7 +184,7 @@ class ColumnConfig(TypedDict, total=False):
     hidden: bool | None
     disabled: bool | None
     required: bool | None
-    default: str | bool | int | float | None
+    default: str | bool | int | float | list[str] | None
     alignment: Literal["left", "center", "right"] | None
     type_config: (
         NumberColumnConfig
@@ -1190,7 +1190,7 @@ def ListColumn(
         help=help,
         disabled=disabled,
         required=required,
-        default=default,
+        default=None if default is None else list(default),
         type_config=ListColumnConfig(type="list"),
     )
 
@@ -1204,7 +1204,7 @@ def MultiselectColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     default: Iterable[str] | None = None,
-    options: Iterable[str] | Iterable[MultiselectOption] | None = None,
+    options: Iterable[MultiselectOption | str] | None = None,
 ):
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1285,7 +1285,7 @@ def MultiselectColumn(
         help=help,
         disabled=disabled,
         required=required,
-        default=default,
+        default=None if default is None else list(default),
         type_config=MultiselectColumnConfig(
             type="multiselect",
             options=list(options) if options is not None else None,
