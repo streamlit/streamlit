@@ -369,12 +369,12 @@ class DataframeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
-    def test_is_pandas_data_object():
+    def test_is_pandas_data_object(self):
         """Test that `is_pandas_data_object` correctly detects pandas data objects."""
         assert dataframe_util.is_pandas_data_object(pd.DataFrame()) is True
         assert dataframe_util.is_pandas_data_object(pd.Series()) is True
         assert dataframe_util.is_pandas_data_object(pd.Index()) is True
-        assert dataframe_util.is_pandas_data_object(pd.array()) is True
+        assert dataframe_util.is_pandas_data_object(pd.array(["a", "b"])) is True
 
     def test_is_snowpandas_data_object(self):
         df = pd.DataFrame([1, 2, 3])
