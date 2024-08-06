@@ -17,8 +17,14 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
+import inspect
 import math
+import re
+from collections import ChainMap, UserDict, deque
+from collections.abc import ItemsView, KeysView, ValuesView
 from enum import Enum, EnumMeta, auto
+from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -34,9 +40,14 @@ from typing import (
 
 from typing_extensions import TypeAlias, TypeGuard
 
-import streamlit as st
 from streamlit import config, errors, logger, string_util
-from streamlit.type_util import is_type
+from streamlit.type_util import (
+    has_callable_attr,
+    is_custom_dict,
+    is_dataclass_instance,
+    is_namedtuple,
+    is_type,
+)
 
 if TYPE_CHECKING:
     import numpy as np
@@ -51,6 +62,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 _MAX_UNEVALUATED_DF_ROWS = 10000
 
+_PANDAS_DATA_OBJECT_TYPE_RE: Final = re.compile(r"^pandas.*$")
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
@@ -60,7 +72,6 @@ _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
-
 
 V_co = TypeVar(
     "V_co",
@@ -111,9 +122,11 @@ class DataFormat(Enum):
     PANDAS_DATAFRAME = auto()  # pd.DataFrame
     PANDAS_SERIES = auto()  # pd.Series
     PANDAS_INDEX = auto()  # pd.Index
+    PANDAS_ARRAY = auto()  # pd.array
     NUMPY_LIST = auto()  # np.array[Scalar]
     NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
     PYARROW_TABLE = auto()  # pyarrow.Table
+    PYARROW_ARRAY = auto()  # pyarrow.Array
     SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
     PYSPARK_OBJECT = auto()  # pyspark.DataFrame
     MODIN_OBJECT = auto()  # Modin DataFrame, Series
@@ -136,9 +149,9 @@ def is_dataframe_like(obj: object) -> bool:
     This does not include basic collection types like list, dict, tuple, etc.
     """
 
-    if obj is None or isinstance(
-        obj, (list, tuple, set, dict, str, bytes, int, float, bool)
-    ):
+    # We exclude list and dict here since there are some cases where a list or dict is
+    # considered a dataframe-like object.
+    if obj is None or isinstance(obj, (tuple, set, str, bytes, int, float, bool)):
         # Basic types are not considered dataframe-like, so we can
         # return False early to avoid unnecessary checks.
         return False
@@ -148,13 +161,16 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PANDAS_SERIES,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
+        DataFormat.PANDAS_ARRAY,
         DataFormat.NUMPY_LIST,
         DataFormat.NUMPY_MATRIX,
         DataFormat.PYARROW_TABLE,
+        DataFormat.PYARROW_ARRAY,
         DataFormat.SNOWPARK_OBJECT,
         DataFormat.PYSPARK_OBJECT,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.COLUMN_SERIES_MAPPING,
     ]
 
 
@@ -166,6 +182,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series
+    - Generator functions
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -176,7 +193,13 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
+        or inspect.isgeneratorfunction(obj)
     )
+
+
+def is_pandas_data_object(obj: object) -> bool:
+    """True if obj is a Pandas object (e.g. DataFrame, Series, Index, Styler, ...)."""
+    return is_type(obj, _PANDAS_DATA_OBJECT_TYPE_RE)
 
 
 def is_snowpark_data_object(obj: object) -> bool:
@@ -186,13 +209,12 @@ def is_snowpark_data_object(obj: object) -> bool:
 
 def is_snowpark_row_list(obj: object) -> bool:
     """True if obj is a list of snowflake.snowpark.row.Row."""
-    if not isinstance(obj, list):
-        return False
-    if len(obj) < 1:
-        return False
-    if not hasattr(obj[0], "__class__"):
-        return False
-    return is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+    return (
+        isinstance(obj, list)
+        and len(obj) > 0
+        and is_type(obj[0], _SNOWPARK_DF_ROW_TYPE_STR)
+        and has_callable_attr(obj[0], "as_dict")
+    )
 
 
 def is_pyspark_data_object(obj: object) -> bool:
@@ -221,6 +243,78 @@ def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
+def _is_list_of_scalars(data: Iterable[Any]) -> bool:
+    """Check if the list only contains scalar values."""
+    from pandas.api.types import infer_dtype
+
+    # Overview on all value that are interpreted as scalar:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
+    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
+
+
+def _iterable_to_list(
+    iterable: Iterable[Any], max_iterations: int | None = None
+) -> list[Any]:
+    """Convert an iterable to a list.
+
+    Parameters
+    ----------
+    iterable : Iterable
+        The iterable to convert to a list.
+
+    max_iterations : int or None
+        The maximum number of iterations to perform. If None, all iterations are performed.
+
+    Returns
+    -------
+    list
+        The converted list.
+    """
+    if max_iterations is None:
+        return list(iterable)
+
+    result = []
+    for i, item in enumerate(iterable):
+        if i >= max_iterations:
+            break
+        result.append(item)
+    return result
+
+
+def _fix_column_naming(data_df: DataFrame) -> DataFrame:
+    """Rename the first column to "value" if it is not named
+    and if there is only one column in the dataframe.
+
+    The default name of the first column is 0 if it is not named
+    which is not very descriptive.
+    """
+
+    if len(data_df.columns) == 1 and data_df.columns[0] == 0:
+        # Pandas automatically names the first column with 0 if it is not named.
+        # We rename it to "value" to make it more descriptive if there is only
+        # one column in the dataframe.
+        data_df.rename(columns={0: "value"}, inplace=True)
+    return data_df
+
+
+def _dict_to_pandas_df(data: dict[Any, Any]) -> DataFrame:
+    """Convert a key-value dict to a Pandas DataFrame.
+
+    Parameters
+    ----------
+    data : dict
+        The dict to convert to a Pandas DataFrame.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The converted Pandas DataFrame.
+    """
+    import pandas as pd
+
+    return _fix_column_naming(pd.DataFrame.from_dict(data, orient="index"))
+
+
 def convert_anything_to_pandas_df(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
@@ -246,81 +340,123 @@ def convert_anything_to_pandas_df(
     pandas.DataFrame
 
     """
+    import array
+
     import numpy as np
     import pandas as pd
 
     if isinstance(data, pd.DataFrame):
         return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
-    if isinstance(data, (pd.Series, pd.Index)):
+    if isinstance(data, (pd.Series, pd.Index, pd.api.extensions.ExtensionArray)):
         return pd.DataFrame(data)
 
     if is_pandas_styler(data):
         return cast(pd.DataFrame, data.data.copy() if ensure_copy else data.data)
 
     if isinstance(data, np.ndarray):
-        return pd.DataFrame([]) if len(data.shape) == 0 else pd.DataFrame(data)
+        return (
+            pd.DataFrame([])
+            if len(data.shape) == 0
+            else _fix_column_naming(pd.DataFrame(data))
+        )
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
-        if isinstance(data, pd.Series):
+        if isinstance(data, (pd.Series, pd.Index)):
             data = data.to_frame()
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `_to_pandas()` on the dataframe to show more."
+                "rows. Call `_to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
     if is_pyspark_data_object(data):
         data = data.limit(max_unevaluated_rows).toPandas()
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `toPandas()` on the dataframe to show more."
+                "rows. Call `toPandas()` on the data object to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_snowpandas_data_object(data):
+        data = data[:max_unevaluated_rows].to_pandas()
+
+        if isinstance(data, (pd.Series, pd.Index)):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
     if is_snowpark_data_object(data):
         data = data.limit(max_unevaluated_rows).to_pandas()
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataframe to show more."
+                "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
 
-    if is_snowpandas_data_object(data):
-        data = data.head(max_unevaluated_rows).to_pandas()
+    if is_snowpark_row_list(data):
+        return pd.DataFrame([row.as_dict() for row in data])
 
-        if isinstance(data, pd.Series):
-            data = data.to_frame()
+    if has_callable_attr(data, "to_pandas"):
+        return pd.DataFrame(data.to_pandas())
+
+    # Support for generator functions
+    if inspect.isgeneratorfunction(data):
+        data = _fix_column_naming(
+            pd.DataFrame(_iterable_to_list(data(), max_iterations=max_unevaluated_rows))
+        )
 
         if data.shape[0] == max_unevaluated_rows:
-            st.caption(
+            _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the dataframe to show more."
+                "rows. Convert the data to a list to show more."
             )
-        return cast(pd.DataFrame, data)
+        return data
 
-    # This is inefficient when data is a pyarrow.Table as it will be converted
-    # back to Arrow when marshalled to protobuf, but area/bar/line charts need
-    # DataFrame magic to generate the correct output.
-    if hasattr(data, "to_pandas"):
-        return pd.DataFrame(data.to_pandas())
+    if isinstance(data, EnumMeta):
+        # Support for enum classes
+        return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
+
+    # Support for some list like objects
+    if isinstance(data, (deque, map, array.ArrayType)):
+        return _fix_column_naming(pd.DataFrame(list(data)))
+
+    # Support for Streamlit's custom dict-like objects
+    if is_custom_dict(data):
+        return _dict_to_pandas_df(data.to_dict())
+
+    # Support for named tuples
+    if is_namedtuple(data):
+        return _dict_to_pandas_df(data._asdict())
+
+    # Support for dataclass instances
+    if is_dataclass_instance(data):
+        return _dict_to_pandas_df(dataclasses.asdict(data))
+
+    # Support for dict-like objects
+    if isinstance(data, (ChainMap, MappingProxyType, UserDict)):
+        return _dict_to_pandas_df(dict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return pd.DataFrame(data)
-
+        return _fix_column_naming(pd.DataFrame(data))
     except ValueError as ex:
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return pd.DataFrame.from_dict(data, orient="index")
+                return _dict_to_pandas_df(data)
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
@@ -419,6 +555,14 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
     return reader.read_pandas()
 
 
+def _show_data_information(msg: str) -> None:
+    """Show a message to the user with important information
+    about the processed dataset."""
+    from streamlit.delta_generator import main_dg
+
+    main_dg.caption(msg)
+
+
 def convert_anything_to_arrow_bytes(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
@@ -449,8 +593,16 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
+    if is_pandas_data_object(data):
+        # All pandas data objects should be handled via our pandas
+        # conversion logic. We are already calling it here
+        # to ensure that its not handled via the interchange
+        # protocol support below.
+        df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
+        return convert_pandas_df_to_arrow_bytes(df)
+
     # Fallback: try to convert to pandas DataFrame
-    # and then to Arrow bytes
+    # and then to Arrow bytes.
     df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
     return convert_pandas_df_to_arrow_bytes(df)
 
@@ -475,7 +627,9 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     if obj is None:
         return []  # type: ignore
 
-    if isinstance(obj, (str, list, tuple, set, range, EnumMeta)):
+    if isinstance(
+        obj, (str, list, tuple, set, range, EnumMeta, deque, map)
+    ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
@@ -569,8 +723,7 @@ def _maybe_truncate_table(
                 # we just display the exact numbers.
                 displayed_rows = str(table.num_rows)
                 total_rows = str(table.num_rows + truncated_rows)
-
-            st.caption(
+            _show_data_information(
                 f"⚠️ Showing {displayed_rows} out of {total_rows} "
                 "rows due to data size limitations."
             )
@@ -579,7 +732,8 @@ def _maybe_truncate_table(
 
 
 def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
-    """Return True if the column type is known to cause issues during Arrow conversion."""
+    """Return True if the column type is known to cause issues during
+    Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind in [
@@ -610,7 +764,8 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         ]:
             return True
         elif inferred_type == "mixed":
-            # This includes most of the more complex/custom types (objects, dicts, lists, ...)
+            # This includes most of the more complex/custom types (objects, dicts,
+            # lists, ...)
             if len(column) == 0 or not hasattr(column, "iloc"):
                 # The column seems to be invalid, so we assume it is incompatible.
                 # But this would most likely never happen since empty columns
@@ -622,7 +777,8 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
 
             if (
                 not is_list_like(first_value)
-                # dicts are list-like, but have issues in Arrow JS (see comments in Quiver.ts)
+                # dicts are list-like, but have issues in Arrow JS (see comments in
+                # Quiver.ts)
                 or is_dict_like(first_value)
                 # Frozensets are list-like, but are not compatible with pyarrow.
                 or isinstance(first_value, frozenset)
@@ -684,15 +840,6 @@ def fix_arrow_incompatible_column_types(
     return df_copy if df_copy is not None else df
 
 
-def _is_list_of_scalars(data: Iterable[Any]) -> bool:
-    """Check if the list only contains scalar values."""
-    from pandas.api.types import infer_dtype
-
-    # Overview on all value that are interpreted as scalar:
-    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
-    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
-
-
 def determine_data_format(input_data: Any) -> DataFormat:
     """Determine the data format of the input data.
 
@@ -706,6 +853,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
+    import array
+
     import numpy as np
     import pandas as pd
     import pyarrow as pa
@@ -722,26 +871,43 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.NUMPY_MATRIX
     elif isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
+    elif isinstance(input_data, pa.Array):
+        return DataFormat.PYARROW_ARRAY
     elif isinstance(input_data, pd.Series):
         return DataFormat.PANDAS_SERIES
     elif isinstance(input_data, pd.Index):
         return DataFormat.PANDAS_INDEX
     elif is_pandas_styler(input_data):
         return DataFormat.PANDAS_STYLER
-    elif is_snowpark_data_object(input_data):
-        return DataFormat.SNOWPARK_OBJECT
+    elif isinstance(input_data, pd.api.extensions.ExtensionArray):
+        return DataFormat.PANDAS_ARRAY
     elif is_modin_data_object(input_data):
         return DataFormat.MODIN_OBJECT
     elif is_snowpandas_data_object(input_data):
         return DataFormat.SNOWPANDAS_OBJECT
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
-    elif isinstance(input_data, (list, tuple, set)):
+    elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
+        return DataFormat.SNOWPARK_OBJECT
+    elif isinstance(
+        input_data, (range, EnumMeta, KeysView, ValuesView, deque, map, array.ArrayType)
+    ):
+        return DataFormat.LIST_OF_VALUES
+    elif (
+        isinstance(input_data, (ChainMap, MappingProxyType, UserDict))
+        or is_dataclass_instance(input_data)
+        or is_namedtuple(input_data)
+        or is_custom_dict(input_data)
+    ):
+        return DataFormat.KEY_VALUE_DICT
+    elif isinstance(input_data, (ItemsView, enumerate)):
+        return DataFormat.LIST_OF_ROWS
+    elif isinstance(input_data, (list, tuple, set, frozenset)):
         if _is_list_of_scalars(input_data):
             # -> one-dimensional data structure
             if isinstance(input_data, tuple):
                 return DataFormat.TUPLE_OF_VALUES
-            if isinstance(input_data, set):
+            if isinstance(input_data, (set, frozenset)):
                 return DataFormat.SET_OF_VALUES
             return DataFormat.LIST_OF_VALUES
         else:
@@ -751,23 +917,23 @@ def determine_data_format(input_data: Any) -> DataFormat:
             first_element = next(iter(input_data))
             if isinstance(first_element, dict):
                 return DataFormat.LIST_OF_RECORDS
-            if isinstance(first_element, (list, tuple, set)):
+            if isinstance(first_element, (list, tuple, set, frozenset)):
                 return DataFormat.LIST_OF_ROWS
     elif isinstance(input_data, dict):
         if not input_data:
             return DataFormat.KEY_VALUE_DICT
         if len(input_data) > 0:
             first_value = next(iter(input_data.values()))
+            # In the future, we could potentially also support tight & split formats
             if isinstance(first_value, dict):
                 return DataFormat.COLUMN_INDEX_MAPPING
             if isinstance(first_value, (list, tuple)):
                 return DataFormat.COLUMN_VALUE_MAPPING
             if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
-            # In the future, we could potentially also support the tight & split formats here
-            if _is_list_of_scalars(input_data.values()):
-                # Only use the key-value dict format if the values are only scalar values
-                return DataFormat.KEY_VALUE_DICT
+            # Use key-value dict as fallback. However, if the values of the dict
+            # contains mixed types, it will become non-editable in the frontend.
+            return DataFormat.KEY_VALUE_DICT
     return DataFormat.UNKNOWN
 
 
@@ -783,12 +949,30 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     return df.fillna(np.nan).replace([np.nan], [None])
 
 
+def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
+    """Convert a Pandas DataFrame to a Pandas Series by selecting the first column.
+
+    Raises
+    ------
+    ValueError
+        If the DataFrame has more than one column.
+    """
+    # Select first column in dataframe and create a new series based on the values
+    if len(df.columns) != 1:
+        raise ValueError(
+            "DataFrame is expected to have a single column but "
+            f"has {len(df.columns)}."
+        )
+    return df[df.columns[0]]
+
+
 def convert_pandas_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> (
     DataFrame
     | Series[Any]
     | pa.Table
+    | pa.Array
     | np.ndarray[Any, np.dtype[Any]]
     | tuple[Any]
     | list[Any]
@@ -818,6 +1002,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.PYSPARK_OBJECT,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
+        DataFormat.PANDAS_ARRAY,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
     ]:
@@ -838,13 +1023,12 @@ def convert_pandas_df_to_data_format(
         import pyarrow as pa
 
         return pa.Table.from_pandas(df)
+    elif data_format == DataFormat.PYARROW_ARRAY:
+        import pyarrow as pa
+
+        return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
-        # Select first column in dataframe and create a new series based on the values
-        if len(df.columns) != 1:
-            raise ValueError(
-                f"DataFrame is expected to have a single column but has {len(df.columns)}."
-            )
-        return df[df.columns[0]]
+        return _pandas_df_to_series(df)
     elif data_format == DataFormat.LIST_OF_RECORDS:
         return _unify_missing_values(df).to_dict(orient="records")
     elif data_format == DataFormat.LIST_OF_ROWS:
@@ -868,7 +1052,8 @@ def convert_pandas_df_to_data_format(
             return_list = df[df.columns[0]].tolist()
         elif len(df.columns) >= 1:
             raise ValueError(
-                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+                "DataFrame is expected to have a single column but "
+                f"has {len(df.columns)}."
             )
         if data_format == DataFormat.TUPLE_OF_VALUES:
             return tuple(return_list)
