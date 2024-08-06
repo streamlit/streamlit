@@ -46,7 +46,6 @@ runs:
         sudo unzip -o protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local 'include/*'
         sudo ln -s /usr/local/bin/protoc /usr/bin/protoc
         echo "/usr/local/bin" >> $GITHUB_PATH
-        echo "/usr/bin" >> $GITHUB_PATH
         # Print out your System's protoc version:
         protoc --version
       shell: bash
@@ -85,6 +84,10 @@ runs:
         pip install --upgrade pip
         pip install uv
         make python-init
+        deactivate
+      shell: bash
+    - name: Activate virtualenv
+      run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
       shell: bash
     - name: Show environment info
       run: |
@@ -95,5 +98,7 @@ runs:
         python -m pip list
       shell: bash
     - name: Generate Protobufs
-      run: make protobuf
+      run: |
+        source venv/bin/activate
+        make protobuf
       shell: bash
