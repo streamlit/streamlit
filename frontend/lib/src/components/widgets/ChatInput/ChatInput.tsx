@@ -260,47 +260,41 @@ function ChatInput({
     // filesRef.current = [...filesRef.current, ...filesToAdd]
   }
 
-  const updateFile = (id: number, fileInfo: UploadFileInfo) => {
-    setFiles(files => files.map(f => (f.id === id ? fileInfo : f)))
+  const updateFile = (
+    id: number,
+    fileInfo: UploadFileInfo,
+    currentFiles: UploadFileInfo[]
+  ) => {
+    return currentFiles.map(f => (f.id === id ? fileInfo : f))
   }
 
   const getFile = (
-    localFileId: number
-  ): Promise<UploadFileInfo | undefined> => {
-    return new Promise((resolve, reject) => {
-      setFiles(files => {
-        const file = files.find(f => f.id === localFileId)
-        resolve(file)
+    localFileId: number,
+    currentFiles: UploadFileInfo[]
+  ): UploadFileInfo | undefined => {
+    return currentFiles.find(f => f.id === localFileId)
+  }
+
+  const deleteFile = (fileId: number): void => {
+    setFiles(files => {
+      const file = getFile(fileId, files)
+      if (file == null) {
         return files
-      })
+      }
+
+      if (file.status.type === "uploading") {
+        // The file hasn't been uploaded. Let's cancel the request.
+        // However, it may have been received by the server so we'll still
+        // send out a request to delete.
+        file.status.cancelToken.cancel()
+      }
+
+      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+        uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
+      }
+
+      return files.filter(file => file.id !== fileId)
     })
-    // return filesRef.current.find(f => f.id === localFileId)
-  }
-
-  const removeFile = (idToRemove: number): void => {
-    // filesRef.current = filesRef.current.filter(file => file.id !== idToRemove)
-    setFiles(files => files.filter(file => file.id !== idToRemove))
-    // setRenderTrigger(renderTrigger + 1)
-  }
-
-  const deleteFile = async (fileId: number): Promise<void> => {
-    const file = await getFile(fileId)
-    if (file == null) {
-      return
-    }
-
-    if (file.status.type === "uploading") {
-      // The file hasn't been uploaded. Let's cancel the request.
-      // However, it may have been received by the server so we'll still
-      // send out a request to delete.
-      file.status.cancelToken.cancel()
-    }
-
-    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
-      uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
-    }
-
-    removeFile(fileId)
   }
 
   const createChatInputWidgetFilesValue = (): FileUploaderStateProto => {
@@ -331,57 +325,60 @@ function ChatInput({
     uploadFile: createUploadFileHandler({
       getNextLocalFileId,
       addFiles,
-      updateFile,
+      updateFile: (id, fileInfo) => {
+        setFiles(files => updateFile(id, fileInfo, files))
+      },
       uploadClient,
       element,
-      onUploadProgress: async (e, fileId) => {
-        console.log("PROGRESSSS....")
-        const file = await getFile(fileId)
-        console.log("THE FILE: ", file)
-        if (file == null || file.status.type !== "uploading") {
-          return
-        }
+      onUploadProgress: (e, fileId) => {
+        setFiles(files => {
+          console.log("PROGRESSSS....")
+          const file = getFile(fileId, files)
+          console.log("THE FILE: ", file)
 
-        const newProgress = Math.round((e.loaded * 100) / e.total)
-        if (file.status.progress === newProgress) {
-          return
-        }
+          if (file == null || file.status.type !== "uploading") {
+            return files
+          }
+          const newProgress = Math.round((e.loaded * 100) / e.total)
+          if (file.status.progress === newProgress) {
+            return files
+          }
 
-        // Update file.progress
-        updateFile(
-          fileId,
-          file.setStatus({
-            type: "uploading",
-            cancelToken: file.status.cancelToken,
-            progress: newProgress,
-          })
-        )
+          return updateFile(
+            fileId,
+            file.setStatus({
+              type: "uploading",
+              cancelToken: file.status.cancelToken,
+              progress: newProgress,
+            }),
+            files
+          )
+        })
       },
-      onUploadComplete: async (id, fileUrls) => {
-        console.log("IN ON UPLOAD COMPLETE....")
-        console.log("ID: ", id)
-        console.log("FILE URL: ", fileUrls)
+      onUploadComplete: (id, fileUrls) => {
+        setFiles(files => {
+          console.log("IN ON UPLOAD COMPLETE....")
+          console.log("ID: ", id)
+          console.log("FILE URL: ", fileUrls)
 
-        const curFile = await getFile(id)
-        if (curFile == null || curFile.status.type !== "uploading") {
-          // The file may have been canceled right before the upload
-          // completed. In this case, we just bail.
-          console.log("JUST BEFORE BAD RETURN :( ")
-          return
-        }
+          const curFile = getFile(id, files)
+          if (curFile == null || curFile.status.type !== "uploading") {
+            // The file may have been canceled right before the upload
+            // completed. In this case, we just bail.
+            console.log("JUST BEFORE BAD RETURN :( ")
+            return files
+          }
 
-        updateFile(
-          curFile.id,
-          curFile.setStatus({
-            type: "uploaded",
-            fileId: fileUrls.fileId as string,
-            fileUrls,
-          })
-        )
-
-        console.log("COMPLETE....")
-        console.log("AAAA")
-        console.log(files)
+          return updateFile(
+            curFile.id,
+            curFile.setStatus({
+              type: "uploaded",
+              fileId: fileUrls.fileId as string,
+              fileUrls,
+            }),
+            files
+          )
+        })
       },
     }),
     addFiles,
