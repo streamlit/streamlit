@@ -20,6 +20,7 @@ import React, { PureComponent, ReactElement } from "react"
 
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
+
 import {
   AppRoot,
   ComponentRegistry,

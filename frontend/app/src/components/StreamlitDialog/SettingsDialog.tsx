@@ -32,7 +32,6 @@ import {
   ThemeConfig,
   UISelectbox,
 } from "@streamlit/lib"
-
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {

@@ -20,6 +20,7 @@ import { Check } from "@emotion-icons/material-outlined"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
+
 import {
   BaseButton,
   BaseButtonKind,

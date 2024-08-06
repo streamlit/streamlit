@@ -16,13 +16,13 @@
 
 import React, { PureComponent, ReactNode } from "react"
 
-import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
+import { HotKeys } from "react-hotkeys"
+import { CSSTransition } from "react-transition-group"
+import { SignalConnection } from "typed-signals"
+
 import {
   BaseButton,
   BaseButtonKind,
@@ -35,10 +35,10 @@ import {
   Timer,
   Tooltip,
 } from "@streamlit/lib"
-import { HotKeys } from "react-hotkeys"
-import { CSSTransition } from "react-transition-group"
-import { SignalConnection } from "typed-signals"
-
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 /*
