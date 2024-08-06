@@ -240,7 +240,7 @@ class DataEditorUtilTest(unittest.TestCase):
             {"col1": 11, "col2": "bar", "col3": True},
         ]
 
-        edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+        edited_rows: dict[int, dict[str, str | int | float | bool | None]] = {
             1: {
                 "col1": 123,
             }

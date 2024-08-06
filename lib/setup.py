@@ -35,8 +35,9 @@ INSTALL_REQUIRES = [
     "click>=7.0, <9",
     "numpy>=1.20, <3",
     "packaging>=20, <25",
-    # Lowest version with available wheel for 3.7 + amd64 + linux
-    "pandas>=1.3.0, <3",
+    # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
+    # the index dtype.
+    "pandas>=1.4.0, <3",
     "pillow>=7.1.0, <11",
     # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
     "protobuf>=3.20, <6",
