@@ -48,7 +48,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
+from tests.streamlit.data_mocks import SHARED_TEST_CASES, CaseMetadata
 
 
 def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
@@ -410,10 +410,16 @@ class DataEditorTest(DeltaGeneratorTestCase):
     @parameterized.expand(SHARED_TEST_CASES)
     def test_with_compatible_data(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that it can be called with compatible data."""
+        if metadata.expected_data_format == DataFormat.UNKNOWN:
+            # We can skip formats where the expected format is unknown
+            # since these cases are not expected to work.
+            return
+
         return_data = st.data_editor(input_data)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
@@ -421,25 +427,22 @@ class DataEditorTest(DeltaGeneratorTestCase):
         self.assertEqual(reconstructed_df.shape[0], metadata.expected_rows)
         self.assertEqual(reconstructed_df.shape[1], metadata.expected_cols)
 
-        # Some data formats are converted to DataFrames instead of
-        # the original data type/structure.
-        if metadata.expected_data_format in [
-            DataFormat.EMPTY,
-            DataFormat.MODIN_OBJECT,
-            DataFormat.PANDAS_INDEX,
-            DataFormat.PANDAS_STYLER,
-            DataFormat.PYSPARK_OBJECT,
-            DataFormat.SNOWPANDAS_OBJECT,
-            DataFormat.SNOWPARK_OBJECT,
-        ]:
-            assert isinstance(return_data, pd.DataFrame)
+        self.assertEqual(
+            type(return_data),
+            type(input_data)
+            if metadata.expected_type is None
+            else metadata.expected_type,
+        )
+
+        if isinstance(return_data, pd.DataFrame):
             self.assertEqual(return_data.shape[0], metadata.expected_rows)
             self.assertEqual(return_data.shape[1], metadata.expected_cols)
-        else:
-            self.assertEqual(type(return_data), type(input_data))
+        elif (
             # Sets in python are unordered, so we can't compare them this way.
-            if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
-                self.assertEqual(str(return_data), str(input_data))
+            metadata.expected_data_format != DataFormat.SET_OF_VALUES
+            and metadata.expected_type is None
+        ):
+            self.assertEqual(str(return_data), str(input_data))
 
     @parameterized.expand(
         [
@@ -454,6 +457,26 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that it raises an exception when called with invalid data."""
         with self.assertRaises(StreamlitAPIException):
             st.data_editor(input_data)
+
+    def test_disables_columns_when_incompatible(self):
+        """Test that Arrow incompatible columns are disabled (configured as non-editable)."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+                "c": pd.Series([1, "foo"]),  # Incompatible
+                "d": pd.Series([1 + 2j, 3 + 4j]),  # Incompatible
+            }
+        )
+        st.data_editor(data_df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        columns_config = json.loads(proto.columns)
+
+        self.assertNotIn("a", columns_config)
+        self.assertNotIn("b", columns_config)
+        self.assertTrue(columns_config["c"]["disabled"])
+        self.assertTrue(columns_config["d"]["disabled"])
 
     @parameterized.expand(
         [

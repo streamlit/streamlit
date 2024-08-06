@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import moment, { Moment } from "moment"
+import moment, { Moment } from "moment-timezone"
 import timezoneMock from "timezone-mock"
 
 import {

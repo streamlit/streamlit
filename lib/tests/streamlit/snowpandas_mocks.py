@@ -41,7 +41,11 @@ class DataFrame:
 
     def head(self, n: int) -> DataFrame:
         """Returns the top n element of a mock version of Snowpark Pandas DataFrame"""
-        return DataFrame(self._data.head(n))
+        return DataFrame(self[:n])
+
+    def __getitem__(self, key: slice | int) -> DataFrame:
+        # Allow slicing and integer indexing
+        return DataFrame(self._data[key])
 
 
 class Series:
@@ -65,4 +69,8 @@ class Series:
 
     def head(self, n: int) -> Series:
         """Returns the top n element of a mock version of Snowpark Pandas Series"""
-        return Series(self._data.head(n))
+        return Series(self[:n])
+
+    def __getitem__(self, key: slice | int) -> Series:
+        # Allow slicing and integer indexing
+        return Series(self._data[key])
