@@ -35,4 +35,4 @@ runs:
       env:
         GITHUB_CONTEXT: ${{ toJson(github) }}
         GITHUB_INPUTS: ${{ toJson(inputs) }}
-      shell: bash --login -eo pipefail {0}
+      shell: bash
