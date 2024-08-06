@@ -47,7 +47,6 @@ from streamlit.elements.widgets.data_editor import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import is_pandas_version_less_than
-
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, CaseMetadata
 
