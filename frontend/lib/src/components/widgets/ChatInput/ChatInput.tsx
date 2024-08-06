@@ -264,6 +264,14 @@ function ChatInput({
     // filesRef.current = [...filesRef.current, ...filesToAdd]
   }
 
+  const isDirty = (value: string, files: UploadFileInfo[]): boolean => {
+    // TODO [kajarnec] add explanatory comment here.
+    if (files.some(f => f.status.type === "uploading")) {
+      return false
+    }
+    return value !== "" || files.length > 0
+  }
+
   const updateFile = (
     id: number,
     fileInfo: UploadFileInfo,
@@ -324,7 +332,7 @@ function ChatInput({
   }
 
   const dropHandler = createDropHandler({
-    acceptMultipleFiles: false,
+    acceptMultipleFiles: true,
     uploadClient: uploadClient,
     uploadFile: createUploadFileHandler({
       getNextLocalFileId,
@@ -393,7 +401,7 @@ function ChatInput({
   })
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
-    multiple: false,
+    multiple: true,
   })
 
   const getScrollHeight = (): number => {
@@ -418,7 +426,7 @@ function ChatInput({
       chatInputRef.current.focus()
     }
 
-    if (!value) {
+    if (!dirty || disabled) {
       return
     }
 
@@ -459,7 +467,7 @@ function ChatInput({
       return
     }
 
-    setDirty(value !== "")
+    setDirty(isDirty(value, files))
     setValue(value)
     setScrollHeight(getScrollHeight())
   }
@@ -470,9 +478,13 @@ function ChatInput({
       element.setValue = false
       const val = element.value || ""
       setValue(val)
-      setDirty(val !== "")
+      setDirty(isDirty(val, files))
     }
   }, [element])
+
+  useEffect(() => {
+    setDirty(isDirty(value, files))
+  }, [files])
 
   useEffect(() => {
     if (chatInputRef.current) {
