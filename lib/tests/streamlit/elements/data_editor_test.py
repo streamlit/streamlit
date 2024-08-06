@@ -277,9 +277,9 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         ).set_index("A")
 
-        deleted_rows: List[int] = [4]
-        added_rows: List[Dict[str, Any]] = [{"_index": 5, "B": 123}]
-        edited_rows = {}
+        deleted_rows: list[int] = [4]
+        added_rows: list[dict[str, Any]] = [{"_index": 5, "B": 123}]
+        edited_rows: dict[int, Any] = {}
 
         _apply_dataframe_edits(
             df,
