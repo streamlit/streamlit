@@ -30,6 +30,7 @@ import StreamlitMarkdown, {
   createAnchorFromText,
   CustomCodeTag,
   CustomCodeTagProps,
+  CustomPreTag,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
 
@@ -474,6 +475,22 @@ describe("CustomCodeTag Element", () => {
         "import streamlit as st\n\n" +
         'st.write("Hello")\n' +
         "</code></div>"
+    )
+  })
+})
+
+describe("CustomPreTag", () => {
+  it("should render without crashing", () => {
+    const props = getCustomCodeTagProps()
+    render(<CustomPreTag {...props} />)
+
+    const preTag = screen.getByTestId("stMarkdownPre")
+    const tagName = preTag.nodeName.toLowerCase()
+
+    expect(preTag).toBeInTheDocument()
+    expect(tagName).toBe("div")
+    expect(preTag).toHaveTextContent(
+      'import streamlit as st st.write("Hello")'
     )
   })
 })
