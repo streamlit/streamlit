@@ -71,7 +71,7 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
 
 EXTRA_REQUIRES = {
     "snowflake": [
-        "snowflake-snowpark-python>=0.9.0; python_version<'3.12'",
+        "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=2.8.0; python_version<'3.12'",
     ]
 }
