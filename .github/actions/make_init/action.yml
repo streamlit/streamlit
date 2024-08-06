@@ -80,12 +80,13 @@ runs:
       name: Create Virtual Env
       run: |
         python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
         pip install uv
-        uv venv
-        source .venv/bin/activate
-        echo "VIRTUAL_ENV=.venv" >> $GITHUB_ENV
-        echo "$PWD/.venv/bin" >> $GITHUB_PATH
         make python-init
+      shell: bash
+    - name: Activate virtualenv
+      run: echo "${{ github.workspace }}/venv/bin" >> $GITHUB_PATH
       shell: bash
     - name: Show environment info
       run: |
