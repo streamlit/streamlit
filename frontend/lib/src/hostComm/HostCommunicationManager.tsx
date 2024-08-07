@@ -31,10 +31,10 @@ import {
 
 export const HOST_COMM_VERSION = 1
 
-// Add typing for window.ReactLoad
+// Add typing for window.streamlitReactLoad
 declare global {
   interface Window {
-    ReactLoad: Date
+    streamlitReactLoad: Date
   }
 }
 
@@ -99,7 +99,7 @@ export default class HostCommunicationManager {
     window.addEventListener("message", this.receiveHostMessage)
     this.sendMessageToHost({
       type: "GUEST_READY",
-      streamlitExecutionStartedAt: window.ReactLoad,
+      streamlitExecutionStartedAt: window.streamlitReactLoad,
       guestReadyAt: new Date(),
     })
   }
