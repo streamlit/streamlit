@@ -132,8 +132,7 @@ export type IHostToGuestMessage = {
 export type IGuestToHostMessage =
   | {
       type: "GUEST_READY"
-      stHtmlLoad: Date
-      stExecutionStart: Date
+      streamlitExecutionStartedAt: Date
       guestReadyAt: Date
     }
   | {

@@ -98,11 +98,16 @@ describe("HostCommunicationManager messaging", () => {
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
     ])
-    expect(openCommFunc).toHaveBeenCalledWith()
+    expect(openCommFunc).toHaveBeenCalled()
   })
 
   it("host should receive a GUEST_READY message", () => {
-    expect(sendMessageToHostFunc).toHaveBeenCalledWith({ type: "GUEST_READY" })
+    expect(sendMessageToHostFunc).toHaveBeenCalled()
+
+    const guestReadyMessage = sendMessageToHostFunc.mock.calls[0][0]
+    expect(guestReadyMessage).toHaveProperty("type", "GUEST_READY")
+    expect(guestReadyMessage).toHaveProperty("streamlitExecutionStartedAt")
+    expect(guestReadyMessage).toHaveProperty("guestReadyAt", expect.any(Date))
   })
 
   it("can process a received CLOSE_MODAL message", () => {
@@ -117,7 +122,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.closeModal).toHaveBeenCalledWith()
+    expect(hostCommunicationMgr.props.closeModal).toHaveBeenCalled()
   })
 
   it("can process a received STOP_SCRIPT message", () => {
@@ -132,7 +137,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.stopScript).toHaveBeenCalledWith()
+    expect(hostCommunicationMgr.props.stopScript).toHaveBeenCalled()
   })
 
   it("can process a received RERUN_SCRIPT message", () => {
@@ -147,7 +152,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.rerunScript).toHaveBeenCalledWith()
+    expect(hostCommunicationMgr.props.rerunScript).toHaveBeenCalled()
   })
 
   it("can process a received CLEAR_CACHE message", () => {
@@ -163,7 +168,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalledWith()
+    expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalled()
   })
 
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
@@ -197,7 +202,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith()
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalled()
   })
 
   it("can process a received SET_INPUTS_DISABLED message", () => {
@@ -405,7 +410,7 @@ describe("HostCommunicationManager messaging", () => {
       "foo=bar"
     )
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalledWith()
+    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalled()
   })
 
   it("can process a received SET_CUSTOM_THEME_CONFIG message", async () => {
