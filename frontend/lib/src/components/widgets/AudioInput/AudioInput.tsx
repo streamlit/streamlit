@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { withTheme } from "@emotion/react"
-import { useReactMediaRecorder } from "react-media-recorder"
+import { useReactMediaRecorder } from "./useReactMediaRecorder"
 import WaveSurfer from "wavesurfer.js"
 import BaseButton, {
   BaseButtonKind,
@@ -104,7 +104,6 @@ const AudioInput: React.FC<Props> = ({
         )}
       </div>
       {/* <p style={{ position: "absolute", top: 20, right: 20 }}>{status}</p> */}
-
       <div>
         <div
           style={{
