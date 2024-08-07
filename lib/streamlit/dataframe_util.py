@@ -75,6 +75,9 @@ _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Ser
 _SNOWPANDAS_INDEX_TYPE_STR: Final = (
     "snowflake.snowpark.modin.plugin.extensions.index.Index"
 )
+_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
+_POLARS_SERIES: Final = "polars.series.series.Series"
+_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
 
 V_co = TypeVar(
     "V_co",
@@ -135,6 +138,9 @@ class DataFormat(Enum):
     MODIN_OBJECT = auto()  # Modin DataFrame, Series
     SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     PANDAS_STYLER = auto()  # pandas Styler
+    POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
+    POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
+    POLARS_SERIES = auto()  # polars.series.series.Series
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -173,6 +179,9 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PYSPARK_OBJECT,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.POLARS_SERIES,
+        DataFormat.POLARS_DATAFRAME,
+        DataFormat.POLARS_LAZYFRAME,
         DataFormat.COLUMN_SERIES_MAPPING,
     ]
 
@@ -185,6 +194,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series / Index
+    - Polars LazyFrame
     - Generator functions
 
     Unevaluated means that the data is not yet in the local memory.
@@ -196,6 +206,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
+        or is_polars_lazyframe(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -241,6 +252,21 @@ def is_snowpandas_data_object(obj: object) -> bool:
         or is_type(obj, _SNOWPANDAS_SERIES_TYPE_STR)
         or is_type(obj, _SNOWPANDAS_INDEX_TYPE_STR)
     )
+
+
+def is_polars_dataframe(obj: object) -> bool:
+    """True if obj is a Polars Dataframe."""
+    return is_type(obj, _POLARS_DATAFRAME)
+
+
+def is_polars_series(obj: object) -> bool:
+    """True if obj is a Polars Series."""
+    return is_type(obj, _POLARS_SERIES)
+
+
+def is_polars_lazyframe(obj: object) -> bool:
+    """True if obj is a Polars Lazyframe."""
+    return is_type(obj, _POLARS_LAZYFRAME)
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
@@ -365,6 +391,23 @@ def convert_anything_to_pandas_df(
             if len(data.shape) == 0
             else _fix_column_naming(pd.DataFrame(data))
         )
+
+    if is_polars_dataframe(data):
+        data = data.clone() if ensure_copy else data
+        return data.to_pandas()
+
+    if is_polars_series(data):
+        data = data.clone() if ensure_copy else data
+        return data.to_pandas().to_frame()
+
+    if is_polars_lazyframe(data):
+        data = data.limit(max_unevaluated_rows).collect().to_pandas()
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `collect()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
@@ -605,6 +648,12 @@ def convert_anything_to_arrow_bytes(
         # protocol support below.
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
         return convert_pandas_df_to_arrow_bytes(df)
+
+    if is_polars_dataframe(data):
+        return convert_arrow_table_to_arrow_bytes(data.to_arrow())
+
+    if is_polars_series(data):
+        return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
@@ -886,6 +935,12 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.PANDAS_STYLER
     elif isinstance(input_data, pd.api.extensions.ExtensionArray):
         return DataFormat.PANDAS_ARRAY
+    elif is_polars_series(input_data):
+        return DataFormat.POLARS_SERIES
+    elif is_polars_dataframe(input_data):
+        return DataFormat.POLARS_DATAFRAME
+    elif is_polars_lazyframe(input_data):
+        return DataFormat.POLARS_LAZYFRAME
     elif is_modin_data_object(input_data):
         return DataFormat.MODIN_OBJECT
     elif is_snowpandas_data_object(input_data):
@@ -1034,6 +1089,17 @@ def convert_pandas_df_to_data_format(
         return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
+    elif (
+        data_format == DataFormat.POLARS_DATAFRAME
+        or data_format == DataFormat.POLARS_LAZYFRAME
+    ):
+        import polars as pl
+
+        return pl.from_pandas(df)
+    elif data_format == DataFormat.POLARS_SERIES:
+        import polars as pl
+
+        return pl.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.LIST_OF_RECORDS:
         return _unify_missing_values(df).to_dict(orient="records")
     elif data_format == DataFormat.LIST_OF_ROWS:
