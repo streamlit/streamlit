@@ -42,6 +42,7 @@ import {
 
 import {
   convertVectorToList,
+  formatDate,
   formatDecimal,
   formatDuration,
   formatFloat,
@@ -554,10 +555,9 @@ export class Quiver {
 
     const categoricalDict =
       this._data.getChildAt(dataColumnIndex)?.data[0]?.dictionary
-    if (categoricalDict) {
-      return convertVectorToList(categoricalDict)
-    }
-    return undefined
+    return notNullOrUndefined(categoricalDict)
+      ? convertVectorToList(categoricalDict)
+      : undefined
   }
 
   /** Parse types for each non-index column. */
@@ -875,7 +875,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // date
     const isDate = x instanceof Date || Number.isFinite(x)
     if (isDate && typeName === "date") {
-      return moment.utc(x as Date | number).format("YYYY-MM-DD")
+      return formatDate(x as Date | number)
     }
     // time
     if (typeof x === "bigint" && typeName === "time") {

@@ -202,9 +202,23 @@ export function formatTime(timestamp: number | bigint, field?: Field): string {
 }
 
 export function formatDate(date: number | Date, field?: Field): string {
-  // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L87
-  // 0 is DAY, 1 is MILLISECOND
-  return moment.utc(date as Date | number).format("YYYY-MM-DD")
+  const formatPattern = "YYYY-MM-DD"
+
+  if (date instanceof Date) {
+    return moment.utc(date).format(formatPattern)
+  } else if (typeof date === "number" && Number.isFinite(date)) {
+    // TODO: what is the best default?
+    const unit = field?.type?.unit ?? 1
+    // 0 is DAY, 1 is MILLISECOND
+    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L87
+    // When unit === 0, convert days to milliseconds:
+
+    const timestamp = unit === 0 ? date * 86400000 : date
+    return moment.utc(timestamp).format(formatPattern)
+  }
+
+  logWarning(`Unsupported date type: ${date}`)
+  return String(date)
 }
 
 /**
