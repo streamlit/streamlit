@@ -79,14 +79,14 @@ _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Ser
 _SNOWPANDAS_INDEX_TYPE_STR: Final = (
     "snowflake.snowpark.modin.plugin.extensions.index.Index"
 )
+_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
+_POLARS_SERIES: Final = "polars.series.series.Series"
+_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
 _DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
 _DASK_SERIES: Final = "dask.dataframe.core.Series"
 _DASK_INDEX: Final = "dask.dataframe.core.Index"
 _RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _RAY_DATASET: Final = "ray.data.dataset.Dataset"
-_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
-_POLARS_SERIES: Final = "polars.series.series.Series"
-_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
 _HUGGINGFACE_DATASET: Final = "datasets.arrow_dataset.Dataset"
 
 V_co = TypeVar(
@@ -148,14 +148,14 @@ class DataFormat(Enum):
     MODIN_OBJECT = auto()  # Modin DataFrame, Series
     SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     PANDAS_STYLER = auto()  # pandas Styler
+    POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
+    POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
+    POLARS_SERIES = auto()  # polars.series.series.Series
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
     RAY_DATASET = auto()  # ray.data.dataset.Dataset
     DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series
-    POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
-    POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
     HUGGINGFACE_DATASET = auto()  # datasets.arrow_dataset.Dataset
-    POLARS_SERIES = auto()  # polars.series.series.Series
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -194,13 +194,13 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PYSPARK_OBJECT,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.POLARS_SERIES,
+        DataFormat.POLARS_DATAFRAME,
+        DataFormat.POLARS_LAZYFRAME,
         DataFormat.XARRAY_DATASET,
         DataFormat.XARRAY_DATA_ARRAY,
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
-        DataFormat.POLARS_SERIES,
-        DataFormat.POLARS_DATAFRAME,
-        DataFormat.POLARS_LAZYFRAME,
         DataFormat.HUGGINGFACE_DATASET,
         DataFormat.COLUMN_SERIES_MAPPING,
     ]

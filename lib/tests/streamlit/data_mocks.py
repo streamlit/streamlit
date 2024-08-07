@@ -948,7 +948,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     ),
 ]
 
-
 ###################################
 ########### Polars Types ##########
 ###################################
