@@ -145,7 +145,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
 
   typeName = typeName.toLowerCase().trim()
   // Match based on arrow types
-  if (["unicode", "empty"].includes(typeName)) {
+  if (["unicode", "empty", "large_string[pyarrow]"].includes(typeName)) {
     return TextColumn
   }
 

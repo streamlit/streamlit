@@ -912,3 +912,63 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
 ]
+
+###################################
+########### Polars Types ##########
+###################################
+try:
+    import polars as pl
+
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Polars DataFrame",
+                pl.DataFrame(
+                    [
+                        {"name": "st.text_area", "type": "widget"},
+                        {"name": "st.markdown", "type": "element"},
+                    ]
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.POLARS_DATAFRAME,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+            (
+                "Polars Series",
+                pl.Series(["st.number_input", "st.text_area", "st.text_input"]),
+                CaseMetadata(
+                    3,
+                    1,
+                    DataFormat.POLARS_SERIES,
+                    ["st.number_input", "st.text_area", "st.text_input"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+            (
+                "Polars LazyFrame",
+                pl.LazyFrame(
+                    {
+                        "name": ["st.text_area", "st.markdown"],
+                        "type": ["widget", "element"],
+                    }
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.POLARS_LAZYFRAME,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    True,
+                    pl.DataFrame,
+                ),
+            ),
+        ]
+    )
+except ModuleNotFoundError:
+    print("Polars not installed. Skipping Polars dataframe integration tests.")  # noqa: T201
