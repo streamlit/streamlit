@@ -326,6 +326,12 @@ describe("AppView element", () => {
       link: "www.example.com",
     })
 
+    const imageWithSize = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      imageSize: "large",
+    })
+
     const fullAppLogo = LogoProto.create({
       image:
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
@@ -362,9 +368,10 @@ describe("AppView element", () => {
       )
     })
 
-    it("default no link with image", () => {
+    it("default no link with image size medium", () => {
       render(<AppView {...getProps({ appLogo: imageOnly })} />)
       expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.5rem" })
     })
 
     it("link with image if provided", () => {
@@ -373,6 +380,11 @@ describe("AppView element", () => {
         "href",
         "www.example.com"
       )
+    })
+
+    it("renders logo - large size when specified", () => {
+      render(<AppView {...getProps({ appLogo: imageWithSize })} />)
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "2.0rem" })
     })
   })
 

@@ -301,22 +301,13 @@ describe("Sidebar Component", () => {
       )
     })
 
-    it("renders logo - default image has no link", () => {
+    it("renders logo - default image has no link & medium size", () => {
       renderSidebar({ appLogo: imageOnly })
       expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.5rem" })
     })
 
     it("renders logo - image has link if provided", () => {
-      renderSidebar({ appLogo: imageWithLink })
-      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
-        "href",
-        "www.example.com"
-      )
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
-    })
-
-    it("renders logo - medium size by default", () => {
       renderSidebar({ appLogo: imageWithLink })
       expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
         "href",
@@ -327,10 +318,6 @@ describe("Sidebar Component", () => {
 
     it("renders logo - small size when specified", () => {
       renderSidebar({ appLogo: logoWithSize })
-      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
-        "href",
-        "www.example.com"
-      )
       expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.25rem" })
     })
   })

@@ -258,6 +258,7 @@ export interface StyledLogoProps {
 }
 
 function translateLogoHeight(size: string): string {
+  // Default logo size
   let logoSize = "1.5rem"
   if (size === "small") {
     logoSize = "1.25rem"
@@ -319,6 +320,7 @@ export const StyledOpenSidebarButton = styled.div(({ theme }) => {
   return {
     zIndex: theme.zIndices.header,
     color,
+    marginTop: theme.spacing.twoXS,
 
     button: {
       "&:hover": {
