@@ -1006,7 +1006,7 @@ try:
         ]
     )
 except ModuleNotFoundError:
-    print("Polars not installed. Skipping Polars dataframe tests.")  # noqa: T201
+    print("Polars not installed. Skipping Polars dataframe integration tests.")  # noqa: T201
 
 
 ###################################
