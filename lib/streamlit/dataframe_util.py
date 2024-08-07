@@ -213,7 +213,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Snowpark DataFrame / Table
     - PySpark DataFrame
     - Modin DataFrame / Series
-    - Snowpandas DataFrame / Series
+    - Snowpandas DataFrame / Series / Index
     - Dask DataFrame / Series
     - Ray Dataset
     - Polars LazyFrame
