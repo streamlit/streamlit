@@ -165,11 +165,11 @@ export class StrategyV1 {
   }
 
   clearPageElements(
-    _elements: AppRoot,
+    elements: AppRoot,
     mainScriptHash: string,
     sidebarElements: BlockNode | undefined
   ): AppRoot {
-    return AppRoot.empty(mainScriptHash, false, sidebarElements)
+    return AppRoot.empty(mainScriptHash, false, sidebarElements, elements.logo)
   }
 }
 

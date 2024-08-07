@@ -559,7 +559,8 @@ export class AppRoot {
   public static empty(
     mainScriptHash = "",
     isInitialRender = true,
-    sidebarElements?: BlockNode | undefined
+    sidebarElements?: BlockNode | undefined,
+    logo?: Logo | null
   ): AppRoot {
     const mainNodes: AppNode[] = []
 
@@ -623,10 +624,13 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
+    // If logo exists, persist it between pages using AppRoot (only used in MPA V1's clearPageElements)
+    const appLogo = logo ? { logo, activeScriptHash: mainScriptHash } : null
+
     return new AppRoot(
       mainScriptHash,
       new BlockNode(mainScriptHash, [main, sidebar, event, bottom]),
-      null
+      appLogo
     )
   }
 
