@@ -43,6 +43,8 @@ ColumnType: TypeAlias = Literal[
     "progress",
 ]
 
+LinkTargetType: TypeAlias = Literal["_self", "_blank", "_parent", "_top"]
+
 
 class NumberColumnConfig(TypedDict):
     type: Literal["number"]
@@ -72,6 +74,7 @@ class LinkColumnConfig(TypedDict):
     max_chars: NotRequired[int | None]
     validate: NotRequired[str | None]
     display_text: NotRequired[str | None]
+    target: NotRequired[LinkTargetType | None]
 
 
 class BarChartColumnConfig(TypedDict):
@@ -484,6 +487,7 @@ def LinkColumn(
     max_chars: int | None = None,
     validate: str | None = None,
     display_text: str | None = None,
+    target: LinkTargetType | None = None,
 ) -> ColumnConfig:
     """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -541,6 +545,21 @@ def LinkColumn(
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
+    target: ``"_blank"``, ``"_parent"``, ``"_self"``, ``"_top"`` or ``None``
+        The target to open link in. Can be one of:
+
+        * ``"_blank"``	URL is loaded into a new window, or tab. This is the default
+
+        * ``"_parent"``	URL is loaded into the parent frame
+
+        * ``"_self"``	URL replaces the current page
+
+        * ``"_top"``	URL replaces any framesets that may be loaded
+
+        * ``None``      Is default value and interpreted as ``"_blank"``
+
+        For more info please read here: https://developer.mozilla.org/en-US/docs/Web/API/Window/open#target
+
 
     Examples
     --------
@@ -599,6 +618,7 @@ def LinkColumn(
             max_chars=max_chars,
             validate=validate,
             display_text=display_text,
+            target=target,
         ),
     )
 

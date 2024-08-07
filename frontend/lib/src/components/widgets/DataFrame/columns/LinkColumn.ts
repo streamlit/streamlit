@@ -33,6 +33,8 @@ export interface LinkColumnParams {
   readonly validate?: string
   // a value to display in the link cell. Can be a regex to parse out a specific substring of the url to be displayed
   readonly display_text?: string
+  // A target to open link in (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#target)
+  readonly target?: "_self" | "_blank" | "_parent" | "_top"
 }
 
 /**
@@ -162,7 +164,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         onClickUri: a => {
           window.open(
             href.startsWith("www.") ? `https://${href}` : href,
-            "_blank",
+            parameters.target ?? "_blank",
             "noopener,noreferrer"
           )
           a.preventDefault()
