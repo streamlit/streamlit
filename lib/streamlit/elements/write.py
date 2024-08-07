@@ -165,7 +165,7 @@ class WriteMixin:
             if type_util.is_openai_chunk(chunk):
                 # Try to convert OpenAI chat completion chunk to a string:
                 try:
-                    if len(chunk.choices) == 0:
+                    if len(chunk.choices) == 0 or chunk.choices[0].delta is None:
                         # The choices list can be empty. E.g. when using the
                         # AzureOpenAI client, the first chunk will always be empty.
                         chunk = ""
