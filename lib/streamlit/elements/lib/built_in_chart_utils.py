@@ -641,14 +641,10 @@ def _parse_y_columns(
     elif isinstance(y_from_user, str):
         y_column_list = [y_from_user]
 
-    elif type_util.is_sequence(y_from_user):
-        y_column_list = [str(col) for col in y_from_user]
-
     else:
-        raise StreamlitAPIException(
-            "y parameter should be a column name (str) or list thereof. "
-            f"Value given: {y_from_user} (type {type(y_from_user)})"
-        )
+        y_column_list = [
+            str(col) for col in dataframe_util.convert_anything_to_sequence(y_from_user)
+        ]
 
     for col in y_column_list:
         if col not in df.columns:

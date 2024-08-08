@@ -21,7 +21,7 @@ import dataclasses
 import inspect
 import math
 import re
-from collections import ChainMap, UserDict, deque
+from collections import ChainMap, UserDict, UserList, deque
 from collections.abc import ItemsView, Mapping
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
@@ -504,7 +504,7 @@ def convert_anything_to_pandas_df(
         return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
 
     # Support for some list like objects
-    if isinstance(data, (deque, map, array.ArrayType)):
+    if isinstance(data, (deque, map, array.ArrayType, UserList)):
         return _fix_column_naming(pd.DataFrame(list(data)))
 
     # Support for Streamlit's custom dict-like objects
@@ -988,7 +988,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
     elif (
-        isinstance(input_data, (ChainMap, MappingProxyType, UserDict))
+        isinstance(
+            input_data,
+            (ChainMap, UserDict, MappingProxyType),
+        )
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
@@ -1013,7 +1016,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.LIST_OF_RECORDS
             if isinstance(first_element, (list, tuple, set, frozenset)):
                 return DataFormat.LIST_OF_ROWS
-    elif isinstance(input_data, dict):
+    elif isinstance(input_data, (dict, Mapping)):
         if not input_data:
             return DataFormat.KEY_VALUE_DICT
         if len(input_data) > 0:
@@ -1030,6 +1033,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
             return DataFormat.KEY_VALUE_DICT
     elif is_list_like(input_data):
         return DataFormat.LIST_OF_VALUES
+
     return DataFormat.UNKNOWN
 
 
