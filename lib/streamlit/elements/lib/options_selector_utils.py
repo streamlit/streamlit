@@ -33,7 +33,7 @@ def check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any | None
 ) -> list[int] | None:
     """Perform validation checks and return indices based on the default values."""
-    if default_values is None and None not in opt:
+    if default_values is None:
         return None
 
     if not isinstance(default_values, list):
