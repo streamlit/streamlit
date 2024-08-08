@@ -41,6 +41,7 @@ pydantic>=1.0, <2.0
 
 # Additional dataframe formats for testing:
 polars
+xarray
 
 # Required for testing the langchain integration
 langchain>=0.2.0
