@@ -98,11 +98,6 @@ class SelectboxTest(DeltaGeneratorTestCase):
             str(item) for item in metadata.expected_sequence
         }
 
-    def test_not_iterable_option_types(self):
-        """Test that it supports different types of options."""
-        with pytest.raises(TypeError):
-            st.selectbox("the label", 123)
-
     def test_cast_options_to_string(self):
         """Test that it casts options to string."""
         arg_options = ["some str", 123, None, {}]

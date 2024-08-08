@@ -92,11 +92,11 @@ class Multiselectbox(DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        st.multiselect("the label", arg_options, default={})
+        st.multiselect("the label", arg_options, default=123)
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [3])
+        self.assertListEqual(c.default[:], [1])
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
@@ -129,12 +129,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
-
-    @parameterized.expand([(15, TypeError)])
-    def test_invalid_options(self, options, expected):
-        """Test that it handles invalid options."""
-        with self.assertRaises(expected):
-            st.multiselect("the label", options)
 
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):

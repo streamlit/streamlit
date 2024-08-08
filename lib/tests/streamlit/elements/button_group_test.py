@@ -171,11 +171,11 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         ButtonGroupMixin._internal_button_group(
             st._main,
             arg_options,
-            default={},
+            default="some str",
         )
 
         c = self.get_delta_from_queue().new_element.button_group
-        self.assertListEqual(c.default[:], [3])
+        self.assertListEqual(c.default[:], [0])
         self.assertEqual(
             [option.content for option in c.options],
             proto_options,
