@@ -140,5 +140,6 @@ uv==0.2.34
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
+xarray==2024.7.0
 yarl==1.9.4
 zipp==3.19.2
