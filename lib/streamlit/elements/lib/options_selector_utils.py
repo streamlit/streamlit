@@ -17,7 +17,6 @@ from __future__ import annotations
 from typing import (
     Any,
     Sequence,
-    cast,
 )
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
@@ -25,7 +24,6 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import (
     T,
     check_python_comparable,
-    is_type,
 )
 
 
@@ -33,25 +31,11 @@ def check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any | None
 ) -> list[int] | None:
     """Perform validation checks and return indices based on the default values."""
-    if default_values is None and None not in opt:
+    if default_values is None:
         return None
 
-    if not isinstance(default_values, list):
-        # This if is done before others because calling if not x (done
-        # right below) when x is of type pd.Series() or np.array() throws a
-        # ValueError exception.
-        if is_type(default_values, "numpy.ndarray") or is_type(
-            default_values, "pandas.core.series.Series"
-        ):
-            default_values = list(cast(Sequence[Any], default_values))
-        elif (
-            isinstance(default_values, (tuple, set))
-            or default_values
-            and default_values not in opt
-        ):
-            default_values = list(default_values)
-        else:
-            default_values = [default_values]
+    default_values = convert_anything_to_sequence(default_values)
+
     for value in default_values:
         if value not in opt:
             raise StreamlitAPIException(
