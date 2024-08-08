@@ -516,6 +516,11 @@ class DataframeUtilTest(unittest.TestCase):
             )
 
     def test_verify_dask_integration(self):
+        """Integration test dask object handling.
+
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
         dask = pytest.importorskip("dask")
 
         dask_df = dask.datasets.timeseries()
