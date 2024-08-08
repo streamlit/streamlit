@@ -2,7 +2,6 @@ aiohappyeyeballs==2.3.5
 aiohttp==3.10.1
 aiosignal==1.3.1
 altair==5.3.0
-asn1crypto==1.5.1
 attrs==24.2.0
 backports.tarfile==1.2.0
 blinker==1.8.2
@@ -13,10 +12,9 @@ cffi==1.17.0
 cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
-cloudpickle==2.2.1
 contourpy==1.2.1
 coverage==7.6.1
-cryptography==42.0.8
+cryptography==43.0.0
 cycler==0.12.1
 dataclasses-json==0.6.7
 distlib==0.3.8
@@ -26,7 +24,6 @@ execnet==2.1.1
 filelock==3.15.4
 fonttools==4.53.1
 frozenlist==1.4.1
-fsspec==2024.6.1
 gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
@@ -49,7 +46,7 @@ keyring==25.3.0
 kiwisolver==1.4.5
 langchain==0.2.12
 langchain-community==0.2.11
-langchain-core==0.2.28
+langchain-core==0.2.29
 langchain-text-splitters==0.2.2
 langsmith==0.1.98
 markdown-it-py==3.0.0
@@ -57,7 +54,6 @@ MarkupSafe==2.1.5
 marshmallow==3.21.3
 matplotlib==3.9.1.post1
 mdurl==0.1.2
-modin==0.28.1
 more-itertools==10.4.0
 multidict==6.0.5
 mypy==1.6.1
@@ -68,7 +64,7 @@ nodeenv==1.9.1
 numpy==1.26.4
 orjson==3.10.6
 packaging==24.1
-pandas==2.2.1
+pandas==2.2.2
 parameterized==0.9.0
 pillow==10.4.0
 pixelmatch==0.3.0
@@ -80,7 +76,6 @@ pluggy==1.5.0
 polars==1.4.1
 pre-commit==3.8.0
 protobuf==5.27.3
-psutil==6.0.0
 pyarrow==17.0.0
 pycparser==2.22
 pydantic==1.10.17
@@ -88,8 +83,6 @@ pydeck==0.9.1
 pydot==3.0.1
 pyee==11.1.0
 Pygments==2.18.0
-PyJWT==2.9.0
-pyOpenSSL==24.2.1
 pyparsing==3.1.2
 pytest==8.1.2
 pytest-base-url==2.1.0
@@ -117,8 +110,6 @@ SecretStorage==3.3.3
 semver==2.13.0
 six==1.16.0
 smmap==5.0.1
-snowflake-connector-python==3.12.0
-snowflake-snowpark-python==1.20.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.53
 sqlalchemy2-stubs==0.0.2a38
@@ -126,7 +117,6 @@ tenacity==8.5.0
 testfixtures==8.3.0
 text-unidecode==1.3
 toml==0.10.2
-tomlkit==0.13.0
 toolz==0.12.1
 tornado==6.4.1
 twine==5.1.1
@@ -142,7 +132,7 @@ typing-inspect==0.9.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.2.33
+uv==0.2.34
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.1
