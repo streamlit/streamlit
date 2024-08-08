@@ -22,7 +22,7 @@ import inspect
 import math
 import re
 from collections import ChainMap, UserDict, deque
-from collections.abc import ItemsView, KeysView, ValuesView
+from collections.abc import ItemsView, Mapping
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
@@ -45,6 +45,7 @@ from streamlit.type_util import (
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
+    is_list_like,
     is_namedtuple,
     is_type,
 )
@@ -712,20 +713,18 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
         # Wrap basic objects into a list
         return [obj]
 
-    if isinstance(
-        obj, (deque, enumerate, ItemsView, list, map, range, set, tuple)
-    ) and not is_snowpark_row_list(obj):
-        # This also ensures that the sequence is copied to prevent
-        # potential mutations to the original object.
-        return list(obj)
-
     if isinstance(obj, EnumMeta):
         # Support for enum classes. For string enums, we return the string value
         # of the enum members. For other enums, we just return the enum member.
         return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
-    if isinstance(obj, dict):
+    if isinstance(obj, Mapping):
         return list(obj.keys())
+
+    if is_list_like(obj) and not is_snowpark_row_list(obj):
+        # This also ensures that the sequence is copied to prevent
+        # potential mutations to the original object.
+        return list(obj)
 
     # Fallback to our DataFrame conversion logic:
     try:
@@ -943,7 +942,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
-    import array
 
     import numpy as np
     import pandas as pd
@@ -989,10 +987,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATA_ARRAY
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
-    elif isinstance(
-        input_data, (range, EnumMeta, KeysView, ValuesView, deque, map, array.ArrayType)
-    ):
-        return DataFormat.LIST_OF_VALUES
     elif (
         isinstance(input_data, (ChainMap, MappingProxyType, UserDict))
         or is_dataclass_instance(input_data)
@@ -1034,6 +1028,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
             # Use key-value dict as fallback. However, if the values of the dict
             # contains mixed types, it will become non-editable in the frontend.
             return DataFormat.KEY_VALUE_DICT
+    elif is_list_like(input_data):
+        return DataFormat.LIST_OF_VALUES
     return DataFormat.UNKNOWN
 
 

@@ -19,6 +19,9 @@ from __future__ import annotations
 import dataclasses
 import re
 import types
+from collections import deque
+from collections.abc import ItemsView, KeysView, ValuesView
+from enum import EnumMeta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -318,6 +321,33 @@ def is_sequence(seq: Any) -> bool:
     except Exception:
         return False
     return True
+
+
+def is_list_like(obj: object) -> TypeGuard[Sequence[Any]]:
+    """True if input looks like a list."""
+    import array
+
+    if isinstance(obj, str):
+        return False
+
+    return isinstance(
+        obj,
+        (
+            deque,
+            enumerate,
+            ItemsView,
+            list,
+            map,
+            range,
+            set,
+            tuple,
+            KeysView,
+            ValuesView,
+            frozenset,
+            EnumMeta,
+            array.ArrayType,
+        ),
+    )
 
 
 def check_python_comparable(seq: Sequence[Any]) -> None:
