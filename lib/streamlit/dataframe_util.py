@@ -708,11 +708,16 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return []  # type: ignore
 
     if isinstance(
-        obj, (deque, enumerate, EnumMeta, ItemsView, list, map, range, set, str, tuple)
+        obj, (deque, enumerate, ItemsView, list, map, range, set, str, tuple)
     ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
+
+    if isinstance(obj, EnumMeta):
+        # Support for enum classes. For string enums, we return the string value
+        # of the enum members. For other enums, we just return the enum member.
+        return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
     if isinstance(obj, dict):
         return list(obj.keys())
