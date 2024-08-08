@@ -412,7 +412,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             1,
             DataFormat.LIST_OF_VALUES,
-            ["st.number_input", "st.text_area", "st.text_input"],
+            [StrTestEnum.NUMBER_INPUT, StrTestEnum.TEXT_AREA, StrTestEnum.TEXT_INPUT],
             "help",
             False,
             list,
