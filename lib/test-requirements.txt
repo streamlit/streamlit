@@ -46,3 +46,5 @@ xarray
 # Required for testing the langchain integration
 langchain>=0.2.0
 langchain-community>=0.2.0
+numpy>=1.22.2 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
