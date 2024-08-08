@@ -122,7 +122,7 @@ class VegaLiteState(TypedDict, total=False):
     --------
     The following two examples have equivalent definitions. Each one has a
     point and interval selection parameter include in the chart definition.
-    The point seleciton parameter is named ``"point_selection"``. The interval
+    The point selection parameter is named ``"point_selection"``. The interval
     or box selection parameter is named ``"interval_selection"``.
 
     The follow example uses ``st.altair_chart``:
