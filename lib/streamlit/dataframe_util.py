@@ -339,11 +339,6 @@ def is_ray_dataset(obj: object) -> bool:
     return is_type(obj, _RAY_DATASET) or is_type(obj, _RAY_MATERIALIZED_DATASET)
 
 
-def is_xarray_data_array(obj: object) -> bool:
-    """True if obj is a Xarray DataArray."""
-    return is_type(obj, _XARRAY_DATA_ARRAY_TYPE_STR)
-
-
 def is_dask_object(obj: object) -> bool:
     """True if obj is a Dask DataFrame or Series."""
     return (
