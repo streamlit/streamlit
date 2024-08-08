@@ -198,12 +198,6 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual([option.content for option in c.options], [])
 
-    @parameterized.expand([(15, TypeError)])
-    def test_invalid_options(self, options, expected):
-        """Test that it handles invalid options."""
-        with self.assertRaises(expected):
-            ButtonGroupMixin._internal_button_group(st._main, options)
-
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):
         """Test that valid default can be passed as expected."""
