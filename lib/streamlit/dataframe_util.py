@@ -688,21 +688,21 @@ def convert_anything_to_arrow_bytes(
 
 
 def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
-    """Try to convert different formats to an indexable Sequence.
+    """Try to convert different formats to a list.
 
     If the input is a dataframe-like object, we just select the first
-    column to iterate over. If the input cannot be converted to a sequence,
-    a TypeError is raised.
+    column to iterate over. Non sequence-like objects and scalar types,
+    will just be wrapped into a list.
 
     Parameters
     ----------
     obj : OptionSequence
-        The object to convert to a sequence.
+        The object to convert to a list.
 
     Returns
     -------
-    Sequence
-        The converted sequence.
+    list
+        The converted list.
     """
     if obj is None:
         return []  # type: ignore
