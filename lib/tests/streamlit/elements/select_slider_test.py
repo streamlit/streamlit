@@ -14,6 +14,7 @@
 
 """slider unit test."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -27,6 +28,10 @@ from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.data_mocks import (
+    SHARED_TEST_CASES,
+    CaseMetadata,
+)
 
 
 class SliderTest(DeltaGeneratorTestCase):
@@ -57,32 +62,24 @@ class SliderTest(DeltaGeneratorTestCase):
         self.assertEqual(c.disabled, True)
 
     @parameterized.expand(
-        [
-            (5, [1, 2, 3, 4, 5], [4]),  # list
-            (5, (1, 2, 3, 4, 5), [4]),  # tuple
-            (5, np.array([1, 2, 3, 4, 5]), [4]),  # numpy array
-            (5, pd.Series([1, 2, 3, 4, 5]), [4]),  # pandas series
-            (5, pd.DataFrame([1, 2, 3, 4, 5]), [4]),  # pandas dataframe
-            (
-                5,
-                pd.DataFrame(  # pandas dataframe with multiple columns
-                    {
-                        "first column": [1, 2, 3, 4, 5],
-                        "second column": [10, 20, 30, 40, 50],
-                    }
-                ),
-                [4],
-            ),
-        ]
+        SHARED_TEST_CASES,
     )
-    def test_options_types(self, value, options, default):
+    def test_option_types(self, name: str, input_data: Any, metadata: CaseMetadata):
         """Test that it supports different types of options."""
+        if len(metadata.expected_sequence) == 0:
+            # Empty option sequences are not supported
+            # in select slider -> skip the test
+            with pytest.raises(StreamlitAPIException):
+                st.select_slider("the label", input_data)
+            return
 
-        st.select_slider("the label", value=value, options=options)
+        st.select_slider("the label", input_data)
 
         c = self.get_delta_from_queue().new_element.slider
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, default)
+        assert c.label == "the label"
+        assert {str(item) for item in c.options} == {
+            str(item) for item in metadata.expected_sequence
+        }
 
     @parameterized.expand([("red", [1, 2, 3]), (("red", "green"), ["red", 2, 3])])
     def test_invalid_values(self, value, options):

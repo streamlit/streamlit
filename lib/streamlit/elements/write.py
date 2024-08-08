@@ -17,9 +17,18 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import types
-from collections import ChainMap, UserDict
+from collections import ChainMap, UserDict, UserList
 from io import StringIO
-from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Generator,
+    Iterable,
+    List,
+    cast,
+)
 
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
@@ -447,6 +456,7 @@ class WriteMixin:
                         types.MappingProxyType,
                         UserDict,
                         ChainMap,
+                        UserList,
                     ),
                 )
                 or type_util.is_custom_dict(arg)

@@ -17,7 +17,15 @@ from __future__ import annotations
 import array
 import enum
 import random
-from collections import ChainMap, Counter, OrderedDict, UserDict, defaultdict, deque
+from collections import (
+    ChainMap,
+    Counter,
+    OrderedDict,
+    UserDict,
+    UserList,
+    defaultdict,
+    deque,
+)
 from dataclasses import dataclass
 from datetime import date
 from types import MappingProxyType
@@ -53,7 +61,7 @@ class CaseMetadata(NamedTuple):
     expected_data_format: DataFormat
     # The expected sequence when the data is converted to a sequence
     # If None, the sequence is not checked.
-    expected_sequence: list[Any] | None
+    expected_sequence: list[Any]
     # The expected command used when the data is written via `st.write`
     expected_write_command: Literal[
         "markdown", "dataframe", "json", "help", "write_stream"
@@ -283,9 +291,9 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             DataFormat.LIST_OF_ROWS,
             [
-                ["st.number_input", "number"],
-                ["st.text_area", "text"],
-                ["st.text_input", "text"],
+                ("st.number_input", "number"),
+                ("st.text_area", "text"),
+                ("st.text_input", "text"),
             ],
             "markdown",
             False,
@@ -362,10 +370,23 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["number", "text", "text"],
+            ["st.number_input", "st.text_area", "st.text_input"],
             "json",
             False,
             dict,
+        ),
+    ),
+    (
+        "collections.UserList",
+        UserList(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "json",
+            False,
+            list,
         ),
     ),
     (
@@ -466,7 +487,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["widget", "element"],
+            ["st.text_area", "st.markdown"],
             "json",
             False,
             dict,
@@ -479,7 +500,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["widget", "element"],
+            ["st.text_area", "st.markdown"],
             "json",
             False,
             dict,
@@ -1045,7 +1066,7 @@ try:
                     2,
                     2,
                     DataFormat.XARRAY_DATASET,
-                    ["st.text_area", "st.markdown"],
+                    ["name", "type"],
                     "dataframe",
                     False,
                 ),
