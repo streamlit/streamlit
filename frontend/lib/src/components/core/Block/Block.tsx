@@ -16,16 +16,18 @@
 
 import React, {
   ReactElement,
+  ReactNode,
   useContext,
   useEffect,
   useMemo,
   useRef,
-  ReactNode,
 } from "react"
+
 import { useTheme } from "@emotion/react"
+
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
+import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
   getElementWidgetID,
   notNullOrUndefined,
@@ -39,20 +41,19 @@ import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 
 import {
+  assignDividerColor,
   BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
-  assignDividerColor,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
-
 import {
   StyledColumn,
   StyledHorizontalBlock,
   StyledVerticalBlock,
-  StyledVerticalBlockWrapper,
   StyledVerticalBlockBorderWrapper,
   StyledVerticalBlockBorderWrapperProps,
+  StyledVerticalBlockWrapper,
 } from "./styled-components"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {

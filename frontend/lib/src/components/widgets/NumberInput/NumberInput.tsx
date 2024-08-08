@@ -15,34 +15,36 @@
  */
 
 import React, { ReactElement } from "react"
-import { Plus, Minus } from "@emotion-icons/open-iconic"
+
+import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
+import { Input as UIInput } from "baseui/input"
+import uniqueId from "lodash/uniqueId"
 
+import {
+  isInForm,
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives/breakpoints"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { Input as UIInput } from "baseui/input"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import {
-  isInForm,
-  labelVisibilityProtoValueToEnum,
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
 
 import {
   StyledInputContainer,
@@ -50,7 +52,6 @@ import {
   StyledInputControls,
   StyledInstructionsContainer,
 } from "./styled-components"
-import uniqueId from "lodash/uniqueId"
 
 /**
  * Return a string property from an element. If the string is
@@ -59,7 +60,7 @@ import uniqueId from "lodash/uniqueId"
 function getNonEmptyString(
   value: string | null | undefined
 ): string | undefined {
-  return value == null || value === "" ? undefined : value
+  return isNullOrUndefined(value) || value === "" ? undefined : value
 }
 
 /**
@@ -110,7 +111,7 @@ export const formatValue = ({
 
   let formatString = getNonEmptyString(format)
 
-  if (formatString == null && step != null) {
+  if (isNullOrUndefined(formatString) && notNullOrUndefined(step)) {
     const strStep = step.toString()
     if (
       dataType === NumberInputProto.DataType.FLOAT &&
@@ -122,7 +123,7 @@ export const formatValue = ({
     }
   }
 
-  if (formatString == null) {
+  if (isNullOrUndefined(formatString)) {
     return value.toString()
   }
 

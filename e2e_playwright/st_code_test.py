@@ -35,6 +35,7 @@ def test_code_blocks_render_correctly(
 ):
     """Test that the code blocks render as expected via screenshot matching."""
     code_blocks = themed_app.get_by_test_id("stCodeBlock")
+    expect(code_blocks).to_have_count(11)
 
     assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
     assert_snapshot(code_blocks.nth(1), name="st_code-empty")
@@ -42,6 +43,7 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(3), name="st_code-line_numbers")
     assert_snapshot(code_blocks.nth(4), name="st_code-no_lang")
     assert_snapshot(code_blocks.nth(5), name="st_markdown-code_block")
+    assert_snapshot(code_blocks.nth(6), name="st_code-diff_lang")
 
 
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
@@ -53,5 +55,5 @@ def test_correct_bottom_spacing_for_code_blocks(app: Page):
     ).to_have_css("margin-bottom", "0px")
     # While the codeblock used inside markdown should have a bottom margin to imitate the gap:
     expect(
-        app.get_by_test_id("stExpander").nth(1).get_by_test_id("stCodeBlock").first
+        app.get_by_test_id("stExpander").nth(1).get_by_test_id("stMarkdownPre").first
     ).to_have_css("margin-bottom", "16px")

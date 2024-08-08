@@ -49,7 +49,7 @@ st.plotly_chart(
     use_container_width=True,
     theme="streamlit",
     # Also test custom toolbar modification:
-    config={"modeBarButtonsToRemove": ["zoom"]},
+    config={"modeBarButtonsToRemove": ["zoom"], "modeBarButtonsToAdd": ["drawline"]},
 )
 
 # Candlestick Chart

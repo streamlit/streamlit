@@ -533,7 +533,7 @@ class SliderMixin:
         timelike_args = (
             data_type in TIMELIKE_TYPES
             and isinstance(step, timedelta)
-            and type(min_value) == type(max_value)
+            and type(min_value) is type(max_value)
         )
 
         if not int_args and not float_args and not timelike_args:

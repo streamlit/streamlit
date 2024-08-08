@@ -15,11 +15,12 @@
  */
 
 import React, { MouseEvent, ReactElement } from "react"
+
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 import {
-  StyledSidebarNavLink,
   StyledSidebarLinkText,
+  StyledSidebarNavLink,
   StyledSidebarNavLinkContainer,
 } from "./styled-components"
 

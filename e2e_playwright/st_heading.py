@@ -56,3 +56,6 @@ for color in colors:
 for color in colors:
     st.subheader(f"{color.capitalize()} Subheader Divider:", divider=color)
     st.write(lorem_ipsum_text)
+
+# Empty subheader to test correct anchor behavior:
+st.subheader("")

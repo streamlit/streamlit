@@ -22,6 +22,10 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, overload
 
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -129,6 +133,7 @@ def _fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     additional_hash_info: str = "",
+    should_show_deprecation_warning: bool = False,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -172,6 +177,15 @@ def _fragment(
         def wrapped_fragment():
             import streamlit as st
 
+            if should_show_deprecation_warning:
+                show_deprecation_warning(
+                    make_deprecated_name_warning(
+                        "experimental_fragment",
+                        "fragment",
+                        "2025-01-01",
+                    )
+                )
+
             # NOTE: We need to call get_script_run_ctx here again and can't just use the
             # value of ctx from above captured by the closure because subsequent
             # fragment runs will generally run in a new script run, thus we'll have a
@@ -179,7 +193,7 @@ def _fragment(
             ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
-            if ctx.script_requests and ctx.script_requests.fragment_id_queue:
+            if ctx.fragment_ids_this_run:
                 # This script run is a run of one or more fragments. We restore the
                 # state of ctx.cursors and dg_stack to the snapshots we took when this
                 # fragment was declared.
@@ -462,4 +476,4 @@ def experimental_fragment(
     run_every: int | float | timedelta | str | None = None,
 ) -> Callable[[F], F] | F:
     """Deprecated alias for @st.fragment. See the docstring for the decorator's new name."""
-    return _fragment(func, run_every=run_every)
+    return _fragment(func, run_every=run_every, should_show_deprecation_warning=True)

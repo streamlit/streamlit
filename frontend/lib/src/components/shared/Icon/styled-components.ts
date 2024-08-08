@@ -20,9 +20,9 @@ import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
 
 import {
+  computeSpacingStyle,
   IconSize,
   ThemeColor,
-  computeSpacingStyle,
 } from "@streamlit/lib/src/theme"
 
 interface StyledSpinnerIconProps {

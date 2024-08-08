@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { IDeployErrorDialog } from "./types"
 
 function DetachedHead(): IDeployErrorDialog {

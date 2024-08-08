@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import enum
 import unittest
-from collections import OrderedDict
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -34,20 +33,14 @@ from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import (
     SHARED_TEST_CASES,
-    StrTestEnum,
-    TestCaseMetadata,
-    TestEnum,
+    CaseMetadata,
     TestObject,
-    data_generator,
 )
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
@@ -66,8 +59,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_convert_anything_to_pandas_df(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_anything_to_pandas_df` correctly converts
         a variety of types to a DataFrame.
@@ -78,30 +72,33 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
     @parameterized.expand(
-        [
-            (ModinDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2000))),),
-            (PysparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
-        ]
+        SHARED_TEST_CASES,
     )
-    def test_convert_anything_to_pandas_df_show_warning_for_unevaluated_df(
+    def test_unevaluated_dataframe_handling(
         self,
+        name: str,
         input_data: Any,
+        metadata: CaseMetadata,
     ):
-        """Test that `convert_anything_to_pandas_df` correctly converts
-        a variety unevaluated dataframes and shows a warning if
-        the row count is > 1000.
+        """Test that unevaluated data objects are correctly detected and
+        handled by limiting the number of rows to be displayed.
         """
-        with patch("streamlit.caption") as mock:
-            converted_df = dataframe_util.convert_anything_to_pandas_df(
-                input_data, max_unevaluated_rows=1000
-            )
-            self.assertIsInstance(converted_df, pd.DataFrame)
-            mock.assert_called_once()
+        with patch("streamlit.dataframe_util._show_data_information") as mock:
+            if metadata.is_unevaluated:
+                assert dataframe_util.is_unevaluated_data_object(input_data) is True
+                converted_df = dataframe_util.convert_anything_to_pandas_df(
+                    input_data, max_unevaluated_rows=1
+                )
+                assert isinstance(converted_df, pd.DataFrame)
+                assert converted_df.shape[0] <= 1
+                mock.assert_called_once()
+            else:
+                assert dataframe_util.is_unevaluated_data_object(input_data) is False
+                converted_df = dataframe_util.convert_anything_to_pandas_df(
+                    input_data, max_unevaluated_rows=1
+                )
+                assert converted_df.shape[0] == metadata.expected_rows
+                mock.assert_not_called()
 
     def test_convert_anything_to_pandas_df_ensure_copy(self):
         """Test that `convert_anything_to_pandas_df` creates a copy of the original
@@ -138,11 +135,13 @@ class DataframeUtilTest(unittest.TestCase):
         """
         data = {"a": 1, "b": 2}
         df = dataframe_util.convert_anything_to_pandas_df(data)
-        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
+        pd.testing.assert_frame_equal(
+            df, pd.DataFrame.from_dict(data, orient="index", columns=["value"])
+        )
 
     def test_convert_anything_to_pandas_df_converts_stylers(self):
-        """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF, without cloning the
-        data.
+        """Test that `convert_anything_to_pandas_df` correctly converts Stylers to DF,
+        without cloning the data.
         """
         original_df = pd.DataFrame(
             {
@@ -194,8 +193,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_convert_anything_to_arrow_bytes(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_anything_to_arrow_bytes` correctly converts
         a variety of types to Arrow bytes.
@@ -370,6 +370,14 @@ class DataframeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
+    def test_is_pandas_data_object(self):
+        """Test that `is_pandas_data_object` correctly detects pandas data objects."""
+        assert dataframe_util.is_pandas_data_object(pd.DataFrame()) is True
+        assert dataframe_util.is_pandas_data_object(pd.Series()) is True
+        assert dataframe_util.is_pandas_data_object(pd.Index(["a", "b"])) is True
+        assert dataframe_util.is_pandas_data_object(pd.array(["a", "b"])) is True
+        assert dataframe_util.is_pandas_data_object(["a", "b"]) is False
+
     def test_is_snowpandas_data_object(self):
         df = pd.DataFrame([1, 2, 3])
 
@@ -380,6 +388,7 @@ class DataframeUtilTest(unittest.TestCase):
             dataframe_util.is_snowpandas_data_object(SnowpandasDataFrame(df))
         )
         self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasSeries(df)))
+        self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasIndex(df)))
 
     def test_is_snowpark_row_list(self):
         class DummyClass:
@@ -415,7 +424,8 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertTrue(
             dataframe_util.is_snowpark_row_list(
                 [
-                    SnowparkRow(),
+                    SnowparkRow({"col1": 1, "col2": "foo"}),
+                    SnowparkRow({"col1": 2, "col2": "bar"}),
                 ]
             )
         )
@@ -440,22 +450,69 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
     @pytest.mark.require_snowflake
-    def test_is_snowpark_dataframe_integration(self):
+    def test_verify_snowpark_integration(self):
+        """Integration test snowpark object handling.
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
         with create_snowpark_session() as snowpark_session:
-            self.assertTrue(
-                dataframe_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1")
-                )
+            snowpark_df = snowpark_session.sql("SELECT 40+2 as COL1")
+
+            assert dataframe_util.is_snowpark_data_object(snowpark_df) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpark_df),
+                pd.DataFrame,
             )
-            self.assertTrue(
-                dataframe_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
-                )
+
+            snowpark_cached_result = snowpark_session.sql(
+                "SELECT 40+2 as COL1"
+            ).cache_result()
+            assert (
+                dataframe_util.is_snowpark_data_object(snowpark_cached_result) is True
             )
-            self.assertTrue(
-                dataframe_util.is_snowpark_row_list(
-                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
-                )
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpark_cached_result),
+                pd.DataFrame,
+            )
+
+            snowpark_row_list = snowpark_session.sql("SELECT 40+2 as COL1").collect()
+            assert dataframe_util.is_snowpark_row_list(snowpark_row_list) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpark_row_list),
+                pd.DataFrame,
+            )
+
+    @pytest.mark.require_snowflake
+    def test_verify_snowpandas_integration(self):
+        """Integration test snowpark pandas object handling.
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
+        import modin.pandas as modin_pd
+
+        # Import the Snowpark pandas plugin for modin.
+        import snowflake.snowpark.modin.plugin  # noqa: F401
+
+        with create_snowpark_session():
+            snowpandas_df = modin_pd.DataFrame([1, 2, 3], columns=["col1"])
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_df) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_df),
+                pd.DataFrame,
+            )
+
+            snowpandas_series = snowpandas_df["col1"]
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_series) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_series),
+                pd.DataFrame,
+            )
+
+            snowpandas_index = snowpandas_df.index
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_index) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_index),
+                pd.DataFrame,
             )
 
     @parameterized.expand(
@@ -463,8 +520,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_determine_data_format(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `determine_data_format` correctly determines the
         data format of a variety of data structures/types.
@@ -481,8 +539,9 @@ class DataframeUtilTest(unittest.TestCase):
     )
     def test_convert_pandas_df_to_data_format(
         self,
+        name: str,
         input_data: Any,
-        metadata: TestCaseMetadata,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_pandas_df_to_data_format` correctly converts a
         DataFrame to the specified data format.
@@ -502,32 +561,26 @@ class DataframeUtilTest(unittest.TestCase):
                 converted_df, metadata.expected_data_format
             )
 
-            # Some data formats are converted to DataFrames instead of
-            # the original data type/structure.
-            if metadata.expected_data_format in [
-                dataframe_util.DataFormat.SNOWPARK_OBJECT,
-                dataframe_util.DataFormat.PYSPARK_OBJECT,
-                dataframe_util.DataFormat.PANDAS_INDEX,
-                dataframe_util.DataFormat.PANDAS_STYLER,
-                dataframe_util.DataFormat.SNOWPANDAS_OBJECT,
-                dataframe_util.DataFormat.MODIN_OBJECT,
-                dataframe_util.DataFormat.EMPTY,
-            ]:
-                assert isinstance(converted_data, pd.DataFrame)
+            self.assertEqual(
+                type(converted_data),
+                type(input_data)
+                if metadata.expected_type is None
+                else metadata.expected_type,
+            )
+
+            if isinstance(converted_data, pd.DataFrame):
                 self.assertEqual(converted_data.shape[0], metadata.expected_rows)
                 self.assertEqual(converted_data.shape[1], metadata.expected_cols)
-            else:
-                self.assertEqual(type(converted_data), type(input_data))
+            elif (
                 # Sets in python are unordered, so we can't compare them this way.
-                if (
-                    metadata.expected_data_format
-                    != dataframe_util.DataFormat.SET_OF_VALUES
-                ):
-                    self.assertEqual(str(converted_data), str(input_data))
-                    pd.testing.assert_frame_equal(
-                        converted_df,
-                        dataframe_util.convert_anything_to_pandas_df(converted_data),
-                    )
+                metadata.expected_data_format != dataframe_util.DataFormat.SET_OF_VALUES
+                and metadata.expected_type is None
+            ):
+                self.assertEqual(str(converted_data), str(input_data))
+                pd.testing.assert_frame_equal(
+                    converted_df,
+                    dataframe_util.convert_anything_to_pandas_df(converted_data),
+                )
 
     def test_convert_pandas_df_to_data_format_with_unknown_data_format(self):
         """Test that `convert_df_to_data_format` raises a ValueError when
@@ -643,245 +696,25 @@ class DataframeUtilTest(unittest.TestCase):
         self.assertEqual(list(StrOpt), converted_list)
 
     @parameterized.expand(
-        [
-            (None, []),
-            # List:
-            ([], []),
-            (
-                ["st.number_input", "st.text_area", "st.text_input"],
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            (
-                [1, 2, 3],
-                [1, 2, 3],
-            ),
-            # Reversed list:
-            (
-                reversed(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.text_input", "st.text_area", "st.number_input"],
-            ),
-            # Set:
-            (set(), []),
-            (
-                {"st.number_input", "st.text_area", "st.text_input"},
-                ["st.text_input", "st.number_input", "st.text_area"],
-            ),
-            # Tuple:
-            ((), []),
-            (
-                ("st.number_input", "st.text_area", "st.text_input"),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dict:
-            ({}, []),
-            (
-                {
-                    "st.number_input": "number",
-                    "st.text_area": "text",
-                    "st.text_input": "text",
-                },
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dict keys:
-            (
-                {
-                    "st.number_input": "number",
-                    "st.text_area": "text",
-                    "st.text_input": "text",
-                }.keys(),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dict values:
-            (
-                {
-                    "st.number_input": "number",
-                    "st.text_area": "text",
-                    "st.text_input": "text",
-                }.values(),
-                ["number", "text", "text"],
-            ),
-            # OrderedDict:
-            (
-                OrderedDict(
-                    [
-                        ("st.number_input", "number"),
-                        ("st.text_area", "text"),
-                        ("st.text_input", "text"),
-                    ]
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Enum:
-            (
-                TestEnum,
-                [TestEnum.NUMBER_INPUT, TestEnum.TEXT_AREA, TestEnum.TEXT_INPUT],
-            ),
-            (StrTestEnum, ["st.number_input", "st.text_area", "st.text_input"]),
-            # Generator:
-            (data_generator(), ["st.number_input", "st.text_area", "st.text_input"]),
-            # String:
-            ("abc", ["a", "b", "c"]),
-            # Enumerate:
-            (
-                enumerate(["st.number_input", "st.text_area", "st.text_input"]),
-                [0, 1, 2],
-            ),
-            # Range:
-            (range(3), [0, 1, 2]),
-            # Pandas Dataframe:
-            (
-                pd.DataFrame(),
-                [],
-            ),
-            (
-                pd.DataFrame(
-                    columns=["name", "type"], index=pd.RangeIndex(start=0, step=1)
-                ),
-                [],
-            ),
-            (
-                pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Dataframe with multiple columns (widgets & types)
-            # The first column is expected to be selected as the sequence.
-            (
-                pd.DataFrame(
-                    {
-                        "widgets": ["st.number_input", "st.text_area", "st.text_input"],
-                        "types": ["number", "text", "text"],
-                    }
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Series (pd.Series):
-            (
-                pd.Series(
-                    ["st.number_input", "st.text_area", "st.text_input"], name="widgets"
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Index (pd.Index):
-            (
-                pd.Index(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Styler (pd.Styler):
-            (
-                pd.DataFrame(
-                    ["st.number_input", "st.text_area", "st.text_input"]
-                ).style,
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas Categorical (pd.Categorical):
-            (
-                pd.Categorical(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pandas DatetimeIndex (pd.DatetimeIndex):
-            (
-                pd.DatetimeIndex(
-                    ["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]
-                ),
-                [
-                    pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
-                    pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
-                ],
-            ),
-            # Pandas DatetimeArrayå:
-            (
-                pd.arrays.DatetimeArray(
-                    pd.DatetimeIndex(
-                        ["1/1/2020 10:00:00+00:00", "2/1/2020 11:00:00+00:00"]
-                    ),
-                ),
-                [
-                    pd.Timestamp("2020-01-01 10:00:00+0000", tz="UTC"),
-                    pd.Timestamp("2020-02-01 11:00:00+0000", tz="UTC"),
-                ],
-            ),
-            # Pandas RangeIndex (pd.RangeIndex):
-            (
-                pd.RangeIndex(start=0, stop=3, step=1),
-                [0, 1, 2],
-            ),
-            # Numpy array:
-            (
-                np.array([]),
-                [],
-            ),
-            (
-                np.array(["st.number_input", "st.text_area", "st.text_input"]),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pyarrow Table:
-            (
-                pa.Table.from_pandas(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark Table:
-            (
-                SnowparkTable(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark DataFrame:
-            (
-                SnowparkDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark Pandas DataFrame:
-            (
-                SnowpandasDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Snowpark Pandas Series:
-            (
-                SnowpandasSeries(
-                    pd.Series(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Pyspark Dataframe:
-            (
-                PysparkDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Modin Dataframe:
-            (
-                ModinDataFrame(
-                    pd.DataFrame(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-            # Modin Series:
-            (
-                ModinSeries(
-                    pd.Series(["st.number_input", "st.text_area", "st.text_input"])
-                ),
-                ["st.number_input", "st.text_area", "st.text_input"],
-            ),
-        ]
+        SHARED_TEST_CASES,
     )
     def test_convert_anything_to_sequence(
-        self, input_data: Any, result_sequence: list[Any]
+        self,
+        name: str,
+        input_data: Any,
+        metadata: CaseMetadata,
     ):
         """Test that `convert_anything_to_sequence` correctly converts
         a variety of types to a sequence.
         """
+        if metadata.expected_sequence is None:
+            # Skip all cases where we don't have an expected sequence.
+            return
+
         converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
         # We convert to a set for the check since some of the formats don't
         # have a guaranteed order.
-        self.assertEqual(set(converted_sequence), set(result_sequence))
+        self.assertEqual(set(converted_sequence), set(metadata.expected_sequence))
         # Check that it is a new object and not the same as the input:
         assert converted_sequence is not input_data
 

@@ -18,13 +18,13 @@ import merge from "lodash/merge"
 import mergeWith from "lodash/mergeWith"
 
 import {
-  getGray30,
-  getGray70,
-  hasLightBackgroundColor,
+  EmotionTheme,
   getCategoricalColorsArray,
   getDivergingColorsArray,
+  getGray30,
+  getGray70,
   getSequentialColorsArray,
-  EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {

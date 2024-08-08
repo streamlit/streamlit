@@ -20,25 +20,26 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
+
 import {
-  ThemeConfig,
   BaseButton,
   BaseButtonKind,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  UISelectbox,
   LibContext,
   LibContextProps,
+  Modal,
+  ModalBody,
+  ModalHeader,
+  ThemeConfig,
+  UISelectbox,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
+  StyledButtonContainer,
   StyledCheckbox,
   StyledDialogBody,
   StyledFullRow,
   StyledHeader,
-  StyledButtonContainer,
   StyledLabel,
   StyledSmall,
 } from "./styled-components"

@@ -15,13 +15,14 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
+
 import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
+import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 import { Skeleton } from "./Skeleton"
-
-import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 describe("Skeleton element", () => {
   it("renders without delay", () => {

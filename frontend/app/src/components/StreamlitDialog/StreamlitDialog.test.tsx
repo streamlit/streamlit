@@ -15,9 +15,12 @@
  */
 
 import React, { Fragment } from "react"
-import { SessionInfo, mockSessionInfo, render } from "@streamlit/lib"
-import { StreamlitDialog, DialogType } from "./StreamlitDialog"
+
 import { screen } from "@testing-library/react"
+
+import { mockSessionInfo, render, SessionInfo } from "@streamlit/lib"
+
+import { DialogType, StreamlitDialog } from "./StreamlitDialog"
 import "@testing-library/jest-dom"
 
 function flushPromises(): Promise<void> {

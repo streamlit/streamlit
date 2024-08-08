@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit.commands.execution_control import _new_fragment_id_queue
+from streamlit.commands.execution_control import _new_fragment_id_queue, rerun
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.scriptrunner import RerunData
 
 
 class NewFragmentIdQueueTest(unittest.TestCase):
@@ -27,14 +28,14 @@ class NewFragmentIdQueueTest(unittest.TestCase):
 
     def test_raises_exception_if_no_fragment_id_queue(self):
         ctx = MagicMock()
-        ctx.script_requests.fragment_id_queue = []
+        ctx.fragment_ids_this_run = []
 
         with pytest.raises(StreamlitAPIException):
             _new_fragment_id_queue(ctx, scope="fragment")
 
     def test_asserts_if_curr_id_not_in_queue(self):
         ctx = MagicMock()
-        ctx.script_requests.fragment_id_queue = ["some_fragment_id"]
+        ctx.fragment_ids_this_run = ["some_fragment_id"]
         ctx.current_fragment_id = "some_other_fragment_id"
 
         with pytest.raises(AssertionError):
@@ -42,7 +43,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
 
     def test_drops_items_in_queue_until_curr_id(self):
         ctx = MagicMock()
-        ctx.script_requests.fragment_id_queue = [
+        ctx.fragment_ids_this_run = [
             "id1",
             "id2",
             "id3",
@@ -57,3 +58,41 @@ class NewFragmentIdQueueTest(unittest.TestCase):
             "id4",
             "id5",
         ]
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_is_fragment_scoped_rerun_flag_False(patched_get_script_run_ctx):
+    ctx = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+
+    rerun(scope="app")
+
+    ctx.script_requests.request_rerun.assert_called_with(
+        RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=ctx.page_script_hash,
+            fragment_id_queue=[],
+            is_fragment_scoped_rerun=False,
+        )
+    )
+
+
+@patch(
+    "streamlit.commands.execution_control._new_fragment_id_queue",
+    MagicMock(return_value=["some_fragment_ids"]),
+)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_is_fragment_scoped_rerun_flag_True(patched_get_script_run_ctx):
+    ctx = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+
+    rerun(scope="fragment")
+
+    ctx.script_requests.request_rerun.assert_called_with(
+        RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=ctx.page_script_hash,
+            fragment_id_queue=["some_fragment_ids"],
+            is_fragment_scoped_rerun=True,
+        )
+    )

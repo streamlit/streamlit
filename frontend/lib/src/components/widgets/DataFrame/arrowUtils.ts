@@ -15,41 +15,41 @@
  */
 
 import {
-  GridCell,
   Theme as GlideTheme,
-  TextCell,
-  NumberCell,
+  GridCell,
   GridCellKind,
+  NumberCell,
+  TextCell,
   UriCell,
 } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
 
 import {
+  Type as ArrowType,
   DataFrameCell,
   Quiver,
-  Type as ArrowType,
 } from "@streamlit/lib/src/dataframes/Quiver"
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
-  ColumnCreator,
-  ObjectColumn,
   CheckboxColumn,
-  NumberColumn,
-  TextColumn,
-  SelectboxColumn,
-  ListColumn,
-  isErrorCell,
-  DateTimeColumn,
-  TimeColumn,
+  ColumnCreator,
   DateColumn,
+  DateTimeColumn,
+  isErrorCell,
+  ListColumn,
+  NumberColumn,
+  ObjectColumn,
   removeLineBreaks,
+  SelectboxColumn,
+  TextColumn,
+  TimeColumn,
 } from "./columns"
 
 /**
@@ -145,7 +145,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
 
   typeName = typeName.toLowerCase().trim()
   // Match based on arrow types
-  if (["unicode", "empty"].includes(typeName)) {
+  if (["unicode", "empty", "large_string[pyarrow]"].includes(typeName)) {
     return TextColumn
   }
 

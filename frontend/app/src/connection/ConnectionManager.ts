@@ -16,15 +16,15 @@
 import { ReactNode } from "react"
 
 import {
-  IHostConfigResponse,
+  BackMsg,
   BaseUriParts,
+  ensureError,
+  ForwardMsg,
   getPossibleBaseUris,
+  IHostConfigResponse,
   logError,
   SessionInfo,
   StreamlitEndpoints,
-  ensureError,
-  BackMsg,
-  ForwardMsg,
 } from "@streamlit/lib"
 
 import { ConnectionState } from "./ConnectionState"
