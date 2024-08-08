@@ -109,9 +109,32 @@ class DataFrameGenericAlias(Protocol[V_co]):
     def iloc(self) -> _iLocIndexer: ...
 
 
+class PandasCompatible(Protocol[V_co]):
+    """Protocol for Pandas compatible objects."""
+
+    @property
+    def to_pandas(self) -> DataFrame | Series: ...
+
+
+class ArrowCompatible(Protocol[V_co]):
+    """Protocol for DataFrame-like objects."""
+
+    @property
+    def to_arrow(self) -> pa.Table: ...
+
+
+class DataframeInterchangeCompatible(Protocol):
+    """Protocol for objects support the dataframe-interchange protocol."""
+
+    def __dataframe__(self) -> object: ...
+
+
 OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
+    PandasCompatible[V_co],
+    ArrowCompatible[V_co],
+    DataframeInterchangeCompatible[V_co],
 ]
 
 # Various data types supported by our dataframe processing
@@ -126,6 +149,9 @@ Data: TypeAlias = Union[
     "np.ndarray",
     Iterable[Any],
     Dict[Any, Any],
+    PandasCompatible,
+    ArrowCompatible,
+    DataframeInterchangeCompatible,
     None,
 ]
 
@@ -805,7 +831,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return []  # type: ignore
 
     if isinstance(
-        obj, (str, list, tuple, set, range, EnumMeta, deque, map)
+        obj, (str, list, tuple, set, range, EnumMeta, deque, map, ItemsView)
     ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
