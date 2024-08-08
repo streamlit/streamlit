@@ -708,7 +708,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return []  # type: ignore
 
     if isinstance(
-        obj, (str, list, tuple, set, range, EnumMeta, deque, map, ItemsView, enumerate)
+        obj, (deque, enumerate, EnumMeta, ItemsView, list, map, range, set, str, tuple)
     ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
