@@ -32,7 +32,6 @@ from typing import (
     Final,
     Iterable,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -687,7 +686,7 @@ def convert_anything_to_arrow_bytes(
     return convert_pandas_df_to_arrow_bytes(df)
 
 
-def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
+def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
     """Try to convert different formats to an indexable Sequence.
 
     If the input is a dataframe-like object, we just select the first
@@ -707,8 +706,12 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     if obj is None:
         return []  # type: ignore
 
+    if isinstance(obj, (str, int, float, bool)):
+        # Wrap basic objects into a list
+        return [obj]
+
     if isinstance(
-        obj, (deque, enumerate, ItemsView, list, map, range, set, str, tuple)
+        obj, (deque, enumerate, ItemsView, list, map, range, set, tuple)
     ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
@@ -732,13 +735,13 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
         # Return first column as a list:
         return (
-            [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
+            []
+            if data_df.empty
+            else cast(list[V_co], list(data_df.iloc[:, 0].to_list()))
         )
-    except errors.StreamlitAPIException as e:
-        raise TypeError(
-            "Object is not an iterable and could not be converted to one. "
-            f"Object type: {type(obj)}"
-        ) from e
+    except errors.StreamlitAPIException:
+        # Wrap the object into a list
+        return [obj]  # type: ignore
 
 
 def _maybe_truncate_table(
