@@ -696,6 +696,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
 
     Parameters
     ----------
+
     obj : OptionSequence
         The object to convert to a list.
 
