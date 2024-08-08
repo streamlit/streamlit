@@ -21,8 +21,8 @@ import dataclasses
 import inspect
 import math
 import re
-from collections import ChainMap, UserDict, deque
-from collections.abc import ItemsView, KeysView, ValuesView
+from collections import ChainMap, UserDict, UserList, deque
+from collections.abc import ItemsView, Mapping
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
@@ -31,8 +31,8 @@ from typing import (
     Dict,
     Final,
     Iterable,
+    List,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -45,6 +45,7 @@ from streamlit.type_util import (
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
+    is_list_like,
     is_namedtuple,
     is_type,
 )
@@ -503,7 +504,7 @@ def convert_anything_to_pandas_df(
         return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
 
     # Support for some list like objects
-    if isinstance(data, (deque, map, array.ArrayType)):
+    if isinstance(data, (deque, map, array.ArrayType, UserList)):
         return _fix_column_naming(pd.DataFrame(list(data)))
 
     # Support for Streamlit's custom dict-like objects
@@ -687,35 +688,43 @@ def convert_anything_to_arrow_bytes(
     return convert_pandas_df_to_arrow_bytes(df)
 
 
-def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
-    """Try to convert different formats to an indexable Sequence.
+def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
+    """Try to convert different formats to a list.
 
     If the input is a dataframe-like object, we just select the first
-    column to iterate over. If the input cannot be converted to a sequence,
-    a TypeError is raised.
+    column to iterate over. Non sequence-like objects and scalar types,
+    will just be wrapped into a list.
 
     Parameters
     ----------
+
     obj : OptionSequence
-        The object to convert to a sequence.
+        The object to convert to a list.
 
     Returns
     -------
-    Sequence
-        The converted sequence.
+    list
+        The converted list.
     """
     if obj is None:
         return []  # type: ignore
 
-    if isinstance(
-        obj, (str, list, tuple, set, range, EnumMeta, deque, map)
-    ) and not is_snowpark_row_list(obj):
+    if isinstance(obj, (str, int, float, bool)):
+        # Wrap basic objects into a list
+        return [obj]
+
+    if isinstance(obj, EnumMeta):
+        # Support for enum classes. For string enums, we return the string value
+        # of the enum members. For other enums, we just return the enum member.
+        return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
+
+    if isinstance(obj, Mapping):
+        return list(obj.keys())
+
+    if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
-
-    if isinstance(obj, dict):
-        return list(obj.keys())
 
     # Fallback to our DataFrame conversion logic:
     try:
@@ -727,13 +736,13 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
         # Return first column as a list:
         return (
-            [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
+            []
+            if data_df.empty
+            else cast(List[V_co], list(data_df.iloc[:, 0].to_list()))
         )
-    except errors.StreamlitAPIException as e:
-        raise TypeError(
-            "Object is not an iterable and could not be converted to one. "
-            f"Object type: {type(obj)}"
-        ) from e
+    except errors.StreamlitAPIException:
+        # Wrap the object into a list
+        return [obj]  # type: ignore
 
 
 def _maybe_truncate_table(
@@ -933,7 +942,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
-    import array
 
     import numpy as np
     import pandas as pd
@@ -979,12 +987,11 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATA_ARRAY
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
-    elif isinstance(
-        input_data, (range, EnumMeta, KeysView, ValuesView, deque, map, array.ArrayType)
-    ):
-        return DataFormat.LIST_OF_VALUES
     elif (
-        isinstance(input_data, (ChainMap, MappingProxyType, UserDict))
+        isinstance(
+            input_data,
+            (ChainMap, UserDict, MappingProxyType),
+        )
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
@@ -1009,7 +1016,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.LIST_OF_RECORDS
             if isinstance(first_element, (list, tuple, set, frozenset)):
                 return DataFormat.LIST_OF_ROWS
-    elif isinstance(input_data, dict):
+    elif isinstance(input_data, (dict, Mapping)):
         if not input_data:
             return DataFormat.KEY_VALUE_DICT
         if len(input_data) > 0:
@@ -1024,6 +1031,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
             # Use key-value dict as fallback. However, if the values of the dict
             # contains mixed types, it will become non-editable in the frontend.
             return DataFormat.KEY_VALUE_DICT
+    elif is_list_like(input_data):
+        return DataFormat.LIST_OF_VALUES
+
     return DataFormat.UNKNOWN
 
 
