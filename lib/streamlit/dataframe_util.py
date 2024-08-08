@@ -594,10 +594,13 @@ def convert_anything_to_pandas_df(
         return cast(pd.DataFrame, data)
 
     if is_type(data, "duckdb.duckdb.DuckDBPyRelation"):
-        return data.limit(max_unevaluated_rows).df()
-
-    if is_snowpark_row_list(data):
-        return pd.DataFrame([row.as_dict() for row in data])
+        data = data.limit(max_unevaluated_rows).df()
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `df()` on the relation to show more."
+            )
+        return data
 
     if isinstance(data, DBAPICursor):
         columns = [d[0] for d in data.description] if data.description else None
@@ -608,6 +611,9 @@ def convert_anything_to_pandas_df(
                 "rows. Call `fetchall()` on the Cursor to show more."
             )
         return data
+
+    if is_snowpark_row_list(data):
+        return pd.DataFrame([row.as_dict() for row in data])
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
@@ -829,6 +835,10 @@ def convert_anything_to_arrow_bytes(
         return convert_arrow_table_to_arrow_bytes(
             data.limit(max_unevaluated_rows).arrow()
         )
+
+    # https://arrow.apache.org/adbc/current/python/quickstart.html
+    # if isinstance(data, DBAPICursor) and has_callable_attr(data, "fetch_arrow_table"):
+    #     return convert_arrow_table_to_arrow_bytes(data.fetch_arrow_table())
 
     # Check for dataframe interchange protocol
     if has_callable_attr(data, "__dataframe__"):
