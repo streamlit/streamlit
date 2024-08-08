@@ -34,7 +34,7 @@ export const HOST_COMM_VERSION = 1
 // Add typing for window.streamlitReactLoad
 declare global {
   interface Window {
-    streamlitReactLoad: Date
+    streamlitReactLoad: number
   }
 }
 
@@ -100,7 +100,7 @@ export default class HostCommunicationManager {
     this.sendMessageToHost({
       type: "GUEST_READY",
       streamlitExecutionStartedAt: window.streamlitReactLoad,
-      guestReadyAt: new Date(),
+      guestReadyAt: Date.now(),
     })
   }
 

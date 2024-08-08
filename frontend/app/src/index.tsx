@@ -29,7 +29,7 @@ import ThemedApp from "./ThemedApp"
 const engine = new Styletron({ prefix: "st-" })
 
 // Timestamp when React is loaded for GUEST_READY message
-window.streamlitReactLoad = new Date()
+window.streamlitReactLoad = Date.now()
 
 // TODO: Deprecated in React 18 - Need to revise to new API
 // react-18-upgrade

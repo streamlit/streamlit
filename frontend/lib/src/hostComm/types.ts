@@ -132,8 +132,8 @@ export type IHostToGuestMessage = {
 export type IGuestToHostMessage =
   | {
       type: "GUEST_READY"
-      streamlitExecutionStartedAt: Date
-      guestReadyAt: Date
+      streamlitExecutionStartedAt: number
+      guestReadyAt: number
     }
   | {
       type: "MENU_ITEM_CALLBACK"

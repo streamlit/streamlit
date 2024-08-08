@@ -107,7 +107,10 @@ describe("HostCommunicationManager messaging", () => {
     const guestReadyMessage = sendMessageToHostFunc.mock.calls[0][0]
     expect(guestReadyMessage).toHaveProperty("type", "GUEST_READY")
     expect(guestReadyMessage).toHaveProperty("streamlitExecutionStartedAt")
-    expect(guestReadyMessage).toHaveProperty("guestReadyAt", expect.any(Date))
+    expect(guestReadyMessage).toHaveProperty(
+      "guestReadyAt",
+      expect.any(Number)
+    )
   })
 
   it("can process a received CLOSE_MODAL message", () => {
