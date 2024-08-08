@@ -69,7 +69,7 @@ def animation_demo() -> None:
     st.button("Re-run")
 
 
-st.set_page_config(page_title="Animation Demo", page_icon="📹")
+st.set_page_config(page_title="Animation Demo", page_icon=":material/animation:")
 st.markdown("# Animation Demo")
 st.sidebar.header("Animation Demo")
 st.write(
