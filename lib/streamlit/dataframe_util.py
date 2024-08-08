@@ -309,11 +309,6 @@ def is_snowpandas_data_object(obj: object) -> bool:
     )
 
 
-def is_xarray_dataset(obj: object) -> bool:
-    """True if obj is a Xarray Dataset."""
-    return is_type(obj, _XARRAY_DATASET_TYPE_STR)
-
-
 def is_polars_dataframe(obj: object) -> bool:
     """True if obj is a Polars Dataframe."""
     return is_type(obj, _POLARS_DATAFRAME)
