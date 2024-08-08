@@ -282,7 +282,11 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             2,
             DataFormat.LIST_OF_ROWS,
-            None,
+            [
+                ["st.number_input", "number"],
+                ["st.text_area", "text"],
+                ["st.text_input", "text"],
+            ],
             "markdown",
             False,
             list,
@@ -484,7 +488,14 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "List of rows",  # List[list[scalar]]
         [["st.text_area", "widget"], ["st.markdown", "element"]],
-        CaseMetadata(2, 2, DataFormat.LIST_OF_ROWS, None, "json", False),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.LIST_OF_ROWS,
+            [["st.text_area", "widget"], ["st.markdown", "element"]],
+            "json",
+            False,
+        ),
     ),
     (
         "List of records",  # List[Dict[str, Scalar]]
@@ -496,7 +507,10 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.LIST_OF_RECORDS,
-            None,
+            [
+                {"name": "st.text_area", "type": "widget"},
+                {"name": "st.markdown", "type": "element"},
+            ],
             "json",
             False,
         ),
