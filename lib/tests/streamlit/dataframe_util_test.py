@@ -515,6 +515,31 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame,
             )
 
+    def test_verify_dask_integration(self):
+        dask = pytest.importorskip("dask")
+
+        dask_df = dask.datasets.timeseries()
+
+        assert dataframe_util.is_dask_object(dask_df) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(dask_df),
+            pd.DataFrame,
+        )
+
+        dask_series = dask_df["x"]
+        assert dataframe_util.is_dask_object(dask_series) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(dask_series),
+            pd.DataFrame,
+        )
+
+        dask_index = dask_df.index
+        assert dataframe_util.is_dask_object(dask_index) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(dask_index),
+            pd.DataFrame,
+        )
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
