@@ -17,7 +17,15 @@ from __future__ import annotations
 import array
 import enum
 import random
-from collections import ChainMap, Counter, OrderedDict, UserDict, defaultdict, deque
+from collections import (
+    ChainMap,
+    Counter,
+    OrderedDict,
+    UserDict,
+    UserList,
+    defaultdict,
+    deque,
+)
 from dataclasses import dataclass
 from datetime import date
 from types import MappingProxyType
@@ -364,6 +372,19 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "json",
             False,
             dict,
+        ),
+    ),
+    (
+        "collections.UserList",
+        UserList(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "json",
+            False,
+            list,
         ),
     ),
     (
