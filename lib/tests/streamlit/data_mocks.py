@@ -972,3 +972,52 @@ try:
     )
 except ModuleNotFoundError:
     print("Polars not installed. Skipping Polars dataframe integration tests.")  # noqa: T201
+
+###################################
+########### Xarray Types ##########
+###################################
+try:
+    import xarray as xr
+
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Xarray Dataset",
+                xr.Dataset.from_dataframe(
+                    pd.DataFrame(
+                        {
+                            "name": ["st.text_area", "st.markdown"],
+                            "type": ["widget", "element"],
+                        }
+                    )
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.XARRAY_DATASET,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+            (
+                "Xarray DataArray",
+                xr.DataArray.from_series(
+                    pd.Series(
+                        ["st.number_input", "st.text_area", "st.text_input"],
+                        name="widgets",
+                    )
+                ),
+                CaseMetadata(
+                    3,
+                    1,
+                    DataFormat.XARRAY_DATA_ARRAY,
+                    ["st.number_input", "st.text_area", "st.text_input"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+        ]
+    )
+except ModuleNotFoundError:
+    print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # noqa: T201
