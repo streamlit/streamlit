@@ -36,6 +36,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from typing_extensions import TypeAlias, TypeGuard
@@ -127,6 +128,30 @@ class DataframeInterchangeCompatible(Protocol[V_co]):
     """Protocol for objects support the dataframe-interchange protocol."""
 
     def __dataframe__(self) -> object: ...
+
+
+@runtime_checkable
+class DBAPICursor(Protocol):
+    # Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
+    @property
+    def description(
+        self,
+    ) -> (
+        Sequence[
+            tuple[
+                str,
+                Any | None,
+                int | None,
+                int | None,
+                int | None,
+                int | None,
+                bool | None,
+            ]
+        ]
+        | None
+    ): ...
+    def fetchmany(self, size: int = ..., /) -> Sequence[Sequence[Any]]: ...
+    def fetchall(self) -> Sequence[Sequence[Any]]: ...
 
 
 OptionSequence: TypeAlias = Union[
@@ -568,8 +593,21 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
+    if is_type(data, "duckdb.duckdb.DuckDBPyRelation"):
+        return data.limit(max_unevaluated_rows).df()
+
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
+
+    if isinstance(data, DBAPICursor):
+        columns = [d[0] for d in data.description] if data.description else None
+        data = pd.DataFrame(data.fetchmany(max_unevaluated_rows), columns=columns)
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `fetchall()` on the Cursor to show more."
+            )
+        return data
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
@@ -786,6 +824,11 @@ def convert_anything_to_arrow_bytes(
 
     if is_huggingface_dataset(data) and hasattr(data, "data"):
         return convert_arrow_table_to_arrow_bytes(data.data)
+
+    if is_type(data, "duckdb.duckdb.DuckDBPyRelation"):
+        return convert_arrow_table_to_arrow_bytes(
+            data.limit(max_unevaluated_rows).arrow()
+        )
 
     # Check for dataframe interchange protocol
     if has_callable_attr(data, "__dataframe__"):
