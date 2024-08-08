@@ -319,6 +319,16 @@ def is_polars_dataframe(obj: object) -> bool:
     return is_type(obj, _POLARS_DATAFRAME)
 
 
+def is_xarray_dataset(obj: object) -> bool:
+    """True if obj is a Xarray Dataset."""
+    return is_type(obj, _XARRAY_DATASET_TYPE_STR)
+
+
+def is_xarray_data_array(obj: object) -> bool:
+    """True if obj is a Xarray DataArray."""
+    return is_type(obj, _XARRAY_DATA_ARRAY_TYPE_STR)
+
+
 def is_polars_series(obj: object) -> bool:
     """True if obj is a Polars Series."""
     return is_type(obj, _POLARS_SERIES)
@@ -1212,7 +1222,7 @@ def convert_pandas_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray dataset / array, list, set, tuple, or dict.
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray.Dataset, xarray.DataArray, polars.Dataframe, polars.Series, list, set, tuple, or dict.
         The converted dataframe.
     """
 

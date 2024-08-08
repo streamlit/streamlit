@@ -1070,7 +1070,7 @@ try:
         ]
     )
 except ModuleNotFoundError:
-    print("Xarray not installed. Skipping Xarray dataframe tests.")  # noqa: T201
+    print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # noqa: T201
 
 
 ###################################
