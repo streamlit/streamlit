@@ -51,7 +51,7 @@ class CaseMetadata(NamedTuple):
     expected_data_format: DataFormat
     # The expected sequence when the data is converted to a sequence
     # If None, the sequence is not checked.
-    expected_sequence: list[Any] | None
+    expected_sequence: list[Any]
     # The expected command used when the data is written via `st.write`
     expected_write_command: Literal[
         "markdown", "dataframe", "json", "help", "write_stream"
@@ -281,9 +281,9 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             DataFormat.LIST_OF_ROWS,
             [
-                ["st.number_input", "number"],
-                ["st.text_area", "text"],
-                ["st.text_input", "text"],
+                ("st.number_input", "number"),
+                ("st.text_area", "text"),
+                ("st.text_input", "text"),
             ],
             "markdown",
             False,
