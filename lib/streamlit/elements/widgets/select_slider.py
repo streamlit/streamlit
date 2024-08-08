@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
@@ -372,6 +373,10 @@ class SelectSliderMixin:
             save_for_app_testing(ctx, id, format_func)
 
         self.dg._enqueue("slider", slider_proto)
+
+        if isinstance(options, Mapping):
+            return options[widget_state.value]  # type: ignore
+
         return widget_state.value
 
     @property

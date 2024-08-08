@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
@@ -335,6 +336,9 @@ class MultiSelectMixin:
             save_for_app_testing(ctx, widget_id, format_func)
 
         self.dg._enqueue(widget_name, proto)
+
+        if isinstance(options, Mapping):
+            return [options[value] for value in widget_state.value]  # type: ignore
 
         return widget_state.value
 

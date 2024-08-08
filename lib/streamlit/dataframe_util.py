@@ -22,7 +22,7 @@ import inspect
 import math
 import re
 from collections import ChainMap, UserDict, deque
-from collections.abc import ItemsView, KeysView, ValuesView
+from collections.abc import ItemsView, KeysView, Mapping, ValuesView
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
@@ -123,7 +123,7 @@ class ArrowCompatible(Protocol[V_co]):
     def to_arrow(self) -> pa.Table: ...
 
 
-class DataframeInterchangeCompatible(Protocol):
+class DataframeInterchangeCompatible(Protocol[V_co]):
     """Protocol for objects support the dataframe-interchange protocol."""
 
     def __dataframe__(self) -> object: ...
@@ -831,13 +831,13 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return []  # type: ignore
 
     if isinstance(
-        obj, (str, list, tuple, set, range, EnumMeta, deque, map, ItemsView)
+        obj, (str, list, tuple, set, range, EnumMeta, deque, map, ItemsView, enumerate)
     ) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
 
-    if isinstance(obj, dict):
+    if isinstance(obj, Mapping):
         return list(obj.keys())
 
     # Fallback to our DataFrame conversion logic:
