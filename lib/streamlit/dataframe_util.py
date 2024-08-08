@@ -80,6 +80,9 @@ _SNOWPANDAS_INDEX_TYPE_STR: Final = (
 _POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
 _POLARS_SERIES: Final = "polars.series.series.Series"
 _POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
+_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
+_DASK_SERIES: Final = "dask.dataframe.core.Series"
+_DASK_INDEX: Final = "dask.dataframe.core.Index"
 
 V_co = TypeVar(
     "V_co",
@@ -145,6 +148,7 @@ class DataFormat(Enum):
     POLARS_SERIES = auto()  # polars.series.series.Series
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
+    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -188,6 +192,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.XARRAY_DATASET,
         DataFormat.XARRAY_DATA_ARRAY,
+        DataFormat.DASK_OBJECT,
         DataFormat.COLUMN_SERIES_MAPPING,
     ]
 
@@ -200,6 +205,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series / Index
+    - Dask DataFrame / Series / Index
     - Polars LazyFrame
     - Generator functions
 
@@ -213,6 +219,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
         or is_polars_lazyframe(obj)
+        or is_dask_object(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -243,6 +250,15 @@ def is_pyspark_data_object(obj: object) -> bool:
         is_type(obj, _PYSPARK_DF_TYPE_STR)
         and hasattr(obj, "toPandas")
         and callable(obj.toPandas)
+    )
+
+
+def is_dask_object(obj: object) -> bool:
+    """True if obj is a Dask DataFrame, Series, or Index."""
+    return (
+        is_type(obj, _DASK_DATAFRAME)
+        or is_type(obj, _DASK_SERIES)
+        or is_type(obj, _DASK_INDEX)
     )
 
 
@@ -434,6 +450,19 @@ def convert_anything_to_pandas_df(
         if ensure_copy:
             data = data.copy(deep=True)
         return data.to_series().to_frame()
+
+    if is_dask_object(data):
+        data = data.head(max_unevaluated_rows, compute=True)
+
+        if isinstance(data, (pd.Series, pd.Index)):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `compute()` on the data object to show more."
+            )
+        return cast(pd.DataFrame, data)
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
@@ -977,6 +1006,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATASET
     elif is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
+    elif is_dask_object(input_data):
+        return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
     elif isinstance(
@@ -1095,6 +1126,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.PANDAS_ARRAY,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.DASK_OBJECT,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
