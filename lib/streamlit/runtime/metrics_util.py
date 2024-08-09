@@ -366,7 +366,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
         exec_start = timer()
         # Local imports to prevent circular dependencies
-        # from streamlit.runtime.scriptrunner import get_script_run_ctx
+        # from streamlit.runtime.script_run_context import get_script_run_ctx
         from streamlit.runtime.scriptrunner.exceptions import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
@@ -446,7 +446,7 @@ def create_page_profile_message(
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
     # Local import to prevent circular dependencies
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.script_run_context import get_script_run_ctx
 
     msg = ForwardMsg()
     page_profile = msg.page_profile

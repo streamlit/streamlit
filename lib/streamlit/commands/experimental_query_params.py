@@ -26,7 +26,7 @@ from streamlit.constants import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.script_run_context import get_script_run_ctx
 
 
 @gather_metrics("experimental_get_query_params")

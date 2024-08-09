@@ -48,7 +48,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )

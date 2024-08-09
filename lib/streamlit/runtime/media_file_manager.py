@@ -28,7 +28,7 @@ _LOGGER: Final = get_logger(__name__)
 
 def _get_session_id() -> str:
     """Get the active AppSession's session_id."""
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.script_run_context import get_script_run_ctx
 
     ctx = get_script_run_ctx()
     if ctx is None:

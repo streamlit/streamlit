@@ -37,6 +37,9 @@ from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.script_run_context import (
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -459,8 +462,6 @@ class SessionState:
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
         """
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
 
         if ctx is not None:
@@ -572,9 +573,6 @@ class SessionState:
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
-        # Avoid circular imports.
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
         if ctx is None:
             return
