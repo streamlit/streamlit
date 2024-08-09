@@ -15,6 +15,7 @@
  */
 
 import { enableAllPlugins } from "immer"
+
 import {
   ArrowTable as ArrowTableProto,
   Button as ButtonProto,
@@ -100,7 +101,9 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).toHaveBeenCalledTimes(1)
       expect(sendBackMsg).toHaveBeenCalledWith(
         expect.anything(),
-        undefined // fragmentId
+        undefined, // fragmentId
+        undefined,
+        undefined
       )
     }
   }
@@ -393,7 +396,9 @@ describe("Widget State Manager", () => {
       )
       expect(sendBackMsg).toHaveBeenCalledWith(
         expect.anything(),
-        "myFragmentId"
+        "myFragmentId",
+        undefined,
+        undefined
       )
     })
 
@@ -409,7 +414,9 @@ describe("Widget State Manager", () => {
       )
       expect(sendBackMsg).toHaveBeenCalledWith(
         expect.anything(),
-        "myFragmentId"
+        "myFragmentId",
+        undefined,
+        undefined
       )
     })
   })
@@ -555,7 +562,9 @@ describe("Widget State Manager", () => {
             { id: "widget2", stringValue: "bar" },
           ],
         },
-        undefined // fragmentId
+        undefined, // fragmentId
+        undefined,
+        undefined
       )
 
       // We have no more pending form.
@@ -590,7 +599,9 @@ describe("Widget State Manager", () => {
             { id: "widget1", stringValue: "foo" },
           ],
         },
-        "myFragmentId"
+        "myFragmentId",
+        undefined,
+        undefined
       )
 
       // We have no more pending form.
@@ -619,6 +630,8 @@ describe("Widget State Manager", () => {
         {
           widgets: [{ id: "firstSubmitButton", triggerValue: true }],
         },
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -710,6 +723,8 @@ describe("Widget State Manager", () => {
             { id: FORM_1.id, stringValue: "foo" },
           ],
         },
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -740,6 +755,8 @@ describe("Widget State Manager", () => {
             { id: FORM_2.id, stringValue: "bar" },
           ],
         },
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -774,6 +791,8 @@ describe("Widget State Manager", () => {
             { id: FORM_2.id, stringValue: "bar" },
           ],
         },
+        undefined,
+        undefined,
         undefined
       )
     })

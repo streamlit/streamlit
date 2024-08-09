@@ -15,6 +15,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react-hooks"
+
 import useStateRef from "./useStateRef" // import the hook
 
 describe("useStateRef hook", () => {

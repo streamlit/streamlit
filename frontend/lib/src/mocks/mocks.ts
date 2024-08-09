@@ -15,8 +15,8 @@
  */
 
 import {
-  Props as SessionInfoProps,
   SessionInfo,
+  Props as SessionInfoProps,
 } from "@streamlit/lib/src/SessionInfo"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IAppPage } from "@streamlit/lib/src/proto"

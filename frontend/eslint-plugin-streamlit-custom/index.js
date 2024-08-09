@@ -14,29 +14,10 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
-import CodeBlock, { CodeBlockProps } from "./CodeBlock"
+const useStrictNullEqualityChecks = require("./use-strict-null-equality-checks")
 
-const getBlockProps = (
-  props: Partial<CodeBlockProps> = {}
-): CodeBlockProps => ({
-  children: [
-    `
-    import streamlit as st
-
-    st.write("Hello")
-  `,
-  ],
-  ...props,
-})
-
-describe("CodeBlock Element", () => {
-  it("should render without crashing", () => {
-    const props = getBlockProps()
-    const { baseElement } = render(<CodeBlock {...props} />)
-
-    // should have "stCodeBlock" class.
-    expect(baseElement.querySelectorAll(".stCodeBlock").length).toBe(1)
-  })
-})
+module.exports = {
+  rules: {
+    "use-strict-null-equality-checks": useStrictNullEqualityChecks,
+  },
+}

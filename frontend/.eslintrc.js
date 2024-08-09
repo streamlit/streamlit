@@ -62,7 +62,7 @@ module.exports = {
     "**/vendor/*",
     "**/node_modules/*",
   ],
-  plugins: ["no-relative-import-paths"],
+  plugins: ["no-relative-import-paths", "streamlit-custom"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   rules: {
@@ -165,6 +165,41 @@ module.exports = {
     "lodash/prefer-is-nil": "off",
     "lodash/prefer-matches": "off",
     "lodash/path-style": "off",
+    "sort-imports": [
+      "error",
+      {
+        ignoreCase: true,
+        ignoreDeclarationSort: true,
+      },
+    ],
+    "import/order": [
+      1,
+      {
+        pathGroups: [
+          {
+            pattern: "react",
+            group: "external",
+            position: "before",
+          },
+          {
+            pattern: "@streamlit/**",
+            group: "internal",
+            position: "before",
+          },
+        ],
+        pathGroupsExcludedImportTypes: ["react"],
+        groups: [
+          "external",
+          "builtin",
+          "internal",
+          "parent",
+          "sibling",
+          "index",
+        ],
+        "newlines-between": "always",
+      },
+    ],
+    "streamlit-custom/use-strict-null-equality-checks": "error",
   },
   settings: {
     react: {

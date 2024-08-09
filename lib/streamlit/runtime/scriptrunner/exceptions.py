@@ -16,7 +16,10 @@ from streamlit.runtime.scriptrunner.script_requests import RerunData
 from streamlit.util import repr_
 
 
-class ScriptControlException(Exception):
+# We inherit from BaseException to avoid being caught by user code.
+# For example, having it inherit from Exception might make st.rerun not
+# work in a try/except block.
+class ScriptControlException(BaseException):  # NOSONAR
     """Base exception for ScriptRunner."""
 
     pass

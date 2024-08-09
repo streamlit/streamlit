@@ -24,8 +24,8 @@ import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
 import {
   BaseColumn,
-  TextColumn,
   isErrorCell,
+  TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 

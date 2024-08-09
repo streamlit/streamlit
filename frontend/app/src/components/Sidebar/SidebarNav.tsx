@@ -21,20 +21,22 @@ import React, {
   useRef,
   useState,
 } from "react"
+
 import groupBy from "lodash/groupBy"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
+
+import { IAppPage, StreamlitEndpoints, useIsOverflowing } from "@streamlit/lib"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
-import { useIsOverflowing, StreamlitEndpoints, IAppPage } from "@streamlit/lib"
 
 import NavSection from "./NavSection"
 import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
-  StyledViewButton,
   StyledSidebarNavSeparator,
+  StyledViewButton,
 } from "./styled-components"
 
 export interface Props {

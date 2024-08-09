@@ -425,13 +425,14 @@ class ScriptRunner:
                 rerun_data.page_script_hash, rerun_data.page_name
             )
             main_page_info = self._pages_manager.get_main_page()
-            uncaught_exception = None
 
             page_script_hash = (
                 active_script["page_script_hash"]
                 if active_script is not None
                 else main_page_info["page_script_hash"]
             )
+
+            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
 
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
@@ -457,6 +458,7 @@ class ScriptRunner:
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
+                fragment_ids_this_run=fragment_ids_this_run,
             )
             self._pages_manager.reset_active_script_hash()
 
@@ -556,9 +558,16 @@ class ScriptRunner:
                                 wrapped_fragment()
 
                             except FragmentStorageKeyError:
-                                raise RuntimeError(
-                                    f"Could not find fragment with id {fragment_id}"
-                                )
+                                # Only raise an error if the fragment is not an
+                                # auto_rerun. If it is an auto_rerun, we might have a
+                                # race condition where the fragment_id is removed
+                                # but the webapp sends a rerun request before the
+                                # removal information has reached the web app
+                                # (see https://github.com/streamlit/streamlit/issues/9080).
+                                if not rerun_data.is_auto_rerun:
+                                    raise RuntimeError(
+                                        f"Could not find fragment with id {fragment_id}"
+                                    )
                             except (RerunException, StopException) as e:
                                 # The wrapped_fragment function is executed
                                 # inside of a exec_func_with_error_handling call, so
@@ -587,6 +596,7 @@ class ScriptRunner:
                 run_without_errors,
                 rerun_exception_data,
                 premature_stop,
+                uncaught_exception,
             ) = exec_func_with_error_handling(code_to_exec, ctx)
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
@@ -612,7 +622,7 @@ class ScriptRunner:
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
-                            ctx.tracked_commands,
+                            commands=ctx.tracked_commands,
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(

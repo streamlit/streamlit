@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+
 import { StyledWidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget/styled-components"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 

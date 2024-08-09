@@ -20,7 +20,6 @@ are executed.
 from __future__ import annotations
 
 import os
-import sys
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -87,8 +86,6 @@ def pytest_configure(config: pytest.Config):
 
     is_require_snowflake = config.getoption("--require-snowflake", default=False)
     if is_require_snowflake:
-        if sys.version_info[0:2] != (3, 8):
-            raise pytest.UsageError("Python 3.8 is required to run Snowflake tests")
         try:
             import snowflake.snowpark  # noqa: F401
         except ImportError:

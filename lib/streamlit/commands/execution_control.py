@@ -66,9 +66,7 @@ def _new_fragment_id_queue(
         return []
 
     else:  # scope == "fragment"
-        curr_queue = (
-            ctx.script_requests.fragment_id_queue if ctx.script_requests else []
-        )
+        curr_queue = ctx.fragment_ids_this_run
 
         # If st.rerun(scope="fragment") is called during a full script run, we raise an
         # exception. This occurs, of course, if st.rerun(scope="fragment") is called
@@ -142,7 +140,7 @@ def rerun(  # type: ignore[misc]
                 query_string=query_string,
                 page_script_hash=page_script_hash,
                 fragment_id_queue=_new_fragment_id_queue(ctx, scope),
-                is_fragment_scoped_rerun=True,
+                is_fragment_scoped_rerun=scope == "fragment",
             )
         )
         # Force a yield point so the runner can do the rerun

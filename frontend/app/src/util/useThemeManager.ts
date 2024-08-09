@@ -15,20 +15,21 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
+
 import {
   AUTO_THEME_NAME,
-  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
+  createTheme,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
   getDefaultTheme,
+  getHostSpecifiedTheme,
+  ICustomThemeConfig,
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
-  createTheme,
-  CustomThemeConfig,
-  ICustomThemeConfig,
-  getHostSpecifiedTheme,
 } from "@streamlit/lib"
 
 export interface ThemeManager {

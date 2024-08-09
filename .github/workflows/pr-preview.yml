@@ -22,7 +22,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     outputs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
@@ -121,7 +121,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     steps:
       - name: Checkout Core Previews Repo

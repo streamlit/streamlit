@@ -22,8 +22,8 @@ import {
   Navigation,
   NewSession,
   PageConfig,
-  PagesChanged,
   PageNotFound,
+  PagesChanged,
 } from "@streamlit/lib"
 
 interface AppNavigationState {

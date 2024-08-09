@@ -15,37 +15,36 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
 import {
-  StyledPre,
-  StyledCopyButtonContainer,
   StyledCodeBlock,
+  StyledCopyButtonContainer,
+  StyledPre,
 } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
-  language?: string | undefined
-  showLineNumbers?: boolean | undefined
+  language?: string
+  showLineNumbers?: boolean
 }
 
 export default function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
   children,
-}: StreamlitSyntaxHighlighterProps): ReactElement {
+}: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
   return (
-    <StyledCodeBlock
-      className="stCodeBlock"
-      data-testid="stCodeBlock"
-      isMarkdown={false}
-    >
+    <StyledCodeBlock className="stCodeBlock" data-testid="stCodeBlock">
       <StyledPre>
         <SyntaxHighlighter
           language={language}
           PreTag="div"
           customStyle={{ backgroundColor: "transparent" }}
+          // We set an empty style object here because we have our own CSS styling that
+          // reacts on our theme.
           style={{}}
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}

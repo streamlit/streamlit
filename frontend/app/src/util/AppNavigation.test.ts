@@ -16,18 +16,19 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import {
-  HostCommunicationManager,
-  NewSession,
-  PagesChanged,
-  PageNotFound,
-  Navigation,
   AppPage,
+  HostCommunicationManager,
+  Navigation,
+  NewSession,
   PageConfig,
+  PageNotFound,
+  PagesChanged,
 } from "@streamlit/lib"
+
 import {
   AppNavigation,
-  PageUrlUpdateCallback,
   PageNotFoundCallback,
+  PageUrlUpdateCallback,
   SetIconCallback,
 } from "./AppNavigation"
 

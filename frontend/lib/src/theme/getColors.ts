@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
+import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
 export type DerivedColors = {
   linkText: string

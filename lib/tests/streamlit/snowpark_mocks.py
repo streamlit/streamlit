@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -74,3 +74,9 @@ class Row:
     for testing purposes."""
 
     __module__ = "snowflake.snowpark.row"
+
+    def __init__(self, row_data: dict[str, Any]):
+        self._row_data: dict[str, Any] = row_data
+
+    def as_dict(self) -> dict[str, Any]:
+        return self._row_data

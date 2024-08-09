@@ -521,7 +521,9 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "default_value_today",  # type: ignore[assignment]
+        value: DateValue
+        | Literal["today", "default_value_today"]
+        | None = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,

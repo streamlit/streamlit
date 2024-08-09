@@ -15,16 +15,18 @@
  */
 
 import React from "react"
+
 import { CloudUpload } from "@emotion-icons/material-outlined"
+
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { FileSize, getSizeDisplay } from "@streamlit/lib/src/util/FileHelper"
 import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 
 import {
   StyledFileDropzoneInstructions,
+  StyledFileDropzoneInstructionsColumn,
   StyledFileDropzoneInstructionsFileUploaderIcon,
   StyledFileDropzoneInstructionsStyledSpan,
-  StyledFileDropzoneInstructionsColumn,
 } from "./styled-components"
 
 export interface Props {
