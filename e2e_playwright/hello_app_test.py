@@ -29,9 +29,18 @@ def check_page_title(app: Page, title: str) -> None:
     expect(app.get_by_test_id("stMarkdown").locator("h1").nth(0)).to_contain_text(title)
 
 
+def check_page_icon(app: Page, icon: str, index: int = 0) -> None:
+    expect(
+        app.get_by_test_id("stSidebarNavLink")
+        .get_by_test_id("stIconMaterial")
+        .nth(index)
+    ).to_have_text(icon)
+
+
 def test_home_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Test that the home page of the hello app is displayed correctly."""
     check_page_title(app, "Welcome to Streamlit!")
+    check_page_icon(app, "waving_hand")
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarNav")).to_be_visible()
 
@@ -43,6 +52,7 @@ def test_animation_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
     navigate_to_page(app, 1)
 
     check_page_title(app, "Animation Demo")
+    check_page_icon(app, "animation", 1)
     # Wait for the animation to end. The animation takes 5-10 seconds to finish
     # which is a lot more than the default timeout, so we set it to a higher value
     expect(app.get_by_test_id("stButton")).to_contain_text("Re-run", timeout=25000)
@@ -55,6 +65,7 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     navigate_to_page(app, 2)
 
     check_page_title(app, "Plotting Demo")
+    check_page_icon(app, "show_chart", 2)
     # The animation takes 5-10 seconds to finish, so we add
     # and additional timeout
     expect(app.get_by_test_id("stText")).to_contain_text("100% Complete", timeout=15000)
@@ -71,6 +82,7 @@ def test_mapping_demo_page(app: Page) -> None:
     navigate_to_page(app, 3)
 
     check_page_title(app, "Mapping Demo")
+    check_page_icon(app, "public", 3)
     # We add an additional timeout here since sometimes the loading of
     # the map takes a bit longer (probably because of the map token request).
     expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_attribute(
@@ -86,6 +98,7 @@ def _load_dataframe_demo_page(app: Page):
     """Load the dataframe demo page and wait until all elements are visible."""
     navigate_to_page(app, 4)
     check_page_title(app, "DataFrame Demo")
+    check_page_icon(app, "table", 4)
     expect(app.get_by_test_id("stMultiSelect")).to_be_visible()
     expect(app.get_by_test_id("stDataFrame")).to_be_visible()
     expect(

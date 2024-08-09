@@ -19,6 +19,9 @@ from __future__ import annotations
 import dataclasses
 import re
 import types
+from collections import UserList, deque
+from collections.abc import ItemsView, KeysView, ValuesView
+from enum import EnumMeta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -309,15 +312,33 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     return True
 
 
-def is_sequence(seq: Any) -> bool:
-    """True if input looks like a sequence."""
-    if isinstance(seq, str):
+def is_list_like(obj: object) -> TypeGuard[Sequence[Any]]:
+    """True if input looks like a list."""
+    import array
+
+    if isinstance(obj, str):
         return False
-    try:
-        len(seq)
-    except Exception:
-        return False
-    return True
+
+    if isinstance(obj, (list, set, tuple)):
+        # Optimization to check the most common types first
+        return True
+
+    return isinstance(
+        obj,
+        (
+            array.ArrayType,
+            deque,
+            EnumMeta,
+            enumerate,
+            frozenset,
+            ItemsView,
+            KeysView,
+            map,
+            range,
+            UserList,
+            ValuesView,
+        ),
+    )
 
 
 def check_python_comparable(seq: Sequence[Any]) -> None:

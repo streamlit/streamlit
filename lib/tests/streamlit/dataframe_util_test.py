@@ -37,6 +37,7 @@ from tests.streamlit.data_mocks import (
     TestObject,
 )
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
@@ -387,6 +388,7 @@ class DataframeUtilTest(unittest.TestCase):
             dataframe_util.is_snowpandas_data_object(SnowpandasDataFrame(df))
         )
         self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasSeries(df)))
+        self.assertTrue(dataframe_util.is_snowpandas_data_object(SnowpandasIndex(df)))
 
     def test_is_snowpark_row_list(self):
         class DummyClass:
@@ -477,6 +479,39 @@ class DataframeUtilTest(unittest.TestCase):
             assert dataframe_util.is_snowpark_row_list(snowpark_row_list) is True
             assert isinstance(
                 dataframe_util.convert_anything_to_pandas_df(snowpark_row_list),
+                pd.DataFrame,
+            )
+
+    @pytest.mark.require_snowflake
+    def test_verify_snowpandas_integration(self):
+        """Integration test snowpark pandas object handling.
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
+        import modin.pandas as modin_pd
+
+        # Import the Snowpark pandas plugin for modin.
+        import snowflake.snowpark.modin.plugin  # noqa: F401
+
+        with create_snowpark_session():
+            snowpandas_df = modin_pd.DataFrame([1, 2, 3], columns=["col1"])
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_df) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_df),
+                pd.DataFrame,
+            )
+
+            snowpandas_series = snowpandas_df["col1"]
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_series) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_series),
+                pd.DataFrame,
+            )
+
+            snowpandas_index = snowpandas_df.index
+            assert dataframe_util.is_snowpandas_data_object(snowpandas_index) is True
+            assert isinstance(
+                dataframe_util.convert_anything_to_pandas_df(snowpandas_index),
                 pd.DataFrame,
             )
 
@@ -672,14 +707,13 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_sequence` correctly converts
         a variety of types to a sequence.
         """
-        if metadata.expected_sequence is None:
-            # Skip all cases where we don't have an expected sequence.
-            return
-
         converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
+
         # We convert to a set for the check since some of the formats don't
         # have a guaranteed order.
-        self.assertEqual(set(converted_sequence), set(metadata.expected_sequence))
+        assert {str(item) for item in converted_sequence} == {
+            str(item) for item in metadata.expected_sequence
+        }
         # Check that it is a new object and not the same as the input:
         assert converted_sequence is not input_data
 

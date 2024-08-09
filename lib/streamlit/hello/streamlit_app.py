@@ -22,11 +22,11 @@ dir_path = Path(__file__).parent
 def run():
     page = st.navigation(
         [
-            st.Page(dir_path / "Hello.py"),
-            st.Page(dir_path / "Animation_Demo.py"),
-            st.Page(dir_path / "Plotting_Demo.py"),
-            st.Page(dir_path / "Mapping_Demo.py"),
-            st.Page(dir_path / "Dataframe_Demo.py"),
+            st.Page(dir_path / "Hello.py", icon=":material/waving_hand:"),
+            st.Page(dir_path / "Animation_Demo.py", icon=":material/animation:"),
+            st.Page(dir_path / "Plotting_Demo.py", icon=":material/show_chart:"),
+            st.Page(dir_path / "Mapping_Demo.py", icon=":material/public:"),
+            st.Page(dir_path / "Dataframe_Demo.py", icon=":material/table:"),
         ]
     )
 

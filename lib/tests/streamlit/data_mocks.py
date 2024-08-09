@@ -17,7 +17,15 @@ from __future__ import annotations
 import array
 import enum
 import random
-from collections import ChainMap, Counter, OrderedDict, UserDict, defaultdict, deque
+from collections import (
+    ChainMap,
+    Counter,
+    OrderedDict,
+    UserDict,
+    UserList,
+    defaultdict,
+    deque,
+)
 from dataclasses import dataclass
 from datetime import date
 from types import MappingProxyType
@@ -32,6 +40,7 @@ from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
@@ -50,7 +59,7 @@ class CaseMetadata(NamedTuple):
     expected_data_format: DataFormat
     # The expected sequence when the data is converted to a sequence
     # If None, the sequence is not checked.
-    expected_sequence: list[Any] | None
+    expected_sequence: list[Any]
     # The expected command used when the data is written via `st.write`
     expected_write_command: Literal[
         "markdown", "dataframe", "json", "help", "write_stream"
@@ -279,7 +288,11 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             2,
             DataFormat.LIST_OF_ROWS,
-            None,
+            [
+                ("st.number_input", "number"),
+                ("st.text_area", "text"),
+                ("st.text_input", "text"),
+            ],
             "markdown",
             False,
             list,
@@ -355,10 +368,23 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["number", "text", "text"],
+            ["st.number_input", "st.text_area", "st.text_input"],
             "json",
             False,
             dict,
+        ),
+    ),
+    (
+        "collections.UserList",
+        UserList(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "json",
+            False,
+            list,
         ),
     ),
     (
@@ -459,7 +485,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["widget", "element"],
+            ["st.text_area", "st.markdown"],
             "json",
             False,
             dict,
@@ -472,7 +498,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["widget", "element"],
+            ["st.text_area", "st.markdown"],
             "json",
             False,
             dict,
@@ -481,7 +507,14 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "List of rows",  # List[list[scalar]]
         [["st.text_area", "widget"], ["st.markdown", "element"]],
-        CaseMetadata(2, 2, DataFormat.LIST_OF_ROWS, None, "json", False),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.LIST_OF_ROWS,
+            [["st.text_area", "widget"], ["st.markdown", "element"]],
+            "json",
+            False,
+        ),
     ),
     (
         "List of records",  # List[Dict[str, Scalar]]
@@ -493,7 +526,10 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.LIST_OF_RECORDS,
-            None,
+            [
+                {"name": "st.text_area", "type": "widget"},
+                {"name": "st.markdown", "type": "element"},
+            ],
             "json",
             False,
         ),
@@ -840,6 +876,21 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
     (
+        "Snowpandas Index",
+        SnowpandasIndex(
+            pd.Index(["st.text_area", "st.markdown"]),
+        ),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.SNOWPANDAS_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
         "Modin DataFrame",
         ModinDataFrame(
             pd.DataFrame(
@@ -896,3 +947,112 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
 ]
+
+###################################
+########### Polars Types ##########
+###################################
+try:
+    import polars as pl
+
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Polars DataFrame",
+                pl.DataFrame(
+                    [
+                        {"name": "st.text_area", "type": "widget"},
+                        {"name": "st.markdown", "type": "element"},
+                    ]
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.POLARS_DATAFRAME,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+            (
+                "Polars Series",
+                pl.Series(["st.number_input", "st.text_area", "st.text_input"]),
+                CaseMetadata(
+                    3,
+                    1,
+                    DataFormat.POLARS_SERIES,
+                    ["st.number_input", "st.text_area", "st.text_input"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+            (
+                "Polars LazyFrame",
+                pl.LazyFrame(
+                    {
+                        "name": ["st.text_area", "st.markdown"],
+                        "type": ["widget", "element"],
+                    }
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.POLARS_LAZYFRAME,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    True,
+                    pl.DataFrame,
+                ),
+            ),
+        ]
+    )
+except ModuleNotFoundError:
+    print("Polars not installed. Skipping Polars dataframe integration tests.")  # noqa: T201
+
+###################################
+########### Xarray Types ##########
+###################################
+try:
+    import xarray as xr
+
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Xarray Dataset",
+                xr.Dataset.from_dataframe(
+                    pd.DataFrame(
+                        {
+                            "name": ["st.text_area", "st.markdown"],
+                            "type": ["widget", "element"],
+                        }
+                    )
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.XARRAY_DATASET,
+                    ["name", "type"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+            (
+                "Xarray DataArray",
+                xr.DataArray.from_series(
+                    pd.Series(
+                        ["st.number_input", "st.text_area", "st.text_input"],
+                        name="widgets",
+                    )
+                ),
+                CaseMetadata(
+                    3,
+                    1,
+                    DataFormat.XARRAY_DATA_ARRAY,
+                    ["st.number_input", "st.text_area", "st.text_input"],
+                    "dataframe",
+                    False,
+                ),
+            ),
+        ]
+    )
+except ModuleNotFoundError:
+    print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # noqa: T201
