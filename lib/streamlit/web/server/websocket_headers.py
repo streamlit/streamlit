@@ -17,7 +17,7 @@ from __future__ import annotations
 from streamlit import runtime
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.script_run_context import get_script_run_ctx
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
 _GET_WEBSOCKET_HEADERS_DEPRECATE_MSG = (

@@ -135,7 +135,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def _send_query_param_msg(self) -> None:
         # Avoid circular imports
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        from streamlit.runtime.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -190,7 +190,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def _ensure_single_query_api_used(self):
         # Avoid circular imports
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        from streamlit.runtime.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
         if ctx is None:
