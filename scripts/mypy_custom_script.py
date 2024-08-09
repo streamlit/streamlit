@@ -32,14 +32,6 @@ import mypy.main as mypy_main
 PATHS = ["lib/streamlit/", "scripts/", "e2e/scripts/"]
 
 
-def shlex_join(split_command: Iterable[str]):
-    """Return a shell-escaped string from *split_command*.
-
-    This function is backported from Python 3.8 - shlex.join
-    """
-    return " ".join(shlex.quote(arg) for arg in split_command)
-
-
 class Module:
     _COLUMNS = (56, 5, 5, 7)
     _HEADERS = ("Module", "Lines", "Typed", "Percent")
@@ -115,7 +107,7 @@ def main(report: bool = False, verbose: bool = False) -> None:
     args.extend(PATHS)
 
     if verbose:
-        shell_command = shlex_join(itertools.chain(["mypy"], args))
+        shell_command = shlex.join(itertools.chain(["mypy"], args))
         print("Executing command:", shell_command)
     mypy_main.main(stdout=sys.stdout, stderr=sys.stderr, args=args)
     if report:
