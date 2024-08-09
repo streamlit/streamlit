@@ -25,11 +25,15 @@ from typing import TYPE_CHECKING, Callable, Final
 
 from blinker import Signal
 
-from streamlit import config, runtime, util
+from streamlit import config, util
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.metrics_util import (
+    create_page_profile_message,
+    to_microseconds,
+)
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -52,6 +56,7 @@ from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -114,6 +119,7 @@ class ScriptRunner:
         main_script_path: str,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        media_file_mgr: MediaFileManager,
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: dict[str, str | None],
@@ -164,6 +170,7 @@ class ScriptRunner:
             session_state, yield_callback=self._maybe_handle_execution_control_request
         )
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._media_file_mgr = media_file_mgr
         self._script_cache = script_cache
         self._user_info = user_info
         self._fragment_storage = fragment_storage
@@ -416,7 +423,7 @@ class ScriptRunner:
                 # Otherwise, we're likely to remove files that still have corresponding
                 # download buttons/links to them present in the app, which will result
                 # in a 404 should the user click on them.
-                runtime.get_instance().media_file_mgr.clear_session_refs()
+                self._media_file_mgr.clear_session_refs()
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -612,12 +619,6 @@ class ScriptRunner:
 
             if ctx.gather_usage_stats:
                 try:
-                    # Prevent issues with circular import
-                    from streamlit.runtime.metrics_util import (
-                        create_page_profile_message,
-                        to_microseconds,
-                    )
-
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
@@ -662,7 +663,7 @@ class ScriptRunner:
 
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
-        runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        self._media_file_mgr.remove_orphaned_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

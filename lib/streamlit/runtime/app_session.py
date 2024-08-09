@@ -47,6 +47,7 @@ from streamlit.watcher import LocalSourcesWatcher
 if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.proto.PagesChanged_pb2 import PagesChanged
+    from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.state import SessionState
@@ -83,6 +84,7 @@ class AppSession:
         self,
         script_data: ScriptData,
         uploaded_file_manager: UploadedFileManager,
+        media_file_manager: MediaFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
         user_info: dict[str, str | None],
@@ -129,6 +131,7 @@ class AppSession:
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
+        self._media_file_manager = media_file_manager
         self._script_cache = script_cache
         self._pages_manager = PagesManager(
             script_data.main_script_path, self._script_cache
@@ -407,6 +410,7 @@ class AppSession:
             main_script_path=self._script_data.main_script_path,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            media_file_mgr=self._media_file_manager,
             script_cache=self._script_cache,
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,

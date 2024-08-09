@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Callable, Protocol, cast
 if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.app_session import AppSession
+    from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -210,6 +211,7 @@ class SessionManager(Protocol):
         self,
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
+        media_file_manager: MediaFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
     ) -> None:

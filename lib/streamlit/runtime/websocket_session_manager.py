@@ -27,6 +27,7 @@ from streamlit.runtime.session_manager import (
 )
 
 if TYPE_CHECKING:
+    from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -48,11 +49,13 @@ class WebsocketSessionManager(SessionManager):
         self,
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
+        media_file_manager: MediaFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
     ) -> None:
         self._session_storage = session_storage
         self._uploaded_file_mgr = uploaded_file_manager
+        self._media_file_mgr = media_file_manager
         self._script_cache = script_cache
         self._message_enqueued_callback = message_enqueued_callback
 
@@ -99,6 +102,7 @@ class WebsocketSessionManager(SessionManager):
         session = AppSession(
             script_data=script_data,
             uploaded_file_manager=self._uploaded_file_mgr,
+            media_file_manager=self._media_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._message_enqueued_callback,
             user_info=user_info,
