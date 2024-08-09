@@ -48,7 +48,11 @@ const AudioInput: React.FC<Props> = ({
     pauseRecording,
     clearBlobUrl,
     previewAudioStream,
-  } = useReactMediaRecorder({ audio: true, video: false })
+  } = useReactMediaRecorder({
+    audio: true,
+    video: false,
+    mediaRecorderOptions: { mimeType: "audio/wav" },
+  })
 
   // WAVE SURFER SPECIFIC STUFF
   const [wavesurfer, setWavesurfer] = React.useState<WaveSurfer | null>(null)
@@ -68,6 +72,7 @@ const AudioInput: React.FC<Props> = ({
 
     const blob = await (await fetch(mediaBlobUrl)).blob()
     const file = new File([blob], "audio.wav", { type: blob.type })
+    console.log({ file, blob, type: blob.type, mediaBlobUrl })
 
     uploadFiles({
       files: [file],
