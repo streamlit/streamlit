@@ -455,6 +455,8 @@ def convert_anything_to_pandas_df(
     if is_dask_object(data):
         data = data.head(max_unevaluated_rows, compute=True)
 
+        # Dask returns a Pandas object (DataFrame, Series, Index) when
+        # executing operations like `head`.
         if isinstance(data, (pd.Series, pd.Index)):
             data = data.to_frame()
 
