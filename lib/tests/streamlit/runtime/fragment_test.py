@@ -163,7 +163,7 @@ class FragmentTest(unittest.TestCase):
         assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_wrapped_fragment_saved_in_FragmentStorage(
+    def test_wrapped_fragment_not_saved_in_FragmentStorage(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
