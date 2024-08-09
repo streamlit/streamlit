@@ -16,16 +16,10 @@ from uuid import uuid4
 
 import streamlit as st
 
-if "counter" not in st.session_state:
-    st.session_state.counter = 0
-
-c = st.empty()
-
 
 @st.fragment
 def outer_fragment():
     with st.container(border=True):
-        st.session_state.counter += 1
         st.write(f"outer fragment: {uuid4()}")
         st.button("rerun outer fragment")
         inner_fragment()
@@ -37,39 +31,7 @@ def inner_fragment():
         st.write(f"inner fragment: {uuid4()}")
         st.button("rerun inner fragment")
 
-        if 5 < st.session_state.counter < 10:
-            st.write("FOO!")
-            c.write("BAR!")
-
-
-@st.fragment
-def outer_fragment2():
-    c = st.container(border=True)
-    c.button("rerun outer fragment2")
-
-    @st.fragment
-    def inner_fragment2():
-        with st.container(border=True):
-            st.write(c._active_dg._cursor.delta_path)
-            c.write(f"inner fragment2: {uuid4()}")
-            # st.write("foo")
-            st.button("rerun inner fragment2")
-
-    inner_fragment2()
-
-    @st.fragment
-    def inner_fragment3():
-        with st.container(border=True):
-            st.write(c._active_dg._cursor.delta_path)
-            c.write(f"inner fragment3: {uuid4()}")
-            # st.write("foo")
-            st.button("rerun inner fragment3")
-
-    inner_fragment3()
-
 
 st.write(f"outside all fragments: {uuid4()}")
 st.button("rerun whole app")
 outer_fragment()
-
-outer_fragment2()
