@@ -18,6 +18,7 @@ import dataclasses
 import inspect
 import types
 from collections import ChainMap, UserDict, UserList
+from collections.abc import ItemsView, KeysView, ValuesView
 from io import StringIO
 from typing import (
     TYPE_CHECKING,
@@ -258,13 +259,13 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame)     : Displays any dataframe-compatible value
-                as read-only table.
+            - write(dataframe)      : Displays any dataframe-like value.
             - write(error)          : Prints an exception specially.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
             - write(class)          : Displays information about a class.
-            - write(dict)           : Displays dict in an interactive widget.
+            - write(dict)           : Displays dict in an interactive viewer.
+            - write(list)           : Displays list in an interactive viewer.
             - write(mpl_fig)        : Displays a Matplotlib figure.
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
@@ -457,6 +458,9 @@ class WriteMixin:
                         UserDict,
                         ChainMap,
                         UserList,
+                        ItemsView,
+                        KeysView,
+                        ValuesView,
                     ),
                 )
                 or type_util.is_custom_dict(arg)

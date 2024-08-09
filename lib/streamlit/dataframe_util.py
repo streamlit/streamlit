@@ -28,7 +28,6 @@ from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
     Iterable,
     List,
@@ -44,6 +43,7 @@ from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
+    CustomDict,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -115,26 +115,31 @@ class DataFrameGenericAlias(Protocol[V_co]):
 class PandasCompatible(Protocol[V_co]):
     """Protocol for Pandas compatible objects."""
 
-    @property
     def to_pandas(self) -> DataFrame | Series: ...
 
 
 class ArrowCompatible(Protocol[V_co]):
-    """Protocol for DataFrame-like objects."""
+    """Protocol for Arrow compatible objects."""
 
-    @property
     def to_arrow(self) -> pa.Table: ...
 
 
 class DataframeInterchangeCompatible(Protocol[V_co]):
     """Protocol for objects support the dataframe-interchange protocol."""
 
-    def __dataframe__(self) -> object: ...
+    def __dataframe__(self) -> Any: ...
 
 
 @runtime_checkable
 class DBAPICursor(Protocol):
-    # Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
+    """Protocol for DBAPI 2.0 Cursor objects (PEP 249).
+
+    This is a simplified version of the DBAPI Cursor protocol.
+
+    Specification: https://peps.python.org/pep-0249/
+    Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
+    """
+
     @property
     def description(
         self,
@@ -173,12 +178,15 @@ Data: TypeAlias = Union[
     "Styler",
     "Index",
     "pa.Table",
+    "pa.Array",
     "np.ndarray",
     Iterable[Any],
-    Dict[Any, Any],
+    Mapping[Any, Any],
     PandasCompatible,
     ArrowCompatible,
     DataframeInterchangeCompatible,
+    DBAPICursor,
+    CustomDict,
     None,
 ]
 
@@ -218,6 +226,7 @@ class DataFormat(Enum):
     COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
     COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
     KEY_VALUE_DICT = auto()  # {index: value}
+    DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
 
 
 def is_dataframe_like(obj: object) -> bool:
@@ -256,6 +265,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.RAY_DATASET,
         DataFormat.HUGGINGFACE_DATASET,
         DataFormat.COLUMN_SERIES_MAPPING,
+        DataFormat.DBAPI_CURSOR,
     ]
 
 
@@ -271,6 +281,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Ray Dataset
     - Polars LazyFrame
     - Generator functions
+    - DB API Cursor
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -285,6 +296,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or inspect.isgeneratorfunction(obj)
+        or is_dbapi_cursor(obj)
     )
 
 
@@ -378,6 +390,11 @@ def is_dask_object(obj: object) -> bool:
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
+
+
+def is_dbapi_cursor(obj: object) -> TypeGuard[DBAPICursor]:
+    """True if obj looks like a DBAPI Cursor."""
+    return isinstance(obj, DBAPICursor)
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -604,7 +621,7 @@ def convert_anything_to_pandas_df(
             )
         return data
 
-    if isinstance(data, DBAPICursor):
+    if is_dbapi_cursor(data):
         columns = [d[0] for d in data.description] if data.description else None
         data = pd.DataFrame(data.fetchmany(max_unevaluated_rows), columns=columns)
         if data.shape[0] == max_unevaluated_rows:
@@ -1171,6 +1188,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_dbapi_cursor(input_data):
+        return DataFormat.DBAPI_CURSOR
     elif (
         isinstance(
             input_data,
@@ -1292,6 +1311,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
+        DataFormat.DBAPI_CURSOR,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
@@ -1316,10 +1336,7 @@ def convert_pandas_df_to_data_format(
         return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
-    elif (
-        data_format == DataFormat.POLARS_DATAFRAME
-        or data_format == DataFormat.POLARS_LAZYFRAME
-    ):
+    elif data_format in [DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME]:
         import polars as pl
 
         return pl.from_pandas(df)
