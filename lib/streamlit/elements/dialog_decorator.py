@@ -17,7 +17,10 @@ from __future__ import annotations
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
 
-from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
+from streamlit.delta_generator_singletons import (
+    get_event_dg,
+    get_last_dg_added_to_context_stack,
+)
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -76,7 +79,7 @@ def _dialog_decorator(
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
-        dialog = event_dg._dialog(title=title, dismissible=True, width=width)
+        dialog = get_event_dg()._dialog(title=title, dismissible=True, width=width)
         dialog.open()
 
         def dialog_content() -> None:
@@ -239,7 +242,9 @@ def experimental_dialog_decorator(title: F, *, width: DialogWidth = "small") -> 
 def experimental_dialog_decorator(
     title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
-    """Deprecated alias for @st.dialog. See the docstring for the decorator's new name."""
+    """Deprecated alias for @st.dialog.
+    See the docstring for the decorator's new name.
+    """
     func_or_title = title
     if isinstance(func_or_title, str):
         # Support passing the params via function decorator

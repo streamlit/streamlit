@@ -65,12 +65,25 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from streamlit.delta_generator import (
-    main_dg as _main_dg,
-    sidebar_dg as _sidebar_dg,
-    event_dg as _event_dg,
-    bottom_dg as _bottom_dg,
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.proto.RootContainer_pb2 import RootContainer
+import streamlit.delta_generator_singletons as _dg_singletons
+
+# DeltaGenerator methods:
+_dg_singletons.main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
+_dg_singletons.sidebar_dg = DeltaGenerator(
+    root_container=RootContainer.SIDEBAR, parent=_dg_singletons.main_dg
 )
+_dg_singletons.event_dg = DeltaGenerator(
+    root_container=RootContainer.EVENT, parent=_dg_singletons.main_dg
+)
+_dg_singletons.bottom_dg = DeltaGenerator(
+    root_container=RootContainer.BOTTOM, parent=_dg_singletons.main_dg
+)
+_main = _dg_singletons.main_dg
+sidebar = _dg_singletons.sidebar_dg
+_event = _dg_singletons.event_dg
+_bottom = _dg_singletons.bottom_dg
 
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,
@@ -103,9 +116,13 @@ from streamlit.commands.experimental_query_params import (
 
 import streamlit.column_config as _column_config
 
-# Modules that the user should have access to. These are imported with the "as" syntax and the same name; note that renaming the import with "as" does not make it an explicit export.
-# In this case, you should import it with an underscore to make clear that it is internal and then assign it to a variable with the new intended name.
-# You can check the export behavior by running 'mypy --strict example_app.py', which disables implicit_reexport, where you use the respective command in the example_app.py Streamlit app.
+# Modules that the user should have access to. These are imported with the "as" syntax
+# and the same name; note that renaming the import with "as" does not make it an
+# explicit export. In this case, you should import it with an underscore to make clear
+# that it is internal and then assign it to a variable with the new intended name.
+# You can check the export behavior by running 'mypy --strict example_app.py', which
+# disables implicit_reexport, where you use the respective command in the example_app.py
+# Streamlit app.
 
 from streamlit.echo import echo as echo
 from streamlit.commands.logo import logo as logo
@@ -133,12 +150,6 @@ def _update_logger() -> None:
 _config.on_config_parsed(_update_logger, True)
 
 secrets = _secrets_singleton
-
-# DeltaGenerator methods:
-_main = _main_dg
-sidebar = _sidebar_dg
-_event = _event_dg
-_bottom = _bottom_dg
 
 altair_chart = _main.altair_chart
 area_chart = _main.area_chart
@@ -213,7 +224,8 @@ write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
 
-# Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
+# Events - Note: these methods cannot be called directly on sidebar
+# (ex: st.sidebar.toast)
 toast = _event.toast
 
 # Config

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+from streamlit.delta_generator_singletons import dg_stack, get_default_dg_stack
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
@@ -61,10 +62,6 @@ def exec_func_with_error_handling(
             RerunExceptions, True for all other exceptions).
         - The uncaught exception if one occurred, None otherwise
     """
-
-    # Avoid circular imports
-    from streamlit.delta_generator import dg_stack, get_default_dg_stack
-
     run_without_errors = True
 
     # This will be set to a RerunData instance if our execution

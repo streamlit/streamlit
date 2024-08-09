@@ -17,6 +17,7 @@ import textwrap
 from typing import TYPE_CHECKING, Literal, NamedTuple, cast
 
 from streamlit import runtime
+from streamlit.delta_generator_singletons import get_dg_stack_or_default
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -41,9 +42,6 @@ def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    # Avoid circular imports.
-    from streamlit.delta_generator import dg_stack
-
     if not runtime.exists():
         return None
 
@@ -53,7 +51,7 @@ def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     if this_dg == this_dg._main_dg:
         # We were created via an `st.foo` call.
         # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
-        for dg in reversed(dg_stack.get()):
+        for dg in reversed(get_dg_stack_or_default()):
             if dg._form_data is not None:
                 return dg._form_data
     else:
@@ -287,7 +285,8 @@ class FormMixin:
         """
         ctx = get_script_run_ctx()
 
-        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        # Checks whether the entered button type is one of the allowed options - either
+        # "primary" or "secondary"
         if type not in ["primary", "secondary"]:
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary" or "secondary". \n'

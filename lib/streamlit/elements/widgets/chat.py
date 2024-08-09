@@ -19,7 +19,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
-from streamlit.elements.form import is_in_form
+from streamlit.delta_generator_singletons import get_bottom_dg
+from streamlit.elements.form_utils import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, to_key
@@ -384,12 +385,9 @@ class ChatMixin:
         if ctx:
             save_for_app_testing(ctx, id, widget_state.value)
         if position == "bottom":
-            # We import it here to avoid circular imports.
-            from streamlit import _bottom
-
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
-            _bottom._enqueue("chat_input", chat_input_proto)
+            get_bottom_dg()._enqueue("chat_input", chat_input_proto)
         else:
             self.dg._enqueue("chat_input", chat_input_proto)
 
