@@ -263,6 +263,7 @@ export function useReactMediaRecorder({
       blobPropertyBag ||
         (video ? { type: "video/mp4" } : { type: "audio/wav" })
     )
+
     const blob = new Blob(mediaChunks.current, blobProperty)
     const url = URL.createObjectURL(blob)
     setStatus("stopped")
