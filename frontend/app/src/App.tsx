@@ -1321,6 +1321,7 @@ export class App extends PureComponent<Props, State> {
     deltaMsg: Delta,
     metadataMsg: ForwardMsgMetadata
   ): void => {
+    console.log("DeltaMsg", deltaMsg, metadataMsg.deltaPath)
     this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
       this.state.scriptRunId,
       deltaMsg,

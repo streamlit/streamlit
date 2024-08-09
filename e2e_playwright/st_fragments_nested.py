@@ -50,10 +50,22 @@ def outer_fragment2():
     @st.fragment
     def inner_fragment2():
         with st.container(border=True):
+            st.write(c._active_dg._cursor.delta_path)
             c.write(f"inner fragment2: {uuid4()}")
+            # st.write("foo")
             st.button("rerun inner fragment2")
 
     inner_fragment2()
+
+    @st.fragment
+    def inner_fragment3():
+        with st.container(border=True):
+            st.write(c._active_dg._cursor.delta_path)
+            c.write(f"inner fragment3: {uuid4()}")
+            # st.write("foo")
+            st.button("rerun inner fragment3")
+
+    inner_fragment3()
 
 
 st.write(f"outside all fragments: {uuid4()}")
