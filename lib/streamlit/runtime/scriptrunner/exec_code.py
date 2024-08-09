@@ -25,8 +25,8 @@ from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 
 if TYPE_CHECKING:
+    from streamlit.runtime.script_run_context import ScriptRunContext
     from streamlit.runtime.scriptrunner.script_requests import RerunData
-    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 
 
 def exec_func_with_error_handling(

@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
-from streamlit.runtime.scriptrunner.script_requests import RerunData
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
     enqueue_message,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
+from streamlit.runtime.scriptrunner.script_requests import RerunData
 from streamlit.runtime.scriptrunner.script_runner import ScriptRunner, ScriptRunnerEvent
 
 __all__ = [

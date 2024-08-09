@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
+    from streamlit.runtime.script_run_context import ScriptRunContext
     from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 

@@ -20,7 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
 
 if TYPE_CHECKING:
-    from streamlit.runtime.scriptrunner.script_run_context import UserInfo
+    from streamlit.runtime.script_run_context import UserInfo
 
 
 def _get_user_info() -> UserInfo:

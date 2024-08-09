@@ -38,6 +38,11 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.script_requests import (
+    ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
+)
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -46,11 +51,6 @@ from streamlit.runtime.scriptrunner import (
     StopException,
 )
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-from streamlit.runtime.scriptrunner.script_requests import (
-    ScriptRequest,
-    ScriptRequests,
-    ScriptRequestType,
-)
 from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 

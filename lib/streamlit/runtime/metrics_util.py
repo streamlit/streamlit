@@ -29,6 +29,7 @@ from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
+from streamlit.runtime.script_run_context import get_script_run_ctx
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -365,7 +366,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
         exec_start = timer()
         # Local imports to prevent circular dependencies
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        # from streamlit.runtime.scriptrunner import get_script_run_ctx
         from streamlit.runtime.scriptrunner.exceptions import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
