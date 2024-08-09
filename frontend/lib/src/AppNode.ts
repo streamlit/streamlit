@@ -257,43 +257,42 @@ export class ElementNode implements AppNode {
     fragmentIdOfBlock?: Set<string>
   ): ElementNode | undefined {
     if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
-      console.log(
-        "ElementNode.clearStaleNodes",
-        this,
-        "fragmentIdOfBlock",
-        fragmentIdOfBlock,
-        "fragmentIdsThisRun",
-        fragmentIdsThisRun,
-        "currentScriptRunId",
-        currentScriptRunId
-      )
-      // if (
-      //   fragmentIdOfBlock &&
-      //   fragmentIdsThisRun.some(id => fragmentIdOfBlock.has(id)) &&
-      //   this.fragmentId !== undefined &&
-      //   !fragmentIdOfBlock.has(this.fragmentId) &&
-      //   currentScriptRunId !== this.scriptRunId
-      // ) {
-      //   return undefined
-      // }
-      // if (
-      //   this.fragmentId &&
-      //   !fragmentIdsThisRun?.includes(this.fragmentId) &&
-      //   fragmentIdOfBlock?.has(this.fragmentId) &&
-      //   !fragmentIdsThisRun?.some(id => fragmentIdOfBlock?.has(id)) &&
-      //   this.scriptRunId !== currentScriptRunId
-      // ) {
+      // if (fragmentIdOfBlock?.size) {
       //   return undefined
       // }
 
-      if (
-        fragmentIdsThisRun?.some(id => fragmentIdOfBlock?.has(id)) &&
-        this.fragmentId &&
-        !fragmentIdsThisRun?.includes(this.fragmentId) &&
-        this.scriptRunId !== currentScriptRunId
-      ) {
-        return undefined
-      }
+      // If we're currently running a fragment, and this element is nested inside of
+      // another fragment that was run, but this element wasn't run in this scriptRun,
+      // we consider it to be stale
+      // console.log(
+      //   "ElementNode.clearStaleNodes",
+      //   this,
+      //   "fragmentIdOfBlock",
+      //   fragmentIdOfBlock,
+      //   "fragmentIdsThisRun",
+      //   fragmentIdsThisRun,
+      //   "currentScriptRunId",
+      //   currentScriptRunId
+      // )
+      // if (
+      //   this.fragmentId &&
+      //   fragmentIdsThisRun?.some(id => fragmentIdOfBlock?.has(id)) &&
+      //   // fragmentIdOfBlock?.has(this.fragmentId) &&
+      //   !fragmentIdsThisRun?.includes(this.fragmentId) &&
+      //   this.scriptRunId !== currentScriptRunId
+      // ) {
+      //   console.log(
+      //     "ElementNode.clearStaleNodes: returning undefined",
+      //     this,
+      //     "fragmentIdOfBlock",
+      //     fragmentIdOfBlock,
+      //     "fragmentIdsThisRun",
+      //     fragmentIdsThisRun,
+      //     "currentScriptRunId",
+      //     currentScriptRunId
+      //   )
+      //   return undefined
+      // }
 
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,
@@ -308,8 +307,10 @@ export class ElementNode implements AppNode {
       //      defined containers.
       if (
         !this.fragmentId ||
-        !fragmentIdsThisRun.includes(this.fragmentId) ||
-        !fragmentIdOfBlock?.has(this.fragmentId)
+        !fragmentIdOfBlock?.size ||
+        // !fragmentIdsThisRun.includes(this.fragmentId) ||
+        // !fragmentIdOfBlock?.has(this.fragmentId)
+        (fragmentIdOfBlock?.size && this.scriptRunId === currentScriptRunId)
       ) {
         return this
       }
@@ -537,56 +538,59 @@ export class BlockNode implements AppNode {
       // Otherwise, we are currently running a fragment, and our behavior
       // depends on the fragmentId of this BlockNode.
 
-      if (this.fragmentId) {
-        // console.log(
-        //   "clearStaleNodes",
-        //   this,
-        //   "fragmentIdOfBlock",
-        //   fragmentIdOfBlock,
-        //   "fragmentIdsThisRun",
-        //   fragmentIdsThisRun,
-        //   "currentScriptRunId",
-        //   currentScriptRunId
-        // )
-        // if (
-        //   fragmentIdOfBlock &&
-        //   fragmentIdsThisRun.some(id => fragmentIdOfBlock?.has(id)) &&
-        //   this.fragmentId &&
-        //   !fragmentIdOfBlock.has(this.fragmentId) &&
-        //   currentScriptRunId !== this.scriptRunId
-        // ) {
-        //   return undefined
-        // }
+      // if (this.fragmentId) {
+      //   // This blocks belong to our fragment, but it was modified in a previous script run.
+      //   // This means it is stale now!
+      //   if (
+      //     (fragmentIdOfBlock?.has(this.fragmentId) ||
+      //       fragmentIdsThisRun?.some(id => fragmentIdOfBlock?.has(id))) &&
+      //     this.scriptRunId !== currentScriptRunId
+      //   ) {
+      //     return undefined
+      //   }
 
-        // if (!fragmentIdsThisRun.includes(this.fragmentId)) {
-        //   // This BlockNode corresponds to a different fragment, so we know we
-        //   // won't be modifying it and can return early.
-        //   return this
-        // }
+      //   // if (
+      //   //   !fragmentIdsThisRun.includes(this.fragmentId) &&
+      //   //   currentScriptRunId === this.scriptRunId
+      //   // )
+      //   //   return this
 
-        // This blocks belong to our fragment, but it was modified in a previous script run.
-        // This means it is stale now!
-        if (
-          (fragmentIdOfBlock?.has(this.fragmentId) ||
-            fragmentIdsThisRun?.some(id => fragmentIdOfBlock?.has(id))) &&
-          this.scriptRunId !== currentScriptRunId
-        ) {
-          return undefined
-        }
+      //   if (
+      //     this.fragmentId &&
+      //     fragmentIdsThisRun?.some(id => fragmentIdOfBlock?.has(id)) &&
+      //     // fragmentIdOfBlock?.has(this.fragmentId) &&
+      //     !fragmentIdsThisRun?.includes(this.fragmentId) &&
+      //     this.scriptRunId !== currentScriptRunId
+      //   )
+      //     return this
 
-        // if (!fragmentIdsThisRun.includes(this.fragmentId)) return this
-
-        // If this BlockNode *does* correspond to a currently running fragment,
-        // we recurse into it below and set the fragmentIdOfBlock parameter to
-        // keep track of which fragment this BlockNode belongs to.
-        if (!fragmentIdOfBlock) {
-          fragmentIdOfBlock = new Set()
-        }
-        fragmentIdOfBlock?.add(this.fragmentId)
-      }
+      //   // If this BlockNode *does* correspond to a currently running fragment,
+      //   // we recurse into it below and set the fragmentIdOfBlock parameter to
+      //   // keep track of which fragment this BlockNode belongs to.
+      //   if (!fragmentIdOfBlock) {
+      //     fragmentIdOfBlock = new Set()
+      //   }
+      //   // if (fragmentIdsThisRun?.includes(this.fragmentId)) {
+      //   fragmentIdOfBlock?.add(this.fragmentId)
+      //   // }
+      // }
 
       // If this BlockNode doesn't correspond to a fragment at all, we recurse
       // into it below as one of its children might.
+
+      if (fragmentIdOfBlock?.size && this.scriptRunId !== currentScriptRunId) {
+        return undefined
+      }
+
+      if (
+        this.fragmentId &&
+        fragmentIdsThisRun.includes(this.fragmentId) &&
+        this.scriptRunId === currentScriptRunId
+      ) {
+        fragmentIdOfBlock = new Set()
+        fragmentIdOfBlock.add(this.fragmentId)
+        // return undefined
+      }
     }
 
     // Recursively clear our children.
