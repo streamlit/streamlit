@@ -21,8 +21,8 @@ import dataclasses
 import inspect
 import math
 import re
-from collections import ChainMap, UserDict, deque
-from collections.abc import ItemsView, KeysView, ValuesView
+from collections import ChainMap, UserDict, UserList, deque
+from collections.abc import ItemsView, Mapping
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
@@ -31,8 +31,8 @@ from typing import (
     Dict,
     Final,
     Iterable,
+    List,
     Protocol,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -45,6 +45,7 @@ from streamlit.type_util import (
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
+    is_list_like,
     is_namedtuple,
     is_type,
 )
@@ -64,6 +65,8 @@ _MAX_UNEVALUATED_DF_ROWS = 10000
 
 _PANDAS_DATA_OBJECT_TYPE_RE: Final = re.compile(r"^pandas.*$")
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
+_XARRAY_DATA_ARRAY_TYPE_STR: Final = "xarray.core.dataarray.DataArray"
+_XARRAY_DATASET_TYPE_STR: Final = "xarray.core.dataset.Dataset"
 _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
@@ -72,6 +75,12 @@ _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 _SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
+_SNOWPANDAS_INDEX_TYPE_STR: Final = (
+    "snowflake.snowpark.modin.plugin.extensions.index.Index"
+)
+_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
+_POLARS_SERIES: Final = "polars.series.series.Series"
+_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
 
 V_co = TypeVar(
     "V_co",
@@ -132,6 +141,11 @@ class DataFormat(Enum):
     MODIN_OBJECT = auto()  # Modin DataFrame, Series
     SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     PANDAS_STYLER = auto()  # pandas Styler
+    POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
+    POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
+    POLARS_SERIES = auto()  # polars.series.series.Series
+    XARRAY_DATASET = auto()  # xarray.Dataset
+    XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -170,6 +184,11 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.PYSPARK_OBJECT,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.POLARS_SERIES,
+        DataFormat.POLARS_DATAFRAME,
+        DataFormat.POLARS_LAZYFRAME,
+        DataFormat.XARRAY_DATASET,
+        DataFormat.XARRAY_DATA_ARRAY,
         DataFormat.COLUMN_SERIES_MAPPING,
     ]
 
@@ -181,7 +200,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Snowpark DataFrame / Table
     - PySpark DataFrame
     - Modin DataFrame / Series
-    - Snowpandas DataFrame / Series
+    - Snowpandas DataFrame / Series / Index
+    - Polars LazyFrame
     - Generator functions
 
     Unevaluated means that the data is not yet in the local memory.
@@ -193,6 +213,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
+        or is_polars_lazyframe(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -233,9 +254,36 @@ def is_modin_data_object(obj: object) -> bool:
 
 def is_snowpandas_data_object(obj: object) -> bool:
     """True if obj is a Snowpark Pandas DataFrame or Series."""
-    return is_type(obj, _SNOWPANDAS_DF_TYPE_STR) or is_type(
-        obj, _SNOWPANDAS_SERIES_TYPE_STR
+    return (
+        is_type(obj, _SNOWPANDAS_DF_TYPE_STR)
+        or is_type(obj, _SNOWPANDAS_SERIES_TYPE_STR)
+        or is_type(obj, _SNOWPANDAS_INDEX_TYPE_STR)
     )
+
+
+def is_polars_dataframe(obj: object) -> bool:
+    """True if obj is a Polars Dataframe."""
+    return is_type(obj, _POLARS_DATAFRAME)
+
+
+def is_xarray_dataset(obj: object) -> bool:
+    """True if obj is a Xarray Dataset."""
+    return is_type(obj, _XARRAY_DATASET_TYPE_STR)
+
+
+def is_xarray_data_array(obj: object) -> bool:
+    """True if obj is a Xarray DataArray."""
+    return is_type(obj, _XARRAY_DATA_ARRAY_TYPE_STR)
+
+
+def is_polars_series(obj: object) -> bool:
+    """True if obj is a Polars Series."""
+    return is_type(obj, _POLARS_SERIES)
+
+
+def is_polars_lazyframe(obj: object) -> bool:
+    """True if obj is a Polars Lazyframe."""
+    return is_type(obj, _POLARS_LAZYFRAME)
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
@@ -361,6 +409,33 @@ def convert_anything_to_pandas_df(
             else _fix_column_naming(pd.DataFrame(data))
         )
 
+    if is_polars_dataframe(data):
+        data = data.clone() if ensure_copy else data
+        return data.to_pandas()
+
+    if is_polars_series(data):
+        data = data.clone() if ensure_copy else data
+        return data.to_pandas().to_frame()
+
+    if is_polars_lazyframe(data):
+        data = data.limit(max_unevaluated_rows).collect().to_pandas()
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `collect()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_xarray_dataset(data):
+        if ensure_copy:
+            data = data.copy(deep=True)
+        return data.to_dataframe()
+
+    if is_xarray_data_array(data):
+        if ensure_copy:
+            data = data.copy(deep=True)
+        return data.to_series().to_frame()
+
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
 
@@ -429,7 +504,7 @@ def convert_anything_to_pandas_df(
         return _fix_column_naming(pd.DataFrame([c.value for c in data]))  # type: ignore
 
     # Support for some list like objects
-    if isinstance(data, (deque, map, array.ArrayType)):
+    if isinstance(data, (deque, map, array.ArrayType, UserList)):
         return _fix_column_naming(pd.DataFrame(list(data)))
 
     # Support for Streamlit's custom dict-like objects
@@ -601,41 +676,55 @@ def convert_anything_to_arrow_bytes(
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
         return convert_pandas_df_to_arrow_bytes(df)
 
+    if is_polars_dataframe(data):
+        return convert_arrow_table_to_arrow_bytes(data.to_arrow())
+
+    if is_polars_series(data):
+        return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
+
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
     df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
     return convert_pandas_df_to_arrow_bytes(df)
 
 
-def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
-    """Try to convert different formats to an indexable Sequence.
+def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
+    """Try to convert different formats to a list.
 
     If the input is a dataframe-like object, we just select the first
-    column to iterate over. If the input cannot be converted to a sequence,
-    a TypeError is raised.
+    column to iterate over. Non sequence-like objects and scalar types,
+    will just be wrapped into a list.
 
     Parameters
     ----------
+
     obj : OptionSequence
-        The object to convert to a sequence.
+        The object to convert to a list.
 
     Returns
     -------
-    Sequence
-        The converted sequence.
+    list
+        The converted list.
     """
     if obj is None:
         return []  # type: ignore
 
-    if isinstance(
-        obj, (str, list, tuple, set, range, EnumMeta, deque, map)
-    ) and not is_snowpark_row_list(obj):
+    if isinstance(obj, (str, int, float, bool)):
+        # Wrap basic objects into a list
+        return [obj]
+
+    if isinstance(obj, EnumMeta):
+        # Support for enum classes. For string enums, we return the string value
+        # of the enum members. For other enums, we just return the enum member.
+        return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
+
+    if isinstance(obj, Mapping):
+        return list(obj.keys())
+
+    if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
         # potential mutations to the original object.
         return list(obj)
-
-    if isinstance(obj, dict):
-        return list(obj.keys())
 
     # Fallback to our DataFrame conversion logic:
     try:
@@ -647,13 +736,13 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         data_df = convert_anything_to_pandas_df(obj, ensure_copy=True)
         # Return first column as a list:
         return (
-            [] if data_df.empty else cast(Sequence[V_co], data_df.iloc[:, 0].to_list())
+            []
+            if data_df.empty
+            else cast(List[V_co], list(data_df.iloc[:, 0].to_list()))
         )
-    except errors.StreamlitAPIException as e:
-        raise TypeError(
-            "Object is not an iterable and could not be converted to one. "
-            f"Object type: {type(obj)}"
-        ) from e
+    except errors.StreamlitAPIException:
+        # Wrap the object into a list
+        return [obj]  # type: ignore
 
 
 def _maybe_truncate_table(
@@ -853,7 +942,6 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
-    import array
 
     import numpy as np
     import pandas as pd
@@ -881,20 +969,29 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.PANDAS_STYLER
     elif isinstance(input_data, pd.api.extensions.ExtensionArray):
         return DataFormat.PANDAS_ARRAY
+    elif is_polars_series(input_data):
+        return DataFormat.POLARS_SERIES
+    elif is_polars_dataframe(input_data):
+        return DataFormat.POLARS_DATAFRAME
+    elif is_polars_lazyframe(input_data):
+        return DataFormat.POLARS_LAZYFRAME
     elif is_modin_data_object(input_data):
         return DataFormat.MODIN_OBJECT
     elif is_snowpandas_data_object(input_data):
         return DataFormat.SNOWPANDAS_OBJECT
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
+    elif is_xarray_dataset(input_data):
+        return DataFormat.XARRAY_DATASET
+    elif is_xarray_data_array(input_data):
+        return DataFormat.XARRAY_DATA_ARRAY
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
-    elif isinstance(
-        input_data, (range, EnumMeta, KeysView, ValuesView, deque, map, array.ArrayType)
-    ):
-        return DataFormat.LIST_OF_VALUES
     elif (
-        isinstance(input_data, (ChainMap, MappingProxyType, UserDict))
+        isinstance(
+            input_data,
+            (ChainMap, UserDict, MappingProxyType),
+        )
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
@@ -919,7 +1016,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.LIST_OF_RECORDS
             if isinstance(first_element, (list, tuple, set, frozenset)):
                 return DataFormat.LIST_OF_ROWS
-    elif isinstance(input_data, dict):
+    elif isinstance(input_data, (dict, Mapping)):
         if not input_data:
             return DataFormat.KEY_VALUE_DICT
         if len(input_data) > 0:
@@ -934,6 +1031,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
             # Use key-value dict as fallback. However, if the values of the dict
             # contains mixed types, it will become non-editable in the frontend.
             return DataFormat.KEY_VALUE_DICT
+    elif is_list_like(input_data):
+        return DataFormat.LIST_OF_VALUES
+
     return DataFormat.UNKNOWN
 
 
@@ -991,7 +1091,7 @@ def convert_pandas_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, xarray.Dataset, xarray.DataArray, polars.Dataframe, polars.Series, list, set, tuple, or dict.
         The converted dataframe.
     """
 
@@ -1029,6 +1129,25 @@ def convert_pandas_df_to_data_format(
         return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
+    elif (
+        data_format == DataFormat.POLARS_DATAFRAME
+        or data_format == DataFormat.POLARS_LAZYFRAME
+    ):
+        import polars as pl
+
+        return pl.from_pandas(df)
+    elif data_format == DataFormat.POLARS_SERIES:
+        import polars as pl
+
+        return pl.from_pandas(_pandas_df_to_series(df))
+    elif data_format == DataFormat.XARRAY_DATASET:
+        import xarray as xr
+
+        return xr.Dataset.from_dataframe(df)
+    elif data_format == DataFormat.XARRAY_DATA_ARRAY:
+        import xarray as xr
+
+        return xr.DataArray.from_series(_pandas_df_to_series(df))
     elif data_format == DataFormat.LIST_OF_RECORDS:
         return _unify_missing_values(df).to_dict(orient="records")
     elif data_format == DataFormat.LIST_OF_ROWS:

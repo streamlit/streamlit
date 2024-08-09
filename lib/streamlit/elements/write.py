@@ -17,9 +17,18 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import types
-from collections import ChainMap, UserDict
+from collections import ChainMap, UserDict, UserList
 from io import StringIO
-from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Generator,
+    Iterable,
+    List,
+    cast,
+)
 
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
@@ -165,7 +174,7 @@ class WriteMixin:
             if type_util.is_openai_chunk(chunk):
                 # Try to convert OpenAI chat completion chunk to a string:
                 try:
-                    if len(chunk.choices) == 0:
+                    if len(chunk.choices) == 0 or chunk.choices[0].delta is None:
                         # The choices list can be empty. E.g. when using the
                         # AzureOpenAI client, the first chunk will always be empty.
                         chunk = ""
@@ -447,6 +456,7 @@ class WriteMixin:
                         types.MappingProxyType,
                         UserDict,
                         ChainMap,
+                        UserList,
                     ),
                 )
                 or type_util.is_custom_dict(arg)
