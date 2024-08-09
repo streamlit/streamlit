@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
-from streamlit.elements.form import is_in_form
+from streamlit.elements.form_utils import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, get_session_state
