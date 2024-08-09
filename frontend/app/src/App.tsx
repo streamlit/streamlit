@@ -1473,7 +1473,7 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
     queryString?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
