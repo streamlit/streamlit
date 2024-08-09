@@ -19,10 +19,8 @@
 from __future__ import annotations
 
 
-import glob
 import itertools
 import os
-import os.path
 import shlex
 import sys
 import tempfile
