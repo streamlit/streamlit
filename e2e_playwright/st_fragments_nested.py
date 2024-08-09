@@ -42,6 +42,22 @@ def inner_fragment():
             c.write("BAR!")
 
 
+@st.fragment
+def outer_fragment2():
+    c = st.container(border=True)
+    c.button("rerun outer fragment2")
+
+    @st.fragment
+    def inner_fragment2():
+        with st.container(border=True):
+            c.write(f"inner fragment2: {uuid4()}")
+            st.button("rerun inner fragment2")
+
+    inner_fragment2()
+
+
 st.write(f"outside all fragments: {uuid4()}")
 st.button("rerun whole app")
 outer_fragment()
+
+outer_fragment2()

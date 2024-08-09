@@ -260,14 +260,8 @@ export class ElementNode implements AppNode {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,
       //   1. This element doesn't correspond to a fragment at all.
-      //   2. This element corresponds to a fragment, but not one that's
-      //      currently being run.
-      //   3. This element was added by a fragment, but the element's
-      //      *parent block* does not correspond to the same fragment. This is
-      //      possible when a fragment writes to a container defined outside of
-      //      itself. We don't clear out these types of elements in this case
-      //      as we don't want fragment runs to result in changes to externally
-      //      defined containers.
+      //   2. This element is a fragment but is in no path that was modified.
+      //   3. This element belongs to a path that was modified, but it was modified in the same run.
       if (
         !this.fragmentId ||
         !fragmentIdOfBlock ||
@@ -498,10 +492,14 @@ export class BlockNode implements AppNode {
     } else {
       // Otherwise, we are currently running a fragment, and our behavior
       // depends on the fragmentId of this BlockNode.
+
+      // The parent block was modified but this element wasn't, so it's stale.
       if (fragmentIdOfBlock && this.scriptRunId !== currentScriptRunId) {
         return undefined
       }
 
+      // This block is modified by the current run, so we indicate this to our children in case
+      // there were not modified by the current run, which means they are stale.
       if (
         this.fragmentId &&
         fragmentIdsThisRun.includes(this.fragmentId) &&
