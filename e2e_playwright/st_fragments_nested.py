@@ -16,10 +16,16 @@ from uuid import uuid4
 
 import streamlit as st
 
+if "counter" not in st.session_state:
+    st.session_state.counter = 0
+
+c = st.container()
+
 
 @st.fragment
 def outer_fragment():
     with st.container(border=True):
+        st.session_state.counter += 1
         st.write(f"outer fragment: {uuid4()}")
         st.button("rerun outer fragment")
         inner_fragment()
@@ -30,6 +36,10 @@ def inner_fragment():
     with st.container(border=True):
         st.write(f"inner fragment: {uuid4()}")
         st.button("rerun inner fragment")
+
+        if 5 < st.session_state.counter < 10:
+            st.write("FOO!")
+            c.write("BAR!")
 
 
 st.write(f"outside all fragments: {uuid4()}")
