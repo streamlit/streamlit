@@ -24,7 +24,7 @@ import streamlit as st
 from streamlit import errors
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.script_run_context.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
 from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX, compute_widget_id
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata

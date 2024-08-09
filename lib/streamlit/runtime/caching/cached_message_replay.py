@@ -25,7 +25,7 @@ from streamlit import runtime, util
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.hashing import update_hash
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
 )

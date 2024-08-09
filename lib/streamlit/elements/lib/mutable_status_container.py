@@ -23,7 +23,7 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner.script_run_context import enqueue_message
+from streamlit.runtime.script_run_context import enqueue_message
 
 if TYPE_CHECKING:
     from types import TracebackType

@@ -34,6 +34,11 @@ from streamlit.runtime.metrics_util import (
     create_page_profile_message,
     to_microseconds,
 )
+from streamlit.runtime.script_run_context import (
+    ScriptRunContext,
+    add_script_run_ctx,
+    get_script_run_ctx,
+)
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -41,11 +46,6 @@ from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
     ScriptRequests,
     ScriptRequestType,
-)
-from streamlit.runtime.scriptrunner.script_run_context import (
-    ScriptRunContext,
-    add_script_run_ctx,
-    get_script_run_ctx,
 )
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
