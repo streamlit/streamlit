@@ -33,7 +33,8 @@ message ChatInput {
     BOTTOM = 0;
   }
   Position position = 8;
-  bool accept_file = 9;
+  // TODO[kajarenc] Consider using Enum for accept_file values
+  string accept_file = 9;
   // Supported file types: For example: ["png","jpg","img"]
   repeated string file_type = 10;
 }

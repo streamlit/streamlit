@@ -299,7 +299,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
-        accept_file: bool = False,
+        accept_file: bool | Literal["multiple"] = False,
         disabled: bool = False,
         file_type: str | Sequence[str] | None = None,
         # TODO [kajarenc] https://github.com/python/mypy/issues/4020#issuecomment-737600893 check does it relevant here
@@ -325,7 +325,7 @@ class ChatMixin:
             The maximum number of characters that can be entered. If ``None``
             (default), there will be no maximum.
 
-        accept_file : bool
+        accept_file : bool | str
             AAA
 
         disabled : bool
@@ -392,7 +392,13 @@ class ChatMixin:
             writes_allowed=False,
         )
 
+        if accept_file not in {True, False, "multiple"}:
+            raise StreamlitAPIException(
+                "The `accept_file` parameter must be a boolean or 'multiple'."
+            )
+
         ctx = get_script_run_ctx()
+        # TODO[kajarenc] Maybe add accept_file and file_type to compute_widget_id
         id = compute_widget_id(
             "chat_input",
             user_key=key,
@@ -453,7 +459,7 @@ class ChatMixin:
 
         chat_input_proto.default = default
 
-        chat_input_proto.accept_file = accept_file
+        chat_input_proto.accept_file = str(accept_file).lower()
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
 
