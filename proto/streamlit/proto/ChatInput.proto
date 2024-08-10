@@ -34,4 +34,6 @@ message ChatInput {
   }
   Position position = 8;
   bool accept_file = 9;
+  // Supported file types: For example: ["png","jpg","img"]
+  repeated string file_type = 10;
 }

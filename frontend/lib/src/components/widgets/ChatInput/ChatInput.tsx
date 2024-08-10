@@ -402,6 +402,7 @@ function ChatInput({
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
     multiple: true,
+    accept: element.fileType,
   })
 
   const getScrollHeight = (): number => {
