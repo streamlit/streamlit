@@ -411,6 +411,24 @@ class ScriptRunnerTest(AsyncTestCase):
         ex = patched_handle_exception.call_args[0][0]
         assert isinstance(ex, RuntimeError)
 
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_FragmentStorageKeyError_for_autoRerun_is_not_raised(
+        self, patched_handle_exception
+    ):
+        fragment = MagicMock()
+        fragment.side_effect = FragmentStorageKeyError("kaboom")
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["my_fragment"], is_auto_rerun=True)
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert patched_handle_exception.call_args is None
+
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
     def test_regular_KeyError_is_rethrown(
@@ -617,6 +635,24 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, [])
+
+    @patch("streamlit.runtime.metrics_util.create_page_profile_message")
+    def test_uncaught_exception_gets_tracked(self, patched_create_page_profile_message):
+        """Tests that we track uncaught exceptions."""
+        with testutil.patch_config_options({"browser.gatherUsageStats": True}):
+            scriptrunner = TestScriptRunner("runtime_error.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+            patched_create_page_profile_message.assert_called_once()
+            call_kwargs = patched_create_page_profile_message.call_args_list[0].kwargs
+
+            # Check the
+            assert len(call_kwargs["commands"]) == 2  # text & exception command
+            assert call_kwargs["exec_time"] > 0
+            assert call_kwargs["prep_time"] > 0
+            assert call_kwargs["uncaught_exception"] == "AttributeError"
 
     @parameterized.expand([(True,), (False,)])
     def test_runtime_error(self, show_error_details: bool):

@@ -26,7 +26,6 @@ import Balloon2 from "@streamlit/lib/src/assets/img/balloons/balloon-2.png"
 import Balloon3 from "@streamlit/lib/src/assets/img/balloons/balloon-3.png"
 import Balloon4 from "@streamlit/lib/src/assets/img/balloons/balloon-4.png"
 import Balloon5 from "@streamlit/lib/src/assets/img/balloons/balloon-5.png"
-
 import Particles from "@streamlit/lib/src/components/elements/Particles"
 import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
 

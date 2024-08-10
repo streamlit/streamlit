@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
+import React from "react"
+
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
 import isEqual from "lodash/isEqual"
-import React from "react"
 
 import {
   CameraInput as CameraInputProto,
@@ -37,19 +38,23 @@ import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { logError } from "@streamlit/lib/src/util/log"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+} from "@streamlit/lib/src/util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
 } from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
+
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
-  StyledSpan,
   StyledImg,
+  StyledSpan,
 } from "./styled-components"
 import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 
@@ -201,12 +206,12 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     const widgetValue = widgetMgr.getFileUploaderStateValue(element)
 
-    if (widgetValue == null) {
+    if (isNullOrUndefined(widgetValue)) {
       return emptyState
     }
 
     const { uploadedFileInfo } = widgetValue
-    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
+    if (isNullOrUndefined(uploadedFileInfo) || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -325,7 +330,7 @@ class CameraInput extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState({ files: [] }, () => {
       const newWidgetValue = this.createWidgetValue()
-      if (newWidgetValue == null) {
+      if (isNullOrUndefined(newWidgetValue)) {
         return
       }
 
@@ -435,7 +440,7 @@ class CameraInput extends React.PureComponent<Props, State> {
    */
   public deleteFile = (fileId: number): void => {
     const file = this.getFile(fileId)
-    if (file == null) {
+    if (isNullOrUndefined(file)) {
       return
     }
 
@@ -495,7 +500,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }))
 
     const curFile = this.getFile(localFileId)
-    if (curFile == null || curFile.status.type !== "uploading") {
+    if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
       // The file may have been canceled right before the upload
       // completed. In this case, we just bail.
       return
@@ -517,7 +522,7 @@ class CameraInput extends React.PureComponent<Props, State> {
    */
   private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
     const file = this.getFile(fileId)
-    if (file == null || file.status.type !== "uploading") {
+    if (isNullOrUndefined(file) || file.status.type !== "uploading") {
       return
     }
 

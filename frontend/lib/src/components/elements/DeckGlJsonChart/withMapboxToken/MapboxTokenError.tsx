@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement } from "react"
+
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
+
 import {
   MapboxTokenFetchingError,
   MapboxTokenNotProvidedError,

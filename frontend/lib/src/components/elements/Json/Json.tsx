@@ -15,16 +15,17 @@
  */
 
 import React, { ReactElement, useRef } from "react"
+
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
-import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import Clipboard from "clipboard"
 
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import {
-  hasLightBackgroundColor,
   EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 

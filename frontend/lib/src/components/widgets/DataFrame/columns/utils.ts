@@ -15,13 +15,13 @@
  */
 
 import {
-  GridCell,
-  Theme as GlideTheme,
-  TextCell,
-  GridCellKind,
-  LoadingCell,
-  GridColumn,
   BaseGridCell,
+  Theme as GlideTheme,
+  GridCell,
+  GridCellKind,
+  GridColumn,
+  LoadingCell,
+  TextCell,
 } from "@glideapps/glide-data-grid"
 import toString from "lodash/toString"
 import merge from "lodash/merge"
@@ -37,8 +37,8 @@ import {
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
 /**

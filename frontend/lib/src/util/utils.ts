@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import {
-  Alert as AlertProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
-  Element,
-  Skeleton as SkeletonProto,
-} from "@streamlit/lib/src/proto"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
 import decamelize from "decamelize"
+
+import {
+  Alert as AlertProto,
+  Element,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Skeleton as SkeletonProto,
+} from "@streamlit/lib/src/proto"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -179,7 +180,7 @@ export function isPaddingDisplayed(): boolean {
 /**
  * Returns true if the URL parameters contain ?embed_options=light_theme (case insensitive).
  */
-export function isLightTheme(): boolean {
+export function isLightThemeInQueryParams(): boolean {
   // NOTE: We don't check for ?embed=true here, because we want to allow display without any
   // other embed options (for example in our e2e tests).
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
@@ -190,7 +191,7 @@ export function isLightTheme(): boolean {
 /**
  * Returns true if the URL parameters contain ?embed_options=dark_theme (case insensitive).
  */
-export function isDarkTheme(): boolean {
+export function isDarkThemeInQueryParams(): boolean {
   // NOTE: We don't check for ?embed=true here, because we want to allow display without any
   // other embed options (for example in our e2e tests).
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
@@ -257,7 +258,7 @@ export function hashString(s: string): string {
  * if the value is null or undefined.
  */
 export function requireNonNull<T>(obj: T | null | undefined): T {
-  if (obj == null) {
+  if (isNullOrUndefined(obj)) {
     throw new Error("value is null")
   }
   return obj
@@ -274,7 +275,7 @@ export function notUndefined<T>(value: T | undefined): value is T {
  * A type predicate that is true if the given value is not null.
  */
 export function notNull<T>(value: T | null): value is T {
-  return value != null
+  return notNullOrUndefined(value)
 }
 
 /**
@@ -344,12 +345,18 @@ export function setCookie(
 
 /** Return an Element's widget ID if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
+  // NOTE: This is a temporary fix until the selections in maps work is done.
+  // We believe that this will be easier to fix when we get to that point so in
+  // the meantime we will be doing this simple fix to prevent this error: https://github.com/streamlit/streamlit/issues/8329
+  if (notNull(element.deckGlJsonChart)) {
+    return undefined
+  }
   return get(element as any, [requireNonNull(element.type), "id"])
 }
 
 /** True if the given form ID is non-null and non-empty. */
 export function isValidFormId(formId?: string): formId is string {
-  return formId != null && formId.length > 0
+  return notNullOrUndefined(formId) && formId.length > 0
 }
 
 /** True if the given widget element is part of a form. */

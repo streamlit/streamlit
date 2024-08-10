@@ -16,8 +16,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import types
+from collections import UserList, deque
+from collections.abc import ItemsView, KeysView, ValuesView
+from enum import EnumMeta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -42,13 +46,22 @@ if TYPE_CHECKING:
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
-    from streamlit.runtime.secrets import Secrets
 
 T = TypeVar("T")
 
 
 class SupportsStr(Protocol):
     def __str__(self) -> str: ...
+
+
+class CustomDict(Protocol):
+    """Protocol for Streamlit native custom dictionaries (e.g. session state, secrets, query params).
+    that can be converted to a dict.
+
+    All these implementations should provide a to_dict method.
+    """
+
+    def to_dict(self) -> dict[str, Any]: ...
 
 
 @overload
@@ -246,20 +259,47 @@ def is_function(x: object) -> TypeGuard[types.FunctionType]:
     return isinstance(x, types.FunctionType)
 
 
+def has_callable_attr(obj: object, name: str) -> bool:
+    """True if obj has the specified attribute that is callable."""
+    return hasattr(obj, name) and callable(getattr(obj, name))
+
+
 def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
-    t = type(x)
-    b = t.__bases__
-    if len(b) != 1 or b[0] is not tuple:
-        return False
-    f = getattr(t, "_fields", None)
-    if not isinstance(f, tuple):
-        return False
-    return all(type(n).__name__ == "str" for n in f)
+    """True if obj is an instance of a namedtuple."""
+    return isinstance(x, tuple) and has_callable_attr(x, "_asdict")
+
+
+def is_dataclass_instance(obj: object) -> bool:
+    """True if obj is an instance of a dataclass."""
+    # The not isinstance(obj, type) check is needed to make sure that this
+    # is an instance of a dataclass and not the class itself.
+    # dataclasses.is_dataclass returns True for either instance or class.
+    return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
 
 def is_pydeck(obj: object) -> TypeGuard[Deck]:
     """True if input looks like a pydeck chart."""
     return is_type(obj, "pydeck.bindings.deck.Deck")
+
+
+def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
+    """True if input looks like one of the Streamlit custom dictionaries."""
+    from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
+    from streamlit.runtime.secrets import Secrets
+    from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+    from streamlit.user_info import UserInfoProxy
+
+    return isinstance(
+        obj,
+        (
+            SessionStateProxy,
+            UserInfoProxy,
+            QueryParamsProxy,
+            StreamlitHeaders,
+            StreamlitCookies,
+            Secrets,
+        ),
+    ) and has_callable_attr(obj, "to_dict")
 
 
 def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
@@ -272,20 +312,33 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     return True
 
 
-def is_streamlit_secrets_class(obj: object) -> TypeGuard[Secrets]:
-    """True if obj is a Streamlit Secrets object."""
-    return is_type(obj, "streamlit.runtime.secrets.Secrets")
+def is_list_like(obj: object) -> TypeGuard[Sequence[Any]]:
+    """True if input looks like a list."""
+    import array
 
+    if isinstance(obj, str):
+        return False
 
-def is_sequence(seq: Any) -> bool:
-    """True if input looks like a sequence."""
-    if isinstance(seq, str):
-        return False
-    try:
-        len(seq)
-    except Exception:
-        return False
-    return True
+    if isinstance(obj, (list, set, tuple)):
+        # Optimization to check the most common types first
+        return True
+
+    return isinstance(
+        obj,
+        (
+            array.ArrayType,
+            deque,
+            EnumMeta,
+            enumerate,
+            frozenset,
+            ItemsView,
+            KeysView,
+            map,
+            range,
+            UserList,
+            ValuesView,
+        ),
+    )
 
 
 def check_python_comparable(seq: Sequence[Any]) -> None:

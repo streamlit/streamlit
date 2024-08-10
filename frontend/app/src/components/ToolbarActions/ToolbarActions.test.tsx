@@ -16,11 +16,11 @@
 
 import React from "react"
 
-import { render, mockSessionInfo } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
+
+import { mockSessionInfo, render } from "@streamlit/lib"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import ToolbarActions, {
   ActionButton,

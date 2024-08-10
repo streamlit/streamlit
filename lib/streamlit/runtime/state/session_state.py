@@ -186,7 +186,7 @@ class WStates(MutableMapping[str, Any]):
     def remove_stale_widgets(
         self,
         active_widget_ids: set[str],
-        fragment_ids_this_run: set[str] | None,
+        fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
         self.states = {
@@ -585,13 +585,9 @@ class SessionState:
         if ctx is None:
             return
 
-        fragment_ids_this_run = (
-            set(ctx.script_requests.fragment_id_queue) if ctx.script_requests else set()
-        )
-
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
-            fragment_ids_this_run,
+            ctx.fragment_ids_this_run,
         )
 
         # Remove entries from _old_state corresponding to
@@ -604,7 +600,7 @@ class SessionState:
                 or not _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(k),
                     active_widget_ids,
-                    fragment_ids_this_run,
+                    ctx.fragment_ids_this_run,
                 )
             )
         }
@@ -712,7 +708,7 @@ def _is_internal_key(key: str) -> bool:
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
     active_widget_ids: set[str],
-    fragment_ids_this_run: set[str] | None,
+    fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:
         return True

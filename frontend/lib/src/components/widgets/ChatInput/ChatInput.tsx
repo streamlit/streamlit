@@ -15,11 +15,11 @@
  */
 
 import React, {
+  ChangeEvent,
+  KeyboardEvent,
   useEffect,
   useRef,
   useState,
-  ChangeEvent,
-  KeyboardEvent,
 } from "react"
 
 import axios from "axios"
@@ -45,8 +45,8 @@ import { FileRejection } from "react-dropzone"
 import zip from "lodash/zip"
 
 import {
-  StyledChatInputContainer,
   StyledChatInput,
+  StyledChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,

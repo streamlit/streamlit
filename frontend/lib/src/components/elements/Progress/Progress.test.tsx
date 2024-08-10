@@ -15,11 +15,13 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import { Progress as ProgressProto } from "@streamlit/lib/src/proto"
+
 import Progress, { ProgressProps } from "./Progress"
 
 const getProps = (

@@ -34,15 +34,11 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.data_mocks import (
+    SHARED_TEST_CASES,
+    CaseMetadata,
+)
 from tests.streamlit.runtime.secrets_test import MOCK_TOML
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -168,19 +164,30 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_input_data(
+        self,
+        name: str,
+        input_data: Any,
+        metadata: CaseMetadata,
+    ):
+        """Test st.write with various input data and check that it uses
+        the expected command."""
+        with patch(
+            f"streamlit.delta_generator.DeltaGenerator.{metadata.expected_write_command}"
+        ) as p:
+            st.write(input_data)
+
+            p.assert_called_once()
+
     def test_plotly(self):
         import plotly.graph_objs as go
 
         """Test st.write with plotly object."""
         with patch("streamlit.delta_generator.DeltaGenerator.plotly_chart") as p:
             st.write([go.Scatter(x=[1, 2], y=[10, 20])])
-
-            p.assert_called_once()
-
-    def test_dict(self):
-        """Test st.write with dict."""
-        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            st.write({"a": 1, "b": 2})
 
             p.assert_called_once()
 
@@ -223,13 +230,6 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-    def test_list(self):
-        """Test st.write with list."""
-        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            st.write([1, 2, 3])
-
-            p.assert_called_once()
-
     def test_namedtuple(self):
         """Test st.write with list."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
@@ -259,31 +259,6 @@ class StreamlitWriteTest(unittest.TestCase):
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write(st.secrets)
 
-            p.assert_called_once()
-
-    @parameterized.expand(
-        [
-            (pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"]),),
-            (pd.Series(np.array(["a", "b", "c"])),),
-            (pd.Index(list("abc")),),
-            (pd.DataFrame({"a": [1], "b": [2]}).style.format("{:.2%}"),),
-            (np.array(["a", "b", "c"]),),
-            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2))),),
-            (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            ([SnowparkRow()],),
-        ]
-    )
-    def test_write_compatible_dataframe(
-        self,
-        input_data: Any,
-    ):
-        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-            st.write(input_data)
             p.assert_called_once()
 
     @patch("streamlit.delta_generator.DeltaGenerator.markdown")

@@ -15,11 +15,13 @@
  */
 
 import React from "react"
+
 import {
   Clear,
   Error,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
+
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
@@ -29,12 +31,13 @@ import ProgressBar, {
 } from "@streamlit/lib/src/components/shared/ProgressBar"
 import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import { FileSize, getSizeDisplay } from "@streamlit/lib/src/util/FileHelper"
+
 import {
-  StyledUploadedFile,
-  StyledFileErrorIcon,
   StyledErrorMessage,
   StyledFileError,
+  StyledFileErrorIcon,
   StyledFileIcon,
+  StyledUploadedFile,
   StyledUploadedFileData,
   StyledUploadedFileName,
 } from "./styled-components"

@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement } from "react"
+
 import classNames from "classnames"
+
 import { isPresetTheme } from "@streamlit/lib/src/theme"
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"

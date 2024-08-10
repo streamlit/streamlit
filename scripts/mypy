@@ -32,19 +32,6 @@ import click
 import mypy.main as mypy_main
 
 PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
-EXCLUDE_FILES = {
-    os.path.join("scripts", "add_license_headers.py"),
-    os.path.join("e2e", "scripts", "st_reuse_label.py"),
-    os.path.join("scripts", "license-template.txt"),
-}
-
-
-def shlex_join(split_command: Iterable[str]):
-    """Return a shell-escaped string from *split_command*.
-
-    This function is backported from Python 3.8 - shlex.join
-    """
-    return " ".join(shlex.quote(arg) for arg in split_command)
 
 
 class Module:
@@ -118,7 +105,7 @@ def main(report: bool = False, verbose: bool = False) -> None:
     for path in PATHS:
         if "*" in path:
             for filename in glob.glob(path):
-                if not (filename in EXCLUDE_FILES or filename.endswith(".sh")):
+                if not (filename.endswith(".sh") or filename.endswith(".txt")):
                     paths.append(filename)
         else:
             paths.append(path)
@@ -131,7 +118,7 @@ def main(report: bool = False, verbose: bool = False) -> None:
     args.extend(paths)
 
     if verbose:
-        shell_command = shlex_join(itertools.chain(["mypy"], args))
+        shell_command = shlex.join(itertools.chain(["mypy"], args))
         print("Executing command:", shell_command)
     mypy_main.main(stdout=sys.stdout, stderr=sys.stderr, args=args)
     if report:

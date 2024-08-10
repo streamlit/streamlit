@@ -27,10 +27,10 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  toSafeString,
   mergeColumnParameters,
-  toSafeNumber,
   toSafeBoolean,
+  toSafeNumber,
+  toSafeString,
 } from "./utils"
 
 export interface SelectboxColumnParams {
@@ -75,6 +75,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     copyData: "",
     contentAlign: props.contentAlignment,
     readonly: !props.isEditable,
+    style: props.isIndex ? "faded" : "normal",
     data: {
       kind: "dropdown-cell",
       allowedValues: [
@@ -85,7 +86,6 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
           .map(opt => toSafeString(opt)), // convert everything to string
       ],
       value: "",
-      readonly: !props.isEditable,
     },
   } as DropdownCellType
 

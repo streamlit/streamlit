@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 
 const MagicFields = {
@@ -94,7 +95,7 @@ export function getDataArrays(
   el: VegaLiteChartElement
 ): { [dataset: string]: any[] } | null {
   const datasets = getDataSets(el)
-  if (datasets == null) {
+  if (isNullOrUndefined(datasets)) {
     return null
   }
 

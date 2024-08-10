@@ -15,7 +15,7 @@
  */
 
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
+import { AppNode, BlockNode } from "@streamlit/lib/src/AppNode"
 import {
   FormsData,
   WidgetStateManager,

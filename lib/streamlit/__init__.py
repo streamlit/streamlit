@@ -246,18 +246,8 @@ dialog = _dialog_decorator
 fragment = _fragment
 
 # Experimental APIs
-experimental_dialog = _deprecate_func_name(
-    _experimental_dialog_decorator,
-    "experimental_dialog",
-    "2025-01-01",
-    name_override="dialog",
-)
-experimental_fragment = _deprecate_func_name(
-    _experimental_fragment,
-    "experimental_fragment",
-    "2025-01-01",
-    name_override="fragment",
-)
+experimental_dialog = _experimental_dialog_decorator
+experimental_fragment = _experimental_fragment
 experimental_user = _UserInfoProxy()
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.query_params) for more information."
