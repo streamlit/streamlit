@@ -25,6 +25,7 @@ import without from "lodash/without"
 import {
   AppConfig,
   AppRoot,
+  AuthRedirect,
   AutoRerun,
   BackMsg,
   BaseUriParts,
@@ -96,12 +97,6 @@ import {
   toThemeInput,
   WidgetStateManager,
   WidgetStates,
-  IHostConfigResponse,
-  LibConfig,
-  AppConfig,
-  AuthRedirect,
-  createPresetThemes,
-  PresetThemeName,
 } from "@streamlit/lib"
 import {
   isNullOrUndefined,
@@ -659,8 +654,6 @@ export class App extends PureComponent<Props, State> {
             newState !== ConnectionState.DISCONNECTED_FOREVER,
         })
       }
-
-      setCookie("_streamlit_xsrf", "")
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()

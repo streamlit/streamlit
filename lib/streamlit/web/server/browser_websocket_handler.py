@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hmac
 import json
 from typing import TYPE_CHECKING, Any, Awaitable, Final
 
@@ -24,6 +25,7 @@ import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
+from tornado.escape import utf8
 from tornado.websocket import WebSocketHandler
 
 from streamlit import config
@@ -128,14 +130,41 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
             ]
 
-            if len(ws_protocols) >= 3:
+            if len(ws_protocols) >= 4:
                 # See the NOTE in the docstring of the `select_subprotocol` method above
                 # for a detailed explanation of why this is done.
-                existing_session_id = ws_protocols[2]
+                existing_session_id = ws_protocols[3]
         except KeyError:
             # Just let existing_session_id=None if we run into any error while trying to
             # extract it from the Sec-Websocket-Protocol header.
             pass
+
+        try:
+            ws_protocols = [
+                p.strip()
+                for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
+            ]
+
+            # TODO [kajarenc] Make sure that running old Streamlit frontend
+            #  with new Streamlit backend doesn't lead to infinite loop
+            if config.get_option("server.enableXsrfProtection") and raw_cookie_value:
+                csrf_protocol_value = ws_protocols[2]
+
+                _, token, _ = self._decode_xsrf_token(csrf_protocol_value)
+                _, expected_token, _ = self._get_raw_xsrf_token()
+
+                if not token:
+                    raise tornado.web.HTTPError(
+                        403, "'_xsrf' argument has invalid format"
+                    )
+
+                if not hmac.compare_digest(utf8(token), utf8(expected_token)):
+                    raise tornado.web.HTTPError(
+                        403, "XSRF cookie does not match POST argument"
+                    )
+
+        except IndexError:
+            raise Exception("INDEX eRROR")
 
         self._session_id = self._runtime.connect_session(
             client=self,

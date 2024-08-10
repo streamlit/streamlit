@@ -42,6 +42,8 @@ import {
 } from "@streamlit/lib"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 
+import { getCookie } from "@streamlit/lib"
+
 /**
  * Name of the logger.
  */
@@ -395,10 +397,14 @@ export class WebsocketConnection {
   private async getSessionTokens(): Promise<Array<string>> {
     const hostAuthToken = await this.args.claimHostAuthToken()
     this.args.resetHostAuthToken()
+
+    const xsrfCookie = getCookie("_streamlit_xsrf")
+
     return [
       // NOTE: We have to set the auth token to some arbitrary placeholder if
       // not provided since the empty string is an invalid protocol option.
       hostAuthToken ?? "PLACEHOLDER_AUTH_TOKEN",
+      xsrfCookie ?? "PLACEHOLDER_XSRF_TOKEN",
       ...(this.args.sessionInfo.last?.sessionId
         ? [this.args.sessionInfo.last?.sessionId]
         : []),
