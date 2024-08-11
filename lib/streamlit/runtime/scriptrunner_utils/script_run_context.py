@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
+    from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)

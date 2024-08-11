@@ -37,9 +37,7 @@ from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.script_run_context import (
-    get_script_run_ctx,
-)
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,

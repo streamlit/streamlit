@@ -21,7 +21,7 @@ from urllib import parse
 from streamlit.constants import EMBED_QUERY_PARAMS_KEYS
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem

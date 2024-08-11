@@ -66,7 +66,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 

@@ -17,12 +17,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator, Mapping, NoReturn, Union
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx as _get_script_run_ctx,
 )
 
 if TYPE_CHECKING:
-    from streamlit.runtime.script_run_context import UserInfo
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
 
 
 def _get_user_info() -> UserInfo:

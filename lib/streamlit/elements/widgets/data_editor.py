@@ -59,7 +59,7 @@ from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,

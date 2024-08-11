@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from streamlit import util
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
 def make_delta_path(

@@ -21,7 +21,7 @@ from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
 def _invalid_logo_text(field_name: str):
