@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.3.5
-aiohttp==3.10.2
+aiohttp==3.10.3
 aiosignal==1.3.1
 altair==5.3.0
 attrs==24.2.0
@@ -27,7 +27,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.110.1
+hypothesis==6.110.2
 identify==2.6.0
 idna==3.7
 importlib_metadata==8.2.0
