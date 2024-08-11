@@ -23,6 +23,7 @@ from typing import Any, Callable
 
 from streamlit import util
 from streamlit.case_converters import to_snake_case
+from streamlit.logger import get_logger
 
 
 class ConfigOption:
@@ -256,9 +257,6 @@ class ConfigOption:
             }
 
             if self.is_expired():
-                # Import here to avoid circular imports
-                from streamlit.logger import get_logger
-
                 LOGGER = get_logger(__name__)
                 LOGGER.error(
                     textwrap.dedent(
@@ -275,9 +273,6 @@ class ConfigOption:
                     % details
                 )
             else:
-                # Import here to avoid circular imports
-                from streamlit.logger import get_logger
-
                 LOGGER = get_logger(__name__)
                 LOGGER.warning(
                     textwrap.dedent(

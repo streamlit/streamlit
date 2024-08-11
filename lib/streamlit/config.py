@@ -28,6 +28,7 @@ from blinker import Signal
 from streamlit import config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 
 # Config System Global State #
 
@@ -1031,9 +1032,6 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options is not None
     ), "_config_options should always be populated here."
     if key not in _config_options:
-        # Import logger locally to prevent circular references
-        from streamlit.logger import get_logger
-
         LOGGER = get_logger(__name__)
 
         LOGGER.warning(
@@ -1103,9 +1101,6 @@ def _maybe_read_env_variable(value: Any) -> Any:
         env_var = os.environ.get(var_name)
 
         if env_var is None:
-            # Import logger locally to prevent circular references
-            from streamlit.logger import get_logger
-
             LOGGER = get_logger(__name__)
 
             LOGGER.error("No environment variable called %s" % var_name)
@@ -1205,9 +1200,6 @@ def get_config_options(
         if old_options and config_util.server_option_changed(
             old_options, _config_options
         ):
-            # Import logger locally to prevent circular references.
-            from streamlit.logger import get_logger
-
             LOGGER = get_logger(__name__)
             LOGGER.warning(
                 "An update to the [server] config option section was detected."
@@ -1225,9 +1217,6 @@ def _check_conflicts() -> None:
     # hard-coded in JS). Otherwise, the browser would decide what port to
     # connect to based on window.location.port, which in dev is going to
     # be (3000)
-
-    # Import logger locally to prevent circular references
-    from streamlit.logger import get_logger
 
     LOGGER = get_logger(__name__)
 
