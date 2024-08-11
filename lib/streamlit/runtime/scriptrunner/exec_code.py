@@ -19,11 +19,14 @@ from typing import TYPE_CHECKING, Any, Callable
 from streamlit.delta_generator_singletons import dg_stack, get_default_dg_stack
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
 
 if TYPE_CHECKING:
-    from streamlit.runtime.script_run_context import ScriptRunContext
-    from streamlit.runtime.scriptrunner.script_requests import RerunData
+    from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
 
 
 def exec_func_with_error_handling(

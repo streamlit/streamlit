@@ -25,7 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.url_util import is_url
 from streamlit.util import lower_clean_dict_keys

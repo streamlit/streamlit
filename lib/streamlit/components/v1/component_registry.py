@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
-from streamlit.runtime.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from types import FrameType

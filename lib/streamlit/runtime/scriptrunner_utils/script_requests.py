@@ -17,13 +17,11 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field, replace
 from enum import Enum
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from streamlit import util
-from streamlit.runtime.state import coalesce_widget_states
-
-if TYPE_CHECKING:
-    from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 
 class ScriptRequestType(Enum):
@@ -91,6 +89,63 @@ def _fragment_run_should_not_preempt_script(
     return bool(fragment_id_queue) and not is_fragment_scoped_rerun
 
 
+def _coalesce_widget_states(
+    old_states: WidgetStates | None, new_states: WidgetStates | None
+) -> WidgetStates | None:
+    """Coalesce an older WidgetStates into a newer one, and return a new
+    WidgetStates containing the result.
+
+    For most widget values, we just take the latest version.
+
+    However, any trigger_values (which are set by buttons) that are True in
+    `old_states` will be set to True in the coalesced result, so that button
+    presses don't go missing.
+    """
+    if not old_states and not new_states:
+        return None
+    elif not old_states:
+        return new_states
+    elif not new_states:
+        return old_states
+
+    states_by_id: dict[str, WidgetState] = {
+        wstate.id: wstate for wstate in new_states.widgets
+    }
+
+    trigger_value_types = [
+        ("trigger_value", False),
+        ("string_trigger_value", StringTriggerValueProto(data=None)),
+    ]
+    for old_state in old_states.widgets:
+        for trigger_value_type, unset_value in trigger_value_types:
+            if (
+                old_state.WhichOneof("value") == trigger_value_type
+                and getattr(old_state, trigger_value_type) != unset_value
+            ):
+                new_trigger_val = states_by_id.get(old_state.id)
+                # It should nearly always be the case that new_trigger_val is None
+                # here as trigger values are deleted from the client's WidgetStateManager
+                # as soon as a rerun_script BackMsg is sent to the server. Since it's
+                # impossible to test that the client sends us state in the expected
+                # format in a unit test, we test for this behavior in
+                # e2e_playwright/test_fragment_queue_test.py
+                if not new_trigger_val or (
+                    # Ensure the corresponding new_state is also a trigger;
+                    # otherwise, a widget that was previously a button/chat_input but no
+                    # longer is could get a bad value.
+                    new_trigger_val.WhichOneof("value") == trigger_value_type
+                    # We only want to take the value of old_state if new_trigger_val is
+                    # unset as the old value may be stale if a newer one was entered.
+                    and getattr(new_trigger_val, trigger_value_type) == unset_value
+                ):
+                    states_by_id[old_state.id] = old_state
+
+    coalesced = WidgetStates()
+    coalesced.widgets.extend(states_by_id.values())
+
+    return coalesced
+
+
 class ScriptRequests:
     """An interface for communicating with a ScriptRunner. Thread-safe.
 
@@ -146,7 +201,7 @@ class ScriptRequests:
                 # We already have an existing Rerun request, so we can coalesce the new
                 # rerun request into the existing one.
 
-                coalesced_states = coalesce_widget_states(
+                coalesced_states = _coalesce_widget_states(
                     self._rerun_data.widget_states, new_data.widget_states
                 )
 
