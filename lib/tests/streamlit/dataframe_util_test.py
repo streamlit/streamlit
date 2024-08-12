@@ -545,6 +545,23 @@ class DataframeUtilTest(unittest.TestCase):
             pd.DataFrame,
         )
 
+    def test_verify_ray_integration(self):
+        """Integration test ray object handling.
+
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
+        ray = pytest.importorskip("ray")
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        ray_dataset = ray.data.from_pandas(df)
+
+        assert dataframe_util.is_ray_dataset(ray_dataset) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(ray_dataset),
+            pd.DataFrame,
+        )
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
