@@ -160,7 +160,7 @@ def _fix_pydantic_duplicate_validators_error():
     which should not be critical.
     """
     try:
-        from pydantic import class_validators  # type: ignore[import-not-found]
+        from pydantic import class_validators
 
         class_validators.in_ipython = lambda: True
     except ImportError:

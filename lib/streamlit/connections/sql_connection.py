@@ -15,7 +15,7 @@
 # NOTE: We ignore all mypy import-not-found errors as top-level since
 # this module is optional and the SQLAlchemy dependency is not installed
 # by default.
-# mypy: disable-error-code="import-not-found"
+# mypy: disable-error-code="import-not-found, redundant-cast"
 
 from __future__ import annotations
 
