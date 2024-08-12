@@ -35,10 +35,6 @@ pytest-github-actions-annotate-failures
 # Used for testing of st.connection
 sqlalchemy[mypy]>=1.4.25, <2
 
-# Pydantic 1.* fails to initialize validators, we add it to requirements
-# to test the fix. Pydantic 2 should not have that issue.
-pydantic>=1.0, <2.0
-
 # Additional dataframe formats for testing:
 polars
 xarray
