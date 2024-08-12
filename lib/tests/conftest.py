@@ -71,27 +71,21 @@ def pytest_addoption(parser: pytest.Parser):
     group = parser.getgroup("streamlit")
 
     group.addoption(
-        "--require-snowflake",
+        "--require-integration",
         action="store_true",
-        help="only run tests that requires snowflake. ",
+        help="only run integration tests. ",
     )
 
 
 def pytest_configure(config: pytest.Config):
     config.addinivalue_line(
         "markers",
-        "require_snowflake(name): mark test to run only on "
-        "when --require-snowflake option is passed to pytest",
+        "require-integration(name): mark test to run only on "
+        "when --require-integration option is passed to pytest",
     )
 
-    is_require_snowflake = config.getoption("--require-snowflake", default=False)
-    if is_require_snowflake:
-        try:
-            import snowflake.snowpark  # noqa: F401
-        except ImportError:
-            raise pytest.UsageError(
-                "The snowflake-snowpark-python package is not installed."
-            )
+    is_require_integration = config.getoption("--require-integration", default=False)
+    if is_require_integration:
         if not SNOWFLAKE_CREDENTIAL_FILE.exists():
             raise pytest.UsageError(
                 f"Missing credential file: {SNOWFLAKE_CREDENTIAL_FILE}"
@@ -104,19 +98,21 @@ def pytest_runtest_setup(item: pytest.Item):
 
     PagesManager.DefaultStrategy = PagesStrategyV1
 
-    is_require_snowflake = item.config.getoption("--require-snowflake", default=False)
-    has_require_snowflake_marker = bool(
-        list(item.iter_markers(name="require_snowflake"))
+    is_require_integration = item.config.getoption(
+        "--require-integration", default=False
+    )
+    has_require_integration_marker = bool(
+        list(item.iter_markers(name="require_integration"))
     )
 
-    if is_require_snowflake and not has_require_snowflake_marker:
+    if is_require_integration and not has_require_integration_marker:
         pytest.skip(
-            f"The test is skipped because it has require_snowflake marker. "
-            f"This tests are only run when --require-snowflake flag is passed to pytest. "
+            f"The test is skipped because it has require_integration marker. "
+            f"This tests are only run when --require-integration flag is passed to pytest. "
             f"{item}"
         )
-    if not is_require_snowflake and has_require_snowflake_marker:
+    if not is_require_integration and has_require_integration_marker:
         pytest.skip(
             f"The test is skipped because it does not have the right marker. "
-            f"Only tests marked with pytest.mark.require_snowflake() are run. {item}"
+            f"Only tests marked with pytest.mark.require_integration() are run. {item}"
         )

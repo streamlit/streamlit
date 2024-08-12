@@ -146,13 +146,14 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
-# Run Python integration tests for snowflake.
-pytest-snowflake:
+# Run Python integration tests
+# This requires the integration-requirements to be installed
+pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
-			--require-snowflake \
+			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
 

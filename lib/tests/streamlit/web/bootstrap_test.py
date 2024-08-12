@@ -30,6 +30,7 @@ from tests import testutil
 from tests.testutil import patch_config_options, should_skip_pydantic_tests
 
 
+@pytest.mark.require_integration
 class BootstrapPydanticFixTest(unittest.TestCase):
     def pydantic_model_definition(self):
         from pydantic import BaseModel, root_validator, validator
