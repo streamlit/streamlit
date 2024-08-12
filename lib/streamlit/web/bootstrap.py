@@ -162,7 +162,7 @@ def _fix_pydantic_duplicate_validators_error():
     try:
         from pydantic import class_validators
 
-        class_validators.in_ipython = lambda: True
+        class_validators.in_ipython = lambda: True  # type: ignore[attr-defined]
     except ImportError:
         pass
 
