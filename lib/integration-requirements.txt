@@ -1,4 +1,3 @@
-
 # Snowflake dependencies:
 snowflake-snowpark-python[modin]>=1.17.0
 snowflake-connector-python>=2.8.0
@@ -22,4 +21,3 @@ pydantic>=1.0, <2.0
 
 # Used by audio test:
 scipy>=1.7.3
-
