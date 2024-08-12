@@ -103,7 +103,6 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
-
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
 Value = TypeVar("Value")

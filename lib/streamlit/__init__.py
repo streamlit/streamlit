@@ -89,6 +89,13 @@ sidebar = _dg_singletons.sidebar_dg
 _event = _dg_singletons.event_dg
 _bottom = _dg_singletons.bottom_dg
 
+
+from streamlit.elements.lib.mutable_status_container import StatusContainer
+from streamlit.elements.lib.dialog import Dialog
+
+_dg_singletons._create_status_container = StatusContainer._create
+_dg_singletons._create_dialog = Dialog._create
+
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,
     experimental_dialog_decorator as _experimental_dialog_decorator,
