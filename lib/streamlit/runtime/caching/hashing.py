@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import collections
+import collections.abc
 import dataclasses
 import datetime
 import functools
@@ -31,7 +32,8 @@ import threading
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Callable, Dict, Final, Pattern, Type, Union
+from types import MappingProxyType
+from typing import Any, Callable, Dict, Final, Pattern, Type, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -405,15 +407,15 @@ class _CacheFuncHasher:
         elif obj is False:
             return b"0"
 
-        elif dataclasses.is_dataclass(obj):
+        elif not isinstance(obj, type) and dataclasses.is_dataclass(obj):
             return self.to_bytes(dataclasses.asdict(obj))
-
         elif isinstance(obj, Enum):
             return str(obj).encode()
 
         elif type_util.is_type(obj, "pandas.core.series.Series"):
             import pandas as pd
 
+            obj = cast(pd.Series, obj)
             self.update(h, obj.size)
             self.update(h, obj.dtype.name)
 
@@ -431,6 +433,7 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
             import pandas as pd
 
+            obj = cast(pd.DataFrame, obj)
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
@@ -449,6 +452,11 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "numpy.ndarray"):
+            import numpy as np
+
+            # write cast type as string to make it work with our Python 3.8 tests
+            # - can be removed once we sunset support for Python 3.8
+            obj = cast("np.ndarray[Any, Any]", obj)
             self.update(h, obj.shape)
             self.update(h, str(obj.dtype))
 
@@ -462,6 +470,9 @@ class _CacheFuncHasher:
             return h.digest()
         elif type_util.is_type(obj, "PIL.Image.Image"):
             import numpy as np
+            from PIL.Image import Image
+
+            obj = cast(Image, obj)
 
             # we don't just hash the results of obj.tobytes() because we want to use
             # the sampling logic for numpy data
@@ -471,8 +482,8 @@ class _CacheFuncHasher:
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())
 
-        elif type_util.is_type(obj, "builtins.mappingproxy") or type_util.is_type(
-            obj, "builtins.dict_items"
+        elif isinstance(obj, MappingProxyType) or isinstance(
+            obj, collections.abc.ItemsView
         ):
             return self.to_bytes(dict(obj))
 

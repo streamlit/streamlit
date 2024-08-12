@@ -42,6 +42,7 @@ from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
+    NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -119,7 +120,7 @@ Data: TypeAlias = Union[
     "Styler",
     "Index",
     "pa.Table",
-    "np.ndarray",
+    "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     Dict[Any, Any],
     None,
@@ -983,7 +984,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     elif isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
-        if len(input_data.shape) == 1:
+        if len(cast(NumpyShape, input_data.shape)) == 1:
             # For technical reasons, we need to distinguish one
             # one-dimensional numpy array from multidimensional ones.
             return DataFormat.NUMPY_LIST
