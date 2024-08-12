@@ -43,7 +43,7 @@ ColumnType: TypeAlias = Literal[
     "progress",
 ]
 
-LinkTargetType: TypeAlias = Literal["_self", "_blank", "_parent", "_top"]
+LinkTargetType: TypeAlias = Literal["_blank", "_top"]
 
 
 class NumberColumnConfig(TypedDict):
@@ -545,14 +545,10 @@ def LinkColumn(
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
-    target: ``"_blank"``, ``"_parent"``, ``"_self"``, ``"_top"`` or ``None``
+    target: ``"_blank"``, ``"_top"`` or ``None``
         The target to open link in. Can be one of:
 
         * ``"_blank"``	URL is loaded into a new window, or tab. This is the default
-
-        * ``"_parent"``	URL is loaded into the parent frame
-
-        * ``"_self"``	URL replaces the current page
 
         * ``"_top"``	URL replaces any framesets that may be loaded
 

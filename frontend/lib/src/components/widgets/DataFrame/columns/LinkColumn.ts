@@ -34,7 +34,7 @@ export interface LinkColumnParams {
   // a value to display in the link cell. Can be a regex to parse out a specific substring of the url to be displayed
   readonly display_text?: string
   // A target to open link in (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#target)
-  readonly target?: "_self" | "_blank" | "_parent" | "_top"
+  readonly target?: "_blank" | "_top"
 }
 
 /**
