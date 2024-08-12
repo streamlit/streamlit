@@ -292,7 +292,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
-        or is_dask_object(obj)
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
