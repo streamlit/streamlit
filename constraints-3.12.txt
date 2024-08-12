@@ -55,7 +55,7 @@ matplotlib==3.9.0
 mdurl==0.1.2
 more-itertools==10.3.0
 multidict==6.0.5
-mypy==1.6.1
+mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
 nh3==0.2.18

@@ -53,7 +53,7 @@ matplotlib==3.8.1
 mdurl==0.1.2
 more-itertools==10.1.0
 multidict==6.0.4
-mypy==1.6.1
+mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
 mysqlclient==2.2.0
