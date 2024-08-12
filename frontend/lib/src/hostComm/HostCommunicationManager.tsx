@@ -31,14 +31,8 @@ import {
 
 export const HOST_COMM_VERSION = 1
 
-// Add typing for window.streamlitReactLoad
-declare global {
-  interface Window {
-    streamlitReactLoad: number
-  }
-}
-
 export interface HostCommunicationProps {
+  readonly stExecTimestamp: number
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
     pageScriptHash?: string
@@ -99,7 +93,7 @@ export default class HostCommunicationManager {
     window.addEventListener("message", this.receiveHostMessage)
     this.sendMessageToHost({
       type: "GUEST_READY",
-      streamlitExecutionStartedAt: window.streamlitReactLoad,
+      streamlitExecutionStartedAt: this.props.stExecTimestamp,
       guestReadyAt: Date.now(),
     })
   }

@@ -53,13 +53,13 @@ describe("ThemedApp", () => {
   })
 
   it("renders without crashing", () => {
-    render(<ThemedApp />)
+    render(<ThemedApp stExecTimestamp={Date.now()} />)
 
     expect(screen.getByTestId("stApp")).toBeInTheDocument()
   })
 
   it("contains the overlay portal required by the interactive table", () => {
-    render(<ThemedApp />)
+    render(<ThemedApp stExecTimestamp={Date.now()} />)
 
     expect(screen.getByTestId("portal")).toBeInTheDocument()
     expect(screen.getByTestId("portal")).toBeInTheDocument()
