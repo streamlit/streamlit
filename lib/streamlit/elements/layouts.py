@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
+from streamlit.delta_generator_singletons import create_dialog, create_status_container
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -769,12 +770,7 @@ class LayoutsMixin:
             height: 300px
 
         """
-        # We need to import StatusContainer here to avoid a circular import
-        from streamlit.elements.lib.mutable_status_container import StatusContainer
-
-        return StatusContainer._create(
-            self.dg, label=label, expanded=expanded, state=state
-        )
+        return create_status_container(self.dg, label, expanded=expanded, state=state)
 
     def _dialog(
         self,
@@ -788,11 +784,7 @@ class LayoutsMixin:
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
-
-        # We need to import Dialog here to avoid a circular import
-        from streamlit.elements.lib.dialog import Dialog
-
-        return Dialog._create(self.dg, title, dismissible=dismissible, width=width)
+        return create_dialog(self.dg, title, dismissible=dismissible, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:

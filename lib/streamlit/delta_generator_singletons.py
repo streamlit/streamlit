@@ -15,10 +15,12 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Literal
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 """
 The main purpose of this module (right now at least) is to avoid a dependency
@@ -84,3 +86,30 @@ def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
     if len(current_stack) > 1:
         return current_stack[-1]
     return None
+
+
+_create_status_container: Callable | None = None
+_create_dialog: Callable | None = None
+
+
+def create_status_container(
+    parent: DeltaGenerator,
+    label: str,
+    expanded: bool = False,
+    state: Literal["running", "complete", "error"] = "running",
+) -> StatusContainer:
+    if _create_status_container is None:
+        raise RuntimeError("Function 'create_status_container' is not initialized.")
+    return _create_status_container(parent, label, expanded, state)
+
+
+def create_dialog(
+    parent: DeltaGenerator,
+    title: str,
+    *,
+    dismissible: bool = True,
+    width: Literal["small", "large"] = "small",
+) -> Dialog:
+    if _create_dialog is None:
+        raise RuntimeError("Function 'create_dialog' is not initialized.")
+    return _create_dialog(parent, title, dismissible=dismissible, width=width)

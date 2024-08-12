@@ -65,9 +65,9 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
+import streamlit.delta_generator_singletons as _dg_singletons
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer
-import streamlit.delta_generator_singletons as _dg_singletons
 
 # DeltaGenerator methods:
 _dg_singletons.main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
@@ -84,6 +84,13 @@ _main = _dg_singletons.main_dg
 sidebar = _dg_singletons.sidebar_dg
 _event = _dg_singletons.event_dg
 _bottom = _dg_singletons.bottom_dg
+
+
+from streamlit.elements.lib.mutable_status_container import StatusContainer
+from streamlit.elements.lib.dialog import Dialog
+
+_dg_singletons._create_status_container = StatusContainer._create
+_dg_singletons._create_dialog = Dialog._create
 
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,
