@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# NOTE: We ignore all mypy import-not-found errors as top-level since
+# this module is optional and the SQLAlchemy dependency is not installed
+# by default.
 # mypy: disable-error-code="import-not-found"
 
 from __future__ import annotations
