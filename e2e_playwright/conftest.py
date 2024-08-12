@@ -612,9 +612,19 @@ def wait_for_app_run(page: Page, wait_delay: int = 100):
     """Wait for the given page to finish running."""
     # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
     page.wait_for_timeout(155)
-
+    # Make sure that the websocket connection is established.
     page.wait_for_selector(
-        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
+        "[data-testid='stApp'][data-test-connection-state='CONNECTED']",
+        timeout=20000,
+        state="attached",
+    )
+    # Wait until we know the script has started. We determine this by checking
+    # whether the app is in notRunning state. (The data-test-connection-state attribute
+    # goes through the sequence "initial" -> "running" -> "notRunning").
+    page.wait_for_selector(
+        "[data-testid='stApp'][data-test-script-state='notRunning']",
+        timeout=20000,
+        state="attached",
     )
 
     if wait_delay > 0:
