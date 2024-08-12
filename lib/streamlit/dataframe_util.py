@@ -214,8 +214,8 @@ class DataFormat(Enum):
     POLARS_SERIES = auto()  # polars.series.series.Series
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
-    RAY_DATASET = auto()  # ray.data.dataset.Dataset
     DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series
+    RAY_DATASET = auto()  # ray.data.dataset.Dataset
     HUGGINGFACE_DATASET = auto()  # datasets.arrow_dataset.Dataset
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
@@ -277,7 +277,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series / Index
-    - Dask DataFrame / Series
+    - Dask DataFrame / Series / Index
     - Ray Dataset
     - Polars LazyFrame
     - Generator functions
@@ -295,6 +295,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_dask_object(obj)
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
+        or is_dask_object(obj)
         or inspect.isgeneratorfunction(obj)
         or is_dbapi_cursor(obj)
     )
@@ -332,6 +333,15 @@ def is_pyspark_data_object(obj: object) -> bool:
 def is_huggingface_dataset(obj: object) -> bool:
     """True if obj is a HuggingFace Dataset."""
     return is_type(obj, _HUGGINGFACE_DATASET)
+
+
+def is_dask_object(obj: object) -> bool:
+    """True if obj is a Dask DataFrame, Series, or Index."""
+    return (
+        is_type(obj, _DASK_DATAFRAME)
+        or is_type(obj, _DASK_SERIES)
+        or is_type(obj, _DASK_INDEX)
+    )
 
 
 def is_modin_data_object(obj: object) -> bool:
@@ -376,15 +386,6 @@ def is_polars_lazyframe(obj: object) -> bool:
 def is_ray_dataset(obj: object) -> bool:
     """True if obj is a Ray Dataset."""
     return is_type(obj, _RAY_DATASET) or is_type(obj, _RAY_MATERIALIZED_DATASET)
-
-
-def is_dask_object(obj: object) -> bool:
-    """True if obj is a Dask DataFrame or Series."""
-    return (
-        is_type(obj, _DASK_DATAFRAME)
-        or is_type(obj, _DASK_SERIES)
-        or is_type(obj, _DASK_INDEX)
-    )
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
@@ -558,6 +559,21 @@ def convert_anything_to_pandas_df(
     if is_dask_object(data):
         data = data.head(max_unevaluated_rows, compute=True)
 
+        if isinstance(data, (pd.Series, pd.Index)):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `compute()` on the data object to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_dask_object(data):
+        data = data.head(max_unevaluated_rows, compute=True)
+
+        # Dask returns a Pandas object (DataFrame, Series, Index) when
+        # executing operations like `head`.
         if isinstance(data, (pd.Series, pd.Index)):
             data = data.to_frame()
 
