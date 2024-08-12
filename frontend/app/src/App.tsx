@@ -1908,11 +1908,12 @@ export class App extends PureComponent<Props, State> {
             <StyledApp
               className={outerDivClass}
               data-testid="stApp"
-              data-teststate={
+              data-test-script-state={
                 scriptRunId == INITIAL_SCRIPT_RUN_ID
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>
