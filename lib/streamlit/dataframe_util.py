@@ -558,19 +558,6 @@ def convert_anything_to_pandas_df(
     if is_dask_object(data):
         data = data.head(max_unevaluated_rows, compute=True)
 
-        if isinstance(data, (pd.Series, pd.Index)):
-            data = data.to_frame()
-
-        if data.shape[0] == max_unevaluated_rows:
-            _show_data_information(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `compute()` on the data object to show more."
-            )
-        return cast(pd.DataFrame, data)
-
-    if is_dask_object(data):
-        data = data.head(max_unevaluated_rows, compute=True)
-
         # Dask returns a Pandas object (DataFrame, Series, Index) when
         # executing operations like `head`.
         if isinstance(data, (pd.Series, pd.Index)):
