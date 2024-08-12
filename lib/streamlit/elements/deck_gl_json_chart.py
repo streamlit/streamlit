@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import TYPE_CHECKING, Any, Final, Mapping, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Mapping, cast
 
 from streamlit import config
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
@@ -158,7 +158,7 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
     # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
     tooltip = getattr(pydeck_obj, "_tooltip", None)
     if tooltip is not None and isinstance(tooltip, dict):
-        return cast(dict[str, str], tooltip)
+        return cast(Dict[str, str], tooltip)
 
     return None
 

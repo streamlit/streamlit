@@ -454,7 +454,9 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "numpy.ndarray"):
             import numpy as np
 
-            obj = cast(np.ndarray[Any, Any], obj)
+            # write cast type as string to make it work with our Python 3.8 tests
+            # - can be removed once we sunset support for Python 3.8
+            obj = cast("np.ndarray[Any, Any]", obj)
             self.update(h, obj.shape)
             self.update(h, str(obj.dtype))
 
