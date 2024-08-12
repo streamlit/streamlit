@@ -52,7 +52,7 @@ keyring==25.3.0
 kiwisolver==1.4.5
 langchain==0.2.12
 langchain-community==0.2.11
-langchain-core==0.2.29
+langchain-core==0.2.30
 langchain-text-splitters==0.2.2
 langsmith==0.1.99
 locket==1.0.0
