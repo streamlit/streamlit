@@ -14,20 +14,33 @@
 
 from __future__ import annotations
 
+import threading
 import unittest
 
 from parameterized import parameterized
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner import ScriptRunContext
+from streamlit.runtime.scriptrunner.script_run_context import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    ScriptRunContext,
+    add_script_run_ctx,
+    enqueue_message,
+)
 from streamlit.runtime.state import SafeSessionState, SessionState
 
 
 class ScriptRunContextTest(unittest.TestCase):
+    def setUp(self):
+        try:
+            # clear context variable as it otherwise would be carried over between tests
+            delattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        except AttributeError:
+            pass
+
     def test_set_page_config_immutable(self):
         """st.set_page_config must be called at most once"""
 
@@ -252,3 +265,68 @@ class ScriptRunContextTest(unittest.TestCase):
         )
         ctx.mark_production_query_params_used()
         assert ctx._production_query_params_used is True
+
+    def test_enqueue_message_raise_if_ctx_is_none(self):
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+
+        with self.assertRaises(NoSessionContext):
+            enqueue_message(msg)
+
+    def test_enqueue_message(self):
+        fake_enqueue_result = {}
+
+        def fake_enqueue(msg: ForwardMsg):
+            fake_enqueue_result["msg"] = msg
+
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
+        )
+        add_script_run_ctx(ctx=ctx)
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+        enqueue_message(msg)
+        self.assertIsNotNone(fake_enqueue_result)
+        self.assertEqual(
+            fake_enqueue_result["msg"].delta.new_element.markdown.body,
+            msg.delta.new_element.markdown.body,
+        )
+
+    def test_enqueue_message_with_fragment_id(self):
+        fake_enqueue_result = {}
+
+        def fake_enqueue(msg: ForwardMsg):
+            fake_enqueue_result["msg"] = msg
+
+            ctx = ScriptRunContext(
+                session_id="TestSessionID",
+                _enqueue=fake_enqueue,
+                query_string="",
+                session_state=SafeSessionState(SessionState(), lambda: None),
+                uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+                main_script_path="",
+                user_info={"email": "test@test.com"},
+                fragment_storage=MemoryFragmentStorage(),
+                pages_manager=PagesManager(""),
+                current_fragment_id="my_fragment_id",
+            )
+            add_script_run_ctx(ctx=ctx)
+            msg = ForwardMsg()
+            msg.delta.new_element.markdown.body = "foo"
+            enqueue_message(msg)
+            self.assertIsNotNone(fake_enqueue_result)
+            self.assertEqual(
+                fake_enqueue_result["msg"].delta.new_element.markdown.body,
+                msg.delta.new_element.markdown.body,
+            )
+            self.assertEqual(
+                fake_enqueue_result["msg"].delta.fragment_id, "my_fragment_id"
+            )
