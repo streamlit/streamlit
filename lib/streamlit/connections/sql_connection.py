@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# mypy: disable-error-code="import-not-found"
 
 from __future__ import annotations
 
@@ -79,7 +80,7 @@ class SQLConnection(BaseConnection["Engine"]):
     """
 
     def _connect(self, autocommit: bool = False, **kwargs) -> Engine:
-        import sqlalchemy  # type: ignore[import-not-found]
+        import sqlalchemy
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
@@ -194,12 +195,8 @@ class SQLConnection(BaseConnection["Engine"]):
         >>> st.dataframe(df)
         """
 
-        from sqlalchemy import text  # type: ignore[import-not-found]
-        from sqlalchemy.exc import (  # type: ignore[import-not-found]
-            DatabaseError,
-            InternalError,
-            OperationalError,
-        )
+        from sqlalchemy import text
+        from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
         from tenacity import (
             retry,
             retry_if_exception_type,
@@ -305,7 +302,7 @@ class SQLConnection(BaseConnection["Engine"]):
         ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
         ...         session.commit()
         """
-        from sqlalchemy.orm import Session  # type: ignore[import-not-found]
+        from sqlalchemy.orm import Session
 
         return Session(self._instance)
 
