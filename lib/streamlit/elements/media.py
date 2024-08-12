@@ -33,6 +33,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
 
 MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
@@ -635,8 +637,8 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
 
     transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(transformed_data.shape) == 1:
-        nchan = 1  # type: ignore[unreachable]
+    if len(cast(NumpyShape, transformed_data.shape)) == 1:
+        nchan = 1
     elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
         # "L1R1L2R2..." for stereo. See
