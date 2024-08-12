@@ -79,7 +79,7 @@ class SQLConnection(BaseConnection["Engine"]):
     """
 
     def _connect(self, autocommit: bool = False, **kwargs) -> Engine:
-        import sqlalchemy
+        import sqlalchemy  # type: ignore[import-not-found]
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
@@ -194,8 +194,12 @@ class SQLConnection(BaseConnection["Engine"]):
         >>> st.dataframe(df)
         """
 
-        from sqlalchemy import text
-        from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
+        from sqlalchemy import text  # type: ignore[import-not-found]
+        from sqlalchemy.exc import (  # type: ignore[import-not-found]
+            DatabaseError,
+            InternalError,
+            OperationalError,
+        )
         from tenacity import (
             retry,
             retry_if_exception_type,
@@ -301,7 +305,7 @@ class SQLConnection(BaseConnection["Engine"]):
         ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
         ...         session.commit()
         """
-        from sqlalchemy.orm import Session
+        from sqlalchemy.orm import Session  # type: ignore[import-not-found]
 
         return Session(self._instance)
 
