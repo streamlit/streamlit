@@ -21,6 +21,7 @@ from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, get_session_state
+from streamlit.runtime.scriptrunner.script_run_context import disallow_cached_widget_usage
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -115,8 +116,7 @@ def check_cache_replay_rules() -> None:
     function to check for those as well. And rename it to check_widget_usage_rules.
     """
     if runtime.exists():
-        ctx = get_script_run_ctx()
-        if ctx and ctx.disallow_cached_widget_usage:
+        if disallow_cached_widget_usage.get():
             from streamlit import exception
 
             # We use an exception here to show a proper stack trace

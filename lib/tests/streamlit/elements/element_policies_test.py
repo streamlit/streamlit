@@ -176,7 +176,7 @@ class CheckCacheReplayTest(ElementPoliciesTest):
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch(
         "streamlit.elements.lib.policies.get_script_run_ctx",
-        MagicMock(return_value=MagicMock(disallow_cached_widget_usage=False)),
+        MagicMock(return_value=MagicMock()),
     )
     @patch("streamlit.exception")
     def test_cache_replay_rules_succeeds(self, patched_st_exception):
@@ -186,7 +186,7 @@ class CheckCacheReplayTest(ElementPoliciesTest):
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch(
         "streamlit.elements.lib.policies.get_script_run_ctx",
-        MagicMock(return_value=MagicMock(disallow_cached_widget_usage=True)),
+        MagicMock(return_value=MagicMock()),
     )
     @patch("streamlit.exception")
     def test_cache_replay_rules_fails(self, patched_st_exception):

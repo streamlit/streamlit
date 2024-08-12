@@ -28,6 +28,7 @@ from streamlit.runtime.caching.hashing import update_hash
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
+    disallow_cached_widget_usage
 )
 from streamlit.util import HASHLIB_KWARGS
 
@@ -247,7 +248,7 @@ class CachedMessageReplayContext(threading.local):
         nested_call = False
         ctx = get_script_run_ctx()
         if ctx:
-            if ctx.disallow_cached_widget_usage:
+            if disallow_cached_widget_usage.get():
                 # The disallow_cached_widget_usage is already set to true.
                 # This indicates that this cached function run is called from another
                 # cached function that disallows widget usage.
@@ -260,7 +261,7 @@ class CachedMessageReplayContext(threading.local):
                 # If we're in a cached function that disallows widget usage, we need to set
                 # the disallow_cached_widget_usage to true for this cached function run
                 # to prevent widget usage (triggers a warning).
-                ctx.disallow_cached_widget_usage = True
+                disallow_cached_widget_usage.set(True)
         try:
             yield
         finally:
@@ -269,7 +270,7 @@ class CachedMessageReplayContext(threading.local):
             if ctx and not nested_call:
                 # Reset the disallow_cached_widget_usage flag. But only if this
                 # is not nested inside a cached function that disallows widget usage.
-                ctx.disallow_cached_widget_usage = False
+                disallow_cached_widget_usage.set(False)
 
     def save_element_message(
         self,
