@@ -119,7 +119,7 @@ Data: TypeAlias = Union[
     "Styler",
     "Index",
     "pa.Table",
-    "np.ndarray",
+    "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     Dict[Any, Any],
     None,

@@ -405,7 +405,7 @@ class _CacheFuncHasher:
         elif obj is False:
             return b"0"
 
-        elif dataclasses.is_dataclass(obj):
+        elif dataclasses.is_dataclass(obj) and not isinstance(obj, type):
             return self.to_bytes(dataclasses.asdict(obj))
 
         elif isinstance(obj, Enum):

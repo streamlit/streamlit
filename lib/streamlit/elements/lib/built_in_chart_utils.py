@@ -667,10 +667,12 @@ def _get_offset_encoding(
     x_offset = alt.XOffset()
     y_offset = alt.YOffset()
 
+    _color_column = color_column if color_column is not None else alt.utils.Undefined
+
     if chart_type is ChartType.VERTICAL_BAR:
-        x_offset = alt.XOffset(field=color_column)
+        x_offset = alt.XOffset(field=_color_column)
     elif chart_type is ChartType.HORIZONTAL_BAR:
-        y_offset = alt.YOffset(field=color_column)
+        y_offset = alt.YOffset(field=_color_column)
 
     return x_offset, y_offset
 
@@ -912,11 +914,13 @@ def _get_color_encoding(
             if len(color_values) != len(y_column_list):
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
-            if len(color_value) == 1:
+            if len(color_values) == 1:
                 return alt.ColorValue(to_css_color(cast(Any, color_value[0])))
             else:
                 return alt.Color(
-                    field=color_column,
+                    field=color_column
+                    if color_column is not None
+                    else alt.utils.Undefined,
                     scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
                     legend=_COLOR_LEGEND_SETTINGS,
                     type="nominal",
@@ -926,7 +930,7 @@ def _get_color_encoding(
         raise StreamlitInvalidColorError(df, color_from_user)
 
     elif color_column is not None:
-        column_type: str | tuple[str, list[Any]]
+        column_type: VegaLiteType
 
         if color_column == _MELTED_COLOR_COLUMN_NAME:
             column_type = "nominal"
