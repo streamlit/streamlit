@@ -667,7 +667,10 @@ def _get_offset_encoding(
     x_offset = alt.XOffset()
     y_offset = alt.YOffset()
 
-    _color_column = color_column if color_column is not None else alt.utils.Undefined
+    # our merge gate does not find the alt.UndefinedType type for some reason
+    _color_column: str | alt.UndefinedType = (  # type: ignore[name-defined]
+        color_column if color_column is not None else alt.utils.Undefined
+    )
 
     if chart_type is ChartType.VERTICAL_BAR:
         x_offset = alt.XOffset(field=_color_column)
