@@ -59,8 +59,8 @@ jobs:
         run: make protobuf
       - name: Make local modules visible
         run: |
-            uv pip install --editable ./lib --no-deps
-            streamlit --version
+          uv pip install --editable ./lib --no-deps
+          streamlit --version
       - name: Run Python Tests
         run: make pytest
       - name: CLI Smoke Tests
