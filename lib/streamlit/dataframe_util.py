@@ -986,7 +986,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         if len(input_data.shape) == 1:
             # For technical reasons, we need to distinguish one
             # one-dimensional numpy array from multidimensional ones.
-            return DataFormat.NUMPY_LIST
+            return DataFormat.NUMPY_LIST  # type: ignore[unreachable]
         return DataFormat.NUMPY_MATRIX
     elif isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
