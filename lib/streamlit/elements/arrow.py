@@ -811,10 +811,8 @@ def _arrow_add_rows(
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = dg._cursor.delta_path
 
-    import streamlit.elements.arrow as arrow_proto
-
     default_uuid = str(hash(dg._get_delta_path_str()))
-    arrow_proto.marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
+    marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
 
     if name:
         msg.delta.arrow_add_rows.name = name
