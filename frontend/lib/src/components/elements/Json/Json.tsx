@@ -16,18 +16,19 @@
 
 import React, { ReactElement, useRef } from "react"
 
-import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
-import ReactJson from "react-json-view"
 import Clipboard from "clipboard"
+import ReactJson from "react-json-view"
+import { useTheme } from "@emotion/react"
+
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-om "@streamlit/lib/src/proto"
+import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 export interface JsonProps {
   width: number
