@@ -113,10 +113,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderTopStyle: "solid",
               borderBottomStyle: "solid",
 
-              borderLeftColor: theme.colors.fadedText10,
-              borderRightColor: theme.colors.fadedText10,
-              borderTopColor: theme.colors.fadedText10,
-              borderBottomColor: theme.colors.fadedText10,
+              borderLeftColor: theme.colors.borderColor,
+              borderRightColor: theme.colors.borderColor,
+              borderTopColor: theme.colors.borderColor,
+              borderBottomColor: theme.colors.borderColor,
 
               boxShadow: lightBackground
                 ? "0px 4px 16px rgba(0, 0, 0, 0.16)"

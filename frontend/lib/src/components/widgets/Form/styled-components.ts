@@ -26,7 +26,7 @@ export interface StyledFormProps {
 
 export const StyledForm = styled.div<StyledFormProps>(({ theme, border }) => ({
   ...(border && {
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: theme.radii.default,
     padding: `calc(${theme.spacing.lg} - 1px)`, // 1px to account for border.
   }),
