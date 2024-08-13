@@ -65,11 +65,15 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
+# DeltaGenerator methods:
+# We initialize them here so that it is clear where they are instantiated.
+# Further, it helps us to break circular imports because the DeltaGenerator
+# imports the different elements but some elements also require DeltaGenerator
+# functions such as the dg_stack.
+import streamlit.delta_generator_singletons as _dg_singletons
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer
-import streamlit.delta_generator_singletons as _dg_singletons
 
-# DeltaGenerator methods:
 _dg_singletons.main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
 _dg_singletons.sidebar_dg = DeltaGenerator(
     root_container=RootContainer.SIDEBAR, parent=_dg_singletons.main_dg

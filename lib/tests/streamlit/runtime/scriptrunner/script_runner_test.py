@@ -26,7 +26,8 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.delta_generator import DeltaGenerator, dg_stack
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -897,7 +898,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         scriptrunner._fragment_storage.set(
             "my_fragment1",
-            lambda: dg_stack.set(dg_stack_set_by_fragment),
+            lambda: context_dg_stack.set(dg_stack_set_by_fragment),
         )
 
         # trigger a run with fragment_id to avoid clearing the fragment_storage in the script runner
@@ -935,7 +936,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         scriptrunner._fragment_storage.set(
             "my_fragment1",
-            lambda: dg_stack.set(dg_stack_set_by_fragment),
+            lambda: context_dg_stack.set(dg_stack_set_by_fragment),
         )
 
         # trigger a run with fragment_id to avoid clearing the fragment_storage in the script runner
@@ -1253,7 +1254,7 @@ class TestScriptRunner(ScriptRunner):
         super()._run_script(rerun_data)
 
         # Set the _dg_stack here to the one belonging to the thread context
-        self._dg_stack = dg_stack.get()
+        self._dg_stack = context_dg_stack.get()
 
     def join(self) -> None:
         """Join the script_thread if it's running."""

@@ -60,13 +60,18 @@ def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
     return (main_dg,)
 
 
-dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar("dg_stack", default=())
+# we don't use the default factory here because `main_dg` is not initialized when this
+# module is imported. This is why we have the `get_dg_stack_or_default` helper function.
+context_dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
+    "context_dg_stack", default=()
+)
 
 
 def get_dg_stack_or_default() -> tuple[DeltaGenerator, ...]:
-    if dg_stack.get() is None:
-        dg_stack.set(get_default_dg_stack())
-    return dg_stack.get()
+    """Get the DeltaGenerator stack for the current context."""
+    if len(context_dg_stack.get()) == 0:
+        context_dg_stack.set(get_default_dg_stack())
+    return context_dg_stack.get()
 
 
 def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:

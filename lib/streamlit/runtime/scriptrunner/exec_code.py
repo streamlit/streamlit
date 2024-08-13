@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
-from streamlit.delta_generator_singletons import dg_stack, get_default_dg_stack
+from streamlit.delta_generator_singletons import context_dg_stack, get_default_dg_stack
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
@@ -90,7 +90,7 @@ def exec_func_with_error_handling(
         # it doesn't matter either way since the fragment resets these values from its
         # snapshot before execution.
         ctx.cursors.clear()
-        dg_stack.set(get_default_dg_stack())
+        context_dg_stack.set(get_default_dg_stack())
 
         # Interruption due to a rerun is usually from `st.rerun()`, which
         # we want to count as a script completion so triggers reset.
