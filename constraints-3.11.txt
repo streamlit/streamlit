@@ -47,8 +47,8 @@ jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.3.0
 kiwisolver==1.4.5
-langchain==0.2.12
-langchain-community==0.2.11
+langchain==0.2.13
+langchain-community==0.2.12
 langchain-core==0.2.30
 langchain-text-splitters==0.2.2
 langsmith==0.1.99
@@ -56,7 +56,7 @@ locket==1.0.0
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.3
-matplotlib==3.9.1.post1
+matplotlib==3.9.2
 mdurl==0.1.2
 more-itertools==10.4.0
 multidict==6.0.5
@@ -131,7 +131,7 @@ types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417
 types-requests==2.32.0.20240712
-types-setuptools==71.1.0.20240806
+types-setuptools==71.1.0.20240813
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
