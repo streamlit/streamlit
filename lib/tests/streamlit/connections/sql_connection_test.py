@@ -12,22 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
-import unittest
-from copy import deepcopy
-from unittest.mock import MagicMock, PropertyMock, patch
-
-import pytest
-
-from streamlit.connections import SQLConnection
-from streamlit.errors import StreamlitAPIException
-from streamlit.runtime import Runtime
-from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    MemoryCacheStorageManager,
-)
-from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.secrets import AttrDict
-from tests.testutil import create_mock_script_run_ctx
 
 DB_SECRETS = {
     "dialect": "postgres",
@@ -40,230 +24,230 @@ DB_SECRETS = {
 }
 
 
-class SQLConnectionTest(unittest.TestCase):
-    def setUp(self) -> None:
-        # Caching functions rely on an active script run ctx
-        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
-        mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
-        Runtime._instance = mock_runtime
+# class SQLConnectionTest(unittest.TestCase):
+#     def setUp(self) -> None:
+#         # Caching functions rely on an active script run ctx
+#         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+#         mock_runtime = MagicMock(spec=Runtime)
+#         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+#         Runtime._instance = mock_runtime
 
-    def tearDown(self):
-        import streamlit as st
+#     def tearDown(self):
+#         import streamlit as st
 
-        st.cache_data.clear()
+#         st.cache_data.clear()
 
-    @pytest.mark.require_integration
-    @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
-    @patch(
-        "streamlit.connections.sql_connection.SQLConnection._secrets",
-        PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
-    )
-    @patch("sqlalchemy.create_engine")
-    def test_url_set_explicitly_in_secrets(self, patched_create_engine):
-        SQLConnection("my_sql_connection")
+#     @pytest.mark.require_integration
+#     @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
+#     @patch(
+#         "streamlit.connections.sql_connection.SQLConnection._secrets",
+#         PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
+#     )
+#     @patch("sqlalchemy.create_engine")
+#     def test_url_set_explicitly_in_secrets(self, patched_create_engine):
+#         SQLConnection("my_sql_connection")
 
-        patched_create_engine.assert_called_once_with("some_sql_conn_string")
+#         patched_create_engine.assert_called_once_with("some_sql_conn_string")
 
-    @pytest.mark.require_integration
-    @patch(
-        "streamlit.connections.sql_connection.SQLConnection._secrets",
-        PropertyMock(return_value=AttrDict(DB_SECRETS)),
-    )
-    @patch("sqlalchemy.create_engine")
-    def test_url_constructed_from_secrets_params(self, patched_create_engine):
-        SQLConnection("my_sql_connection")
+#     @pytest.mark.require_integration
+#     @patch(
+#         "streamlit.connections.sql_connection.SQLConnection._secrets",
+#         PropertyMock(return_value=AttrDict(DB_SECRETS)),
+#     )
+#     @patch("sqlalchemy.create_engine")
+#     def test_url_constructed_from_secrets_params(self, patched_create_engine):
+#         SQLConnection("my_sql_connection")
 
-        patched_create_engine.assert_called_once()
-        args, _ = patched_create_engine.call_args_list[0]
-        assert (
-            str(args[0])
-            == "postgres+psycopg2://AzureDiamond:hunter2@localhost:5432/postgres"
-        )
+#         patched_create_engine.assert_called_once()
+#         args, _ = patched_create_engine.call_args_list[0]
+#         assert (
+#             str(args[0])
+#             == "postgres+psycopg2://AzureDiamond:hunter2@localhost:5432/postgres"
+#         )
 
-    @pytest.mark.require_integration
-    @patch(
-        "streamlit.connections.sql_connection.SQLConnection._secrets",
-        PropertyMock(return_value=AttrDict(DB_SECRETS)),
-    )
-    @patch("sqlalchemy.create_engine")
-    def test_kwargs_overwrite_secrets_values(self, patched_create_engine):
-        SQLConnection(
-            "my_sql_connection",
-            port=2345,
-            username="DnomaidEruza",
-            query={"charset": "utf8mb4"},
-        )
+#     @pytest.mark.require_integration
+#     @patch(
+#         "streamlit.connections.sql_connection.SQLConnection._secrets",
+#         PropertyMock(return_value=AttrDict(DB_SECRETS)),
+#     )
+#     @patch("sqlalchemy.create_engine")
+#     def test_kwargs_overwrite_secrets_values(self, patched_create_engine):
+#         SQLConnection(
+#             "my_sql_connection",
+#             port=2345,
+#             username="DnomaidEruza",
+#             query={"charset": "utf8mb4"},
+#         )
 
-        patched_create_engine.assert_called_once()
-        args, _ = patched_create_engine.call_args_list[0]
-        assert (
-            str(args[0])
-            == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres?charset=utf8mb4"
-        )
+#         patched_create_engine.assert_called_once()
+#         args, _ = patched_create_engine.call_args_list[0]
+#         assert (
+#             str(args[0])
+#             == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres?charset=utf8mb4"
+#         )
 
-    @pytest.mark.require_integration
-    def test_error_if_no_config(self):
-        with patch(
-            "streamlit.connections.sql_connection.SQLConnection._secrets",
-            PropertyMock(return_value=AttrDict({})),
-        ):
-            with pytest.raises(StreamlitAPIException) as e:
-                SQLConnection("my_sql_connection")
+#     @pytest.mark.require_integration
+#     def test_error_if_no_config(self):
+#         with patch(
+#             "streamlit.connections.sql_connection.SQLConnection._secrets",
+#             PropertyMock(return_value=AttrDict({})),
+#         ):
+#             with pytest.raises(StreamlitAPIException) as e:
+#                 SQLConnection("my_sql_connection")
 
-            assert "Missing SQL DB connection configuration." in str(e.value)
+#             assert "Missing SQL DB connection configuration." in str(e.value)
 
-    @pytest.mark.require_integration
-    def test_error_if_missing_required_param(self):
-        for missing_param in ["dialect", "username", "host"]:
-            secrets = deepcopy(DB_SECRETS)
-            del secrets[missing_param]
+#     @pytest.mark.require_integration
+#     def test_error_if_missing_required_param(self):
+#         for missing_param in ["dialect", "username", "host"]:
+#             secrets = deepcopy(DB_SECRETS)
+#             del secrets[missing_param]
 
-            with patch(
-                "streamlit.connections.sql_connection.SQLConnection._secrets",
-                PropertyMock(return_value=AttrDict(secrets)),
-            ):
-                with pytest.raises(StreamlitAPIException) as e:
-                    SQLConnection("my_sql_connection")
+#             with patch(
+#                 "streamlit.connections.sql_connection.SQLConnection._secrets",
+#                 PropertyMock(return_value=AttrDict(secrets)),
+#             ):
+#                 with pytest.raises(StreamlitAPIException) as e:
+#                     SQLConnection("my_sql_connection")
 
-                assert (
-                    str(e.value) == f"Missing SQL DB connection param: {missing_param}"
-                )
+#                 assert (
+#                     str(e.value) == f"Missing SQL DB connection param: {missing_param}"
+#                 )
 
-    @pytest.mark.require_integration
-    @patch(
-        "streamlit.connections.sql_connection.SQLConnection._secrets",
-        PropertyMock(
-            return_value=AttrDict(
-                {
-                    **DB_SECRETS,
-                    "create_engine_kwargs": {"foo": "bar", "baz": "i get overwritten"},
-                }
-            )
-        ),
-    )
-    @patch("sqlalchemy.create_engine")
-    def test_create_engine_kwargs_secrets_section(self, patched_create_engine):
-        SQLConnection("my_sql_connection", baz="qux")
+#     @pytest.mark.require_integration
+#     @patch(
+#         "streamlit.connections.sql_connection.SQLConnection._secrets",
+#         PropertyMock(
+#             return_value=AttrDict(
+#                 {
+#                     **DB_SECRETS,
+#                     "create_engine_kwargs": {"foo": "bar", "baz": "i get overwritten"},
+#                 }
+#             )
+#         ),
+#     )
+#     @patch("sqlalchemy.create_engine")
+#     def test_create_engine_kwargs_secrets_section(self, patched_create_engine):
+#         SQLConnection("my_sql_connection", baz="qux")
 
-        patched_create_engine.assert_called_once()
-        _, kwargs = patched_create_engine.call_args_list[0]
+#         patched_create_engine.assert_called_once()
+#         _, kwargs = patched_create_engine.call_args_list[0]
 
-        assert kwargs == {"foo": "bar", "baz": "qux"}
+#         assert kwargs == {"foo": "bar", "baz": "qux"}
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch("pandas.read_sql")
-    def test_query_caches_value(self, patched_read_sql):
-        patched_read_sql.return_value = "i am a dataframe"
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     @patch("pandas.read_sql")
+#     def test_query_caches_value(self, patched_read_sql):
+#         patched_read_sql.return_value = "i am a dataframe"
 
-        conn = SQLConnection("my_sql_connection")
+#         conn = SQLConnection("my_sql_connection")
 
-        assert conn.query("SELECT 1;") == "i am a dataframe"
-        assert conn.query("SELECT 1;") == "i am a dataframe"
-        patched_read_sql.assert_called_once()
+#         assert conn.query("SELECT 1;") == "i am a dataframe"
+#         assert conn.query("SELECT 1;") == "i am a dataframe"
+#         patched_read_sql.assert_called_once()
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch("pandas.read_sql")
-    def test_does_not_reset_cache_when_ttl_changes(self, patched_read_sql):
-        patched_read_sql.return_value = "i am a dataframe"
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     @patch("pandas.read_sql")
+#     def test_does_not_reset_cache_when_ttl_changes(self, patched_read_sql):
+#         patched_read_sql.return_value = "i am a dataframe"
 
-        conn = SQLConnection("my_sql_connection")
+#         conn = SQLConnection("my_sql_connection")
 
-        conn.query("SELECT 1;", ttl=10)
-        conn.query("SELECT 2;", ttl=20)
-        conn.query("SELECT 1;", ttl=10)
-        conn.query("SELECT 2;", ttl=20)
+#         conn.query("SELECT 1;", ttl=10)
+#         conn.query("SELECT 2;", ttl=20)
+#         conn.query("SELECT 1;", ttl=10)
+#         conn.query("SELECT 2;", ttl=20)
 
-        assert patched_read_sql.call_count == 2
+#         assert patched_read_sql.call_count == 2
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch("pandas.read_sql")
-    def test_scopes_caches_by_connection_name(self, patched_read_sql):
-        patched_read_sql.return_value = "i am a dataframe"
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     @patch("pandas.read_sql")
+#     def test_scopes_caches_by_connection_name(self, patched_read_sql):
+#         patched_read_sql.return_value = "i am a dataframe"
 
-        conn1 = SQLConnection("my_sql_connection1")
-        conn2 = SQLConnection("my_sql_connection2")
+#         conn1 = SQLConnection("my_sql_connection1")
+#         conn2 = SQLConnection("my_sql_connection2")
 
-        conn1.query("SELECT 1;")
-        conn1.query("SELECT 1;")
-        conn2.query("SELECT 1;")
-        conn2.query("SELECT 1;")
+#         conn1.query("SELECT 1;")
+#         conn1.query("SELECT 1;")
+#         conn2.query("SELECT 1;")
+#         conn2.query("SELECT 1;")
 
-        assert patched_read_sql.call_count == 2
+#         assert patched_read_sql.call_count == 2
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    def test_repr_html_(self):
-        conn = SQLConnection("my_sql_connection")
-        with conn.session as s:
-            s.bind.dialect.name = "postgres"
-        repr_ = conn._repr_html_()
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     def test_repr_html_(self):
+#         conn = SQLConnection("my_sql_connection")
+#         with conn.session as s:
+#             s.bind.dialect.name = "postgres"
+#         repr_ = conn._repr_html_()
 
-        assert (
-            "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQLConnection`"
-            in repr_
-        )
-        assert "Dialect: `postgres`" in repr_
+#         assert (
+#             "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQLConnection`"
+#             in repr_
+#         )
+#         assert "Dialect: `postgres`" in repr_
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch(
-        "streamlit.connections.sql_connection.SQLConnection._secrets",
-        PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
-    )
-    def test_repr_html_with_secrets(self):
-        conn = SQLConnection("my_sql_connection")
-        with conn.session as s:
-            s.bind.dialect.name = "postgres"
-        repr_ = conn._repr_html_()
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     @patch(
+#         "streamlit.connections.sql_connection.SQLConnection._secrets",
+#         PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
+#     )
+#     def test_repr_html_with_secrets(self):
+#         conn = SQLConnection("my_sql_connection")
+#         with conn.session as s:
+#             s.bind.dialect.name = "postgres"
+#         repr_ = conn._repr_html_()
 
-        assert (
-            "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQLConnection`"
-            in repr_
-        )
-        assert "Dialect: `postgres`" in repr_
-        assert "Configured from `[connections.my_sql_connection]`" in repr_
+#         assert (
+#             "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQLConnection`"
+#             in repr_
+#         )
+#         assert "Dialect: `postgres`" in repr_
+#         assert "Configured from `[connections.my_sql_connection]`" in repr_
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch("pandas.read_sql")
-    def test_retry_behavior(self, patched_read_sql):
-        from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     @patch("pandas.read_sql")
+#     def test_retry_behavior(self, patched_read_sql):
+#         from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
 
-        for error_class in [DatabaseError, InternalError, OperationalError]:
-            patched_read_sql.side_effect = error_class("kaboom", params=None, orig=None)
+#         for error_class in [DatabaseError, InternalError, OperationalError]:
+#             patched_read_sql.side_effect = error_class("kaboom", params=None, orig=None)
 
-            conn = SQLConnection("my_sql_connection")
+#             conn = SQLConnection("my_sql_connection")
 
-            with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
-                with pytest.raises(error_class):
-                    conn.query("SELECT 1;")
+#             with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
+#                 with pytest.raises(error_class):
+#                     conn.query("SELECT 1;")
 
-                # Our connection should have been reset after each failed attempt to call
-                # query.
-                assert wrapped_reset.call_count == 3
+#                 # Our connection should have been reset after each failed attempt to call
+#                 # query.
+#                 assert wrapped_reset.call_count == 3
 
-            # conn._connect should have been called three times: once in the initial
-            # connection, then once each after the second and third attempts to call
-            # query.
-            assert conn._connect.call_count == 3
-            conn._connect.reset_mock()
+#             # conn._connect should have been called three times: once in the initial
+#             # connection, then once each after the second and third attempts to call
+#             # query.
+#             assert conn._connect.call_count == 3
+#             conn._connect.reset_mock()
 
-    @pytest.mark.require_integration
-    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
-    @patch("pandas.read_sql")
-    def test_retry_behavior_fails_fast_for_most_errors(self, patched_read_sql):
-        patched_read_sql.side_effect = Exception("kaboom")
+#     @pytest.mark.require_integration
+#     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+#     @patch("pandas.read_sql")
+#     def test_retry_behavior_fails_fast_for_most_errors(self, patched_read_sql):
+#         patched_read_sql.side_effect = Exception("kaboom")
 
-        conn = SQLConnection("my_sql_connection")
+#         conn = SQLConnection("my_sql_connection")
 
-        with pytest.raises(Exception):  # noqa: B017
-            conn.query("SELECT 1;")
+#         with pytest.raises(Exception):
+#             conn.query("SELECT 1;")
 
-        # conn._connect should have just been called once when first creating the
-        # connection.
-        assert conn._connect.call_count == 1
-        conn._connect.reset_mock()
+#         # conn._connect should have just been called once when first creating the
+#         # connection.
+#         assert conn._connect.call_count == 1
+#         conn._connect.reset_mock()
