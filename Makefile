@@ -160,7 +160,7 @@ pytest-integration:
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
-	./scripts/mypy
+	./scripts/mypy_custom_script.py
 
 .PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
