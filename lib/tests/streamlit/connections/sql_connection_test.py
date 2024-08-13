@@ -41,6 +41,7 @@ DB_SECRETS = {
 }
 
 
+@pytest.mark.require_integration
 class SQLConnectionTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
