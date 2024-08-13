@@ -449,7 +449,7 @@ class DataframeUtilTest(unittest.TestCase):
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
         This is in addition to the tests using the mocks to verify that
@@ -482,7 +482,7 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame,
             )
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     def test_verify_snowpandas_integration(self):
         """Integration test snowpark pandas object handling.
         This is in addition to the tests using the mocks to verify that

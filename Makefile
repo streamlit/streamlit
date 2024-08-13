@@ -1,3 +1,4 @@
+
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -146,13 +147,14 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
-# Run Python integration tests for snowflake.
-pytest-snowflake:
+# Run Python integration tests
+# This requires the integration-requirements to be installed
+pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
-			--require-snowflake \
+			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
@@ -427,4 +429,3 @@ frontend-lib-prod:
 streamlit-lib-prod:
 	make mini-init;
 	make frontend-lib-prod;
-
