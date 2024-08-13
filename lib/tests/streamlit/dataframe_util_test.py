@@ -522,7 +522,7 @@ class DataframeUtilTest(unittest.TestCase):
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
-        dask = pytest.importorskip("dask")
+        import dask
 
         dask_df = dask.datasets.timeseries()
 
@@ -553,7 +553,7 @@ class DataframeUtilTest(unittest.TestCase):
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
-        ray = pytest.importorskip("ray")
+        import ray
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         ray_dataset = ray.data.from_pandas(df)
