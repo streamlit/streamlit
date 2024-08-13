@@ -114,8 +114,8 @@ class SQLConnectionTest(unittest.TestCase):
 
             assert "Missing SQL DB connection configuration." in str(e.value)
 
-    @parameterized.expand([("dialect",), ("username",), ("host",)])
     @pytest.mark.require_integration
+    @parameterized.expand([("dialect",), ("username",), ("host",)])
     def test_error_if_missing_required_param(self, missing_param):
         secrets = deepcopy(DB_SECRETS)
         del secrets[missing_param]

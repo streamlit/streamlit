@@ -61,6 +61,7 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         user_info={"email": "mock@test.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=PagesManager(""),
+        widget_ids_this_run=set(),
     )
 
 
