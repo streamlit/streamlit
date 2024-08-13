@@ -40,8 +40,9 @@ describe("Metric element", () => {
   it("renders metric as expected", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetric")).toBeInTheDocument()
-    expect(screen.getByTestId("stMetric")).toHaveClass("stMetric")
+    const metricElement = screen.getByTestId("stMetric")
+    expect(metricElement).toBeInTheDocument()
+    expect(metricElement).toHaveClass("stMetric")
   })
 
   it("renders metric label as expected", () => {

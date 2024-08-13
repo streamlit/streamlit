@@ -39,7 +39,9 @@ export interface MetricProps {
   element: MetricProto
 }
 
-export default function Metric({ element }: MetricProps): ReactElement {
+export default function Metric({
+  element,
+}: Readonly<MetricProps>): ReactElement {
   const { colors }: EmotionTheme = useTheme()
   const { MetricColor, MetricDirection } = MetricProto
 
