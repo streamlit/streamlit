@@ -15,7 +15,10 @@
 import unittest
 
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.delta_generator_singletons import context_dg_stack, get_default_dg_stack
+from streamlit.delta_generator_singletons import (
+    context_dg_stack,
+    get_default_dg_stack_value,
+)
 from streamlit.elements.form_utils import FormData, is_in_form
 from streamlit.runtime import Runtime, RuntimeConfig
 
@@ -26,7 +29,7 @@ class FormUtilsTest(unittest.TestCase):
 
         # reset context_dg_stack to clean state for other tests
         # that are executed in the same thread
-        context_dg_stack.set(get_default_dg_stack())
+        context_dg_stack.set(get_default_dg_stack_value())
 
     @classmethod
     def setUpClass(cls):
@@ -49,12 +52,12 @@ class FormUtilsTest(unittest.TestCase):
         dg = DeltaGenerator()
         dg._form_data = FormData("form_id")
 
-        self.assertTrue(is_in_form(dg))
+        assert is_in_form(dg) is True
 
     def test_is_in_form_false_when_dg_has_no_formdata(self):
         dg = DeltaGenerator()
 
-        self.assertFalse(is_in_form(dg))
+        assert is_in_form(dg) is False
 
     def test_is_in_form_true_when_dg_stack_has_form(self):
         form_dg = DeltaGenerator()
@@ -62,24 +65,24 @@ class FormUtilsTest(unittest.TestCase):
         dg = DeltaGenerator()
         context_dg_stack.set((form_dg, dg))
 
-        self.assertTrue(is_in_form(dg))
+        assert is_in_form(dg) is True
 
     def test_is_in_form_false_when_dg_stack_has_no_form(self):
         form_dg = DeltaGenerator()
         dg = DeltaGenerator()
         context_dg_stack.set((form_dg, dg))
 
-        self.assertFalse(is_in_form(dg))
+        assert is_in_form(dg) is False
 
     def test_is_in_form_true_when_dg_has_form_parent(self):
         parent_dg = DeltaGenerator()
         parent_dg._form_data = FormData("form_id")
         dg = DeltaGenerator(parent=parent_dg)
 
-        self.assertTrue(is_in_form(dg))
+        assert is_in_form(dg) is True
 
     def test_is_in_form_false_when_dg_has_no_form_parent(self):
         parent_dg = DeltaGenerator()
         dg = DeltaGenerator(parent=parent_dg)
 
-        self.assertFalse(is_in_form(dg))
+        assert is_in_form(dg) is False

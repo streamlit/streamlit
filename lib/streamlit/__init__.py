@@ -75,20 +75,20 @@ import streamlit.delta_generator_singletons as _dg_singletons
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 
-_dg_singletons.main_dg = _DeltaGenerator(root_container=_RootContainer.MAIN)
-_dg_singletons.sidebar_dg = _DeltaGenerator(
-    root_container=_RootContainer.SIDEBAR, parent=_dg_singletons.main_dg
+_dg_singletons._main_dg = _DeltaGenerator(root_container=_RootContainer.MAIN)
+_dg_singletons._sidebar_dg = _DeltaGenerator(
+    root_container=_RootContainer.SIDEBAR, parent=_dg_singletons._main_dg
 )
-_dg_singletons.event_dg = _DeltaGenerator(
-    root_container=_RootContainer.EVENT, parent=_dg_singletons.main_dg
+_dg_singletons._event_dg = _DeltaGenerator(
+    root_container=_RootContainer.EVENT, parent=_dg_singletons._main_dg
 )
-_dg_singletons.bottom_dg = _DeltaGenerator(
-    root_container=_RootContainer.BOTTOM, parent=_dg_singletons.main_dg
+_dg_singletons._bottom_dg = _DeltaGenerator(
+    root_container=_RootContainer.BOTTOM, parent=_dg_singletons._main_dg
 )
-_main = _dg_singletons.main_dg
-sidebar = _dg_singletons.sidebar_dg
-_event = _dg_singletons.event_dg
-_bottom = _dg_singletons.bottom_dg
+_main = _dg_singletons._main_dg
+sidebar = _dg_singletons._sidebar_dg
+_event = _dg_singletons._event_dg
+_bottom = _dg_singletons._bottom_dg
 
 
 from streamlit.elements.lib.mutable_status_container import (

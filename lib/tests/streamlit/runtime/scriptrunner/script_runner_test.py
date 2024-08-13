@@ -356,7 +356,7 @@ class ScriptRunnerTest(AsyncTestCase):
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
-    def test_run_multiple_foo_fragments_even_if_one_raised_an_exception(self):
+    def test_run_multiple_fragments_even_if_one_raised_an_exception(self):
         """Tests that fragments continue to run when previous fragment raised an error."""
         fragment = MagicMock()
         scriptrunner = TestScriptRunner("good_script.py")

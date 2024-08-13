@@ -17,15 +17,15 @@ import unittest
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import (
-    bottom_dg,
+    _bottom_dg,
+    _event_dg,
+    _main_dg,
+    _sidebar_dg,
     context_dg_stack,
     create_dialog,
     create_status_container,
-    event_dg,
-    get_default_dg_stack,
+    get_default_dg_stack_value,
     get_last_dg_added_to_context_stack,
-    main_dg,
-    sidebar_dg,
 )
 from streamlit.proto.RootContainer_pb2 import RootContainer
 
@@ -33,50 +33,50 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 class DeltaGeneratorSingletonsTest(unittest.TestCase):
     def test_get_last_dg_added_to_context_stack(self):
         last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-        self.assertIsNone(last_dg_added_to_context_stack)
+        assert last_dg_added_to_context_stack is None
 
         sidebar = st.sidebar
         with sidebar:
             last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-            self.assertEqual(sidebar, last_dg_added_to_context_stack)
+            assert sidebar == last_dg_added_to_context_stack
         last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-        self.assertNotEqual(sidebar, last_dg_added_to_context_stack)
+        assert sidebar != last_dg_added_to_context_stack
 
     def test_context_dg_stack(self):
         dg_stack = context_dg_stack.get()
-        self.assertEqual(get_default_dg_stack(), dg_stack)
-        self.assertEqual(len(dg_stack), 1)
+        assert get_default_dg_stack_value() == dg_stack
+        assert len(dg_stack) == 1
 
-        new_dg = DeltaGenerator(root_container=RootContainer.MAIN, parent=main_dg)
+        new_dg = DeltaGenerator(root_container=RootContainer.MAIN, parent=_main_dg)
         token = context_dg_stack.set(context_dg_stack.get() + (new_dg,))
 
         # get the updated dg_stack for current context
         dg_stack = context_dg_stack.get()
-        self.assertEqual(len(dg_stack), 2)
+        assert len(dg_stack) == 2
 
         # reset for the other tests
         context_dg_stack.reset(token)
         dg_stack = context_dg_stack.get()
-        self.assertEqual(len(dg_stack), 1)
+        assert len(dg_stack) == 1
 
 
 class DeltaGeneratorSingletonsVariablesAreInitializedTest(unittest.TestCase):
     """dg variables are initialized by Streamlit.__init__.py"""
 
     def test_main_dg_is_initialized(self):
-        self.assertIsNotNone(main_dg)
+        assert _main_dg is not None
 
     def test_sidebar_dg_is_initialized(self):
-        self.assertIsNotNone(sidebar_dg)
+        assert _sidebar_dg is not None
 
     def test_event_dg_is_initialized(self):
-        self.assertIsNotNone(event_dg)
+        assert _event_dg is not None
 
     def test_bottom_dg_is_initialized(self):
-        self.assertIsNotNone(bottom_dg)
+        assert _bottom_dg is not None
 
     def test_create_status_container_is_initialized(self):
-        self.assertIsNotNone(create_status_container)
+        assert create_status_container is not None
 
     def test_create_dialog_is_initialized(self):
-        self.assertIsNotNone(create_dialog)
+        assert create_dialog is not None

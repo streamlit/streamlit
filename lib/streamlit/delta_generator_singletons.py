@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+The main purpose of this module (right now at least) is to avoid a dependency
+cycle between streamlit.delta_generator and some elements.
+"""
+
 from __future__ import annotations
 
 from contextvars import ContextVar, Token
@@ -22,56 +27,57 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-"""
-The main purpose of this module (right now at least) is to avoid a dependency
-cycle between streamlit.delta_generator and some elements.
-"""
-
-
-main_dg: DeltaGenerator | None = None
-sidebar_dg: DeltaGenerator | None = None
-event_dg: DeltaGenerator | None = None
-bottom_dg: DeltaGenerator | None = None
+_main_dg: DeltaGenerator | None = None
+_sidebar_dg: DeltaGenerator | None = None
+_event_dg: DeltaGenerator | None = None
+_bottom_dg: DeltaGenerator | None = None
 
 
 def get_main_dg() -> DeltaGenerator:
-    if main_dg is None:
+    if _main_dg is None:
         raise RuntimeError("main_dg is not initialized")
-    return main_dg
+    return _main_dg
 
 
 def get_sidebar_dg() -> DeltaGenerator:
-    if sidebar_dg is None:
+    if _sidebar_dg is None:
         raise RuntimeError("sidebar_dg is not initialized")
-    return sidebar_dg
+    return _sidebar_dg
 
 
 def get_event_dg() -> DeltaGenerator:
-    if event_dg is None:
+    if _event_dg is None:
         raise RuntimeError("event_dg is not initialized")
-    return event_dg
+    return _event_dg
 
 
 def get_bottom_dg() -> DeltaGenerator:
-    if bottom_dg is None:
+    if _bottom_dg is None:
         raise RuntimeError("bottom_dg is not initialized")
-    return bottom_dg
+    return _bottom_dg
 
 
-# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
-# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
-# so that different threads or async tasks can have their own stacks.
-def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
-    if main_dg is None:
+def get_default_dg_stack_value() -> tuple[DeltaGenerator, ...]:
+    """Get the default dg_stack value with which the dg_stack should
+    be initialized and reset if needed."""
+    if _main_dg is None:
         raise RuntimeError("main_dg is not set")
 
-    return (main_dg,)
+    return (_main_dg,)
 
 
 _T = TypeVar("_T")
 
 
 class ContextVarWithLazyDefault(Generic[_T]):
+    """The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
+    a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
+    so that different threads or async tasks can have their own stacks.
+
+    We have a wrapper around it because ContextVar default cannot be a function, but
+    the default dg (main_dg) might not exist yet when this module is imported.
+    """
+
     def __init__(self, name: str, *, default: Callable[[], _T]):
         self._name = name
         self._default = default
