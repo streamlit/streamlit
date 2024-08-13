@@ -58,7 +58,7 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
         if (avatar === "user") {
           return (
             <StyledAvatarIcon
-              data-testid="chatAvatarIcon-user"
+              data-testid="stChatMessageAvatarUser"
               background={theme.colors.red60}
             >
               <Icon content={Face} size="lg" />
@@ -67,7 +67,7 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
         } else if (avatar === "assistant") {
           return (
             <StyledAvatarIcon
-              data-testid="chatAvatarIcon-assistant"
+              data-testid="stChatMessageAvatarAssistant"
               background={theme.colors.orange60}
             >
               <Icon content={SmartToy} size="lg" />
@@ -75,7 +75,7 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
           )
         } else if (avatar.startsWith(":material")) {
           return (
-            <StyledAvatarBackground data-testid="chatAvatarIcon-custom">
+            <StyledAvatarBackground data-testid="stChatMessageAvatarCustom">
               <DynamicIcon
                 size="lg"
                 iconValue={avatar}

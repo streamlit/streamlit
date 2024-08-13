@@ -93,7 +93,7 @@ describe("ChatMessage", () => {
     })
     render(<ChatMessage {...props} />)
 
-    const userAvatarIcon = screen.getByTestId("chatAvatarIcon-user")
+    const userAvatarIcon = screen.getByTestId("stChatMessageAvatarUser")
     expect(userAvatarIcon).toBeInTheDocument()
   })
 
@@ -105,7 +105,9 @@ describe("ChatMessage", () => {
     })
     render(<ChatMessage {...props} />)
 
-    const assistantAvatarIcon = screen.getByTestId("chatAvatarIcon-assistant")
+    const assistantAvatarIcon = screen.getByTestId(
+      "stChatMessageAvatarAssistant"
+    )
     expect(assistantAvatarIcon).toBeInTheDocument()
   })
 
