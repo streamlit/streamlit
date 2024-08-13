@@ -43,7 +43,6 @@ from streamlit import (
 )
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
-    get_dg_stack_or_default,
     get_last_dg_added_to_context_stack,
 )
 from streamlit.elements.alert import AlertMixin
@@ -279,7 +278,7 @@ class DeltaGenerator(
 
     def __enter__(self) -> None:
         # with block started
-        context_dg_stack.set(get_dg_stack_or_default() + (self,))
+        context_dg_stack.set(context_dg_stack.get() + (self,))
 
     def __exit__(
         self,
@@ -289,7 +288,7 @@ class DeltaGenerator(
     ) -> Literal[False]:
         # with block ended
 
-        context_dg_stack.set(get_dg_stack_or_default()[:-1])
+        context_dg_stack.set(context_dg_stack.get()[:-1])
 
         # Re-raise any exceptions
         return False

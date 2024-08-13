@@ -17,7 +17,6 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack,
-    get_dg_stack_or_default,
     get_last_dg_added_to_context_stack,
     main_dg,
 )
@@ -38,7 +37,7 @@ class DeltaGeneratorSingletonsTest(DeltaGeneratorTestCase):
         self.assertNotEqual(sidebar, last_dg_added_to_context_stack)
 
     def test_get_dg_stack_or_default(self):
-        dg_stack = get_dg_stack_or_default()
+        dg_stack = context_dg_stack.get()
         self.assertEqual(get_default_dg_stack(), dg_stack)
         self.assertEqual(context_dg_stack.get(), dg_stack)
         self.assertEqual(len(dg_stack), 1)
@@ -47,7 +46,7 @@ class DeltaGeneratorSingletonsTest(DeltaGeneratorTestCase):
         token = context_dg_stack.set(get_default_dg_stack() + (new_dg,))
 
         # get the updated dg_stack for current context
-        dg_stack = get_dg_stack_or_default()
+        dg_stack = context_dg_stack.get()
         self.assertEqual(len(dg_stack), 2)
 
         # reset for the other tests

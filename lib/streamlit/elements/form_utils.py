@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NamedTuple
 
 from streamlit import runtime
-from streamlit.delta_generator_singletons import get_dg_stack_or_default
+from streamlit.delta_generator_singletons import context_dg_stack
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -46,7 +46,7 @@ def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     if this_dg == this_dg._main_dg:
         # We were created via an `st.foo` call.
         # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
-        for dg in reversed(get_dg_stack_or_default()):
+        for dg in reversed(context_dg_stack.get()):
             if dg._form_data is not None:
                 return dg._form_data
     else:

@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-from contextvars import ContextVar
-from typing import TYPE_CHECKING
+from contextvars import ContextVar, Token
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -36,6 +36,12 @@ def get_main_dg() -> DeltaGenerator:
     if main_dg is None:
         raise RuntimeError("main_dg is not initialized")
     return main_dg
+
+
+def get_sidebar_dg() -> DeltaGenerator:
+    if sidebar_dg is None:
+        raise RuntimeError("sidebar_dg is not initialized")
+    return sidebar_dg
 
 
 def get_event_dg() -> DeltaGenerator:
@@ -60,18 +66,44 @@ def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
     return (main_dg,)
 
 
+_T = TypeVar("_T")
+
+
+class ContextVarWithCustomFactory(Generic[_T]):
+    def __init__(self, name: str, *, default: Callable[[], _T]):
+        self._name = name
+        self._default = default
+        self._context_var: ContextVar[_T] | None = None
+
+    def _init_context_var(self) -> None:
+        self._context_var = ContextVar(self._name, default=self._default())
+
+    def get(self) -> _T:
+        if self._context_var is None:
+            self._init_context_var()
+        return self._context_var.get()  # type: ignore[union-attr]
+
+    def set(self, value: _T) -> Token[_T]:
+        if self._context_var is None:
+            self._init_context_var()
+        return self._context_var.set(value)  # type: ignore[union-attr]
+
+    def reset(self, token: Token[_T]) -> None:
+        if self._context_var is None:
+            self._init_context_var()
+        self._context_var.reset(token)  # type: ignore[union-attr]
+
+    def __hash__(self) -> int:
+        if self._context_var is None:
+            self._init_context_var()
+        return self._context_var.__hash__()  # type: ignore[union-attr]
+
+
 # we don't use the default factory here because `main_dg` is not initialized when this
 # module is imported. This is why we have the `get_dg_stack_or_default` helper function.
-context_dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
-    "context_dg_stack", default=()
+context_dg_stack: ContextVarWithCustomFactory[tuple[DeltaGenerator, ...]] = (
+    ContextVarWithCustomFactory("context_dg_stack", default=lambda: (get_main_dg(),))
 )
-
-
-def get_dg_stack_or_default() -> tuple[DeltaGenerator, ...]:
-    """Get the DeltaGenerator stack for the current context."""
-    if len(context_dg_stack.get()) == 0:
-        context_dg_stack.set(get_default_dg_stack())
-    return context_dg_stack.get()
 
 
 def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
@@ -79,7 +111,7 @@ def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
 
     Returns None if the stack has only one element or is empty for whatever reason.
     """
-    current_stack = get_dg_stack_or_default()
+    current_stack = context_dg_stack.get()
     # If set to "> 0" and thus return the only delta generator in the stack -
     # which logically makes more sense -, some unit tests fail.
     # It looks like the reason is that they create their own main delta generator

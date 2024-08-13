@@ -356,7 +356,7 @@ class ScriptRunnerTest(AsyncTestCase):
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
-    def test_run_multiple_fragments_even_if_one_raised_an_exception(self):
+    def test_run_multiple_foo_fragments_even_if_one_raised_an_exception(self):
         """Tests that fragments continue to run when previous fragment raised an error."""
         fragment = MagicMock()
         scriptrunner = TestScriptRunner("good_script.py")
@@ -430,7 +430,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         assert patched_handle_exception.call_args is None
 
-    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
     @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
     def test_regular_KeyError_is_rethrown(
         self, patched_handle_exception, patched_get_script_run_ctx
@@ -1251,9 +1251,8 @@ class TestScriptRunner(ScriptRunner):
 
     def _run_script(self, rerun_data: RerunData) -> None:
         self.forward_msg_queue.clear()
-        super()._run_script(rerun_data)
-
         # Set the _dg_stack here to the one belonging to the thread context
+        super()._run_script(rerun_data)
         self._dg_stack = context_dg_stack.get()
 
     def join(self) -> None:
