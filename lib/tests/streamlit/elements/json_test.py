@@ -53,10 +53,10 @@ class StJsonAPITest(DeltaGeneratorTestCase):
         assert el.json.expanded is True
         assert el.json.max_expand_depth == 2
 
-        with self.assertRaises(TypeError()):
+        with self.assertRaises(TypeError):
             st.json(
                 {
                     "level1": {"level2": {"level3": {"a": "b"}}, "c": "d"},
                 },
-                expanded=["foo"],
+                expanded=["foo"],  # type: ignore
             )
