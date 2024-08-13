@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def exec_func_with_error_handling(
-    func: Callable[[], None], ctx: ScriptRunContext
+    func: Callable[[], Any], ctx: ScriptRunContext
 ) -> tuple[
     Any | None,
     bool,

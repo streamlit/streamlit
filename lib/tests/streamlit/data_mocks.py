@@ -36,9 +36,14 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.dataframe_util import DataFormat
+from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
+from tests.streamlit.dask_mocks import Index as DaskIndex
+from tests.streamlit.dask_mocks import Series as DaskSeries
 from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
 from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
+from tests.streamlit.ray_mocks import Dataset as RayDataset
+from tests.streamlit.ray_mocks import MaterializedDataset as RayMaterializedDataset
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
@@ -940,6 +945,94 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.PYSPARK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask DataFrame",
+        DaskDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask Series",
+        DaskSeries(pd.Series(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask Index",
+        DaskIndex(
+            pd.Index(["st.text_area", "st.markdown"]),
+        ),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Ray Dataset",
+        RayDataset(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.RAY_DATASET,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Ray Materialized Dataset",
+        RayMaterializedDataset(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.RAY_DATASET,
             ["st.text_area", "st.markdown"],
             "dataframe",
             True,

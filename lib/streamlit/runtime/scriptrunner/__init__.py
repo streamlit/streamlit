@@ -17,6 +17,7 @@ from streamlit.runtime.scriptrunner.script_requests import RerunData
 from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
+    enqueue_message,
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner.script_runner import ScriptRunner, ScriptRunnerEvent
@@ -26,6 +27,7 @@ __all__ = [
     "ScriptRunContext",
     "add_script_run_ctx",
     "get_script_run_ctx",
+    "enqueue_message",
     "RerunException",
     "ScriptRunner",
     "ScriptRunnerEvent",
