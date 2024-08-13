@@ -5,11 +5,8 @@ bokeh==2.4.3
 graphviz>=0.17
 matplotlib>=3.3.4
 plotly>=5.3.1
-pydot>=1.4.2
-scipy>=1.7.3
 seaborn>=0.11.2
 watchdog>=2.1.5
-urllib3>=1.9
 # Use by vega-lite / altair e2e tests:
 vega_datasets
 # Testing infrastructure dependencies:
@@ -31,14 +28,5 @@ pixelmatch>=0.3.0
 pytest-xdist
 pytest-rerunfailures
 pytest-github-actions-annotate-failures
-
 # Used for testing of st.connection
 sqlalchemy[mypy]>=1.4.25, <2
-
-# Pydantic 1.* fails to initialize validators, we add it to requirements
-# to test the fix. Pydantic 2 should not have that issue.
-pydantic>=1.0, <2.0
-
-# Required for testing the langchain integration
-langchain>=0.2.0
-langchain-community>=0.2.0
