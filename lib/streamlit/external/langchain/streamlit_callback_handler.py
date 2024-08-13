@@ -31,25 +31,20 @@ the API *from LangChain itself*.
 This module is lazy-loaded.
 """
 
-# NOTE: We ignore all mypy import-not-found errors as top-level since
-# this module is optional and the langchain dependency is not installed
-# by default.
-# mypy: disable-error-code="import-not-found, unused-ignore, misc"
-
 from __future__ import annotations
 
 import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-from langchain.callbacks.base import (
+from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
     BaseCallbackHandler,
 )
 
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from langchain.schema import (
+    from langchain.schema import (  # type: ignore[import-not-found, unused-ignore]
         AgentAction,
         AgentFinish,
         LLMResult,

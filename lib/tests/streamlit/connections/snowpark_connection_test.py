@@ -26,7 +26,7 @@ from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
 
 
-@pytest.mark.require_integration
+@pytest.mark.require_snowflake
 class SnowparkConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()

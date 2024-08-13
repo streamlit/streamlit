@@ -189,7 +189,7 @@ jobs:
         env:
           TARGET_BRANCH: constraints-${{ github.ref_name }}
 
-  py-integration-tests:
+  py-snowflake-integration-tests:
     needs:
       - build_info
 
@@ -207,7 +207,7 @@ jobs:
       )
 
     name: >
-      py-integration-tests
+      py-unit-tests (snowflake)
 
     env:
       USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
@@ -224,7 +224,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Decrypt Snowflake credentials
+      - name: Decrypt credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
           PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
@@ -232,7 +232,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
-      - name: Install integration dependencies
-        run: uv pip install -r lib/integration-requirements.txt --force-reinstall
-      - name: Run Python integration tests
-        run: make pytest-integration
+      - name: Install lib with snowflake dependencies
+        run: uv pip install --editable ./lib[snowflake]
+      - name: Run Python Tests for Snowflake
+        run: make pytest-snowflake

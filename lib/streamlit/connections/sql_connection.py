@@ -282,7 +282,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
         This is equivalent to accessing ``self._instance.driver``.
         """
-        return cast(str, self._instance.driver)
+        return self._instance.driver
 
     @property
     def session(self) -> Session:
