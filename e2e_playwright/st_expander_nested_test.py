@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+
+from e2e_playwright.shared.app_utils import expect_exception
 
 
 def test_nested_expanders(app: Page):
     """Test that st.expander may not be nested inside other expanders."""
-    exception_message = app.locator(".stException .message")
-
-    expect(exception_message).to_have_text(
-        "StreamlitAPIException: Expanders may not be nested inside other expanders."
+    expect_exception(
+        app,
+        "StreamlitAPIException: Expanders may not be nested inside other expanders.",
     )
