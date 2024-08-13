@@ -41,6 +41,7 @@ describe("Balloons element", () => {
 
     const balloonElement = screen.getByTestId("stBalloons")
     expect(balloonElement).toBeInTheDocument()
+    expect(balloonElement).toHaveClass("stChatMessage")
 
     const balloonImages = screen.getAllByRole("img")
     expect(balloonImages.length).toBe(NUM_BALLOONS)

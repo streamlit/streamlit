@@ -44,8 +44,9 @@ describe("ChatMessage", () => {
     const props = getProps()
     render(<ChatMessage {...props} />)
 
-    const chatContent = screen.getByTestId("stChatMessageContent")
-    expect(chatContent).toBeInTheDocument()
+    const chatMessage = screen.getByTestId("stChatMessage")
+    expect(chatMessage).toBeInTheDocument()
+    expect(chatMessage).toHaveClass("stChatMessage")
   })
 
   it("renders message children content", () => {

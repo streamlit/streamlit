@@ -77,7 +77,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
   const deltaExists = element.delta !== ""
 
   return (
-    <div data-testid="stMetric">
+    <div className="stMetric" data-testid="stMetric">
       <StyledMetricLabelText
         data-testid="stMetricLabel"
         visibility={labelVisibilityProtoValueToEnum(

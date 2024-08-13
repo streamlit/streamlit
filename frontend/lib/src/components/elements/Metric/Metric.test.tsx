@@ -41,6 +41,7 @@ describe("Metric element", () => {
     const props = getProps()
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetric")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetric")).toHaveClass("stMetric")
   })
 
   it("renders metric label as expected", () => {
