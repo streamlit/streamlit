@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import datetime
 import unittest
@@ -175,7 +177,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     def test_create_page_profile_message_is_fragment_run(self):
         ctx = get_script_run_ctx()
-        ctx.fragment_ids_this_run = {"some_fragment_id"}
+        ctx.fragment_ids_this_run = ["some_fragment_id"]
 
         forward_msg = metrics_util.create_page_profile_message(
             commands=[
@@ -275,6 +277,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "experimental_connection",
             "spinner",
             "progress",
+            "context",
         }
 
         # Create a list of all public API names in the `st` module (minus

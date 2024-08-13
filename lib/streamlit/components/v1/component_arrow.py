@@ -20,13 +20,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.elements.lib import pandas_styler_utils
 
 if TYPE_CHECKING:
     from pandas import DataFrame, Index, Series
 
     from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
+
+
+def _maybe_tuple_to_list(item: Any) -> Any:
+    """Convert a tuple to a list. Leave as is if it's not a tuple."""
+    return list(item) if isinstance(item, tuple) else item
 
 
 def marshall(
@@ -43,10 +48,10 @@ def marshall(
         Something that is or can be converted to a dataframe.
 
     """
-    if type_util.is_pandas_styler(data):
+    if dataframe_util.is_pandas_styler(data):
         pandas_styler_utils.marshall_styler(proto, data, default_uuid)  # type: ignore
 
-    df = type_util.convert_anything_to_df(data)
+    df = dataframe_util.convert_anything_to_pandas_df(data)
     _marshall_index(proto, df.index)
     _marshall_columns(proto, df.columns)
     _marshall_data(proto, df)
@@ -67,9 +72,9 @@ def _marshall_index(proto: ArrowTableProto, index: Index) -> None:
     """
     import pandas as pd
 
-    index = map(type_util.maybe_tuple_to_list, index.values)
+    index = map(_maybe_tuple_to_list, index.values)
     index_df = pd.DataFrame(index)
-    proto.index = type_util.data_frame_to_bytes(index_df)
+    proto.index = dataframe_util.convert_pandas_df_to_arrow_bytes(index_df)
 
 
 def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
@@ -87,9 +92,9 @@ def _marshall_columns(proto: ArrowTableProto, columns: Series) -> None:
     """
     import pandas as pd
 
-    columns = map(type_util.maybe_tuple_to_list, columns.values)
+    columns = map(_maybe_tuple_to_list, columns.values)
     columns_df = pd.DataFrame(columns)
-    proto.columns = type_util.data_frame_to_bytes(columns_df)
+    proto.columns = dataframe_util.convert_pandas_df_to_arrow_bytes(columns_df)
 
 
 def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
@@ -104,7 +109,7 @@ def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
         A dataframe to marshall.
 
     """
-    proto.data = type_util.data_frame_to_bytes(df)
+    proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
 
 
 def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
@@ -125,9 +130,9 @@ def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
 
     import pandas as pd
 
-    data = type_util.bytes_to_data_frame(proto.data)
-    index = type_util.bytes_to_data_frame(proto.index)
-    columns = type_util.bytes_to_data_frame(proto.columns)
+    data = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.data)
+    index = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.index)
+    columns = dataframe_util.convert_arrow_bytes_to_pandas_df(proto.columns)
 
     return pd.DataFrame(
         data.values, index=index.values.T.tolist(), columns=columns.values.T.tolist()

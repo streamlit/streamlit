@@ -73,11 +73,11 @@ class LayoutsMixin:
         >>> import streamlit as st
         >>>
         >>> with st.container():
-        ...    st.write("This is inside the container")
+        ...     st.write("This is inside the container")
         ...
-        ...    # You can call any Streamlit command, including custom components:
-        ...    st.bar_chart(np.random.randn(50, 3))
-        ...
+        ...     # You can call any Streamlit command, including custom components:
+        ...     st.bar_chart(np.random.randn(50, 3))
+        >>>
         >>> st.write("This is outside the container")
 
         .. output ::
@@ -201,16 +201,16 @@ class LayoutsMixin:
         >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg")
-        ...
+        ...     st.header("A cat")
+        ...     st.image("https://static.streamlit.io/examples/cat.jpg")
+        >>>
         >>> with col2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg")
-        ...
+        ...     st.header("A dog")
+        ...     st.image("https://static.streamlit.io/examples/dog.jpg")
+        >>>
         >>> with col3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg")
+        ...     st.header("An owl")
+        ...     st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
             https://doc-columns1.streamlit.app/
@@ -346,31 +346,21 @@ class LayoutsMixin:
         Parameters
         ----------
         tabs : list of str
-            Creates a tab for each string in the list. The first tab is selected by default.
-            The string is used as the name of the tab and can optionally contain Markdown,
-            supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
-            Emojis, and Links.
+            Creates a tab for each string in the list. The first tab is selected
+            by default. The string is used as the name of the tab and can
+            optionally contain GitHub-flavored Markdown of the following types:
+            Bold, Italics, Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         Returns
         -------
@@ -386,16 +376,14 @@ class LayoutsMixin:
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
         >>>
         >>> with tab1:
-        ...    st.header("A cat")
-        ...    st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
-        ...
+        ...     st.header("A cat")
+        ...     st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
         >>> with tab2:
-        ...    st.header("A dog")
-        ...    st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
-        ...
+        ...     st.header("A dog")
+        ...     st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
         >>> with tab3:
-        ...    st.header("An owl")
-        ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+        ...     st.header("An owl")
+        ...     st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
             https://doc-tabs1.streamlit.app/
@@ -467,29 +455,19 @@ class LayoutsMixin:
         ----------
         label : str
             A string to use as the header for the expander. The label can optionally
-            contain Markdown and supports the following elements: Bold, Italics,
-            Strikethroughs, Inline Code, Emojis, and Links.
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
@@ -503,13 +481,13 @@ class LayoutsMixin:
             * A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
 
-            * An icon from the Material Symbols library (outlined style) in the
+            * An icon from the Material Symbols library (rounded style) in the
               format ``":material/icon_name:"`` where "icon_name" is the name
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
         Examples
@@ -595,30 +573,20 @@ class LayoutsMixin:
         ----------
         label : str
             The label of the button that opens the popover container.
-            The label can optionally contain Markdown and supports the
-            following elements: Bold, Italics, Strikethroughs, Inline Code,
-            Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-                For a list of all supported codes,
-                see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-                must be on their own lines). Supported LaTeX functions are listed
-                at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         help : str
             An optional tooltip that gets displayed when the popover button is
@@ -673,6 +641,7 @@ class LayoutsMixin:
         .. output ::
             https://doc-popover2.streamlit.app/
             height: 400px
+
         """
         if label is None:
             raise StreamlitAPIException("A label is required for a popover")
@@ -719,29 +688,19 @@ class LayoutsMixin:
 
         label : str
             The initial label of the status container. The label can optionally
-            contain Markdown and supports the following elements: Bold,
-            Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            contain GitHub-flavored Markdown of the following types: Bold, Italics,
+            Strikethroughs, Inline Code, and Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents)
-            render. Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         expanded : bool
             If True, initializes the status container in "expanded" state. Defaults to
@@ -799,7 +758,9 @@ class LayoutsMixin:
         ...     time.sleep(1)
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
-        ...     status.update(label="Download complete!", state="complete", expanded=False)
+        ...     status.update(
+        ...         label="Download complete!", state="complete", expanded=False
+        ...     )
         >>>
         >>> st.button("Rerun")
 

@@ -15,22 +15,24 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
-  BaseButtonProps as BaseButtonPropsT,
   BaseButtonKind,
+  BaseButtonProps as BaseButtonPropsT,
   BaseButtonSize,
   StyledBorderlessIconButton,
+  StyledBorderlessIconButtonActive,
+  StyledElementToolbarButton,
+  StyledHeaderButton,
+  StyledHeaderNoPaddingButton,
   StyledIconButton,
   StyledLinkButton,
   StyledMinimalButton,
   StyledPrimaryButton,
-  StyledSecondaryButton,
-  StyledTertiaryButton,
   StyledPrimaryFormSubmitButton,
+  StyledSecondaryButton,
   StyledSecondaryFormSubmitButton,
-  StyledHeaderButton,
-  StyledHeaderNoPaddingButton,
-  StyledElementToolbarButton,
+  StyledTertiaryButton,
 } from "./styled-components"
 
 function BaseButton({
@@ -41,7 +43,7 @@ function BaseButton({
   fluidWidth,
   children,
   autoFocus,
-}: BaseButtonPropsT): ReactElement {
+}: Readonly<BaseButtonPropsT>): ReactElement {
   let ComponentType = StyledPrimaryButton
 
   if (kind === BaseButtonKind.SECONDARY) {
@@ -54,6 +56,8 @@ function BaseButton({
     ComponentType = StyledIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
+  } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {
+    ComponentType = StyledBorderlessIconButtonActive
   } else if (kind === BaseButtonKind.MINIMAL) {
     ComponentType = StyledMinimalButton
   } else if (kind === BaseButtonKind.PRIMARY_FORM_SUBMIT) {
@@ -71,7 +75,7 @@ function BaseButton({
   return (
     <ComponentType
       kind={kind}
-      size={size || BaseButtonSize.MEDIUM}
+      size={size ?? BaseButtonSize.MEDIUM}
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       onClick={onClick || (() => {})}

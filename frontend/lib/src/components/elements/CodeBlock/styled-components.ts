@@ -104,6 +104,19 @@ export const StyledPre = styled.pre(({ theme }) => ({
   ".token.entity": {
     cursor: "help",
   },
+
+  /**
+   * Diff syntax highlighting
+   */
+  ".token.deleted.line, .token.deleted.prefix": {
+    color: theme.colors.red70,
+  },
+  ".token.inserted.line, .token.inserted.prefix": {
+    color: theme.colors.green70,
+  },
+  ".token.unchanged.line": {
+    color: theme.colors.gray70,
+  },
 }))
 
 export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
@@ -123,29 +136,19 @@ export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
   pointerEvents: "none",
 }))
 
-export interface StyledCodeBlockProps {
-  /**
-   * The code-block behaves a bit differently if it is
-   * used inside markdown.
-   */
-  isMarkdown: boolean
-}
+export const StyledCodeBlock = styled.div(({ theme }) => ({
+  position: "relative",
+  marginLeft: theme.spacing.none,
+  marginRight: theme.spacing.none,
+  marginTop: theme.spacing.none,
+  marginBottom: undefined,
 
-export const StyledCodeBlock = styled.div<StyledCodeBlockProps>(
-  ({ theme, isMarkdown }) => ({
-    position: "relative",
-    marginLeft: theme.spacing.none,
-    marginRight: theme.spacing.none,
-    marginTop: theme.spacing.none,
-    marginBottom: isMarkdown ? theme.spacing.lg : undefined,
-
-    "&:hover": {
-      [`${StyledCopyButtonContainer}`]: {
-        opacity: 1,
-      },
+  "&:hover": {
+    [`${StyledCopyButtonContainer}`]: {
+      opacity: 1,
     },
-  })
-)
+  },
+}))
 
 export const StyledCopyButton = styled.button(({ theme }) => ({
   pointerEvents: "auto",

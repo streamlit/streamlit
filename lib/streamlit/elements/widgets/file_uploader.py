@@ -23,12 +23,15 @@ from typing_extensions import TypeAlias
 from streamlit import config
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
+    check_widget_policies,
+    maybe_raise_label_warnings,
 )
-from streamlit.elements.lib.utils import get_label_visibility_proto_value
+from streamlit.elements.lib.utils import (
+    Key,
+    LabelVisibility,
+    get_label_visibility_proto_value,
+    to_key,
+)
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
@@ -42,7 +45,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
-from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -248,33 +250,24 @@ class FileUploaderMixin:
         ----------
         label : str
             A short label explaining to the user what this file uploader is for.
-            The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
 
-            This also supports:
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
 
-            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
-              For a list of all supported codes,
-              see https://share.streamlit.io/streamlit/emoji-shortcodes.
-
-            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
-              must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
-
-            * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              For example, you can use ``:orange[your text here]`` or
-              ``:blue-background[your text here]``.
-
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
-            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         type : str or list of str or None
             Array of allowed extensions. ['png', 'jpg']
@@ -308,6 +301,7 @@ class FileUploaderMixin:
             An optional boolean, which disables the file uploader if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -357,7 +351,9 @@ class FileUploaderMixin:
 
         >>> import streamlit as st
         >>>
-        >>> uploaded_files = st.file_uploader("Choose a CSV file", accept_multiple_files=True)
+        >>> uploaded_files = st.file_uploader(
+        ...     "Choose a CSV file", accept_multiple_files=True
+        ... )
         >>> for uploaded_file in uploaded_files:
         ...     bytes_data = uploaded_file.read()
         ...     st.write("filename:", uploaded_file.name)
@@ -400,10 +396,13 @@ class FileUploaderMixin:
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None,
+            writes_allowed=False,
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(

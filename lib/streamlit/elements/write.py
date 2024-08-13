@@ -16,26 +16,32 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-import json
 import types
+from collections import ChainMap, UserDict, UserList
 from io import StringIO
-from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Generator,
+    Iterable,
+    List,
+    cast,
+)
 
-from streamlit import type_util
+from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import (
     is_mem_address_str,
     max_char_sequence,
     probably_contains_html_tags,
 )
-from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Special methods:
 HELP_TYPES: Final[tuple[type[Any], ...]] = (
@@ -128,7 +134,7 @@ class WriteMixin:
 
         # Just apply some basic checks for common iterable types that should
         # not be passed in here.
-        if isinstance(stream, str) or type_util.is_dataframe_like(stream):
+        if isinstance(stream, str) or dataframe_util.is_dataframe_like(stream):
             raise StreamlitAPIException(
                 "`st.write_stream` expects a generator or stream-like object as input "
                 f"not {type(stream)}. Please use `st.write` instead for "
@@ -168,7 +174,7 @@ class WriteMixin:
             if type_util.is_openai_chunk(chunk):
                 # Try to convert OpenAI chat completion chunk to a string:
                 try:
-                    if len(chunk.choices) == 0:
+                    if len(chunk.choices) == 0 or chunk.choices[0].delta is None:
                         # The choices list can be empty. E.g. when using the
                         # AzureOpenAI client, the first chunk will always be empty.
                         chunk = ""
@@ -252,7 +258,8 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame)     : Displays the DataFrame as a table.
+            - write(data_frame)     : Displays any dataframe-compatible value
+                as read-only table.
             - write(error)          : Prints an exception specially.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
@@ -302,7 +309,7 @@ class WriteMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.write('Hello, *World!* :sunglasses:')
+        >>> st.write("Hello, *World!* :sunglasses:")
 
         ..  output::
             https://doc-write1.streamlit.app/
@@ -315,10 +322,14 @@ class WriteMixin:
         >>> import pandas as pd
         >>>
         >>> st.write(1234)
-        >>> st.write(pd.DataFrame({
-        ...     'first column': [1, 2, 3, 4],
-        ...     'second column': [10, 20, 30, 40],
-        ... }))
+        >>> st.write(
+        ...     pd.DataFrame(
+        ...         {
+        ...             "first column": [1, 2, 3, 4],
+        ...             "second column": [10, 20, 30, 40],
+        ...         }
+        ...     )
+        ... )
 
         ..  output::
             https://doc-write2.streamlit.app/
@@ -328,8 +339,8 @@ class WriteMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.write('1 + 1 = ', 2)
-        >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
+        >>> st.write("1 + 1 = ", 2)
+        >>> st.write("Below is a DataFrame:", data_frame, "Above is a dataframe.")
 
         ..  output::
             https://doc-write3.streamlit.app/
@@ -342,12 +353,12 @@ class WriteMixin:
         >>> import numpy as np
         >>> import altair as alt
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> c = alt.Chart(df).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
+        >>> df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+        >>> c = (
+        ...     alt.Chart(df)
+        ...     .mark_circle()
+        ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
+        ... )
         >>>
         >>> st.write(c)
 
@@ -401,22 +412,12 @@ class WriteMixin:
                         item()
                     else:
                         self.write(item, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_unevaluated_data_object(
-                arg
-            ) or type_util.is_snowpark_row_list(arg):
-                flush_buffer()
-                self.dg.dataframe(arg)
-            elif type_util.is_dataframe_like(arg):
-                import numpy as np
-
-                flush_buffer()
-                if len(np.shape(arg)) > 2:
-                    self.dg.text(arg)
-                else:
-                    self.dg.dataframe(arg)
             elif isinstance(arg, Exception):
                 flush_buffer()
                 self.dg.exception(arg)
+            elif dataframe_util.is_dataframe_like(arg):
+                flush_buffer()
+                self.dg.dataframe(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
                 self.dg.altair_chart(arg)
@@ -444,14 +445,25 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(
-                arg, (dict, list, SessionStateProxy, UserInfoProxy, QueryParamsProxy)
+            elif (
+                isinstance(
+                    arg,
+                    (
+                        dict,
+                        list,
+                        map,
+                        enumerate,
+                        types.MappingProxyType,
+                        UserDict,
+                        ChainMap,
+                        UserList,
+                    ),
+                )
+                or type_util.is_custom_dict(arg)
+                or type_util.is_namedtuple(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)
-            elif type_util.is_namedtuple(arg):
-                flush_buffer()
-                self.dg.json(json.dumps(arg._asdict()))
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
@@ -477,16 +489,12 @@ class WriteMixin:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
             elif (
-                hasattr(arg, "_repr_html_")
-                and callable(arg._repr_html_)
+                type_util.has_callable_attr(arg, "_repr_html_")
                 and (repr_html := arg._repr_html_())
                 and (unsafe_allow_html or not probably_contains_html_tags(repr_html))
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_streamlit_secrets_class(arg):
-                flush_buffer()
-                self.dg.json(arg.to_dict())
             else:
                 stringified_arg = str(arg)
 

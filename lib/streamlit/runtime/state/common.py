@@ -27,19 +27,23 @@ from typing import (
     Final,
     Generic,
     Iterable,
+    Literal,
     Tuple,
     TypeVar,
     Union,
+    cast,
+    get_args,
 )
 
 from google.protobuf.message import Message
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.Checkbox_pb2 import Checkbox
@@ -64,7 +68,6 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
     from streamlit.runtime.state.widgets import NoValue
-    from streamlit.type_util import ValueFieldName
 
 
 # Protobuf types for all widgets.
@@ -72,6 +75,7 @@ WidgetProto: TypeAlias = Union[
     Arrow,
     ArrowVegaLiteChart,
     Button,
+    ButtonGroup,
     CameraInput,
     ChatInput,
     Checkbox,
@@ -109,6 +113,53 @@ WidgetCallback: TypeAlias = Callable[..., None]
 # a value field on WidgetState proto. They should be inverses.
 WidgetDeserializer: TypeAlias = Callable[[Any, str], T]
 WidgetSerializer: TypeAlias = Callable[[T], Any]
+
+# The array value field names are part of the larger set of possible value
+# field names. See the explanation for said set below. The message types
+# associated with these fields are distinguished by storing data in a `data`
+# field in their messages, meaning they need special treatment in certain
+# circumstances. Hence, they need their own, dedicated, sub-type.
+ArrayValueFieldName: TypeAlias = Literal[
+    "double_array_value",
+    "int_array_value",
+    "string_array_value",
+]
+
+# A frozenset containing the allowed values of the ArrayValueFieldName type.
+# Useful for membership checking.
+_ARRAY_VALUE_FIELD_NAMES: Final = frozenset(
+    cast(
+        "tuple[ArrayValueFieldName, ...]",
+        # NOTE: get_args is not recursive, so this only works as long as
+        # ArrayValueFieldName remains flat.
+        get_args(ArrayValueFieldName),
+    )
+)
+
+# These are the possible field names that can be set in the `value` oneof-field
+# of the WidgetState message (schema found in .proto/WidgetStates.proto).
+# We need these as a literal type to ensure correspondence with the protobuf
+# schema in certain parts of the python code.
+# TODO(harahu): It would be preferable if this type was automatically derived
+#  from the protobuf schema, rather than manually maintained. Not sure how to
+#  achieve that, though.
+ValueFieldName: TypeAlias = Literal[
+    ArrayValueFieldName,
+    "arrow_value",
+    "bool_value",
+    "bytes_value",
+    "double_value",
+    "file_uploader_state_value",
+    "int_value",
+    "json_value",
+    "string_value",
+    "trigger_value",
+    "string_trigger_value",
+]
+
+
+def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
+    return obj in _ARRAY_VALUE_FIELD_NAMES
 
 
 @dataclass(frozen=True)

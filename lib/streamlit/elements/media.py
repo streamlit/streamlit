@@ -33,6 +33,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
 
 MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
@@ -95,7 +97,7 @@ class MediaMixin:
             one of the following:
 
             * ``None`` (default): The element plays from the beginning.
-            * An``int`` or ``float`` specifying the time in seconds. ``float``
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
               values are rounded down to whole seconds.
             * A string specifying the time in a format supported by `Pandas'
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
@@ -288,7 +290,7 @@ class MediaMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> video_file = open('myvideo.mp4', 'rb')
+        >>> video_file = open("myvideo.mp4", "rb")
         >>> video_bytes = video_file.read()
         >>>
         >>> st.video(video_bytes)
@@ -376,7 +378,7 @@ def _reshape_youtube_url(url: str) -> str | None:
 
     Example
     -------
-    >>> print(_reshape_youtube_url('https://youtu.be/_T8LGqJtuGc'))
+    >>> print(_reshape_youtube_url("https://youtu.be/_T8LGqJtuGc"))
 
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
@@ -633,29 +635,29 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data: npt.NDArray[Any] = np.array(data, dtype=float)
+    transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(data.shape) == 1:
+    if len(cast(NumpyShape, transformed_data.shape)) == 1:
         nchan = 1
-    elif len(data.shape) == 2:
+    elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
         # "L1R1L2R2..." for stereo. See
         # http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
         # for channel ordering
-        nchan = data.shape[0]
-        data = data.T.ravel()
+        nchan = transformed_data.shape[0]
+        transformed_data = transformed_data.T.ravel()
     else:
         raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
 
-    if data.size == 0:
-        return data.astype(np.int16).tobytes(), nchan
+    if transformed_data.size == 0:
+        return transformed_data.astype(np.int16).tobytes(), nchan
 
-    max_abs_value = np.max(np.abs(data))
+    max_abs_value = np.max(np.abs(transformed_data))
     # 16-bit samples are stored as 2's-complement signed integers,
     # ranging from -32768 to 32767.
     # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
     # values to 32_767 == 2 ** 15 - 1.
-    np_array = (data / max_abs_value) * 32767
+    np_array = (transformed_data / max_abs_value) * 32767
     scaled_data = np_array.astype(np.int16)
     return scaled_data.tobytes(), nchan
 

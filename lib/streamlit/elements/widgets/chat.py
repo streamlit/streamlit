@@ -21,12 +21,8 @@ from typing import TYPE_CHECKING, Literal, cast
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -42,7 +38,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import is_emoji, validate_material_icon
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -167,13 +162,13 @@ class ChatMixin:
             * A single-character emoji. For example, you can set ``avatar="🧑‍💻"``
               or ``avatar="🦖"``. Emoji short codes are not supported.
 
-            * An icon from the Material Symbols library (outlined style) in the
+            * An icon from the Material Symbols library (rounded style) in the
               format ``":material/icon_name:"`` where "icon_name" is the name
               of the icon in snake case.
 
               For example, ``icon=":material/thumb_up:"`` will display the
               Thumb Up icon. Find additional icons in the `Material Symbols \
-              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
 
         Returns
@@ -298,8 +293,9 @@ class ChatMixin:
             height: 350px
 
         The chat input can also be used inline by nesting it inside any layout
-        container (container, columns, tabs, sidebar, etc). Create chat
-        interfaces embedded next to other content or have multiple chat bots!
+        container (container, columns, tabs, sidebar, etc) or fragment. Create
+        chat interfaces embedded next to other content or have multiple
+        chatbots!
 
         >>> import streamlit as st
         >>>
@@ -317,10 +313,13 @@ class ChatMixin:
         default = ""
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_submit)
-        check_session_state_rules(default_value=default, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_submit,
+            default_value=default,
+            writes_allowed=False,
+        )
 
         ctx = get_script_run_ctx()
         id = compute_widget_id(

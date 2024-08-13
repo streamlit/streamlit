@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook, act } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react-hooks"
 
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "@streamlit/lib/src/mocks/arrow"

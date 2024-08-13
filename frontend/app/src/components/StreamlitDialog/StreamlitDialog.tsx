@@ -14,37 +14,38 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import {
-  BaseButtonKind,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
-  SessionInfo,
-  StreamlitMarkdown,
-  IException,
-} from "@streamlit/lib"
+import React, { CSSProperties, ReactElement, ReactNode } from "react"
+
 import { HotKeys } from "react-hotkeys"
 
+import {
+  BaseButtonKind,
+  IException,
+  Modal,
+  ModalBody,
+  ModalButton,
+  ModalFooter,
+  ModalHeader,
+  SessionInfo,
+  StreamlitMarkdown,
+} from "@streamlit/lib"
 import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "@streamlit/app/src/components/StreamlitDialog/ScriptChangedDialog"
 import { STREAMLIT_HOME_URL } from "@streamlit/app/src/urls"
-import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
+
+import { SettingsDialog, Props as SettingsDialogProps } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
-
 import {
-  StyledRerunHeader,
-  StyledCommandLine,
-  StyledDeployErrorContent,
   StyledAboutInfo,
   StyledAboutLink,
+  StyledCommandLine,
+  StyledDeployErrorContent,
+  StyledRerunHeader,
 } from "./styled-components"
 
 export type PlainEventHandler = () => void

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import TYPE_CHECKING, Any, Final, Mapping, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Mapping, cast
 
 from streamlit import config
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
@@ -91,37 +91,40 @@ class PydeckMixin:
         >>> import pydeck as pdk
         >>>
         >>> chart_data = pd.DataFrame(
-        ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...    columns=['lat', 'lon'])
+        ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
+        ...     columns=["lat", "lon"],
+        ... )
         >>>
-        >>> st.pydeck_chart(pdk.Deck(
-        ...     map_style=None,
-        ...     initial_view_state=pdk.ViewState(
-        ...         latitude=37.76,
-        ...         longitude=-122.4,
-        ...         zoom=11,
-        ...         pitch=50,
-        ...     ),
-        ...     layers=[
-        ...         pdk.Layer(
-        ...            'HexagonLayer',
-        ...            data=chart_data,
-        ...            get_position='[lon, lat]',
-        ...            radius=200,
-        ...            elevation_scale=4,
-        ...            elevation_range=[0, 1000],
-        ...            pickable=True,
-        ...            extruded=True,
+        >>> st.pydeck_chart(
+        ...     pdk.Deck(
+        ...         map_style=None,
+        ...         initial_view_state=pdk.ViewState(
+        ...             latitude=37.76,
+        ...             longitude=-122.4,
+        ...             zoom=11,
+        ...             pitch=50,
         ...         ),
-        ...         pdk.Layer(
-        ...             'ScatterplotLayer',
-        ...             data=chart_data,
-        ...             get_position='[lon, lat]',
-        ...             get_color='[200, 30, 0, 160]',
-        ...             get_radius=200,
-        ...         ),
-        ...     ],
-        ... ))
+        ...         layers=[
+        ...             pdk.Layer(
+        ...                 "HexagonLayer",
+        ...                 data=chart_data,
+        ...                 get_position="[lon, lat]",
+        ...                 radius=200,
+        ...                 elevation_scale=4,
+        ...                 elevation_range=[0, 1000],
+        ...                 pickable=True,
+        ...                 extruded=True,
+        ...             ),
+        ...             pdk.Layer(
+        ...                 "ScatterplotLayer",
+        ...                 data=chart_data,
+        ...                 get_position="[lon, lat]",
+        ...                 get_color="[200, 30, 0, 160]",
+        ...                 get_radius=200,
+        ...             ),
+        ...         ],
+        ...     )
+        ... )
 
         .. output::
            https://doc-pydeck-chart.streamlit.app/
@@ -155,7 +158,7 @@ def _get_pydeck_tooltip(pydeck_obj: Deck | None) -> dict[str, str] | None:
     # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
     tooltip = getattr(pydeck_obj, "_tooltip", None)
     if tooltip is not None and isinstance(tooltip, dict):
-        return tooltip
+        return cast(Dict[str, str], tooltip)
 
     return None
 

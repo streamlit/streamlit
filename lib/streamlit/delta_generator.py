@@ -24,7 +24,6 @@ from typing import (
     Any,
     Callable,
     Final,
-    Hashable,
     Iterable,
     Literal,
     NoReturn,
@@ -41,7 +40,6 @@ from streamlit import (
     env_util,
     logger,
     runtime,
-    type_util,
     util,
 )
 from streamlit.elements.alert import AlertMixin
@@ -73,6 +71,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
 from streamlit.elements.widgets.button import ButtonMixin
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.elements.widgets.camera_input import CameraInputMixin
 from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
@@ -88,26 +87,23 @@ from streamlit.elements.widgets.slider import SliderMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
+from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
-    from numpy import typing as npt
-    from pandas import DataFrame
 
     from streamlit.cursor import Cursor
-    from streamlit.elements.arrow import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
 Value = TypeVar("Value")
-DG = TypeVar("DG", bound="DeltaGenerator")
 
 # Type aliases for Ancestor Block Types
 BlockType: TypeAlias = str
@@ -148,6 +144,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    ButtonGroupMixin,
     CameraInputMixin,
     ChatMixin,
     CheckboxMixin,
@@ -439,9 +436,9 @@ class DeltaGenerator(
         ctx = get_script_run_ctx()
         if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
             raise StreamlitAPIException(
-                "Calling `st.sidebar` in a function wrapped with `st.experimental_fragment` "
-                "is not supported. To write elements to the sidebar with a fragment, "
-                "call your fragment function inside a `with st.sidebar` context manager."
+                "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
+                "supported. To write elements to the sidebar with a fragment, call your "
+                "fragment function inside a `with st.sidebar` context manager."
             )
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
@@ -552,121 +549,6 @@ class DeltaGenerator(
 
         return block_dg
 
-    def _arrow_add_rows(
-        self: DG,
-        data: Data = None,
-        **kwargs: (
-            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
-        ),
-    ) -> DG | None:
-        """Concatenate a dataframe to the bottom of the current one.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
-            Table to concat. Optional.
-
-        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
-            The named dataset to concat. Optional. You can only pass in 1
-            dataset (including the one in the data parameter).
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df1 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> my_table = st.table(df1)
-        >>>
-        >>> df2 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> my_table.add_rows(df2)
-        >>> # Now the table shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        You can do the same thing with plots. For example, if you want to add
-        more data to a line chart:
-
-        >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st.line_chart(df1)
-        >>> my_chart.add_rows(df2)
-        >>> # Now the chart shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        And for plots whose datasets are named, you can pass the data with a
-        keyword argument where the key is the name:
-
-        >>> my_chart = st.vega_lite_chart({
-        ...     'mark': 'line',
-        ...     'encoding': {'x': 'a', 'y': 'b'},
-        ...     'datasets': {
-        ...       'some_fancy_name': df1,  # <-- named dataset
-        ...      },
-        ...     'data': {'name': 'some_fancy_name'},
-        ... }),
-        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
-
-        """
-        if self._root_container is None or self._cursor is None:
-            return self
-
-        if not self._cursor.is_locked:
-            raise StreamlitAPIException("Only existing elements can `add_rows`.")
-
-        # Accept syntax st._arrow_add_rows(df).
-        if data is not None and len(kwargs) == 0:
-            name = ""
-        # Accept syntax st._arrow_add_rows(foo=df).
-        elif len(kwargs) == 1:
-            name, data = kwargs.popitem()
-        # Raise error otherwise.
-        else:
-            raise StreamlitAPIException(
-                "Wrong number of arguments to add_rows()."
-                "Command requires exactly one dataset"
-            )
-
-        # When doing _arrow_add_rows on an element that does not already have data
-        # (for example, st.line_chart() without any args), call the original
-        # st.foo() element with new data instead of doing a _arrow_add_rows().
-        if (
-            "add_rows_metadata" in self._cursor.props
-            and self._cursor.props["add_rows_metadata"]
-            and self._cursor.props["add_rows_metadata"].last_index is None
-        ):
-            st_method = getattr(
-                self, self._cursor.props["add_rows_metadata"].chart_command
-            )
-            st_method(data, **kwargs)
-            return None
-
-        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
-            data,
-            self._cursor.props["add_rows_metadata"],
-        )
-
-        msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.delta_path[:] = self._cursor.delta_path
-
-        import streamlit.elements.arrow as arrow_proto
-
-        default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
-
-        if name:
-            msg.delta.arrow_add_rows.name = name
-            msg.delta.arrow_add_rows.has_name = True
-
-        _enqueue_message(msg)
-
-        return self
-
 
 main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
 sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg)
@@ -700,39 +582,7 @@ def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
     return None
 
 
-def _prep_data_for_add_rows(
-    data: Data,
-    add_rows_metadata: AddRowsMetadata | None,
-) -> tuple[Data, AddRowsMetadata | None]:
-    if not add_rows_metadata:
-        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-        return type_util.convert_anything_to_df(data, allow_styler=True), None
-
-    # If add_rows_metadata is set, it indicates that the add_rows used called
-    # on a chart based on our built-in chart commands.
-
-    # For built-in chart commands we have to reshape the data structure
-    # otherwise the input data and the actual data used
-    # by vega_lite will be different, and it will throw an error.
-    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
-
-    return prep_chart_data_for_add_rows(data, add_rows_metadata)
-
-
-def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
-    """Enqueues a ForwardMsg proto to send to the app."""
-    ctx = get_script_run_ctx()
-
-    if ctx is None:
-        raise NoSessionContext()
-
-    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
-        msg.delta.fragment_id = ctx.current_fragment_id
-
-    ctx.enqueue(msg)
-
-
-def _writes_directly_to_sidebar(dg: DG) -> bool:
+def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(len(list(dg._ancestor_block_types)))
     return in_sidebar and not has_container

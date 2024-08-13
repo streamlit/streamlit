@@ -17,8 +17,9 @@ Global pytest fixtures. This file is automatically run by pytest before tests
 are executed.
 """
 
+from __future__ import annotations
+
 import os
-import sys
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -44,7 +45,7 @@ with patch(
     # be sure to catch any instances of calling config.get_option() when
     # first importing a file. We disallow this because doing so means that we
     # miss config options set via flag or environment variable.
-    import streamlit as st
+    import streamlit as st  # noqa: F401
     from streamlit import config, file_util, source_util
 
     assert (
@@ -85,10 +86,8 @@ def pytest_configure(config: pytest.Config):
 
     is_require_snowflake = config.getoption("--require-snowflake", default=False)
     if is_require_snowflake:
-        if sys.version_info[0:2] != (3, 8):
-            raise pytest.UsageError("Python 3.8 is required to run Snowflake tests")
         try:
-            import snowflake.snowpark
+            import snowflake.snowpark  # noqa: F401
         except ImportError:
             raise pytest.UsageError(
                 "The snowflake-snowpark-python package is not installed."

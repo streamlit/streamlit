@@ -76,6 +76,12 @@ export const StyledStickyBottomContainer = styled.div(() => ({
   left: 0,
   bottom: 0,
   width: "100%",
+
+  // move the bottom container to the end of pages in print-mode so that nothing
+  // (e.g. a floating chat-input) overlays the actual app content
+  "@media print": {
+    position: "static",
+  },
 }))
 
 export const StyledInnerBottomContainer = styled.div(({ theme }) => ({

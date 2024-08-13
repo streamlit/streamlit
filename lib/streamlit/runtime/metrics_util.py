@@ -86,6 +86,11 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "cudf",
     "xarray",
     "ray",
+    "geopandas",
+    "mars",
+    "tables",
+    "zarr",
+    "datasets",
     # ML & LLM Tools:
     "mistralai",
     "openai",
@@ -141,7 +146,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pymilvus",
     "lancedb",
     # Others:
-    "datasets",
     "snowflake",
     "streamlit_extras",
     "streamlit_pydantic",

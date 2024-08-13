@@ -32,7 +32,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit import type_util, util
+from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import (
@@ -60,6 +60,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
+    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
@@ -201,12 +202,12 @@ class Widget(Element, ABC):
     def _widget_state(self) -> WidgetState: ...
 
 
-El = TypeVar("El", bound=Element, covariant=True)
+El_co = TypeVar("El_co", bound=Element, covariant=True)
 
 
-class ElementList(Generic[El]):
-    def __init__(self, els: Sequence[El]):
-        self._list: Sequence[El] = els
+class ElementList(Generic[El_co]):
+    def __init__(self, els: Sequence[El_co]):
+        self._list: Sequence[El_co] = els
 
     def __len__(self) -> int:
         return len(self._list)
@@ -216,12 +217,12 @@ class ElementList(Generic[El]):
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> El: ...
+    def __getitem__(self, idx: int) -> El_co: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> ElementList[El]: ...
+    def __getitem__(self, idx: slice) -> ElementList[El_co]: ...
 
-    def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
+    def __getitem__(self, idx: int | slice) -> El_co | ElementList[El_co]:
         if isinstance(idx, slice):
             return ElementList(self._list[idx])
         else:
@@ -233,7 +234,7 @@ class ElementList(Generic[El]):
     def __repr__(self):
         return util.repr_(self)
 
-    def __eq__(self, other: ElementList[El] | object) -> bool:
+    def __eq__(self, other: ElementList[El_co] | object) -> bool:
         if isinstance(other, ElementList):
             return self._list == other._list
         else:
@@ -244,11 +245,11 @@ class ElementList(Generic[El]):
         return [e.value for e in self]
 
 
-W = TypeVar("W", bound=Widget, covariant=True)
+W_co = TypeVar("W_co", bound=Widget, covariant=True)
 
 
-class WidgetList(ElementList[W], Generic[W]):
-    def __call__(self, key: str) -> W:
+class WidgetList(ElementList[W_co], Generic[W_co]):
+    def __call__(self, key: str) -> W_co:
         for e in self._list:
             if e.key == key:
                 return e
@@ -506,7 +507,7 @@ class Dataframe(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
@@ -692,6 +693,91 @@ class Metric(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+
+@dataclass(repr=False)
+class ButtonGroup(Widget, Generic[T]):
+    """A representation of button_group that is used by ``st.feedback``."""
+
+    _value: list[T] | None
+
+    proto: ButtonGroupProto = field(repr=False)
+    options: list[ButtonGroupProto.Option]
+    form_id: str
+
+    def __init__(self, proto: ButtonGroupProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "button_group"
+        self.options = list(proto.options)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.int_array_value.data[:] = self.indices
+        return ws
+
+    @property
+    def value(self) -> list[T]:
+        """The currently selected values from the options. (list)"""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(List[T], state[self.id])
+
+    @property
+    def indices(self) -> Sequence[int]:
+        """The indices of the currently selected values from the options. (list)"""
+        return [self.options.index(self.format_func(v)) for v in self.value]
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        """The widget's formatting function for displaying options. (callable)"""
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
+
+    def set_value(self, v: list[T]) -> ButtonGroup[T]:
+        """Set the value of the multiselect widget. (list)"""
+
+        self._value = v
+        return self
+
+    def select(self, v: T) -> ButtonGroup[T]:
+        """
+        Add a selection to the widget. Do nothing if the value is already selected.\
+        If testing a multiselect widget with repeated options, use ``set_value``\
+        instead.
+        """
+        current = self.value
+        if v in current:
+            return self
+        else:
+            new = current.copy()
+            new.append(v)
+            self.set_value(new)
+            return self
+
+    def unselect(self, v: T) -> ButtonGroup[T]:
+        """
+        Remove a selection from the widget. Do nothing if the value is not\
+        already selected. If a value is selected multiple times, the first\
+        instance is removed.
+        """
+        current = self.value
+        if v not in current:
+            return self
+        else:
+            new = current.copy()
+            while v in new:
+                new.remove(v)
+            self.set_value(new)
+            return self
 
 
 @dataclass(repr=False)
@@ -1107,7 +1193,7 @@ class Table(Element):
 
     @property
     def value(self) -> PandasDataframe:
-        return type_util.bytes_to_data_frame(self.proto.data)
+        return dataframe_util.convert_arrow_bytes_to_pandas_df(self.proto.data)
 
 
 @dataclass(repr=False)
@@ -1405,6 +1491,10 @@ class Block:
     @property
     def button(self) -> WidgetList[Button]:
         return WidgetList(self.get("button"))  # type: ignore
+
+    @property
+    def button_group(self) -> WidgetList[ButtonGroup[Any]]:
+        return WidgetList(self.get("button_group"))  # type: ignore
 
     @property
     def caption(self) -> ElementList[Caption]:
@@ -1882,6 +1972,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Table(elt.arrow_table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
+            elif ty == "button_group":
+                new_node = ButtonGroup(elt.button_group, root=root)
             elif ty == "chat_input":
                 new_node = ChatInput(elt.chat_input, root=root)
             elif ty == "checkbox":

@@ -37,8 +37,8 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
+from streamlit import dataframe_util
 from streamlit import logger as _logger
-from streamlit import type_util
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
@@ -54,12 +54,8 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_fragment_path_policy,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -71,7 +67,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
+from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
@@ -89,7 +85,7 @@ _LOGGER: Final = _logger.get_logger(__name__)
 EditableData = TypeVar(
     "EditableData",
     bound=Union[
-        DataFrameGenericAlias[Any],  # covers DataFrame and Series
+        dataframe_util.DataFrameGenericAlias[Any],  # covers DataFrame and Series
         Tuple[Any],
         List[Any],
         Set[Any],
@@ -419,8 +415,8 @@ def _is_supported_index(df_index: pd.Index) -> bool:
             # Period type isn't editable currently:
             # pd.PeriodIndex,
         ]
-        # We need to check these index types without importing, since they are deprecated
-        # and planned to be removed soon.
+        # We need to check these index types without importing, since they are
+        # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
@@ -785,18 +781,21 @@ class DataEditorMixin:
 
         key = to_key(key)
 
-        check_fragment_path_policy(self.dg)
-        check_cache_replay_rules()
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_widget_policies(
+            self.dg,
+            key,
+            on_change,
+            default_value=None,
+            writes_allowed=False,
+        )
 
         if column_order is not None:
             column_order = list(column_order)
 
         column_config_mapping: ColumnConfigMapping = {}
 
-        data_format = type_util.determine_data_format(data)
-        if data_format == DataFormat.UNKNOWN:
+        data_format = dataframe_util.determine_data_format(data)
+        if data_format == dataframe_util.DataFormat.UNKNOWN:
             raise StreamlitAPIException(
                 f"The data type ({type(data).__name__}) or format is not supported by the data editor. "
                 "Please convert your data into a Pandas Dataframe or another supported data format."
@@ -804,7 +803,7 @@ class DataEditorMixin:
 
         # The dataframe should always be a copy of the original data
         # since we will apply edits directly to it.
-        data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
+        data_df = dataframe_util.convert_anything_to_pandas_df(data, ensure_copy=True)
 
         # Check if the index is supported.
         if not _is_supported_index(data_df.index):
@@ -818,18 +817,37 @@ class DataEditorMixin:
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
-        apply_data_specific_configs(
-            column_config_mapping, data_df, data_format, check_arrow_compatibility=True
-        )
+
+        # Deactivate editing for columns that are not compatible with arrow
+        for column_name, column_data in data_df.items():
+            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+                update_column_config(
+                    column_config_mapping, column_name, {"disabled": True}
+                )
+                # Convert incompatible type to string
+                data_df[column_name] = column_data.astype("string")
+
+        apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
-        # Temporary workaround: We hide range indices if num_rows is dynamic.
-        # since the current way of handling this index during editing is a bit confusing.
-        if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
+
+        has_range_index = isinstance(data_df.index, pd.RangeIndex)
+
+        if not has_range_index:
+            # If the index is not a range index, we will configure it as required
+            # since the user is required to provide a (unique) value for editing.
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
+
+        if hide_index is None and has_range_index and num_rows == "dynamic":
+            # Temporary workaround:
+            # We hide range indices if num_rows is dynamic.
+            # since the current way of handling this index during editing is a
+            # bit confusing. The user can still decide to show the index by
+            # setting hide_index explicitly to False.
+            hide_index = True
 
         if hide_index is not None:
             update_column_config(
@@ -855,7 +873,7 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
-        arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+        arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(arrow_table)
 
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
@@ -902,7 +920,7 @@ class DataEditorMixin:
 
         proto.form_id = current_form_id(self.dg)
 
-        if type_util.is_pandas_styler(data):
+        if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
             # Get first 10 chars of md5 hash of the key or delta path as styler uuid
             # and set it as styler uuid.
@@ -936,7 +954,7 @@ class DataEditorMixin:
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
         self.dg._enqueue("arrow_data_frame", proto)
-        return type_util.convert_df_to_data_format(data_df, data_format)
+        return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property
     def dg(self) -> DeltaGenerator:

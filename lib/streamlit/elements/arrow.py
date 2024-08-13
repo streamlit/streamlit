@@ -19,20 +19,18 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
+    Hashable,
     Iterable,
-    List,
     Literal,
     TypedDict,
-    Union,
     cast,
     overload,
 )
 
 from typing_extensions import TypeAlias
 
-from streamlit import type_util
+from streamlit import dataframe_util
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -43,38 +41,27 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
-from streamlit.elements.lib.policies import (
-    check_cache_replay_rules,
-    check_callback_rules,
-    check_session_state_rules,
-)
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import (
+    enqueue_message,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-    from numpy import ndarray
-    from pandas import DataFrame, Index, Series
-    from pandas.io.formats.style import Styler
+    from numpy import typing as npt
+    from pandas import DataFrame
 
+    from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
-Data: TypeAlias = Union[
-    "DataFrame",
-    "Series",
-    "Styler",
-    "Index",
-    "pa.Table",
-    "ndarray",
-    Iterable,
-    Dict[str, List[Any]],
-    None,
-]
 
 SelectionMode: TypeAlias = Literal[
     "single-row", "multi-row", "single-column", "multi-column"
@@ -489,10 +476,15 @@ class ArrowMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-            check_cache_replay_rules()
-            if callable(on_select):
-                check_callback_rules(self.dg, on_select)
-            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast(WidgetCallback, on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
@@ -511,15 +503,15 @@ class ArrowMixin:
 
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
-            proto.data = type_util.pyarrow_table_to_bytes(data)
+            proto.data = dataframe_util.convert_arrow_table_to_arrow_bytes(data)
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
 
             # Determine the input data format
-            data_format = type_util.determine_data_format(data)
+            data_format = dataframe_util.determine_data_format(data)
 
-            if type_util.is_pandas_styler(data):
+            if dataframe_util.is_pandas_styler(data):
                 # If pandas.Styler uuid is not provided, a hash of the position
                 # of the element will be used. This will cause a rerender of the table
                 # when the position of the element is changed.
@@ -528,15 +520,12 @@ class ArrowMixin:
                 marshall_styler(proto, data, default_uuid)
 
             # Convert the input data into a pandas.DataFrame
-            data_df = type_util.convert_anything_to_df(data, ensure_copy=False)
-            apply_data_specific_configs(
-                column_config_mapping,
-                data_df,
-                data_format,
-                check_arrow_compatibility=False,
+            data_df = dataframe_util.convert_anything_to_pandas_df(
+                data, ensure_copy=False
             )
+            apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
-            proto.data = type_util.data_frame_to_bytes(data_df)
+            proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
 
         if hide_index is not None:
             update_column_config(
@@ -603,7 +592,9 @@ class ArrowMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(np.random.randn(10, 5), columns=("col %d" % i for i in range(5)))
+        >>> df = pd.DataFrame(
+        ...     np.random.randn(10, 5), columns=("col %d" % i for i in range(5))
+        ... )
         >>>
         >>> st.table(df)
 
@@ -613,10 +604,14 @@ class ArrowMixin:
 
         """
 
-        # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
-        # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
-        if type_util.is_unevaluated_data_object(data):
-            data = type_util.convert_anything_to_df(data, max_unevaluated_rows=100)
+        # Check if data is uncollected, and collect it but with 100 rows max, instead of
+        # 10k rows, which is done in all other cases.
+        # We use 100 rows in st.table, because large tables render slowly,
+        # take too much screen space, and can crush the app.
+        if dataframe_util.is_unevaluated_data_object(data):
+            data = dataframe_util.convert_anything_to_pandas_df(
+                data, max_unevaluated_rows=100
+            )
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
@@ -647,11 +642,15 @@ class ArrowMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df1 = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>> df1 = pd.DataFrame(
+        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+        ... )
         >>>
         >>> my_table = st.table(df1)
         >>>
-        >>> df2 = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>> df2 = pd.DataFrame(
+        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+        ... )
         >>>
         >>> my_table.add_rows(df2)
         >>> # Now the table shown in the Streamlit app contains the data for
@@ -669,23 +668,159 @@ class ArrowMixin:
         And for plots whose datasets are named, you can pass the data with a
         keyword argument where the key is the name:
 
-        >>> my_chart = st.vega_lite_chart({
-        ...     'mark': 'line',
-        ...     'encoding': {'x': 'a', 'y': 'b'},
-        ...     'datasets': {
-        ...       'some_fancy_name': df1,  # <-- named dataset
-        ...      },
-        ...     'data': {'name': 'some_fancy_name'},
-        ... }),
+        >>> my_chart = st.vega_lite_chart(
+        ...     {
+        ...         "mark": "line",
+        ...         "encoding": {"x": "a", "y": "b"},
+        ...         "datasets": {
+        ...             "some_fancy_name": df1,  # <-- named dataset
+        ...         },
+        ...         "data": {"name": "some_fancy_name"},
+        ...     }
+        ... )
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        return self.dg._arrow_add_rows(data, **kwargs)
+        return _arrow_add_rows(self.dg, data, **kwargs)
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _prep_data_for_add_rows(
+    data: Data,
+    add_rows_metadata: AddRowsMetadata | None,
+) -> tuple[Data, AddRowsMetadata | None]:
+    if not add_rows_metadata:
+        if dataframe_util.is_pandas_styler(data):
+            # When calling add_rows on st.table or st.dataframe we want styles to
+            # pass through.
+            return data, None
+        return dataframe_util.convert_anything_to_pandas_df(data), None
+
+    # If add_rows_metadata is set, it indicates that the add_rows used called
+    # on a chart based on our built-in chart commands.
+
+    # For built-in chart commands we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different, and it will throw an error.
+    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
+
+    return prep_chart_data_for_add_rows(data, add_rows_metadata)
+
+
+def _arrow_add_rows(
+    dg: DeltaGenerator,
+    data: Data = None,
+    **kwargs: (
+        DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+    ),
+) -> DeltaGenerator | None:
+    """Concatenate a dataframe to the bottom of the current one.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        Table to concat. Optional.
+
+    **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        The named dataset to concat. Optional. You can only pass in 1
+        dataset (including the one in the data parameter).
+
+    Example
+    -------
+    >>> import streamlit as st
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>>
+    >>> df1 = pd.DataFrame(
+    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+    ... )
+    >>> my_table = st.table(df1)
+    >>>
+    >>> df2 = pd.DataFrame(
+    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+    ... )
+    >>> my_table.add_rows(df2)
+    >>> # Now the table shown in the Streamlit app contains the data for
+    >>> # df1 followed by the data for df2.
+
+    You can do the same thing with plots. For example, if you want to add
+    more data to a line chart:
+
+    >>> # Assuming df1 and df2 from the example above still exist...
+    >>> my_chart = st.line_chart(df1)
+    >>> my_chart.add_rows(df2)
+    >>> # Now the chart shown in the Streamlit app contains the data for
+    >>> # df1 followed by the data for df2.
+
+    And for plots whose datasets are named, you can pass the data with a
+    keyword argument where the key is the name:
+
+    >>> my_chart = st.vega_lite_chart(
+    ...     {
+    ...         "mark": "line",
+    ...         "encoding": {"x": "a", "y": "b"},
+    ...         "datasets": {
+    ...             "some_fancy_name": df1,  # <-- named dataset
+    ...         },
+    ...         "data": {"name": "some_fancy_name"},
+    ...     }
+    ... )
+    >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
+
+    """
+    if dg._root_container is None or dg._cursor is None:
+        return dg
+
+    if not dg._cursor.is_locked:
+        raise StreamlitAPIException("Only existing elements can `add_rows`.")
+
+    # Accept syntax st._arrow_add_rows(df).
+    if data is not None and len(kwargs) == 0:
+        name = ""
+    # Accept syntax st._arrow_add_rows(foo=df).
+    elif len(kwargs) == 1:
+        name, data = kwargs.popitem()
+    # Raise error otherwise.
+    else:
+        raise StreamlitAPIException(
+            "Wrong number of arguments to add_rows()."
+            "Command requires exactly one dataset"
+        )
+
+    # When doing _arrow_add_rows on an element that does not already have data
+    # (for example, st.line_chart() without any args), call the original
+    # st.foo() element with new data instead of doing a _arrow_add_rows().
+    if (
+        "add_rows_metadata" in dg._cursor.props
+        and dg._cursor.props["add_rows_metadata"]
+        and dg._cursor.props["add_rows_metadata"].last_index is None
+    ):
+        st_method = getattr(dg, dg._cursor.props["add_rows_metadata"].chart_command)
+        st_method(data, **kwargs)
+        return None
+
+    new_data, dg._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+        data,
+        dg._cursor.props["add_rows_metadata"],
+    )
+
+    msg = ForwardMsg()
+    msg.metadata.delta_path[:] = dg._cursor.delta_path
+
+    default_uuid = str(hash(dg._get_delta_path_str()))
+    marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
+
+    if name:
+        msg.delta.arrow_add_rows.name = name
+        msg.delta.arrow_add_rows.has_name = True
+
+    enqueue_message(msg)
+
+    return dg
 
 
 def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> None:
@@ -705,9 +840,8 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         (e.g. charts) can ignore it.
 
     """
-    import pyarrow as pa
 
-    if type_util.is_pandas_styler(data):
+    if dataframe_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
         # and `None` otherwise.
         assert isinstance(
@@ -715,8 +849,4 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> 
         ), "Default UUID must be a string for Styler data."
         marshall_styler(proto, data, default_uuid)
 
-    if isinstance(data, pa.Table):
-        proto.data = type_util.pyarrow_table_to_bytes(data)
-    else:
-        df = type_util.convert_anything_to_df(data)
-        proto.data = type_util.data_frame_to_bytes(df)
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)

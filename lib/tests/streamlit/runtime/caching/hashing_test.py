@@ -14,6 +14,8 @@
 
 """st.memo/singleton hashing tests."""
 
+from __future__ import annotations
+
 import datetime
 import functools
 import hashlib
@@ -456,8 +458,8 @@ class HashTest(unittest.TestCase):
         temp1 = tempfile.NamedTemporaryFile()
         temp2 = tempfile.NamedTemporaryFile()
 
-        with open(__file__, "r") as f:
-            with open(__file__, "r") as g:
+        with open(__file__) as f:
+            with open(__file__) as g:
                 self.assertEqual(get_hash(f), get_hash(g))
 
             self.assertNotEqual(get_hash(f), get_hash(temp1))
@@ -466,7 +468,7 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(temp1), get_hash(temp2))
 
     def test_file_position(self):
-        with open(__file__, "r") as f:
+        with open(__file__) as f:
             h1 = get_hash(f)
             self.assertEqual(h1, get_hash(f))
             f.readline()
@@ -528,7 +530,7 @@ class NotHashableTest(unittest.TestCase):
 
     def test_generator_not_hashable(self):
         with self.assertRaises(UnhashableTypeError):
-            get_hash((x for x in range(1)))
+            get_hash(x for x in range(1))
 
     def test_hash_funcs_acceptable_keys(self):
         """Test that hashes are equivalent when hash_func key is supplied both as a

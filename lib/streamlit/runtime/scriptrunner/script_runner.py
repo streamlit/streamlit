@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Callable, Final
 from blinker import Signal
 
 from streamlit import config, runtime, util
+from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -336,12 +337,7 @@ class ScriptRunner:
         # Whenever we enqueue a ForwardMsg, we also handle any pending
         # execution control request. This means that a script can be
         # cleanly interrupted and stopped inside most `st.foo` calls.
-        #
-        # (If "runner.installTracer" is true, then we'll actually be
-        # handling these requests in a callback called after every Python
-        # instruction instead.)
-        if not config.get_option("runner.installTracer"):
-            self._maybe_handle_execution_control_request()
+        self._maybe_handle_execution_control_request()
 
         # Pass the message to our associated AppSession.
         self.on_event.send(
@@ -382,17 +378,6 @@ class ScriptRunner:
         assert request.type == ScriptRequestType.STOP
         raise StopException()
 
-    def _install_tracer(self) -> None:
-        """Install function that runs before each line of the script."""
-
-        def trace_calls(frame, event, arg):
-            self._maybe_handle_execution_control_request()
-            return trace_calls
-
-        # Python interpreters are not required to implement sys.settrace.
-        if hasattr(sys, "settrace"):
-            sys.settrace(trace_calls)
-
     @contextmanager
     def _set_execing_flag(self):
         """A context for setting the ScriptRunner._execing flag.
@@ -426,8 +411,12 @@ class ScriptRunner:
             start_time: float = timer()
             prep_time: float = 0  # This will be overwritten once preparations are done.
 
-            # Reset DeltaGenerators, widgets, media files.
-            runtime.get_instance().media_file_mgr.clear_session_refs()
+            if not rerun_data.fragment_id_queue:
+                # Don't clear session refs for media files if we're running a fragment.
+                # Otherwise, we're likely to remove files that still have corresponding
+                # download buttons/links to them present in the app, which will result
+                # in a 404 should the user click on them.
+                runtime.get_instance().media_file_mgr.clear_session_refs()
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -436,7 +425,6 @@ class ScriptRunner:
                 rerun_data.page_script_hash, rerun_data.page_name
             )
             main_page_info = self._pages_manager.get_main_page()
-            uncaught_exception = None
 
             page_script_hash = (
                 active_script["page_script_hash"]
@@ -444,7 +432,7 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
-            fragment_ids_this_run = set(rerun_data.fragment_id_queue)
+            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
 
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
@@ -474,12 +462,22 @@ class ScriptRunner:
             )
             self._pages_manager.reset_active_script_hash()
 
+            # We want to clear the forward_msg_queue during full script runs and
+            # fragment-scoped fragment reruns. For normal fragment runs, clearing the
+            # forward_msg_queue may cause us to drop messages either corresponding to
+            # other, unrelated fragments or that this fragment run depends on.
+            fragment_ids_this_run = rerun_data.fragment_id_queue
+            clear_forward_msg_queue = (
+                not fragment_ids_this_run or rerun_data.is_fragment_scoped_rerun
+            )
+
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                clear_forward_msg_queue=clear_forward_msg_queue,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -520,9 +518,6 @@ class ScriptRunner:
             # is to run it. Errors thrown during execution will be shown to the
             # user as ExceptionElements.
 
-            if config.get_option("runner.installTracer"):
-                self._install_tracer()
-
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
             module = self._new_module("__main__")
@@ -559,16 +554,36 @@ class ScriptRunner:
                                 wrapped_fragment = self._fragment_storage.get(
                                     fragment_id
                                 )
-                                ctx.current_fragment_id = fragment_id
                                 wrapped_fragment()
 
-                            except KeyError:
-                                raise RuntimeError(
-                                    f"Could not find fragment with id {fragment_id}"
-                                )
+                            except FragmentStorageKeyError:
+                                # Only raise an error if the fragment is not an
+                                # auto_rerun. If it is an auto_rerun, we might have a
+                                # race condition where the fragment_id is removed
+                                # but the webapp sends a rerun request before the
+                                # removal information has reached the web app
+                                # (see https://github.com/streamlit/streamlit/issues/9080).
+                                if not rerun_data.is_auto_rerun:
+                                    raise RuntimeError(
+                                        f"Could not find fragment with id {fragment_id}"
+                                    )
+                            except (RerunException, StopException) as e:
+                                # The wrapped_fragment function is executed
+                                # inside of a exec_func_with_error_handling call, so
+                                # there is a correct handler for these exceptions.
+                                raise e
+                            except Exception:
+                                # Ignore exceptions raised by fragments here as we don't
+                                # want to stop the execution of other fragments. The
+                                # error itself is already rendered within the wrapped
+                                # fragment.
+                                pass
+
                     else:
-                        self._fragment_storage.clear()
                         exec(code, module.__dict__)
+                        self._fragment_storage.clear(
+                            new_fragment_ids=ctx.new_fragment_ids
+                        )
 
                     self._session_state.maybe_check_serializable()
                     # check for control requests, e.g. rerun requests have arrived
@@ -580,6 +595,7 @@ class ScriptRunner:
                 run_without_errors,
                 rerun_exception_data,
                 premature_stop,
+                uncaught_exception,
             ) = exec_func_with_error_handling(code_to_exec, ctx)
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
@@ -605,7 +621,7 @@ class ScriptRunner:
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
-                            ctx.tracked_commands,
+                            commands=ctx.tracked_commands,
                             exec_time=to_microseconds(timer() - start_time),
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(

@@ -14,6 +14,8 @@
 
 """Streamlit Unit test."""
 
+from __future__ import annotations
+
 import dataclasses
 import time
 import unittest
@@ -32,15 +34,11 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.data_mocks import (
+    SHARED_TEST_CASES,
+    CaseMetadata,
+)
 from tests.streamlit.runtime.secrets_test import MOCK_TOML
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -56,7 +54,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_repr_html(self):
         """Test st.write with an object that defines _repr_html_."""
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             def _repr_html_(self):
                 return "<strong>hello world</strong>"
 
@@ -70,7 +68,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with an object that defines _repr_html_ and allows
         unsafe HTML explicitly."""
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             def _repr_html_(self):
                 return "<strong>hello world</strong>"
 
@@ -86,7 +84,7 @@ class StreamlitWriteTest(unittest.TestCase):
         html tags in the returned string.
         """
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             def _repr_html_(self):
                 return "hello **world**"
 
@@ -98,7 +96,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_repr_html_not_callable(self):
         """Test st.write with an object that defines _repr_html_ but is not callable"""
 
-        class FakeHTMLable(object):
+        class FakeHTMLable:
             _repr_html_ = "hello **world**"
 
         with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
@@ -145,7 +143,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with altair_chart."""
         is_type.side_effect = make_is_type_mock(type_util._ALTAIR_RE)
 
-        class FakeChart(object):
+        class FakeChart:
             pass
 
         with patch("streamlit.delta_generator.DeltaGenerator.altair_chart") as p:
@@ -158,11 +156,29 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with matplotlib."""
         is_type.side_effect = make_is_type_mock("matplotlib.figure.Figure")
 
-        class FakePyplot(object):
+        class FakePyplot:
             pass
 
         with patch("streamlit.delta_generator.DeltaGenerator.pyplot") as p:
             st.write(FakePyplot())
+
+            p.assert_called_once()
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_input_data(
+        self,
+        name: str,
+        input_data: Any,
+        metadata: CaseMetadata,
+    ):
+        """Test st.write with various input data and check that it uses
+        the expected command."""
+        with patch(
+            f"streamlit.delta_generator.DeltaGenerator.{metadata.expected_write_command}"
+        ) as p:
+            st.write(input_data)
 
             p.assert_called_once()
 
@@ -172,13 +188,6 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with plotly object."""
         with patch("streamlit.delta_generator.DeltaGenerator.plotly_chart") as p:
             st.write([go.Scatter(x=[1, 2], y=[10, 20])])
-
-            p.assert_called_once()
-
-    def test_dict(self):
-        """Test st.write with dict."""
-        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            st.write({"a": 1, "b": 2})
 
             p.assert_called_once()
 
@@ -213,7 +222,7 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with openai.Stream."""
         is_type.side_effect = make_is_type_mock("openai.Stream")
 
-        class FakeOpenaiStream(object):
+        class FakeOpenaiStream:
             pass
 
         with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
@@ -221,17 +230,10 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-    def test_list(self):
-        """Test st.write with list."""
-        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            st.write([1, 2, 3])
-
-            p.assert_called_once()
-
     def test_namedtuple(self):
         """Test st.write with list."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            Boy = namedtuple("Boy", ("name", "age"))
+            Boy = namedtuple("Boy", ("name", "age"))  # noqa: PYI024
             John = Boy("John", 29)
             st.write(John)
 
@@ -259,31 +261,6 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-    @parameterized.expand(
-        [
-            (pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"]),),
-            (pd.Series(np.array(["a", "b", "c"])),),
-            (pd.Index(list("abc")),),
-            (pd.DataFrame({"a": [1], "b": [2]}).style.format("{:.2%}"),),
-            (np.array(["a", "b", "c"]),),
-            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2))),),
-            (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            ([SnowparkRow()],),
-        ]
-    )
-    def test_write_compatible_dataframe(
-        self,
-        input_data: Any,
-    ):
-        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-            st.write(input_data)
-            p.assert_called_once()
-
     @patch("streamlit.delta_generator.DeltaGenerator.markdown")
     @patch("streamlit.delta_generator.DeltaGenerator.json")
     def test_dict_and_string(self, mock_json, mock_markdown):
@@ -304,7 +281,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_default_object(self):
         """Test st.write with default clause ie some object."""
 
-        class SomeObject(object):
+        class SomeObject:
             def __str__(self):
                 return "1 * 2 - 3 = 4 `ok` !"
 
@@ -318,7 +295,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_default_object_multiline(self):
         """Test st.write with default clause ie some object with multiline string."""
 
-        class SomeObject(object):
+        class SomeObject:
             def __str__(self):
                 return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
 
@@ -395,7 +372,7 @@ class StreamlitWriteTest(unittest.TestCase):
         ):
             m.side_effect = Exception("some exception")
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 st.write("some text")
 
     def test_unknown_arguments(self):

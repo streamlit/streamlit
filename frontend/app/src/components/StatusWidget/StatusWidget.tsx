@@ -14,29 +14,33 @@
  * limitations under the License.
  */
 
+import React, { PureComponent, ReactNode } from "react"
+
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
-import {
-  RERUN_PROMPT_MODAL_DIALOG,
-  BaseButton,
-  BaseButtonKind,
-  Tooltip,
-  Placement,
-  ScriptRunState,
-  Timer,
-  Icon,
-  EmotionTheme,
-  SessionEvent,
-} from "@streamlit/lib"
-import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
 import { SignalConnection } from "typed-signals"
 
+import {
+  BaseButton,
+  BaseButtonKind,
+  EmotionTheme,
+  Icon,
+  Placement,
+  RERUN_PROMPT_MODAL_DIALOG,
+  ScriptRunState,
+  SessionEvent,
+  Timer,
+  Tooltip,
+} from "@streamlit/lib"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
  * from a subpath.
@@ -45,12 +49,12 @@ import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
 import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 
 import {
-  StyledConnectionStatus,
-  StyledConnectionStatusLabel,
-  StyledAppStatus,
   StyledAppButtonContainer,
   StyledAppRunningIcon,
+  StyledAppStatus,
   StyledAppStatusLabel,
+  StyledConnectionStatus,
+  StyledConnectionStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
@@ -231,13 +235,13 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     const prevView = this.curView
     this.curView = this.renderWidget()
-    if (prevView == null && this.curView == null) {
+    if (isNullOrUndefined(prevView) && isNullOrUndefined(this.curView)) {
       return null
     }
 
     let animateIn: boolean
     let renderView: ReactNode
-    if (this.curView != null) {
+    if (notNullOrUndefined(this.curView)) {
       animateIn = true
       renderView = this.curView
     } else {

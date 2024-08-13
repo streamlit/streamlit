@@ -16,11 +16,28 @@
 
 import { transparentize } from "color2k"
 import styled from "@emotion/styled"
+
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
 import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
+
+// Check for custom text color & handle colors in SidebarNav accordingly
+const conditionalCustomColor = (
+  theme: any,
+  customThemeColor: string,
+  defaultThemeColor: string
+): string => {
+  let customTextColor = theme.colors.bodyText !== theme.colors.gray10
+
+  if (hasLightBackgroundColor(theme)) {
+    customTextColor = theme.colors.bodyText !== theme.colors.gray85
+  }
+
+  return customTextColor ? customThemeColor : defaultThemeColor
+}
+
 export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
@@ -100,14 +117,21 @@ export interface StyledSidebarNavLinkProps {
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
-    const isLightTheme = hasLightBackgroundColor(theme)
-    const activeSvgColor = isLightTheme
-      ? theme.colors.gray90
-      : theme.colors.gray10
-    const svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
-    const activeBgColor = isLightTheme
-      ? theme.colors.darkenedBgMix15
-      : transparentize(theme.colors.gray100, 0.6)
+    const color = conditionalCustomColor(
+      theme,
+      theme.colors.bodyText,
+      theme.colors.navTextColor
+    )
+    const svgColor = conditionalCustomColor(
+      theme,
+      theme.colors.fadedText60,
+      theme.colors.navIconColor
+    )
+    const activeSvgColor = conditionalCustomColor(
+      theme,
+      theme.colors.bodyText,
+      theme.colors.navActiveTextColor
+    )
 
     const defaultPageLinkStyles = {
       textDecoration: "none",
@@ -120,8 +144,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
-      borderRadius: theme.spacing.twoXS,
-
+      borderRadius: theme.radii.lg,
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
       marginLeft: theme.spacing.twoXL,
@@ -130,8 +153,8 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
-      color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
-      backgroundColor: isActive ? activeBgColor : "transparent",
+      color,
+      backgroundColor: isActive ? theme.colors.darkenedBgMix25 : "transparent",
 
       [StyledMaterialIcon as any]: {
         color: isActive ? activeSvgColor : svgColor,
@@ -139,7 +162,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       },
 
       "&:hover": {
-        backgroundColor: activeBgColor,
+        backgroundColor: transparentize(theme.colors.darkenedBgMix25, 0.1),
       },
 
       "&:active,&:visited,&:hover": {
@@ -163,13 +186,16 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
-    const isLightTheme = hasLightBackgroundColor(theme)
-    const defaultColor = isLightTheme
-      ? theme.colors.gray80
-      : theme.colors.gray50
-    const activeColor = isLightTheme
-      ? theme.colors.gray90
-      : theme.colors.gray10
+    const defaultColor = conditionalCustomColor(
+      theme,
+      transparentize(theme.colors.bodyText, 0.2),
+      theme.colors.navTextColor
+    )
+    const activeColor = conditionalCustomColor(
+      theme,
+      theme.colors.bodyText,
+      theme.colors.navActiveTextColor
+    )
 
     return {
       color: isActive ? activeColor : defaultColor,
@@ -264,11 +290,15 @@ export const StyledSidebarOpenContainer =
   )
 
 export const StyledOpenSidebarButton = styled.div(({ theme }) => {
-  const isLightTheme = hasLightBackgroundColor(theme)
+  const color = conditionalCustomColor(
+    theme,
+    theme.colors.bodyText,
+    theme.colors.sidebarControlColor
+  )
 
   return {
     zIndex: theme.zIndices.header,
-    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+    color,
 
     button: {
       "&:hover": {
@@ -289,13 +319,17 @@ export interface StyledCollapseSidebarButtonProps {
 export const StyledCollapseSidebarButton =
   styled.div<StyledCollapseSidebarButtonProps>(
     ({ showSidebarCollapse, theme }) => {
-      const isLightTheme = hasLightBackgroundColor(theme)
+      const color = conditionalCustomColor(
+        theme,
+        theme.colors.bodyText,
+        theme.colors.sidebarControlColor
+      )
 
       return {
         display: showSidebarCollapse ? "inline" : "none",
         transition: "left 300ms",
         transitionDelay: "left 300ms",
-        color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+        color,
         lineHeight: "0",
 
         [`@media print`]: {
@@ -310,12 +344,16 @@ export const StyledCollapseSidebarButton =
   )
 
 export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
-  const isLightTheme = hasLightBackgroundColor(theme)
+  const color = conditionalCustomColor(
+    theme,
+    transparentize(theme.colors.bodyText, 0.15),
+    theme.colors.navTextColor
+  )
 
   return {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
-    color: isLightTheme ? theme.colors.gray80 : theme.colors.gray60,
+    color,
     lineHeight: theme.lineHeights.table,
     paddingRight: theme.spacing.sm,
     marginLeft: theme.spacing.twoXL,
@@ -326,12 +364,16 @@ export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
 })
 
 export const StyledViewButton = styled.button(({ theme }) => {
-  const isLightTheme = hasLightBackgroundColor(theme)
+  const color = conditionalCustomColor(
+    theme,
+    theme.colors.bodyText,
+    theme.colors.navActiveTextColor
+  )
 
   return {
     fontSize: theme.fontSizes.sm,
     lineHeight: "1.4rem",
-    color: isLightTheme ? theme.colors.gray90 : theme.colors.gray10,
+    color,
     backgroundColor: theme.colors.transparent,
     border: "none",
     borderRadius: theme.radii.lg,
@@ -344,9 +386,7 @@ export const StyledViewButton = styled.button(({ theme }) => {
       boxShadow: "none",
     },
     "&:hover": {
-      backgroundColor: isLightTheme
-        ? theme.colors.darkenedBgMix15
-        : transparentize(theme.colors.gray100, 0.6),
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
   }
 })

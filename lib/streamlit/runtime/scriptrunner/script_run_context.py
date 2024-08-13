@@ -22,8 +22,7 @@ from urllib import parse
 
 from typing_extensions import TypeAlias
 
-from streamlit import runtime
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -77,7 +76,8 @@ class ScriptRunContext:
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
-    fragment_ids_this_run: set[str] | None = None
+    fragment_ids_this_run: list[str] | None = None
+    new_fragment_ids: set[str] = field(default_factory=set)
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     # If true, it indicates that we are in a cached function that disallows
@@ -100,7 +100,7 @@ class ScriptRunContext:
         self,
         query_string: str = "",
         page_script_hash: str = "",
-        fragment_ids_this_run: set[str] | None = None,
+        fragment_ids_this_run: list[str] | None = None,
     ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -117,6 +117,7 @@ class ScriptRunContext:
         self.current_fragment_id = None
         self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
+        self.new_fragment_ids = set()
         self.has_dialog_opened = False
         self.disallow_cached_widget_usage = False
 
@@ -222,15 +223,28 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
     """
     thread = threading.current_thread()
     ctx: ScriptRunContext | None = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
-    if ctx is None and runtime.exists() and not suppress_warning:
+    if ctx is None and not suppress_warning:
         # Only warn about a missing ScriptRunContext if suppress_warning is False, and
         # we were started via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
-        _LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
+        _LOGGER.warning(
+            "Thread '%s': missing ScriptRunContext! This warning can be ignored when "
+            "running in bare mode.",
+            thread.name,
+        )
 
     return ctx
 
 
-# Needed to avoid circular dependencies while running tests.
-import streamlit  # noqa: E402, F401
+def enqueue_message(msg: ForwardMsg) -> None:
+    """Enqueues a ForwardMsg proto to send to the app."""
+    ctx = get_script_run_ctx()
+
+    if ctx is None:
+        raise NoSessionContext()
+
+    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ctx.current_fragment_id
+
+    ctx.enqueue(msg)

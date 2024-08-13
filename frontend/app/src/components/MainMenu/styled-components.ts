@@ -17,8 +17,9 @@
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
-import { EmotionTheme } from "@streamlit/lib"
 import { transparentize } from "color2k"
+
+import { EmotionTheme } from "@streamlit/lib"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
 0% {

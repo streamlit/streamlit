@@ -34,6 +34,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -140,7 +141,7 @@ class ImageMixin:
         Example
         -------
         >>> import streamlit as st
-        >>> st.image('sunrise.jpg', caption='Sunrise by the mountains')
+        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 
         .. output::
            https://doc-image.streamlit.app/
@@ -205,6 +206,7 @@ def _validate_image_format_string(
     if format == "JPG":
         return "JPEG"
 
+    pil_image: PILImage
     if isinstance(image_data, bytes):
         from PIL import Image
 
@@ -258,16 +260,17 @@ def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
 
 
 def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
-    if len(array.shape) not in (2, 3):
+    shape: NumpyShape = array.shape
+    if len(shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
-    if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
+    if len(shape) == 3 and shape[-1] not in (1, 3, 4):
         raise StreamlitAPIException(
             "Channel can only be 1, 3, or 4 got %d. Shape is %s"
-            % (array.shape[-1], str(array.shape))
+            % (shape[-1], str(shape))
         )
 
     # If there's only one channel, convert is to x, y
-    if len(array.shape) == 3 and array.shape[-1] == 1:
+    if len(shape) == 3 and shape[-1] == 1:
         array = array[:, :, 0]
 
     return array
@@ -287,7 +290,7 @@ def _ensure_image_size_and_format(
     """
     from PIL import Image
 
-    pil_image = Image.open(io.BytesIO(image_data))
+    pil_image: PILImage = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = pil_image.size
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
@@ -417,7 +420,7 @@ def image_to_url(
         )
 
         if channels == "BGR":
-            if len(image.shape) == 3:
+            if len(cast(NumpyShape, image.shape)) == 3:
                 image = image[:, :, [2, 1, 0]]
             else:
                 raise StreamlitAPIException(
@@ -508,7 +511,7 @@ def marshall_images(
     images: Sequence[AtomicImage]
     if isinstance(image, list):
         images = image
-    elif isinstance(image, np.ndarray) and len(image.shape) == 4:
+    elif isinstance(image, np.ndarray) and len(cast(NumpyShape, image.shape)) == 4:
         images = _4d_to_list_3d(image)
     else:
         images = [image]
@@ -519,7 +522,10 @@ def marshall_images(
         if isinstance(caption, str):
             captions = [caption]
         # You can pass in a 1-D Numpy array as captions.
-        elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
+        elif (
+            isinstance(caption, np.ndarray)
+            and len(cast(NumpyShape, caption.shape)) == 1
+        ):
             captions = caption.tolist()
         # If there are no captions then make the captions list the same size
         # as the images list.

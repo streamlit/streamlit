@@ -18,20 +18,20 @@ import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
-  notNullOrUndefined,
   isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { isIntegerType } from "@streamlit/lib/src/components/widgets/DataFrame/isIntegerType"
 
 import {
   BaseColumn,
   BaseColumnProps,
+  countDecimals,
+  formatNumber,
   getErrorCell,
-  toSafeString,
   mergeColumnParameters,
   toSafeNumber,
-  formatNumber,
-  countDecimals,
+  toSafeString,
   truncateDecimals,
 } from "./utils"
 

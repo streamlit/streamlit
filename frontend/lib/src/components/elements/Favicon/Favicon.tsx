@@ -15,6 +15,7 @@
  */
 
 import nodeEmoji from "node-emoji"
+
 import { grabTheRightIcon } from "@streamlit/lib/src/vendor/twemoji"
 import { IGuestToHostMessage } from "@streamlit/lib/src/hostComm/types"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
@@ -27,7 +28,7 @@ function iconToUrl(icon: string): string {
     return ""
   }
 
-  const iconUrl = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/${matchResult[2]}/default/24px.svg`
+  const iconUrl = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${matchResult[2]}/default/24px.svg`
   return iconUrl
 }
 

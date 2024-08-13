@@ -14,13 +14,13 @@
 
 """Base class for DeltaGenerator-related unit tests."""
 
+from __future__ import annotations
+
 import threading
 import unittest
-from typing import List
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -39,6 +39,10 @@ from streamlit.runtime.scriptrunner import (
 from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
+
+if TYPE_CHECKING:
+    from streamlit.proto.Delta_pb2 import Delta
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):
@@ -87,7 +91,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         deltas = self.get_all_deltas_from_queue()
         return deltas[index]
 
-    def get_all_deltas_from_queue(self) -> List[Delta]:
+    def get_all_deltas_from_queue(self) -> list[Delta]:
         """Return all the delta messages in our ForwardMsgQueue"""
         return [
             msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
