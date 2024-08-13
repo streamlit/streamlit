@@ -34,8 +34,8 @@ export const StyledTable = styled.table(({ theme }) => ({
 }))
 
 const styleCellFunction = (theme: EmotionTheme): CSSObject => ({
-  borderBottom: `${theme.sizes.borderWidth}  solid ${theme.colors.fadedText05}`,
-  borderRight: `${theme.sizes.borderWidth}  solid ${theme.colors.fadedText05}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
+  borderRight: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   fontWeight: theme.fontWeights.normal,
