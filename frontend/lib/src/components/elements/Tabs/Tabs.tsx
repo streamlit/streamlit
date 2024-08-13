@@ -89,10 +89,10 @@ function Tabs(props: TabProps): ReactElement {
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
   return (
     <StyledTabContainer
-      isOverflowing={isOverflowing}
-      tabHeight={TAB_HEIGHT}
       className="stTabs"
       data-testid="stTabs"
+      isOverflowing={isOverflowing}
+      tabHeight={TAB_HEIGHT}
     >
       <UITabs
         activateOnFocus
@@ -117,7 +117,7 @@ function Tabs(props: TabProps): ReactElement {
           },
           TabBorder: {
             style: () => ({
-              backgroundColor: theme.colors.fadedText05,
+              backgroundColor: theme.colors.borderColorLight,
               height: TAB_BORDER_HEIGHT,
             }),
           },
@@ -174,6 +174,7 @@ function Tabs(props: TabProps): ReactElement {
 
           return (
             <UITab
+              data-testid={"stTab"}
               title={
                 <StreamlitMarkdown
                   source={nodeLabel}
@@ -182,7 +183,6 @@ function Tabs(props: TabProps): ReactElement {
                 />
               }
               key={index}
-              data-testid={"stTab"}
               disabled={widgetsDisabled}
               overrides={{
                 TabPanel: {
