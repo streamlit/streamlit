@@ -108,6 +108,12 @@ module.exports = {
         rule.test.toString().includes("ts|tsx")
       )
 
+      if (process.env.OMIT_HASH_FROM_MAIN_FILES) {
+        // Use fixed names for the main JS & CSS files, if asked to.
+        webpackConfig.output.filename = "static/js/[name].js"
+        webpackConfig.output.cssFilename = "static/css/[name].css"
+      }
+
       tsRule.include = undefined
       tsRule.exclude = /node_modules/
 
