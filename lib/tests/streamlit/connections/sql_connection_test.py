@@ -154,8 +154,6 @@ class SQLConnectionTest(unittest.TestCase):
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_query_caches_value(self, patched_read_sql):
-        # Caching functions rely on an active script run ctx
-        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         patched_read_sql.return_value = "i am a dataframe"
 
         conn = SQLConnection("my_sql_connection")
@@ -168,8 +166,6 @@ class SQLConnectionTest(unittest.TestCase):
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_does_not_reset_cache_when_ttl_changes(self, patched_read_sql):
-        # Caching functions rely on an active script run ctx
-        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         patched_read_sql.return_value = "i am a dataframe"
 
         conn = SQLConnection("my_sql_connection")
@@ -185,8 +181,6 @@ class SQLConnectionTest(unittest.TestCase):
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_scopes_caches_by_connection_name(self, patched_read_sql):
-        # Caching functions rely on an active script run ctx
-        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         patched_read_sql.return_value = "i am a dataframe"
 
         conn1 = SQLConnection("my_sql_connection1")
