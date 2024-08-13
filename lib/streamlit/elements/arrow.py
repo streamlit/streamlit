@@ -227,7 +227,7 @@ class ArrowMixin:
         data: Data = None,
         width: int | None = None,
         height: int | None = None,
-        *,
+        *,  # keyword-only arguments:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -243,7 +243,7 @@ class ArrowMixin:
         data: Data = None,
         width: int | None = None,
         height: int | None = None,
-        *,
+        *,  # keyword-only arguments:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
@@ -259,7 +259,7 @@ class ArrowMixin:
         data: Data = None,
         width: int | None = None,
         height: int | None = None,
-        *,
+        *,  # keyword-only arguments:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,

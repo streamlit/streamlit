@@ -261,12 +261,12 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: time | datetime | Literal["now"] = "now",
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
@@ -278,12 +278,12 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
@@ -295,12 +295,12 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: time | datetime | Literal["now"] | None = "now",
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
@@ -418,12 +418,12 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value: time | datetime | Literal["now"] | None = "now",
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
@@ -526,12 +526,12 @@ class TimeWidgetsMixin:
         | None = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -687,12 +687,12 @@ class TimeWidgetsMixin:
         ) = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",

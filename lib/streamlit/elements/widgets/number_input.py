@@ -82,12 +82,12 @@ class NumberInputMixin:
         value: Number | Literal["min"] = "min",
         step: Number | None = None,
         format: str | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -103,12 +103,12 @@ class NumberInputMixin:
         value: None = None,
         step: Number | None = None,
         format: str | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -124,12 +124,12 @@ class NumberInputMixin:
         value: Number | Literal["min"] | None = "min",
         step: Number | None = None,
         format: str | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -288,7 +288,6 @@ class NumberInputMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",

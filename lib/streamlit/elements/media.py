@@ -67,9 +67,9 @@ class MediaMixin:
     def audio(
         self,
         data: MediaData,
+        *,  # keyword-only arguments:
         format: str = "audio/wav",
         start_time: MediaTime = 0,
-        *,
         sample_rate: int | None = None,
         end_time: MediaTime | None = None,
         loop: bool = False,
@@ -200,9 +200,9 @@ class MediaMixin:
     def video(
         self,
         data: MediaData,
+        *,  # keyword-only arguments:
         format: str = "video/mp4",
         start_time: MediaTime = 0,
-        *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
         end_time: MediaTime | None = None,
         loop: bool = False,

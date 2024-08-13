@@ -80,11 +80,11 @@ class ButtonMixin:
         self,
         label: str,
         key: Key | None = None,
+        *,  # keyword-only arguments:
         help: str | None = None,
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
@@ -199,12 +199,12 @@ class ButtonMixin:
         data: DownloadButtonDataType,
         file_name: str | None = None,
         mime: str | None = None,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
@@ -380,7 +380,7 @@ class ButtonMixin:
         self,
         label: str,
         url: str,
-        *,
+        *,  # keyword-only arguments:
         help: str | None = None,
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
@@ -466,7 +466,7 @@ class ButtonMixin:
     def page_link(
         self,
         page: str | StreamlitPage,
-        *,
+        *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
         help: str | None = None,
@@ -588,7 +588,6 @@ class ButtonMixin:
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
@@ -658,7 +657,6 @@ class ButtonMixin:
         label: str,
         url: str,
         help: str | None,
-        *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
@@ -678,7 +676,6 @@ class ButtonMixin:
     def _page_link(
         self,
         page: str | StreamlitPage,
-        *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
         help: str | None = None,
@@ -756,7 +753,6 @@ class ButtonMixin:
         on_click: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,

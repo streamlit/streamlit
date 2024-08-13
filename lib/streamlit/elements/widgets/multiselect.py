@@ -117,13 +117,13 @@ class MultiSelectMixin:
         label: str,
         options: OptionSequence[T],
         default: Any | None = None,
+        *,  # keyword-only arguments:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         max_selections: int | None = None,
         placeholder: str = "Choose an option",
         disabled: bool = False,
@@ -257,7 +257,6 @@ class MultiSelectMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
         max_selections: int | None = None,
         placeholder: str = "Choose an option",
         disabled: bool = False,

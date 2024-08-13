@@ -31,6 +31,7 @@ class CodeMixin:
         self,
         body: SupportsStr,
         language: str | None = "python",
+        *,  # keyword-only arguments:
         line_numbers: bool = False,
     ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.

@@ -40,6 +40,7 @@ class PydeckMixin:
     def pydeck_chart(
         self,
         pydeck_obj: Deck | None = None,
+        *,  # keyword-only arguments:
         use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Draw a chart using the PyDeck library.

@@ -122,7 +122,7 @@ class ChatMixin:
     def chat_message(
         self,
         name: Literal["user", "assistant", "ai", "human"] | str,
-        *,
+        *,  # keyword-only arguments:
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
     ) -> DeltaGenerator:
         """Insert a chat message container.
@@ -233,7 +233,7 @@ class ChatMixin:
     def chat_input(
         self,
         placeholder: str = "Your message",
-        *,
+        *,  # keyword-only arguments:
         key: Key | None = None,
         max_chars: int | None = None,
         disabled: bool = False,

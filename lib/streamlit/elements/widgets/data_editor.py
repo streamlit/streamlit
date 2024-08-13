@@ -539,7 +539,7 @@ class DataEditorMixin:
     def data_editor(
         self,
         data: EditableData,
-        *,
+        *,  # keyword-only arguments:
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = False,
@@ -559,7 +559,7 @@ class DataEditorMixin:
     def data_editor(
         self,
         data: Any,
-        *,
+        *,  # keyword-only arguments:
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = False,
@@ -579,7 +579,7 @@ class DataEditorMixin:
     def data_editor(
         self,
         data: DataTypes,
-        *,
+        *,  # keyword-only arguments:
         width: int | None = None,
         height: int | None = None,
         use_container_width: bool = False,

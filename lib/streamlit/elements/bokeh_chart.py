@@ -38,6 +38,7 @@ class BokehMixin:
     def bokeh_chart(
         self,
         figure: Figure,
+        *,  # keyword-only arguments:
         use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display an interactive Bokeh chart.

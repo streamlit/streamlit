@@ -90,6 +90,7 @@ class ImageMixin:
         #  by way of overload
         caption: str | list[str] | None = None,
         width: int | None = None,
+        *,  # keyword-only arguments:
         use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
