@@ -80,12 +80,18 @@ def pytest_addoption(parser: pytest.Parser):
 def pytest_configure(config: pytest.Config):
     config.addinivalue_line(
         "markers",
-        "require-integration(name): mark test to run only on "
+        "require_integration(name): mark test to run only on "
         "when --require-integration option is passed to pytest",
     )
 
     is_require_integration = config.getoption("--require-integration", default=False)
     if is_require_integration:
+        try:
+            import snowflake.snowpark  # noqa: F401
+        except ImportError:
+            raise pytest.UsageError(
+                "The snowflake-snowpark-python package is not installed."
+            )
         if not SNOWFLAKE_CREDENTIAL_FILE.exists():
             raise pytest.UsageError(
                 f"Missing credential file: {SNOWFLAKE_CREDENTIAL_FILE}"
