@@ -28,7 +28,6 @@ import {
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 export interface JsonProps {
   width: number
