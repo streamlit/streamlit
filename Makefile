@@ -146,7 +146,7 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
-# Run Python integration tests for snowflake.
+# Run Python integration tests.
 pytest-snowflake:
 	cd lib; \
 		PYTHONPATH=. \
