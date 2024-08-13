@@ -95,8 +95,8 @@ from streamlit.elements.lib.mutable_status_container import (
 )
 from streamlit.elements.lib.dialog import Dialog as _Dialog
 
-_dg_singletons._create_status_container = _StatusContainer._create
-_dg_singletons._create_dialog = _Dialog._create
+_dg_singletons.create_status_container = _StatusContainer._create
+_dg_singletons.create_dialog = _Dialog._create
 
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,

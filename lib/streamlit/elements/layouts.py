@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.delta_generator_singletons import create_dialog, create_status_container
+import streamlit.delta_generator_singletons as delta_generator_singletons
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -770,7 +770,9 @@ class LayoutsMixin:
             height: 300px
 
         """
-        return create_status_container(self.dg, label, expanded=expanded, state=state)
+        return delta_generator_singletons.create_status_container(
+            self.dg, label, expanded=expanded, state=state
+        )
 
     def _dialog(
         self,
@@ -784,7 +786,9 @@ class LayoutsMixin:
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
-        return create_dialog(self.dg, title, dismissible=dismissible, width=width)
+        return delta_generator_singletons.create_dialog(
+            self.dg, title, dismissible=dismissible, width=width
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

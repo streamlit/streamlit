@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from contextvars import ContextVar, Token
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -71,7 +71,7 @@ def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
 _T = TypeVar("_T")
 
 
-class ContextVarWithCustomFactory(Generic[_T]):
+class ContextVarWithLazyDefault(Generic[_T]):
     def __init__(self, name: str, *, default: Callable[[], _T]):
         self._name = name
         self._default = default
@@ -98,13 +98,13 @@ class ContextVarWithCustomFactory(Generic[_T]):
     def __hash__(self) -> int:
         if self._context_var is None:
             self._init_context_var()
-        return self._context_var.__hash__()  # type: ignore[union-attr]
+        return self._context_var.__hash__()
 
 
 # we don't use the default factory here because `main_dg` is not initialized when this
-# module is imported. This is why we have the `get_dg_stack_or_default` helper function.
-context_dg_stack: ContextVarWithCustomFactory[tuple[DeltaGenerator, ...]] = (
-    ContextVarWithCustomFactory("context_dg_stack", default=lambda: (get_main_dg(),))
+# module is imported. This is why we have our own ContextVar wrapper.
+context_dg_stack: ContextVarWithLazyDefault[tuple[DeltaGenerator, ...]] = (
+    ContextVarWithLazyDefault("context_dg_stack", default=lambda: (get_main_dg(),))
 )
 
 
@@ -125,28 +125,7 @@ def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
     return None
 
 
-_create_status_container: Callable | None = None
-_create_dialog: Callable | None = None
-
-
-def create_status_container(
-    parent: DeltaGenerator,
-    label: str,
-    expanded: bool = False,
-    state: Literal["running", "complete", "error"] = "running",
-) -> StatusContainer:
-    if _create_status_container is None:
-        raise RuntimeError("Function 'create_status_container' is not initialized.")
-    return _create_status_container(parent, label, expanded, state)
-
-
-def create_dialog(
-    parent: DeltaGenerator,
-    title: str,
-    *,
-    dismissible: bool = True,
-    width: Literal["small", "large"] = "small",
-) -> Dialog:
-    if _create_dialog is None:
-        raise RuntimeError("Function 'create_dialog' is not initialized.")
-    return _create_dialog(parent, title, dismissible=dismissible, width=width)
+# stubs for functions that are required by some Mixins. Defined here to avoid circular
+# imports.
+create_status_container: Callable[..., StatusContainer]
+create_dialog: Callable[..., Dialog]

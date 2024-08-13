@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_main_dg
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
