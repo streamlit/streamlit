@@ -22,6 +22,10 @@ from parameterized import parameterized
 
 from streamlit.connections import SQLConnection
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime import Runtime
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
@@ -38,6 +42,13 @@ DB_SECRETS = {
 
 
 class SQLConnectionTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
+
     def tearDown(self) -> None:
         import streamlit as st
 
