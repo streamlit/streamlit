@@ -47,16 +47,17 @@ class JsonMixin:
 
         Parameters
         ----------
+
         body : object or str
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
         expanded : bool or int
-            An optional boolean that allows the user to set whether the initial
-            state of this json element should be expanded. If integer,
-            specifies the depth to which the JSON should be expanded, collapsing
-            deeper levels. Defaults to True.
+            Controls the initial expansion state of the json element.
+            If bool, ``True`` expands all levels, ``False`` collapses all levels.
+            If int, specifies the depth to which the json should be expanded,
+            collapsing deeper levels. Defaults to ``True``.
 
         Example
         -------
@@ -65,14 +66,15 @@ class JsonMixin:
         >>> st.json(
         ...     {
         ...         "foo": "bar",
-        ...         "baz": "boz",
         ...         "stuff": [
         ...             "stuff 1",
         ...             "stuff 2",
         ...             "stuff 3",
         ...             "stuff 5",
         ...         ],
-        ...     }
+        ...         "baz": {"boz": "value"},
+        ...     },
+        ...     expanded=3,
         ... )
 
         .. output::
