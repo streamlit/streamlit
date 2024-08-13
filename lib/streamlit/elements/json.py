@@ -107,11 +107,16 @@ class JsonMixin:
         json_proto = JsonProto()
         json_proto.body = body
 
-        json_proto.expanded = bool(expanded)
-
-        if isinstance(expanded, int):
+        if isinstance(expanded, bool):
+            json_proto.expanded = expanded
+        elif isinstance(expanded, int):
             json_proto.expanded = True
             json_proto.max_expand_depth = expanded
+        else:
+            raise TypeError(
+                f"The type {str(type(expanded))} of `expanded` is not supported"
+                ", must be bool or int."
+            )
 
         return self.dg._enqueue("json", json_proto)
 
