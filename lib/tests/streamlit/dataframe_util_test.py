@@ -515,6 +515,7 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame,
             )
 
+    @pytest.mark.require_integration
     def test_verify_dask_integration(self):
         """Integration test dask object handling.
 
@@ -545,6 +546,7 @@ class DataframeUtilTest(unittest.TestCase):
             pd.DataFrame,
         )
 
+    @pytest.mark.require_integration
     def test_verify_ray_integration(self):
         """Integration test ray object handling.
 
