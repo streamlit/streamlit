@@ -1251,8 +1251,9 @@ class TestScriptRunner(ScriptRunner):
 
     def _run_script(self, rerun_data: RerunData) -> None:
         self.forward_msg_queue.clear()
-        # Set the _dg_stack here to the one belonging to the thread context
         super()._run_script(rerun_data)
+
+        # Set the _dg_stack here to the one belonging to the thread context
         self._dg_stack = context_dg_stack.get()
 
     def join(self) -> None:
