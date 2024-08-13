@@ -230,6 +230,6 @@ jobs:
       - name: Run make develop
         run: make develop
       - name: Install integration dependencies
-        run: uv pip install --editable ./lib[snowflake]
+        run: uv pip install -r lib/integration-requirements.txt --force-reinstall
       - name: Run Python Tests for Snowflake
         run: make pytest-integration
