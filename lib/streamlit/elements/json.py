@@ -19,7 +19,6 @@ import types
 from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
-from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import is_custom_dict, is_namedtuple
@@ -29,10 +28,9 @@ if TYPE_CHECKING:
 
 
 def _ensure_serialization(o: object) -> str | list[Any]:
-    """A repr function for json.dumps default arg, which tries to serialize sets as lists"""
-    if isinstance(o, set):
-        return list(o)
-    return repr(o)
+    """A repr function for json.dumps default arg, which tries to serialize sets
+    as lists."""
+    return list(o) if isinstance(o, set) else repr(o)
 
 
 class JsonMixin:
@@ -70,11 +68,10 @@ class JsonMixin:
         ...             "stuff 1",
         ...             "stuff 2",
         ...             "stuff 3",
-        ...             "stuff 5",
         ...         ],
-        ...         "baz": {"boz": "value"},
+        ...         "level1": {"level2": {"level3": {"a": "b"}}},
         ...     },
-        ...     expanded=3,
+        ...     expanded=2,
         ... )
 
         .. output::
@@ -110,15 +107,11 @@ class JsonMixin:
         json_proto = JsonProto()
         json_proto.body = body
 
-        if isinstance(expanded, bool):
-            json_proto.expanded = expanded
-        elif isinstance(expanded, int):
+        json_proto.expanded = bool(expanded)
+
+        if isinstance(expanded, int):
             json_proto.expanded = True
             json_proto.max_expand_depth = expanded
-        else:
-            raise StreamlitAPIException(
-                f"The expanded parameter must be a bool or an int, but got {type(expanded)}"
-            )
 
         return self.dg._enqueue("json", json_proto)
 
