@@ -10,6 +10,10 @@ scipy>=1.7.3
 seaborn>=0.11.2
 watchdog>=2.1.5
 urllib3>=1.9
+# Optional dependency used for improved exception formatting
+# in Community Cloud.
+rich>=10.14.0
+
 # Use by vega-lite / altair e2e tests:
 vega_datasets
 # Testing infrastructure dependencies:

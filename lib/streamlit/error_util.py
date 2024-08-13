@@ -80,18 +80,17 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     """
     error_logged = False
 
-    if config.get_option("logger.enableRich"):
-        try:
-            # Print exception via rich
-            # Rich is only a soft dependency
-            # -> if not installed, we will use the default traceback formatting
-            _print_rich_exception(ex)
-            error_logged = True
-        except Exception:
-            # Rich is not installed or not compatible to our config
-            # -> Use normal traceback formatting as fallback
-            # Catching all exceptions because we don't want to leave any possibility of breaking here.
-            error_logged = False
+    try:
+        # Try to print exception via rich.
+        # Rich is only a soft dependency
+        # -> if not installed, we will use the default traceback formatting
+        _print_rich_exception(ex)
+        error_logged = True
+    except Exception:
+        # Rich is not installed or not compatible to our config
+        # -> Use normal traceback formatting as fallback
+        # Catching all exceptions because we don't want to leave any possibility of breaking here.
+        error_logged = False
 
     if config.get_option("client.showErrorDetails"):
         if not error_logged:

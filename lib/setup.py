@@ -45,7 +45,6 @@ INSTALL_REQUIRES = [
     # upper bound on it.
     "pyarrow>=7.0",
     "requests>=2.27, <3",
-    "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
