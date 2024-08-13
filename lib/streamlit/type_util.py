@@ -31,6 +31,7 @@ from typing import (
     NamedTuple,
     Protocol,
     Sequence,
+    Tuple,
     TypeVar,
     Union,
     overload,
@@ -48,6 +49,10 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
+
+# we define our own type here because mypy doesn't seem to support the shape type and
+# reports unreachable code. When mypy supports it, we can remove this custom type.
+NumpyShape: TypeAlias = Tuple[int, ...]
 
 
 class SupportsStr(Protocol):

@@ -44,6 +44,7 @@ from typing_extensions import TypeAlias, TypeGuard
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
     CustomDict,
+    NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -179,7 +180,7 @@ Data: TypeAlias = Union[
     "Index",
     "pa.Table",
     "pa.Array",
-    "np.ndarray",
+    "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     Mapping[Any, Any],
     PandasCompatible,
@@ -214,8 +215,8 @@ class DataFormat(Enum):
     POLARS_SERIES = auto()  # polars.series.series.Series
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
-    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series
-    RAY_DATASET = auto()  # ray.data.dataset.Dataset
+    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
+    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
     HUGGINGFACE_DATASET = auto()  # datasets.arrow_dataset.Dataset
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
@@ -567,6 +568,16 @@ def convert_anything_to_pandas_df(
             _show_data_information(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
                 "rows. Call `compute()` on the data object to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_ray_dataset(data):
+        data = data.limit(max_unevaluated_rows).to_pandas()
+
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataset to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -1149,7 +1160,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     elif isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
-        if len(input_data.shape) == 1:
+        if len(cast(NumpyShape, input_data.shape)) == 1:
             # For technical reasons, we need to distinguish one
             # one-dimensional numpy array from multidimensional ones.
             return DataFormat.NUMPY_LIST
