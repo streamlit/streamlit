@@ -41,7 +41,6 @@ DB_SECRETS = {
 }
 
 
-@pytest.mark.require_integration
 class SQLConnectionTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
@@ -55,6 +54,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         st.cache_data.clear()
 
+    @pytest.mark.require_integration
     @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",
@@ -66,6 +66,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         patched_create_engine.assert_called_once_with("some_sql_conn_string")
 
+    @pytest.mark.require_integration
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",
         PropertyMock(return_value=AttrDict(DB_SECRETS)),
@@ -81,6 +82,7 @@ class SQLConnectionTest(unittest.TestCase):
             == "postgres+psycopg2://AzureDiamond:hunter2@localhost:5432/postgres"
         )
 
+    @pytest.mark.require_integration
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",
         PropertyMock(return_value=AttrDict(DB_SECRETS)),
@@ -101,6 +103,7 @@ class SQLConnectionTest(unittest.TestCase):
             == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres?charset=utf8mb4"
         )
 
+    @pytest.mark.require_integration
     def test_error_if_no_config(self):
         with patch(
             "streamlit.connections.sql_connection.SQLConnection._secrets",
@@ -111,6 +114,7 @@ class SQLConnectionTest(unittest.TestCase):
 
             assert "Missing SQL DB connection configuration." in str(e.value)
 
+    @pytest.mark.require_integration
     @parameterized.expand([("dialect",), ("username",), ("host",)])
     def test_error_if_missing_required_param(self, missing_param):
         secrets = deepcopy(DB_SECRETS)
@@ -125,6 +129,7 @@ class SQLConnectionTest(unittest.TestCase):
 
             assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
 
+    @pytest.mark.require_integration
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",
         PropertyMock(
@@ -145,6 +150,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         assert kwargs == {"foo": "bar", "baz": "qux"}
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_query_caches_value(self, patched_read_sql):
@@ -158,6 +164,7 @@ class SQLConnectionTest(unittest.TestCase):
         assert conn.query("SELECT 1;") == "i am a dataframe"
         patched_read_sql.assert_called_once()
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_does_not_reset_cache_when_ttl_changes(self, patched_read_sql):
@@ -174,6 +181,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         assert patched_read_sql.call_count == 2
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_scopes_caches_by_connection_name(self, patched_read_sql):
@@ -191,6 +199,7 @@ class SQLConnectionTest(unittest.TestCase):
 
         assert patched_read_sql.call_count == 2
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     def test_repr_html_(self):
         conn = SQLConnection("my_sql_connection")
@@ -204,6 +213,7 @@ class SQLConnectionTest(unittest.TestCase):
         )
         assert "Dialect: `postgres`" in repr_
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch(
         "streamlit.connections.sql_connection.SQLConnection._secrets",
@@ -222,6 +232,7 @@ class SQLConnectionTest(unittest.TestCase):
         assert "Dialect: `postgres`" in repr_
         assert "Configured from `[connections.my_sql_connection]`" in repr_
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_retry_behavior(self, patched_read_sql):
@@ -246,6 +257,7 @@ class SQLConnectionTest(unittest.TestCase):
             assert conn._connect.call_count == 3
             conn._connect.reset_mock()
 
+    @pytest.mark.require_integration
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     @patch("pandas.read_sql")
     def test_retry_behavior_fails_fast_for_most_errors(self, patched_read_sql):
