@@ -153,7 +153,7 @@ pytest-integration:
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
-			--require-snowflake \
+			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
