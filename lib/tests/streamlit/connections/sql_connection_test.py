@@ -18,7 +18,6 @@ from copy import deepcopy
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-from parameterized import parameterized
 
 from streamlit.connections import SQLConnection
 from streamlit.errors import StreamlitAPIException
@@ -115,19 +114,21 @@ class SQLConnectionTest(unittest.TestCase):
             assert "Missing SQL DB connection configuration." in str(e.value)
 
     @pytest.mark.require_integration
-    @parameterized.expand([("dialect",), ("username",), ("host",)])
-    def test_error_if_missing_required_param(self, missing_param):
-        secrets = deepcopy(DB_SECRETS)
-        del secrets[missing_param]
+    def test_error_if_missing_required_param(self):
+        for missing_param in ["dialect", "username", "host"]:
+            secrets = deepcopy(DB_SECRETS)
+            del secrets[missing_param]
 
-        with patch(
-            "streamlit.connections.sql_connection.SQLConnection._secrets",
-            PropertyMock(return_value=AttrDict(secrets)),
-        ):
-            with pytest.raises(StreamlitAPIException) as e:
-                SQLConnection("my_sql_connection")
+            with patch(
+                "streamlit.connections.sql_connection.SQLConnection._secrets",
+                PropertyMock(return_value=AttrDict(secrets)),
+            ):
+                with pytest.raises(StreamlitAPIException) as e:
+                    SQLConnection("my_sql_connection")
 
-            assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
+                assert (
+                    str(e.value) == f"Missing SQL DB connection param: {missing_param}"
+                )
 
     @pytest.mark.require_integration
     @patch(
