@@ -31,5 +31,4 @@ pixelmatch>=0.3.0
 pytest-xdist
 pytest-rerunfailures
 pytest-github-actions-annotate-failures
-# Used for testing of st.connection
-sqlalchemy[mypy]>=1.4.25, <2
+
