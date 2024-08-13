@@ -60,7 +60,7 @@ def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
     return (main_dg,)
 
 
-dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar("dg_stack", default=None)
+dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar("dg_stack", default=())
 
 
 def get_dg_stack_or_default() -> tuple[DeltaGenerator, ...]:
