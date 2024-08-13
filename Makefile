@@ -147,7 +147,8 @@ pytest:
 			$(PYTHON_MODULES)
 
 # Run Python integration tests.
-pytest-snowflake:
+# This requires the integration-requirements to be installed.
+pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \

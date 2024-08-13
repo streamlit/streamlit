@@ -232,4 +232,4 @@ jobs:
       - name: Install integration dependencies
         run: uv pip install --editable ./lib[snowflake]
       - name: Run Python Tests for Snowflake
-        run: make pytest-snowflake
+        run: make pytest-integration
