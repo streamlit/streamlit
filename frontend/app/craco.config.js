@@ -112,6 +112,8 @@ module.exports = {
         // Use fixed names for the main JS & CSS files, if asked to.
         webpackConfig.output.filename = "static/js/[name].js"
         webpackConfig.output.cssFilename = "static/css/[name].css"
+        // Use fixed names for font files as well.
+        webpackConfig.output.assetModuleFilename = "static/media/[base]"
       }
 
       tsRule.include = undefined
