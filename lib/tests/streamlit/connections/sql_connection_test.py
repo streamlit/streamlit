@@ -20,7 +20,6 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from parameterized import parameterized
 
-import streamlit as st
 from streamlit.connections import SQLConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -38,8 +37,11 @@ DB_SECRETS = {
 }
 
 
+@pytest.mark.require_integration
 class SQLConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
+        import streamlit as st
+
         st.cache_data.clear()
 
     @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
