@@ -38,7 +38,6 @@ DB_SECRETS = {
 }
 
 
-@pytest.mark.require_integration
 class SQLConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
