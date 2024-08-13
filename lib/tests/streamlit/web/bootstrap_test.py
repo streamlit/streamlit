@@ -30,9 +30,14 @@ from tests import testutil
 from tests.testutil import patch_config_options, should_skip_pydantic_tests
 
 
+@pytest.mark.require_integration
 class BootstrapPydanticFixTest(unittest.TestCase):
     def pydantic_model_definition(self):
-        from pydantic import BaseModel, root_validator, validator
+        from pydantic import (  # type: ignore[import-not-found]
+            BaseModel,
+            root_validator,
+            validator,
+        )
 
         class UserModel(BaseModel):
             name: str
@@ -64,7 +69,7 @@ class BootstrapPydanticFixTest(unittest.TestCase):
     )
     @patch("pydantic.class_validators.in_ipython", Mock(return_value=False))
     def test_fix_pydantic_crash(self):
-        import pydantic
+        import pydantic  # type: ignore[import-not-found]
 
         # Check that without fix it crashes when model with validator
         # defined two times (we emulate Streamlit rerun).
