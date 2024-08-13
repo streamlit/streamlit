@@ -28,6 +28,12 @@ from streamlit.web.server.authlib_tornado_integration import TornadoIntegration
 class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
     client_cls = OAuth2Session
 
+    def load_server_metadata(self):
+        result = super().load_server_metadata()
+        if "S256" in result.get("code_challenge_methods_supported", []):
+            self.client_kwargs["code_challenge_method"] = "S256"
+        return result
+
     def save_authorize_data(self, **kwargs):
         state = kwargs.pop("state", None)
         if state:

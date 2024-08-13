@@ -38,6 +38,9 @@ class AuthCache:
 
 my_cache = AuthCache()
 
+# Todo [kajarenc] initialize Auth clients lazily
+# todo [kajarenc] use create_oauth_client function that initialize and return client
+
 if secrets_singleton.load_if_toml_exists():
     auth_section = secrets_singleton.get("auth")
     if auth_section:
@@ -56,11 +59,16 @@ if secrets_singleton.load_if_toml_exists():
     auth_section = secrets_singleton.get("auth", None)
 
     if auth_section is not None:
+        # TODO[kajarenc] rewrite config parsing better way
         for key in auth_section.keys():
             if key == "redirect_uri":
                 continue
 
-            if auth_section.get(key, {}).get("client_kwargs", {}).get("scope", None):
+            if auth_section.get(key, {}).get("client_kwargs", {}).get(
+                "scope", None
+            ) or auth_section.get(key, {}).get("client_kwargs", {}).get(
+                "code_challenge_method", None
+            ):
                 oauth.register(key)
             else:
                 oauth.register(
