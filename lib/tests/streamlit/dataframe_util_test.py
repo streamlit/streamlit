@@ -449,7 +449,7 @@ class DataframeUtilTest(unittest.TestCase):
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
         This is in addition to the tests using the mocks to verify that
@@ -482,7 +482,7 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame,
             )
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     def test_verify_snowpandas_integration(self):
         """Integration test snowpark pandas object handling.
         This is in addition to the tests using the mocks to verify that
@@ -515,13 +515,14 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame,
             )
 
+    @pytest.mark.require_integration
     def test_verify_dask_integration(self):
         """Integration test dask object handling.
 
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
-        dask = pytest.importorskip("dask")
+        import dask
 
         dask_df = dask.datasets.timeseries()
 
@@ -545,13 +546,14 @@ class DataframeUtilTest(unittest.TestCase):
             pd.DataFrame,
         )
 
+    @pytest.mark.require_integration
     def test_verify_ray_integration(self):
         """Integration test ray object handling.
 
         This is in addition to the tests using the mocks to verify that
         the latest version of the library is still supported.
         """
-        ray = pytest.importorskip("ray")
+        import ray
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
         ray_dataset = ray.data.from_pandas(df)

@@ -1192,7 +1192,7 @@ def convert_pandas_df_to_data_format(
         data_format == DataFormat.POLARS_DATAFRAME
         or data_format == DataFormat.POLARS_LAZYFRAME
     ):
-        import polars as pl
+        import polars as pl  # type: ignore[import-not-found]
 
         return pl.from_pandas(df)
     elif data_format == DataFormat.POLARS_SERIES:
@@ -1200,7 +1200,7 @@ def convert_pandas_df_to_data_format(
 
         return pl.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.XARRAY_DATASET:
-        import xarray as xr
+        import xarray as xr  # type: ignore[import-not-found]
 
         return xr.Dataset.from_dataframe(df)
     elif data_format == DataFormat.XARRAY_DATA_ARRAY:
