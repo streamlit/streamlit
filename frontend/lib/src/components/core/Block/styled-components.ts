@@ -78,7 +78,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       display: "none",
     },
 
-    ":has(> .cacheSpinner)": {
+    ":has(> .stCacheSpinner)": {
       height: 0,
       overflow: "visible",
       visibility: "visible",

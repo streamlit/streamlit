@@ -39,7 +39,9 @@ interface ChatMessageAvatarProps {
   endpoints: StreamlitEndpoints
 }
 
-function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
+function ChatMessageAvatar(
+  props: Readonly<ChatMessageAvatarProps>
+): ReactElement {
   const { avatar, avatarType, name, endpoints } = props
   const theme: EmotionTheme = useTheme()
 

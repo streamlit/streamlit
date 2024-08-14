@@ -33,13 +33,13 @@ describe("CopyButton Element", () => {
 
   it("renders without crashing", () => {
     render(<CopyButton text="test" />)
-    expect(screen.getByTestId("stCopyButton")).toBeInTheDocument()
+    expect(screen.getByTestId("stCodeCopyButton")).toBeInTheDocument()
   })
 
   describe("attributes", () => {
     it("should have title", () => {
       render(<CopyButton text="test" />)
-      expect(screen.getByTestId("stCopyButton")).toHaveAttribute(
+      expect(screen.getByTestId("stCodeCopyButton")).toHaveAttribute(
         "title",
         "Copy to clipboard"
       )

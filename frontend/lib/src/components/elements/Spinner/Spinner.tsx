@@ -41,7 +41,7 @@ function Spinner({ width, element }: Readonly<SpinnerProps>): ReactElement {
 
   return (
     <StyledSpinner
-      className={classNames({ stSpinner: true, cacheSpinner: cache })}
+      className={classNames({ stSpinner: true, stCacheSpinner: cache })}
       data-testid="stSpinner"
       width={width}
       cache={cache}

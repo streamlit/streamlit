@@ -77,7 +77,7 @@ describe("Spinner component", () => {
     expect(spinnerContainer).toBeInTheDocument()
 
     expect(spinnerContainer).toHaveClass("stSpinner")
-    expect(spinnerContainer).toHaveClass("cacheSpinner")
+    expect(spinnerContainer).toHaveClass("stCacheSpinner")
     expect(spinnerContainer).toHaveStyle("paddingBottom: 1rem")
   })
 })
