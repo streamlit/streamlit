@@ -18,8 +18,8 @@ import os
 from io import BytesIO
 
 import numpy as np
+import pytest
 from parameterized import parameterized
-from scipy.io import wavfile
 
 import streamlit as st
 from streamlit.elements.media import (
@@ -210,8 +210,11 @@ class AudioTest(DeltaGeneratorTestCase):
         computed_bytes = _maybe_convert_to_wav_bytes(np_arr, sample_rate=None)
         self.assertTrue(computed_bytes is np_arr)
 
+    @pytest.mark.require_integration
     def test_st_audio_from_file(self):
         """Test st.audio using generated data in a file-like object."""
+        from scipy.io import wavfile
+
         sample_rate = 44100
         frequency = 440
         length = 5

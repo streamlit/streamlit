@@ -42,6 +42,7 @@ from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
+    NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
@@ -81,6 +82,11 @@ _SNOWPANDAS_INDEX_TYPE_STR: Final = (
 _POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
 _POLARS_SERIES: Final = "polars.series.series.Series"
 _POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
+_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
+_DASK_SERIES: Final = "dask.dataframe.core.Series"
+_DASK_INDEX: Final = "dask.dataframe.core.Index"
+_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
+_RAY_DATASET: Final = "ray.data.dataset.Dataset"
 
 V_co = TypeVar(
     "V_co",
@@ -116,7 +122,7 @@ Data: TypeAlias = Union[
     "Styler",
     "Index",
     "pa.Table",
-    "np.ndarray",
+    "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     Dict[Any, Any],
     None,
@@ -146,6 +152,8 @@ class DataFormat(Enum):
     POLARS_SERIES = auto()  # polars.series.series.Series
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
+    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
+    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
     LIST_OF_VALUES = auto()  # List[Scalar]
@@ -189,6 +197,8 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.XARRAY_DATASET,
         DataFormat.XARRAY_DATA_ARRAY,
+        DataFormat.DASK_OBJECT,
+        DataFormat.RAY_DATASET,
         DataFormat.COLUMN_SERIES_MAPPING,
     ]
 
@@ -201,6 +211,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series / Index
+    - Dask DataFrame / Series / Index
+    - Ray Dataset
     - Polars LazyFrame
     - Generator functions
 
@@ -213,7 +225,9 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_pyspark_data_object(obj)
         or is_snowpandas_data_object(obj)
         or is_modin_data_object(obj)
+        or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
+        or is_dask_object(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -244,6 +258,15 @@ def is_pyspark_data_object(obj: object) -> bool:
         is_type(obj, _PYSPARK_DF_TYPE_STR)
         and hasattr(obj, "toPandas")
         and callable(obj.toPandas)
+    )
+
+
+def is_dask_object(obj: object) -> bool:
+    """True if obj is a Dask DataFrame, Series, or Index."""
+    return (
+        is_type(obj, _DASK_DATAFRAME)
+        or is_type(obj, _DASK_SERIES)
+        or is_type(obj, _DASK_INDEX)
     )
 
 
@@ -284,6 +307,11 @@ def is_polars_series(obj: object) -> bool:
 def is_polars_lazyframe(obj: object) -> bool:
     """True if obj is a Polars Lazyframe."""
     return is_type(obj, _POLARS_LAZYFRAME)
+
+
+def is_ray_dataset(obj: object) -> bool:
+    """True if obj is a Ray Dataset."""
+    return is_type(obj, _RAY_DATASET) or is_type(obj, _RAY_MATERIALIZED_DATASET)
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
@@ -435,6 +463,31 @@ def convert_anything_to_pandas_df(
         if ensure_copy:
             data = data.copy(deep=True)
         return data.to_series().to_frame()
+
+    if is_dask_object(data):
+        data = data.head(max_unevaluated_rows, compute=True)
+
+        # Dask returns a Pandas object (DataFrame, Series, Index) when
+        # executing operations like `head`.
+        if isinstance(data, (pd.Series, pd.Index)):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `compute()` on the data object to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_ray_dataset(data):
+        data = data.limit(max_unevaluated_rows).to_pandas()
+
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `to_pandas()` on the dataset to show more."
+            )
+        return cast(pd.DataFrame, data)
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
@@ -952,7 +1005,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
     elif isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
-        if len(input_data.shape) == 1:
+        if len(cast(NumpyShape, input_data.shape)) == 1:
             # For technical reasons, we need to distinguish one
             # one-dimensional numpy array from multidimensional ones.
             return DataFormat.NUMPY_LIST
@@ -985,6 +1038,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.XARRAY_DATASET
     elif is_xarray_data_array(input_data):
         return DataFormat.XARRAY_DATA_ARRAY
+    elif is_ray_dataset(input_data):
+        return DataFormat.RAY_DATASET
+    elif is_dask_object(input_data):
+        return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
     elif (
@@ -1105,6 +1162,8 @@ def convert_pandas_df_to_data_format(
         DataFormat.PANDAS_ARRAY,
         DataFormat.MODIN_OBJECT,
         DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.DASK_OBJECT,
+        DataFormat.RAY_DATASET,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
@@ -1133,7 +1192,7 @@ def convert_pandas_df_to_data_format(
         data_format == DataFormat.POLARS_DATAFRAME
         or data_format == DataFormat.POLARS_LAZYFRAME
     ):
-        import polars as pl
+        import polars as pl  # type: ignore[import-not-found]
 
         return pl.from_pandas(df)
     elif data_format == DataFormat.POLARS_SERIES:
@@ -1141,7 +1200,7 @@ def convert_pandas_df_to_data_format(
 
         return pl.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.XARRAY_DATASET:
-        import xarray as xr
+        import xarray as xr  # type: ignore[import-not-found]
 
         return xr.Dataset.from_dataframe(df)
     elif data_format == DataFormat.XARRAY_DATA_ARRAY:
