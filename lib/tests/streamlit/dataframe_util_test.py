@@ -506,7 +506,7 @@ class DataframeUtilTest(unittest.TestCase):
 
     @pytest.mark.require_integration
     def test_verify_duckdb_relational_api_integration(self):
-        """Test that duckdb cursor can be used as a data source.
+        """Test that duckdb relational API can be used as a data source.
 
         https://duckdb.org/docs/api/python/relational_api
         """

@@ -1124,6 +1124,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_duckdb_relation(input_data):
+        return DataFormat.DUCKDB_RELATION
     elif is_dbapi_cursor(input_data):
         return DataFormat.DBAPI_CURSOR
     elif (
