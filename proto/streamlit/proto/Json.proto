@@ -22,6 +22,9 @@ option java_outer_classname = "JsonProto";
 message Json {
   // Content to display.
   string body = 1;
-
+  // Controls the initial expansion state of the json element.
+  // Is superseded by max_expand_depth if provided.
   bool expanded = 2;
+  // The maximum depth to expand the JSON object.
+  optional int32 max_expand_depth = 3;
 }

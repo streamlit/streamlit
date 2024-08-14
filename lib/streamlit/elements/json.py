@@ -33,10 +33,9 @@ if TYPE_CHECKING:
 
 
 def _ensure_serialization(o: object) -> str | list[Any]:
-    """A repr function for json.dumps default arg, which tries to serialize sets as lists"""
-    if isinstance(o, set):
-        return list(o)
-    return repr(o)
+    """A repr function for json.dumps default arg, which tries to serialize sets
+    as lists."""
+    return list(o) if isinstance(o, set) else repr(o)
 
 
 class JsonMixin:
@@ -45,20 +44,23 @@ class JsonMixin:
         self,
         body: object,
         *,  # keyword-only arguments:
-        expanded: bool = True,
+        expanded: bool | int = True,
     ) -> DeltaGenerator:
         """Display object or string as a pretty-printed JSON string.
 
         Parameters
         ----------
+
         body : object or str
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
-        expanded : bool
-            An optional boolean that allows the user to set whether the initial
-            state of this json element should be expanded. Defaults to True.
+        expanded : bool or int
+            Controls the initial expansion state of the json element.
+            If bool, ``True`` expands all levels, ``False`` collapses all levels.
+            If int, specifies the depth to which the json should be expanded,
+            collapsing deeper levels. Defaults to ``True``.
 
         Example
         -------
@@ -67,14 +69,14 @@ class JsonMixin:
         >>> st.json(
         ...     {
         ...         "foo": "bar",
-        ...         "baz": "boz",
         ...         "stuff": [
         ...             "stuff 1",
         ...             "stuff 2",
         ...             "stuff 3",
-        ...             "stuff 5",
         ...         ],
-        ...     }
+        ...         "level1": {"level2": {"level3": {"a": "b"}}},
+        ...     },
+        ...     expanded=2,
         ... )
 
         .. output::
@@ -111,7 +113,18 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        json_proto.expanded = expanded
+
+        if isinstance(expanded, bool):
+            json_proto.expanded = expanded
+        elif isinstance(expanded, int):
+            json_proto.expanded = True
+            json_proto.max_expand_depth = expanded
+        else:
+            raise TypeError(
+                f"The type {str(type(expanded))} of `expanded` is not supported"
+                ", must be bool or int."
+            )
+
         return self.dg._enqueue("json", json_proto)
 
     @property
