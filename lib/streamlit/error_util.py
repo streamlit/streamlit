@@ -17,7 +17,6 @@ from __future__ import annotations
 from typing import Final
 
 import streamlit as st
-import streamlit.runtime.scriptrunner.script_runner as script_runner
 from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
@@ -52,6 +51,9 @@ def _print_rich_exception(e: BaseException) -> None:
         no_color=False,
         tab_size=8,
     )
+
+    # move here to silence GitHub import cycle warning
+    import streamlit.runtime.scriptrunner.script_runner as script_runner
 
     # Print exception via rich
     console.print(
