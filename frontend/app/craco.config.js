@@ -114,6 +114,21 @@ module.exports = {
         webpackConfig.output.cssFilename = "static/css/[name].css"
         // Use fixed names for font files as well.
         webpackConfig.output.assetModuleFilename = "static/media/[base]"
+
+        // The MiniCssExtractPlugin doesn't honor cssFilename, so recreate the
+        // plugin with better settings if it's present.
+        const cssPluginIndex = webpackConfig.plugins.findIndex(
+          value => value.constructor?.name === "MiniCssExtractPlugin"
+        )
+        if (cssPluginIndex >= 0) {
+          const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+          const cssPlugin = webpackConfig.plugins[cssPluginIndex]
+          const newPlugin = new MiniCssExtractPlugin({
+            filename: webpackConfig.output.cssFilename,
+            chunkFilename: cssPlugin.options.chunkFilename,
+          })
+          webpackConfig.plugins[cssPluginIndex] = newPlugin
+        }
       }
 
       tsRule.include = undefined

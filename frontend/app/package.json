@@ -99,6 +99,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-github-actions-reporter": "^1.0.3",
     "jest-websocket-mock": "^2.4.0",
+    "mini-css-extract-plugin": "^2.4.5",
     "prettier": "^2.8.3",
     "prop-types": "^15.7.2",
     "react-scripts": "5.0.1",
