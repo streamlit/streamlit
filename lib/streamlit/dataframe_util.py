@@ -89,6 +89,7 @@ _DASK_SERIES: Final = "dask.dataframe.core.Series"
 _DASK_INDEX: Final = "dask.dataframe.core.Index"
 _RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _RAY_DATASET: Final = "ray.data.dataset.Dataset"
+_DUCKDB_RELATION: Final = "duckdb.duckdb.DuckDBPyRelation"
 
 V_co = TypeVar(
     "V_co",
@@ -196,6 +197,7 @@ class DataFormat(Enum):
     COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
     KEY_VALUE_DICT = auto()  # {index: value}
     DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
+    DUCKDB_RELATION = auto()  # DuckDB Relation
 
 
 def is_dataframe_like(obj: object) -> bool:
@@ -249,7 +251,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Ray Dataset
     - Polars LazyFrame
     - Generator functions
-    - DB API Cursor
+    - DB API 2.0 Cursor (PEP 249)
+    - DuckDB Relation (Relational API)
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -263,8 +266,9 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
-        or inspect.isgeneratorfunction(obj)
+        or is_duckdb_relation(obj)
         or is_dbapi_cursor(obj)
+        or inspect.isgeneratorfunction(obj)
     )
 
 
@@ -361,6 +365,15 @@ def is_dbapi_cursor(obj: object) -> TypeGuard[DBAPICursor]:
     https://peps.python.org/pep-0249/
     """
     return isinstance(obj, DBAPICursor)
+
+
+def is_duckdb_relation(obj: object) -> bool:
+    """True if obj is a DuckDB relation.
+
+    https://duckdb.org/docs/api/python/relational_api
+    """
+
+    return is_type(obj, _DUCKDB_RELATION)
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -576,6 +589,15 @@ def convert_anything_to_pandas_df(
                 "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
+
+    if is_duckdb_relation(data):
+        data = data.limit(max_unevaluated_rows).df()
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `df()` on the relation to show more."
+            )
+        return data
 
     if is_dbapi_cursor(data):
         columns = [d[0] for d in data.description] if data.description else None
@@ -1221,6 +1243,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
         DataFormat.DBAPI_CURSOR,
+        DataFormat.DUCKDB_RELATION,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:

@@ -505,6 +505,28 @@ class DataframeUtilTest(unittest.TestCase):
         con.close()
 
     @pytest.mark.require_integration
+    def test_verify_duckdb_relational_api_integration(self):
+        """Test that duckdb cursor can be used as a data source.
+
+        https://duckdb.org/docs/api/python/relational_api
+        """
+        import duckdb
+
+        items = pd.DataFrame([["foo", 1], ["bar", 2]], columns=["name", "value"])
+        db_relation = duckdb.sql("SELECT * from items")
+        assert dataframe_util.is_duckdb_relation(db_relation) is True
+        assert (
+            dataframe_util.determine_data_format(db_relation)
+            is dataframe_util.DataFormat.DUCKDB_RELATION
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(db_relation)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == items.shape
+
+    @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
         This is in addition to the tests using the mocks to verify that
