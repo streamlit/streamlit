@@ -17,7 +17,7 @@ from __future__ import annotations
 import unittest
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.script_requests import (
+from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
     ScriptRequest,
     ScriptRequests,

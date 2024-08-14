@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import streamlit as st
-from streamlit.runtime.script_requests import ScriptRequestType
+from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequestType
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 

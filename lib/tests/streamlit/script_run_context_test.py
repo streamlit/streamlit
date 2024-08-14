@@ -24,7 +24,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
     ScriptRunContext,
     add_script_run_ctx,

@@ -38,11 +38,6 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.script_requests import (
-    ScriptRequest,
-    ScriptRequests,
-    ScriptRequestType,
-)
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -51,6 +46,11 @@ from streamlit.runtime.scriptrunner import (
     StopException,
 )
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.scriptrunner_utils.script_requests import (
+    ScriptRequest,
+    ScriptRequests,
+    ScriptRequestType,
+)
 from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
@@ -637,7 +637,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.runtime.metrics_util.create_page_profile_message")
+    @patch("streamlit.runtime.scriptrunner.script_runner.create_page_profile_message")
     def test_uncaught_exception_gets_tracked(self, patched_create_page_profile_message):
         """Tests that we track uncaught exceptions."""
         with testutil.patch_config_options({"browser.gatherUsageStats": True}):

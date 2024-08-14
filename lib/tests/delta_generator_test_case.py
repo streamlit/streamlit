@@ -31,12 +31,12 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.script_requests import ScriptRequests
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
 
