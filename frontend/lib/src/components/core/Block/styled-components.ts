@@ -18,7 +18,6 @@ import React from "react"
 
 import styled from "@emotion/styled"
 
-import { StyledNavLinkContainer } from "@streamlit/lib/src/components/elements/PageLink/styled-components"
 import { StyledCheckbox } from "@streamlit/lib/src/components/widgets/Checkbox/styled-components"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
@@ -86,7 +85,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: 1000,
     },
 
-    [`:has(> ${StyledNavLinkContainer}))`]: {
+    [`:has(> .stPageLink))`]: {
       marginTop: "-0.375rem",
       marginBottom: "-0.375rem",
     },
