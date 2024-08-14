@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export { default } from "@streamlit/lib/src/components/elements/IFrame/IFrame"
+export { default } from "./IFrame"

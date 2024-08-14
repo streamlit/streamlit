@@ -39,7 +39,9 @@ describe("st.iframe", () => {
   it("should render an iframe", () => {
     const props = getProps({})
     render(<IFrame {...props} />)
-    expect(screen.getByTestId("stIFrame")).toBeInTheDocument()
+    const iframeElement = screen.getByTestId("stIframe")
+    expect(iframeElement).toBeInTheDocument()
+    expect(iframeElement).toHaveClass("stIframe")
   })
 
   it("should set iframe height", () => {
@@ -47,7 +49,7 @@ describe("st.iframe", () => {
       height: 400,
     })
     render(<IFrame {...props} />)
-    expect(screen.getByTestId("stIFrame")).toHaveAttribute("height", "400")
+    expect(screen.getByTestId("stIframe")).toHaveAttribute("height", "400")
   })
 
   describe("Render iframe with `src` parameter", () => {
@@ -58,17 +60,17 @@ describe("st.iframe", () => {
 
     it("should set `srcDoc` to undefined if src is defined", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).not.toHaveAttribute("srcdoc")
+      expect(screen.getByTestId("stIframe")).not.toHaveAttribute("srcdoc")
     })
 
     it("should set `src`", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("src", "foo")
+      expect(screen.getByTestId("stIframe")).toHaveAttribute("src", "foo")
     })
 
     it("should use our default feature policy", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+      expect(screen.getByTestId("stIframe")).toHaveAttribute(
         "allow",
         DEFAULT_IFRAME_FEATURE_POLICY
       )
@@ -76,7 +78,7 @@ describe("st.iframe", () => {
 
     it("should use our default sandbox policy", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+      expect(screen.getByTestId("stIframe")).toHaveAttribute(
         "sandbox",
         DEFAULT_IFRAME_SANDBOX_POLICY
       )
@@ -90,12 +92,12 @@ describe("st.iframe", () => {
 
     it("should set `srcDoc`", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("srcdoc", "bar")
+      expect(screen.getByTestId("stIframe")).toHaveAttribute("srcdoc", "bar")
     })
 
     it("should use our default feature policy", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+      expect(screen.getByTestId("stIframe")).toHaveAttribute(
         "allow",
         DEFAULT_IFRAME_FEATURE_POLICY
       )
@@ -103,7 +105,7 @@ describe("st.iframe", () => {
 
     it("should use our default sandbox policy", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+      expect(screen.getByTestId("stIframe")).toHaveAttribute(
         "sandbox",
         DEFAULT_IFRAME_SANDBOX_POLICY
       )
@@ -117,13 +119,13 @@ describe("st.iframe", () => {
     })
     it("should set element width", () => {
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("width", "200")
+      expect(screen.getByTestId("stIframe")).toHaveAttribute("width", "200")
     })
 
     it("should set app width", () => {
       const props = getProps({})
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("width", "100")
+      expect(screen.getByTestId("stIframe")).toHaveAttribute("width", "100")
     })
   })
 
@@ -133,11 +135,11 @@ describe("st.iframe", () => {
         scrolling: true,
       })
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+      expect(screen.getByTestId("stIframe")).toHaveAttribute(
         "scrolling",
         "auto"
       )
-      expect(screen.getByTestId("stIFrame")).not.toHaveStyle(
+      expect(screen.getByTestId("stIframe")).not.toHaveStyle(
         "overflow: hidden"
       )
     })
@@ -145,8 +147,8 @@ describe("st.iframe", () => {
     it("should set `overflow` to hidden", () => {
       const props = getProps({})
       render(<IFrame {...props} />)
-      expect(screen.getByTestId("stIFrame")).toHaveStyle("overflow: hidden")
-      expect(screen.getByTestId("stIFrame")).toHaveAttribute("scrolling", "no")
+      expect(screen.getByTestId("stIframe")).toHaveStyle("overflow: hidden")
+      expect(screen.getByTestId("stIframe")).toHaveAttribute("scrolling", "no")
     })
   })
 })

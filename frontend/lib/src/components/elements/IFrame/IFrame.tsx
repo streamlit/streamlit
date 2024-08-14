@@ -33,7 +33,7 @@ export interface IFrameProps {
 export default function IFrame({
   element,
   width: propWidth,
-}: IFrameProps): ReactElement {
+}: Readonly<IFrameProps>): ReactElement {
   const width = element.hasWidth ? element.width : propWidth
 
   // Handle scrollbar visibility. Chrome and other WebKit browsers still
@@ -60,7 +60,8 @@ export default function IFrame({
 
   return (
     <iframe
-      data-testid="stIFrame"
+      className="stIframe"
+      data-testid="stIframe"
       allow={DEFAULT_IFRAME_FEATURE_POLICY}
       style={style}
       src={src}
