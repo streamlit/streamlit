@@ -32,7 +32,7 @@ export interface TableProps {
   element: Quiver
 }
 
-export function ArrowTable(props: TableProps): ReactElement {
+export function ArrowTable(props: Readonly<TableProps>): ReactElement {
   const table = props.element
   const { cssId, cssStyles, caption } = table
   const { headerRows, rows, columns } = table.dimensions
