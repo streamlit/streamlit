@@ -544,17 +544,7 @@ def convert_anything_to_pandas_df(
     if is_xarray_data_array(data):
         if ensure_copy:
             data = data.copy(deep=True)
-        return pd.DataFrame(data.to_series())
-
-    if is_ray_dataset(data):
-        data = data.limit(max_unevaluated_rows).to_pandas()
-
-        if data.shape[0] == max_unevaluated_rows:
-            _show_data_information(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `to_pandas()` on the data object to show more."
-            )
-        return cast(pd.DataFrame, data)
+        return data.to_series().to_frame()
 
     if is_dask_object(data):
         data = data.head(max_unevaluated_rows, compute=True)
