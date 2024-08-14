@@ -47,7 +47,7 @@ describe("CopyButton Element", () => {
 
     it("should have clipboard text", () => {
       render(<CopyButton text="test" />)
-      expect(screen.getByTestId("stCopyButton")).toHaveAttribute(
+      expect(screen.getByTestId("stCodeCopyButton")).toHaveAttribute(
         "data-clipboard-text",
         "test"
       )
