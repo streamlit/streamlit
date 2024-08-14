@@ -16,9 +16,9 @@ duckdb
 # Used for testing of st.connection
 sqlalchemy[mypy]>=1.4.25, <2
 
-# Pydantic 1.* fails to initialize validators, we add it to requirements
-# to test the fix. Pydantic 2 should not have that issue.
-pydantic>=1.0, <2.0
-
 # Used by audio test:
 scipy>=1.7.3
+
+# Used to ensure pydantic is supported
+# We only guarantee full support for pydantic >= 2.0.0
+pydantic>=2.0.0
