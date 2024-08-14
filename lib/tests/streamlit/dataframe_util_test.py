@@ -477,6 +477,30 @@ class DataframeUtilTest(unittest.TestCase):
         con.close()
 
     @pytest.mark.require_integration
+    def test_verify_duckdb_integration(self):
+        import duckdb
+
+        con = duckdb.connect(database=":memory:")
+        con.execute(
+            "CREATE TABLE items (item VARCHAR, value DECIMAL(10, 2), count INTEGER)"
+        )
+        con.execute("INSERT INTO items VALUES ('jeans', 20.0, 1), ('hammer', 42.2, 2)")
+        con.execute("SELECT * FROM items")
+
+        assert dataframe_util.is_dbapi_cursor(con) is True
+        assert (
+            dataframe_util.determine_data_format(con)
+            is dataframe_util.DataFormat.DBAPI_CURSOR
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(con)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == (2, 3)
+        con.close()
+
+    @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
         This is in addition to the tests using the mocks to verify that
