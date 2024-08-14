@@ -477,7 +477,11 @@ class DataframeUtilTest(unittest.TestCase):
         con.close()
 
     @pytest.mark.require_integration
-    def test_verify_duckdb_integration(self):
+    def test_verify_duckdb_db_api_integration(self):
+        """Test that duckdb cursor can be used as a data source.
+
+        https://duckdb.org/docs/api/python/dbapi
+        """
         import duckdb
 
         con = duckdb.connect(database=":memory:")
