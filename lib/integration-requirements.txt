@@ -17,3 +17,6 @@ sqlalchemy[mypy]>=1.4.25, <2
 
 # Used by audio test:
 scipy>=1.7.3
+
+# Used to ensure pydantic is supported:
+pydantic>=2.0.0
