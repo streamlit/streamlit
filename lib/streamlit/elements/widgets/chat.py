@@ -19,7 +19,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
-from streamlit.delta_generator_singletons import get_bottom_dg
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.form_utils import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.lib.policies import check_widget_policies
@@ -387,7 +387,9 @@ class ChatMixin:
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
-            get_bottom_dg()._enqueue("chat_input", chat_input_proto)
+            get_dg_singleton_instance().bottom_dg._enqueue(
+                "chat_input", chat_input_proto
+            )
         else:
             self.dg._enqueue("chat_input", chat_input_proto)
 

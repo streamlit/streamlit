@@ -18,7 +18,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
 
 from streamlit.delta_generator_singletons import (
-    get_event_dg,
+    get_dg_singleton_instance,
     get_last_dg_added_to_context_stack,
 )
 from streamlit.deprecation_util import (
@@ -79,7 +79,9 @@ def _dialog_decorator(
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
-        dialog = get_event_dg()._dialog(title=title, dismissible=True, width=width)
+        dialog = get_dg_singleton_instance().event_dg._dialog(
+            title=title, dismissible=True, width=width
+        )
         dialog.open()
 
         def dialog_content() -> None:

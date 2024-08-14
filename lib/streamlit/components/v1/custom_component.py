@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
-from streamlit.delta_generator_singletons import get_main_dg
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.errors import StreamlitAPIException
@@ -222,7 +222,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        dg = get_main_dg()
+        dg = get_dg_singleton_instance().main_dg
 
         element = Element()
         return_value = marshall_component(dg, element)

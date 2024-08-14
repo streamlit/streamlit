@@ -22,48 +22,109 @@ from __future__ import annotations
 from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
+from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
+
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-_main_dg: DeltaGenerator | None = None
-_sidebar_dg: DeltaGenerator | None = None
-_event_dg: DeltaGenerator | None = None
-_bottom_dg: DeltaGenerator | None = None
+
+class DeltaGeneratorSingleton:
+    """Used to initialize the DeltaGenerator classes and store them as singletons.
+    This module allows us to avoid circular imports between DeltaGenerator and elements,
+    because elemens can import this singleton module instead of DeltaGenerator directly.
+    """
+
+    _instance: DeltaGeneratorSingleton | None = None
+
+    @classmethod
+    def instance(cls) -> DeltaGeneratorSingleton:
+        """Return the singleton DeltaGeneratorSingleton instance. Raise an Error if the
+        DeltaGeneratorSingleton hasn't been created yet.
+        """
+        if cls._instance is None:
+            raise RuntimeError("DeltaGeneratorSingleton hasn't been created!")
+        return cls._instance
+
+    def __init__(
+        self,
+        delta_generator_cls: type[DeltaGenerator],
+        status_container_cls: type[StatusContainer],
+        dialog_container_cls: type[Dialog],
+    ):
+        """Registers and initializes all delta-generator classes.
+
+        Parameters
+        ----------
+
+        delta_generator_cls : type[DeltaGenerator]
+            The main DeltaGenerator class.
+        status_container_cls : type[StatusContainer]
+            The delta-generator class that is used as return value for `st.status`.
+        dialog_container_cls : type[Dialog]
+            The delta-generator class used is used as return value for `st.dialog`.
+
+        Raises
+        ------
+        RuntimeError
+            If the DeltaGeneratorSingleton instance already exists.
+        """
+        if DeltaGeneratorSingleton._instance is not None:
+            raise RuntimeError("DeltaGeneratorSingleton instance already exists!")
+        DeltaGeneratorSingleton._instance = self
+
+        self._main_dg = delta_generator_cls(root_container=_RootContainer.MAIN)
+        self._sidebar_dg = delta_generator_cls(
+            root_container=_RootContainer.SIDEBAR, parent=self._main_dg
+        )
+        self._event_dg = delta_generator_cls(
+            root_container=_RootContainer.EVENT, parent=self._main_dg
+        )
+        self._bottom_dg = delta_generator_cls(
+            root_container=_RootContainer.BOTTOM, parent=self._main_dg
+        )
+        self._status_container_cls = status_container_cls
+        self._dialog_container_cls = dialog_container_cls
+
+    @property
+    def main_dg(self) -> DeltaGenerator:
+        return self._main_dg
+
+    @property
+    def sidebar_dg(self) -> DeltaGenerator:
+        return self._sidebar_dg
+
+    @property
+    def event_dg(self) -> DeltaGenerator:
+        return self._event_dg
+
+    @property
+    def bottom_dg(self) -> DeltaGenerator:
+        return self._bottom_dg
+
+    @property
+    def status_container_cls(
+        self,
+    ) -> type[StatusContainer]:
+        """Stub for StatusContainer. Since StatusContainer inherits from DeltaGenerator,
+        this is used to avoid circular imports.
+        """
+        return self._status_container_cls
+
+    @property
+    def dialog_container_cls(self) -> type[Dialog]:
+        """Stub for Dialog. Since Dialog inherits from DeltaGenerator,
+        this is used to avoid circular imports.
+        """
+        return self._dialog_container_cls
 
 
-def get_main_dg() -> DeltaGenerator:
-    if _main_dg is None:
-        raise RuntimeError("main_dg is not initialized")
-    return _main_dg
-
-
-def get_sidebar_dg() -> DeltaGenerator:
-    if _sidebar_dg is None:
-        raise RuntimeError("sidebar_dg is not initialized")
-    return _sidebar_dg
-
-
-def get_event_dg() -> DeltaGenerator:
-    if _event_dg is None:
-        raise RuntimeError("event_dg is not initialized")
-    return _event_dg
-
-
-def get_bottom_dg() -> DeltaGenerator:
-    if _bottom_dg is None:
-        raise RuntimeError("bottom_dg is not initialized")
-    return _bottom_dg
-
-
-def get_default_dg_stack_value() -> tuple[DeltaGenerator, ...]:
-    """Get the default dg_stack value with which the dg_stack should
-    be initialized and reset if needed."""
-    if _main_dg is None:
-        raise RuntimeError("main_dg is not set")
-
-    return (_main_dg,)
+def get_dg_singleton_instance() -> DeltaGeneratorSingleton:
+    """Return the DeltaGeneratorSingleton instance. Raise an Error if the
+    DeltaGeneratorSingleton hasn't been created yet.
+    """
+    return DeltaGeneratorSingleton.instance()
 
 
 _T = TypeVar("_T")
@@ -110,8 +171,20 @@ class ContextVarWithLazyDefault(Generic[_T]):
 # we don't use the default factory here because `main_dg` is not initialized when this
 # module is imported. This is why we have our own ContextVar wrapper.
 context_dg_stack: ContextVarWithLazyDefault[tuple[DeltaGenerator, ...]] = (
-    ContextVarWithLazyDefault("context_dg_stack", default=lambda: (get_main_dg(),))
+    ContextVarWithLazyDefault(
+        "context_dg_stack", default=lambda: (get_dg_singleton_instance().main_dg,)
+    )
 )
+
+
+def get_default_dg_stack_value() -> tuple[DeltaGenerator, ...]:
+    """Get the default dg_stack value with which the dg_stack should
+    be initialized and reset if needed."""
+    instance = get_dg_singleton_instance()
+    if instance._main_dg is None:
+        raise RuntimeError("main_dg is not set")
+
+    return (instance._main_dg,)
 
 
 def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
@@ -129,9 +202,3 @@ def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
     if len(current_stack) > 1:
         return current_stack[-1]
     return None
-
-
-# stubs for functions that are required by some Mixins. Defined here to avoid circular
-# imports.
-create_status_container: Callable[..., StatusContainer]
-create_dialog: Callable[..., Dialog]

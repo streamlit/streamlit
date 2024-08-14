@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
-import streamlit.delta_generator_singletons as delta_generator_singletons
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -770,7 +770,7 @@ class LayoutsMixin:
             height: 300px
 
         """
-        return delta_generator_singletons.create_status_container(
+        return get_dg_singleton_instance().status_container_cls._create(
             self.dg, label, expanded=expanded, state=state
         )
 
@@ -786,7 +786,7 @@ class LayoutsMixin:
         Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
         The dialog_decorator also has a more descriptive docstring since it is user-facing.
         """
-        return delta_generator_singletons.create_dialog(
+        return get_dg_singleton_instance().dialog_container_cls._create(
             self.dg, title, dismissible=dismissible, width=width
         )
 

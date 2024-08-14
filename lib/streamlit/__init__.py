@@ -71,33 +71,26 @@ __version__ = _STREAMLIT_VERSION_STRING
 # imports the different elements but some elements also require DeltaGenerator
 # functions such as the dg_stack. Now, elements that require DeltaGenerator functions
 # can import the singleton module.
-import streamlit.delta_generator_singletons as _dg_singletons
+from streamlit.delta_generator_singletons import (
+    DeltaGeneratorSingleton as _DeltaGeneratorSingleton,
+)
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
-
-_dg_singletons._main_dg = _DeltaGenerator(root_container=_RootContainer.MAIN)
-_dg_singletons._sidebar_dg = _DeltaGenerator(
-    root_container=_RootContainer.SIDEBAR, parent=_dg_singletons._main_dg
-)
-_dg_singletons._event_dg = _DeltaGenerator(
-    root_container=_RootContainer.EVENT, parent=_dg_singletons._main_dg
-)
-_dg_singletons._bottom_dg = _DeltaGenerator(
-    root_container=_RootContainer.BOTTOM, parent=_dg_singletons._main_dg
-)
-_main = _dg_singletons._main_dg
-sidebar = _dg_singletons._sidebar_dg
-_event = _dg_singletons._event_dg
-_bottom = _dg_singletons._bottom_dg
-
-
 from streamlit.elements.lib.mutable_status_container import (
     StatusContainer as _StatusContainer,
 )
 from streamlit.elements.lib.dialog import Dialog as _Dialog
 
-_dg_singletons.create_status_container = _StatusContainer._create
-_dg_singletons.create_dialog = _Dialog._create
+# instantiate the DeltaGeneratorSingleton
+_dg_singleton = _DeltaGeneratorSingleton(
+    delta_generator_cls=_DeltaGenerator,
+    status_container_cls=_StatusContainer,
+    dialog_container_cls=_Dialog,
+)
+_main = _dg_singleton._main_dg
+sidebar = _dg_singleton._sidebar_dg
+_event = _dg_singleton._event_dg
+_bottom = _dg_singleton._bottom_dg
+
 
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,

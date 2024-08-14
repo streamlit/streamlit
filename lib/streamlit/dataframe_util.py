@@ -686,9 +686,9 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
 def _show_data_information(msg: str) -> None:
     """Show a message to the user with important information
     about the processed dataset."""
-    from streamlit.delta_generator_singletons import get_main_dg
+    from streamlit.delta_generator_singletons import get_dg_singleton_instance
 
-    get_main_dg().caption(msg)
+    get_dg_singleton_instance().main_dg.caption(msg)
 
 
 def convert_anything_to_arrow_bytes(
