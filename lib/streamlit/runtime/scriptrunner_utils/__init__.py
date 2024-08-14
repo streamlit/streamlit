@@ -12,3 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""The modules in this package are separated from
+the scriptrunner-package, because they are more or less
+standalone and other modules import them quite frequently.
+This separation helps us to remove dependency cycles.
+"""
