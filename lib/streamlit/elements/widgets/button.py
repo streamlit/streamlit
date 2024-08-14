@@ -31,7 +31,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import runtime
-from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException

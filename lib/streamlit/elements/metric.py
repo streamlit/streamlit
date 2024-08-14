@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-Value: TypeAlias = Union["np.integer", "np.floating", float, int, str, None]
+Value: TypeAlias = Union["np.integer[Any]", "np.floating[Any]", float, int, str, None]
 Delta: TypeAlias = Union[float, int, str, None]
 DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
