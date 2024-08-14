@@ -37,6 +37,7 @@ from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import dataframe_util, type_util
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartStackType,
@@ -1882,9 +1883,6 @@ class VegaChartsMixin:
         vega_lite_proto.theme = theme or ""
 
         if is_selection_activated:
-            # Import here to avoid circular imports
-            from streamlit.elements.form import current_form_id
-
             # Load the stabilized spec again as a dict:
             final_spec = json.loads(vega_lite_proto.spec)
             # Temporary limitation to disallow multi-view charts (compositions) with selections.

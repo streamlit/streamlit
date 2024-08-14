@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 from typing_extensions import TypeGuard
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,

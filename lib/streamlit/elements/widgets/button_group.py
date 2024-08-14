@@ -28,7 +28,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
