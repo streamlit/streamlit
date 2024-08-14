@@ -48,6 +48,7 @@ describe("Spinner component", () => {
 
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
+    expect(spinnerContainer).toHaveClass("stSpinner")
   })
 
   it("sets the text and width correctly", () => {

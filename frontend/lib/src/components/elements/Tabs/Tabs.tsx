@@ -40,7 +40,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
   renderTabContent: (childProps: any) => ReactElement
 }
 
-function Tabs(props: TabProps): ReactElement {
+function Tabs(props: Readonly<TabProps>): ReactElement {
   const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
   const { fragmentIdsThisRun } = useContext(LibContext)
 
@@ -146,7 +146,9 @@ function Tabs(props: TabProps): ReactElement {
       >
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
           // Reset available tab labels when rerendering
-          if (index === 0) allTabLabels = []
+          if (index === 0) {
+            allTabLabels = []
+          }
 
           // If the tab is stale, disable it
           const isStaleTab = isElementStale(

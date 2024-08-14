@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 export const StyledViewButton = styled.button(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
-  lineHeight: "1.4rem",
+  lineHeight: theme.lineHeights.base,
   color: theme.colors.fadedText60,
   backgroundColor: theme.colors.transparent,
   border: "none",
@@ -45,7 +45,7 @@ export const StyledToastWrapper = styled.div<StyledToastMessageProps>(
     gap: theme.spacing.lg,
 
     "> span": {
-      marginTop: "0.25rem",
+      marginTop: theme.spacing.twoXS,
     },
   })
 )
