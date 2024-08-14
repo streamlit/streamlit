@@ -15,10 +15,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -74,6 +74,42 @@ class SelectboxSerde(Generic[T]):
 
 
 class SelectboxMixin:
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str = "Choose an option",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str = "Choose an option",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T | None: ...
+
     @gather_metrics("selectbox")
     def selectbox(
         self,

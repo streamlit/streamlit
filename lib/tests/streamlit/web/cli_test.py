@@ -31,9 +31,8 @@ import requests
 import requests_mock
 from click.testing import CliRunner
 from parameterized import parameterized
-from requests.adapters import HTTPAdapter
+from requests.adapters import HTTPAdapter, Retry
 from testfixtures import tempdir
-from urllib3 import Retry
 
 import streamlit
 import streamlit.web.bootstrap

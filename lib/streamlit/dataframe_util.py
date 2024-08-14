@@ -686,9 +686,9 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
 def _show_data_information(msg: str) -> None:
     """Show a message to the user with important information
     about the processed dataset."""
-    from streamlit.delta_generator import main_dg
+    from streamlit.delta_generator_singletons import get_dg_singleton_instance
 
-    main_dg.caption(msg)
+    get_dg_singleton_instance().main_dg.caption(msg)
 
 
 def convert_anything_to_arrow_bytes(
@@ -1192,7 +1192,7 @@ def convert_pandas_df_to_data_format(
         data_format == DataFormat.POLARS_DATAFRAME
         or data_format == DataFormat.POLARS_LAZYFRAME
     ):
-        import polars as pl
+        import polars as pl  # type: ignore[import-not-found]
 
         return pl.from_pandas(df)
     elif data_format == DataFormat.POLARS_SERIES:
@@ -1200,7 +1200,7 @@ def convert_pandas_df_to_data_format(
 
         return pl.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.XARRAY_DATASET:
-        import xarray as xr
+        import xarray as xr  # type: ignore[import-not-found]
 
         return xr.Dataset.from_dataframe(df)
     elif data_format == DataFormat.XARRAY_DATA_ARRAY:

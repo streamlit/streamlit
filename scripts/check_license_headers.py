@@ -56,7 +56,7 @@ IGNORE_PATTERN = re.compile(
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini)$"
-    r"|^lib/(test|dev)-requirements\.txt$"
+    r"|^lib/.*-requirements\.txt$"
     r"|^lib/min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
     r"|\.credentials/\.gitignore$"
