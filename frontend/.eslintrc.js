@@ -55,8 +55,9 @@ module.exports = {
     // Allows for the use of imports
     sourceType: "module",
   },
-  // Ignore our auto-generated and vendored code
+  // Ignore our auto-generated, patched, and vendored code
   ignorePatterns: [
+    "lib/src/patches/@protobufjs/inquire.js",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
     "**/vendor/*",

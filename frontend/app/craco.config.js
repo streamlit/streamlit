@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+const path = require("path")
+const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin")
+
 module.exports = {
   devServer: {
     static: {
@@ -23,12 +27,13 @@ module.exports = {
   },
   jest: {
     configure: jestConfig => {
-      const path = require("path")
       // use local files for @streamlit/lib, specifically needed for yarn test as
       // jest and webpack configs are different environments
       jestConfig.moduleNameMapper["^@streamlit/lib$"] = path.resolve(
         __dirname,
-        "../lib/src"
+        "..",
+        "lib",
+        "src"
       )
       jestConfig.setupFiles = ["jest-canvas-mock"]
 
@@ -52,8 +57,6 @@ module.exports = {
   },
   webpack: {
     configure: webpackConfig => {
-      // this file overrides the default CRA configurations (webpack, eslint, babel, etc)
-      const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin")
       // ignore webpack warnings by source-map-loader https://github.com/facebook/create-react-app/pull/11752
       webpackConfig.ignoreWarnings = [/Failed to parse source map from/]
       webpackConfig.resolve.mainFields = ["module", "main"]
@@ -61,6 +64,21 @@ module.exports = {
       webpackConfig.resolve.fallback ||= {}
       webpackConfig.resolve.fallback.tty = false
       webpackConfig.resolve.fallback.os = false
+
+      // Patch "@protobufjs/inquire" to remove the "eval" that is used to
+      // get "require" in Node environments.
+      // See https://github.com/protobufjs/protobuf.js/issues/997
+      webpackConfig.resolve.alias = {
+        "@protobufjs/inquire": path.resolve(
+          __dirname,
+          "..",
+          "lib",
+          "src",
+          "patches",
+          "@protobufjs",
+          "inquire.js"
+        ),
+      }
 
       // Apache Arrow uses .mjs
       webpackConfig.module.rules.push({
