@@ -17,7 +17,7 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast, overload
 
 from typing_extensions import TypeAlias
 
@@ -51,6 +51,8 @@ if TYPE_CHECKING:
 
 
 Number: TypeAlias = Union[int, float]
+IntOrNone = TypeVar("IntOrNone", int, None)
+FloatOrNone = TypeVar("FloatOrNone", float, None)
 
 
 @dataclass
@@ -73,47 +75,91 @@ class NumberInputSerde:
 
 
 class NumberInputMixin:
-    @overload
-    def number_input(
-        self,
-        label: str,
-        min_value: Number | None = None,
-        max_value: Number | None = None,
-        value: Number | Literal["min"] = "min",
-        step: Number | None = None,
-        format: str | None = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        placeholder: str | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-    ) -> Number:
-        pass
+    # For easier readability, all the arguments with un-changing types across these overload signatures have been
+    # collapsed onto a single line.
 
+    # fmt: off
+    # If "min_value: int" is given and all other numerical inputs are
+    #   "int"s or not provided (value optionally being "min"), return "int"
+    # If "min_value: int, value: None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
     @overload
     def number_input(
         self,
         label: str,
-        min_value: Number | None = None,
-        max_value: Number | None = None,
-        value: None = None,
-        step: Number | None = None,
-        format: str | None = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        placeholder: str | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-    ) -> Number | None:
-        pass
+        min_value: int,
+        max_value: int | None = None,
+        value: IntOrNone | Literal["min"] = "min",
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int | IntOrNone:
+        ...
+
+    # If "max_value: int" is given and all other numerical inputs are
+    #   "int"s or not provided (value optionally being "min"), return "int"
+    # If "max_value: int, value=None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int | None = None,
+        *,
+        max_value: int,
+        value: IntOrNone | Literal["min"] = "min",
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int | IntOrNone:
+        ...
+
+    # If "value=int" is given and all other numerical inputs are "int"s
+    #   or not provided, return "int"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int | None = None,
+        max_value: int | None = None,
+        *,
+        value: int,
+        step: int | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int:
+        ...
+
+    # If "step=int" is given and all other numerical inputs are "int"s
+    #   or not provided (value optionally being "min"), return "int"
+    # If "step=int, value=None" is given and all other numerical inputs
+    #   are "int"s or not provided, return "int | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: int | None = None,
+        max_value: int | None = None,
+        value: IntOrNone | Literal["min"] = "min",
+        *,
+        step: int,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> int | IntOrNone:
+        ...
+
+    # If all numerical inputs are floats (with value optionally being "min")
+    #   or are not provided, return "float"
+    # If only "value=None" is given and none of the other numerical inputs
+    #   are "int"s, return "float | None"
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        value: FloatOrNone | Literal["min"] = "min",
+        step: float | None = None,
+        format: str | None = None, key: Key | None = None, help: str | None = None, on_change: WidgetCallback | None = None, args: WidgetArgs | None = None, kwargs: WidgetKwargs | None = None, *, placeholder: str | None = None, disabled: bool = False, label_visibility: LabelVisibility = "visible"
+    ) -> float | FloatOrNone:
+        ...
+    # # fmt: on
 
     @gather_metrics("number_input")
     def number_input(
