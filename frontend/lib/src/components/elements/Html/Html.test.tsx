@@ -37,8 +37,10 @@ describe("HTML element", () => {
     const props = getProps()
     render(<Html {...props} />)
     const html = screen.getByTestId("stHtml")
+    expect(html).toBeInTheDocument()
     expect(html).toHaveTextContent("Test Html")
     expect(html).toHaveStyle("width: 100px")
+    expect(html).toHaveClass("stHtml")
   })
 
   it("handles <style> tags - applies style", () => {
@@ -57,7 +59,7 @@ describe("HTML element", () => {
     expect(screen.getByText("Test Html")).toHaveStyle("color: orange")
     // Check that the unnecessary spacing handling by hiding parent
     // eslint-disable-next-line testing-library/no-node-access
-    expect(html.parentElement).toHaveClass("empty-html")
+    expect(html.parentElement).toHaveClass(".stHtml-empty")
   })
 
   it("sanitizes <script> tags", () => {
