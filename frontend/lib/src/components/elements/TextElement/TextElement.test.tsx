@@ -23,7 +23,6 @@ import { render } from "@streamlit/lib/src/test_util"
 import { Text as TextProto } from "@streamlit/lib/src/proto"
 
 import TextElement, { TextProps } from "./TextElement"
-import TextElement from "../../../../dist/components/elements/TextElement/TextElement"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({
