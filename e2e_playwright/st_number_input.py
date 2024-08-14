@@ -12,8 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+from __future__ import annotations
+
 import streamlit as st
 from streamlit import runtime
+from streamlit.errors import NumberInputInvalidMinValueException, set_exception_handler
+
+
+def exception_handler(exc: BaseException) -> BaseException | None:
+    if isinstance(exc, NumberInputInvalidMinValueException):
+        # Custom error handling
+        st.image("https://media1.tenor.com/m/t7_iTN0iYekAAAAd/sad-sad-cat.gif")
+        st.error(
+            "Die Zahl in `value` Parameter ({value}) muss größer oder gleich dem "
+            "`min_value` Parameter ({min_value}) sein.".format(**exc.exec_kwargs),
+            icon="😿",
+        )
+        return None
+    return exc
+
+
+set_exception_handler(exception_handler)
 
 v1 = st.number_input("number input 1 (default)", help="Help text")
 st.write("number input 1 (default) - value: ", v1)
@@ -74,3 +94,8 @@ v12 = st.number_input(
     key="number_input_12",
 )
 st.write("number input 12 (value from state & min=1) - value: ", v12)
+
+
+st.number_input(
+    "number input 13 (raises exception)", min_value=10, max_value=5, value=7
+)

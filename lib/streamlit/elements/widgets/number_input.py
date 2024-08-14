@@ -32,7 +32,13 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    NumberInputDifferentTypesException,
+    NumberInputInvalidFormatException,
+    NumberInputInvalidMaxValueException,
+    NumberInputInvalidMinValueException,
+    StreamlitAPIException,
+)
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -277,6 +283,21 @@ class NumberInputMixin:
             The current value of the numeric input widget or ``None`` if the widget
             is empty. The return type will match the data type of the value parameter.
 
+        Raises
+        ------
+        NumberInputInvalidMinValueException
+            If the default `value` is less than the minimum value.
+
+        NumberInputInvalidMaxValueException
+            If the default `value` is greater than the maximum value.
+
+        NumberInputInvalidFormatException
+            If the format string contains invalid characters.
+
+        NumberInputDifferentTypesException
+            If the value, min_value, max_value or step arguments are of different types.
+
+
         Example
         -------
         >>> import streamlit as st
@@ -379,12 +400,11 @@ class NumberInputMixin:
         )
 
         if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
+            raise NumberInputDifferentTypesException(
+                type(value).__name__,
+                type(min_value).__name__,
+                type(max_value).__name__,
+                type(step).__name__,
             )
 
         session_state = get_session_state().filtered_state
@@ -437,22 +457,15 @@ class NumberInputMixin:
         try:
             float(format % 2)
         except (TypeError, ValueError):
-            raise StreamlitAPIException(
-                "Format string for st.number_input contains invalid characters: %s"
-                % format
-            )
+            raise NumberInputInvalidFormatException(format)
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
 
         if min_value is not None and value is not None and min_value > value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be greater than or equal to the `min_value` {min_value}"
-            )
+            raise NumberInputInvalidMinValueException(value, min_value)
         if max_value is not None and value is not None and max_value < value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
-            )
+            raise NumberInputInvalidMaxValueException(value, max_value)
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.

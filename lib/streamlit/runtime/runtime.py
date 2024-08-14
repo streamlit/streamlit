@@ -19,7 +19,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
+from typing import TYPE_CHECKING, Awaitable, Callable, Final, NamedTuple
 
 from streamlit import config
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
@@ -213,6 +213,9 @@ class Runtime:
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
         )
+        self._exception_handler: (
+            None | Callable[[BaseException], BaseException | None]
+        ) = None
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
@@ -248,6 +251,18 @@ class Runtime:
     @property
     def stats_mgr(self) -> StatsManager:
         return self._stats_mgr
+
+    @property
+    def exception_handler(
+        self,
+    ) -> None | Callable[[BaseException], BaseException | None]:
+        return self._exception_handler
+
+    @exception_handler.setter
+    def exception_handler(
+        self, handler: Callable[[BaseException], BaseException | None]
+    ) -> None:
+        self._exception_handler = handler
 
     @property
     def stopped(self) -> Awaitable[None]:
