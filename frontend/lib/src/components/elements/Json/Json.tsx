@@ -37,7 +37,10 @@ export interface JsonProps {
 /**
  * Functional element representing JSON structured text.
  */
-export default function Json({ width, element }: JsonProps): ReactElement {
+export default function Json({
+  width,
+  element,
+}: Readonly<JsonProps>): ReactElement {
   const styleProp = { width }
   const theme: EmotionTheme = useTheme()
 
@@ -73,7 +76,12 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   }
 
   return (
-    <div data-testid="stJson" style={styleProp} ref={elementRef}>
+    <div
+      className="stJson"
+      data-testid="stJson"
+      style={styleProp}
+      ref={elementRef}
+    >
       <ReactJson
         src={bodyObject}
         collapsed={element.maxExpandDepth ?? !element.expanded}
