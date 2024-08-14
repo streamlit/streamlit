@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Any
 
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
-from streamlit.delta_generator import main_dg
-from streamlit.elements.form import current_form_id
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
@@ -222,7 +222,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        dg = main_dg
+        dg = get_dg_singleton_instance().main_dg
 
         element = Element()
         return_value = marshall_component(dg, element)
@@ -243,7 +243,8 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
     def __ne__(self, other) -> bool:
         """Inequality operator."""
 
-        # we have to use "not X == Y"" here because if we use "X != Y" we call __ne__ again and end up in recursion
+        # we have to use "not X == Y"" here because if we use "X != Y"
+        # we call __ne__ again and end up in recursion
         return not self == other
 
     def __str__(self) -> str:
