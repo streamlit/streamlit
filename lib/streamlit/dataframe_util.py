@@ -33,9 +33,11 @@ from typing import (
     Iterable,
     List,
     Protocol,
+    Sequence,
     TypeVar,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from typing_extensions import TypeAlias, TypeGuard
@@ -94,6 +96,35 @@ V_co = TypeVar(
 )
 
 
+@runtime_checkable
+class DBAPICursor(Protocol):
+    """Protocol for DBAPI 2.0 Cursor objects (PEP 249).
+    This is a simplified version of the DBAPI Cursor protocol.
+    Specification: https://peps.python.org/pep-0249/
+    Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
+    """
+
+    @property
+    def description(
+        self,
+    ) -> (
+        Sequence[
+            tuple[
+                str,
+                Any | None,
+                int | None,
+                int | None,
+                int | None,
+                int | None,
+                bool | None,
+            ]
+        ]
+        | None
+    ): ...
+    def fetchmany(self, size: int = ..., /) -> Sequence[Sequence[Any]]: ...
+    def fetchall(self) -> Sequence[Sequence[Any]]: ...
+
+
 class DataFrameGenericAlias(Protocol[V_co]):
     """Technically not a GenericAlias, but serves the same purpose in
     OptionSequence below, in that it is a type which admits DataFrame,
@@ -125,6 +156,7 @@ Data: TypeAlias = Union[
     "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     Dict[Any, Any],
+    DBAPICursor,
     None,
 ]
 
@@ -163,6 +195,7 @@ class DataFormat(Enum):
     COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
     COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
     KEY_VALUE_DICT = auto()  # {index: value}
+    DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
 
 
 def is_dataframe_like(obj: object) -> bool:
@@ -200,6 +233,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
         DataFormat.COLUMN_SERIES_MAPPING,
+        DataFormat.DBAPI_CURSOR,
     ]
 
 
@@ -215,6 +249,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Ray Dataset
     - Polars LazyFrame
     - Generator functions
+    - DB API Cursor
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -229,6 +264,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
         or inspect.isgeneratorfunction(obj)
+        or is_dbapi_cursor(obj)
     )
 
 
@@ -317,6 +353,14 @@ def is_ray_dataset(obj: object) -> bool:
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
+
+
+def is_dbapi_cursor(obj: object) -> TypeGuard[DBAPICursor]:
+    """True if obj looks like a DB API 2.0 Cursor.
+
+    https://peps.python.org/pep-0249/
+    """
+    return isinstance(obj, DBAPICursor)
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -532,6 +576,16 @@ def convert_anything_to_pandas_df(
                 "rows. Call `to_pandas()` on the data object to show more."
             )
         return cast(pd.DataFrame, data)
+
+    if is_dbapi_cursor(data):
+        columns = [d[0] for d in data.description] if data.description else None
+        data = pd.DataFrame(data.fetchmany(max_unevaluated_rows), columns=columns)
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `fetchall()` on the Cursor to show more."
+            )
+        return data
 
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
@@ -1044,6 +1098,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_dbapi_cursor(input_data):
+        return DataFormat.DBAPI_CURSOR
     elif (
         isinstance(
             input_data,
@@ -1164,6 +1220,7 @@ def convert_pandas_df_to_data_format(
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
+        DataFormat.DBAPI_CURSOR,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:

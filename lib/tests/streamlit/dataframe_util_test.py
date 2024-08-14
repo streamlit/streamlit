@@ -449,6 +449,33 @@ class DataframeUtilTest(unittest.TestCase):
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
+    def test_verify_sqlite3_integration(self):
+        """Verify that sqlite3 cursor can be used as a data source."""
+        import sqlite3
+
+        con = sqlite3.connect("file::memory:")
+        cur = con.cursor()
+        cur.execute("CREATE TABLE movie(title, year, score)")
+        cur.execute("""
+            INSERT INTO movie VALUES
+                ('Monty Python and the Holy Grail', 1975, 8.2),
+                ('And Now for Something Completely Different', 1971, 7.5)
+        """)
+        con.commit()
+        db_cursor = cur.execute("SELECT * FROM movie")
+        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+        assert (
+            dataframe_util.determine_data_format(db_cursor)
+            is dataframe_util.DataFormat.DBAPI_CURSOR
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == (2, 3)
+        con.close()
+
     @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
