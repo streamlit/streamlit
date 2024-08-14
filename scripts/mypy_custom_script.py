@@ -29,7 +29,7 @@ from typing import Iterable
 import click
 import mypy.main as mypy_main
 
-PATHS = ["lib/streamlit/", "scripts/", "e2e/scripts/"]
+PATHS = ["lib/streamlit/", "lib/tests/streamlit/typing/", "scripts/", "e2e/scripts/"]
 
 
 class Module:

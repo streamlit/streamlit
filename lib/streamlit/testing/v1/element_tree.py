@@ -36,10 +36,9 @@ from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import (
-    SliderScalar,
-    SliderScalarT,
     SliderSerde,
-    Step,
+    SliderStep,
+    SliderValueT,
 )
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
@@ -1127,17 +1126,17 @@ class SelectSlider(Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class Slider(Widget, Generic[SliderScalarT]):
+class Slider(Widget, Generic[SliderValueT]):
     """A representation of ``st.slider``."""
 
-    _value: SliderScalarT | Sequence[SliderScalarT] | None
+    _value: SliderValueT | Sequence[SliderValueT] | None
 
     proto: SliderProto = field(repr=False)
     label: str
     data_type: SliderProto.DataType.ValueType
-    min: SliderScalar
-    max: SliderScalar
-    step: Step
+    min: SliderValueT
+    max: SliderValueT
+    step: SliderStep
     help: str
     form_id: str
 
@@ -1146,8 +1145,8 @@ class Slider(Widget, Generic[SliderScalarT]):
         self.type = "slider"
 
     def set_value(
-        self, v: SliderScalarT | Sequence[SliderScalarT]
-    ) -> Slider[SliderScalarT]:
+        self, v: SliderValueT | Sequence[SliderValueT]
+    ) -> Slider[SliderValueT]:
         """Set the (single) value of the slider."""
         self._value = v
         return self
@@ -1164,7 +1163,7 @@ class Slider(Widget, Generic[SliderScalarT]):
         return ws
 
     @property
-    def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
+    def value(self) -> SliderValueT | Sequence[SliderValueT]:
         """The currently selected value or range. (Any or Sequence of Any)"""
         if self._value is not None:
             return self._value
@@ -1175,8 +1174,8 @@ class Slider(Widget, Generic[SliderScalarT]):
             return state[self.id]  # type: ignore
 
     def set_range(
-        self, lower: SliderScalarT, upper: SliderScalarT
-    ) -> Slider[SliderScalarT]:
+        self, lower: SliderValueT, upper: SliderValueT
+    ) -> Slider[SliderValueT]:
         """Set the ranged value of the slider."""
         return self.set_value([lower, upper])
 
