@@ -600,7 +600,11 @@ def convert_anything_to_pandas_df(
         return data
 
     if is_dbapi_cursor(data):
-        columns = [d[0] for d in data.description] if data.description else None
+        # Based on the specification, the first item in the description is the
+        # column name (if available)
+        columns = (
+            [d[0] if d else "" for d in data.description] if data.description else None
+        )
         data = pd.DataFrame(data.fetchmany(max_unevaluated_rows), columns=columns)
         if data.shape[0] == max_unevaluated_rows:
             _show_data_information(
