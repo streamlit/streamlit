@@ -59,7 +59,7 @@ describe("HTML element", () => {
     expect(screen.getByText("Test Html")).toHaveStyle("color: orange")
     // Check that the unnecessary spacing handling by hiding parent
     // eslint-disable-next-line testing-library/no-node-access
-    expect(html.parentElement).toHaveClass(".stHtml-empty")
+    expect(html.parentElement).toHaveClass("stHtml-empty")
   })
 
   it("sanitizes <script> tags", () => {
