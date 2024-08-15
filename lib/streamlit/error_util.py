@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Final
 
-import streamlit as st
+import streamlit
 from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
@@ -52,9 +52,6 @@ def _print_rich_exception(e: BaseException) -> None:
         tab_size=8,
     )
 
-    # move here to silence GitHub import cycle warning
-    import streamlit.runtime.scriptrunner.script_runner as script_runner
-
     # Print exception via rich
     console.print(
         rich_traceback.Traceback.from_exception(
@@ -66,9 +63,14 @@ def _print_rich_exception(e: BaseException) -> None:
             max_frames=100,
             word_wrap=False,
             extra_lines=3,
-            suppress=[script_runner],  # Ignore script runner
+            suppress=[streamlit],
         )
     )
+
+
+def _show_exception(ex: BaseException) -> None:
+    """Show the exception on the frontend."""
+    streamlit.exception(ex)
 
 
 def handle_uncaught_app_exception(ex: BaseException) -> None:
@@ -78,6 +80,7 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
+
     error_logged = False
 
     if config.get_option("logger.enableRich"):
@@ -95,12 +98,11 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
 
     if config.get_option("client.showErrorDetails"):
         if not error_logged:
-            # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
             _LOGGER.warning("Uncaught app exception", exc_info=ex)
-        st.exception(ex)
+        _show_exception(ex)
     else:
         if not error_logged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
             _LOGGER.error("Uncaught app exception", exc_info=ex)
-        st.exception(UncaughtAppException(ex))
+        _show_exception(UncaughtAppException(ex))

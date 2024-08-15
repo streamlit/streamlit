@@ -79,7 +79,6 @@ class JsonMixin:
            height: 385px
 
         """
-        import streamlit as st
 
         if is_custom_dict(body):
             body = body.to_dict()
@@ -98,7 +97,7 @@ class JsonMixin:
                 # Serialize body to string and try to interpret sets as lists
                 body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
-                st.warning(
+                self.dg.warning(
                     "Warning: this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
