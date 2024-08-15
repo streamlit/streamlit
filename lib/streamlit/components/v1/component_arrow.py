@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from streamlit import dataframe_util
+from streamlit import dataframe_util, type_util
 from streamlit.elements.lib import pandas_styler_utils
 
 if TYPE_CHECKING:
@@ -122,7 +122,7 @@ def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
 
     """
 
-    if dataframe_util.is_pyarrow_version_less_than("14.0.1"):
+    if type_util.is_pyarrow_version_less_than("14.0.1"):
         raise RuntimeError(
             "The installed pyarrow version is not compatible with this component. "
             "Please upgrade to 14.0.1 or higher: pip install -U pyarrow"
