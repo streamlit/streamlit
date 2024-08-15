@@ -36,7 +36,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
-    maybe_coerce_enum_sequence,
+    # maybe_coerce_enum_sequence,
     to_key,
 )
 from streamlit.elements.widgets.multiselect import MultiSelectSerde
@@ -305,7 +305,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-    ) -> list[V]:
+    ) -> list[V] | V | None:
         # when selection mode is a single-value selection, the default must be a single
         # value too.
         if (
@@ -348,11 +348,17 @@ class ButtonGroupMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
-            after_register_callback=lambda widget_state: maybe_coerce_enum_sequence(
-                widget_state, options, indexable_options
-            ),
+            # after_register_callback=lambda widget_state: maybe_coerce_enum_sequence(
+            #     widget_state, options, indexable_options
+            # ),
         )
-        return res.value
+
+        if selection_mode == "multiselect" and len(res.value) > 0:
+            return res.value
+
+        return (
+            res.value[0] if selection_mode == "select" and len(res.value) > 0 else None
+        )
 
     def _button_group(
         self,
