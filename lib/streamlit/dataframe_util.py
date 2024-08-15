@@ -536,7 +536,7 @@ def convert_anything_to_pandas_df(
 
     Parameters
     ----------
-    data : any
+    data : dataframe-, array, or collections-like object
         The data to convert to a Pandas DataFrame.
 
     max_unevaluated_rows: int
@@ -875,7 +875,7 @@ def convert_anything_to_arrow_bytes(
 
     Parameters
     ----------
-    data : any
+    data : dataframe-, array-, or collections-like object
         The data to convert to Arrow bytes.
 
     max_unevaluated_rows: int
@@ -940,7 +940,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
     Parameters
     ----------
 
-    obj : OptionSequence
+    obj : dataframe-, array-, or collections-like object
         The object to convert to a list.
 
     Returns
