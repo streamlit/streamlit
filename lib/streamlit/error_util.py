@@ -14,14 +14,21 @@
 
 from __future__ import annotations
 
+import os
 from typing import Final
 
+import streamlit
 from streamlit import config
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
+# The path to the streamlit package directory used to
+# suppress internal tracebacks in error messages.
+_STREAMLIT_DIR: Final = os.path.join(
+    os.path.realpath(os.path.dirname(streamlit.__file__)), ""
+)
 
 
 def _print_rich_exception(e: BaseException) -> None:
@@ -52,9 +59,6 @@ def _print_rich_exception(e: BaseException) -> None:
         tab_size=8,
     )
 
-    # move here to silence GitHub import cycle warning
-    import streamlit.runtime.scriptrunner.script_runner as script_runner
-
     # Print exception via rich
     console.print(
         rich_traceback.Traceback.from_exception(
@@ -66,7 +70,7 @@ def _print_rich_exception(e: BaseException) -> None:
             max_frames=100,
             word_wrap=False,
             extra_lines=3,
-            suppress=[script_runner],  # Ignore script runner
+            suppress=[_STREAMLIT_DIR],
         )
     )
 
