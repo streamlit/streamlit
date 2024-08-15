@@ -20,33 +20,30 @@ import unittest
 from unittest.mock import patch
 
 from streamlit.error_util import _print_rich_exception, handle_uncaught_app_exception
+from streamlit.errors import UncaughtAppException
 from tests import testutil
 
 
 class ErrorUtilTest(unittest.TestCase):
-    @patch("streamlit.exception")
-    @patch("streamlit.error")
-    def test_uncaught_exception_show_details(self, mock_st_error, mock_st_exception):
+    @patch("streamlit.error_util._show_exception")
+    def test_uncaught_exception_show_details(self, mock_show_exception):
         """If client.showErrorDetails is true, uncaught app errors print
         to the frontend."""
         with testutil.patch_config_options({"client.showErrorDetails": True}):
             exc = RuntimeError("boom!")
             handle_uncaught_app_exception(exc)
 
-            mock_st_error.assert_not_called()
-            mock_st_exception.assert_called_once_with(exc)
+            mock_show_exception.assert_called_once_with(exc)
 
-    @patch("streamlit.exception")
-    @patch("streamlit.error")
-    def test_uncaught_exception_no_details(self, mock_st_error, mock_st_exception):
+    @patch("streamlit.error_util._show_exception")
+    def test_uncaught_exception_no_details(self, mock_show_exception):
         """If client.showErrorDetails is false, uncaught app errors are logged,
         and a generic error message is printed to the frontend."""
         with testutil.patch_config_options({"client.showErrorDetails": False}):
             exc = RuntimeError("boom!")
             handle_uncaught_app_exception(exc)
 
-            mock_st_error.assert_not_called()
-            mock_st_exception.assert_called_once()
+            mock_show_exception.assert_called_once_with(UncaughtAppException(exc))
 
     def test_handle_print_rich_exception(self):
         """Test if the print rich exception method is working fine."""

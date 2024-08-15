@@ -75,6 +75,11 @@ def _print_rich_exception(e: BaseException) -> None:
     )
 
 
+def _show_exception(ex: BaseException) -> None:
+    """Show the exception on the frontend."""
+    get_dg_singleton_instance().main_dg.exception(ex)
+
+
 def handle_uncaught_app_exception(ex: BaseException) -> None:
     """Handle an exception that originated from a user app.
 
@@ -100,12 +105,11 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
 
     if config.get_option("client.showErrorDetails"):
         if not error_logged:
-            # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
             _LOGGER.warning("Uncaught app exception", exc_info=ex)
-        get_dg_singleton_instance().main_dg.exception(ex)
+        _show_exception(ex)
     else:
         if not error_logged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
             _LOGGER.error("Uncaught app exception", exc_info=ex)
-        get_dg_singleton_instance().main_dg.exception(UncaughtAppException(ex))
+        _show_exception(UncaughtAppException(ex))
