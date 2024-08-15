@@ -29,6 +29,8 @@ import {
   StyledIconButtonActive,
   StyledLinkButton,
   StyledMinimalButton,
+  StyledPillsButton,
+  StyledPillsButtonActive,
   StyledPrimaryButton,
   StyledPrimaryFormSubmitButton,
   StyledSecondaryButton,
@@ -57,6 +59,10 @@ function BaseButton({
     ComponentType = StyledIconButton
   } else if (kind === BaseButtonKind.ICON_ACTIVE) {
     ComponentType = StyledIconButtonActive
+  } else if (kind === BaseButtonKind.PILLS) {
+    ComponentType = StyledPillsButton
+  } else if (kind === BaseButtonKind.PILLS_ACTIVE) {
+    ComponentType = StyledPillsButtonActive
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {

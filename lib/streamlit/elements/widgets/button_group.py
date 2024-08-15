@@ -152,6 +152,7 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
+    style: Literal["normal", "pills"] = "normal",
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -160,6 +161,7 @@ def _build_proto(
     proto.form_id = current_form_id
     proto.disabled = disabled
     proto.click_mode = click_mode
+    proto.style = ButtonGroupProto.Style.Value(style.upper())
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -302,6 +304,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["select", "multiselect"] = "select",
         disabled: bool = False,
         format_func: Callable[[V], dict[str, str]] | None = None,
+        style: Literal["normal", "pills"] = "normal",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -343,6 +346,7 @@ class ButtonGroupMixin:
             else ButtonGroupProto.SINGLE_SELECT,
             disabled=disabled,
             format_func=_transformed_format_func,
+            style=style,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
@@ -370,6 +374,7 @@ class ButtonGroupMixin:
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
+        style: Literal["normal", "pills"] = "normal",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
@@ -415,6 +420,7 @@ class ButtonGroupMixin:
             form_id,
             click_mode=selection_mode,
             selection_visualization=selection_visualization,
+            style=style,
         )
 
         widget_state = register_widget(

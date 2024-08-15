@@ -36,6 +36,8 @@ export enum BaseButtonKind {
   HEADER_BUTTON = "header",
   HEADER_NO_PADDING = "headerNoPadding",
   ELEMENT_TOOLBAR = "elementToolbar",
+  PILLS = "pills",
+  PILLS_ACTIVE = "pillsActive",
 }
 
 export enum BaseButtonSize {
@@ -262,6 +264,40 @@ export const StyledIconButton = styled(
 
 export const StyledIconButtonActive = styled(
   StyledIconButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    color: theme.colors.white,
+    "&:hover": {
+      backgroundColor: theme.colors.transparent,
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+  }
+})
+
+export const StyledPillsButton = styled(
+  StyledBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    background: theme.colors.white,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    borderRadius: theme.radii.xxl,
+    padding: `${theme.spacing.twoXS}`,
+    fontSize: theme.fontSizes.sm,
+    fontWeight: 400,
+    minHeight: 0,
+
+    "&:hover": {
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+  }
+})
+
+export const StyledPillsButtonActive = styled(
+  StyledPillsButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.primary,
