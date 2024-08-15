@@ -979,6 +979,94 @@ describe("AppRoot.applyDelta", () => {
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
   })
 
+  it("removes a block's children if the block type changes for the same delta path", () => {
+    const newRoot = ROOT.applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          expandable: {
+            expanded: true,
+            label: "label",
+            icon: "",
+          },
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    ).applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+      }),
+      forwardMsgMetadata([0, 1, 1, 0])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode).toBeDefined()
+    expect(newNode.deltaBlock.type).toBe("expandable")
+    expect(newNode.children.length).toBe(1)
+
+    const newRoot2 = newRoot.applyDelta(
+      "new_script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          tabContainer: {},
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const replacedBlock = newRoot2.main.getIn([1, 1]) as BlockNode
+    expect(replacedBlock).toBeDefined()
+    expect(replacedBlock.deltaBlock.type).toBe("tabContainer")
+    expect(replacedBlock.children.length).toBe(0)
+  })
+
+  it("will not remove a block's children if the block type is the same for the same delta path", () => {
+    const newRoot = ROOT.applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          expandable: {
+            expanded: true,
+            label: "label",
+            icon: "",
+          },
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    ).applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+      }),
+      forwardMsgMetadata([0, 1, 1, 0])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode).toBeDefined()
+    expect(newNode.deltaBlock.type).toBe("expandable")
+    expect(newNode.children.length).toBe(1)
+
+    const newRoot2 = newRoot.applyDelta(
+      "new_script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          expandable: {
+            expanded: true,
+            label: "other label",
+            icon: "",
+          },
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const replacedBlock = newRoot2.main.getIn([1, 1]) as BlockNode
+    expect(replacedBlock).toBeDefined()
+    expect(replacedBlock.deltaBlock.type).toBe("expandable")
+    expect(replacedBlock.children.length).toBe(1)
+  })
+
   it("specifies active script hash on 'newElement' deltas", () => {
     const delta = makeProto(DeltaProto, {
       newElement: { text: { body: "newElement!" } },
