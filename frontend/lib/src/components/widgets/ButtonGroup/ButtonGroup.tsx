@@ -252,31 +252,41 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
 
   const valueString = useMemo(() => JSON.stringify(value), [value])
   useEffect(() => {
-    const parsedValue = JSON.parse(valueString)
-    if (elementRef.current.setValue) {
-      setSelected(parsedValue)
-      syncWithWidgetManager(
-        selected,
-        elementRef.current,
-        widgetMgr,
-        fragmentId,
-        false
-      )
-      elementRef.current.setValue = false
-    } else {
-      // only commit to the backend if the value has changed
-      if (isEqual(selected, selectedRef.current)) {
-        return
-      }
-      const fromUi = selectedRef.current === undefined ? false : true
-      syncWithWidgetManager(
-        selected,
-        elementRef.current,
-        widgetMgr,
-        fragmentId,
-        fromUi
-      )
+    if (element.setValue) {
+      // We are intentionally setting this to avoid regularly calling this effect.
+      element.setValue = false
+      const val = element.value || []
+      setSelected(val)
     }
+  }, [element])
+
+  useEffect(() => {
+    const parsedValue = JSON.parse(valueString)
+    console.log("useEffect", parsedValue, elementRef.current.setValue)
+    // if (elementRef.current.setValue) {
+    //   setSelected(parsedValue)
+    //   syncWithWidgetManager(
+    //     selected,
+    //     elementRef.current,
+    //     widgetMgr,
+    //     fragmentId,
+    //     false
+    //   )
+    //   elementRef.current.setValue = false
+    // } else {
+    // only commit to the backend if the value has changed
+    if (isEqual(selected, selectedRef.current)) {
+      return
+    }
+    const fromUi = selectedRef.current === undefined ? false : true
+    syncWithWidgetManager(
+      selected,
+      elementRef.current,
+      widgetMgr,
+      fragmentId,
+      fromUi
+    )
+    // }
     selectedRef.current = selected
   }, [selected, widgetMgr, fragmentId, valueString])
 
