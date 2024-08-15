@@ -38,7 +38,10 @@ const sanitizeString = (html: string): string => {
 /**
  * HTML code to insert into the page.
  */
-export default function Html({ element, width }: HtmlProps): ReactElement {
+export default function Html({
+  element,
+  width,
+}: Readonly<HtmlProps>): ReactElement {
   const { body } = element
   const [sanitizedHtml, setSanitizedHtml] = useState(sanitizeString(body))
   const htmlRef = useRef<HTMLDivElement | null>(null)
@@ -56,7 +59,7 @@ export default function Html({ element, width }: HtmlProps): ReactElement {
       htmlRef.current.parentElement?.childElementCount === 1
     ) {
       // div has no rendered content - hide to avoid unnecessary spacing
-      htmlRef.current.parentElement.classList.add("empty-html")
+      htmlRef.current.parentElement.classList.add("stHtml-empty")
     }
   })
 
@@ -67,7 +70,7 @@ export default function Html({ element, width }: HtmlProps): ReactElement {
           className="stHtml"
           data-testid="stHtml"
           ref={htmlRef}
-          style={{ width: width }}
+          style={{ width }}
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
       )}

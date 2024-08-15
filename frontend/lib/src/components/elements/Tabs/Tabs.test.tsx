@@ -56,6 +56,10 @@ describe("st.tabs", () => {
   it("renders without crashing", () => {
     render(<Tabs {...getProps()} />)
 
+    const tabsElement = screen.getByTestId("stTabs")
+    expect(tabsElement).toBeInTheDocument()
+    expect(tabsElement).toHaveClass("stTabs")
+
     const tabsContainer = screen.getByRole("tablist")
     expect(tabsContainer).toBeInTheDocument()
     const tabs = within(tabsContainer).getAllByRole("tab")

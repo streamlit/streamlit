@@ -50,6 +50,7 @@ describe("Popover container", () => {
     )
     const popoverButton = screen.getByTestId("stPopover")
     expect(popoverButton).toBeInTheDocument()
+    expect(popoverButton).toHaveClass("stPopover")
   })
 
   it("renders label as expected", () => {

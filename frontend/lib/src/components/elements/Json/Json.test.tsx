@@ -44,7 +44,9 @@ describe("JSON element", () => {
   it("renders json as expected", () => {
     const props = getProps()
     render(<Json {...props} />)
-    expect(screen.getByTestId("stJson")).toBeInTheDocument()
+    const jsonElement = screen.getByTestId("stJson")
+    expect(jsonElement).toBeInTheDocument()
+    expect(jsonElement).toHaveClass("stJson")
   })
 
   it("should show an error with invalid JSON", () => {
