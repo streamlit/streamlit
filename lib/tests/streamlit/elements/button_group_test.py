@@ -197,9 +197,24 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         self.assertEqual([option.content for option in c.options], [])
 
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
-    def test_defaults(self, defaults, expected):
+    def test_defaults_for_multiselect(self, defaults, expected):
         """Test that valid default can be passed as expected."""
-        st.button_group(["Coffee", "Tea", "Water"], default=defaults)
+        st.button_group(
+            ["Coffee", "Tea", "Water"], default=defaults, selection_mode="multiselect"
+        )
+        c = self.get_delta_from_queue().new_element.button_group
+        self.assertListEqual(c.default[:], expected)
+        self.assertEqual(
+            [option.content for option in c.options],
+            ["Coffee", "Tea", "Water"],
+        )
+
+    @parameterized.expand([(None, []), ([], []), (["Tea"], [1]), ("Coffee", [0])])
+    def test_defaults_for_singleselect(self, defaults, expected):
+        """Test that valid default can be passed as expected."""
+        st.button_group(
+            ["Coffee", "Tea", "Water"], default=defaults, selection_mode="select"
+        )
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(
@@ -218,7 +233,9 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_default_types(self, defaults, expected):
         """Test that iterables other than lists can be passed as defaults."""
-        st.button_group(["Coffee", "Tea", "Water"], default=defaults)
+        st.button_group(
+            ["Coffee", "Tea", "Water"], default=defaults, selection_mode="multiselect"
+        )
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
@@ -264,7 +281,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_options_with_default_types(
         self, options, defaults, expected_options, expected_default
     ):
-        st.button_group(options, default=defaults)
+        st.button_group(options, default=defaults, selection_mode="multiselect")
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected_default)
         self.assertEqual(

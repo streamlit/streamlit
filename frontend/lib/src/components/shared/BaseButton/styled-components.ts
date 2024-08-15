@@ -27,6 +27,7 @@ export enum BaseButtonKind {
   TERTIARY = "tertiary",
   LINK = "link",
   ICON = "icon",
+  ICON_ACTIVE = "iconActive",
   BORDERLESS_ICON = "borderlessIcon",
   BORDERLESS_ICON_ACTIVE = "borderlessIconActive",
   MINIMAL = "minimal",
@@ -251,6 +252,21 @@ export const StyledIconButton = styled(
       backgroundColor: theme.colors.lightGray,
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
+    },
+  }
+})
+
+export const StyledIconButtonActive = styled(
+  StyledIconButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    color: theme.colors.white,
+    "&:hover": {
+      backgroundColor: theme.colors.transparent,
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
     },
   }
 })

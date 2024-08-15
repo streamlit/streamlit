@@ -26,6 +26,7 @@ import {
   StyledHeaderButton,
   StyledHeaderNoPaddingButton,
   StyledIconButton,
+  StyledIconButtonActive,
   StyledLinkButton,
   StyledMinimalButton,
   StyledPrimaryButton,
@@ -54,6 +55,8 @@ function BaseButton({
     ComponentType = StyledLinkButton
   } else if (kind === BaseButtonKind.ICON) {
     ComponentType = StyledIconButton
+  } else if (kind === BaseButtonKind.ICON_ACTIVE) {
+    ComponentType = StyledIconButtonActive
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {
