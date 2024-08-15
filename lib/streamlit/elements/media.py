@@ -168,7 +168,6 @@ class MediaMixin:
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         audio_proto = AudioProto()
-        coordinates = self.dg._get_delta_path_str()
 
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
@@ -181,7 +180,7 @@ class MediaMixin:
                 "Warning: `sample_rate` will be ignored since data is not a numpy "
                 "array."
             )
-
+        coordinates = self.dg._get_delta_path_str()
         marshall_audio(
             coordinates,
             audio_proto,
