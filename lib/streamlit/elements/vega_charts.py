@@ -53,7 +53,7 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.util import HASHLIB_KWARGS

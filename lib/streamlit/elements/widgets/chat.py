@@ -30,7 +30,7 @@ from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,

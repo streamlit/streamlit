@@ -32,7 +32,7 @@ from streamlit.runtime.fragment import (
     fragment,
 )
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,

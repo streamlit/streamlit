@@ -24,8 +24,8 @@ import streamlit as st
 from streamlit import errors
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import coalesce_widget_states
+from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX, compute_widget_id
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import user_key_from_widget_id
@@ -292,7 +292,7 @@ class WidgetManagerTests(unittest.TestCase):
         )
 
         session_state.set_widgets_from_proto(
-            coalesce_widget_states(old_states, new_states)
+            _coalesce_widget_states(old_states, new_states)
         )
 
         self.assertRaises(KeyError, lambda: session_state["old_unset_trigger"])
@@ -316,15 +316,15 @@ class WidgetManagerTests(unittest.TestCase):
         self.assertEqual(3, session_state["shape_changing_trigger"])
 
     def coalesce_widget_states_returns_None_if_both_inputs_None(self):
-        assert coalesce_widget_states(None, None) is None
+        assert _coalesce_widget_states(None, None) is None
 
     def coalesce_widget_states_returns_old_states_if_new_states_None(self):
         old_states = WidgetStates()
-        assert coalesce_widget_states(old_states, None) is old_states
+        assert _coalesce_widget_states(old_states, None) is old_states
 
     def coalesce_widget_states_returns_new_states_if_old_states_None(self):
         new_states = WidgetStates()
-        assert coalesce_widget_states(None, new_states) is new_states
+        assert _coalesce_widget_states(None, new_states) is new_states
 
 
 class WidgetHelperTests(unittest.TestCase):
