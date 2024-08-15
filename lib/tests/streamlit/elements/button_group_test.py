@@ -27,7 +27,6 @@ from streamlit.elements.widgets.button_group import (
     _SELECTED_STAR_ICON,
     _STAR_ICON,
     _THUMB_ICONS,
-    ButtonGroupMixin,
     FeedbackSerde,
     get_mapped_options,
 )
@@ -154,7 +153,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_option_types(self, options, proto_options):
         """Test that it supports different types of options."""
-        ButtonGroupMixin._internal_button_group(st._main, options)
+        st.button_group(options)
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [])
@@ -168,8 +167,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        ButtonGroupMixin._internal_button_group(
-            st._main,
+        st.button_group(
             arg_options,
             default="some str",
         )
@@ -192,7 +190,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_no_options(self, options):
         """Test that it handles no options."""
-        ButtonGroupMixin._internal_button_group(st._main, options)
+        st.button_group(options)
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], [])
@@ -201,9 +199,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):
         """Test that valid default can be passed as expected."""
-        ButtonGroupMixin._internal_button_group(
-            st._main, ["Coffee", "Tea", "Water"], default=defaults
-        )
+        st.button_group(["Coffee", "Tea", "Water"], default=defaults)
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(
@@ -222,9 +218,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_default_types(self, defaults, expected):
         """Test that iterables other than lists can be passed as defaults."""
-        ButtonGroupMixin._internal_button_group(
-            st._main, ["Coffee", "Tea", "Water"], default=defaults
-        )
+        st.button_group(["Coffee", "Tea", "Water"], default=defaults)
 
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected)
@@ -270,7 +264,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_options_with_default_types(
         self, options, defaults, expected_options, expected_default
     ):
-        ButtonGroupMixin._internal_button_group(st._main, options, default=defaults)
+        st.button_group(options, default=defaults)
         c = self.get_delta_from_queue().new_element.button_group
         self.assertListEqual(c.default[:], expected_default)
         self.assertEqual(
@@ -287,13 +281,11 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_invalid_defaults(self, defaults, expected):
         """Test that invalid default trigger the expected exception."""
         with self.assertRaises(expected):
-            ButtonGroupMixin._internal_button_group(
-                st._main, ["Coffee", "Tea", "Water"], default=defaults
-            )
+            st.button_group(["Coffee", "Tea", "Water"], default=defaults)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
-        ButtonGroupMixin._internal_button_group(st._main, ["bar", "baz"])
+        st.button_group(["bar", "baz"])
 
         proto = self.get_delta_from_queue().new_element.button_group
         self.assertEqual(proto.form_id, "")
@@ -303,7 +295,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         """Test that form id is marshalled correctly inside of a form."""
 
         with st.form("form"):
-            ButtonGroupMixin._internal_button_group(st._main, ["bar", "baz"])
+            st.button_group(["bar", "baz"])
         # 2 elements will be created: form block, widget
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
@@ -314,10 +306,10 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
 
-        col1, col2 = st.columns(2)
+        col1, _ = st.columns(2)
 
         with col1:
-            ButtonGroupMixin._internal_button_group(st._main, ["bar", "baz"])
+            st.button_group(["bar", "baz"])
         all_deltas = self.get_all_deltas_from_queue()
 
         # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
