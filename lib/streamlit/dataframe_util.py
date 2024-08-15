@@ -51,6 +51,7 @@ from streamlit.type_util import (
     is_list_like,
     is_namedtuple,
     is_type,
+    is_version_less_than,
 )
 
 if TYPE_CHECKING:
@@ -202,6 +203,53 @@ class DataFormat(Enum):
     KEY_VALUE_DICT = auto()  # {index: value}
     DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
     DUCKDB_RELATION = auto()  # DuckDB Relation
+
+
+def is_pandas_version_less_than(v: str) -> bool:
+    """Return True if the current Pandas version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
+    import pandas as pd
+
+    return is_version_less_than(pd.__version__, v)
+
+
+def is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
+    """
+    import pyarrow as pa
+
+    return is_version_less_than(pa.__version__, v)
 
 
 def is_dataframe_like(obj: object) -> bool:
