@@ -740,10 +740,13 @@ class ButtonMixin:
                     page_link_proto.page = page_name
                     break
 
-        if page_link_proto.page_script_hash == "":
-            raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
-            )
+            if page_link_proto.page_script_hash == "":
+                raise StreamlitAPIException(
+                    f"Could not find page: `{page}`. Must be the file path relative to "
+                    "the main script, from the directory: "
+                    f"`{os.path.basename(main_script_directory)}`. Only the main app "
+                    "file and files in the `pages/` directory are supported."
+                )
 
         return self.dg._enqueue("page_link", page_link_proto)
 
