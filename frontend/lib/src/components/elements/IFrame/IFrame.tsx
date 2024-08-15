@@ -60,8 +60,8 @@ export default function IFrame({
 
   return (
     <iframe
-      className="stIframe"
-      data-testid="stIframe"
+      className="stIFrame"
+      data-testid="stIFrame"
       allow={DEFAULT_IFRAME_FEATURE_POLICY}
       style={style}
       src={src}
