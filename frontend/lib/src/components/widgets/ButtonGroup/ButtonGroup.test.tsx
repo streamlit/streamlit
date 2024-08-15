@@ -137,6 +137,7 @@ describe("ButtonGroup widget", () => {
       )
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
 
+      // click element at index 1 to select it
       fireEvent.click(buttons[1])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -146,6 +147,7 @@ describe("ButtonGroup widget", () => {
       )
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
 
+      // click element at index 0 to select it
       fireEvent.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -153,11 +155,17 @@ describe("ButtonGroup widget", () => {
         { fromUi: true },
         undefined
       )
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
-      // click on same button does not increase counter
+      // click on same button does deselect it
       fireEvent.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+        props.element,
+        [],
+        { fromUi: true },
+        undefined
+      )
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(4)
     })
 
     it("onClick prop for multi select", () => {
