@@ -33,11 +33,20 @@ def outer_fragment():
 def inner_fragment():
     with st.container(border=True):
         st.write(f"inner fragment: {uuid4()}")
-        st.button("rerun inner fragment")
+        st.button("rerun inner fragment1")
 
         # show inner-fragment counter message only if counter is between 1 and 3
         if 1 <= st.session_state.counter < 3:
             st.write(f"Counter has value {st.session_state.counter}")
+
+        inner_fragment2()
+
+
+@st.fragment
+def inner_fragment2():
+    with st.container(border=True):
+        st.write(f"inner fragment2: {uuid4()}")
+        st.button("rerun inner fragment2")
 
 
 st.write(f"outside all fragments: {uuid4()}")
