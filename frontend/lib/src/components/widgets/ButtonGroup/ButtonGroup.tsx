@@ -143,7 +143,8 @@ function createOptionChild(
   index: number,
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
-  selected: number[]
+  selected: number[],
+  style: ButtonGroupProto.Style
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -174,8 +175,15 @@ function createOptionChild(
     //     : BaseButtonKind.BORDERLESS_ICON_ACTIVE
 
     let buttonKind = BaseButtonKind.ICON
+    console.log("contentElement", contentElement, style)
     if (contentElement.type === StreamlitMarkdown) {
-      if (isVisuallySelected || option.selectedContent) {
+      if (style === ButtonGroupProto.Style.PILLS) {
+        buttonKind = BaseButtonKind.PILLS
+
+        if (isVisuallySelected || option.selectedContent) {
+          buttonKind = BaseButtonKind.PILLS_ACTIVE
+        }
+      } else if (isVisuallySelected || option.selectedContent) {
         buttonKind = BaseButtonKind.ICON_ACTIVE
       }
     } else if (contentElement.type === DynamicIcon) {
@@ -210,6 +218,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     options,
     value,
     selectionVisualization,
+    style,
   } = element
 
   const theme: EmotionTheme = useTheme()
@@ -292,7 +301,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       index,
       selectionVisualization,
       clickMode,
-      selected
+      selected,
+      style
     )
     return <Element key={`${option.content}-${index}`} />
   })

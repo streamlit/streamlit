@@ -47,4 +47,10 @@ message ButtonGroup {
     ALL_UP_TO_SELECTED = 1;
   }
   SelectionVisualization selection_visualization = 9;
+
+  enum Style {
+    NORMAL = 0;
+    PILLS = 1;
+  }
+  Style style = 10;
 }
