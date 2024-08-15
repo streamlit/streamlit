@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Final
 
-import streamlit as st
 from streamlit import config
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
@@ -78,6 +78,7 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
+
     error_logged = False
 
     if config.get_option("logger.enableRich"):
@@ -97,10 +98,10 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
         if not error_logged:
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
             _LOGGER.warning("Uncaught app exception", exc_info=ex)
-        st.exception(ex)
+        get_dg_singleton_instance().main_dg.exception(ex)
     else:
         if not error_logged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
             _LOGGER.error("Uncaught app exception", exc_info=ex)
-        st.exception(UncaughtAppException(ex))
+        get_dg_singleton_instance().main_dg.exception(UncaughtAppException(ex))

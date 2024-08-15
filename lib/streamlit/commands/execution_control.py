@@ -21,7 +21,6 @@ from typing import Final, Literal, NoReturn
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.logger import get_logger
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import (
@@ -29,8 +28,6 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     get_script_run_ctx,
 )
-
-_LOGGER: Final = get_logger(__name__)
 
 
 @gather_metrics("stop")
