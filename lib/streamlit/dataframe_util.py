@@ -975,6 +975,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         "period[ns]",
         "period[U]",
         "period[us]",
+        "geometry",
     }:
         return True
 
