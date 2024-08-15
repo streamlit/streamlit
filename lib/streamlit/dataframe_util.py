@@ -536,7 +536,7 @@ def convert_anything_to_pandas_df(
 
     Parameters
     ----------
-    data : dataframe-, array, or collections-like object
+    data : dataframe-, array-, or collections-like object
         The data to convert to a Pandas DataFrame.
 
     max_unevaluated_rows: int
@@ -894,8 +894,8 @@ def convert_anything_to_arrow_bytes(
         return convert_arrow_table_to_arrow_bytes(data)
 
     if is_pandas_data_object(data) or is_unevaluated_data_object(data):
-        # All pandas and unevluated objects should be handled via our pandas
-        # conversion logic. We are already calling it here
+        # All pandas and unevaluated data objects should be handled via
+        # our pandas conversion logic. We are already calling it here
         # to ensure that its not handled via the interchange
         # protocol support below.
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
