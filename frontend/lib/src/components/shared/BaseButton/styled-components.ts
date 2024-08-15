@@ -225,16 +225,20 @@ export const StyledSecondaryFormSubmitButton = styled(
 export const StyledIconButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ size, theme }) => {
-  const iconPadding: Record<BaseButtonSize, string> = {
-    [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
-    [BaseButtonSize.SMALL]: theme.spacing.twoXS,
-    [BaseButtonSize.MEDIUM]: theme.spacing.md,
-    [BaseButtonSize.LARGE]: theme.spacing.lg,
-  }
+  // const iconPadding: Record<BaseButtonSize, string> = {
+  //   [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
+  //   [BaseButtonSize.SMALL]: theme.spacing.twoXS,
+  //   [BaseButtonSize.MEDIUM]: theme.spacing.md,
+  //   [BaseButtonSize.LARGE]: theme.spacing.lg,
+  // }
   return {
     backgroundColor: theme.colors.transparent,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
-    padding: iconPadding[size],
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    // padding: iconPadding[size],
+    flex: "1 1 0",
+    padding: 0,
+    maxWidth: theme.sizes.contentMaxWidth,
+    // width: "max-content",
 
     "&:hover": {
       borderColor: theme.colors.primary,
