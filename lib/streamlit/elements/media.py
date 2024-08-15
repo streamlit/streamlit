@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
-import streamlit as st
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.errors import StreamlitAPIException
@@ -178,7 +177,7 @@ class MediaMixin:
                 "`sample_rate` must be specified when `data` is a numpy array."
             )
         if not is_data_numpy_array and sample_rate is not None:
-            st.warning(
+            self.dg.warning(
                 "Warning: `sample_rate` will be ignored since data is not a numpy "
                 "array."
             )
