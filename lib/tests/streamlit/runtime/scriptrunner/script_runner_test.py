@@ -46,7 +46,7 @@ from streamlit.runtime.scriptrunner import (
     StopException,
 )
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-from streamlit.runtime.scriptrunner.script_requests import (
+from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequest,
     ScriptRequests,
     ScriptRequestType,
@@ -637,7 +637,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.runtime.metrics_util.create_page_profile_message")
+    @patch("streamlit.runtime.scriptrunner.script_runner.create_page_profile_message")
     def test_uncaught_exception_gets_tracked(self, patched_create_page_profile_message):
         """Tests that we track uncaught exceptions."""
         with testutil.patch_config_options({"browser.gatherUsageStats": True}):
