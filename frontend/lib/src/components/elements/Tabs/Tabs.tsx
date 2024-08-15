@@ -176,7 +176,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
           return (
             <UITab
-              data-testid={"stTab"}
+              data-testid="stTab"
               title={
                 <StreamlitMarkdown
                   source={nodeLabel}
