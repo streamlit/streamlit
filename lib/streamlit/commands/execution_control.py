@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 from itertools import dropwhile
-from typing import Final, Literal, NoReturn
+from typing import Literal, NoReturn
 
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
