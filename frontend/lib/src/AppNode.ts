@@ -265,7 +265,7 @@ export class ElementNode implements AppNode {
       if (
         !this.fragmentId ||
         !fragmentIdOfBlock ||
-        (fragmentIdOfBlock && this.scriptRunId === currentScriptRunId)
+        this.scriptRunId === currentScriptRunId
       ) {
         return this
       }
