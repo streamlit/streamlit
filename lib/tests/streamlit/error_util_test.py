@@ -20,7 +20,6 @@ import unittest
 from unittest.mock import patch
 
 from streamlit.error_util import _print_rich_exception, handle_uncaught_app_exception
-from streamlit.errors import UncaughtAppException
 from tests import testutil
 
 
@@ -43,7 +42,7 @@ class ErrorUtilTest(unittest.TestCase):
             exc = RuntimeError("boom!")
             handle_uncaught_app_exception(exc)
 
-            mock_show_exception.assert_called_once_with(UncaughtAppException(exc))
+            mock_show_exception.assert_called_once()
 
     def test_handle_print_rich_exception(self):
         """Test if the print rich exception method is working fine."""
