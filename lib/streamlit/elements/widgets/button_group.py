@@ -281,7 +281,7 @@ class ButtonGroupMixin:
             transformed_options,
             default=None,
             key=key,
-            click_mode=ButtonGroupProto.SINGLE_SELECT,
+            selection_mode=ButtonGroupProto.SINGLE_SELECT,
             disabled=disabled,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
@@ -292,15 +292,14 @@ class ButtonGroupMixin:
         )
         return sentiment.value
 
-    # Disable this more generic widget for now
-    # @gather_metrics("button_group")
-    def _internal_button_group(
+    @gather_metrics("button_group")
+    def button_group(
         self,
         options: OptionSequence[V],
         *,
         key: Key | None = None,
         default: Sequence[Any] | None = None,
-        click_mode: Literal["select", "multiselect"] = "select",
+        selection_mode: Literal["select", "multiselect"] = "select",
         disabled: bool = False,
         format_func: Callable[[V], dict[str, str]] | None = None,
         on_change: WidgetCallback | None = None,
@@ -325,8 +324,8 @@ class ButtonGroupMixin:
             indexable_options,
             key=key,
             default=default_values,
-            click_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
-            if click_mode == "multiselect"
+            selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
+            if selection_mode == "multiselect"
             else ButtonGroupProto.SINGLE_SELECT,
             disabled=disabled,
             format_func=_transformed_format_func,
@@ -347,7 +346,7 @@ class ButtonGroupMixin:
         *,
         key: Key | None = None,
         default: list[int] | None = None,
-        click_mode: ButtonGroupProto.ClickMode.ValueType = (
+        selection_mode: ButtonGroupProto.ClickMode.ValueType = (
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
@@ -384,7 +383,7 @@ class ButtonGroupMixin:
             options=formatted_options,
             default=default,
             form_id=form_id,
-            click_mode=click_mode,
+            click_mode=selection_mode,
             page=ctx.active_script_hash if ctx else None,
         )
 
@@ -394,7 +393,7 @@ class ButtonGroupMixin:
             default or [],
             disabled,
             form_id,
-            click_mode=click_mode,
+            click_mode=selection_mode,
             selection_visualization=selection_visualization,
         )
 
