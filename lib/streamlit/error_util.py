@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Final
 
 import streamlit
@@ -24,11 +23,6 @@ from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
-# The path to the streamlit package directory used to
-# suppress internal tracebacks in error messages.
-_STREAMLIT_DIR: Final = os.path.join(
-    os.path.realpath(os.path.dirname(streamlit.__file__)), ""
-)
 
 
 def _print_rich_exception(e: BaseException) -> None:
@@ -70,7 +64,7 @@ def _print_rich_exception(e: BaseException) -> None:
             max_frames=100,
             word_wrap=False,
             extra_lines=3,
-            suppress=[_STREAMLIT_DIR],
+            suppress=[streamlit],
         )
     )
 
