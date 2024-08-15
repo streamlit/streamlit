@@ -402,7 +402,7 @@ function ChatInput({
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
     multiple: element.acceptFile === "multiple",
-    accept: element.fileType,
+    accept: element.fileType.length > 0 ? element.fileType : undefined,
   })
 
   const getScrollHeight = (): number => {
@@ -524,10 +524,12 @@ function ChatInput({
         )}
       </div>
       <StyledChatInput>
-        <div {...getRootProps()}>
-          <input {...getInputProps()} />
-          <button>+</button>
-        </div>
+        {element.acceptFile !== "false" ? (
+          <div {...getRootProps()}>
+            <input {...getInputProps()} />
+            <button>+</button>
+          </div>
+        ) : null}
 
         <UITextArea
           inputRef={chatInputRef}

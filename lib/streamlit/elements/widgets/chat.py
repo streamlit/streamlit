@@ -463,7 +463,7 @@ class ChatMixin:
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
 
-        serde = ChatInputSerde(accept_files=accept_file)
+        serde = ChatInputSerde(accept_files=bool(accept_file))
         widget_state = register_widget(
             "chat_input",
             chat_input_proto,
