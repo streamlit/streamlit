@@ -861,8 +861,9 @@ export class AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
     // If we're replacing an existing Block of the same type, this new Block
-    // inherits the existing Block's children. This prevents existing widgets
-    // from having their values reset.
+    // inherits the existing Block's children. This preserves two things:
+    //  1. Widget State
+    //  2. React state of all elements
     let children: AppNode[] = []
     if (
       existingNode instanceof BlockNode &&
