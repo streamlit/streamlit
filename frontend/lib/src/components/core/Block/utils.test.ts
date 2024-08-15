@@ -41,10 +41,17 @@ describe("isElementStale", () => {
   })
 
   // When running in a fragment, the only elements that should be set to stale
-  // are those belonging to the fragment that's currently running.
-  it("if running and currentFragmentId is set, compares with node's fragmentId", () => {
+  // are those belonging to the fragment that's currently running and only if the script run id is different.
+  // If the script run id is the same, the element has just been updated and is not stale.
+  it("if running and currentFragmentId is set, compares with node's fragmentId and scriptrunId", () => {
     expect(
       isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
+        "myFragmentId",
+      ])
+    ).toBe(false)
+
+    expect(
+      isElementStale(node, ScriptRunState.RUNNING, "otherScriptRunId", [
         "myFragmentId",
       ])
     ).toBe(true)
