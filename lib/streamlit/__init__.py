@@ -65,12 +65,32 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from streamlit.delta_generator import (
-    main_dg as _main_dg,
-    sidebar_dg as _sidebar_dg,
-    event_dg as _event_dg,
-    bottom_dg as _bottom_dg,
+# DeltaGenerator methods:
+# We initialize them here so that it is clear where they are instantiated.
+# Further, it helps us to break circular imports because the DeltaGenerator
+# imports the different elements but some elements also require DeltaGenerator
+# functions such as the dg_stack. Now, elements that require DeltaGenerator functions
+# can import the singleton module.
+from streamlit.delta_generator_singletons import (
+    DeltaGeneratorSingleton as _DeltaGeneratorSingleton,
 )
+from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
+from streamlit.elements.lib.mutable_status_container import (
+    StatusContainer as _StatusContainer,
+)
+from streamlit.elements.lib.dialog import Dialog as _Dialog
+
+# instantiate the DeltaGeneratorSingleton
+_dg_singleton = _DeltaGeneratorSingleton(
+    delta_generator_cls=_DeltaGenerator,
+    status_container_cls=_StatusContainer,
+    dialog_container_cls=_Dialog,
+)
+_main = _dg_singleton._main_dg
+sidebar = _dg_singleton._sidebar_dg
+_event = _dg_singleton._event_dg
+_bottom = _dg_singleton._bottom_dg
+
 
 from streamlit.elements.dialog_decorator import (
     dialog_decorator as _dialog_decorator,
@@ -103,9 +123,13 @@ from streamlit.commands.experimental_query_params import (
 
 import streamlit.column_config as _column_config
 
-# Modules that the user should have access to. These are imported with the "as" syntax and the same name; note that renaming the import with "as" does not make it an explicit export.
-# In this case, you should import it with an underscore to make clear that it is internal and then assign it to a variable with the new intended name.
-# You can check the export behavior by running 'mypy --strict example_app.py', which disables implicit_reexport, where you use the respective command in the example_app.py Streamlit app.
+# Modules that the user should have access to. These are imported with the "as" syntax
+# and the same name; note that renaming the import with "as" does not make it an
+# explicit export. In this case, you should import it with an underscore to make clear
+# that it is internal and then assign it to a variable with the new intended name.
+# You can check the export behavior by running 'mypy --strict example_app.py', which
+# disables implicit_reexport, where you use the respective command in the example_app.py
+# Streamlit app.
 
 from streamlit.echo import echo as echo
 from streamlit.commands.logo import logo as logo
@@ -133,12 +157,6 @@ def _update_logger() -> None:
 _config.on_config_parsed(_update_logger, True)
 
 secrets = _secrets_singleton
-
-# DeltaGenerator methods:
-_main = _main_dg
-sidebar = _sidebar_dg
-_event = _event_dg
-_bottom = _bottom_dg
 
 altair_chart = _main.altair_chart
 area_chart = _main.area_chart
@@ -213,7 +231,8 @@ write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
 
-# Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
+# Events - Note: these methods cannot be called directly on sidebar
+# (ex: st.sidebar.toast)
 toast = _event.toast
 
 # Config

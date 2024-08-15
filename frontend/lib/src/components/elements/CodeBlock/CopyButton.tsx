@@ -51,7 +51,7 @@ class CopyButton extends PureComponent<Props> {
   public render(): ReactNode {
     return (
       <StyledCopyButton
-        data-testid="stCopyButton"
+        data-testid="stCodeCopyButton"
         title="Copy to clipboard"
         ref={this.button}
         data-clipboard-text={this.props.text}

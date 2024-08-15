@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.scriptrunner.script_requests import RerunData
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
 from streamlit.util import repr_
 
 

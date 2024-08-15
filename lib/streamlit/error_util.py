@@ -52,7 +52,7 @@ def _print_rich_exception(e: BaseException) -> None:
         tab_size=8,
     )
 
-    # Import script_runner here to prevent circular import
+    # move here to silence GitHub import cycle warning
     import streamlit.runtime.scriptrunner.script_runner as script_runner
 
     # Print exception via rich

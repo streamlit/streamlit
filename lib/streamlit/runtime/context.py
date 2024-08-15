@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast
 
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.type_util import is_type
 
 if TYPE_CHECKING:

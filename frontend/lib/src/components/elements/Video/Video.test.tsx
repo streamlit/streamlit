@@ -58,7 +58,9 @@ describe("Video Element", () => {
     const props = getProps()
     render(<Video {...props} />)
 
-    expect(screen.getByTestId("stVideo")).toBeInTheDocument()
+    const videoElement = screen.getByTestId("stVideo")
+    expect(videoElement).toBeInTheDocument()
+    expect(videoElement).toHaveClass("stVideo")
   })
 
   it("has correct style", () => {

@@ -33,9 +33,11 @@ from typing import (
     Iterable,
     List,
     Protocol,
+    Sequence,
     TypeVar,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from typing_extensions import TypeAlias, TypeGuard
@@ -87,11 +89,45 @@ _DASK_SERIES: Final = "dask.dataframe.core.Series"
 _DASK_INDEX: Final = "dask.dataframe.core.Index"
 _RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _RAY_DATASET: Final = "ray.data.dataset.Dataset"
+_DUCKDB_RELATION: Final = "duckdb.duckdb.DuckDBPyRelation"
 
 V_co = TypeVar(
     "V_co",
     covariant=True,  # https://peps.python.org/pep-0484/#covariance-and-contravariance
 )
+
+
+@runtime_checkable
+class DBAPICursor(Protocol):
+    """Protocol for DBAPI 2.0 Cursor objects (PEP 249).
+
+    This is a simplified version of the DBAPI Cursor protocol
+    that only contains the methods that are relevant or used for
+    our DB API Integration.
+
+    Specification: https://peps.python.org/pep-0249/
+    Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
+    """
+
+    @property
+    def description(
+        self,
+    ) -> (
+        Sequence[
+            tuple[
+                str,
+                Any | None,
+                int | None,
+                int | None,
+                int | None,
+                int | None,
+                bool | None,
+            ]
+        ]
+        | None
+    ): ...
+    def fetchmany(self, size: int = ..., /) -> Sequence[Sequence[Any]]: ...
+    def fetchall(self) -> Sequence[Sequence[Any]]: ...
 
 
 class DataFrameGenericAlias(Protocol[V_co]):
@@ -125,6 +161,7 @@ Data: TypeAlias = Union[
     "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     Dict[Any, Any],
+    DBAPICursor,
     None,
 ]
 
@@ -163,6 +200,8 @@ class DataFormat(Enum):
     COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
     COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
     KEY_VALUE_DICT = auto()  # {index: value}
+    DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
+    DUCKDB_RELATION = auto()  # DuckDB Relation
 
 
 def is_dataframe_like(obj: object) -> bool:
@@ -200,6 +239,7 @@ def is_dataframe_like(obj: object) -> bool:
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
         DataFormat.COLUMN_SERIES_MAPPING,
+        DataFormat.DBAPI_CURSOR,
     ]
 
 
@@ -215,6 +255,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Ray Dataset
     - Polars LazyFrame
     - Generator functions
+    - DB API 2.0 Cursor (PEP 249)
+    - DuckDB Relation (Relational API)
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -228,6 +270,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
+        or is_duckdb_relation(obj)
+        or is_dbapi_cursor(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -317,6 +361,23 @@ def is_ray_dataset(obj: object) -> bool:
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
+
+
+def is_dbapi_cursor(obj: object) -> TypeGuard[DBAPICursor]:
+    """True if obj looks like a DB API 2.0 Cursor.
+
+    https://peps.python.org/pep-0249/
+    """
+    return isinstance(obj, DBAPICursor)
+
+
+def is_duckdb_relation(obj: object) -> bool:
+    """True if obj is a DuckDB relation.
+
+    https://duckdb.org/docs/api/python/relational_api
+    """
+
+    return is_type(obj, _DUCKDB_RELATION)
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -533,6 +594,29 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
+    if is_duckdb_relation(data):
+        data = data.limit(max_unevaluated_rows).df()
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `df()` on the relation to show more."
+            )
+        return data
+
+    if is_dbapi_cursor(data):
+        # Based on the specification, the first item in the description is the
+        # column name (if available)
+        columns = (
+            [d[0] if d else "" for d in data.description] if data.description else None
+        )
+        data = pd.DataFrame(data.fetchmany(max_unevaluated_rows), columns=columns)
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `fetchall()` on the Cursor to show more."
+            )
+        return data
+
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
 
@@ -686,9 +770,9 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
 def _show_data_information(msg: str) -> None:
     """Show a message to the user with important information
     about the processed dataset."""
-    from streamlit.delta_generator import main_dg
+    from streamlit.delta_generator_singletons import get_dg_singleton_instance
 
-    main_dg.caption(msg)
+    get_dg_singleton_instance().main_dg.caption(msg)
 
 
 def convert_anything_to_arrow_bytes(
@@ -891,6 +975,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         "period[ns]",
         "period[U]",
         "period[us]",
+        "geometry",
     }:
         return True
 
@@ -1044,6 +1129,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_duckdb_relation(input_data):
+        return DataFormat.DUCKDB_RELATION
+    elif is_dbapi_cursor(input_data):
+        return DataFormat.DBAPI_CURSOR
     elif (
         isinstance(
             input_data,
@@ -1164,6 +1253,8 @@ def convert_pandas_df_to_data_format(
         DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,
         DataFormat.RAY_DATASET,
+        DataFormat.DBAPI_CURSOR,
+        DataFormat.DUCKDB_RELATION,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:

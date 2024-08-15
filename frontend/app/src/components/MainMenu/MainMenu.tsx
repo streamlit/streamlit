@@ -205,7 +205,7 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors }: EmotionTheme = useTheme()
+  const { colors, sizes }: EmotionTheme = useTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
@@ -231,7 +231,7 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
             ":focus": {
               outline: "none",
             },
-            border: `1px solid ${colors.fadedText10}`,
+            border: `${sizes.borderWidth} solid ${colors.borderColor}`,
           },
         },
       }}
