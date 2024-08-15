@@ -216,6 +216,7 @@ def _fragment(
             prev_fragment_id = ctx.current_fragment_id
             ctx.current_fragment_id = fragment_id
 
+            result = None
             try:
                 # Make sure we set the active script hash to the same value
                 # for the fragment run as when defined upon initialization
@@ -228,7 +229,6 @@ def _fragment(
                     if initialized_active_script_hash != ctx.active_script_hash
                     else contextlib.nullcontext()
                 )
-                result = None
                 with active_hash_context:
                     with st.container():
                         try:
@@ -263,10 +263,11 @@ def _fragment(
                             # raise here again in case we are in full app execution
                             # and some flags have to be set
                             raise FragmentHandledException(e)
-                    return result
             finally:
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
+
+            return result
 
         if not ctx.fragment_storage.contains(fragment_id):
             ctx.fragment_storage.set(fragment_id, wrapped_fragment)
