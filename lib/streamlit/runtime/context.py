@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping, cast
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.type_util import is_type
 
 if TYPE_CHECKING:
     from http.cookies import Morsel
@@ -42,11 +41,13 @@ def _get_request() -> HTTPServerRequest | None:
     # We return websocket request only if session_client is an instance of
     # BrowserWebSocketHandler (which is True for the Streamlit open-source
     # implementation). For any other implementation, we return None.
-    if not is_type(
-        session_client,
-        "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler",
+    # We are not using `type_util.is_type` here to avoid circular import.
+    if (
+        f"{type(session_client).__module__}.{type(session_client).__qualname__}"
+        != "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler"
     ):
         return None
+
     return cast("RequestHandler", session_client).request
 
 
