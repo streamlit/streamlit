@@ -298,7 +298,7 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         key: Key | None = None,
-        default: Sequence[Any] | None = None,
+        default: Sequence[V] | V | None = None,
         selection_mode: Literal["select", "multiselect"] = "select",
         disabled: bool = False,
         format_func: Callable[[V], dict[str, str]] | None = None,
@@ -306,6 +306,20 @@ class ButtonGroupMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> list[V]:
+        # when selection mode is a single-value selection, the default must be a single
+        # value too.
+        if (
+            default is not None
+            and not isinstance(default, str)
+            and isinstance(default, Sequence)
+            and selection_mode == "select"
+            and len(default) > 1
+        ):
+            raise StreamlitAPIException(
+                "The default argument to `st.button_group` must be a single value when "
+                "`selection_mode='select'`."
+            )
+
         def _transformed_format_func(x: V) -> ButtonGroupProto.Option:
             if format_func is None:
                 return ButtonGroupProto.Option(content=str(x))
