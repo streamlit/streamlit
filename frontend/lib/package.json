@@ -45,7 +45,7 @@
     "@loaders.gl/csv": "^3.2.13",
     "@loaders.gl/gltf": "^3.2.13",
     "apache-arrow": "^17.0.0",
-    "axios": "^1.6.0",
+    "axios": "^1.7.4",
     "baseui": "12.2.0",
     "camelcase": "^7.0.1",
     "classnames": "^2.3.2",

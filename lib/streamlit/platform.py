@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
 def post_parent_message(message: str) -> None:

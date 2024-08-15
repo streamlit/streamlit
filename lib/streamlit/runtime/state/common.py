@@ -66,7 +66,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from builtins import ellipsis
 
-    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
     from streamlit.runtime.state.widgets import NoValue
 
 

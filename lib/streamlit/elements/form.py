@@ -14,9 +14,13 @@
 from __future__ import annotations
 
 import textwrap
-from typing import TYPE_CHECKING, Literal, NamedTuple, cast
+from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit import runtime
+from streamlit.elements.form_utils import FormData, current_form_id, is_in_form
+from streamlit.elements.lib.policies import (
+    check_cache_replay_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -25,63 +29,6 @@ from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
-
-
-class FormData(NamedTuple):
-    """Form data stored on a DeltaGenerator."""
-
-    # The form's unique ID.
-    form_id: str
-
-
-def _current_form(this_dg: DeltaGenerator) -> FormData | None:
-    """Find the FormData for the given DeltaGenerator.
-
-    Forms are blocks, and can have other blocks nested inside them.
-    To find the current form, we walk up the dg_stack until we find
-    a DeltaGenerator that has FormData.
-    """
-    # Avoid circular imports.
-    from streamlit.delta_generator import dg_stack
-
-    if not runtime.exists():
-        return None
-
-    if this_dg._form_data is not None:
-        return this_dg._form_data
-
-    if this_dg == this_dg._main_dg:
-        # We were created via an `st.foo` call.
-        # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
-        for dg in reversed(dg_stack.get()):
-            if dg._form_data is not None:
-                return dg._form_data
-    else:
-        # We were created via an `dg.foo` call.
-        # Take a look at our parent's form data to see if we're nested inside a form.
-        parent = this_dg._parent
-        if parent is not None and parent._form_data is not None:
-            return parent._form_data
-
-    return None
-
-
-def current_form_id(dg: DeltaGenerator) -> str:
-    """Return the form_id for the current form, or the empty string if we're
-    not inside an `st.form` block.
-
-    (We return the empty string, instead of None, because this value is
-    assigned to protobuf message fields, and None is not valid.)
-    """
-    form_data = _current_form(dg)
-    if form_data is None:
-        return ""
-    return form_data.form_id
-
-
-def is_in_form(dg: DeltaGenerator) -> bool:
-    """True if the DeltaGenerator is inside an st.form block."""
-    return current_form_id(dg) != ""
 
 
 def _build_duplicate_form_message(user_key: str | None = None) -> str:
@@ -192,12 +139,6 @@ class FormMixin:
            height: 375px
 
         """
-        # Import this here to avoid circular imports.
-        from streamlit.elements.lib.policies import (
-            check_cache_replay_rules,
-            check_session_state_rules,
-        )
-
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
@@ -287,7 +228,8 @@ class FormMixin:
         """
         ctx = get_script_run_ctx()
 
-        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        # Checks whether the entered button type is one of the allowed options - either
+        # "primary" or "secondary"
         if type not in ["primary", "secondary"]:
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary" or "secondary". \n'

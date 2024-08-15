@@ -45,8 +45,8 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
-    script_run_context,
 )
+from streamlit.runtime.scriptrunner_utils import script_run_context
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase

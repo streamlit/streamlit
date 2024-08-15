@@ -20,7 +20,7 @@ from typing import Callable
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.util import calc_md5

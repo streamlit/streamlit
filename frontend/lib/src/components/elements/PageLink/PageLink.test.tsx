@@ -62,7 +62,6 @@ describe("PageLink", () => {
 
     const pageLink = screen.getByTestId("stPageLink")
 
-    expect(pageLink).toHaveClass("row-widget")
     expect(pageLink).toHaveClass("stPageLink")
     expect(pageLink).toHaveStyle(`width: ${props.width}px`)
   })

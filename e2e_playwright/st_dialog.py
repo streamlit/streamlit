@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
 @st.dialog("Test Dialog with Images")

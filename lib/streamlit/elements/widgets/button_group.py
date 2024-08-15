@@ -28,7 +28,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
@@ -43,7 +43,7 @@ from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
