@@ -65,7 +65,9 @@ function handleSelection(
   if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(index, currentSelection ?? [])
   }
-  return [index]
+
+  // unselect if item is already selected
+  return currentSelection?.includes(index) ? [] : [index]
 }
 
 function getSingleSelection(currentSelection: number[]): number {
@@ -177,7 +179,7 @@ function createOptionChild(
         buttonKind = BaseButtonKind.ICON_ACTIVE
       }
     } else if (contentElement.type === DynamicIcon) {
-      if (isVisuallySelected || option.selectedContent) {
+      if (isVisuallySelected) {
         buttonKind = BaseButtonKind.BORDERLESS_ICON_ACTIVE
       } else {
         buttonKind = BaseButtonKind.BORDERLESS_ICON
