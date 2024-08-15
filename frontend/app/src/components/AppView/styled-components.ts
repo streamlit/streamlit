@@ -71,11 +71,12 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
   })
 )
 
-export const StyledStickyBottomContainer = styled.div(() => ({
+export const StyledStickyBottomContainer = styled.div(({ theme }) => ({
   position: "sticky",
   left: 0,
   bottom: 0,
   width: "100%",
+  zIndex: theme.zIndices.bottom,
 
   // move the bottom container to the end of pages in print-mode so that nothing
   // (e.g. a floating chat-input) overlays the actual app content
@@ -93,7 +94,6 @@ export const StyledInnerBottomContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  zIndex: theme.zIndices.bottom,
 }))
 
 export interface StyledAppViewBlockContainerProps {

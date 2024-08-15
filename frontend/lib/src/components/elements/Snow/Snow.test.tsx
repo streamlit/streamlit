@@ -41,7 +41,7 @@ describe("Snow element", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
-    const snowElement = screen.getByTestId("snow")
+    const snowElement = screen.getByTestId("stSnow")
     expect(snowElement).toBeInTheDocument()
 
     const snowImages = screen.getAllByRole("img")
@@ -56,7 +56,7 @@ describe("Snow element", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
-    const snowElement = screen.getByTestId("snow")
+    const snowElement = screen.getByTestId("stSnow")
     expect(snowElement).toHaveClass("stHidden")
   })
 })
