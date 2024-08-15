@@ -163,7 +163,7 @@ def _fragment(
 
         ctx = get_script_run_ctx()
         if ctx is None:
-            return None
+            return
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
