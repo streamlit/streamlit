@@ -41,6 +41,7 @@ def _get_request() -> HTTPServerRequest | None:
     # We return websocket request only if session_client is an instance of
     # BrowserWebSocketHandler (which is True for the Streamlit open-source
     # implementation). For any other implementation, we return None.
+    # We are not using `type_util.is_type` here to avoid circular import.
     if (
         f"{type(session_client).__module__}.{type(session_client).__qualname__}"
         != "streamlit.web.server.browser_websocket_handler.BrowserWebSocketHandler"
