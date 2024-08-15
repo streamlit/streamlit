@@ -449,6 +449,83 @@ class DataframeUtilTest(unittest.TestCase):
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
+    def test_verify_sqlite3_integration(self):
+        """Verify that sqlite3 cursor can be used as a data source."""
+        import sqlite3
+
+        con = sqlite3.connect("file::memory:")
+        cur = con.cursor()
+        cur.execute("CREATE TABLE movie(title, year, score)")
+        cur.execute("""
+            INSERT INTO movie VALUES
+                ('Monty Python and the Holy Grail', 1975, 8.2),
+                ('And Now for Something Completely Different', 1971, 7.5)
+        """)
+        con.commit()
+        db_cursor = cur.execute("SELECT * FROM movie")
+        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+        assert (
+            dataframe_util.determine_data_format(db_cursor)
+            is dataframe_util.DataFormat.DBAPI_CURSOR
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == (2, 3)
+        con.close()
+
+    @pytest.mark.require_integration
+    def test_verify_duckdb_db_api_integration(self):
+        """Test that duckdb cursor can be used as a data source.
+
+        https://duckdb.org/docs/api/python/dbapi
+        """
+        import duckdb
+
+        con = duckdb.connect(database=":memory:")
+        con.execute(
+            "CREATE TABLE items (item VARCHAR, value DECIMAL(10, 2), count INTEGER)"
+        )
+        con.execute("INSERT INTO items VALUES ('jeans', 20.0, 1), ('hammer', 42.2, 2)")
+        con.execute("SELECT * FROM items")
+
+        assert dataframe_util.is_dbapi_cursor(con) is True
+        assert (
+            dataframe_util.determine_data_format(con)
+            is dataframe_util.DataFormat.DBAPI_CURSOR
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(con)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == (2, 3)
+        con.close()
+
+    @pytest.mark.require_integration
+    def test_verify_duckdb_relational_api_integration(self):
+        """Test that duckdb relational API can be used as a data source.
+
+        https://duckdb.org/docs/api/python/relational_api
+        """
+        import duckdb
+
+        items = pd.DataFrame([["foo", 1], ["bar", 2]], columns=["name", "value"])
+        db_relation = duckdb.sql("SELECT * from items")
+        assert dataframe_util.is_duckdb_relation(db_relation) is True
+        assert (
+            dataframe_util.determine_data_format(db_relation)
+            is dataframe_util.DataFormat.DUCKDB_RELATION
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(db_relation)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == items.shape
+
     @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
