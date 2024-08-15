@@ -112,7 +112,7 @@ def test_outer_fragment_rerun(app: Page):
     _rerun_outer_fragment(app)
 
     # We reran the outer fragment, so the UUID outside of the fragments should stay
-    # constant, but the other two should have changed.
+    # constant, but the nested fragments' UUIDs should have changed.
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(outside_fragment_text)
     expect(app.get_by_test_id("stMarkdown").nth(1)).not_to_have_text(
         outer_fragment_text
@@ -133,7 +133,8 @@ def test_inner_fragment_rerun(app: Page):
 
     _rerun_inner_fragment(app)
 
-    # We reran the inner fragment. Only that corresponding UUID should have changed.
+    # We reran the inner fragment directly nested in the outer fragment. This UUID and
+    # UUID of the inner fragment's nested fragment (inner_fragment2) should've changed.
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(outside_fragment_text)
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(outer_fragment_text)
     expect(app.get_by_test_id("stMarkdown").nth(2)).not_to_have_text(
@@ -152,7 +153,8 @@ def test_inner_fragment2_rerun(app: Page):
 
     _rerun_inner_fragment2(app)
 
-    # We reran the inner fragment. Only that corresponding UUID should have changed.
+    # We reran the inner-most nested fragment. Only that corresponding UUID should have
+    # changed.
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(outside_fragment_text)
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text(outer_fragment_text)
     expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text(inner_fragment_text)

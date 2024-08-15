@@ -499,7 +499,7 @@ export class BlockNode implements AppNode {
       }
 
       // This block is modified by the current run, so we indicate this to our children in case
-      // there were not modified by the current run, which means they are stale.
+      // they were not modified by the current run, which means they are stale.
       if (
         this.fragmentId &&
         fragmentIdsThisRun.includes(this.fragmentId) &&
