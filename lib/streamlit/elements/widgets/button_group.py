@@ -335,6 +335,7 @@ class ButtonGroupMixin:
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
+
         serde = MultiSelectSerde(indexable_options, default_values)
 
         res = self._button_group(
@@ -361,7 +362,9 @@ class ButtonGroupMixin:
             return res.value
 
         return (
-            res.value[0] if selection_mode == "select" and len(res.value) > 0 else None
+            res.value[0]
+            if selection_mode == "select" and res.value and len(res.value) > 0
+            else None
         )
 
     def _button_group(
@@ -391,7 +394,11 @@ class ButtonGroupMixin:
     ) -> RegisterWidgetResult[T]:
         key = to_key(key)
 
-        check_widget_policies(self.dg, key, on_change, default_value=default)
+        _default = default
+        if default is not None and len(default) == 0:
+            _default = None
+
+        check_widget_policies(self.dg, key, on_change, default_value=_default)
 
         widget_name = "button_group"
         ctx = get_script_run_ctx()
