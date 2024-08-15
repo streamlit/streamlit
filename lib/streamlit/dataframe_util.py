@@ -100,7 +100,11 @@ V_co = TypeVar(
 @runtime_checkable
 class DBAPICursor(Protocol):
     """Protocol for DBAPI 2.0 Cursor objects (PEP 249).
-    This is a simplified version of the DBAPI Cursor protocol.
+
+    This is a simplified version of the DBAPI Cursor protocol
+    that only contains the methods that are relevant or used for
+    our DB API Integration.
+
     Specification: https://peps.python.org/pep-0249/
     Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
     """
