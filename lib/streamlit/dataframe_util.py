@@ -165,37 +165,6 @@ class DataframeInterchangeCompatible(Protocol[V_co]):
     def __dataframe__(self) -> Any: ...
 
 
-@runtime_checkable
-class DBAPICursor(Protocol):
-    """Protocol for DBAPI 2.0 Cursor objects (PEP 249).
-
-    This is a simplified version of the DBAPI Cursor protocol.
-
-    Specification: https://peps.python.org/pep-0249/
-    Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
-    """
-
-    @property
-    def description(
-        self,
-    ) -> (
-        Sequence[
-            tuple[
-                str,
-                Any | None,
-                int | None,
-                int | None,
-                int | None,
-                int | None,
-                bool | None,
-            ]
-        ]
-        | None
-    ): ...
-    def fetchmany(self, size: int = ..., /) -> Sequence[Sequence[Any]]: ...
-    def fetchall(self) -> Sequence[Sequence[Any]]: ...
-
-
 OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
@@ -335,7 +304,6 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_duckdb_relation(obj)
         or is_dbapi_cursor(obj)
         or inspect.isgeneratorfunction(obj)
-        or is_dbapi_cursor(obj)
     )
 
 
@@ -907,7 +875,7 @@ def convert_anything_to_arrow_bytes(
     if is_huggingface_dataset(data) and hasattr(data, "data"):
         return convert_arrow_table_to_arrow_bytes(data.data)
 
-    if is_type(data, "duckdb.duckdb.DuckDBPyRelation"):
+    if is_duckdb_relation(data):
         return convert_arrow_table_to_arrow_bytes(
             data.limit(max_unevaluated_rows).arrow()
         )
