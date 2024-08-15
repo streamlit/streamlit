@@ -18,7 +18,6 @@ from typing import Final
 
 import streamlit
 from streamlit import config
-from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
@@ -71,7 +70,7 @@ def _print_rich_exception(e: BaseException) -> None:
 
 def _show_exception(ex: BaseException) -> None:
     """Show the exception on the frontend."""
-    get_dg_singleton_instance().main_dg.exception(ex)
+    streamlit.exception(ex)
 
 
 def handle_uncaught_app_exception(ex: BaseException) -> None:
