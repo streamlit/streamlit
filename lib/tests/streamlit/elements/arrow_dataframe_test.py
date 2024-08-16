@@ -170,13 +170,9 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
             st.dataframe(df.style.format("{:03d}"))
         pd.reset_option("styler.render.max_elements")
 
-    @patch(
-        "streamlit.type_util.is_pandas_version_less_than",
-        MagicMock(return_value=False),
-    )
     @patch.object(Styler, "_translate")
-    def test_pandas_version_1_3_0_and_above(self, mock_styler_translate):
-        """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
+    def test_styler_translate_gets_called(self, mock_styler_translate):
+        """Tests that `styler._translate` is called with correct arguments."""
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
 

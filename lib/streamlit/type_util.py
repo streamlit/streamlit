@@ -381,53 +381,6 @@ def check_python_comparable(seq: Sequence[Any]) -> None:
         )
 
 
-def is_pandas_version_less_than(v: str) -> bool:
-    """Return True if the current Pandas version is less than the input version.
-
-    Parameters
-    ----------
-    v : str
-        Version string, e.g. "0.25.0"
-
-    Returns
-    -------
-    bool
-
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
-    """
-    import pandas as pd
-
-    return is_version_less_than(pd.__version__, v)
-
-
-def is_pyarrow_version_less_than(v: str) -> bool:
-    """Return True if the current Pyarrow version is less than the input version.
-
-    Parameters
-    ----------
-    v : str
-        Version string, e.g. "0.25.0"
-
-    Returns
-    -------
-    bool
-
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
-
-    """
-    import pyarrow as pa
-
-    return is_version_less_than(pa.__version__, v)
-
-
 def is_altair_version_less_than(v: str) -> bool:
     """Return True if the current Altair version is less than the input version.
 

@@ -53,6 +53,7 @@ from streamlit.type_util import (
     is_namedtuple,
     is_pydantic_model,
     is_type,
+    is_version_less_than,
 )
 
 if TYPE_CHECKING:
@@ -146,9 +147,26 @@ class DataFrameGenericAlias(Protocol[V_co]):
     def iloc(self) -> _iLocIndexer: ...
 
 
+class PandasCompatible(Protocol):
+    """Protocol for Pandas compatible objects that have a `to_pandas` method."""
+
+    def to_pandas(self) -> DataFrame | Series: ...
+
+
+class DataframeInterchangeCompatible(Protocol):
+    """Protocol for objects support the dataframe-interchange protocol.
+
+    https://data-apis.org/dataframe-protocol/latest/index.html
+    """
+
+    def __dataframe__(self, allow_copy: bool) -> Any: ...
+
+
 OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
+    PandasCompatible,
+    DataframeInterchangeCompatible,
 ]
 
 # Various data types supported by our dataframe processing
@@ -160,10 +178,13 @@ Data: TypeAlias = Union[
     "Styler",
     "Index",
     "pa.Table",
+    "pa.Array",
     "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
     "Mapping[Any, Any]",
     DBAPICursor,
+    PandasCompatible,
+    DataframeInterchangeCompatible,
     CustomDict,
     None,
 ]
@@ -205,6 +226,53 @@ class DataFormat(Enum):
     KEY_VALUE_DICT = auto()  # {index: value}
     DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
     DUCKDB_RELATION = auto()  # DuckDB Relation
+
+
+def is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
+    """
+    import pyarrow as pa
+
+    return is_version_less_than(pa.__version__, v)
+
+
+def is_pandas_version_less_than(v: str) -> bool:
+    """Return True if the current Pandas version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
+    import pandas as pd
+
+    return is_version_less_than(pd.__version__, v)
 
 
 def is_dataframe_like(obj: object) -> bool:
@@ -301,11 +369,7 @@ def is_snowpark_row_list(obj: object) -> bool:
 
 def is_pyspark_data_object(obj: object) -> bool:
     """True if obj is of type pyspark.sql.dataframe.DataFrame"""
-    return (
-        is_type(obj, _PYSPARK_DF_TYPE_STR)
-        and hasattr(obj, "toPandas")
-        and callable(obj.toPandas)
-    )
+    return is_type(obj, _PYSPARK_DF_TYPE_STR) and has_callable_attr(obj, "toPandas")
 
 
 def is_dask_object(obj: object) -> bool:
@@ -464,7 +528,7 @@ def convert_anything_to_pandas_df(
 
     Parameters
     ----------
-    data : any
+    data : dataframe-, array-, or collections-like object
         The data to convert to a Pandas DataFrame.
 
     max_unevaluated_rows: int
@@ -625,6 +689,16 @@ def convert_anything_to_pandas_df(
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
+
+    # Check for dataframe interchange protocol
+    # Only available in pandas >= 1.5.0
+    # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
+    if (
+        has_callable_attr(data, "__dataframe__")
+        and is_pandas_version_less_than("1.5.0") is False
+    ):
+        data_df = pd.api.interchange.from_dataframe(data)
+        return data_df.copy() if ensure_copy else data_df
 
     # Support for generator functions
     if inspect.isgeneratorfunction(data):
@@ -792,7 +866,7 @@ def convert_anything_to_arrow_bytes(
 
     Parameters
     ----------
-    data : any
+    data : dataframe-, array-, or collections-like object
         The data to convert to Arrow bytes.
 
     max_unevaluated_rows: int
@@ -810,19 +884,7 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    if is_pandas_data_object(data):
-        # All pandas data objects should be handled via our pandas
-        # conversion logic. We are already calling it here
-        # to ensure that its not handled via the interchange
-        # protocol support below.
-        df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
-        return convert_pandas_df_to_arrow_bytes(df)
-
-    if is_polars_dataframe(data):
-        return convert_arrow_table_to_arrow_bytes(data.to_arrow())
-
-    if is_polars_series(data):
-        return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
+    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
@@ -840,7 +902,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
     Parameters
     ----------
 
-    obj : OptionSequence
+    obj : dataframe-, array-, or collections-like object
         The object to convert to a list.
 
     Returns
