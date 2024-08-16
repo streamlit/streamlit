@@ -276,7 +276,7 @@ class ScriptRunnerTest(AsyncTestCase):
         Runtime._instance.media_file_mgr.clear_session_refs.assert_called_once()
 
     @patch("streamlit.exception")
-    def test_run_nonexistent_fragment(self, patched_st_exception):
+    def test_run_nonexistent_fragment(self, mocked_st_exception):
         """Tests that we raise an exception when trying to run a nonexistent fragment."""
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.request_rerun(
@@ -299,7 +299,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
         self._assert_no_exceptions(scriptrunner)
-        patched_st_exception.assert_called_once()
+        mocked_st_exception.assert_called_once()
 
     def test_run_one_fragment(self):
         """Tests that we can run one fragment."""

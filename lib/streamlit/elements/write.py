@@ -259,13 +259,13 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(dataframe)      : Displays any dataframe-like value.
+            - write(dataframe)      : Displays any dataframe-like object in a table.
+            - write(dict)           : Displays dict-like in an interactive viewer.
+            - write(list)           : Displays list-like in an interactive viewer.
             - write(error)          : Prints an exception specially.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
             - write(class)          : Displays information about a class.
-            - write(dict)           : Displays dict in an interactive viewer.
-            - write(list)           : Displays list in an interactive viewer.
             - write(mpl_fig)        : Displays a Matplotlib figure.
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
@@ -277,7 +277,9 @@ class WriteMixin:
             - write(bokeh_fig)      : Displays a Bokeh figure.
             - write(sympy_expr)     : Prints SymPy expression using LaTeX.
             - write(htmlable)       : Prints _repr_html_() for the object if available.
+            - write(db_cursor)      : Displays DB API 2.0 cursor results in a table.
             - write(obj)            : Prints str(obj) if otherwise unknown.
+
 
         unsafe_allow_html : bool
             Whether to render HTML within ``*args``. This only applies to

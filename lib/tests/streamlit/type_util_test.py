@@ -86,8 +86,13 @@ class TypeUtilTest(unittest.TestCase):
         res = type_util.is_namedtuple(John)
         self.assertTrue(res)
 
+    @pytest.mark.require_integration
     def test_is_pydantic_model(self):
         from pydantic import BaseModel
+
+        class OtherObject:
+            foo: int
+            bar: str
 
         class BarModel(BaseModel):
             foo: int
@@ -95,6 +100,7 @@ class TypeUtilTest(unittest.TestCase):
 
         self.assertTrue(type_util.is_pydantic_model(BarModel(foo=1, bar="test")))
         self.assertFalse(type_util.is_pydantic_model(BarModel))
+        self.assertFalse(type_util.is_pydantic_model(OtherObject))
 
     def test_to_bytes(self):
         bytes_obj = b"some bytes"
