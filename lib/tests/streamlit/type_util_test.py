@@ -86,6 +86,7 @@ class TypeUtilTest(unittest.TestCase):
         res = type_util.is_namedtuple(John)
         self.assertTrue(res)
 
+    @pytest.mark.require_integration
     def test_is_pydantic_model(self):
         from pydantic import BaseModel
 
