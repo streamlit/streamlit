@@ -796,18 +796,18 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def convert_pandas_df_to_arrow_table(df: DataFrame) -> pa.Table:
-    """Convert a pandas DataFrame to an Arrow Table.
+def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
+    """Serialize pandas.DataFrame to Arrow IPC bytes.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The dataframe to convert.
+        A dataframe to convert.
 
     Returns
     -------
-    pyarrow.Table
-        The converted Arrow Table.
+    bytes
+        The serialized Arrow IPC bytes.
     """
     import pyarrow as pa
 
@@ -822,23 +822,7 @@ def convert_pandas_df_to_arrow_table(df: DataFrame) -> pa.Table:
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
-    return table
-
-
-def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
-    """Serialize pandas.DataFrame to Arrow IPC bytes.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A dataframe to convert.
-
-    Returns
-    -------
-    bytes
-        The serialized Arrow IPC bytes.
-    """
-    return convert_arrow_table_to_arrow_bytes(convert_pandas_df_to_arrow_table(df))
+    return convert_arrow_table_to_arrow_bytes(table)
 
 
 def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
@@ -872,42 +856,6 @@ def _show_data_information(msg: str) -> None:
     get_dg_singleton_instance().main_dg.caption(msg)
 
 
-def conconvert_anything_to_arrow_table(
-    data: Any, max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS
-) -> pa.Table:
-    """Try to convert different formats to an Arrow Table.
-
-    This method tries to directly convert the input data to Arrow bytes
-    for some supported formats, but falls back to conversion to a Pandas
-    DataFrame and then to Arrow bytes.
-
-    Parameters
-    ----------
-    data : dataframe-, array-, or collections-like object
-        The data to convert to an Arrow Table.
-
-    max_unevaluated_rows: int
-        If unevaluated data is detected this func will evaluate it,
-        taking max_unevaluated_rows, defaults to 10k.
-
-    Returns
-    -------
-    pyarrow.Table
-        The converted Arrow Table.
-    """
-    import pyarrow as pa
-
-    if isinstance(data, pa.Table):
-        return data
-
-    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
-
-    # Fallback: try to convert to pandas DataFrame
-    # and then to Arrow bytes.
-    df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
-    return convert_pandas_df_to_arrow_table(df)
-
-
 def convert_anything_to_arrow_bytes(
     data: Any,
     max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS,
@@ -933,8 +881,17 @@ def convert_anything_to_arrow_bytes(
         The serialized Arrow IPC bytes.
     """
 
-    arrow_table = conconvert_anything_to_arrow_table(data, max_unevaluated_rows)
-    return convert_arrow_table_to_arrow_bytes(arrow_table)
+    import pyarrow as pa
+
+    if isinstance(data, pa.Table):
+        return convert_arrow_table_to_arrow_bytes(data)
+
+    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
+
+    # Fallback: try to convert to pandas DataFrame
+    # and then to Arrow bytes.
+    df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
+    return convert_pandas_df_to_arrow_bytes(df)
 
 
 def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
