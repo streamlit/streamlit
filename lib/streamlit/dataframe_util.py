@@ -70,29 +70,30 @@ _LOGGER: Final = logger.get_logger(__name__)
 _MAX_UNEVALUATED_DF_ROWS = 10000
 
 _PANDAS_DATA_OBJECT_TYPE_RE: Final = re.compile(r"^pandas.*$")
-_PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
-_XARRAY_DATA_ARRAY_TYPE_STR: Final = "xarray.core.dataarray.DataArray"
-_XARRAY_DATASET_TYPE_STR: Final = "xarray.core.dataset.Dataset"
-_SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
-_SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
-_SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
-_PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+
+_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
+_DASK_INDEX: Final = "dask.dataframe.core.Index"
+_DASK_SERIES: Final = "dask.dataframe.core.Series"
+_DUCKDB_RELATION: Final = "duckdb.duckdb.DuckDBPyRelation"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
+_PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
+_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
+_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
+_POLARS_SERIES: Final = "polars.series.series.Series"
+_PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+_RAY_DATASET: Final = "ray.data.dataset.Dataset"
+_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
-_SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
 _SNOWPANDAS_INDEX_TYPE_STR: Final = (
     "snowflake.snowpark.modin.plugin.extensions.index.Index"
 )
-_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
-_POLARS_SERIES: Final = "polars.series.series.Series"
-_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
-_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
-_DASK_SERIES: Final = "dask.dataframe.core.Series"
-_DASK_INDEX: Final = "dask.dataframe.core.Index"
-_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
-_RAY_DATASET: Final = "ray.data.dataset.Dataset"
-_DUCKDB_RELATION: Final = "duckdb.duckdb.DuckDBPyRelation"
+_SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
+_SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
+_SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
+_SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
+_XARRAY_DATASET_TYPE_STR: Final = "xarray.core.dataset.Dataset"
+_XARRAY_DATA_ARRAY_TYPE_STR: Final = "xarray.core.dataarray.DataArray"
 
 V_co = TypeVar(
     "V_co",
@@ -195,37 +196,38 @@ class DataFormat(Enum):
 
     UNKNOWN = auto()
     EMPTY = auto()  # None
-    PANDAS_DATAFRAME = auto()  # pd.DataFrame
-    PANDAS_SERIES = auto()  # pd.Series
-    PANDAS_INDEX = auto()  # pd.Index
-    PANDAS_ARRAY = auto()  # pd.array
+
+    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
+    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
+    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
+    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
+    DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
+    DUCKDB_RELATION = auto()  # DuckDB Relation
+    KEY_VALUE_DICT = auto()  # {index: value}
+    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
+    LIST_OF_ROWS = auto()  # List[List[Scalar]]
+    LIST_OF_VALUES = auto()  # List[Scalar]
+    MODIN_OBJECT = auto()  # Modin DataFrame, Series
     NUMPY_LIST = auto()  # np.array[Scalar]
     NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
-    PYARROW_TABLE = auto()  # pyarrow.Table
-    PYARROW_ARRAY = auto()  # pyarrow.Array
-    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
-    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
-    MODIN_OBJECT = auto()  # Modin DataFrame, Series
-    SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
+    PANDAS_ARRAY = auto()  # pd.array
+    PANDAS_DATAFRAME = auto()  # pd.DataFrame
+    PANDAS_INDEX = auto()  # pd.Index
+    PANDAS_SERIES = auto()  # pd.Series
     PANDAS_STYLER = auto()  # pandas Styler
     POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
     POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
     POLARS_SERIES = auto()  # polars.series.series.Series
+    PYARROW_ARRAY = auto()  # pyarrow.Array
+    PYARROW_TABLE = auto()  # pyarrow.Table
+    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
+    SET_OF_VALUES = auto()  # Set[Scalar]
+    SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
+    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
+    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
-    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
-    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
-    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
-    LIST_OF_ROWS = auto()  # List[List[Scalar]]
-    LIST_OF_VALUES = auto()  # List[Scalar]
-    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
-    SET_OF_VALUES = auto()  # Set[Scalar]
-    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
-    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
-    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
-    KEY_VALUE_DICT = auto()  # {index: value}
-    DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
-    DUCKDB_RELATION = auto()  # DuckDB Relation
 
 
 def is_pyarrow_version_less_than(v: str) -> bool:
@@ -288,30 +290,30 @@ def is_dataframe_like(obj: object) -> bool:
         # return False early to avoid unnecessary checks.
         return False
 
-    return determine_data_format(obj) in [
-        DataFormat.PANDAS_DATAFRAME,
-        DataFormat.PANDAS_SERIES,
-        DataFormat.PANDAS_INDEX,
-        DataFormat.PANDAS_STYLER,
-        DataFormat.PANDAS_ARRAY,
+    return determine_data_format(obj) in {
+        DataFormat.COLUMN_SERIES_MAPPING,
+        DataFormat.DASK_OBJECT,
+        DataFormat.DBAPI_CURSOR,
+        DataFormat.MODIN_OBJECT,
         DataFormat.NUMPY_LIST,
         DataFormat.NUMPY_MATRIX,
-        DataFormat.PYARROW_TABLE,
-        DataFormat.PYARROW_ARRAY,
-        DataFormat.SNOWPARK_OBJECT,
-        DataFormat.PYSPARK_OBJECT,
-        DataFormat.MODIN_OBJECT,
-        DataFormat.SNOWPANDAS_OBJECT,
-        DataFormat.POLARS_SERIES,
+        DataFormat.PANDAS_ARRAY,
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_SERIES,
+        DataFormat.PANDAS_STYLER,
         DataFormat.POLARS_DATAFRAME,
         DataFormat.POLARS_LAZYFRAME,
+        DataFormat.POLARS_SERIES,
+        DataFormat.PYARROW_ARRAY,
+        DataFormat.PYARROW_TABLE,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.RAY_DATASET,
+        DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.SNOWPARK_OBJECT,
         DataFormat.XARRAY_DATASET,
         DataFormat.XARRAY_DATA_ARRAY,
-        DataFormat.DASK_OBJECT,
-        DataFormat.RAY_DATASET,
-        DataFormat.COLUMN_SERIES_MAPPING,
-        DataFormat.DBAPI_CURSOR,
-    ]
+    }
 
 
 def is_unevaluated_data_object(obj: object) -> bool:
@@ -892,7 +894,7 @@ def convert_anything_to_arrow_bytes(
     return convert_pandas_df_to_arrow_bytes(df)
 
 
-def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
+def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
     """Try to convert different formats to a list.
 
     If the input is a dataframe-like object, we just select the first
@@ -1309,21 +1311,21 @@ def convert_pandas_df_to_data_format(
         The converted dataframe.
     """
 
-    if data_format in [
+    if data_format in {
         DataFormat.EMPTY,
-        DataFormat.PANDAS_DATAFRAME,
-        DataFormat.SNOWPARK_OBJECT,
-        DataFormat.PYSPARK_OBJECT,
-        DataFormat.PANDAS_INDEX,
-        DataFormat.PANDAS_STYLER,
-        DataFormat.PANDAS_ARRAY,
-        DataFormat.MODIN_OBJECT,
-        DataFormat.SNOWPANDAS_OBJECT,
         DataFormat.DASK_OBJECT,
-        DataFormat.RAY_DATASET,
         DataFormat.DBAPI_CURSOR,
         DataFormat.DUCKDB_RELATION,
-    ]:
+        DataFormat.MODIN_OBJECT,
+        DataFormat.PANDAS_ARRAY,
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_STYLER,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.RAY_DATASET,
+        DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.SNOWPARK_OBJECT,
+    }:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
         import numpy as np
@@ -1347,10 +1349,7 @@ def convert_pandas_df_to_data_format(
         return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
-    elif (
-        data_format == DataFormat.POLARS_DATAFRAME
-        or data_format == DataFormat.POLARS_LAZYFRAME
-    ):
+    elif data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
         import polars as pl  # type: ignore[import-not-found]
 
         return pl.from_pandas(df)
