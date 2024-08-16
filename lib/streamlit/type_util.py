@@ -112,6 +112,11 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
         return fqn_type_pattern.match(fqn_type) is not None
 
 
+def _is_type_instance(obj: object, type_to_check: str) -> bool:
+    """Check if instance of type without importing expensive modules."""
+    return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
+
+
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
     return f"{the_type.__module__}.{the_type.__qualname__}"
@@ -285,6 +290,16 @@ def is_dataclass_instance(obj: object) -> bool:
 def is_pydeck(obj: object) -> TypeGuard[Deck]:
     """True if input looks like a pydeck chart."""
     return is_type(obj, "pydeck.bindings.deck.Deck")
+
+
+def is_pydantic_model(obj) -> bool:
+    """True if input looks like a Pydantic model instance."""
+
+    if isinstance(obj, type):
+        # Should be an instance, not a class.
+        return False
+
+    return _is_type_instance(obj, "pydantic.main.BaseModel")
 
 
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:

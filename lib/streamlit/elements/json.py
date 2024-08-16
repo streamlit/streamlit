@@ -21,7 +21,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.type_util import is_custom_dict, is_namedtuple
+from streamlit.type_util import (
+    is_custom_dict,
+    is_list_like,
+    is_namedtuple,
+    is_pydantic_model,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -79,6 +84,7 @@ class JsonMixin:
            height: 385px
 
         """
+        import streamlit as st
 
         if is_custom_dict(body):
             body = body.to_dict()
@@ -86,18 +92,20 @@ class JsonMixin:
         if is_namedtuple(body):
             body = body._asdict()
 
-        if isinstance(body, (map, enumerate)):
-            body = list(body)
+        if isinstance(
+            body, (ChainMap, types.MappingProxyType, UserDict)
+        ) or is_pydantic_model(body):
+            body = dict(body)  # type: ignore
 
-        if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
-            body = dict(body)
+        if is_list_like(body):
+            body = list(body)
 
         if not isinstance(body, str):
             try:
                 # Serialize body to string and try to interpret sets as lists
                 body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
-                self.dg.warning(
+                st.warning(
                     "Warning: this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
