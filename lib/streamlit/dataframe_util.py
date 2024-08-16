@@ -365,11 +365,7 @@ def is_snowpark_row_list(obj: object) -> bool:
 
 def is_pyspark_data_object(obj: object) -> bool:
     """True if obj is of type pyspark.sql.dataframe.DataFrame"""
-    return (
-        is_type(obj, _PYSPARK_DF_TYPE_STR)
-        and hasattr(obj, "toPandas")
-        and callable(obj.toPandas)
-    )
+    return is_type(obj, _PYSPARK_DF_TYPE_STR) and has_callable_attr(obj, "toPandas")
 
 
 def is_dask_object(obj: object) -> bool:
@@ -690,9 +686,6 @@ def convert_anything_to_pandas_df(
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
 
-    if has_callable_attr(data, "toPandas"):
-        return pd.DataFrame(data.toPandas())
-
     # Check for dataframe interchange protocol
     # Only available in pandas >= 1.5.0
     # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
@@ -885,7 +878,7 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    if is_pandas_data_object(data) and is_unevaluated_data_object(data):
+    if is_pandas_data_object(data) or is_unevaluated_data_object(data):
         # All pandas and unevaluated data objects should be handled via
         # our pandas conversion logic. We are already calling it here
         # to ensure that its not handled via the interchange
