@@ -31,6 +31,7 @@ const RawSkeleton: FC<React.PropsWithChildren<{ element: SkeletonProto }>> = ({
 
   return (
     <SquareSkeleton
+      className="stSkeleton"
       data-testid="stSkeleton"
       height={element?.height ? element.height + "px" : undefined}
     />
