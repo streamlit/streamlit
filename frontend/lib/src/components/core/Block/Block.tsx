@@ -29,6 +29,7 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
+  convertKeyToClassName,
   getElementWidgetID,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
@@ -324,6 +325,8 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ...props,
     ...{ width },
   }
+  const userKey = props.node.deltaBlock.key
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -341,11 +344,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         <StyledVerticalBlock
           width={width}
           data-testid="stVerticalBlock"
-          className={
-            props.node.deltaBlock.key
-              ? `st-key-${props.node.deltaBlock.key}`
-              : undefined
-          }
+          className={userKey ? convertKeyToClassName(userKey) : undefined}
         >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>

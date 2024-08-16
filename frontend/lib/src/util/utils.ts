@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import decamelize from "decamelize"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
-import decamelize from "decamelize"
 
 import {
   Alert as AlertProto,
@@ -552,4 +552,15 @@ export function keysToSnakeCase(
     acc[newKey] = value
     return acc
   }, {} as Record<string, any>)
+}
+
+/**
+ * Converts a key to a valid CSS class name.
+ *
+ * @param key - The key to convert.
+ * @returns A valid CSS class name.
+ */
+export function convertKeyToClassName(key: string): string {
+  const className = key.trim().replace(/[^a-zA-Z0-9-]/g, "-")
+  return "st-key-" + className
 }
