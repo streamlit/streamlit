@@ -144,7 +144,8 @@ function createOptionChild(
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
-  style: ButtonGroupProto.Style
+  style: ButtonGroupProto.Style,
+  width: string
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -174,8 +175,9 @@ function createOptionChild(
     //     ? BaseButtonKind.BORDERLESS_ICON
     //     : BaseButtonKind.BORDERLESS_ICON_ACTIVE
 
+    let size = BaseButtonSize.XSMALL
     let buttonKind = BaseButtonKind.ICON
-    console.log("contentElement", contentElement, style)
+    console.log("contentElement", contentElement, style, width)
     if (contentElement.type === StreamlitMarkdown) {
       if (style === ButtonGroupProto.Style.PILLS) {
         buttonKind = BaseButtonKind.PILLS
@@ -186,6 +188,9 @@ function createOptionChild(
       } else if (isVisuallySelected || option.selectedContent) {
         buttonKind = BaseButtonKind.ICON_ACTIVE
       }
+
+      size = BaseButtonSize[width.toUpperCase() as keyof typeof BaseButtonSize]
+      console.log("parsed size", width, size)
     } else if (contentElement.type === DynamicIcon) {
       if (isVisuallySelected) {
         buttonKind = BaseButtonKind.BORDERLESS_ICON_ACTIVE
@@ -195,7 +200,7 @@ function createOptionChild(
     }
 
     return (
-      <BaseButton {...props} size={BaseButtonSize.XSMALL} kind={buttonKind}>
+      <BaseButton {...props} size={size} kind={buttonKind}>
         {contentElement}
       </BaseButton>
     )
@@ -219,8 +224,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     value,
     selectionVisualization,
     style,
+    width,
   } = element
-
+  console.log("element", element)
   const theme: EmotionTheme = useTheme()
 
   const [selected, setSelected] = useState<number[]>(
@@ -312,7 +318,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       selectionVisualization,
       clickMode,
       selected,
-      style
+      style,
+      width
     )
     return <Element key={`${option.content}-${index}`} />
   })
