@@ -31,7 +31,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import (
+from tests.streamlit.data_samples import (
     SHARED_TEST_CASES,
     CaseMetadata,
     TestObject,

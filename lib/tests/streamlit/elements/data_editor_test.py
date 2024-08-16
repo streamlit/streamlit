@@ -51,7 +51,7 @@ from streamlit.elements.widgets.data_editor import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.data_samples import SHARED_TEST_CASES, CaseMetadata
 
 
 def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
