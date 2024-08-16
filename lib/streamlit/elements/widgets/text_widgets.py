@@ -349,7 +349,7 @@ class TextWidgetsMixin:
                 text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
-        self.dg._enqueue("text_input", text_input_proto)
+        self.dg._enqueue("text_input", text_input_proto, user_key=key)
         return widget_state.value
 
     @overload
@@ -607,7 +607,7 @@ class TextWidgetsMixin:
                 text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
-        self.dg._enqueue("text_area", text_area_proto)
+        self.dg._enqueue("text_area", text_area_proto, user_key=key)
         return widget_state.value
 
     @property

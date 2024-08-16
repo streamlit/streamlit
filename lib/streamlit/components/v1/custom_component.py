@@ -227,7 +227,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         element = Element()
         return_value = marshall_component(dg, element)
 
-        dg._enqueue("component_instance", element.component_instance)
+        dg._enqueue("component_instance", element.component_instance, user_key=key)
         return return_value
 
     def __eq__(self, other) -> bool:

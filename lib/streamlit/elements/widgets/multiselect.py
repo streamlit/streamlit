@@ -334,7 +334,7 @@ class MultiSelectMixin:
         if ctx:
             save_for_app_testing(ctx, widget_id, format_func)
 
-        self.dg._enqueue(widget_name, proto)
+        self.dg._enqueue(widget_name, proto, user_key=key)
 
         return widget_state.value
 

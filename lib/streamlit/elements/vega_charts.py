@@ -1929,6 +1929,7 @@ class VegaChartsMixin:
                 "arrow_vega_lite_chart",
                 vega_lite_proto,
                 add_rows_metadata=add_rows_metadata,
+                user_key=key,
             )
             return cast(VegaLiteState, widget_state.value)
         # If its not used with selections activated, just return
@@ -1937,6 +1938,7 @@ class VegaChartsMixin:
             "arrow_vega_lite_chart",
             vega_lite_proto,
             add_rows_metadata=add_rows_metadata,
+            user_key=key,
         )
 
     @property

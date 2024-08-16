@@ -130,8 +130,9 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 56
+    // Next ID: 57
   }
 
+  string key = 56;
   reserved 9;
 }

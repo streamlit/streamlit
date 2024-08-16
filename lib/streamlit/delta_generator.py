@@ -417,6 +417,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         add_rows_metadata: AddRowsMetadata | None = None,
+        user_key: str | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -426,6 +427,10 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
+        add_rows_metadata : AddRowsMetadata or None
+            Metadata for the add_rows method
+        user_key : str or None
+            A custom key for the element provided by the user.
 
         Returns
         -------
@@ -451,6 +456,8 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
+
+        msg.delta.new_element.key = user_key or ""
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False

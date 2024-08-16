@@ -529,7 +529,7 @@ class NumberInputMixin:
                 number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
 
-        self.dg._enqueue("number_input", number_input_proto)
+        self.dg._enqueue("number_input", number_input_proto, user_key=key)
         return widget_state.value
 
     @property

@@ -29,7 +29,6 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
-  convertKeyToClassName,
   getElementWidgetID,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
@@ -44,6 +43,7 @@ import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 import {
   assignDividerColor,
   BaseBlockProps,
+  convertKeyToClassName,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"

@@ -650,7 +650,7 @@ class ButtonMixin:
             ctx=ctx,
         )
 
-        self.dg._enqueue("download_button", download_button_proto)
+        self.dg._enqueue("download_button", download_button_proto, user_key=key)
         return button_state.value
 
     def _link_button(
@@ -832,7 +832,7 @@ class ButtonMixin:
 
         if ctx:
             save_for_app_testing(ctx, id, button_state.value)
-        self.dg._enqueue("button", button_proto)
+        self.dg._enqueue("button", button_proto, user_key=key)
 
         return button_state.value
 

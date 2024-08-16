@@ -567,10 +567,10 @@ class ArrowMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
             )
-            self.dg._enqueue("arrow_data_frame", proto)
+            self.dg._enqueue("arrow_data_frame", proto, user_key=key)
             return cast(DataframeState, widget_state.value)
         else:
-            return self.dg._enqueue("arrow_data_frame", proto)
+            return self.dg._enqueue("arrow_data_frame", proto, user_key=key)
 
     @gather_metrics("table")
     def table(self, data: Data = None) -> DeltaGenerator:

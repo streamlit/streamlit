@@ -408,6 +408,7 @@ def replay_cached_messages(
                             data.media, data.mimetype, data.media_id
                         )
                 dg = returned_dgs[msg.id_of_dg_called_on]
+                # TODO(lukasmasuch): What to do here?
                 maybe_dg = dg._enqueue(msg.delta_type, msg.message)
                 if isinstance(maybe_dg, DeltaGenerator):
                     returned_dgs[msg.returned_dgs_id] = maybe_dg

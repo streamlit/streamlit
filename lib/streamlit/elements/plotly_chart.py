@@ -530,10 +530,10 @@ class PlotlyMixin:
                 ctx=ctx,
             )
 
-            self.dg._enqueue("plotly_chart", plotly_chart_proto)
+            self.dg._enqueue("plotly_chart", plotly_chart_proto, user_key=key)
             return cast(PlotlyState, widget_state.value)
         else:
-            return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+            return self.dg._enqueue("plotly_chart", plotly_chart_proto, user_key=key)
 
     @property
     def dg(self) -> DeltaGenerator:

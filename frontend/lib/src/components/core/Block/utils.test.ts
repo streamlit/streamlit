@@ -17,7 +17,7 @@
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
-import { isElementStale } from "./utils"
+import { convertKeyToClassName, isElementStale } from "./utils"
 
 describe("isElementStale", () => {
   const node = new ElementNode(
@@ -86,4 +86,25 @@ describe("isElementStale", () => {
       expect(isElementStale(node, s, "someOtherScriptRunId", [])).toBe(false)
     })
   })
+})
+
+describe("convertKeyToClassName", () => {
+  const testCases = [
+    { input: "helloWorld", expected: "st-key-helloWorld" },
+    { input: "hello world!", expected: "st-key-hello-world-" },
+    { input: "123Start", expected: "st-key-123Start" },
+    { input: "My_Class-Name", expected: "st-key-My_Class-Name" },
+    {
+      input: "invalid#characters$here",
+      expected: "st-key-invalid-characters-here",
+    },
+    { input: "another$Test_case", expected: "st-key-another-Test_case" },
+  ]
+
+  test.each(testCases)(
+    "converts $input to $expected",
+    ({ input, expected }) => {
+      expect(convertKeyToClassName(input)).toBe(expected)
+    }
+  )
 })
