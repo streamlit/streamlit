@@ -22,7 +22,7 @@ import inspect
 import math
 import re
 from collections import ChainMap, UserDict, UserList, deque
-from collections.abc import ItemsView, Mapping
+from collections.abc import ItemsView
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
@@ -31,6 +31,7 @@ from typing import (
     Final,
     Iterable,
     List,
+    Mapping,
     Protocol,
     Sequence,
     TypeVar,
@@ -161,7 +162,7 @@ Data: TypeAlias = Union[
     "pa.Table",
     "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
-    Mapping[Any, Any],
+    "Mapping[Any, Any]",
     DBAPICursor,
     CustomDict,
     None,
