@@ -457,7 +457,8 @@ class DeltaGenerator(
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
 
-        msg.delta.new_element.key = user_key or ""
+        if user_key:
+            msg.delta.new_element.key = user_key
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False

@@ -15,7 +15,12 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button, click_checkbox, get_checkbox
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    click_checkbox,
+    get_checkbox,
+    get_element_by_key,
+)
 
 
 def test_permits_multiple_out_of_order_elements(app: Page):
@@ -26,12 +31,6 @@ def test_permits_multiple_out_of_order_elements(app: Page):
     expect(markdown_elements.nth(1)).to_have_text("Line 3")
     expect(markdown_elements.nth(2)).to_have_text("Line 1")
     expect(markdown_elements.nth(3)).to_have_text("Line 4")
-
-
-def test_container_with_custom_class_exists(app: Page):
-    """Test that its possible to create a container with a custom CSS class."""
-    container = app.locator(".st-key-first-container")
-    expect(container).to_be_attached()
 
 
 def test_persists_widget_state_across_reruns(app: Page):
@@ -108,3 +107,8 @@ def test_correctly_handles_first_chat_message(
         app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
         name="st_container-added_chat_message",
     )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the container can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "first container")).to_be_visible()

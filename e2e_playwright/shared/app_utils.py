@@ -438,3 +438,25 @@ def expect_script_state(
         timeout=10000,
         state="attached",
     )
+
+
+def get_element_by_key(locator: Locator | Page, key: str) -> Locator:
+    """Get an element with the given user-defined key.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    key : str
+        The user-defined key of the element.
+
+    Returns
+    -------
+    Locator
+        The element.
+    """
+    class_name = key.strip().replace(r"[^a-zA-Z0-9_-]", "-")
+    class_name = f"st-key-{class_name}"
+    return locator.locator(f".{class_name}")
