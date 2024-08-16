@@ -884,14 +884,6 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    if is_pandas_data_object(data) or is_unevaluated_data_object(data):
-        # All pandas and unevaluated data objects should be handled via
-        # our pandas conversion logic. We are already calling it here
-        # to ensure that its not handled via the interchange
-        # protocol support below.
-        df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
-        return convert_pandas_df_to_arrow_bytes(df)
-
     # TODO(lukasmasuch): Add direct conversion to Arrow here for supproted formats
 
     # Fallback: try to convert to pandas DataFrame
