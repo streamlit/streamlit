@@ -40,6 +40,7 @@ describe("CustomCodeTag Element", () => {
     const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
 
     expect(baseElement.querySelectorAll("pre code")).toHaveLength(1)
+    expect(baseElement).toHaveClass("stCode")
   })
 
   it("should render as plaintext", () => {
