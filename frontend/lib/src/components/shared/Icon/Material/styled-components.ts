@@ -41,7 +41,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       fontFamily: "Material Symbols Rounded",
       fontWeight: "normal",
       fontStyle: "normal",
-      lineHeight: 1,
+      lineHeight: theme.lineHeights.none,
       letterSpacing: "normal",
       textTransform: "none",
       whiteSpace: "nowrap",
