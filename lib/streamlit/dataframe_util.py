@@ -151,12 +151,6 @@ class PandasCompatible(Protocol):
     def to_pandas(self) -> DataFrame | Series: ...
 
 
-class ArrowCompatible(Protocol):
-    """Protocol for Arrow compatible objects that have a `to_arrow` method."""
-
-    def to_arrow(self) -> pa.Table: ...
-
-
 class DataframeInterchangeCompatible(Protocol):
     """Protocol for objects support the dataframe-interchange protocol.
 
@@ -170,7 +164,6 @@ OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
     PandasCompatible,
-    ArrowCompatible,
     DataframeInterchangeCompatible,
 ]
 
@@ -893,7 +886,7 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    if is_pandas_data_object(data) or is_unevaluated_data_object(data):
+    if is_pandas_data_object(data):
         # All pandas and unevaluated data objects should be handled via
         # our pandas conversion logic. We are already calling it here
         # to ensure that its not handled via the interchange
@@ -906,23 +899,6 @@ def convert_anything_to_arrow_bytes(
 
     if is_polars_series(data):
         return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
-
-    # Check for dataframe interchange protocol
-    if has_callable_attr(data, "__dataframe__"):
-        from pyarrow import interchange as pa_interchange
-
-        arrow_table = pa_interchange.from_dataframe(data)
-        return convert_arrow_table_to_arrow_bytes(arrow_table)
-
-    # Check if data structure supports to_arrow or to_pyarrow methods
-    # and assume that it is converting to a pyarrow.Table
-    if has_callable_attr(data, "to_arrow"):
-        arrow_table = cast(pa.Table, data.to_arrow())
-        return convert_arrow_table_to_arrow_bytes(arrow_table)
-
-    if has_callable_attr(data, "to_pyarrow"):
-        arrow_table = cast(pa.Table, data.to_pyarrow())
-        return convert_arrow_table_to_arrow_bytes(arrow_table)
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
