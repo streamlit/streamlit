@@ -561,6 +561,6 @@ export function keysToSnakeCase(
  * @returns A valid CSS class name.
  */
 export function convertKeyToClassName(key: string): string {
-  const className = key.trim().replace(/[^a-zA-Z0-9-]/g, "-")
+  const className = key.trim().replace(/[^a-zA-Z0-9_-]/g, "-")
   return "st-key-" + className
 }
