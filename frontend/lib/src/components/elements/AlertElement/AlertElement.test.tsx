@@ -44,7 +44,10 @@ describe("Alert element", () => {
       body: "#what in the world?",
     })
     render(<AlertElement {...props} />)
-    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
+    const alertElement = screen.getByTestId("stAlert")
+    expect(alertElement).toBeInTheDocument()
+    expect(alertElement).toHaveClass("stAlert")
+
     expect(
       screen.getByTestId("stNotificationContentError")
     ).toBeInTheDocument()
