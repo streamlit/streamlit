@@ -87,9 +87,9 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import {
   BaseBlockProps,
+  convertKeyToClassName,
   isComponentStale,
   shouldComponentBeEnabled,
-  convertKeyToClassName,
 } from "./utils"
 import { StyledElementContainer } from "./styled-components"
 
