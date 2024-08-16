@@ -750,7 +750,7 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  // A element key provided by the user. Will be set as CSS class name.
+  // A user provided key that will be set as CSS class name
   const userKey = node.element.key
 
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
