@@ -457,6 +457,6 @@ def get_element_by_key(locator: Locator | Page, key: str) -> Locator:
     Locator
         The element.
     """
-    class_name = key.strip().replace(r"[^a-zA-Z0-9_-]", "-")
+    class_name = re.sub(r"[^a-zA-Z0-9_-]", "-", key.strip())
     class_name = f"st-key-{class_name}"
     return locator.locator(f".{class_name}")
