@@ -28,6 +28,12 @@ def test_permits_multiple_out_of_order_elements(app: Page):
     expect(markdown_elements.nth(3)).to_have_text("Line 4")
 
 
+def test_container_with_custom_class_exists(app: Page):
+    """Test that its possible to create a container with a custom CSS class."""
+    container = app.locator(".st-key-first-container")
+    expect(container).to_be_attached()
+
+
 def test_persists_widget_state_across_reruns(app: Page):
     """Test that st.container persists widget state across reruns."""
 

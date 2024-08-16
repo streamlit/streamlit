@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-container = st.container()
+container = st.container(key="first container")
 
 st.write("Line 1")
 container.write("Line 2")
@@ -48,6 +48,6 @@ empty_container = st.container(height=100)
 if st.button("Add message"):
     empty_container.chat_message("user").write("Hello world")
 
-with st.container(height=200):
+with st.container(height=200, key="my_container"):
     for i in range(10):
         st.chat_message("user").write(f"Message {i}")
