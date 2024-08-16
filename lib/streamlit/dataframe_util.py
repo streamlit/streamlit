@@ -884,7 +884,7 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    # TODO(lukasmasuch): Add direct conversion to Arrow here for supproted formats
+    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
