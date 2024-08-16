@@ -762,7 +762,7 @@ const ElementNodeRenderer = (
       <StyledElementContainer
         className={classNames(
           "element-container",
-          convertKeyToClassName(userKey)
+          convertKeyToClassName(userKey ?? "")
         )}
         data-testid="element-container"
         data-stale={isStale}
