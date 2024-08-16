@@ -148,6 +148,7 @@ def _build_proto(
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
     style: Literal["normal", "pills"] = "normal",
+    width: Literal["small", "medium", "large"] = "medium",
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -157,6 +158,7 @@ def _build_proto(
     proto.disabled = disabled
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
+    proto.width = width
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -323,6 +325,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         format_func: Callable[[V], dict[str, str]] | None = None,
         style: Literal["normal", "pills"] = "normal",
+        width: Literal["small", "medium", "large"] = "medium",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -366,6 +369,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             format_func=_transformed_format_func,
             style=style,
+            width=width,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
@@ -396,6 +400,7 @@ class ButtonGroupMixin:
         ),
         disabled: bool = False,
         style: Literal["normal", "pills"] = "normal",
+        width: Literal["small", "medium", "large"] = "medium",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
@@ -434,6 +439,8 @@ class ButtonGroupMixin:
             default=default,
             form_id=form_id,
             click_mode=selection_mode,
+            style=style,
+            width=width,
             page=ctx.active_script_hash if ctx else None,
         )
 
@@ -446,6 +453,7 @@ class ButtonGroupMixin:
             click_mode=selection_mode,
             selection_visualization=selection_visualization,
             style=style,
+            width=width,
         )
 
         widget_state = register_widget(
