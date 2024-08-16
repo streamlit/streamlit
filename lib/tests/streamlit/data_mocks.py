@@ -260,7 +260,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.LIST_OF_VALUES,
             ["st.number_input", "st.text_area", "st.text_input"],
-            "markdown",
+            "json",
             False,
             list,
         ),
@@ -277,7 +277,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.LIST_OF_VALUES,
             ["number", "text", "text"],
-            "markdown",
+            "json",
             False,
             list,
         ),
@@ -298,7 +298,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
                 ("st.text_area", "text"),
                 ("st.text_input", "text"),
             ],
-            "markdown",
+            "json",
             False,
             list,
         ),
@@ -1149,3 +1149,36 @@ try:
     )
 except ModuleNotFoundError:
     print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # noqa: T201
+
+###################################
+########## Pydantic Types #########
+###################################
+try:
+    from pydantic import BaseModel
+
+    class ElementPydanticModel(BaseModel):
+        name: str
+        is_widget: bool
+        usage: float
+
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Pydantic Model",
+                ElementPydanticModel(
+                    name="st.number_input", is_widget=True, usage=0.32
+                ),
+                CaseMetadata(
+                    3,
+                    1,
+                    DataFormat.KEY_VALUE_DICT,
+                    ["st.number_input", True, 0.32],
+                    "json",
+                    False,
+                    dict,
+                ),
+            ),
+        ]
+    )
+except ModuleNotFoundError:
+    print("Pydantic not installed. Skipping Pydantic dataframe tests.")  # noqa: T201
