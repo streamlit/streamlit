@@ -31,16 +31,16 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
+from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.data_mocks.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
 from tests.streamlit.data_samples import (
     SHARED_TEST_CASES,
     CaseMetadata,
     TestObject,
 )
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
