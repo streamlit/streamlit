@@ -19,15 +19,15 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_code_display(app: Page):
     """Test that st.code displays a code block."""
-    code_element = app.locator(".element-container pre").first
+    code_element = app.get_by_test_id("stCode").first
     expect(code_element).to_contain_text("This code is awesome!")
 
 
 def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the copy-to-clipboard action appears on hover."""
-    first_code_element = themed_app.locator(".element-container:first-child pre").first
+    first_code_element = themed_app.get_by_test_id("stCode").first
     first_code_element.hover()
-    assert_snapshot(first_code_element, name="syntax_highlighting-hover")
+    assert_snapshot(first_code_element, name="st_code-hover_copy")
 
 
 def test_code_blocks_render_correctly(
