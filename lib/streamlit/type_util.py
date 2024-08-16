@@ -296,7 +296,9 @@ def is_pydantic_model(obj) -> bool:
     """True if input looks like a Pydantic model instance."""
 
     if isinstance(obj, type):
-        # Should be an instance, not a class.
+        # The obj is a class, but we
+        # only want to check for instances
+        # of Pydantic models, so we return False.
         return False
 
     return _is_type_instance(obj, "pydantic.main.BaseModel")
