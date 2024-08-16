@@ -81,6 +81,7 @@ class Index:
     snowflake.snowpark.modin.plugin.extensions.index.Index class for testing purposes.
     We use this to make sure that our code does a special handling
     if it detects a Snowpark Pandas Index.
+
     This allows testing of the functionality without having the library installed,
     but it won't capture changes in the API of the library. This requires
     integration tests.

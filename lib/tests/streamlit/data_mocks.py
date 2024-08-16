@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.dataframe_util import DataFormat
+from streamlit.dataframe_util import DataFormat, is_pandas_version_less_than
 from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
 from tests.streamlit.dask_mocks import Index as DaskIndex
 from tests.streamlit.dask_mocks import Series as DaskSeries
@@ -103,6 +103,18 @@ class UserDictExample(UserDict):  # type: ignore
 class TestObject:
     def __str__(self):
         return "TestObject"
+
+
+class CustomDataframe:
+    """A dummy dataframe-like class that supports the dataframe interchange protocol
+    (__dataframe__ method).
+    """
+
+    def __init__(self, data: pd.DataFrame):
+        self._data: pd.DataFrame = data
+
+    def __dataframe__(self, allow_copy: bool = True):
+        return self._data.__dataframe__(allow_copy=allow_copy)
 
 
 class StrTestEnum(str, enum.Enum):
@@ -1040,6 +1052,35 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
         ),
     ),
 ]
+
+###################################
+###### Dataframe Interchange ######
+###################################
+if is_pandas_version_less_than("1.5.0") is False:
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Dataframe-interchange compatible",
+                CustomDataframe(
+                    pd.DataFrame(
+                        [
+                            {"name": "st.text_area", "type": "widget"},
+                            {"name": "st.markdown", "type": "element"},
+                        ]
+                    )
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.UNKNOWN,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    False,
+                    None,
+                ),
+            ),
+        ]
+    )
 
 ###################################
 ########### Polars Types ##########
