@@ -181,7 +181,6 @@ Data: TypeAlias = Union[
     Dict[Any, Any],
     DBAPICursor,
     PandasCompatible,
-    ArrowCompatible,
     DataframeInterchangeCompatible,
     None,
 ]

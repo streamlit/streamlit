@@ -105,6 +105,18 @@ class TestObject:
         return "TestObject"
 
 
+class CustomDataframe:
+    """A dummy dataframe-like class that supports the dataframe interchange protocol
+    (__dataframe__ method).
+    """
+
+    def __init__(self, data: pd.DataFrame):
+        self._data: pd.DataFrame = data
+
+    def __dataframe__(self, allow_copy: bool = True):
+        return self._data.__dataframe__(allow_copy=allow_copy)
+
+
 class StrTestEnum(str, enum.Enum):
     NUMBER_INPUT = "st.number_input"
     TEXT_AREA = "st.text_area"
@@ -1037,6 +1049,26 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             "dataframe",
             True,
             pd.DataFrame,
+        ),
+    ),
+    (
+        "Dataframe-interchange compatible",
+        CustomDataframe(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.UNKNOWN,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            False,
+            None,
         ),
     ),
 ]
