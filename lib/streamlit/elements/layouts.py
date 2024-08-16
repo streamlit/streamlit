@@ -54,6 +54,7 @@ class LayoutsMixin:
 
         Parameters
         ----------
+
         height : int or None
             Desired height of the container expressed in pixels. If ``None`` (default)
             the container grows to fit its content. If a fixed height, scrolling is
@@ -70,6 +71,12 @@ class LayoutsMixin:
             Whether to show a border around the container. If ``None`` (default), a
             border is shown if the container is set to a fixed height and not
             shown otherwise.
+
+        key : str or None
+            An optional string to give this container a stable identity.
+
+            Additionally, if ``key`` is provided, it will be used as CSS
+            class name prefixed with ``st-key-``.
 
 
         Examples
