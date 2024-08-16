@@ -233,13 +233,22 @@ export const StyledIconButton = styled(
   //   [BaseButtonSize.MEDIUM]: theme.spacing.md,
   //   [BaseButtonSize.LARGE]: theme.spacing.lg,
   // }
+  console.log("size", size)
+  let minWidth = "12rem"
+  if (size === BaseButtonSize.SMALL) {
+    minWidth = "8rem"
+  } else if (size === BaseButtonSize.LARGE) {
+    minWidth = "20rem"
+  }
+
   return {
     backgroundColor: theme.colors.transparent,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     // padding: iconPadding[size],
     flex: "1 1 0",
     padding: 0,
-    maxWidth: theme.sizes.contentMaxWidth,
+    maxWidth: minWidth, //theme.sizes.contentMaxWidth,
+    minWidth: minWidth,
     // width: "max-content",
 
     "&:hover": {

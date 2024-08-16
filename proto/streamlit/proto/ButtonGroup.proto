@@ -53,4 +53,6 @@ message ButtonGroup {
     PILLS = 1;
   }
   Style style = 10;
+
+  string width = 11;
 }
