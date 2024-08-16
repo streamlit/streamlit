@@ -22,16 +22,16 @@ import inspect
 import math
 import re
 from collections import ChainMap, UserDict, UserList, deque
-from collections.abc import ItemsView, Mapping
+from collections.abc import ItemsView
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
     Iterable,
     List,
+    Mapping,
     Protocol,
     Sequence,
     TypeVar,
@@ -44,12 +44,14 @@ from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
+    CustomDict,
     NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
     is_list_like,
     is_namedtuple,
+    is_pydantic_model,
     is_type,
     is_version_less_than,
 )
@@ -179,10 +181,11 @@ Data: TypeAlias = Union[
     "pa.Array",
     "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
-    Dict[Any, Any],
+    "Mapping[Any, Any]",
     DBAPICursor,
     PandasCompatible,
     DataframeInterchangeCompatible,
+    CustomDict,
     None,
 ]
 
@@ -731,7 +734,9 @@ def convert_anything_to_pandas_df(
         return _dict_to_pandas_df(dataclasses.asdict(data))
 
     # Support for dict-like objects
-    if isinstance(data, (ChainMap, MappingProxyType, UserDict)):
+    if isinstance(data, (ChainMap, MappingProxyType, UserDict)) or is_pydantic_model(
+        data
+    ):
         return _dict_to_pandas_df(dict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -887,11 +892,7 @@ def convert_anything_to_arrow_bytes(
         df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
         return convert_pandas_df_to_arrow_bytes(df)
 
-    if is_polars_dataframe(data):
-        return convert_arrow_table_to_arrow_bytes(data.to_arrow())
-
-    if is_polars_series(data):
-        return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
+    # TODO(lukasmasuch): Add direct conversion to Arrow here for supproted formats
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
@@ -1215,6 +1216,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
+        or is_pydantic_model(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
     elif isinstance(input_data, (ItemsView, enumerate)):
