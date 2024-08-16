@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.dataframe_util import DataFormat
+from streamlit.dataframe_util import DataFormat, is_pandas_version_less_than
 from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
 from tests.streamlit.dask_mocks import Index as DaskIndex
 from tests.streamlit.dask_mocks import Series as DaskSeries
@@ -1051,27 +1051,36 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             pd.DataFrame,
         ),
     ),
-    (
-        "Dataframe-interchange compatible",
-        CustomDataframe(
-            pd.DataFrame(
-                [
-                    {"name": "st.text_area", "type": "widget"},
-                    {"name": "st.markdown", "type": "element"},
-                ]
-            )
-        ),
-        CaseMetadata(
-            2,
-            2,
-            DataFormat.UNKNOWN,
-            ["st.text_area", "st.markdown"],
-            "dataframe",
-            False,
-            None,
-        ),
-    ),
 ]
+
+###################################
+###### Dataframe Interchange ######
+###################################
+if is_pandas_version_less_than("1.5.0") is False:
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Dataframe-interchange compatible",
+                CustomDataframe(
+                    pd.DataFrame(
+                        [
+                            {"name": "st.text_area", "type": "widget"},
+                            {"name": "st.markdown", "type": "element"},
+                        ]
+                    )
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.UNKNOWN,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    False,
+                    None,
+                ),
+            ),
+        ]
+    )
 
 ###################################
 ########### Polars Types ##########
