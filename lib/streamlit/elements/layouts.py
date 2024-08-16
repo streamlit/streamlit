@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -35,7 +36,11 @@ SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
-        self, *, height: int | None = None, border: bool | None = None
+        self,
+        *,
+        height: int | None = None,
+        border: bool | None = None,
+        key: Key | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -132,6 +137,9 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+
+        if key := to_key(key):
+            block_proto.key = key
 
         if height:
             # Activate scrolling container behavior:
