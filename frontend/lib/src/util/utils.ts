@@ -346,7 +346,9 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
+/**
+ * If the element has a valid ID, returns it. Otherwise, returns undefined.
+ */
 export function getElementWidgetID(element: Element): string | undefined {
   const elementId = get(element as any, [requireNonNull(element.type), "id"])
   if (elementId && elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)) {
