@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from typing_extensions import TypeGuard
 
@@ -49,10 +49,7 @@ from streamlit.runtime.state.common import (
     compute_widget_id,
     save_for_app_testing,
 )
-from streamlit.type_util import (
-    T,
-    check_python_comparable,
-)
+from streamlit.type_util import T, check_python_comparable
 from streamlit.util import index_
 
 if TYPE_CHECKING:
@@ -83,7 +80,7 @@ class SelectSliderSerde(Generic[T]):
 
         # The widget always returns floats, so convert to ints before indexing
         return_value: tuple[T, T] = cast(
-            Tuple[T, T],
+            tuple[T, T],
             tuple(self.options[int(x)] for x in ui_value),
         )
 
@@ -102,12 +99,58 @@ class SelectSliderSerde(Generic[T]):
 
 
 class SelectSliderMixin:
+    @overload
+    def select_slider(  # type: ignore[overload-overlap]
+        self,
+        label: str,
+        options: OptionSequence[T],
+        value: tuple[T, T] | list[T],
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> tuple[T, T]: ...
+
+    # The overload-overlap error given by mypy here stems from
+    # the fact that
+    #
+    #   opt:List[object] = [1, 2, "3"]
+    #   select_slider("foo", options=opt, value=[1, 2])
+    #
+    # matches both overloads; "opt" matches
+    # OptionsSequence[T] in each case, binding T to object.
+    # However, the list[int] type of "value" can be interpreted
+    # as subtype of object, or as a subtype of List[object],
+    # meaning it matches both signatures.
+
+    @overload
+    def select_slider(
+        self,
+        label: str,
+        options: OptionSequence[T] = (),
+        value: T | None = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
     @gather_metrics("select_slider")
     def select_slider(
         self,
         label: str,
         options: OptionSequence[T] = (),
-        value: object = None,
+        value: T | Sequence[T] | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
@@ -266,7 +309,7 @@ class SelectSliderMixin:
         self,
         label: str,
         options: OptionSequence[T] = (),
-        value: object = None,
+        value: T | Sequence[T] | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
@@ -359,7 +402,7 @@ class SelectSliderMixin:
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(
-                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options, opt
+                cast(RegisterWidgetResult[tuple[T, T]], widget_state), options, opt
             )
         else:
             widget_state = maybe_coerce_enum(widget_state, options, opt)
