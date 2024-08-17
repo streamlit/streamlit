@@ -88,6 +88,7 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
   BaseBlockProps,
   convertKeyToClassName,
+  getElementKey,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -750,8 +751,8 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  // A user provided key that will be set as CSS class name
-  const userKey = node.element.key
+  // Get the user key - if it was set - and use it as CSS class name:
+  const userKey = getElementKey(node.element)
 
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a

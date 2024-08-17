@@ -141,12 +141,10 @@ class LayoutsMixin:
             height: 400px
 
         """
+        key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
-
-        if key := to_key(key):
-            block_proto.key = key
 
         if height:
             # Activate scrolling container behavior:
@@ -158,7 +156,10 @@ class LayoutsMixin:
                 # containers.
                 block_proto.vertical.border = True
 
-        return self.dg._block(block_proto)
+        return self.dg._block(
+            block_proto,
+            user_key=key,
+        )
 
     @gather_metrics("columns")
     def columns(

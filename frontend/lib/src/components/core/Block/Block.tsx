@@ -217,6 +217,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               }
 
               const key = getElementWidgetID(node.element) || index
+              console.log("key", key)
               return <ElementNodeRenderer key={key} {...childProps} />
             }
 

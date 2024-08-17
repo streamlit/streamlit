@@ -457,9 +457,6 @@ class DeltaGenerator(
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
 
-        if user_key:
-            msg.delta.new_element.key = user_key
-
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
@@ -504,6 +501,7 @@ class DeltaGenerator(
         self,
         block_proto: Block_pb2.Block = Block_pb2.Block(),
         dg_type: type | None = None,
+        user_key: str | None = None,
     ) -> DeltaGenerator:
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
@@ -520,6 +518,14 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.delta_path[:] = dg._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
+
+        if user_key:
+            if ctx := get_script_run_ctx():
+                if user_key not in ctx.widget_user_keys_this_run:
+                    ctx.widget_user_keys_this_run.add(user_key)
+                else:
+                    raise StreamlitAPIException(f"Duplicate element key: {user_key}")
+            msg.delta.add_block.key = user_key
 
         # Normally we'd return a new DeltaGenerator that uses the locked cursor
         # below. But in this case we want to return a DeltaGenerator that uses
