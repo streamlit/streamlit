@@ -81,6 +81,9 @@ export enum LoadingScreenType {
   V2,
 }
 
+// This prefix should be in sync with the value on the python side:
+const GENERATED_ELEMENT_ID_PREFIX = "$$WIDGET_ID"
+
 /**
  * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key
  * (EMBED_QUERY_PARAM_KEY, EMBED_OPTIONS_QUERY_PARAM_KEY). Is case insensitive.
@@ -345,13 +348,12 @@ export function setCookie(
 
 /** Return an Element's widget ID if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
-  // NOTE: This is a temporary fix until the selections in maps work is done.
-  // We believe that this will be easier to fix when we get to that point so in
-  // the meantime we will be doing this simple fix to prevent this error: https://github.com/streamlit/streamlit/issues/8329
-  if (notNull(element.deckGlJsonChart)) {
-    return undefined
+  const elementId = get(element as any, [requireNonNull(element.type), "id"])
+  if (elementId && elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)) {
+    // We only care about valid element IDs (with the correct prefix)
+    return elementId
   }
-  return get(element as any, [requireNonNull(element.type), "id"])
+  return undefined
 }
 
 /** True if the given form ID is non-null and non-empty. */
