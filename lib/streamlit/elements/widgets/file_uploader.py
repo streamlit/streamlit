@@ -470,7 +470,7 @@ class FileUploaderMixin:
             ctx=ctx,
         )
 
-        self.dg._enqueue("file_uploader", file_uploader_proto, user_key=key)
+        self.dg._enqueue("file_uploader", file_uploader_proto)
 
         if isinstance(widget_state.value, DeletedFile):
             return None

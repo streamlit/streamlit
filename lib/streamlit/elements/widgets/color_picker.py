@@ -254,7 +254,7 @@ class ColorPickerMixin:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True
 
-        self.dg._enqueue("color_picker", color_picker_proto, user_key=key)
+        self.dg._enqueue("color_picker", color_picker_proto)
         return widget_state.value
 
     @property

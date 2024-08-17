@@ -839,7 +839,7 @@ class SliderMixin:
             slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
 
-        self.dg._enqueue("slider", slider_proto, user_key=key)
+        self.dg._enqueue("slider", slider_proto)
         return cast(SliderReturn, widget_state.value)
 
     @property

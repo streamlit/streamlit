@@ -334,7 +334,7 @@ class CheckboxMixin:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 
-        self.dg._enqueue("checkbox", checkbox_proto, user_key=key)
+        self.dg._enqueue("checkbox", checkbox_proto)
         return checkbox_state.value
 
     @property

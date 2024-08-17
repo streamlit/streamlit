@@ -239,7 +239,7 @@ class CameraInputMixin:
             ctx=ctx,
         )
 
-        self.dg._enqueue("camera_input", camera_input_proto, user_key=key)
+        self.dg._enqueue("camera_input", camera_input_proto)
 
         if isinstance(camera_input_state.value, DeletedFile):
             return None

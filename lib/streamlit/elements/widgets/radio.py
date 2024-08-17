@@ -354,7 +354,7 @@ class RadioMixin:
 
         if ctx:
             save_for_app_testing(ctx, id, format_func)
-        self.dg._enqueue("radio", radio_proto, user_key=key)
+        self.dg._enqueue("radio", radio_proto)
         return widget_state.value
 
     @property

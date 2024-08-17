@@ -953,7 +953,7 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("arrow_data_frame", proto, user_key=key)
+        self.dg._enqueue("arrow_data_frame", proto)
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

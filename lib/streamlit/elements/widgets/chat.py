@@ -388,10 +388,10 @@ class ChatMixin:
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto, user_key=key
+                "chat_input", chat_input_proto
             )
         else:
-            self.dg._enqueue("chat_input", chat_input_proto, user_key=key)
+            self.dg._enqueue("chat_input", chat_input_proto)
 
         return widget_state.value if not widget_state.value_changed else None
 

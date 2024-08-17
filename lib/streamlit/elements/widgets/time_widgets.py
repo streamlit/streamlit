@@ -514,7 +514,7 @@ class TimeWidgetsMixin:
                 time_input_proto.value = serialized_value
             time_input_proto.set_value = True
 
-        self.dg._enqueue("time_input", time_input_proto, user_key=key)
+        self.dg._enqueue("time_input", time_input_proto)
         return widget_state.value
 
     @gather_metrics("date_input")
@@ -817,7 +817,7 @@ class TimeWidgetsMixin:
             date_input_proto.value[:] = serde.serialize(widget_state.value)
             date_input_proto.set_value = True
 
-        self.dg._enqueue("date_input", date_input_proto, user_key=key)
+        self.dg._enqueue("date_input", date_input_proto)
         return widget_state.value
 
     @property
