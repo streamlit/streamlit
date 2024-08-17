@@ -1452,6 +1452,8 @@ export class App extends PureComponent<Props, State> {
         .filter(notUndefined)
     )
 
+    // Here we need to determine the new page hash and URL, including queryString (preserve embed params)
+
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
@@ -1474,7 +1476,7 @@ export class App extends PureComponent<Props, State> {
     fragmentId?: string,
     pageScriptHash?: string,
     isAutoRerun?: boolean,
-    queryString?: string
+    queryString?: string // does this need to be definite?
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1488,6 +1490,8 @@ export class App extends PureComponent<Props, State> {
 
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
+
+    // lift this code out?
 
     let pageName = ""
     let queryStringChanged = false
@@ -1509,6 +1513,8 @@ export class App extends PureComponent<Props, State> {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we
       // rerun the current page.
+      // TODO find this codepath and make sure we dont break it.
+
       pageScriptHash = currentPageScriptHash
       // We also want to presever the existing query params _if_ they weren't specified
       // (which should be the case when the user clicks "Rerun")

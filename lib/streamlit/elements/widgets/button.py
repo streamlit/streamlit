@@ -764,16 +764,12 @@ class ButtonMixin:
         if query_params is not None:
             if not hasattr(query_params, "get_all"):
                 query_params_internal: QueryParams = QueryParams()
-                query_params_internal._disable_forward_msg = (
-                    True  # turn off sending forward messages for THIS QueryParams
-                )
+                # turn off sending forward messages for THIS QueryParams
+                query_params_internal._disable_forward_msg = True
                 query_params_internal.from_dict(query_params)
             else:
                 query_params_internal = cast(QueryParams, query_params)
-
             page_link_proto.query_string = query_params_internal.to_string()
-            if page_link_proto.query_string != "":
-                page_link_proto.page += "?" + page_link_proto.query_string
 
         return self.dg._enqueue("page_link", page_link_proto)
 
