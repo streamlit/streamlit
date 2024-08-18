@@ -800,6 +800,7 @@ class ButtonMixin:
             "button",
             user_key=key,
             label=label,
+            icon=icon,
             key=key,
             help=help,
             is_form_submitter=is_form_submitter,
