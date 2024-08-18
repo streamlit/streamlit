@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { useTheme } from "@emotion/react"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
