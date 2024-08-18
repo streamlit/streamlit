@@ -264,9 +264,8 @@ export const StyledLogo = styled.img<StyledLogoProps>(
     zIndex: theme.zIndices.header,
 
     ...(sidebarWidth && {
-      // Control max width of logo so doesn't hide sidebar collapse button (issue #8707)
-      // L & R padding (3rem) + R margin (0.5rem)
-      // + sidebar collapse button (2.25rem) = 5.75rem
+      // Control max width of logo so sidebar collapse button always shows (issue #8707)
+      // L & R padding (3rem) + R margin (.5rem) + collapse button (2.25rem) = 5.75rem
       maxWidth: `calc(${sidebarWidth}px - 5.75rem)`,
     }),
   })
