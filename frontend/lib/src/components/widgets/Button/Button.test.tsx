@@ -141,4 +141,18 @@ describe("Button widget", () => {
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle(`width: ${250}px`)
   })
+
+  it("renders an emoji icon if provided", () => {
+    render(<Button {...getProps({ icon: "😀" })} />)
+
+    const icon = screen.getByTestId("stIconEmoji")
+    expect(icon).toHaveTextContent("😀")
+  })
+
+  it("renders a material icon if provided", () => {
+    render(<Button {...getProps({ icon: ":material/thumb_up:" })} />)
+
+    const icon = screen.getByTestId("stIconMaterial")
+    expect(icon).toHaveTextContent("thumb_up")
+  })
 })
