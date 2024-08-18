@@ -972,11 +972,13 @@ export class App extends PureComponent<Props, State> {
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
         const pagePath = isViewingMainPage ? "" : newPageName
-        const newQueryString =
-          preserveEmbedQueryParams() + (queryString ? `&${queryString}` : "")
+        const queryString = preserveEmbedQueryParams()
+        const qs = queryString ? `?${queryString}` : ""
+
         const basePathPrefix = basePath ? `/${basePath}` : ""
-        const qs = newQueryString ? `?${newQueryString}` : ""
+
         const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
         window.history.pushState({}, "", pageUrl)
       }
     }
@@ -1452,13 +1454,10 @@ export class App extends PureComponent<Props, State> {
         .filter(notUndefined)
     )
 
-    // Here we need to determine the new page hash and URL, including queryString (preserve embed params)
-
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash,
-      queryString
+      pageScriptHash
     )
   }
 
@@ -1475,8 +1474,7 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean,
-    queryString?: string // does this need to be definite?
+    isAutoRerun?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1490,40 +1488,25 @@ export class App extends PureComponent<Props, State> {
 
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
-
-    // lift this code out?
-
+    let queryString = this.getQueryString()
     let pageName = ""
-    let queryStringChanged = false
 
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change, and replace them with the
-        // queryString provided by the caller (if present)
-        if (queryString == undefined || queryString == "") {
-          queryString = preserveEmbedQueryParams()
-        } else {
-          queryString = queryString + "&" + preserveEmbedQueryParams()
-        }
-        queryStringChanged = true
+        // clear non-embed query parameters within a page change
+        queryString = preserveEmbedQueryParams()
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_QUERY_PARAM",
+          queryParams: queryString,
+        })
       }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we
       // rerun the current page.
-      // TODO find this codepath and make sure we dont break it.
-
       pageScriptHash = currentPageScriptHash
-      // We also want to presever the existing query params _if_ they weren't specified
-      // (which should be the case when the user clicks "Rerun")
-      if (queryString == undefined) {
-        queryString = this.getQueryString()
-        queryStringChanged = false
-      } else {
-        queryStringChanged = true
-      }
     } else {
       // We must be in the case where the user is navigating directly to a
       // non-main page of this app. Since we haven't received the list of the
@@ -1535,13 +1518,6 @@ export class App extends PureComponent<Props, State> {
         basePath
       )
       pageScriptHash = ""
-    }
-
-    if (queryStringChanged) {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_QUERY_PARAM",
-        queryParams: queryString ?? "",
-      })
     }
 
     this.sendBackMsg(
@@ -1801,10 +1777,6 @@ export class App extends PureComponent<Props, State> {
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
 
-  queryStringToParams = (queryParams: string): URLSearchParams => {
-    return new URLSearchParams(queryParams)
-  }
-
   isInCloudEnvironment = (): boolean => {
     const { hostMenuItems } = this.state
     return hostMenuItems && hostMenuItems?.length > 0
@@ -1937,11 +1909,12 @@ export class App extends PureComponent<Props, State> {
             <StyledApp
               className={outerDivClass}
               data-testid="stApp"
-              data-teststate={
+              data-test-script-state={
                 scriptRunId == INITIAL_SCRIPT_RUN_ID
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>
