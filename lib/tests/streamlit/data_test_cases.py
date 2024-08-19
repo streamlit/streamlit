@@ -36,20 +36,22 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.dataframe_util import DataFormat, is_pandas_version_less_than
-from tests.streamlit.dask_mocks import DataFrame as DaskDataFrame
-from tests.streamlit.dask_mocks import Index as DaskIndex
-from tests.streamlit.dask_mocks import Series as DaskSeries
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
-from tests.streamlit.ray_mocks import Dataset as RayDataset
-from tests.streamlit.ray_mocks import MaterializedDataset as RayMaterializedDataset
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
+from tests.streamlit.data_mocks.dask_mocks import DataFrame as DaskDataFrame
+from tests.streamlit.data_mocks.dask_mocks import Index as DaskIndex
+from tests.streamlit.data_mocks.dask_mocks import Series as DaskSeries
+from tests.streamlit.data_mocks.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.data_mocks.modin_mocks import Series as ModinSeries
+from tests.streamlit.data_mocks.pyspark_mocks import DataFrame as PySparkDataFrame
+from tests.streamlit.data_mocks.ray_mocks import Dataset as RayDataset
+from tests.streamlit.data_mocks.ray_mocks import (
+    MaterializedDataset as RayMaterializedDataset,
+)
+from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
+from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.data_mocks.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.data_mocks.snowpark_mocks import Table as SnowparkTable
 
 np.random.seed(0)
 random.seed(0)
