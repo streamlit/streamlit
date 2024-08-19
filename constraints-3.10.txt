@@ -3,7 +3,7 @@ attrs==24.2.0
 backports.tarfile==1.2.0
 blinker==1.8.2
 bokeh==2.4.3
-cachetools==5.4.0
+cachetools==5.5.0
 certifi==2024.7.4
 cffi==1.17.0
 cfgv==3.4.0
