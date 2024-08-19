@@ -20,7 +20,7 @@ import threading
 import time
 import unittest
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 from parameterized import parameterized
@@ -30,10 +30,6 @@ from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_utils import CachedResult
-from streamlit.runtime.caching.cached_message_replay import (
-    MultiCacheResults,
-    _make_widget_key,
-)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -54,9 +50,6 @@ from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx
 
-if TYPE_CHECKING:
-    from streamlit.runtime.caching.cache_type import CacheType
-
 
 def get_text_or_block(delta):
     if delta.WhichOneof("type") == "new_element":
@@ -67,15 +60,11 @@ def get_text_or_block(delta):
         return "new_block"
 
 
-def as_cached_result(value: Any, cache_type: CacheType) -> MultiCacheResults:
+def as_cached_result(value: Any) -> CachedResult:
     """Creates cached results for a function that returned `value`
     and did not execute any elements.
     """
-    result = CachedResult(value, [], st._main.id, st.sidebar.id)
-    widget_key = _make_widget_key([], cache_type)
-    d = {widget_key: result}
-    initial = MultiCacheResults(set(), d)
-    return initial
+    return CachedResult(value, [], st._main.id, st.sidebar.id)
 
 
 class CommonCacheTest(DeltaGeneratorTestCase):
