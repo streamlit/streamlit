@@ -439,11 +439,12 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
             (
                 # define a lambda that matches the signature of what button_group is
                 # passing to compute_widget_id, because st.feedback doesn't take a label
+                # and its arguments are different.
                 lambda key,
                 options,
                 disabled=False,
                 default=[],
-                click_mode=0: st.feedback(options, disabled=disabled),
+                click_mode=0: st.feedback("stars", disabled=disabled),
                 "button_group",
             ),
             (st.multiselect, "multiselect"),

@@ -23,10 +23,8 @@ from typing import (
     Sequence,
     TypeVar,
     cast,
-    get_args,
+    overload,
 )
-
-from typing_extensions import TypeAlias
 
 from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
@@ -80,8 +78,6 @@ _STAR_ICON: Final = ":material/star:"
 # in base64 format and send it over the wire as an image.
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
-_FeedbackOptions: TypeAlias = Literal["thumbs", "faces", "stars"]
-
 
 class FeedbackSerde:
     """Uses the MultiSelectSerde under-the-hood, but accepts a single index value
@@ -114,7 +110,7 @@ class FeedbackSerde:
 
 
 def get_mapped_options(
-    feedback_option: _FeedbackOptions,
+    feedback_option: Literal["thumbs", "faces", "stars"],
 ) -> tuple[list[ButtonGroupProto.Option], list[int]]:
     # options object understandable by the web app
     options: list[ButtonGroupProto.Option] = []
@@ -168,10 +164,33 @@ def _build_proto(
 
 
 class ButtonGroupMixin:
+    @overload  # These overloads are not documented in the docstring, at least not at this time, on the theory that most people won't know what it means. And the Literals here are a subclass of int anyway.
+    # Usually, we would make a type alias for Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too many other places, and it's a more helpful autocomplete if we just enumerate the values explicitly, so a decision has been made to keep it as not an alias.
+    def feedback(
+        self,
+        options: Literal["thumbs"] = ...,
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> Literal[0, 1] | None: ...
+    @overload
+    def feedback(
+        self,
+        options: Literal["faces", "stars"] = ...,
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
         self,
-        options: _FeedbackOptions = "thumbs",
+        options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
         key: str | None = None,
         disabled: bool = False,
@@ -262,7 +281,7 @@ class ButtonGroupMixin:
 
         """
 
-        if not isinstance(options, list) and options not in get_args(_FeedbackOptions):
+        if options not in ["thumbs", "faces", "stars"]:
             raise StreamlitAPIException(
                 "The options argument to st.feedback must be one of "
                 "['thumbs', 'faces', 'stars']. "
