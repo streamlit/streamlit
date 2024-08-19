@@ -38,7 +38,7 @@ describe("ErrorElement element", () => {
     const props = getProps()
     render(<ErrorElement {...props} />)
 
-    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContainer")).toBeInTheDocument()
   })
 
   it("renders stack without first line and trimmed lines", () => {

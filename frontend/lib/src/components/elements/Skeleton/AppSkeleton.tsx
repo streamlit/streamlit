@@ -42,7 +42,7 @@ const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
   if (!visible) return <></>
 
   return (
-    <StyledSkeleton data-testid="stAppSkeleton">
+    <StyledSkeleton className="stAppSkeleton" data-testid="stAppSkeleton">
       <TitleSkeleton />
       <ParagraphSkeleton>
         <TextLineSkeleton width="98%" />

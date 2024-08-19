@@ -98,7 +98,7 @@ describe("aboutDialog", () => {
       </Fragment>
     )
 
-    expect(screen.getByTestId("stModal")).toBeInTheDocument()
+    expect(screen.getByTestId("stDialog")).toBeInTheDocument()
     // need a regex because there is a line break
     const versionRegex = /Streamlit v\s*42\.42\.42/
     const versionText = screen.getByText(versionRegex)
@@ -119,7 +119,7 @@ describe("aboutDialog", () => {
       </Fragment>
     )
 
-    expect(screen.getByTestId("stModal")).toBeInTheDocument()
+    expect(screen.getByTestId("stDialog")).toBeInTheDocument()
     // regex that is anything after Streamlit v
     const versionRegex = /^Streamlit v.*/
     const nonExistentText = screen.queryByText(versionRegex)

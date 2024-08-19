@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 
 from typing_extensions import TypeGuard
 
-from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -287,7 +287,7 @@ class SelectSliderMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = convert_anything_to_sequence(options)
+        opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if len(opt) == 0:

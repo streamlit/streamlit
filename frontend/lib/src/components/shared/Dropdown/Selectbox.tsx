@@ -34,7 +34,6 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 const NO_OPTIONS_MSG = "No options to select."
@@ -298,8 +297,8 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: iconSizes.xl,
-                      height: iconSizes.xl,
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
                     }),
                   },
                 },
