@@ -37,9 +37,8 @@ export type MaybeStateUpdate =
   | [Partial<AppNavigationState>, () => void]
   | undefined
 export type PageUrlUpdateCallback = (
-  mainPageName: string,
-  newPageName: string,
-  isViewingMainPage: boolean,
+  mainPageName?: string,
+  newPageName?: string,
   queryString?: string
 ) => void
 export type PageNotFoundCallback = (pageName?: string) => void
@@ -91,12 +90,7 @@ export class StrategyV1 {
       mainPage.pageScriptHash === this.currentPageScriptHash
 
     const queryString = newSession.queryString
-    this.appNav.onUpdatePageUrl(
-      mainPageName,
-      newPageName,
-      isViewingMainPage,
-      queryString
-    )
+    this.appNav.onUpdatePageUrl(mainPageName, newPageName, queryString)
 
     // Set the title to its default value
     document.title = getTitle(newPageName ?? "")
@@ -261,11 +255,7 @@ export class StrategyV2 {
       this.appNav.onPageIconChange(currentPage.icon)
     }
 
-    this.appNav.onUpdatePageUrl(
-      mainPage.urlPathname ?? "",
-      currentPageName,
-      currentPage.isDefault ?? false
-    )
+    this.appNav.onUpdatePageUrl(mainPage.urlPathname ?? "", currentPageName)
 
     return [
       {

@@ -503,7 +503,7 @@ export function extractPageNameFromPathName(
   // regex special-characters. This is why we're stuck with the
   // weird-looking triple `replace()`.
   return decodeURIComponent(
-    document.location.pathname
+    pathname
       .replace(`/${basePath}`, "")
       .replace(new RegExp("^/?"), "")
       .replace(new RegExp("/$"), "")
