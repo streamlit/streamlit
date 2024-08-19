@@ -174,11 +174,6 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
 
 
 class CheckCacheReplayTest(ElementPoliciesTest):
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch(
-        "streamlit.elements.lib.policies.get_script_run_ctx",
-        MagicMock(return_value=MagicMock(disallow_cached_widget_usage=False)),
-    )
     @patch("streamlit.exception")
     def test_cache_replay_rules_succeeds(self, patched_st_exception):
         check_cache_replay_rules()
@@ -189,6 +184,8 @@ class CheckCacheReplayTest(ElementPoliciesTest):
         in_cached_function.set(True)
         check_cache_replay_rules()
         patched_st_exception.assert_called()
+        # Reset the global flag to avoid affecting other tests
+        in_cached_function.set(False)
 
 
 class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):  #
