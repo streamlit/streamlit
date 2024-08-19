@@ -181,8 +181,6 @@ def register_widget_from_metadata(
 
     See `register_widget` for details on what this returns.
     """
-    # Local import to avoid import cycle
-
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
