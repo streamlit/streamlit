@@ -276,7 +276,8 @@ def show_widget_replay_deprecation(
     decorator: Literal["cache_data", "cache_resource"],
 ) -> None:
     show_deprecation_warning(
-        "The `experimental_allow_widgets` parameter is deprecated and will be removed "
+        "The cached widget replay feature was removed in 1.38. The "
+        "`experimental_allow_widgets` parameter will also be removed "
         "in a future release. Please remove the `experimental_allow_widgets` parameter "
         f"from the `@st.{decorator}` decorator and move all widget commands outside of "
         "cached functions.\n\nTo speed up your app, we recommend moving your widgets "

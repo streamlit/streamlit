@@ -307,9 +307,11 @@ class CacheResourceAPI:
 
         experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
-            Support for widgets in cached functions is currently experimental.
-            Setting this parameter to True may lead to excessive memory use since the
-            widget value is treated as an additional input parameter to the cache.
+
+            .. deprecated::
+                The cached widget replay functionality was removed in 1.38. Please
+                remove the ``experimental_allow_widgets`` parameter from your
+                caching decorators.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -318,10 +320,6 @@ class CacheResourceAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
-
-        .. deprecated::
-            ``experimental_allow_widgets`` is deprecated and will be removed in
-            a later version.
 
         Example
         -------
