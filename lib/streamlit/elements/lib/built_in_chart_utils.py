@@ -643,7 +643,7 @@ def _parse_y_columns(
 
     else:
         y_column_list = [
-            str(col) for col in dataframe_util.convert_anything_to_sequence(y_from_user)
+            str(col) for col in dataframe_util.convert_anything_to_list(y_from_user)
         ]
 
     for col in y_column_list:
