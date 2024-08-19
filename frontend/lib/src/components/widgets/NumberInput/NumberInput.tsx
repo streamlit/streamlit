@@ -31,7 +31,6 @@ import {
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives/breakpoints"
 import {
   Source,
   WidgetStateManager,
@@ -483,7 +482,7 @@ export const NumberInput: React.FC<Props> = ({
           }}
         />
         {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-        {width > breakpoints.hideNumberInputControls && (
+        {width > theme.breakpoints.hideNumberInputControls && (
           <StyledInputControls>
             <StyledInputControl
               className="step-down"
@@ -515,7 +514,7 @@ export const NumberInput: React.FC<Props> = ({
         )}
       </StyledInputContainer>
       {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > breakpoints.hideWidgetDetails && (
+      {width > theme.breakpoints.hideWidgetDetails && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions
             dirty={dirty}
