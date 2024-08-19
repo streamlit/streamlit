@@ -997,9 +997,11 @@ export class App extends PureComponent<Props, State> {
 
     // Extract the query string
     const prevQueryParams = new URLSearchParams(this.getQueryString())
-    const newQueryParams = notNullOrUndefined(queryString)
-      ? new URLSearchParams(queryString)
-      : prevQueryParams
+    const newQueryParams = preserveEmbedQueryParams(
+      notNullOrUndefined(queryString)
+        ? new URLSearchParams(queryString)
+        : prevQueryParams
+    )
 
     // If either the page name or the query params have changed, push a new URL to the page history.
     if (prevPageName !== newPageName || newQueryParams !== prevQueryParams) {
@@ -1492,19 +1494,21 @@ export class App extends PureComponent<Props, State> {
     )
 
     // clear non-embed query parameters within a page change
-    // queryString = preserveEmbedQueryParams()
-    // this.hostCommunicationMgr.sendMessageToHost({
-    //   type: "SET_QUERY_PARAM",
-    //   queryParams: queryString,
-    // })
+    const queryParams = preserveEmbedQueryParams(queryString ?? "").toString()
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_QUERY_PARAM",
+      queryParams,
+    })
     // TODO: is this where we actually "Set" the queryParams?
     // is this the appropriate place to send this host message.
 
-    this.sendRerunBackMsg(
-      this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
-      undefined,
-      pageScriptHash
-    )
+    this.setState({ queryParams }, () => {
+      this.sendRerunBackMsg(
+        this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
+        undefined,
+        pageScriptHash
+      )
+    })
   }
 
   isAppInReadyState = (prevState: Readonly<State>): boolean => {

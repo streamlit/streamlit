@@ -85,6 +85,8 @@ export enum LoadingScreenType {
  * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key
  * (EMBED_QUERY_PARAM_KEY, EMBED_OPTIONS_QUERY_PARAM_KEY). Is case insensitive.
  */
+// TODO: this function needs to use the App State query params, not
+// window.location.search; so in theory the params should get passed in.
 export function getEmbedUrlParams(embedKey: string): Set<string> {
   const embedUrlParams = new Set<string>()
   const urlParams = new URLSearchParams(window.location.search)
@@ -107,23 +109,27 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
  *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
  *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
  */
-export function preserveEmbedQueryParams(): string {
+export function preserveEmbedQueryParams(
+  queryString: string | URLSearchParams
+): URLSearchParams {
+  const queryParams =
+    typeof queryString == "string"
+      ? new URLSearchParams(queryString)
+      : queryString
   if (!isEmbed()) {
-    return ""
+    return queryParams
   }
 
   const embedOptionsValues = new URLSearchParams(
     window.location.search
   ).getAll(EMBED_OPTIONS_QUERY_PARAM_KEY)
 
-  // instantiate multiple key values with an array of string pairs
-  // https://stackoverflow.com/questions/72571132/urlsearchparams-with-multiple-values
-  const embedUrlMap: string[][] = []
-  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, EMBED_TRUE])
+  queryParams.set(EMBED_QUERY_PARAM_KEY, EMBED_TRUE)
+  queryParams.delete(EMBED_OPTIONS_QUERY_PARAM_KEY)
   embedOptionsValues.forEach((embedValue: string) => {
-    embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
+    queryParams.append(EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue)
   })
-  return new URLSearchParams(embedUrlMap).toString()
+  return queryParams
 }
 
 /**
