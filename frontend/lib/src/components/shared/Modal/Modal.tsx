@@ -38,7 +38,8 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { genericFonts, fontSizes, spacing, fontWeights }: EmotionTheme =
+    useTheme()
 
   return (
     <UIModalHeader
@@ -53,7 +54,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         paddingLeft: spacing.twoXL,
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.xl,
-        fontWeight: 600,
+        fontWeight: fontWeights.bold,
         margin: spacing.none,
         lineHeight: 1.5,
         textTransform: "none",
@@ -116,7 +117,7 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
         paddingLeft: spacing.md,
       }}
     >
-      <div className="ModalBody">{children}</div>
+      <div>{children}</div>
     </UIModalFooter>
   )
 }
@@ -138,7 +139,8 @@ function Modal(props: ModalProps): ReactElement {
         background: colors.darkenedBgMix25,
       },
       props: {
-        "data-testid": "stModal",
+        className: "stDialog",
+        "data-testid": "stDialog",
       },
     },
     DialogContainer: {

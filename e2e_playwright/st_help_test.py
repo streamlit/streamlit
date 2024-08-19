@@ -20,7 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.header renders correctly with dividers."""
-    help_elements = app.get_by_test_id("stDocstring")
+    help_elements = app.get_by_test_id("stHelp")
 
     for i, element in enumerate(help_elements.all()):
         assert_snapshot(element, name=f"st_help-{i}")

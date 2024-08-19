@@ -152,13 +152,12 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
 
 export const StyledCopyButton = styled.button(({ theme }) => ({
   pointerEvents: "auto",
-  height: "2.5rem",
-  padding: 0,
-  width: "2.5rem",
+  height: theme.iconSizes.threeXL,
+  width: theme.iconSizes.threeXL,
+  padding: theme.spacing.none,
   border: "none",
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText60,
-  borderRadius: theme.radii.xl,
   transform: "scale(0)",
 
   [`${StyledCodeBlock}:hover &, &:active, &:focus, &:hover`]: {
