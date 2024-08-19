@@ -183,10 +183,9 @@ class CheckCacheReplayTest(ElementPoliciesTest):
         check_cache_replay_rules()
         patched_st_exception.assert_not_called()
 
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     @patch(
-        "streamlit.elements.lib.policies.get_script_run_ctx",
-        MagicMock(return_value=MagicMock(disallow_cached_widget_usage=True)),
+        "streamlit.runtime.scriptrunner_utils.script_run_context.in_cached_function.get",
+        MagicMock(return_value=True),
     )
     @patch("streamlit.exception")
     def test_cache_replay_rules_fails(self, patched_st_exception):
