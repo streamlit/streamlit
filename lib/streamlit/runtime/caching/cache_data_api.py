@@ -435,9 +435,11 @@ class CacheDataAPI:
 
         experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
-            Support for widgets in cached functions is currently experimental.
-            Setting this parameter to True may lead to excessive memory use since the
-            widget value is treated as an additional input parameter to the cache.
+
+            .. deprecated::
+                The cached widget replay functionality was removed in 1.38. Please
+                remove the ``experimental_allow_widgets`` parameter from your
+                caching decorators.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
