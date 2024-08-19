@@ -1491,6 +1491,15 @@ export class App extends PureComponent<Props, State> {
         .filter(notUndefined)
     )
 
+    // clear non-embed query parameters within a page change
+    // queryString = preserveEmbedQueryParams()
+    // this.hostCommunicationMgr.sendMessageToHost({
+    //   type: "SET_QUERY_PARAM",
+    //   queryParams: queryString,
+    // })
+    // TODO: is this where we actually "Set" the queryParams?
+    // is this the appropriate place to send this host message.
+
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
@@ -1531,14 +1540,6 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change
-        queryString = preserveEmbedQueryParams()
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_QUERY_PARAM",
-          queryParams: queryString,
-        })
-      }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we

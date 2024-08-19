@@ -31,7 +31,7 @@ interface AppNavigationState {
   appPages: IAppPage[]
   currentPageScriptHash: string
   navSections: string[]
-  queryString?: string
+  queryParams?: string
 }
 
 export type MaybeStateUpdate =
@@ -206,18 +206,10 @@ export class StrategyV2 {
     // We do not know the page name, so use an empty string version
     document.title = getTitle("")
 
-    // TODO: using an instance variable like this to transfer
-    // the queryString from this method (when we get the queryString)
-    // to handleNavigation (where we will get the pageURL) "smells" wrong
-    // but I can't think of a better way to do it right now because I don't
-    // have a good enough conceptualization of the overall architecture of App
-    this.appNav.newQueryString = newSession.queryString
-
-    // TODO: is it correct to update the app state here?
     return [
       {
         hideSidebarNav: this.hideSidebarNav ?? false,
-        queryString: newSession.queryString ?? "",
+        queryParams: newSession.queryString ?? "",
       },
       () => {},
     ]
@@ -272,11 +264,7 @@ export class StrategyV2 {
     }
 
     // TODO for some reason
-    this.appNav.onUpdatePageUrl(
-      mainPage.urlPathname ?? "",
-      currentPageName,
-      this.appNav.newQueryString
-    )
+    this.appNav.onUpdatePageUrl(mainPage.urlPathname ?? "", currentPageName)
 
     return [
       {
@@ -284,7 +272,6 @@ export class StrategyV2 {
         navSections: sections,
         hideSidebarNav: this.hideSidebarNav,
         currentPageScriptHash,
-        queryString: this.appNav.newQueryString,
       },
       () => {
         this.appNav.hostCommunicationMgr.sendMessageToHost({
