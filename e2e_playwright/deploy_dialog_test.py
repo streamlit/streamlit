@@ -25,7 +25,7 @@ def test_deploy_button_displays_correctly(
 
     # Make sure that deploy dialog is properly displayed
     # Before taking screenshot
-    deploy_dialog = themed_app.get_by_test_id("stModal")
+    deploy_dialog = themed_app.get_by_test_id("stDialog")
     expect(deploy_dialog).to_be_visible()
     expect(
         deploy_dialog.get_by_test_id("stDeployDialogCommunityCloudIcon")
