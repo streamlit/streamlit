@@ -648,7 +648,7 @@ class DataCache(Cache):
             sidebar_id = st.sidebar.id
             entry = CachedResult(value, messages, main_id, sidebar_id)
             pickled_entry = pickle.dumps(entry)
-        except pickle.PicklingError as exc:
+        except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
         self.storage.set(key, pickled_entry)
 
