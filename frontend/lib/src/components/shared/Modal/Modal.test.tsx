@@ -32,7 +32,8 @@ describe("Modal component", () => {
       </BaseProvider>
     )
 
-    const modalElement = screen.getByRole("dialog")
+    const modalElement = screen.getByTestId("stDialog")
     expect(modalElement).toBeInTheDocument()
+    expect(modalElement).toHaveClass("stDialog")
   })
 })

@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
-from playwright.sync_api import Page
+from typing import Literal
 
-from e2e_playwright.conftest import ImageCompareFunction
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 
+feedback = ButtonGroupMixin().feedback
 
-def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that st.header renders correctly with dividers."""
-    help_elements = app.get_by_test_id("stHelp")
-
-    for i, element in enumerate(help_elements.all()):
-        assert_snapshot(element, name=f"st_help-{i}")
+v1: None | Literal[0, 1] = feedback()
+v2: None | Literal[0, 1] = feedback("thumbs")
+v3: None | Literal[0, 1, 2, 3, 4] = feedback("faces")
+v4: None | Literal[0, 1, 2, 3, 4] = feedback("stars")

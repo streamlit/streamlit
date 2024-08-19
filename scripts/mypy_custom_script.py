@@ -24,7 +24,6 @@ import os
 import shlex
 import sys
 import tempfile
-from typing import Iterable
 
 import click
 import mypy.main as mypy_main
