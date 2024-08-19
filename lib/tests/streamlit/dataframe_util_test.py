@@ -36,7 +36,7 @@ from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.data_mocks.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.data_samples import (
+from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
     TestObject,

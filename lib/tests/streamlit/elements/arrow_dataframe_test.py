@@ -30,7 +30,7 @@ from streamlit.dataframe_util import (
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_samples import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 
 
 def mock_data_frame():
