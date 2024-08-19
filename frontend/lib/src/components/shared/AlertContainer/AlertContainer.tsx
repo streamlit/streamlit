@@ -100,7 +100,7 @@ export default function AlertContainer({
         InnerContainer: {
           style: {
             width: "100%",
-            lineHeight: "1.5",
+            lineHeight: theme.lineHeights.alert,
           },
         },
       }}
