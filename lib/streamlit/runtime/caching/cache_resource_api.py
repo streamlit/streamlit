@@ -37,13 +37,10 @@ from streamlit.runtime.caching.cache_utils import (
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
     CachedResult,
-    ElementMsgData,
     MsgData,
-    MultiCacheResults,
     show_widget_replay_deprecation,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.time_util import time_to_seconds
 
@@ -83,7 +80,6 @@ class ResourceCaches(CacheStatsProvider):
         max_entries: int | float | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
-        allow_widgets: bool,
     ) -> ResourceCache:
         """Return the mem cache for the given key.
 
@@ -114,7 +110,6 @@ class ResourceCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 validate=validate,
-                allow_widgets=allow_widgets,
             )
             self._function_caches[key] = cache
             return cache
@@ -155,13 +150,11 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         max_entries: int | None,
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
-        allow_widgets: bool,
         hash_funcs: HashFuncsDict | None = None,
     ):
         super().__init__(
             func,
             show_spinner=show_spinner,
-            allow_widgets=allow_widgets,
             hash_funcs=hash_funcs,
         )
         self.max_entries = max_entries
@@ -188,7 +181,6 @@ class CachedResourceFuncInfo(CachedFuncInfo):
             max_entries=self.max_entries,
             ttl=self.ttl,
             validate=self.validate,
-            allow_widgets=self.allow_widgets,
         )
 
 
@@ -426,7 +418,6 @@ class CacheResourceAPI:
                     max_entries=max_entries,
                     ttl=ttl,
                     validate=validate,
-                    allow_widgets=experimental_allow_widgets,
                     hash_funcs=hash_funcs,
                 )
             )
@@ -438,7 +429,6 @@ class CacheResourceAPI:
                 max_entries=max_entries,
                 ttl=ttl,
                 validate=validate,
-                allow_widgets=experimental_allow_widgets,
                 hash_funcs=hash_funcs,
             )
         )
@@ -459,17 +449,15 @@ class ResourceCache(Cache):
         ttl_seconds: float,
         validate: ValidateFunc | None,
         display_name: str,
-        allow_widgets: bool,
     ):
         super().__init__()
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
+        self._mem_cache: TTLCache[str, CachedResult] = TTLCache(
             maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
-        self.allow_widgets = allow_widgets
 
     @property
     def max_entries(self) -> float:
@@ -488,24 +476,11 @@ class ResourceCache(Cache):
                 # key does not exist in cache.
                 raise CacheKeyNotFoundError()
 
-            multi_results: MultiCacheResults = self._mem_cache[key]
-
-            ctx = get_script_run_ctx()
-            if not ctx:
-                # ScriptRunCtx does not exist (we're probably running in "raw" mode).
-                raise CacheKeyNotFoundError()
-
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
-            if widget_key not in multi_results.results:
-                # widget_key does not exist in cache (this combination of widgets hasn't been
-                # seen for the value_key yet).
-                raise CacheKeyNotFoundError()
-
-            result = multi_results.results[widget_key]
+            result = self._mem_cache[key]
 
             if self.validate is not None and not self.validate(result.value):
                 # Validate failed: delete the entry and raise an error.
-                del multi_results.results[widget_key]
+                del self._mem_cache[key]
                 raise CacheKeyNotFoundError()
 
             return result
@@ -513,33 +488,11 @@ class ResourceCache(Cache):
     @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return
-
         main_id = st._main.id
         sidebar_id = st.sidebar.id
-        if self.allow_widgets:
-            widgets = {
-                msg.widget_metadata.widget_id
-                for msg in messages
-                if isinstance(msg, ElementMsgData) and msg.widget_metadata is not None
-            }
-        else:
-            widgets = set()
 
         with self._mem_cache_lock:
-            try:
-                multi_results = self._mem_cache[key]
-            except KeyError:
-                multi_results = MultiCacheResults(widget_ids=widgets, results={})
-
-            multi_results.widget_ids.update(widgets)
-            widget_key = multi_results.get_current_widget_key(ctx, CacheType.RESOURCE)
-
-            result = CachedResult(value, messages, main_id, sidebar_id)
-            multi_results.results[widget_key] = result
-            self._mem_cache[key] = multi_results
+            self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
