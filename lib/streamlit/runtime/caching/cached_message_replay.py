@@ -154,7 +154,7 @@ class CachedMessageReplayContext(threading.local):
             if not nested_call:
                 # Reset the in_cached_function flag. But only if this
                 # is not nested inside a cached function that disallows widget usage.
-                in_cached_function.set(True)
+                in_cached_function.set(False)
 
     def save_element_message(
         self,
