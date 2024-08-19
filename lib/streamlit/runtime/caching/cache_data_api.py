@@ -449,10 +449,6 @@ class CacheDataAPI:
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
 
-        .. deprecated::
-            ``experimental_allow_widgets`` is deprecated and will be removed in
-            a later version.
-
         Example
         -------
         >>> import streamlit as st
