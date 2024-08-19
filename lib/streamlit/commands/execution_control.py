@@ -28,6 +28,7 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     get_script_run_ctx,
 )
+from streamlit.runtime.state.query_params import QueryParams
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -219,25 +220,17 @@ def switch_page(
 
     # We want to reset query params (with exception of embed) when switching pages
     # but also allow the user to update the query_params explicitly.
-    # Any changes to session_state qp here will be automatically reflected in
-    # ctx.query_string when QueryParams sends a forward message.
-    with ctx.session_state.query_params() as qp:
+    if isinstance(query_params, QueryParams):
+        _params_to_send = query_params
+    else:
+        _params_to_send = QueryParams()
+        _params_to_send._disable_forward_msg = True
         if query_params is not None:
-            if hasattr(query_params, "get_all"):
-                query_params = {k: query_params.get_all(k) for k in query_params}
-            # PROBLEM: This (and clear) both send a forward message; this results in TWO items being put in
-            # browser history. We really want just ONE item in browser history for this switch, which
-            # means we need to update query params WITHOUT sending anything to the frontend, however
-            # that currently (with the present implementation of QueryParams) bypasses all the value
-            # validation that we perform against user input.
-            # hmm.....
-            qp.from_dict(query_params)
-        else:
-            qp.clear()
+            _params_to_send.from_dict(query_params)
 
     ctx.script_requests.request_rerun(
         RerunData(
-            query_string=ctx.query_string,
+            query_string=_params_to_send.to_string(),
             page_script_hash=page_script_hash,
         )
     )

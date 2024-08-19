@@ -31,6 +31,7 @@ interface AppNavigationState {
   appPages: IAppPage[]
   currentPageScriptHash: string
   navSections: string[]
+  queryString?: string
 }
 
 export type MaybeStateUpdate =
@@ -90,6 +91,7 @@ export class StrategyV1 {
       mainPage.pageScriptHash === this.currentPageScriptHash
 
     const queryString = newSession.queryString
+    this.appNav.newQueryString = queryString
     this.appNav.onUpdatePageUrl(mainPageName, newPageName, queryString)
 
     // Set the title to its default value
@@ -204,7 +206,21 @@ export class StrategyV2 {
     // We do not know the page name, so use an empty string version
     document.title = getTitle("")
 
-    return [{ hideSidebarNav: this.hideSidebarNav ?? false }, () => {}]
+    // TODO: using an instance variable like this to transfer
+    // the queryString from this method (when we get the queryString)
+    // to handleNavigation (where we will get the pageURL) "smells" wrong
+    // but I can't think of a better way to do it right now because I don't
+    // have a good enough conceptualization of the overall architecture of App
+    this.appNav.newQueryString = newSession.queryString
+
+    // TODO: is it correct to update the app state here?
+    return [
+      {
+        hideSidebarNav: this.hideSidebarNav ?? false,
+        queryString: newSession.queryString ?? "",
+      },
+      () => {},
+    ]
   }
 
   handlePagesChanged(_pagesChangedMsg: PagesChanged): MaybeStateUpdate {
@@ -255,7 +271,12 @@ export class StrategyV2 {
       this.appNav.onPageIconChange(currentPage.icon)
     }
 
-    this.appNav.onUpdatePageUrl(mainPage.urlPathname ?? "", currentPageName)
+    // TODO for some reason
+    this.appNav.onUpdatePageUrl(
+      mainPage.urlPathname ?? "",
+      currentPageName,
+      this.appNav.newQueryString
+    )
 
     return [
       {
@@ -263,6 +284,7 @@ export class StrategyV2 {
         navSections: sections,
         hideSidebarNav: this.hideSidebarNav,
         currentPageScriptHash,
+        queryString: this.appNav.newQueryString,
       },
       () => {
         this.appNav.hostCommunicationMgr.sendMessageToHost({
@@ -314,6 +336,8 @@ export class AppNavigation {
 
   isPageIconSet: boolean
 
+  newQueryString: string
+
   strategy: StrategyV1 | StrategyV2
 
   constructor(
@@ -328,6 +352,7 @@ export class AppNavigation {
     this.onPageIconChange = onPageIconChange
     this.isPageIconSet = false
     this.isPageTitleSet = false
+    this.newQueryString = ""
 
     // Start with the V1 strategy as it will apply to V0 as well
     this.strategy = new StrategyV1(this)

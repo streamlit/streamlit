@@ -822,6 +822,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleNavigation = (navigationMsg: Navigation): void => {
+    console.log("Got navigationMsg", navigationMsg)
     this.maybeSetState(this.appNavigation.handleNavigation(navigationMsg))
   }
 
@@ -950,6 +951,12 @@ export class App extends PureComponent<Props, State> {
     newPageName?: string,
     queryString?: string
   ): void => {
+    console.log("maybeUpdatePageUrl", {
+      mainPageName,
+      newPageName,
+      queryString,
+    })
+    console.trace()
     // Start by extracting the URL path
     const baseUriParts = this.getBaseUriParts()
     if (isNullOrUndefined(baseUriParts)) {
@@ -1028,7 +1035,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewSession = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
-
+    console.log("Got new Session", newSessionProto)
     if (this.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
