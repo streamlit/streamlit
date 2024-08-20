@@ -26,4 +26,6 @@ x = st.sidebar.text("overwrite me")
 x.text("overwritten")
 y = st.sidebar.text_input("type here")
 
-# TODO: add more tests such as markdown elements and also a test that takes screenshot of complete app to verify alignment of elements
+with st.sidebar:
+    st.header("hello world")
+    st.markdown("hello world")
