@@ -47,10 +47,10 @@ describe("CustomCodeTag Element", () => {
     const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
 
     expect(baseElement.querySelector("pre code")?.outerHTML).toBe(
-      '<code class="language-plaintext" style="white-space: pre;"><span>import streamlit as st\n' +
-        "</span>\n" +
-        'st.write("Hello")\n' +
-        "</code>"
+      '<code class="language-plaintext" style="white-space: pre;"><span><span>import streamlit as st\n' +
+        "</span></span><span>\n" +
+        '</span><span>st.write("Hello")\n' +
+        "</span><span></span></code>"
     )
   })
 
@@ -59,10 +59,10 @@ describe("CustomCodeTag Element", () => {
     const { baseElement } = render(<StreamlitSyntaxHighlighter {...props} />)
 
     expect(baseElement.querySelector("pre code")?.outerHTML).toBe(
-      '<code class="language-plaintext" style="white-space: pre;"><span>import streamlit as st\n' +
-        "</span>\n" +
-        'st.write("Hello")\n' +
-        "</code>"
+      '<code class="language-plaintext" style="white-space: pre;"><span><span>import streamlit as st\n' +
+        "</span></span><span>\n" +
+        '</span><span>st.write("Hello")\n' +
+        "</span><span></span></code>"
     )
   })
 

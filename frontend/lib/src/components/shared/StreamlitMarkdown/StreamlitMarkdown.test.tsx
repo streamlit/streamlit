@@ -431,18 +431,17 @@ describe("CustomCodeTag Element", () => {
     const props = getCustomCodeTagProps()
     render(<CustomCodeTag {...props} />)
 
-    const codeTag = screen.getByText(`st.write("Hello")`)
+    const codeTag = screen.getByText(`st.write("Hello")`).closest("code")
     const tagName = codeTag.nodeName.toLowerCase()
 
     expect(codeTag).toBeInTheDocument()
-    expect(tagName).toBe("code")
   })
 
   it("should render as plaintext", () => {
     const props = getCustomCodeTagProps({ className: "language-plaintext" })
     render(<CustomCodeTag {...props} />)
 
-    const codeTag = screen.getByText(`st.write("Hello")`)
+    const codeTag = screen.getByText(`st.write("Hello")`).closest("code")
     expect(codeTag).toHaveClass("language-plaintext")
   })
 
