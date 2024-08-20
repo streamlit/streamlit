@@ -89,7 +89,6 @@ class ChartType(Enum):
 # color legends in all instances, since the "size" circles vary in size based
 # on the data, and their container is top-aligned with the color container. But
 # through trial-and-error I found this value to be a good enough middle ground.
-# See e2e/scripts/st_arrow_scatter_chart.py for some alignment tests.
 #
 # NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
 # ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
