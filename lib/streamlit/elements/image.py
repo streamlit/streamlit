@@ -178,14 +178,11 @@ class ImageMixin:
 
 
 def _image_may_have_alpha_channel(image: PILImage) -> bool:
-    if image.mode in ("RGBA", "LA", "P"):
-        return True
-    else:
-        return False
+    return image.mode in ("RGBA", "LA", "P")
 
 
 def _image_is_gif(image: PILImage) -> bool:
-    return bool(image.format == "GIF")
+    return image.format == "GIF"
 
 
 def _validate_image_format_string(
@@ -199,7 +196,7 @@ def _validate_image_format_string(
     "GIF" if the image is a GIF, and "JPEG" otherwise.
     """
     format = format.upper()
-    if format == "JPEG" or format == "PNG":
+    if format in {"JPEG", "PNG"}:
         return cast(ImageFormat, format)
 
     # We are forgiving on the spelling of JPEG
@@ -509,30 +506,23 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
-    if isinstance(image, list):
-        images = image
+    if isinstance(image, (list, set, tuple)):
+        images = list(image)
     elif isinstance(image, np.ndarray) and len(cast(NumpyShape, image.shape)) == 4:
         images = _4d_to_list_3d(image)
     else:
-        images = [image]
+        images = [image]  # type: ignore
 
     if isinstance(caption, list):
         captions: Sequence[str | None] = caption
+    elif isinstance(caption, str):
+        captions = [caption]
+    elif isinstance(caption, np.ndarray) and len(cast(NumpyShape, caption.shape)) == 1:
+        captions = caption.tolist()
+    elif caption is None:
+        captions = [None] * len(images)
     else:
-        if isinstance(caption, str):
-            captions = [caption]
-        # You can pass in a 1-D Numpy array as captions.
-        elif (
-            isinstance(caption, np.ndarray)
-            and len(cast(NumpyShape, caption.shape)) == 1
-        ):
-            captions = caption.tolist()
-        # If there are no captions then make the captions list the same size
-        # as the images list.
-        elif caption is None:
-            captions = [None] * len(images)
-        else:
-            captions = [str(caption)]
+        captions = [str(caption)]
 
     assert isinstance(
         captions, list
