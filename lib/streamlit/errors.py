@@ -14,6 +14,9 @@
 
 from __future__ import annotations
 
+import gettext
+from typing import Any
+
 from streamlit import util
 
 
@@ -158,3 +161,88 @@ class StreamlitModuleNotFoundError(StreamlitAPIWarning):
             "installed."
         )
         super().__init__(message, *args)
+
+
+class LocalizableStreamlitException(StreamlitAPIException):
+    def __init__(self, message: str, **kwargs):
+        exception_name = type(self).__name__
+        exception_message = gettext.gettext(exception_name)
+        if exception_message == exception_name:
+            # gettext returns the message ID if there is no translation.
+            # In this case, we want to use the message provided in the constructor.
+            exception_message = message
+        super().__init__((exception_message).format(**kwargs))
+        self._exec_kwargs = kwargs
+
+    @property
+    def exec_kwargs(self) -> dict[str, Any]:
+        return self._exec_kwargs
+
+
+class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
+    """Exception raised mixing floats and ints in st.number_input."""
+
+    def __init__(
+        self,
+        value: int | float,
+        min_value: int | float,
+        max_value: int | float,
+        step: int | float,
+    ):
+        error_message = "All numerical arguments must be of the same type."
+
+        if value:
+            value_type = type(value).__name__
+            error_message += f"\n`value` has {value_type} type."
+
+        if min_value:
+            min_value_type = type(min_value).__name__
+            error_message += f"\n`min_value` has {min_value_type} type."
+
+        if max_value:
+            max_value_type = type(max_value).__name__
+            error_message += f"\n`max_value` has {max_value_type} type."
+
+        if step:
+            step_type = type(step).__name__
+            error_message += f"\n`step` has {step_type} type."
+
+        super().__init__(error_message)
+
+
+class StreamlitInputInvalidValueError(LocalizableStreamlitException):
+    """Exception raised when the `min_value` is greater or the `max_value` is less than the `value` in `st.number_input`."""
+
+    def __init__(
+        self, value: int | float, min_value: int | float, max_value: int | float
+    ):
+        error_message = None
+
+        if value < min_value:
+            error_message = (
+                f"The `value` {value} is less than the `min_value` {min_value}."
+            )
+        elif value > max_value:
+            error_message = (
+                f"The `value` {value} is greater than the `max_value` {max_value}."
+            )
+
+        super().__init__(error_message)
+
+
+class StreamlitJSNumberBoundsError(LocalizableStreamlitException):
+    """Exception raised when a number exceeds the Javascript limits."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class StreamlitNumberInputInvalidFormatError(LocalizableStreamlitException):
+    """Exception raised when the format string for `st.number_input` contains
+    invalid characters.
+    """
+
+    def __init__(self, format: str):
+        super().__init__(
+            f"Format string for st.number_input contains invalid characters: {format}"
+        )

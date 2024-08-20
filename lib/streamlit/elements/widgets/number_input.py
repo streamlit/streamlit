@@ -33,7 +33,12 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StNumberInputDifferentTypesError,
+    StreamlitInputInvalidValueError,
+    StreamlitJSNumberBoundsError,
+    StreamlitNumberInputInvalidFormatError,
+)
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -369,23 +374,17 @@ class NumberInputMixin:
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
-        int_args = all(
+        all_int_args = all(
             isinstance(a, (numbers.Integral, type(None), str))
             for a in number_input_args
         )
 
-        float_args = all(
+        all_float_args = all(
             isinstance(a, (float, type(None), str)) for a in number_input_args
         )
 
-        if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
-            )
+        if not all_int_args and not all_float_args:
+            raise StNumberInputDifferentTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -394,9 +393,9 @@ class NumberInputMixin:
         if value == "min":
             if min_value is not None:
                 value = min_value
-            elif int_args and float_args:
+            elif all_int_args and all_float_args:
                 value = 0.0  # if no values are provided, defaults to float
-            elif int_args:
+            elif all_int_args:
                 value = 0
             else:
                 value = 0.0
@@ -405,7 +404,7 @@ class NumberInputMixin:
         float_value = isinstance(value, float)
 
         if value is None:
-            if int_args and not float_args:
+            if all_int_args and not all_float_args:
                 # Select int type if all relevant args are ints:
                 int_value = True
             else:
@@ -437,22 +436,14 @@ class NumberInputMixin:
         try:
             float(format % 2)
         except (TypeError, ValueError):
-            raise StreamlitAPIException(
-                "Format string for st.number_input contains invalid characters: %s"
-                % format
-            )
+            raise StreamlitNumberInputInvalidFormatError(format)
+
 
         # Ensure that the value matches arguments' types.
-        all_ints = int_value and int_args
+        all_ints = int_value and all_int_args
 
-        if min_value is not None and value is not None and min_value > value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be greater than or equal to the `min_value` {min_value}"
-            )
-        if max_value is not None and value is not None and max_value < value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
-            )
+        if ((min_value is not None and value is not None and min_value > value) or (max_value is not None and value is not None and max_value < value)):
+            raise StreamlitInputInvalidValueError(value=value, min_value=min_value, max_value=max_value)
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
@@ -476,7 +467,7 @@ class NumberInputMixin:
                 if value is not None:
                     JSNumber.validate_float_bounds(value, "`value`")
         except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
+            raise StreamlitJSNumberBoundsError(str(e))
 
         data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
 
