@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import gettext
+import os
 from typing import Any
 
 from streamlit import util
@@ -179,6 +180,7 @@ class LocalizableStreamlitException(StreamlitAPIException):
         return self._exec_kwargs
 
 
+# st.number_input
 class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
     """Exception raised mixing floats and ints in st.number_input."""
 
@@ -246,3 +248,29 @@ class StreamlitNumberInputInvalidFormatError(LocalizableStreamlitException):
         super().__init__(
             f"Format string for st.number_input contains invalid characters: {format}"
         )
+
+
+# st.page_link
+class StreamlitMissingPageLabelError(LocalizableStreamlitException):
+    """Exception raised when a page_link is created without a label."""
+
+    def __init__(self):
+        super().__init__(
+            "The `label` param is required for external links used with `st.page_link` - please provide a `label`."
+        )
+
+
+class StreamlitPageNotFoundError(LocalizableStreamlitException):
+    """Exception raised the linked page can not be found."""
+
+    def __init__(self, page: str, main_script_directory: str):
+        # TODO: how to determine MPAv1 vs MPAv2?
+        is_mpav2 = False
+        error_message = None
+
+        if is_mpav2:
+            error_message = f"Could not find page: `{page}`. You must provide a `StreamlitPage` object or file path relative to the entrypoint file. Only pages previously defined by [st.Page](http://st.page/) and passed to `st.navigation` are allowed."
+        else:
+            error_message = f"Could not find page: `{page}`. You must provide a file path relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). Only the entrypoint file and files in the `pages/` directory are supported."
+
+        super().__init__(error_message)
