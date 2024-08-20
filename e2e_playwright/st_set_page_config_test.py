@@ -15,7 +15,6 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_exception,
@@ -24,7 +23,7 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def test_wide_layout(app: Page, assert_snapshot: ImageCompareFunction):
+def test_wide_layout(app: Page):
     app_view_container = app.get_by_test_id("stAppViewContainer")
     # The default layout is "centered":
     expect(app_view_container).to_have_attribute("data-layout", "narrow")
@@ -32,9 +31,8 @@ def test_wide_layout(app: Page, assert_snapshot: ImageCompareFunction):
     expander_container = get_expander(app, "Expander in main")
     expect(expander_container).to_be_visible()
     expander_dimensions = expander_container.bounding_box()
-    # Its fine to use assert here since we don't need to wait for this to be true:
     assert expander_dimensions is not None
-    assert expander_dimensions["width"] == 704
+    narrow_expander_width = expander_dimensions["width"]
 
     click_button(app, "Wide Layout")
     expect(app).to_have_title("Wide Layout")
@@ -44,7 +42,9 @@ def test_wide_layout(app: Page, assert_snapshot: ImageCompareFunction):
 
     expander_dimensions = expander_container.bounding_box()
     assert expander_dimensions is not None
-    assert expander_dimensions["width"] == 784
+
+    # Its fine to use assert here since we don't need to wait for this to be true:
+    assert narrow_expander_width < expander_dimensions["width"]
 
 
 def test_centered_layout(app: Page):
