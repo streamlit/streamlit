@@ -291,7 +291,7 @@ function getPreferredMenuOrder(
     // If the first or last item is a divider, delete it, because
     // we don't want to start/end the menu with it.
     // TODO(sfc-gh-kbregula): We should use Array#at when supported by
-    //  browsers/cypress or transpilers.
+    //  browsers or transpilers.
     //  See: https://github.com/tc39/proposal-relative-indexing-method
     while (
       preferredMenuOrder.length > 0 &&

@@ -22,8 +22,6 @@
     "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
     "testLib": "yarn workspace @streamlit/lib testWatch",
     "testApp": "yarn workspace @streamlit/app testWatch",
-    "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
-    "cy:run": "unset NODE_OPTIONS && cypress run"
   },
   "browserslist": [
     ">0.2%",
