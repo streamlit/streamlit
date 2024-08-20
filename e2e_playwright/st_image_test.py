@@ -83,5 +83,4 @@ def test_gif_as_png(app: Page):
 
 def test_fullscreen_button_exists(app: Page):
     """Test that element has the fullscreen button."""
-    first_image = app.get_by_test_id("stImage").first
-    expect(first_image.get_by_test_id("StyledFullScreenButton")).to_be_attached()
+    expect(app.get_by_test_id("StyledFullScreenButton")).to_have_count(16)
