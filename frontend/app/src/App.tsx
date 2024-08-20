@@ -99,6 +99,7 @@ import {
   WidgetStates,
 } from "@streamlit/lib"
 import {
+  areURLSearchParamsEqual,
   isNullOrUndefined,
   notNullOrUndefined,
   preserveEmbedQueryParams,
@@ -175,11 +176,11 @@ interface State {
   hostHideSidebarNav: boolean
   sidebarChevronDownshift: number
   pageLinkBaseUrl: string
-  queryParams: string
+  queryParams: string | null
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timer[]
+  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
 }
 
@@ -305,7 +306,7 @@ export class App extends PureComponent<Props, State> {
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
       pageLinkBaseUrl: "",
-      queryParams: "",
+      queryParams: null,
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -956,7 +957,6 @@ export class App extends PureComponent<Props, State> {
       newPageName,
       queryString,
     })
-    console.trace()
     // Start by extracting the URL path
     const baseUriParts = this.getBaseUriParts()
     if (isNullOrUndefined(baseUriParts)) {
@@ -1004,14 +1004,30 @@ export class App extends PureComponent<Props, State> {
     )
 
     // If either the page name or the query params have changed, push a new URL to the page history.
-    if (prevPageName !== newPageName || newQueryParams !== prevQueryParams) {
+    console.debug("Detecting new URL ", {
+      prevPageName,
+      newPageName,
+      prevQPSize: prevQueryParams.size,
+      newQPSize: newQueryParams.size,
+      prevQueryParams: Array.from(prevQueryParams.entries()),
+      newQueryParams: Array.from(newQueryParams.entries()),
+    })
+    if (
+      prevPageName !== newPageName ||
+      !areURLSearchParamsEqual(prevQueryParams, newQueryParams)
+    ) {
+      console.debug("New URL detected")
+
       const queryStringFromParams = newQueryParams.toString()
       const queryString =
         queryStringFromParams != "" ? "?" + newQueryParams.toString() : ""
       const basePathPrefix = basePath ? `/${basePath}` : ""
       const pageUrl = `${basePathPrefix}/${newPagePath}${queryString}`
 
+      console.debug("pushing to history", pageUrl)
+      console.debug("history length before is ", history.length)
       window.history.pushState({}, "", pageUrl)
+      console.debug("history length after is ", history.length)
 
       // If queryString was specified, send a host message
       if (queryString) {
@@ -1143,12 +1159,13 @@ export class App extends PureComponent<Props, State> {
   onHistoryChange = (): void => {
     const { currentPageScriptHash } = this.state
     const targetAppPage = this.appNavigation.findPageByUrlPath(
-      document.location.pathname
+      window.location.pathname
     )
-    const targetQueryString = document.location.search.replace("?", "")
+    const targetQueryString = window.location.search.replace("?", "")
+    console.debug("popstate triggered, location is ", window.location)
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
-    const hasAnchor = document.location.toString().includes("#")
+    const hasAnchor = window.location.toString().includes("#")
     const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
@@ -1821,11 +1838,9 @@ export class App extends PureComponent<Props, State> {
   getQueryString = (): string => {
     const { queryParams } = this.state
 
-    const queryString = queryParams
-    // We cannot do this we need to respect queryParams in this.state even if they are empty
-    // queryParams && queryParams.length > 0
-    //   ? queryParams
-    //   : document.location.search
+    const queryString = notNullOrUndefined(queryParams)
+      ? queryParams
+      : document.location.search
 
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }

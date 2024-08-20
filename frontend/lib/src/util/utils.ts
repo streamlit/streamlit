@@ -559,3 +559,35 @@ export function keysToSnakeCase(
     return acc
   }, {} as Record<string, any>)
 }
+
+export function areURLSearchParamsEqual(
+  params1: URLSearchParams,
+  params2: URLSearchParams
+) {
+  // Needed a newer version of typescript for these:
+  // https://github.com/microsoft/TypeScript/blob/2170e6c6cc12f08bfa2975955da2f145e4be6101/src/lib/dom.generated.d.ts#L22555-L22557
+  if (params1.size != params2.size) {
+    return false
+  }
+  if (params1.size == 0 && params2.size == 0) {
+    return true
+  }
+
+  // Loop over keys and values and check that they're all the same. Sad that we
+  // have to do this but URLSearchParams doesn't have a built-in comparison operator.
+  const keys = [...params1.keys(), ...params2.keys()]
+  for (const key of keys) {
+    const p1_values = params1.getAll(key)
+    const p2_values = params2.getAll(key)
+    if (p1_values.length != p2_values.length) {
+      return false
+    }
+    for (const p1_value of params1.getAll(key)) {
+      if (!p2_values.includes(p1_value)) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
