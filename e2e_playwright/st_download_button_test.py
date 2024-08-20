@@ -39,7 +39,6 @@ def test_download_button_widget_rendering(
 def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction):
     download_button = app.get_by_test_id("stDownloadButton").nth(4)
     download_button.hover()
-    # Not taking a snapshot of the tooltip since it isn't visible in the screenshot
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("Example help text")
 
 
