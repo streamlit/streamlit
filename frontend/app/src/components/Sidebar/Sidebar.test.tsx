@@ -150,7 +150,7 @@ describe("Sidebar Component", () => {
     renderSidebar({ appPages })
 
     // Hidden when not hovering near the top of sidebar
-    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
+    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
       "display: none"
     )
 
@@ -158,7 +158,7 @@ describe("Sidebar Component", () => {
     fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
 
     // Displays the collapse <
-    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
+    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
       "display: inline"
     )
   })
