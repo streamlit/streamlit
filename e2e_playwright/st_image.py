@@ -37,7 +37,7 @@ img800 = np.repeat(0, 640000).reshape(800, 800)
 
 st.header("Images from numpy arrays")
 
-st.image(img, caption="Black **Square** as _JPEG_.", output_format="JPEG", width=100)
+st.image(img, caption="Black Square as JPEG.", output_format="JPEG", width=100)
 
 st.image(img, caption="Black Square as PNG.", output_format="PNG", width=100)
 
