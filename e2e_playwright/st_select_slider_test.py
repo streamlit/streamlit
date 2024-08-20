@@ -91,7 +91,9 @@ def test_select_slider_calls_callback(app: Page):
 def test_select_slider_label_realigns_when_expander_opens(app: Page):
     app.get_by_test_id("stExpander").locator("summary").click()
     app.get_by_test_id("stExpander").locator("summary").click()
-    expect(app.get_by_test_id("stThumbValue").nth(11)).not_to_have_css("left", "0px")
+    expect(app.get_by_test_id("stSliderThumbValue").nth(11)).not_to_have_css(
+        "left", "0px"
+    )
 
 
 def test_select_slider_works_in_forms(app: Page):

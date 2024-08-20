@@ -171,7 +171,7 @@ def test_selectbox_in_fragment(app: Page):
 def test_slider_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    slider_element = app.get_by_test_id("stThumbValue")
+    slider_element = app.get_by_test_id("stSliderThumbValue")
     slider_element.click(force=True)
     slider_element.press("ArrowRight")
     wait_for_app_run(app)

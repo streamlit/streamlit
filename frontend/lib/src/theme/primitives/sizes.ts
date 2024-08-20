@@ -23,4 +23,5 @@ export const sizes = {
   borderWidth: "1px",
   minElementHeight: "2.5rem",
   logoHeight: "1.5rem",
+  sliderThumb: "0.75rem",
 }

@@ -92,7 +92,7 @@ def test_handles_changes_in_start_time(
     app.wait_for_timeout(2000)
 
     # Change the start time of second video from 6 to 5
-    app.get_by_test_id("stNumberInput").locator("button.step-down").click()
+    app.get_by_test_id("stNumberInput").get_by_test_id("stNumberInputStepDown").click()
     # Wait for the video start time to update
     app.wait_for_timeout(2000)
 

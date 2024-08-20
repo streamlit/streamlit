@@ -183,7 +183,7 @@ class TimeInput extends PureComponent<Props, State> {
 
             ValueContainer: {
               style: () => ({
-                lineHeight: 1.4,
+                lineHeight: theme.lineHeights.inputWidget,
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 paddingRight: theme.spacing.sm,
                 paddingLeft: theme.spacing.sm,
@@ -194,15 +194,14 @@ class TimeInput extends PureComponent<Props, State> {
 
             SingleValue: {
               props: {
-                // For easier testing - indicates div that holds the selected time
-                "data-testid": "stTimeInput-timeDisplay",
+                "data-testid": "stTimeInputTimeDisplay",
               },
             },
 
             Dropdown: {
               style: () => ({
-                paddingTop: 0,
-                paddingBottom: 0,
+                paddingTop: theme.spacing.none,
+                paddingBottom: theme.spacing.none,
               }),
             },
 
