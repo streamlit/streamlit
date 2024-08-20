@@ -16,7 +16,10 @@
 
 import React, { ReactElement } from "react"
 
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import {
+  Prism as SyntaxHighlighter,
+  createElement,
+} from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
 import {
@@ -51,6 +54,36 @@ export default function StreamlitSyntaxHighlighter({
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}
           wrapLongLines={wrapLines}
+          // Fix bug in link below by using a renderer that wraps code in a span.
+          // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
+          renderer={({ rows, stylesheet, useInlineStyles }) =>
+            rows.map((row, index) => {
+              const children = row.children
+
+              if (children && showLineNumbers && wrapLines) {
+                const lineNumberElement = children.shift()
+
+                if (lineNumberElement) {
+                  row.children = [
+                    lineNumberElement,
+                    {
+                      children,
+                      properties: { className: [] },
+                      tagName: "span",
+                      type: "element",
+                    },
+                  ]
+                }
+              }
+
+              return createElement({
+                node: row,
+                stylesheet,
+                useInlineStyles,
+                key: index,
+              })
+            })
+          }
         >
           {children}
         </SyntaxHighlighter>
