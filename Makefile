@@ -331,11 +331,6 @@ jstest:
 jscoverage:
 	cd frontend; yarn run test --coverage --watchAll=false
 
-.PHONY: e2etest
-# Run E2E tests.
-e2etest:
-	./scripts/run_e2e_tests.py
-
 .PHONY: playwright
 # Run playwright E2E tests (without custom component tests).
 custom_components_test_folder = ./custom_components
