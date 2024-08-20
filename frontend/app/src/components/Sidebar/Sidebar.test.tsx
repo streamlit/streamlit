@@ -307,5 +307,15 @@ describe("Sidebar Component", () => {
       )
       expect(screen.getByTestId("stLogo")).toBeInTheDocument()
     })
+
+    it("sets maxWidth of logo based on sidebar width", () => {
+      renderSidebar({ appLogo: imageWithLink })
+      const sidebarWidth = window.getComputedStyle(
+        screen.getByTestId("stSidebar")
+      ).width
+      expect(screen.getByTestId("stLogo")).toHaveStyle(
+        `max-width: calc(${sidebarWidth} - 5.75rem)`
+      )
+    })
   })
 })
