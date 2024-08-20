@@ -975,8 +975,8 @@ export class App extends PureComponent<Props, State> {
 
     // If mainPageName is undefined, we don't even try to figure out
     // what page is in the URL already
-    var newPagePath: string
-    var prevPageName: string
+    let newPagePath: string
+    let prevPageName: string
     if (notNullOrUndefined(mainPageName)) {
       prevPageName =
         prevPageNameInPath === "" ? mainPageName : prevPageNameInPath
@@ -1145,6 +1145,7 @@ export class App extends PureComponent<Props, State> {
     const targetAppPage = this.appNavigation.findPageByUrlPath(
       document.location.pathname
     )
+    const targetQueryString = document.location.search.replace("?", "")
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
@@ -1153,7 +1154,15 @@ export class App extends PureComponent<Props, State> {
     if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
-    this.onPageChange(targetAppPage.pageScriptHash as string)
+    console.debug(
+      "Calling onPageChange from onHistoryChange with ",
+      targetAppPage,
+      targetQueryString
+    )
+    this.onPageChange(
+      targetAppPage.pageScriptHash as string,
+      targetQueryString
+    )
   }
 
   /**
@@ -1501,6 +1510,7 @@ export class App extends PureComponent<Props, State> {
     })
     // TODO: is this where we actually "Set" the queryParams?
     // is this the appropriate place to send this host message.
+    console.debug("queryParams set in onPageChange: ", queryParams)
 
     this.setState({ queryParams }, () => {
       this.sendRerunBackMsg(
@@ -1538,7 +1548,7 @@ export class App extends PureComponent<Props, State> {
 
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
-    let queryString = this.getQueryString()
+    const queryString = this.getQueryString()
     let pageName = ""
 
     if (pageScriptHash) {
@@ -1811,10 +1821,11 @@ export class App extends PureComponent<Props, State> {
   getQueryString = (): string => {
     const { queryParams } = this.state
 
-    const queryString =
-      queryParams && queryParams.length > 0
-        ? queryParams
-        : document.location.search
+    const queryString = queryParams
+    // We cannot do this we need to respect queryParams in this.state even if they are empty
+    // queryParams && queryParams.length > 0
+    //   ? queryParams
+    //   : document.location.search
 
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
