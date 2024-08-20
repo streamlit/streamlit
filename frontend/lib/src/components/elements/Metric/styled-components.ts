@@ -57,7 +57,7 @@ export const StyledMetricLabelText = styled(
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
-  color: theme.colors.textColor,
+  color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
 }))
 

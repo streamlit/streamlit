@@ -22,33 +22,38 @@ import inspect
 import math
 import re
 from collections import ChainMap, UserDict, UserList, deque
-from collections.abc import ItemsView, Mapping
+from collections.abc import ItemsView
 from enum import Enum, EnumMeta, auto
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
     Iterable,
     List,
+    Mapping,
     Protocol,
+    Sequence,
     TypeVar,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, errors, logger, string_util
 from streamlit.type_util import (
+    CustomDict,
     NumpyShape,
     has_callable_attr,
     is_custom_dict,
     is_dataclass_instance,
     is_list_like,
     is_namedtuple,
+    is_pydantic_model,
     is_type,
+    is_version_less_than,
 )
 
 if TYPE_CHECKING:
@@ -65,33 +70,68 @@ _LOGGER: Final = logger.get_logger(__name__)
 _MAX_UNEVALUATED_DF_ROWS = 10000
 
 _PANDAS_DATA_OBJECT_TYPE_RE: Final = re.compile(r"^pandas.*$")
-_PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
-_XARRAY_DATA_ARRAY_TYPE_STR: Final = "xarray.core.dataarray.DataArray"
-_XARRAY_DATASET_TYPE_STR: Final = "xarray.core.dataset.Dataset"
-_SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
-_SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
-_SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
-_PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+
+_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
+_DASK_INDEX: Final = "dask.dataframe.core.Index"
+_DASK_SERIES: Final = "dask.dataframe.core.Series"
+_DUCKDB_RELATION: Final = "duckdb.duckdb.DuckDBPyRelation"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
+_PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
+_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
+_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
+_POLARS_SERIES: Final = "polars.series.series.Series"
+_PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+_RAY_DATASET: Final = "ray.data.dataset.Dataset"
+_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
 _SNOWPANDAS_DF_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
-_SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
 _SNOWPANDAS_INDEX_TYPE_STR: Final = (
     "snowflake.snowpark.modin.plugin.extensions.index.Index"
 )
-_POLARS_DATAFRAME: Final = "polars.dataframe.frame.DataFrame"
-_POLARS_SERIES: Final = "polars.series.series.Series"
-_POLARS_LAZYFRAME: Final = "polars.lazyframe.frame.LazyFrame"
-_DASK_DATAFRAME: Final = "dask.dataframe.core.DataFrame"
-_DASK_SERIES: Final = "dask.dataframe.core.Series"
-_DASK_INDEX: Final = "dask.dataframe.core.Index"
-_RAY_MATERIALIZED_DATASET: Final = "ray.data.dataset.MaterializedDataset"
-_RAY_DATASET: Final = "ray.data.dataset.Dataset"
+_SNOWPANDAS_SERIES_TYPE_STR: Final = "snowflake.snowpark.modin.pandas.series.Series"
+_SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
+_SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
+_SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
+_XARRAY_DATASET_TYPE_STR: Final = "xarray.core.dataset.Dataset"
+_XARRAY_DATA_ARRAY_TYPE_STR: Final = "xarray.core.dataarray.DataArray"
 
 V_co = TypeVar(
     "V_co",
     covariant=True,  # https://peps.python.org/pep-0484/#covariance-and-contravariance
 )
+
+
+@runtime_checkable
+class DBAPICursor(Protocol):
+    """Protocol for DBAPI 2.0 Cursor objects (PEP 249).
+
+    This is a simplified version of the DBAPI Cursor protocol
+    that only contains the methods that are relevant or used for
+    our DB API Integration.
+
+    Specification: https://peps.python.org/pep-0249/
+    Inspired by: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/dbapi.pyi
+    """
+
+    @property
+    def description(
+        self,
+    ) -> (
+        Sequence[
+            tuple[
+                str,
+                Any | None,
+                int | None,
+                int | None,
+                int | None,
+                int | None,
+                bool | None,
+            ]
+        ]
+        | None
+    ): ...
+    def fetchmany(self, size: int = ..., /) -> Sequence[Sequence[Any]]: ...
+    def fetchall(self) -> Sequence[Sequence[Any]]: ...
 
 
 class DataFrameGenericAlias(Protocol[V_co]):
@@ -108,9 +148,26 @@ class DataFrameGenericAlias(Protocol[V_co]):
     def iloc(self) -> _iLocIndexer: ...
 
 
+class PandasCompatible(Protocol):
+    """Protocol for Pandas compatible objects that have a `to_pandas` method."""
+
+    def to_pandas(self) -> DataFrame | Series: ...
+
+
+class DataframeInterchangeCompatible(Protocol):
+    """Protocol for objects support the dataframe-interchange protocol.
+
+    https://data-apis.org/dataframe-protocol/latest/index.html
+    """
+
+    def __dataframe__(self, allow_copy: bool) -> Any: ...
+
+
 OptionSequence: TypeAlias = Union[
     Iterable[V_co],
     DataFrameGenericAlias[V_co],
+    PandasCompatible,
+    DataframeInterchangeCompatible,
 ]
 
 # Various data types supported by our dataframe processing
@@ -122,9 +179,14 @@ Data: TypeAlias = Union[
     "Styler",
     "Index",
     "pa.Table",
+    "pa.Array",
     "np.ndarray[Any, np.dtype[Any]]",
     Iterable[Any],
-    Dict[Any, Any],
+    "Mapping[Any, Any]",
+    DBAPICursor,
+    PandasCompatible,
+    DataframeInterchangeCompatible,
+    CustomDict,
     None,
 ]
 
@@ -134,35 +196,85 @@ class DataFormat(Enum):
 
     UNKNOWN = auto()
     EMPTY = auto()  # None
-    PANDAS_DATAFRAME = auto()  # pd.DataFrame
-    PANDAS_SERIES = auto()  # pd.Series
-    PANDAS_INDEX = auto()  # pd.Index
-    PANDAS_ARRAY = auto()  # pd.array
+
+    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
+    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
+    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
+    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
+    DBAPI_CURSOR = auto()  # DBAPI Cursor (PEP 249)
+    DUCKDB_RELATION = auto()  # DuckDB Relation
+    KEY_VALUE_DICT = auto()  # {index: value}
+    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
+    LIST_OF_ROWS = auto()  # List[List[Scalar]]
+    LIST_OF_VALUES = auto()  # List[Scalar]
+    MODIN_OBJECT = auto()  # Modin DataFrame, Series
     NUMPY_LIST = auto()  # np.array[Scalar]
     NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
-    PYARROW_TABLE = auto()  # pyarrow.Table
-    PYARROW_ARRAY = auto()  # pyarrow.Array
-    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
-    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
-    MODIN_OBJECT = auto()  # Modin DataFrame, Series
-    SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
+    PANDAS_ARRAY = auto()  # pd.array
+    PANDAS_DATAFRAME = auto()  # pd.DataFrame
+    PANDAS_INDEX = auto()  # pd.Index
+    PANDAS_SERIES = auto()  # pd.Series
     PANDAS_STYLER = auto()  # pandas Styler
     POLARS_DATAFRAME = auto()  # polars.dataframe.frame.DataFrame
     POLARS_LAZYFRAME = auto()  # polars.lazyframe.frame.LazyFrame
     POLARS_SERIES = auto()  # polars.series.series.Series
+    PYARROW_ARRAY = auto()  # pyarrow.Array
+    PYARROW_TABLE = auto()  # pyarrow.Table
+    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
+    SET_OF_VALUES = auto()  # Set[Scalar]
+    SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
+    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
+    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
     XARRAY_DATASET = auto()  # xarray.Dataset
     XARRAY_DATA_ARRAY = auto()  # xarray.DataArray
-    DASK_OBJECT = auto()  # dask.dataframe.core.DataFrame, Series, Index
-    RAY_DATASET = auto()  # ray.data.dataset.Dataset, MaterializedDataset
-    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
-    LIST_OF_ROWS = auto()  # List[List[Scalar]]
-    LIST_OF_VALUES = auto()  # List[Scalar]
-    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
-    SET_OF_VALUES = auto()  # Set[Scalar]
-    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
-    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
-    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
-    KEY_VALUE_DICT = auto()  # {index: value}
+
+
+def is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
+    """
+    import pyarrow as pa
+
+    return is_version_less_than(pa.__version__, v)
+
+
+def is_pandas_version_less_than(v: str) -> bool:
+    """Return True if the current Pandas version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
+    import pandas as pd
+
+    return is_version_less_than(pd.__version__, v)
 
 
 def is_dataframe_like(obj: object) -> bool:
@@ -178,29 +290,30 @@ def is_dataframe_like(obj: object) -> bool:
         # return False early to avoid unnecessary checks.
         return False
 
-    return determine_data_format(obj) in [
-        DataFormat.PANDAS_DATAFRAME,
-        DataFormat.PANDAS_SERIES,
-        DataFormat.PANDAS_INDEX,
-        DataFormat.PANDAS_STYLER,
-        DataFormat.PANDAS_ARRAY,
+    return determine_data_format(obj) in {
+        DataFormat.COLUMN_SERIES_MAPPING,
+        DataFormat.DASK_OBJECT,
+        DataFormat.DBAPI_CURSOR,
+        DataFormat.MODIN_OBJECT,
         DataFormat.NUMPY_LIST,
         DataFormat.NUMPY_MATRIX,
-        DataFormat.PYARROW_TABLE,
-        DataFormat.PYARROW_ARRAY,
-        DataFormat.SNOWPARK_OBJECT,
-        DataFormat.PYSPARK_OBJECT,
-        DataFormat.MODIN_OBJECT,
-        DataFormat.SNOWPANDAS_OBJECT,
-        DataFormat.POLARS_SERIES,
+        DataFormat.PANDAS_ARRAY,
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_SERIES,
+        DataFormat.PANDAS_STYLER,
         DataFormat.POLARS_DATAFRAME,
         DataFormat.POLARS_LAZYFRAME,
+        DataFormat.POLARS_SERIES,
+        DataFormat.PYARROW_ARRAY,
+        DataFormat.PYARROW_TABLE,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.RAY_DATASET,
+        DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.SNOWPARK_OBJECT,
         DataFormat.XARRAY_DATASET,
         DataFormat.XARRAY_DATA_ARRAY,
-        DataFormat.DASK_OBJECT,
-        DataFormat.RAY_DATASET,
-        DataFormat.COLUMN_SERIES_MAPPING,
-    ]
+    }
 
 
 def is_unevaluated_data_object(obj: object) -> bool:
@@ -215,6 +328,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
     - Ray Dataset
     - Polars LazyFrame
     - Generator functions
+    - DB API 2.0 Cursor (PEP 249)
+    - DuckDB Relation (Relational API)
 
     Unevaluated means that the data is not yet in the local memory.
     Unevaluated data objects are treated differently from other data objects by only
@@ -228,6 +343,8 @@ def is_unevaluated_data_object(obj: object) -> bool:
         or is_ray_dataset(obj)
         or is_polars_lazyframe(obj)
         or is_dask_object(obj)
+        or is_duckdb_relation(obj)
+        or is_dbapi_cursor(obj)
         or inspect.isgeneratorfunction(obj)
     )
 
@@ -254,11 +371,7 @@ def is_snowpark_row_list(obj: object) -> bool:
 
 def is_pyspark_data_object(obj: object) -> bool:
     """True if obj is of type pyspark.sql.dataframe.DataFrame"""
-    return (
-        is_type(obj, _PYSPARK_DF_TYPE_STR)
-        and hasattr(obj, "toPandas")
-        and callable(obj.toPandas)
-    )
+    return is_type(obj, _PYSPARK_DF_TYPE_STR) and has_callable_attr(obj, "toPandas")
 
 
 def is_dask_object(obj: object) -> bool:
@@ -317,6 +430,23 @@ def is_ray_dataset(obj: object) -> bool:
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     """True if obj is a pandas Styler."""
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
+
+
+def is_dbapi_cursor(obj: object) -> TypeGuard[DBAPICursor]:
+    """True if obj looks like a DB API 2.0 Cursor.
+
+    https://peps.python.org/pep-0249/
+    """
+    return isinstance(obj, DBAPICursor)
+
+
+def is_duckdb_relation(obj: object) -> bool:
+    """True if obj is a DuckDB relation.
+
+    https://duckdb.org/docs/api/python/relational_api
+    """
+
+    return is_type(obj, _DUCKDB_RELATION)
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -400,7 +530,7 @@ def convert_anything_to_pandas_df(
 
     Parameters
     ----------
-    data : any
+    data : dataframe-, array-, or collections-like object
         The data to convert to a Pandas DataFrame.
 
     max_unevaluated_rows: int
@@ -533,11 +663,44 @@ def convert_anything_to_pandas_df(
             )
         return cast(pd.DataFrame, data)
 
+    if is_duckdb_relation(data):
+        data = data.limit(max_unevaluated_rows).df()
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `df()` on the relation to show more."
+            )
+        return data
+
+    if is_dbapi_cursor(data):
+        # Based on the specification, the first item in the description is the
+        # column name (if available)
+        columns = (
+            [d[0] if d else "" for d in data.description] if data.description else None
+        )
+        data = pd.DataFrame(data.fetchmany(max_unevaluated_rows), columns=columns)
+        if data.shape[0] == max_unevaluated_rows:
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `fetchall()` on the Cursor to show more."
+            )
+        return data
+
     if is_snowpark_row_list(data):
         return pd.DataFrame([row.as_dict() for row in data])
 
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
+
+    # Check for dataframe interchange protocol
+    # Only available in pandas >= 1.5.0
+    # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
+    if (
+        has_callable_attr(data, "__dataframe__")
+        and is_pandas_version_less_than("1.5.0") is False
+    ):
+        data_df = pd.api.interchange.from_dataframe(data)
+        return data_df.copy() if ensure_copy else data_df
 
     # Support for generator functions
     if inspect.isgeneratorfunction(data):
@@ -573,7 +736,9 @@ def convert_anything_to_pandas_df(
         return _dict_to_pandas_df(dataclasses.asdict(data))
 
     # Support for dict-like objects
-    if isinstance(data, (ChainMap, MappingProxyType, UserDict)):
+    if isinstance(data, (ChainMap, MappingProxyType, UserDict)) or is_pydantic_model(
+        data
+    ):
         return _dict_to_pandas_df(dict(data))
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
@@ -686,9 +851,9 @@ def convert_arrow_bytes_to_pandas_df(source: bytes) -> DataFrame:
 def _show_data_information(msg: str) -> None:
     """Show a message to the user with important information
     about the processed dataset."""
-    from streamlit.delta_generator import main_dg
+    from streamlit.delta_generator_singletons import get_dg_singleton_instance
 
-    main_dg.caption(msg)
+    get_dg_singleton_instance().main_dg.caption(msg)
 
 
 def convert_anything_to_arrow_bytes(
@@ -703,7 +868,7 @@ def convert_anything_to_arrow_bytes(
 
     Parameters
     ----------
-    data : any
+    data : dataframe-, array-, or collections-like object
         The data to convert to Arrow bytes.
 
     max_unevaluated_rows: int
@@ -721,19 +886,7 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    if is_pandas_data_object(data):
-        # All pandas data objects should be handled via our pandas
-        # conversion logic. We are already calling it here
-        # to ensure that its not handled via the interchange
-        # protocol support below.
-        df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
-        return convert_pandas_df_to_arrow_bytes(df)
-
-    if is_polars_dataframe(data):
-        return convert_arrow_table_to_arrow_bytes(data.to_arrow())
-
-    if is_polars_series(data):
-        return convert_arrow_table_to_arrow_bytes(data.to_frame().to_arrow())
+    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
@@ -741,7 +894,7 @@ def convert_anything_to_arrow_bytes(
     return convert_pandas_df_to_arrow_bytes(df)
 
 
-def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
+def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
     """Try to convert different formats to a list.
 
     If the input is a dataframe-like object, we just select the first
@@ -751,7 +904,7 @@ def convert_anything_to_sequence(obj: OptionSequence[V_co]) -> list[V_co]:
     Parameters
     ----------
 
-    obj : OptionSequence
+    obj : dataframe-, array-, or collections-like object
         The object to convert to a list.
 
     Returns
@@ -891,6 +1044,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
         "period[ns]",
         "period[U]",
         "period[us]",
+        "geometry",
     }:
         return True
 
@@ -1044,6 +1198,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.DASK_OBJECT
     elif is_snowpark_data_object(input_data) or is_snowpark_row_list(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_duckdb_relation(input_data):
+        return DataFormat.DUCKDB_RELATION
+    elif is_dbapi_cursor(input_data):
+        return DataFormat.DBAPI_CURSOR
     elif (
         isinstance(
             input_data,
@@ -1052,6 +1210,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
         or is_dataclass_instance(input_data)
         or is_namedtuple(input_data)
         or is_custom_dict(input_data)
+        or is_pydantic_model(input_data)
     ):
         return DataFormat.KEY_VALUE_DICT
     elif isinstance(input_data, (ItemsView, enumerate)):
@@ -1152,19 +1311,21 @@ def convert_pandas_df_to_data_format(
         The converted dataframe.
     """
 
-    if data_format in [
+    if data_format in {
         DataFormat.EMPTY,
+        DataFormat.DASK_OBJECT,
+        DataFormat.DBAPI_CURSOR,
+        DataFormat.DUCKDB_RELATION,
+        DataFormat.MODIN_OBJECT,
+        DataFormat.PANDAS_ARRAY,
         DataFormat.PANDAS_DATAFRAME,
-        DataFormat.SNOWPARK_OBJECT,
-        DataFormat.PYSPARK_OBJECT,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
-        DataFormat.PANDAS_ARRAY,
-        DataFormat.MODIN_OBJECT,
-        DataFormat.SNOWPANDAS_OBJECT,
-        DataFormat.DASK_OBJECT,
+        DataFormat.PYSPARK_OBJECT,
         DataFormat.RAY_DATASET,
-    ]:
+        DataFormat.SNOWPANDAS_OBJECT,
+        DataFormat.SNOWPARK_OBJECT,
+    }:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
         import numpy as np
@@ -1188,10 +1349,7 @@ def convert_pandas_df_to_data_format(
         return pa.Array.from_pandas(_pandas_df_to_series(df))
     elif data_format == DataFormat.PANDAS_SERIES:
         return _pandas_df_to_series(df)
-    elif (
-        data_format == DataFormat.POLARS_DATAFRAME
-        or data_format == DataFormat.POLARS_LAZYFRAME
-    ):
+    elif data_format in {DataFormat.POLARS_DATAFRAME, DataFormat.POLARS_LAZYFRAME}:
         import polars as pl  # type: ignore[import-not-found]
 
         return pl.from_pandas(df)

@@ -112,6 +112,11 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
         return fqn_type_pattern.match(fqn_type) is not None
 
 
+def _is_type_instance(obj: object, type_to_check: str) -> bool:
+    """Check if instance of type without importing expensive modules."""
+    return type_to_check in [get_fqn(t) for t in type(obj).__mro__]
+
+
 def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
     return f"{the_type.__module__}.{the_type.__qualname__}"
@@ -287,6 +292,18 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
+def is_pydantic_model(obj) -> bool:
+    """True if input looks like a Pydantic model instance."""
+
+    if isinstance(obj, type):
+        # The obj is a class, but we
+        # only want to check for instances
+        # of Pydantic models, so we return False.
+        return False
+
+    return _is_type_instance(obj, "pydantic.main.BaseModel")
+
+
 def is_custom_dict(obj: object) -> TypeGuard[CustomDict]:
     """True if input looks like one of the Streamlit custom dictionaries."""
     from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
@@ -362,53 +379,6 @@ def check_python_comparable(seq: Sequence[Any]) -> None:
             "which cannot be compared. Refactor your code to use elements of "
             "comparable types as options, e.g. use indices instead."
         )
-
-
-def is_pandas_version_less_than(v: str) -> bool:
-    """Return True if the current Pandas version is less than the input version.
-
-    Parameters
-    ----------
-    v : str
-        Version string, e.g. "0.25.0"
-
-    Returns
-    -------
-    bool
-
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
-    """
-    import pandas as pd
-
-    return is_version_less_than(pd.__version__, v)
-
-
-def is_pyarrow_version_less_than(v: str) -> bool:
-    """Return True if the current Pyarrow version is less than the input version.
-
-    Parameters
-    ----------
-    v : str
-        Version string, e.g. "0.25.0"
-
-    Returns
-    -------
-    bool
-
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
-
-    """
-    import pyarrow as pa
-
-    return is_version_less_than(pa.__version__, v)
 
 
 def is_altair_version_less_than(v: str) -> bool:

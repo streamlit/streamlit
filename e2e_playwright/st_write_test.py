@@ -66,7 +66,7 @@ def test_display_json(app: Page):
 
 def test_display_help(app: Page):
     """Test that st.write displays objects via st.help."""
-    help_elements = app.get_by_test_id("stDocstring")
+    help_elements = app.get_by_test_id("stHelp")
     expect(help_elements).to_have_count(3)
 
 

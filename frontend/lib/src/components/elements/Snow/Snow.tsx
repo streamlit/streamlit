@@ -49,7 +49,8 @@ const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   // actually rerun.
   return (
     <Particles
-      className="snow"
+      className="stSnow"
+      data-testid="stSnow"
       scriptRunId={scriptRunId}
       numParticleTypes={NUM_FLAKE_TYPES}
       numParticles={NUM_FLAKES}

@@ -31,6 +31,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -47,7 +48,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
@@ -534,9 +535,6 @@ class ArrowMixin:
         marshall_column_config(proto, column_config_mapping)
 
         if is_selection_activated:
-            # Import here to avoid circular imports
-            from streamlit.elements.form import current_form_id
-
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
             proto.selection_mode.extend(parse_selection_mode(selection_mode))
