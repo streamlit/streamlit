@@ -300,3 +300,16 @@ class StreamlitWidgetValueAssignmentNotAllowedError(LocalizableStreamlitExceptio
         super().__init__(
             f"Values for the widget with `key` '{key}' cannot be set using `st.session_state`."
         )
+
+
+# st.multiselect
+class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
+    """Exception raised when there are more default selections specified than the max allowable selections."""
+
+    def __init__(self, current_selections_count: int, max_selections_count: int):
+        curr_selections_noun = (
+            "selections" if current_selections_count > 1 else "selection"
+        )
+        super().__init__(
+            f"Multiselect has {current_selections_count} {curr_selections_noun} selected but `max_selections` is set to {max_selections_count}. This happened because you either gave too many options to `default` or you manipulated the widget's state through `st.session_state`. Note that the latter can happen before the line indicated in the traceback. Please select at most {max_selections_count} options."
+        )

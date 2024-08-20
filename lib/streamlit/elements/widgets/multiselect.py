@@ -37,7 +37,9 @@ from streamlit.elements.lib.utils import (
     maybe_coerce_enum_sequence,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitSelectionCountExceedsMaxError,
+)
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -108,8 +110,8 @@ def _check_max_selections(
 
     default_count = _get_default_count(selections)
     if default_count > max_selections:
-        raise StreamlitAPIException(
-            _get_over_max_options_message(default_count, max_selections)
+        raise StreamlitSelectionCountExceedsMaxError(
+            current_selections_count=default_count, max_selections_count=max_selections
         )
 
 
