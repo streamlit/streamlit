@@ -18,6 +18,7 @@ import React from "react"
 import "@testing-library/jest-dom"
 
 import { screen, within } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { BlockNode } from "@streamlit/lib/src/AppNode"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -54,6 +55,10 @@ const getProps = (props?: Partial<TabProps>): TabProps =>
 describe("st.tabs", () => {
   it("renders without crashing", () => {
     render(<Tabs {...getProps()} />)
+
+    const tabsElement = screen.getByTestId("stTabs")
+    expect(tabsElement).toBeInTheDocument()
+    expect(tabsElement).toHaveClass("stTabs")
 
     const tabsContainer = screen.getByRole("tablist")
     expect(tabsContainer).toBeInTheDocument()

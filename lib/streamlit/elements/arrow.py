@@ -18,7 +18,9 @@ import json
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
+    Hashable,
     Iterable,
     Literal,
     TypedDict,
@@ -29,6 +31,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -43,14 +46,22 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    enqueue_message,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
+    from numpy import typing as npt
+    from pandas import DataFrame
+
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
 
 SelectionMode: TypeAlias = Literal[
@@ -513,12 +524,7 @@ class ArrowMixin:
             data_df = dataframe_util.convert_anything_to_pandas_df(
                 data, ensure_copy=False
             )
-            apply_data_specific_configs(
-                column_config_mapping,
-                data_df,
-                data_format,
-                check_arrow_compatibility=False,
-            )
+            apply_data_specific_configs(column_config_mapping, data_format)
             # Serialize the data to bytes:
             proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(data_df)
 
@@ -529,9 +535,6 @@ class ArrowMixin:
         marshall_column_config(proto, column_config_mapping)
 
         if is_selection_activated:
-            # Import here to avoid circular imports
-            from streamlit.elements.form import current_form_id
-
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
             proto.selection_mode.extend(parse_selection_mode(selection_mode))
@@ -599,8 +602,10 @@ class ArrowMixin:
 
         """
 
-        # Check if data is uncollected, and collect it but with 100 rows max, instead of 10k rows, which is done in all other cases.
-        # Avoid this and use 100 rows in st.table, because large tables render slowly, take too much screen space, and can crush the app.
+        # Check if data is uncollected, and collect it but with 100 rows max, instead of
+        # 10k rows, which is done in all other cases.
+        # We use 100 rows in st.table, because large tables render slowly,
+        # take too much screen space, and can crush the app.
         if dataframe_util.is_unevaluated_data_object(data):
             data = dataframe_util.convert_anything_to_pandas_df(
                 data, max_unevaluated_rows=100
@@ -674,12 +679,146 @@ class ArrowMixin:
         >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
 
         """
-        return self.dg._arrow_add_rows(data, **kwargs)
+        return _arrow_add_rows(self.dg, data, **kwargs)
 
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _prep_data_for_add_rows(
+    data: Data,
+    add_rows_metadata: AddRowsMetadata | None,
+) -> tuple[Data, AddRowsMetadata | None]:
+    if not add_rows_metadata:
+        if dataframe_util.is_pandas_styler(data):
+            # When calling add_rows on st.table or st.dataframe we want styles to
+            # pass through.
+            return data, None
+        return dataframe_util.convert_anything_to_pandas_df(data), None
+
+    # If add_rows_metadata is set, it indicates that the add_rows used called
+    # on a chart based on our built-in chart commands.
+
+    # For built-in chart commands we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different, and it will throw an error.
+    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
+
+    return prep_chart_data_for_add_rows(data, add_rows_metadata)
+
+
+def _arrow_add_rows(
+    dg: DeltaGenerator,
+    data: Data = None,
+    **kwargs: (
+        DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+    ),
+) -> DeltaGenerator | None:
+    """Concatenate a dataframe to the bottom of the current one.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        Table to concat. Optional.
+
+    **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        The named dataset to concat. Optional. You can only pass in 1
+        dataset (including the one in the data parameter).
+
+    Example
+    -------
+    >>> import streamlit as st
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>>
+    >>> df1 = pd.DataFrame(
+    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+    ... )
+    >>> my_table = st.table(df1)
+    >>>
+    >>> df2 = pd.DataFrame(
+    ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
+    ... )
+    >>> my_table.add_rows(df2)
+    >>> # Now the table shown in the Streamlit app contains the data for
+    >>> # df1 followed by the data for df2.
+
+    You can do the same thing with plots. For example, if you want to add
+    more data to a line chart:
+
+    >>> # Assuming df1 and df2 from the example above still exist...
+    >>> my_chart = st.line_chart(df1)
+    >>> my_chart.add_rows(df2)
+    >>> # Now the chart shown in the Streamlit app contains the data for
+    >>> # df1 followed by the data for df2.
+
+    And for plots whose datasets are named, you can pass the data with a
+    keyword argument where the key is the name:
+
+    >>> my_chart = st.vega_lite_chart(
+    ...     {
+    ...         "mark": "line",
+    ...         "encoding": {"x": "a", "y": "b"},
+    ...         "datasets": {
+    ...             "some_fancy_name": df1,  # <-- named dataset
+    ...         },
+    ...         "data": {"name": "some_fancy_name"},
+    ...     }
+    ... )
+    >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
+
+    """
+    if dg._root_container is None or dg._cursor is None:
+        return dg
+
+    if not dg._cursor.is_locked:
+        raise StreamlitAPIException("Only existing elements can `add_rows`.")
+
+    # Accept syntax st._arrow_add_rows(df).
+    if data is not None and len(kwargs) == 0:
+        name = ""
+    # Accept syntax st._arrow_add_rows(foo=df).
+    elif len(kwargs) == 1:
+        name, data = kwargs.popitem()
+    # Raise error otherwise.
+    else:
+        raise StreamlitAPIException(
+            "Wrong number of arguments to add_rows()."
+            "Command requires exactly one dataset"
+        )
+
+    # When doing _arrow_add_rows on an element that does not already have data
+    # (for example, st.line_chart() without any args), call the original
+    # st.foo() element with new data instead of doing a _arrow_add_rows().
+    if (
+        "add_rows_metadata" in dg._cursor.props
+        and dg._cursor.props["add_rows_metadata"]
+        and dg._cursor.props["add_rows_metadata"].last_index is None
+    ):
+        st_method = getattr(dg, dg._cursor.props["add_rows_metadata"].chart_command)
+        st_method(data, **kwargs)
+        return None
+
+    new_data, dg._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+        data,
+        dg._cursor.props["add_rows_metadata"],
+    )
+
+    msg = ForwardMsg()
+    msg.metadata.delta_path[:] = dg._cursor.delta_path
+
+    default_uuid = str(hash(dg._get_delta_path_str()))
+    marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
+
+    if name:
+        msg.delta.arrow_add_rows.name = name
+        msg.delta.arrow_add_rows.has_name = True
+
+    enqueue_message(msg)
+
+    return dg
 
 
 def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> None:

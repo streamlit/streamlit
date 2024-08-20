@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
+import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
 export type DerivedColors = {
   linkText: string
@@ -29,6 +29,9 @@ export type DerivedColors = {
   darkenedBgMix25: string
   darkenedBgMix15: string
   lightenedBg05: string
+
+  borderColor: string
+  borderColorLight: string
 }
 
 export const computeDerivedColors = (
@@ -49,6 +52,9 @@ export const computeDerivedColors = (
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
+
+  const borderColor = fadedText10
+  const borderColorLight = fadedText05
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg
@@ -73,6 +79,9 @@ export const computeDerivedColors = (
     darkenedBgMix25,
     darkenedBgMix15,
     lightenedBg05,
+
+    borderColor,
+    borderColorLight,
   }
 }
 

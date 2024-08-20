@@ -24,8 +24,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
-
+        shell: bash
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v4
@@ -80,7 +79,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash --login -eo pipefail {0}
+        shell: bash
 
     steps:
       - name: Checkout Streamlit code

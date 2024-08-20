@@ -28,4 +28,5 @@ message ClientState {
   string page_script_hash = 3;
   string page_name = 4;
   string fragment_id = 5;
+  bool is_auto_rerun = 6;
 }

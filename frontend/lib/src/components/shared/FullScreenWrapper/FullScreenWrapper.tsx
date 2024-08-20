@@ -15,14 +15,17 @@
  */
 
 import React, { PureComponent } from "react"
+
 import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
+
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import {
-  StyledFullScreenFrame,
   StyledFullScreenButton,
+  StyledFullScreenFrame,
 } from "./styled-components"
 
 export type Size = {
@@ -148,7 +151,7 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
     return (
       <StyledFullScreenFrame
         isExpanded={expanded}
-        data-testid={"stFullScreenFrame"}
+        data-testid="stFullScreenFrame"
       >
         {!disableFullscreenMode && (
           <StyledFullScreenButton

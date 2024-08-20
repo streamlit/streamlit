@@ -31,7 +31,7 @@ def test_renders_settings_dialog_properly(
     themed_app.get_by_test_id("stMainMenu").click()
 
     themed_app.get_by_text("Settings").click()
-    dialog = themed_app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog.get_by_role("dialog"), name="settings_dialog")
 
@@ -44,7 +44,7 @@ def test_renders_screencast_dialog_properly(
     themed_app.get_by_test_id("stMainMenu").click()
 
     themed_app.get_by_text("Record a screencast").click()
-    dialog = themed_app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog.get_by_role("dialog"), name="record_screencast_dialog")
 
@@ -62,7 +62,7 @@ def test_renders_screencast_recorded_dialog_properly(themed_app: Page):
 
     # stop recording
     themed_app.keyboard.press("Escape")
-    dialog = themed_app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
 
     # don't use screenshot as the recording may differ so just check for specific text
@@ -75,7 +75,7 @@ def test_renders_about_dialog_properly(themed_app: Page):
     themed_app.get_by_test_id("stMainMenu").click()
 
     themed_app.get_by_text("About").click()
-    dialog = themed_app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text("Made with Streamlit v")
 
@@ -86,7 +86,7 @@ def test_renders_clear_cache_dialog_properly(
     themed_app.get_by_test_id("stMainMenu").click()
 
     themed_app.get_by_text("Clear cache").click()
-    dialog = themed_app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text(
         "Are you sure you want to clear the app's function caches?"
@@ -101,7 +101,7 @@ def test_renders_active_theme_dialog_properly(
     themed_app.get_by_text("Settings").click()
     themed_app.get_by_text("Edit active theme").click()
 
-    dialog = themed_app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
 
     assert_snapshot(dialog.get_by_role("dialog"), name="edit_active_theme_dialog")

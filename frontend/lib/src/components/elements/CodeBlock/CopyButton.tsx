@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode, createRef } from "react"
+import React, { useEffect, useRef } from "react"
+
 import Clipboard from "clipboard"
 import { Copy as CopyIcon } from "react-feather"
 
@@ -24,45 +25,42 @@ interface Props {
   text: string
 }
 
-class CopyButton extends PureComponent<Props> {
-  private button = createRef<HTMLButtonElement>()
+const CopyButton: React.FC<Props> = ({ text }) => {
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const clipboardRef = useRef<Clipboard | null>(null)
 
-  private clipboard: ClipboardJS | null = null
-
-  public componentDidMount = (): void => {
-    const node = this.button.current
+  useEffect(() => {
+    const node = buttonRef.current
 
     if (node !== null) {
-      this.clipboard = new Clipboard(node, {
-        // we set the container here so that copying also works in dialogs.
-        // otherwise, the copy event is swallowed somehow.
+      clipboardRef.current = new Clipboard(node, {
+        // Set the container so that copying also works in dialogs.
+        // Otherwise, the copy event is swallowed somehow.
         container: node.parentElement ?? undefined,
       })
     }
-  }
 
-  public componentWillUnmount = (): void => {
-    if (this.clipboard !== null) {
-      this.clipboard.destroy()
+    return () => {
+      if (clipboardRef.current !== null) {
+        clipboardRef.current.destroy()
+      }
     }
-  }
+  }, [])
 
-  public render(): ReactNode {
-    return (
-      <StyledCopyButton
-        data-testid="stCopyButton"
-        title="Copy to clipboard"
-        ref={this.button}
-        data-clipboard-text={this.props.text}
-        style={{
-          top: 0,
-          right: 0,
-        }}
-      >
-        <CopyIcon size="16" />
-      </StyledCopyButton>
-    )
-  }
+  return (
+    <StyledCopyButton
+      data-testid="stCodeCopyButton"
+      title="Copy to clipboard"
+      ref={buttonRef}
+      data-clipboard-text={text}
+      style={{
+        top: 0,
+        right: 0,
+      }}
+    >
+      <CopyIcon size="16" />
+    </StyledCopyButton>
+  )
 }
 
 export default CopyButton

@@ -15,12 +15,14 @@
  */
 
 import React, { ReactElement, useEffect, useRef, useState } from "react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+
+import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
+
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import {
   DynamicIcon,
-  StyledSpinnerIcon,
   StyledIcon,
+  StyledSpinnerIcon,
 } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
@@ -29,11 +31,11 @@ import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
 
 import {
   BORDER_SIZE,
+  StyledDetails,
+  StyledDetailsPanel,
   StyledExpandableContainer,
   StyledSummary,
   StyledSummaryHeading,
-  StyledDetailsPanel,
-  StyledDetails,
 } from "./styled-components"
 
 export interface ExpanderIconProps {
@@ -228,7 +230,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   }
 
   return (
-    <StyledExpandableContainer data-testid="stExpander">
+    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
       <StyledDetails isStale={isStale} ref={detailsRef}>
         <StyledSummary onClick={toggle} empty={empty} ref={summaryRef}>
           <StyledSummaryHeading>

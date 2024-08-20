@@ -20,6 +20,7 @@ from playwright.sync_api import FilePayload, Page, expect
 from e2e_playwright.shared.app_utils import (
     click_button,
     expect_markdown,
+    get_checkbox,
     wait_for_app_run,
 )
 
@@ -101,6 +102,14 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
     )
 
 
+def test_dont_observe_invalid_status(
+    app: Page,
+):
+    """Test that unknown status is not observed and raises an error."""
+    status = _get_status(app, "Connecting2", DISCONNECT_WEBSOCKET_ACTION)
+    assert "timeout: did not observe status 'Connecting2'" in status
+
+
 def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
     app: Page,
 ):
@@ -120,12 +129,21 @@ def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
         expect_markdown(app, f"count: {expected_count}")
 
 
-def test_dont_observe_invalid_status(
+def test_reruns_script_when_interrupted_by_websocket_disconnect(
     app: Page,
 ):
-    """Test that unknown status is not observed and raises an error."""
-    status = _get_status(app, "Connecting2", DISCONNECT_WEBSOCKET_ACTION)
-    assert "timeout: did not observe status 'Connecting2'" in status
+    # Click on the checkbox, but don't wait for the app to finish running.
+    get_checkbox(app, "do something slow").locator("label").click()
+
+    # NOTE: The "Connecting" status doesn't actually show up because the "Running"
+    # status takes priority in the app's status widget, so this _get_status call ends up
+    # timing out. This is fine for now as it doesn't really affect the test, and we'll
+    # be moving away from using the status widget to determine app state in tests due to
+    # the natural flakiness of the approach.
+    _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
+
+    wait_for_app_run(app)
+    expect_markdown(app, "slow operations attempted: 2")
 
 
 def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(

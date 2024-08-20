@@ -17,14 +17,12 @@
 from __future__ import annotations
 
 import sys
-from contextvars import ContextVar
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Final,
-    Hashable,
     Iterable,
     Literal,
     NoReturn,
@@ -38,11 +36,14 @@ from streamlit import (
     cli_util,
     config,
     cursor,
-    dataframe_util,
     env_util,
     logger,
     runtime,
     util,
+)
+from streamlit.delta_generator_singletons import (
+    context_dg_stack,
+    get_last_dg_added_to_context_stack,
 )
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
@@ -53,7 +54,8 @@ from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
-from streamlit.elements.form import FormData, FormMixin, current_form_id
+from streamlit.elements.form import FormMixin
+from streamlit.elements.form_utils import FormData, current_form_id
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
 from streamlit.elements.html import HtmlMixin
@@ -89,26 +91,22 @@ from streamlit.elements.widgets.slider import SliderMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
+from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
-    from numpy import typing as npt
-    from pandas import DataFrame
 
     from streamlit.cursor import Cursor
-    from streamlit.dataframe_util import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
-
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
 Value = TypeVar("Value")
-DG = TypeVar("DG", bound="DeltaGenerator")
 
 # Type aliases for Ancestor Block Types
 BlockType: TypeAlias = str
@@ -280,7 +278,7 @@ class DeltaGenerator(
 
     def __enter__(self) -> None:
         # with block started
-        dg_stack.set(dg_stack.get() + (self,))
+        context_dg_stack.set(context_dg_stack.get() + (self,))
 
     def __exit__(
         self,
@@ -290,7 +288,7 @@ class DeltaGenerator(
     ) -> Literal[False]:
         # with block ended
 
-        dg_stack.set(dg_stack.get()[:-1])
+        context_dg_stack.set(context_dg_stack.get()[:-1])
 
         # Re-raise any exceptions
         return False
@@ -554,189 +552,8 @@ class DeltaGenerator(
 
         return block_dg
 
-    def _arrow_add_rows(
-        self: DG,
-        data: Data = None,
-        **kwargs: (
-            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
-        ),
-    ) -> DG | None:
-        """Concatenate a dataframe to the bottom of the current one.
 
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
-            Table to concat. Optional.
-
-        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
-            The named dataset to concat. Optional. You can only pass in 1
-            dataset (including the one in the data parameter).
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df1 = pd.DataFrame(
-        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-        ... )
-        >>> my_table = st.table(df1)
-        >>>
-        >>> df2 = pd.DataFrame(
-        ...     np.random.randn(50, 20), columns=("col %d" % i for i in range(20))
-        ... )
-        >>> my_table.add_rows(df2)
-        >>> # Now the table shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        You can do the same thing with plots. For example, if you want to add
-        more data to a line chart:
-
-        >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st.line_chart(df1)
-        >>> my_chart.add_rows(df2)
-        >>> # Now the chart shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        And for plots whose datasets are named, you can pass the data with a
-        keyword argument where the key is the name:
-
-        >>> my_chart = st.vega_lite_chart(
-        ...     {
-        ...         "mark": "line",
-        ...         "encoding": {"x": "a", "y": "b"},
-        ...         "datasets": {
-        ...             "some_fancy_name": df1,  # <-- named dataset
-        ...         },
-        ...         "data": {"name": "some_fancy_name"},
-        ...     }
-        ... )
-        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
-
-        """
-        if self._root_container is None or self._cursor is None:
-            return self
-
-        if not self._cursor.is_locked:
-            raise StreamlitAPIException("Only existing elements can `add_rows`.")
-
-        # Accept syntax st._arrow_add_rows(df).
-        if data is not None and len(kwargs) == 0:
-            name = ""
-        # Accept syntax st._arrow_add_rows(foo=df).
-        elif len(kwargs) == 1:
-            name, data = kwargs.popitem()
-        # Raise error otherwise.
-        else:
-            raise StreamlitAPIException(
-                "Wrong number of arguments to add_rows()."
-                "Command requires exactly one dataset"
-            )
-
-        # When doing _arrow_add_rows on an element that does not already have data
-        # (for example, st.line_chart() without any args), call the original
-        # st.foo() element with new data instead of doing a _arrow_add_rows().
-        if (
-            "add_rows_metadata" in self._cursor.props
-            and self._cursor.props["add_rows_metadata"]
-            and self._cursor.props["add_rows_metadata"].last_index is None
-        ):
-            st_method = getattr(
-                self, self._cursor.props["add_rows_metadata"].chart_command
-            )
-            st_method(data, **kwargs)
-            return None
-
-        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
-            data,
-            self._cursor.props["add_rows_metadata"],
-        )
-
-        msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.delta_path[:] = self._cursor.delta_path
-
-        import streamlit.elements.arrow as arrow_proto
-
-        default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
-
-        if name:
-            msg.delta.arrow_add_rows.name = name
-            msg.delta.arrow_add_rows.has_name = True
-
-        _enqueue_message(msg)
-
-        return self
-
-
-main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
-sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg)
-event_dg = DeltaGenerator(root_container=RootContainer.EVENT, parent=main_dg)
-bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
-
-
-# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
-# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
-# so that different threads or async tasks can have their own stacks.
-def get_default_dg_stack() -> tuple[DeltaGenerator, ...]:
-    return (main_dg,)
-
-
-dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
-    "dg_stack", default=get_default_dg_stack()
-)
-
-
-def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
-    """Get the last added DeltaGenerator of the stack in the current context.
-
-    Returns None if the stack has only one element or is empty for whatever reason.
-    """
-    current_stack = dg_stack.get()
-    # If set to "> 0" and thus return the only delta generator in the stack - which logically makes more sense -, some unit tests
-    # fail. It looks like the reason is that they create their own main delta generator but do not populate the dg_stack correctly. However, to be on the safe-side,
-    # we keep the logic but leave the comment as shared knowledge for whoever will look into this in the future.
-    if len(current_stack) > 1:
-        return current_stack[-1]
-    return None
-
-
-def _prep_data_for_add_rows(
-    data: Data,
-    add_rows_metadata: AddRowsMetadata | None,
-) -> tuple[Data, AddRowsMetadata | None]:
-    if not add_rows_metadata:
-        if dataframe_util.is_pandas_styler(data):
-            # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-            return data, None
-        return dataframe_util.convert_anything_to_pandas_df(data), None
-
-    # If add_rows_metadata is set, it indicates that the add_rows used called
-    # on a chart based on our built-in chart commands.
-
-    # For built-in chart commands we have to reshape the data structure
-    # otherwise the input data and the actual data used
-    # by vega_lite will be different, and it will throw an error.
-    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
-
-    return prep_chart_data_for_add_rows(data, add_rows_metadata)
-
-
-def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
-    """Enqueues a ForwardMsg proto to send to the app."""
-    ctx = get_script_run_ctx()
-
-    if ctx is None:
-        raise NoSessionContext()
-
-    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
-        msg.delta.fragment_id = ctx.current_fragment_id
-
-    ctx.enqueue(msg)
-
-
-def _writes_directly_to_sidebar(dg: DG) -> bool:
+def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(len(list(dg._ancestor_block_types)))
     return in_sidebar and not has_container

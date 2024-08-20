@@ -108,8 +108,8 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
 }): ReactElement => {
   return (
     <StyledToolbarWrapper
-      className={"stElementToolbar"}
-      data-testid={"stElementToolbar"}
+      className="stElementToolbar"
+      data-testid="stElementToolbar"
       locked={locked || isFullScreen}
       target={target}
     >

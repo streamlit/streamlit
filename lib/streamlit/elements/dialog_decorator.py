@@ -17,7 +17,14 @@ from __future__ import annotations
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar, cast, overload
 
-from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
+from streamlit.delta_generator_singletons import (
+    get_dg_singleton_instance,
+    get_last_dg_added_to_context_stack,
+)
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import _fragment
 from streamlit.runtime.metrics_util import gather_metrics
@@ -54,7 +61,11 @@ F = TypeVar("F", bound=Callable[..., None])
 
 
 def _dialog_decorator(
-    non_optional_func: F, title: str, *, width: DialogWidth = "small"
+    non_optional_func: F,
+    title: str,
+    *,
+    width: DialogWidth = "small",
+    should_show_deprecation_warning: bool = False,
 ) -> F:
     if title is None or title == "":
         raise StreamlitAPIException(
@@ -68,10 +79,21 @@ def _dialog_decorator(
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
-        dialog = event_dg._dialog(title=title, dismissible=True, width=width)
+        dialog = get_dg_singleton_instance().event_dg._dialog(
+            title=title, dismissible=True, width=width
+        )
         dialog.open()
 
         def dialog_content() -> None:
+            if should_show_deprecation_warning:
+                show_deprecation_warning(
+                    make_deprecated_name_warning(
+                        "experimental_dialog",
+                        "dialog",
+                        "2025-01-01",
+                    )
+                )
+
             # if the dialog should be closed, st.rerun() has to be called
             # (same behavior as with st.fragment)
             _ = non_optional_func(*args, **kwargs)
@@ -222,5 +244,24 @@ def experimental_dialog_decorator(title: F, *, width: DialogWidth = "small") -> 
 def experimental_dialog_decorator(
     title: F | str, *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
-    """Deprecated alias for @st.dialog. See the docstring for the decorator's new name."""
-    return dialog_decorator(title, width=width)
+    """Deprecated alias for @st.dialog.
+    See the docstring for the decorator's new name.
+    """
+    func_or_title = title
+    if isinstance(func_or_title, str):
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            title: str = func_or_title
+            return _dialog_decorator(
+                non_optional_func=f,
+                title=title,
+                width=width,
+                should_show_deprecation_warning=True,
+            )
+
+        return wrapper
+
+    func: F = func_or_title
+    return _dialog_decorator(
+        func, "", width=width, should_show_deprecation_warning=True
+    )

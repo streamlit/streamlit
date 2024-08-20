@@ -32,7 +32,7 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -521,7 +521,9 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "default_value_today",  # type: ignore[assignment]
+        value: DateValue
+        | Literal["today", "default_value_today"]
+        | None = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,

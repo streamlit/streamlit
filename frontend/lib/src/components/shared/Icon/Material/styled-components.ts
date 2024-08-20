@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { IconSize, computeSpacingStyle } from "@streamlit/lib/src/theme"
+import { computeSpacingStyle, IconSize } from "@streamlit/lib/src/theme"
 
 export interface StyledMaterialIconProps {
   size: IconSize
@@ -41,7 +41,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       fontFamily: "Material Symbols Rounded",
       fontWeight: "normal",
       fontStyle: "normal",
-      lineHeight: 1,
+      lineHeight: theme.lineHeights.none,
       letterSpacing: "normal",
       textTransform: "none",
       whiteSpace: "nowrap",

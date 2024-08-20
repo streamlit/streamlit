@@ -20,10 +20,13 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
 from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
-from streamlit.runtime.scriptrunner.script_requests import RerunData
-from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
 
 
@@ -47,14 +50,19 @@ class TestWrapInTryAndExec(unittest.TestCase):
             """Test function that does nothing and, thus, succeeds."""
             return 42
 
-        result, run_without_errors, rerun_exception_data, premature_stop = (
-            exec_func_with_error_handling(test_func, self.ctx)
-        )
+        (
+            result,
+            run_without_errors,
+            rerun_exception_data,
+            premature_stop,
+            uncaught_exception,
+        ) = exec_func_with_error_handling(test_func, self.ctx)
 
         assert result == 42
         assert run_without_errors is True
         assert rerun_exception_data is None
         assert premature_stop is False
+        assert uncaught_exception is None
 
     def test_func_throws_rerun_exception(self):
         rerun_data = RerunData(query_string="foo")
@@ -63,37 +71,52 @@ class TestWrapInTryAndExec(unittest.TestCase):
             """Test function that raises a RerunException."""
             raise RerunException(rerun_data)
 
-        _, run_without_errors, rerun_exception_data, premature_stop = (
-            exec_func_with_error_handling(test_func, self.ctx)
-        )
+        (
+            _,
+            run_without_errors,
+            rerun_exception_data,
+            premature_stop,
+            uncaught_exception,
+        ) = exec_func_with_error_handling(test_func, self.ctx)
 
         assert run_without_errors is True
         assert rerun_exception_data == rerun_data
         assert premature_stop is False
+        assert uncaught_exception is None
 
     def test_func_throws_stop_exception(self):
         def test_func():
             """Test function that raises a StopException."""
             raise StopException()
 
-        _, run_without_errors, rerun_exception_data, premature_stop = (
-            exec_func_with_error_handling(test_func, self.ctx)
-        )
+        (
+            _,
+            run_without_errors,
+            rerun_exception_data,
+            premature_stop,
+            uncaught_exception,
+        ) = exec_func_with_error_handling(test_func, self.ctx)
 
         assert run_without_errors is True
         assert rerun_exception_data is None
         assert premature_stop is True
+        assert uncaught_exception is None
 
     @parameterized.expand([(ValueError), (TypeError), (RuntimeError), (Exception)])
-    def test_func_throws_generic_exception(self, exception_type: Exception):
+    def test_func_throws_generic_exception(self, exception_type: type):
         def test_func():
             """Test function that raises a generic Exception."""
             raise exception_type()
 
-        _, run_without_errors, rerun_exception_data, premature_stop = (
-            exec_func_with_error_handling(test_func, self.ctx)
-        )
+        (
+            _,
+            run_without_errors,
+            rerun_exception_data,
+            premature_stop,
+            uncaught_exception,
+        ) = exec_func_with_error_handling(test_func, self.ctx)
 
         assert run_without_errors is False
         assert rerun_exception_data is None
         assert premature_stop is True
+        assert isinstance(uncaught_exception, exception_type)

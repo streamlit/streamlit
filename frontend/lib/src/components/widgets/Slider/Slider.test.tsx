@@ -15,9 +15,9 @@
  */
 
 import React from "react"
-import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
 
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
 import TimezoneMock from "timezone-mock"
 
 import {
@@ -27,6 +27,7 @@ import {
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import Slider, { Props } from "./Slider"
 
 const getProps = (

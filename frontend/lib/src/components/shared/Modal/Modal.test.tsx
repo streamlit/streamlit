@@ -15,9 +15,11 @@
  */
 
 import React from "react"
+
 import { BaseProvider, LightTheme } from "baseui"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { render } from "@streamlit/lib/src/test_util"
 
 import Modal from "./Modal"
@@ -30,7 +32,8 @@ describe("Modal component", () => {
       </BaseProvider>
     )
 
-    const modalElement = screen.getByRole("dialog")
+    const modalElement = screen.getByTestId("stDialog")
     expect(modalElement).toBeInTheDocument()
+    expect(modalElement).toHaveClass("stDialog")
   })
 })

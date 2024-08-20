@@ -15,11 +15,14 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
+
 import { select } from "d3"
-import { graphviz, Engine } from "d3-graphviz"
+import { Engine, graphviz } from "d3-graphviz"
+
 import { logError } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
+
 import { StyledGraphVizChart } from "./styled-components"
 
 export interface GraphVizChartProps {
@@ -30,8 +33,8 @@ export interface GraphVizChartProps {
 export function GraphVizChart({
   element,
   isFullScreen,
-}: GraphVizChartProps): ReactElement {
-  const chartId = `graphviz-chart-${element.elementId}`
+}: Readonly<GraphVizChartProps>): ReactElement {
+  const chartId = `st-graphviz-chart-${element.elementId}`
 
   useEffect(() => {
     try {
@@ -62,7 +65,7 @@ export function GraphVizChart({
 
   return (
     <StyledGraphVizChart
-      className="graphviz stGraphVizChart"
+      className="stGraphVizChart"
       data-testid="stGraphVizChart"
       id={chartId}
       isFullScreen={isFullScreen}

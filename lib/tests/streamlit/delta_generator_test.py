@@ -34,7 +34,8 @@ import streamlit as st
 import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
-from streamlit.delta_generator import DeltaGenerator, get_last_dg_added_to_context_stack
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
@@ -200,7 +201,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         """Multiple widgets with the same generated key should report an error."""
         widgets = {
             "button": lambda key=None: st.button("", key=key),
-            "button_group": lambda key=None: st.feedback([1, 2], key=key),
+            "button_group": lambda key=None: st.feedback("thumbs", key=key),
             "checkbox": lambda key=None: st.checkbox("", key=key),
             "multiselect": lambda key=None: st.multiselect("", options=[1, 2], key=key),
             "radio": lambda key=None: st.radio("", options=[1, 2], key=key),
@@ -248,7 +249,9 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         widgets = {
             "button": lambda key=None, label="": st.button(label=label, key=key),
             "checkbox": lambda key=None, label="": st.checkbox(label=label, key=key),
-            "feedback": lambda key=None, label="": st.feedback(options=[1, 2], key=key),
+            "feedback": lambda key=None, label="": st.feedback(
+                options="thumbs", key=key
+            ),
             "multiselect": lambda key=None, label="": st.multiselect(
                 label=label, options=[1, 2], key=key
             ),
@@ -289,17 +292,6 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
                 ),
                 str(ctx.exception),
             )
-
-    def test_get_last_dg_added_to_context_stack(self):
-        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-        self.assertIsNone(last_dg_added_to_context_stack)
-
-        sidebar = st.sidebar
-        with sidebar:
-            last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-            self.assertEqual(sidebar, last_dg_added_to_context_stack)
-        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
-        self.assertNotEqual(sidebar, last_dg_added_to_context_stack)
 
 
 class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
@@ -397,20 +389,18 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.script_requests = MagicMock()
-        ctx.script_requests.fragment_id_queue = ["my_fragment_id"]
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
 
         exc = "is not supported"
         with pytest.raises(StreamlitAPIException, match=exc):
-            delta_generator.sidebar_dg._enqueue("text", TextProto())
+            get_dg_singleton_instance().sidebar_dg._enqueue("text", TextProto())
 
     def test_enqueue_can_write_to_container_in_sidebar(self):
         ctx = get_script_run_ctx()
         ctx.current_fragment_id = "my_fragment_id"
-        ctx.script_requests = MagicMock()
-        ctx.script_requests.fragment_id_queue = ["my_fragment_id"]
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
 
-        delta_generator.sidebar_dg.container().write("Hello world")
+        get_dg_singleton_instance().sidebar_dg.container().write("Hello world")
 
         deltas = self.get_all_deltas_from_queue()
         assert [d.fragment_id for d in deltas] == ["my_fragment_id", "my_fragment_id"]

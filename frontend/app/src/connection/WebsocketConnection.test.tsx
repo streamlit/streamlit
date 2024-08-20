@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
+import React, { Fragment } from "react"
+
 import axios from "axios"
 import { WS } from "jest-websocket-mock"
 import zip from "lodash/zip"
-import React, { Fragment } from "react"
 
-import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import {
-  SessionInfo,
+  BackMsg,
   mockEndpoints,
   mockSessionInfoProps,
-  BackMsg,
+  SessionInfo,
 } from "@streamlit/lib"
+import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import {
+  Args,
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
+  doInitPings,
   StyledBashCode,
   WebsocketConnection,
-  doInitPings,
-  Args,
 } from "@streamlit/app/src/connection/WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {

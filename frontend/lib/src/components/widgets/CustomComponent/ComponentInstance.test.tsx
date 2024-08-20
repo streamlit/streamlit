@@ -15,8 +15,9 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { act, screen, fireEvent } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import {
   ComponentInstance as ComponentInstanceProto,
@@ -488,7 +489,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      expect(screen.getByTestId("stNotificationContentError")).toBeVisible()
+      expect(screen.getByTestId("stAlertContentError")).toBeVisible()
     })
 
     it("errors on unrecognized special args", () => {

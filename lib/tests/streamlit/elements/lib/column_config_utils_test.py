@@ -480,23 +480,36 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (DataFormat.SET_OF_VALUES, True),
-            (DataFormat.TUPLE_OF_VALUES, True),
+            (DataFormat.COLUMN_VALUE_MAPPING, True),
+            (DataFormat.LIST_OF_RECORDS, True),
+            (DataFormat.LIST_OF_ROWS, True),
             (DataFormat.LIST_OF_VALUES, True),
             (DataFormat.NUMPY_LIST, True),
             (DataFormat.NUMPY_MATRIX, True),
-            (DataFormat.LIST_OF_RECORDS, True),
-            (DataFormat.LIST_OF_ROWS, True),
-            (DataFormat.COLUMN_VALUE_MAPPING, True),
+            (DataFormat.PANDAS_ARRAY, True),
+            (DataFormat.PANDAS_INDEX, True),
+            (DataFormat.POLARS_DATAFRAME, True),
+            (DataFormat.POLARS_LAZYFRAME, True),
+            (DataFormat.POLARS_SERIES, True),
+            (DataFormat.PYARROW_ARRAY, True),
+            (DataFormat.RAY_DATASET, True),
+            (DataFormat.SET_OF_VALUES, True),
+            (DataFormat.TUPLE_OF_VALUES, True),
             # Some data formats which should not hide the index:
-            (DataFormat.PANDAS_DATAFRAME, False),
-            (DataFormat.PANDAS_SERIES, False),
-            (DataFormat.PANDAS_INDEX, False),
-            (DataFormat.KEY_VALUE_DICT, False),
-            (DataFormat.PYARROW_TABLE, False),
-            (DataFormat.PANDAS_STYLER, False),
             (DataFormat.COLUMN_INDEX_MAPPING, False),
             (DataFormat.COLUMN_SERIES_MAPPING, False),
+            (DataFormat.DASK_OBJECT, False),
+            (DataFormat.KEY_VALUE_DICT, False),
+            (DataFormat.MODIN_OBJECT, False),
+            (DataFormat.PANDAS_DATAFRAME, False),
+            (DataFormat.PANDAS_SERIES, False),
+            (DataFormat.PANDAS_STYLER, False),
+            (DataFormat.PYARROW_TABLE, False),
+            (DataFormat.PYSPARK_OBJECT, False),
+            (DataFormat.SNOWPANDAS_OBJECT, False),
+            (DataFormat.SNOWPARK_OBJECT, False),
+            (DataFormat.XARRAY_DATA_ARRAY, False),
+            (DataFormat.XARRAY_DATASET, False),
         ]
     )
     def test_apply_data_specific_configs_hides_index(
@@ -504,8 +517,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
     ):
         """Test that the index is hidden for some data formats."""
         columns_config: ColumnConfigMapping = {}
-        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        apply_data_specific_configs(columns_config, data_df, data_format)
+        apply_data_specific_configs(columns_config, data_format)
 
         if hidden:
             self.assertEqual(
@@ -515,81 +527,6 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             )
         else:
             self.assertNotIn(INDEX_IDENTIFIER, columns_config)
-
-    def test_apply_data_specific_configs_makes_index_required(self):
-        """Test that a non-range index gets configured as required."""
-        columns_config: ColumnConfigMapping = {}
-        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=["a", "b", "c"])
-        apply_data_specific_configs(
-            columns_config, data_df, DataFormat.PANDAS_DATAFRAME
-        )
-        self.assertEqual(
-            columns_config[INDEX_IDENTIFIER]["required"],
-            True,
-            f"Index of type {type(data_df.index)} should be configured as required.",
-        )
-
-    @parameterized.expand(
-        [
-            (DataFormat.SET_OF_VALUES, True),
-            (DataFormat.TUPLE_OF_VALUES, True),
-            (DataFormat.LIST_OF_VALUES, True),
-            (DataFormat.NUMPY_LIST, True),
-            (DataFormat.KEY_VALUE_DICT, True),
-            # Most other data formats which should not rename the first column:
-            (DataFormat.PANDAS_DATAFRAME, False),
-            (DataFormat.PANDAS_SERIES, False),
-            (DataFormat.PANDAS_INDEX, False),
-            (DataFormat.PYARROW_TABLE, False),
-            (DataFormat.PANDAS_STYLER, False),
-            (DataFormat.COLUMN_INDEX_MAPPING, False),
-            (DataFormat.COLUMN_SERIES_MAPPING, False),
-            (DataFormat.LIST_OF_RECORDS, False),
-            (DataFormat.LIST_OF_ROWS, False),
-            (DataFormat.COLUMN_VALUE_MAPPING, False),
-        ]
-    )
-    def test_apply_data_specific_configs_renames_column(
-        self, data_format: DataFormat, renames: bool
-    ):
-        """Test that the column names are changed for some data formats."""
-        data_df = pd.DataFrame([1, 2, 3])
-        apply_data_specific_configs({}, data_df, data_format)
-        if renames:
-            self.assertEqual(
-                data_df.columns[0],
-                "value",
-                f"Data of type {data_format} should be renamed to 'value'",
-            )
-        else:
-            self.assertEqual(
-                data_df.columns[0],
-                0,
-                f"Data of type {data_format} should not be renamed.",
-            )
-
-    def test_apply_data_specific_configs_disables_columns(self):
-        """Test that Arrow incompatible columns are disabled (configured as non-editable)."""
-        columns_config: ColumnConfigMapping = {}
-        data_df = pd.DataFrame(
-            {
-                "a": pd.Series([1, 2]),
-                "b": pd.Series(["foo", "bar"]),
-                "c": pd.Series([1, "foo"]),  # Incompatible
-                "d": pd.Series([1 + 2j, 3 + 4j]),  # Incompatible
-            }
-        )
-
-        apply_data_specific_configs(
-            columns_config,
-            data_df,
-            DataFormat.PANDAS_DATAFRAME,
-            check_arrow_compatibility=True,
-        )
-        self.assertNotIn("a", columns_config)
-        self.assertNotIn("b", columns_config)
-        self.assertTrue(columns_config["c"]["disabled"])
-        self.assertTrue(columns_config["d"]["disabled"])
 
     def test_nan_as_value_raises_exception(self):
         """Test that the usage of `nan` as value in column config raises an exception."""

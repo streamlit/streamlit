@@ -26,13 +26,13 @@ import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseColumn,
   BaseColumnProps,
-  getErrorCell,
-  getEmptyCell,
-  toSafeString,
-  toSafeArray,
-  mergeColumnParameters,
-  toSafeNumber,
   formatNumber,
+  getEmptyCell,
+  getErrorCell,
+  mergeColumnParameters,
+  toSafeArray,
+  toSafeNumber,
+  toSafeString,
 } from "./utils"
 
 export const LINE_CHART_TYPE = "line_chart"

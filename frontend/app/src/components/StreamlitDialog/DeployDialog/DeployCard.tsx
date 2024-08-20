@@ -15,9 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { Card } from "baseui/card"
-import { EmotionTheme } from "@streamlit/lib"
 import { useTheme } from "@emotion/react"
+
+import { EmotionTheme } from "@streamlit/lib"
 
 interface IDeployCardProps {
   children?: React.ReactNode
@@ -26,32 +28,33 @@ interface IDeployCardProps {
 function DeployCard(
   props: React.PropsWithChildren<IDeployCardProps>
 ): ReactElement {
-  const { colors, spacing, radii, breakpoints }: EmotionTheme = useTheme()
+  const { colors, spacing, radii, breakpoints, sizes }: EmotionTheme =
+    useTheme()
   const { children } = props
   return (
     <Card
       overrides={{
         Root: {
           style: {
-            borderTopWidth: "1px",
-            borderBottomWidth: "1px",
-            borderLeftWidth: "1px",
-            borderRightWidth: "1px",
+            borderTopWidth: sizes.borderWidth,
+            borderBottomWidth: sizes.borderWidth,
+            borderLeftWidth: sizes.borderWidth,
+            borderRightWidth: sizes.borderWidth,
 
             borderTopStyle: "solid",
             borderBottomStyle: "solid",
             borderLeftStyle: "solid",
             borderRightStyle: "solid",
 
-            borderTopColor: colors.fadedText10,
-            borderBottomColor: colors.fadedText10,
-            borderLeftColor: colors.fadedText10,
-            borderRightColor: colors.fadedText10,
+            borderTopColor: colors.borderColor,
+            borderBottomColor: colors.borderColor,
+            borderLeftColor: colors.borderColor,
+            borderRightColor: colors.borderColor,
 
-            borderTopLeftRadius: radii.lg,
-            borderTopRightRadius: radii.lg,
-            borderBottomLeftRadius: radii.lg,
-            borderBottomRightRadius: radii.lg,
+            borderTopLeftRadius: radii.default,
+            borderTopRightRadius: radii.default,
+            borderBottomLeftRadius: radii.default,
+            borderBottomRightRadius: radii.default,
           },
         },
         Contents: {

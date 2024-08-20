@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
 import { withTheme } from "@emotion/react"
@@ -22,13 +23,13 @@ import { withTheme } from "@emotion/react"
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -36,7 +37,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledTextInput } from "./styled-components"
@@ -284,7 +284,7 @@ class TextInput extends React.PureComponent<Props, State> {
           }}
         />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}

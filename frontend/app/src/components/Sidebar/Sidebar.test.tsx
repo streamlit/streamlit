@@ -15,21 +15,23 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import {
-  screen,
   fireEvent,
-  within,
   RenderResult,
+  screen,
+  within,
 } from "@testing-library/react"
 
 import {
-  render,
-  mockEndpoints,
   emotionLightTheme,
-  PageConfig,
   Logo,
+  mockEndpoints,
+  PageConfig,
+  render,
 } from "@streamlit/lib"
+
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 jest.mock("@streamlit/lib/src/util/Hooks", () => ({

@@ -15,10 +15,12 @@
  */
 
 import styled from "@emotion/styled"
+
 import {
-  StyledIcon,
   StyledEmojiIcon,
+  StyledIcon,
 } from "@streamlit/lib/src/components/shared/Icon/styled-components"
+import { StyledCodeBlock } from "@streamlit/lib/src/components/elements/CodeBlock/styled-components"
 import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 
 export const StyledAlertContent = styled.div(({ theme }) => ({
@@ -26,22 +28,12 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
   width: "100%",
 
-  [StyledEmojiIcon as any]: {
+  [`${StyledEmojiIcon}, ${StyledIcon}, ${StyledMaterialIcon}`]: {
     position: "relative",
     top: "2px",
   },
 
-  [StyledIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-
-  [StyledMaterialIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-
-  ".stCodeBlock code": {
-    paddingRight: "1rem",
+  [`${StyledCodeBlock} code`]: {
+    paddingRight: theme.spacing.lg,
   },
 }))

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { FC, useState, useEffect, memo } from "react"
+import React, { FC, memo, useEffect, useState } from "react"
 
 import {
-  StyledSkeleton,
-  TitleSkeleton,
   ParagraphSkeleton,
-  TextLineSkeleton,
   SquareSkeleton,
+  StyledSkeleton,
+  TextLineSkeleton,
+  TitleSkeleton,
 } from "./styled-components"
 
 const SHOW_DELAY_MS = 500
@@ -42,7 +42,7 @@ const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
   if (!visible) return <></>
 
   return (
-    <StyledSkeleton data-testid="stAppSkeleton">
+    <StyledSkeleton className="stAppSkeleton" data-testid="stAppSkeleton">
       <TitleSkeleton />
       <ParagraphSkeleton>
         <TextLineSkeleton width="98%" />

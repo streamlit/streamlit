@@ -15,21 +15,22 @@
  */
 
 import React, { ReactElement } from "react"
+
 import { useTheme } from "@emotion/react"
+
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import {
   StyledNavLink,
-  StyledNavLinkText,
   StyledNavLinkContainer,
+  StyledNavLinkText,
 } from "./styled-components"
 
 export interface Props {
@@ -50,7 +51,7 @@ function shouldUseContainerWidth(
   return useContainerWidth === true ? true : false
 }
 
-function PageLink(props: Props): ReactElement {
+function PageLink(props: Readonly<Props>): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
   const isInSidebar = React.useContext(IsSidebarContext)
 
@@ -76,17 +77,13 @@ function PageLink(props: Props): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash as string)
+        onPageChange(element.pageScriptHash)
       }
     }
   }
 
   return (
-    <div
-      className="row-widget stPageLink"
-      data-testid="stPageLink"
-      style={style}
-    >
+    <div className="stPageLink" data-testid="stPageLink" style={style}>
       <BaseButtonTooltip help={element.help} placement={Placement.TOP_RIGHT}>
         <StyledNavLinkContainer>
           <StyledNavLink

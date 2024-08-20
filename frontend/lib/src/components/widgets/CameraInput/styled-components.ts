@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+import { MouseEvent, ReactNode } from "react"
+
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
-import { MouseEvent, ReactNode } from "react"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface CameraInputButtonProps {
@@ -140,7 +142,7 @@ export const StyledCameraInputBaseButton =
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.lightenedBg05,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: `0 0 ${theme.radii.default} ${theme.radii.default}`,
     "&:hover": {
       borderColor: theme.colors.primary,

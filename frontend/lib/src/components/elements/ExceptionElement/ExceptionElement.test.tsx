@@ -15,10 +15,11 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
-import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
+import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import { Exception as ExceptionProto } from "@streamlit/lib/src/proto"
 
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
@@ -42,6 +43,7 @@ describe("ExceptionElement Element", () => {
 
     const exceptionContainer = screen.getByTestId("stException")
     expect(exceptionContainer).toBeInTheDocument()
+    expect(exceptionContainer).toHaveClass("stException")
   })
 
   it("should render the complete stack", () => {

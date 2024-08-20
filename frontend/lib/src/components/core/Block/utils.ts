@@ -15,7 +15,7 @@
  */
 
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
+import { AppNode, BlockNode } from "@streamlit/lib/src/AppNode"
 import {
   FormsData,
   WidgetStateManager,
@@ -47,8 +47,13 @@ export function isElementStale(
 
   if (scriptRunState === ScriptRunState.RUNNING) {
     if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+      // if the fragmentId is set, we only want to mark elements as stale
+      // that belong to the same fragmentId and have a different scriptRunId.
+      // If they have the same scriptRunId, they were just updated.
       return Boolean(
-        node.fragmentId && fragmentIdsThisRun.includes(node.fragmentId)
+        node.fragmentId &&
+          fragmentIdsThisRun.includes(node.fragmentId) &&
+          node.scriptRunId !== scriptRunId
       )
     }
     return node.scriptRunId !== scriptRunId

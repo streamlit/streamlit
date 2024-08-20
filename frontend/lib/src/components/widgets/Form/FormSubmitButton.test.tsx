@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 import React from "react"
-import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
 import { enableAllPlugins } from "immer"
 
+import { render } from "@streamlit/lib/src/test_util"
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
-
 import {
   createFormsData,
   FormsData,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
+
 import { FormSubmitButton, Props } from "./FormSubmitButton"
 
 // Required by ImmerJS

@@ -15,7 +15,8 @@
  */
 
 import { css, SerializedStyles } from "@emotion/react"
-import { darken, transparentize, readableColor } from "color2k"
+import { darken, readableColor, transparentize } from "color2k"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
@@ -90,7 +91,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   #vg-tooltip-element {
     font-family: ${theme.genericFonts.bodyFont};
     color: ${theme.colors.bodyText};
-    border: ${theme.sizes.borderWidth} solid ${theme.colors.fadedText10};
+    border: ${theme.sizes.borderWidth} solid ${theme.colors.borderColor};
     background-color: ${transparentize(theme.colors.bgColor, 0.05)};
     font-size: ${theme.fontSizes.sm};
     box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
@@ -168,7 +169,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     color: inherit; // 1
     background-color: transparent;
     border: none;
-    border-bottom: ${theme.sizes.borderWidth} solid ${theme.colors.fadedText10};
+    border-bottom: ${theme.sizes.borderWidth} solid ${theme.colors.borderColor};
   }
 
   hr:not([size]) {

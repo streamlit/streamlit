@@ -20,9 +20,9 @@ import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
 
 import {
+  computeSpacingStyle,
   IconSize,
   ThemeColor,
-  computeSpacingStyle,
 } from "@streamlit/lib/src/theme"
 
 interface StyledSpinnerIconProps {
@@ -44,7 +44,7 @@ export const StyledSpinnerIcon = styled(Spinner, {
       justifyContents: "center",
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
-      borderColor: theme.colors.fadedText10,
+      borderColor: theme.colors.borderColor,
       borderTopColor: usingCustomTheme
         ? theme.colors.primary
         : theme.colors.blue70,

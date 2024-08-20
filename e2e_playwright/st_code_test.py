@@ -19,22 +19,23 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_code_display(app: Page):
     """Test that st.code displays a code block."""
-    code_element = app.locator(".element-container pre").first
+    code_element = app.get_by_test_id("stCode").first
     expect(code_element).to_contain_text("This code is awesome!")
 
 
 def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the copy-to-clipboard action appears on hover."""
-    first_code_element = themed_app.locator(".element-container:first-child pre").first
+    first_code_element = themed_app.get_by_test_id("stCode").first
     first_code_element.hover()
-    assert_snapshot(first_code_element, name="syntax_highlighting-hover")
+    assert_snapshot(first_code_element, name="st_code-hover_copy")
 
 
 def test_code_blocks_render_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the code blocks render as expected via screenshot matching."""
-    code_blocks = themed_app.get_by_test_id("stCodeBlock")
+    code_blocks = themed_app.get_by_test_id("stCode")
+    expect(code_blocks).to_have_count(11)
 
     assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
     assert_snapshot(code_blocks.nth(1), name="st_code-empty")
@@ -42,6 +43,7 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(3), name="st_code-line_numbers")
     assert_snapshot(code_blocks.nth(4), name="st_code-no_lang")
     assert_snapshot(code_blocks.nth(5), name="st_markdown-code_block")
+    assert_snapshot(code_blocks.nth(6), name="st_code-diff_lang")
 
 
 def test_correct_bottom_spacing_for_code_blocks(app: Page):
@@ -49,9 +51,9 @@ def test_correct_bottom_spacing_for_code_blocks(app: Page):
 
     # The first code block should have no bottom margin:
     expect(
-        app.get_by_test_id("stExpander").nth(0).get_by_test_id("stCodeBlock").first
+        app.get_by_test_id("stExpander").nth(0).get_by_test_id("stCode").first
     ).to_have_css("margin-bottom", "0px")
     # While the codeblock used inside markdown should have a bottom margin to imitate the gap:
     expect(
-        app.get_by_test_id("stExpander").nth(1).get_by_test_id("stCodeBlock").first
+        app.get_by_test_id("stExpander").nth(1).get_by_test_id("stMarkdownPre").first
     ).to_have_css("margin-bottom", "16px")

@@ -15,11 +15,13 @@
  */
 
 import React from "react"
+
 import { screen } from "@testing-library/react"
+
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
-
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
+
 import LinkButton, { Props } from "./LinkButton"
 
 const getProps = (
@@ -51,7 +53,6 @@ describe("LinkButton widget", () => {
 
     const linkButton = screen.getByTestId("stLinkButton")
 
-    expect(linkButton).toHaveClass("row-widget")
     expect(linkButton).toHaveClass("stLinkButton")
     expect(linkButton).toHaveStyle(`width: ${props.width}px`)
   })

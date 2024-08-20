@@ -15,11 +15,14 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+
 import { Form, Props } from "./Form"
 
 describe("Form", () => {

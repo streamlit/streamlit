@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import platform
 import re
-from typing import Pattern
+from typing import Literal, Pattern
 
 from playwright.sync_api import Locator, Page, expect
 
@@ -229,7 +229,7 @@ def expect_markdown(
     locator: Locator | Page,
     expected_message: str | Pattern[str],
 ) -> None:
-    """Expect an exception to be displayed in the app.
+    """Expect markdown with the given message to be displayed in the app.
 
     Parameters
     ----------
@@ -410,3 +410,31 @@ def expect_help_tooltip(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
     expect(tooltip_content).not_to_be_attached()
+
+
+def expect_script_state(
+    page: Page,
+    state: Literal[
+        "initial",
+        "running",
+        "notRunning",
+        "rerunRequested",
+        "stopRequested",
+        "compilationError",
+    ],
+) -> None:
+    """Expect the app to be in a specific script state.
+
+    Parameters
+    ----------
+    page : Page
+        The page to search for the script state.
+
+    state :
+        The expected script state.
+    """
+    page.wait_for_selector(
+        f"[data-testid='stApp'][data-test-script-state='{state}']",
+        timeout=10000,
+        state="attached",
+    )

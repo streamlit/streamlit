@@ -15,6 +15,10 @@
  */
 import React, { CSSProperties, ReactElement } from "react"
 
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { IFrame as IFrameProto } from "@streamlit/lib/src/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
@@ -29,7 +33,7 @@ export interface IFrameProps {
 export default function IFrame({
   element,
   width: propWidth,
-}: IFrameProps): ReactElement {
+}: Readonly<IFrameProps>): ReactElement {
   const width = element.hasWidth ? element.width : propWidth
 
   // Handle scrollbar visibility. Chrome and other WebKit browsers still
@@ -50,10 +54,13 @@ export default function IFrame({
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
   // is set, we're loading a remote URL in the iframe.
   const src = getNonEmptyString(element.src)
-  const srcDoc = src != null ? undefined : getNonEmptyString(element.srcdoc)
+  const srcDoc = notNullOrUndefined(src)
+    ? undefined
+    : getNonEmptyString(element.srcdoc)
 
   return (
     <iframe
+      className="stIFrame"
       data-testid="stIFrame"
       allow={DEFAULT_IFRAME_FEATURE_POLICY}
       style={style}
@@ -75,5 +82,5 @@ export default function IFrame({
 function getNonEmptyString(
   value: string | null | undefined
 ): string | undefined {
-  return value == null || value === "" ? undefined : value
+  return isNullOrUndefined(value) || value === "" ? undefined : value
 }

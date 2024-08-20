@@ -17,15 +17,15 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { Info } from "@emotion-icons/material-outlined"
 
 import { render } from "@streamlit/lib/src/test_util"
 
 import Toolbar, {
   ToolbarAction,
-  ToolbarProps,
   ToolbarActionProps,
+  ToolbarProps,
 } from "./Toolbar"
 
 const onExpand = jest.fn()
@@ -66,6 +66,7 @@ describe("Toolbar element", () => {
     const toolbar = screen.getByTestId("stElementToolbar")
     expect(toolbar).toBeInTheDocument()
     expect(toolbar).toBeVisible()
+    expect(toolbar).toHaveClass("stElementToolbar")
 
     // Check if toolbar buttons are rendered:
     const toolbarButton = screen.getAllByTestId("stElementToolbarButton")

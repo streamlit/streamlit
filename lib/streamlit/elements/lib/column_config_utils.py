@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Dict, Final, Literal, Mapping, Union
 
 from typing_extensions import TypeAlias
 
-from streamlit.dataframe_util import DataFormat, is_colum_type_arrow_incompatible
+from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.errors import StreamlitAPIException
@@ -466,9 +466,7 @@ def update_column_config(
 
 def apply_data_specific_configs(
     columns_config: ColumnConfigMapping,
-    data_df: DataFrame,
     data_format: DataFormat,
-    check_arrow_compatibility: bool = False,
 ) -> None:
     """Apply data specific configurations to the provided dataframe.
 
@@ -480,24 +478,9 @@ def apply_data_specific_configs(
     columns_config : ColumnConfigMapping
         A mapping of column names/ids to column configurations.
 
-    data_df : pd.DataFrame
-        The dataframe to apply the configurations to.
-
     data_format : DataFormat
         The format of the data.
-
-    check_arrow_compatibility : bool
-        Whether to check if the data is compatible with arrow.
     """
-    import pandas as pd
-
-    # Deactivate editing for columns that are not compatible with arrow
-    if check_arrow_compatibility:
-        for column_name, column_data in data_df.items():
-            if is_colum_type_arrow_incompatible(column_data):
-                update_column_config(columns_config, column_name, {"disabled": True})
-                # Convert incompatible type to string
-                data_df[column_name] = column_data.astype("string")
 
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
@@ -511,25 +494,16 @@ def apply_data_specific_configs(
         DataFormat.LIST_OF_RECORDS,
         DataFormat.LIST_OF_ROWS,
         DataFormat.COLUMN_VALUE_MAPPING,
+        # Dataframe-like objects that don't have an index:
+        DataFormat.PANDAS_ARRAY,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.POLARS_DATAFRAME,
+        DataFormat.POLARS_SERIES,
+        DataFormat.POLARS_LAZYFRAME,
+        DataFormat.PYARROW_ARRAY,
+        DataFormat.RAY_DATASET,
     ]:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
-
-    # Rename the first column to "value" for some of the data formats
-    if data_format in [
-        DataFormat.SET_OF_VALUES,
-        DataFormat.TUPLE_OF_VALUES,
-        DataFormat.LIST_OF_VALUES,
-        DataFormat.NUMPY_LIST,
-        DataFormat.KEY_VALUE_DICT,
-    ]:
-        # Pandas automatically names the first column "0"
-        # We rename it to "value" in selected cases to make it more descriptive
-        data_df.rename(columns={0: "value"}, inplace=True)
-
-    if not isinstance(data_df.index, pd.RangeIndex):
-        # If the index is not a range index, we will configure it as required
-        # since the user is required to provide a (unique) value for editing.
-        update_column_config(columns_config, INDEX_IDENTIFIER, {"required": True})
 
 
 def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -> str:

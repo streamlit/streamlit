@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.36.0"  # PEP-440
+VERSION = "1.37.1"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -71,7 +71,7 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
 
 EXTRA_REQUIRES = {
     "snowflake": [
-        "snowflake-snowpark-python>=0.9.0; python_version<'3.12'",
+        "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
         "snowflake-connector-python>=2.8.0; python_version<'3.12'",
     ]
 }

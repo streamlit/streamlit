@@ -23,7 +23,6 @@ import React, { FC, memo } from "react"
 import Flake0 from "@streamlit/lib/src/assets/img/snow/flake-0.png"
 import Flake1 from "@streamlit/lib/src/assets/img/snow/flake-1.png"
 import Flake2 from "@streamlit/lib/src/assets/img/snow/flake-2.png"
-
 import Particles from "@streamlit/lib/src/components/elements/Particles"
 import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
 
@@ -50,7 +49,8 @@ const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   // actually rerun.
   return (
     <Particles
-      className="snow"
+      className="stSnow"
+      data-testid="stSnow"
       scriptRunId={scriptRunId}
       numParticleTypes={NUM_FLAKE_TYPES}
       numParticles={NUM_FLAKES}

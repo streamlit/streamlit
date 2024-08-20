@@ -37,6 +37,7 @@ from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -186,7 +187,7 @@ class WStates(MutableMapping[str, Any]):
     def remove_stale_widgets(
         self,
         active_widget_ids: set[str],
-        fragment_ids_this_run: set[str] | None,
+        fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
         self.states = {
@@ -459,8 +460,6 @@ class SessionState:
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
         """
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
 
         if ctx is not None:
@@ -572,20 +571,13 @@ class SessionState:
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
-        # Avoid circular imports.
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
         if ctx is None:
             return
 
-        fragment_ids_this_run = (
-            set(ctx.script_requests.fragment_id_queue) if ctx.script_requests else set()
-        )
-
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
-            fragment_ids_this_run,
+            ctx.fragment_ids_this_run,
         )
 
         # Remove entries from _old_state corresponding to
@@ -598,7 +590,7 @@ class SessionState:
                 or not _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(k),
                     active_widget_ids,
-                    fragment_ids_this_run,
+                    ctx.fragment_ids_this_run,
                 )
             )
         }
@@ -706,7 +698,7 @@ def _is_internal_key(key: str) -> bool:
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
     active_widget_ids: set[str],
-    fragment_ids_this_run: set[str] | None,
+    fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:
         return True

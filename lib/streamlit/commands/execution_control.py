@@ -16,12 +16,11 @@ from __future__ import annotations
 
 import os
 from itertools import dropwhile
-from typing import Final, Literal, NoReturn
+from typing import Literal, NoReturn
 
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.logger import get_logger
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import (
@@ -29,8 +28,6 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     get_script_run_ctx,
 )
-
-_LOGGER: Final = get_logger(__name__)
 
 
 @gather_metrics("stop")
@@ -67,9 +64,7 @@ def _new_fragment_id_queue(
         return []
 
     else:  # scope == "fragment"
-        curr_queue = (
-            ctx.script_requests.fragment_id_queue if ctx.script_requests else []
-        )
+        curr_queue = ctx.fragment_ids_this_run
 
         # If st.rerun(scope="fragment") is called during a full script run, we raise an
         # exception. This occurs, of course, if st.rerun(scope="fragment") is called
@@ -143,7 +138,7 @@ def rerun(  # type: ignore[misc]
                 query_string=query_string,
                 page_script_hash=page_script_hash,
                 fragment_id_queue=_new_fragment_id_queue(ctx, scope),
-                is_fragment_scoped_rerun=True,
+                is_fragment_scoped_rerun=scope == "fragment",
             )
         )
         # Force a yield point so the runner can do the rerun

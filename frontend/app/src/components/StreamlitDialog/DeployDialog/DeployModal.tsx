@@ -15,8 +15,10 @@
  */
 
 import React, { ReactElement } from "react"
-import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
+
 import { CloseSource } from "baseui/modal/types"
+
+import { Modal, ModalBody, ModalHeader } from "@streamlit/lib"
 
 interface IDeployModalProps {
   children: React.ReactNode

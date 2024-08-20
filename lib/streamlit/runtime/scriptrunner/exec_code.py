@@ -16,18 +16,31 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+from streamlit.delta_generator_singletons import (
+    context_dg_stack,
+    get_default_dg_stack_value,
+)
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
 
 if TYPE_CHECKING:
-    from streamlit.runtime.scriptrunner.script_requests import RerunData
-    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
+    from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
 
 
 def exec_func_with_error_handling(
-    func: Callable[[], None], ctx: ScriptRunContext
-) -> tuple[Any | None, bool, RerunData | None, bool]:
+    func: Callable[[], Any], ctx: ScriptRunContext
+) -> tuple[
+    Any | None,
+    bool,
+    RerunData | None,
+    bool,
+    Exception | None,
+]:
     """Execute the passed function wrapped in a try/except block.
 
     This function is called by the script runner to execute the user's script or
@@ -53,11 +66,8 @@ def exec_func_with_error_handling(
             interrupted by a RerunException.
         - A boolean indicating whether the script was stopped prematurely (False for
             RerunExceptions, True for all other exceptions).
+        - The uncaught exception if one occurred, None otherwise
     """
-
-    # Avoid circular imports
-    from streamlit.delta_generator import dg_stack, get_default_dg_stack
-
     run_without_errors = True
 
     # This will be set to a RerunData instance if our execution
@@ -71,6 +81,9 @@ def exec_func_with_error_handling(
     # The result of the passed function
     result: Any | None = None
 
+    # The uncaught exception if one occurred, None otherwise
+    uncaught_exception: Exception | None = None
+
     try:
         result = func()
     except RerunException as e:
@@ -83,7 +96,7 @@ def exec_func_with_error_handling(
         # it doesn't matter either way since the fragment resets these values from its
         # snapshot before execution.
         ctx.cursors.clear()
-        dg_stack.set(get_default_dg_stack())
+        context_dg_stack.set(get_default_dg_stack_value())
 
         # Interruption due to a rerun is usually from `st.rerun()`, which
         # we want to count as a script completion so triggers reset.
@@ -102,5 +115,12 @@ def exec_func_with_error_handling(
         run_without_errors = False
         premature_stop = True
         handle_uncaught_app_exception(ex)
+        uncaught_exception = ex
 
-    return result, run_without_errors, rerun_exception_data, premature_stop
+    return (
+        result,
+        run_without_errors,
+        rerun_exception_data,
+        premature_stop,
+        uncaught_exception,
+    )

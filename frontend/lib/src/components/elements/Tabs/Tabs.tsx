@@ -21,10 +21,11 @@ import React, {
   useRef,
   useState,
 } from "react"
-import { useTheme } from "@emotion/react"
-import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
-import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
+import { useTheme } from "@emotion/react"
+import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
+
+import { AppNode, BlockNode } from "@streamlit/lib/src/AppNode"
 import { BlockPropsWithoutWidth } from "@streamlit/lib/src/components/core/Block"
 import { isElementStale } from "@streamlit/lib/src/components/core/Block/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
@@ -39,7 +40,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
   renderTabContent: (childProps: any) => ReactElement
 }
 
-function Tabs(props: TabProps): ReactElement {
+function Tabs(props: Readonly<TabProps>): ReactElement {
   const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
   const { fragmentIdsThisRun } = useContext(LibContext)
 
@@ -88,10 +89,10 @@ function Tabs(props: TabProps): ReactElement {
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
   return (
     <StyledTabContainer
-      isOverflowing={isOverflowing}
-      tabHeight={TAB_HEIGHT}
       className="stTabs"
       data-testid="stTabs"
+      isOverflowing={isOverflowing}
+      tabHeight={TAB_HEIGHT}
     >
       <UITabs
         activateOnFocus
@@ -116,7 +117,7 @@ function Tabs(props: TabProps): ReactElement {
           },
           TabBorder: {
             style: () => ({
-              backgroundColor: theme.colors.fadedText05,
+              backgroundColor: theme.colors.borderColorLight,
               height: TAB_BORDER_HEIGHT,
             }),
           },
@@ -145,7 +146,9 @@ function Tabs(props: TabProps): ReactElement {
       >
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
           // Reset available tab labels when rerendering
-          if (index === 0) allTabLabels = []
+          if (index === 0) {
+            allTabLabels = []
+          }
 
           // If the tab is stale, disable it
           const isStaleTab = isElementStale(
@@ -173,6 +176,7 @@ function Tabs(props: TabProps): ReactElement {
 
           return (
             <UITab
+              data-testid="stTab"
               title={
                 <StreamlitMarkdown
                   source={nodeLabel}
@@ -181,7 +185,6 @@ function Tabs(props: TabProps): ReactElement {
                 />
               }
               key={index}
-              data-testid={"stTab"}
               disabled={widgetsDisabled}
               overrides={{
                 TabPanel: {

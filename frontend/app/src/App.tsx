@@ -15,12 +15,93 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
+import without from "lodash/without"
 
-// Other local imports.
+import {
+  AppConfig,
+  AppRoot,
+  AutoRerun,
+  BackMsg,
+  BaseUriParts,
+  ComponentRegistry,
+  Config,
+  createFormsData,
+  createPresetThemes,
+  createTheme,
+  CUSTOM_THEME_NAME,
+  CustomThemeConfig,
+  Delta,
+  DeployedAppMetadata,
+  ensureError,
+  extractPageNameFromPathName,
+  FileUploadClient,
+  FileURLsResponse,
+  FormsData,
+  ForwardMsg,
+  ForwardMsgMetadata,
+  generateUID,
+  getCachedTheme,
+  getElementWidgetID,
+  getEmbeddingIdClassName,
+  getHostSpecifiedTheme,
+  getIFrameEnclosingApp,
+  GitInfo,
+  handleFavicon,
+  hashString,
+  HostCommunicationManager,
+  IAppPage,
+  ICustomThemeConfig,
+  IGitInfo,
+  IHostConfigResponse,
+  IMenuItem,
+  Initialize,
+  isColoredLineDisplayed,
+  isEmbed,
+  isInChildFrame,
+  isPaddingDisplayed,
+  isPresetTheme,
+  isScrollingHidden,
+  isToolbarDisplayed,
+  IToolbarItem,
+  LibConfig,
+  LibContext,
+  logError,
+  logMessage,
+  Logo,
+  Navigation,
+  NewSession,
+  notUndefined,
+  PageConfig,
+  PageInfo,
+  PageNotFound,
+  PageProfile,
+  PagesChanged,
+  ParentMessage,
+  PerformanceEvents,
+  PresetThemeName,
+  RERUN_PROMPT_MODAL_DIALOG,
+  ScriptRunState,
+  SessionEvent,
+  SessionInfo,
+  SessionStatus,
+  setCookie,
+  StreamlitEndpoints,
+  ThemeConfig,
+  toExportedTheme,
+  toThemeInput,
+  WidgetStateManager,
+  WidgetStates,
+} from "@streamlit/lib"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+  preserveEmbedQueryParams,
+} from "@streamlit/lib/src/util/utils"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"
@@ -36,97 +117,16 @@ import {
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-import {
-  generateUID,
-  getElementWidgetID,
-  getEmbeddingIdClassName,
-  getIFrameEnclosingApp,
-  hashString,
-  isColoredLineDisplayed,
-  isEmbed,
-  isInChildFrame,
-  isPaddingDisplayed,
-  isScrollingHidden,
-  isToolbarDisplayed,
-  notUndefined,
-  setCookie,
-  extractPageNameFromPathName,
-  BaseUriParts,
-  RERUN_PROMPT_MODAL_DIALOG,
-  SessionInfo,
-  FileUploadClient,
-  logError,
-  logMessage,
-  AppRoot,
-  ComponentRegistry,
-  handleFavicon,
-  getHostSpecifiedTheme,
-  createTheme,
-  CUSTOM_THEME_NAME,
-  getCachedTheme,
-  isPresetTheme,
-  toThemeInput,
-  ThemeConfig,
-  toExportedTheme,
-  StreamlitEndpoints,
-  ensureError,
-  LibContext,
-  AutoRerun,
-  BackMsg,
-  Config,
-  ICustomThemeConfig,
-  CustomThemeConfig,
-  Delta,
-  FileURLsResponse,
-  ForwardMsg,
-  ForwardMsgMetadata,
-  GitInfo,
-  IAppPage,
-  IGitInfo,
-  Initialize,
-  Logo,
-  Navigation,
-  NewSession,
-  PageConfig,
-  PageInfo,
-  PageNotFound,
-  PageProfile,
-  PagesChanged,
-  ParentMessage,
-  SessionEvent,
-  SessionStatus,
-  WidgetStates,
-  ScriptRunState,
-  HostCommunicationManager,
-  IMenuItem,
-  IToolbarItem,
-  DeployedAppMetadata,
-  PerformanceEvents,
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-  IHostConfigResponse,
-  LibConfig,
-  AppConfig,
-  createPresetThemes,
-  PresetThemeName,
-} from "@streamlit/lib"
-import without from "lodash/without"
-
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-
 import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-
 import { StyledApp } from "@streamlit/app/src/styled-components"
-
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 import { ThemeManager } from "./util/useThemeManager"
 import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 
@@ -589,8 +589,8 @@ export class App extends PureComponent<Props, State> {
       const { environmentInfo } = initializeMsg
 
       if (
-        environmentInfo != null &&
-        environmentInfo.streamlitVersion != null
+        notNullOrUndefined(environmentInfo) &&
+        notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
         return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
@@ -623,10 +623,22 @@ export class App extends PureComponent<Props, State> {
     )
 
     if (newState === ConnectionState.CONNECTED) {
-      logMessage("Reconnected to server; requesting a script run")
-      // Trigger a full app rerun:
-      this.widgetMgr.sendUpdateWidgetsMessage(undefined)
-      this.setState({ dialog: null })
+      logMessage("Reconnected to server.")
+
+      const lastRunWasInterrupted =
+        this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED ||
+        this.state.scriptRunState === ScriptRunState.RUNNING
+
+      // We request a script rerun if:
+      //   1. this is the first time we establish a websocket connection to the
+      //      server, or
+      //   2. our last script run attempt was interrupted by the websocket
+      //      connection dropping.
+      if (!this.sessionInfo.last || lastRunWasInterrupted) {
+        logMessage("Requesting a script run.")
+        this.widgetMgr.sendUpdateWidgetsMessage(undefined)
+        this.setState({ dialog: null })
+      }
 
       this.hostCommunicationMgr.sendMessageToHost({
         type: "WEBSOCKET_CONNECTED",
@@ -837,7 +849,7 @@ export class App extends PureComponent<Props, State> {
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
     }, autoRerun.interval * 1000)
 
     this.setState((prevState: State) => {
@@ -868,7 +880,7 @@ export class App extends PureComponent<Props, State> {
         // If the scriptCompileError dialog is open and the script starts
         // running, close it.
         if (
-          dialog != null &&
+          notNullOrUndefined(dialog) &&
           dialog.type === DialogType.SCRIPT_COMPILE_ERROR
         ) {
           dialog = undefined
@@ -1098,7 +1110,7 @@ export class App extends PureComponent<Props, State> {
     const hasAnchor = document.location.toString().includes("#")
     const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
-    if (targetAppPage == null || (hasAnchor && isSamePage)) {
+    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
       return
     }
     this.onPageChange(targetAppPage.pageScriptHash as string)
@@ -1460,7 +1472,8 @@ export class App extends PureComponent<Props, State> {
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
     fragmentId?: string,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    isAutoRerun?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1514,6 +1527,7 @@ export class App extends PureComponent<Props, State> {
           pageScriptHash,
           pageName,
           fragmentId,
+          isAutoRerun,
         },
       })
     )
@@ -1894,11 +1908,12 @@ export class App extends PureComponent<Props, State> {
             <StyledApp
               className={outerDivClass}
               data-testid="stApp"
-              data-teststate={
+              data-test-script-state={
                 scriptRunId == INITIAL_SCRIPT_RUN_ID
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>

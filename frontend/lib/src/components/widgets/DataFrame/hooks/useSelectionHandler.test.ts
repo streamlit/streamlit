@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook, act } from "@testing-library/react-hooks"
+import { act, renderHook } from "@testing-library/react-hooks"
 import { CompactSelection } from "@glideapps/glide-data-grid"
 
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"

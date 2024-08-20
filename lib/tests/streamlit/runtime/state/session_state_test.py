@@ -652,7 +652,8 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx.widget_ids_this_run = {"widget_id"}
 
         with patch(
-            "streamlit.runtime.scriptrunner.get_script_run_ctx", return_value=mock_ctx
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
         ):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state._key_id_mapping = {"widget_id": "widget_id"}
@@ -664,7 +665,8 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx.form_ids_this_run = {"form_id"}
 
         with patch(
-            "streamlit.runtime.scriptrunner.get_script_run_ctx", return_value=mock_ctx
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
         ):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state["form_id"] = "blah"
@@ -688,10 +690,6 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not self.session_state._widget_changed("foo")
 
     def test_remove_stale_widgets(self):
-        ctx = get_script_run_ctx()
-        ctx.script_requests = MagicMock()
-        ctx.script_requests.fragment_id_queue = []
-
         existing_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-existing_widget"
         generated_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-removed_widget"
 

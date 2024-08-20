@@ -15,16 +15,17 @@
  */
 
 import React, { ReactElement, useRef } from "react"
-import { useTheme } from "@emotion/react"
-import JSON5 from "json5"
-import ReactJson from "react-json-view"
-import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
-import Clipboard from "clipboard"
 
+import JSON5 from "json5"
+import Clipboard from "clipboard"
+import ReactJson from "react-json-view"
+import { useTheme } from "@emotion/react"
+
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import {
-  hasLightBackgroundColor,
   EmotionTheme,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 
@@ -36,7 +37,10 @@ export interface JsonProps {
 /**
  * Functional element representing JSON structured text.
  */
-export default function Json({ width, element }: JsonProps): ReactElement {
+export default function Json({
+  width,
+  element,
+}: Readonly<JsonProps>): ReactElement {
   const styleProp = { width }
   const theme: EmotionTheme = useTheme()
 
@@ -72,10 +76,15 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   }
 
   return (
-    <div data-testid="stJson" style={styleProp} ref={elementRef}>
+    <div
+      className="stJson"
+      data-testid="stJson"
+      style={styleProp}
+      ref={elementRef}
+    >
       <ReactJson
         src={bodyObject}
-        collapsed={!element.expanded}
+        collapsed={element.maxExpandDepth ?? !element.expanded}
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}

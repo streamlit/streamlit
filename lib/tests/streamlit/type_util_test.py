@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 from collections import namedtuple
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
@@ -26,6 +27,10 @@ from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.context import StreamlitCookies, StreamlitHeaders
+from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+from streamlit.user_info import UserInfoProxy
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -81,6 +86,22 @@ class TypeUtilTest(unittest.TestCase):
         res = type_util.is_namedtuple(John)
         self.assertTrue(res)
 
+    @pytest.mark.require_integration
+    def test_is_pydantic_model(self):
+        from pydantic import BaseModel
+
+        class OtherObject:
+            foo: int
+            bar: str
+
+        class BarModel(BaseModel):
+            foo: int
+            bar: str
+
+        self.assertTrue(type_util.is_pydantic_model(BarModel(foo=1, bar="test")))
+        self.assertFalse(type_util.is_pydantic_model(BarModel))
+        self.assertFalse(type_util.is_pydantic_model(OtherObject))
+
     def test_to_bytes(self):
         bytes_obj = b"some bytes"
         self.assertTrue(type_util.is_bytes_like(bytes_obj))
@@ -129,3 +150,35 @@ class TypeUtilTest(unittest.TestCase):
             ),
             str(exception_message.value),
         )
+
+    def test_has_callable_attr(self):
+        class TestClass:
+            def __init__(self) -> None:
+                self.also_not_callable = "I am not callable"
+
+            def callable_attr(self):
+                pass
+
+            @property
+            def not_callable_attr(self):
+                return "I am a property"
+
+        assert type_util.has_callable_attr(TestClass, "callable_attr") is True
+        assert type_util.has_callable_attr(TestClass, "not_callable_attr") is False
+        assert type_util.has_callable_attr(TestClass, "also_not_callable") is False
+        assert type_util.has_callable_attr(TestClass, "not_a_real_attr") is False
+
+    @parameterized.expand(
+        [
+            ({"key": "value"}, False),
+            (Secrets(), True),
+            (QueryParamsProxy(), True),
+            (SessionStateProxy(), True),
+            (StreamlitCookies({}), True),
+            (StreamlitHeaders({}), True),
+            (UserInfoProxy(), True),
+        ]
+    )
+    def test_is_custom_dict(self, dict_obj: Any, is_custom_dict: bool):
+        """Test that `is_custom_dict` returns True for all Streamlit custom dicts."""
+        assert type_util.is_custom_dict(dict_obj) is is_custom_dict

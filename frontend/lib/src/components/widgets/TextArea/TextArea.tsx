@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+
 import { Textarea as UITextArea } from "baseui/textarea"
 import { withTheme } from "@emotion/react"
 import uniqueId from "lodash/uniqueId"
@@ -22,13 +23,13 @@ import uniqueId from "lodash/uniqueId"
 import { TextArea as TextAreaProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  WidgetStateManager,
   Source,
+  WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
@@ -36,7 +37,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
@@ -259,7 +259,7 @@ class TextArea extends React.PureComponent<Props, State> {
           }}
         />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}

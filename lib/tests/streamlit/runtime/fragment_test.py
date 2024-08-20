@@ -22,11 +22,17 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.delta_generator import DeltaGenerator, dg_stack
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
-from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment, fragment
+from streamlit.runtime.fragment import (
+    MemoryFragmentStorage,
+    _fragment,
+    experimental_fragment,
+    fragment,
+)
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -91,9 +97,9 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
 class FragmentTest(unittest.TestCase):
     def setUp(self):
-        self.original_dg_stack = dg_stack.get()
+        self.original_dg_stack = context_dg_stack.get()
         root_container = MagicMock()
-        dg_stack.set(
+        context_dg_stack.set(
             (
                 DeltaGenerator(
                     root_container=root_container,
@@ -103,13 +109,13 @@ class FragmentTest(unittest.TestCase):
         )
 
     def tearDown(self):
-        dg_stack.set(self.original_dg_stack)
+        context_dg_stack.set(self.original_dg_stack)
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
     def test_wrapped_fragment_calls_original_function(self):
         called = False
 
-        dg_stack_len = len(dg_stack.get())
+        dg_stack_len = len(context_dg_stack.get())
 
         @fragment
         def my_fragment():
@@ -118,7 +124,7 @@ class FragmentTest(unittest.TestCase):
 
             # Verify that a new container gets created for the contents of this
             # fragment to be written to.
-            assert len(dg_stack.get()) == dg_stack_len + 1
+            assert len(context_dg_stack.get()) == dg_stack_len + 1
 
         my_fragment()
         assert called
@@ -157,7 +163,7 @@ class FragmentTest(unittest.TestCase):
         assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_wrapped_fragment_saved_in_FragmentStorage(
+    def test_wrapped_fragment_not_saved_in_FragmentStorage(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
@@ -174,20 +180,20 @@ class FragmentTest(unittest.TestCase):
         # fragment a single time.
         my_fragment()
         my_fragment()
-        ctx.fragment_storage.set.assert_called_once()
+        assert ctx.fragment_storage.set.call_count == 2
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_id_queue(
+    def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.script_requests.fragment_id_queue = ["my_fragment_id"]
+        ctx.fragment_ids_this_run = ["my_fragment_id"]
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
         dg = MagicMock()
         dg.my_random_field = 7
-        dg_stack.set((dg,))
+        context_dg_stack.set((dg,))
         ctx.cursors = MagicMock()
         ctx.cursors.my_other_random_field = 8
 
@@ -199,7 +205,7 @@ class FragmentTest(unittest.TestCase):
 
             assert ctx.current_fragment_id is not None
 
-            curr_dg_stack = dg_stack.get()
+            curr_dg_stack = context_dg_stack.get()
             # Verify that mutations made in previous runs of my_fragment aren't
             # persisted.
             assert curr_dg_stack[0].my_random_field == 7
@@ -232,7 +238,7 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.script_requests.fragment_id_queue = []
+        ctx.fragment_ids_this_run = []
         ctx.new_fragment_ids = set()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
@@ -240,13 +246,13 @@ class FragmentTest(unittest.TestCase):
 
         dg = MagicMock()
         dg.my_random_field = 0
-        dg_stack.set((dg,))
+        context_dg_stack.set((dg,))
 
         @fragment
         def my_fragment():
             assert ctx.current_fragment_id is not None
 
-            curr_dg_stack = dg_stack.get()
+            curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
         assert len(ctx.new_fragment_ids) == 0
@@ -415,6 +421,32 @@ class FragmentTest(unittest.TestCase):
         # countercheck
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
+    @patch("streamlit.runtime.fragment.show_deprecation_warning")
+    def test_calling_experimental_fragment_shows_warning(
+        self, patched_show_deprecation_warning
+    ):
+        @experimental_fragment
+        def my_fragment():
+            pass
+
+        my_fragment()
+
+        patched_show_deprecation_warning.assert_called_once()
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
+    @patch("streamlit.runtime.fragment.show_deprecation_warning")
+    def test_calling_fragment_does_not_show_warning(
+        self, patched_show_deprecation_warning
+    ):
+        @fragment
+        def my_fragment():
+            pass
+
+        my_fragment()
+
+        patched_show_deprecation_warning.assert_not_called()
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT

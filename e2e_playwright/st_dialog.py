@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 
 @st.dialog("Test Dialog with Images")
@@ -141,3 +141,12 @@ def dialog_with_copy_buttons():
 
 if st.button("Open Dialog with Copy Buttons"):
     dialog_with_copy_buttons()
+
+
+@st.experimental_dialog("Usage of deprecated experimental_dialog")
+def dialog_with_deprecation_warning():
+    pass  # No need to write anything in the dialog body.
+
+
+if st.button("Open Dialog with deprecation warning"):
+    dialog_with_deprecation_warning()

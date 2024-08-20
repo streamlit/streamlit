@@ -15,13 +15,14 @@
  */
 
 import React from "react"
-import { render } from "@streamlit/lib/src/test_util"
+
 import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
+import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 import { Skeleton } from "./Skeleton"
-
-import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 describe("Skeleton element", () => {
   it("renders without delay", () => {
@@ -31,7 +32,9 @@ describe("Skeleton element", () => {
     // Render the skeleton immediately, without any sort of delay.
     // (This is normal React behavior, but different from AppSkeleton, so I'm
     // writing a very trivial test for it.)
-    expect(screen.getByTestId("stSkeleton")).toBeVisible()
+    const skeletonElement = screen.getByTestId("stSkeleton")
+    expect(skeletonElement).toBeVisible()
+    expect(skeletonElement).toHaveClass("stSkeleton")
   })
 
   it("converts properties appropriately", () => {

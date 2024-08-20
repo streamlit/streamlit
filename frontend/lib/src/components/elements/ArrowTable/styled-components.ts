@@ -15,6 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
@@ -29,12 +30,12 @@ export const StyledTable = styled.table(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   color: theme.colors.bodyText,
   borderCollapse: "collapse",
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText05}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColorLight}`,
 }))
 
 const styleCellFunction = (theme: EmotionTheme): CSSObject => ({
-  borderBottom: `${theme.sizes.borderWidth}  solid ${theme.colors.fadedText05}`,
-  borderRight: `${theme.sizes.borderWidth}  solid ${theme.colors.fadedText05}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColorLight}`,
+  borderRight: `${theme.sizes.borderWidth} solid ${theme.colors.borderColorLight}`,
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   fontWeight: theme.fontWeights.normal,

@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { BubbleCell, GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
+  isMissingValueCell,
   toSafeArray,
   toSafeString,
-  isMissingValueCell,
 } from "./utils"
 
 /**

@@ -15,9 +15,11 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import Clipboard from "clipboard"
+
 import { render } from "@streamlit/lib/src/test_util"
 
 import CopyButton from "./CopyButton"
@@ -31,13 +33,13 @@ describe("CopyButton Element", () => {
 
   it("renders without crashing", () => {
     render(<CopyButton text="test" />)
-    expect(screen.getByTestId("stCopyButton")).toBeInTheDocument()
+    expect(screen.getByTestId("stCodeCopyButton")).toBeInTheDocument()
   })
 
   describe("attributes", () => {
     it("should have title", () => {
       render(<CopyButton text="test" />)
-      expect(screen.getByTestId("stCopyButton")).toHaveAttribute(
+      expect(screen.getByTestId("stCodeCopyButton")).toHaveAttribute(
         "title",
         "Copy to clipboard"
       )
@@ -45,7 +47,7 @@ describe("CopyButton Element", () => {
 
     it("should have clipboard text", () => {
       render(<CopyButton text="test" />)
-      expect(screen.getByTestId("stCopyButton")).toHaveAttribute(
+      expect(screen.getByTestId("stCodeCopyButton")).toHaveAttribute(
         "data-clipboard-text",
         "test"
       )

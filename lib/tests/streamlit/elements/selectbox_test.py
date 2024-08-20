@@ -14,6 +14,7 @@
 
 """selectbox unit tests."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -27,6 +28,10 @@ from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.data_test_cases import (
+    SHARED_TEST_CASES,
+    CaseMetadata,
+)
 
 
 class SelectboxTest(DeltaGeneratorTestCase):
@@ -80,33 +85,18 @@ class SelectboxTest(DeltaGeneratorTestCase):
         self.assertEqual(current_value, None)
 
     @parameterized.expand(
-        [
-            (("m", "f"), ["m", "f"]),
-            (["male", "female"], ["male", "female"]),
-            (np.array(["m", "f"]), ["m", "f"]),
-            (pd.Series(np.array(["male", "female"])), ["male", "female"]),
-            (pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
-            (
-                pd.DataFrame(
-                    data=[[1, 4, 7], [2, 5, 8], [3, 6, 9]], columns=["a", "b", "c"]
-                ).columns,
-                ["a", "b", "c"],
-            ),
-        ]
+        SHARED_TEST_CASES,
     )
-    def test_option_types(self, options, proto_options):
+    def test_option_types(self, name: str, input_data: Any, metadata: CaseMetadata):
         """Test that it supports different types of options."""
-        st.selectbox("the label", options)
+        st.selectbox("the label", input_data)
 
         c = self.get_delta_from_queue().new_element.selectbox
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, 0)
-        self.assertEqual(c.options, proto_options)
-
-    def test_not_iterable_option_types(self):
-        """Test that it supports different types of options."""
-        with pytest.raises(TypeError):
-            st.selectbox("the label", 123)
+        assert c.label == "the label"
+        assert c.default == 0
+        assert {str(item) for item in c.options} == {
+            str(item) for item in metadata.expected_sequence
+        }
 
     def test_cast_options_to_string(self):
         """Test that it casts options to string."""

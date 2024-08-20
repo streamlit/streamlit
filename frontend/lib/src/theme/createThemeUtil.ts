@@ -15,12 +15,13 @@
  */
 
 import {
-  Primitives as ThemePrimitives,
   createTheme as createBaseTheme,
   lightThemePrimitives as lightBaseThemePrimitives,
+  Primitives as ThemePrimitives,
 } from "baseui"
 import { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
+
 import { EmotionTheme } from "./types"
 
 // Theme primitives. See lightThemePrimitives for what's available. These are

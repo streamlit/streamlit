@@ -15,14 +15,16 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import {
-  Metric as MetricProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
+  Metric as MetricProto,
 } from "@streamlit/lib/src/proto"
+
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
@@ -38,7 +40,9 @@ describe("Metric element", () => {
   it("renders metric as expected", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetric")).toBeInTheDocument()
+    const metricElement = screen.getByTestId("stMetric")
+    expect(metricElement).toBeInTheDocument()
+    expect(metricElement).toHaveClass("stMetric")
   })
 
   it("renders metric label as expected", () => {

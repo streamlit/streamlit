@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
+
+import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
-import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 
 // Check for custom text color & handle colors in SidebarNav accordingly
 const conditionalCustomColor = (
@@ -392,5 +393,5 @@ export const StyledViewButton = styled.button(({ theme }) => {
 
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: theme.spacing.lg,
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))

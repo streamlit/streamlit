@@ -15,12 +15,13 @@
  */
 
 import React, {
+  ChangeEvent,
+  KeyboardEvent,
   useEffect,
   useRef,
   useState,
-  ChangeEvent,
-  KeyboardEvent,
 } from "react"
+
 import { useTheme } from "@emotion/react"
 import { Send } from "@emotion-icons/material-rounded"
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -30,11 +31,10 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 
 import {
-  StyledChatInputContainer,
   StyledChatInput,
+  StyledChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,
@@ -236,7 +236,7 @@ function ChatInput({
           }}
         />
         {/* Hide the character limit in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <StyledInputInstructionsContainer>
             <InputInstructions
               dirty={dirty}

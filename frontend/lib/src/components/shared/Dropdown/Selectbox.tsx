@@ -15,25 +15,25 @@
  */
 
 import React from "react"
+
 import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
-import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
+import { OnChangeParams, Option, Select as UISelect } from "baseui/select"
 import { withTheme } from "@emotion/react"
 import { hasMatch, score } from "fzy.js"
 import sortBy from "lodash/sortBy"
 
 import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import {
-  LabelVisibilityOptions,
   isNullOrUndefined,
+  LabelVisibilityOptions,
 } from "@streamlit/lib/src/util/utils"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
-  WidgetLabel,
   StyledWidgetLabelHelp,
+  WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 const NO_OPTIONS_MSG = "No options to select."
@@ -297,8 +297,8 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: iconSizes.xl,
-                      height: iconSizes.xl,
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
                     }),
                   },
                 },

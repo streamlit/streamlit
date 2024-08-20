@@ -34,7 +34,7 @@ concurrency:
 
 defaults:
   run:
-    shell: bash --login -eo pipefail {0}
+    shell: bash
 
 env:
   FORCE_COLOR: "1"
@@ -108,7 +108,7 @@ jobs:
         env:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
-        run: scripts/mypy --report
+        run: scripts/mypy_custom_script.py --report
       - name: Run Python Tests
         run: make pytest
       - name: CLI Smoke Tests
@@ -189,7 +189,7 @@ jobs:
         env:
           TARGET_BRANCH: constraints-${{ github.ref_name }}
 
-  py-snowflake-integration-tests:
+  py-integration-tests:
     needs:
       - build_info
 
@@ -206,9 +206,6 @@ jobs:
       (github.event_name == 'schedule')
       )
 
-    name: >
-      Python 3.8: Python tests for Snowflake
-
     env:
       USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
       CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
@@ -220,11 +217,11 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-      - name: Set up Python 3.8
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
-      - name: Decrypt credentials
+          python-version: "3.11"
+      - name: Decrypt Snowflake credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
           PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
@@ -232,7 +229,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
-      - name: Run Type Checkers
-        run: scripts/mypy --report
-      - name: Run Python Tests for Snowflake
-        run: make pytest-snowflake
+      - name: Install integration dependencies
+        run: uv pip install -r lib/integration-requirements.txt --force-reinstall
+      - name: Run Python integration tests
+        run: make pytest-integration

@@ -15,10 +15,11 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
 
+import { render } from "@streamlit/lib/src/test_util"
 import {
   Balloons as BalloonsProto,
   ForwardMsgMetadata,
@@ -33,6 +34,7 @@ import {
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { mockEndpoints, mockSessionInfo } from "@streamlit/lib/src/mocks/mocks"
+
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
@@ -128,7 +130,7 @@ describe("ElementNodeRenderer Block Component", () => {
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("balloons")
+      expect(elementRendererChildren[0]).toHaveClass("stBalloons")
     })
   })
 
@@ -166,7 +168,7 @@ describe("ElementNodeRenderer Block Component", () => {
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("snow")
+      expect(elementRendererChildren[0]).toHaveClass("stSnow")
     })
   })
 })

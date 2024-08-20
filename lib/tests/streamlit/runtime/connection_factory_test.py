@@ -102,7 +102,7 @@ class ConnectionFactoryTest(unittest.TestCase):
         [
             # No type is specified, and there's no config file to find one
             # in.
-            (None, FileNotFoundError, "No secrets files found"),
+            (None, FileNotFoundError, "No secrets found"),
             # Nonexistent module.
             (
                 "nonexistent.module.SomeConnection",

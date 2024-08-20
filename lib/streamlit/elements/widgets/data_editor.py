@@ -39,7 +39,7 @@ from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -59,7 +59,7 @@ from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
@@ -415,8 +415,8 @@ def _is_supported_index(df_index: pd.Index) -> bool:
             # Period type isn't editable currently:
             # pd.PeriodIndex,
         ]
-        # We need to check these index types without importing, since they are deprecated
-        # and planned to be removed soon.
+        # We need to check these index types without importing, since they are
+        # deprecated and planned to be removed soon.
         or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
@@ -817,18 +817,37 @@ class DataEditorMixin:
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
-        apply_data_specific_configs(
-            column_config_mapping, data_df, data_format, check_arrow_compatibility=True
-        )
+
+        # Deactivate editing for columns that are not compatible with arrow
+        for column_name, column_data in data_df.items():
+            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+                update_column_config(
+                    column_config_mapping, column_name, {"disabled": True}
+                )
+                # Convert incompatible type to string
+                data_df[column_name] = column_data.astype("string")
+
+        apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
-        # Temporary workaround: We hide range indices if num_rows is dynamic.
-        # since the current way of handling this index during editing is a bit confusing.
-        if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
+
+        has_range_index = isinstance(data_df.index, pd.RangeIndex)
+
+        if not has_range_index:
+            # If the index is not a range index, we will configure it as required
+            # since the user is required to provide a (unique) value for editing.
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping, INDEX_IDENTIFIER, {"required": True}
             )
+
+        if hide_index is None and has_range_index and num_rows == "dynamic":
+            # Temporary workaround:
+            # We hide range indices if num_rows is dynamic.
+            # since the current way of handling this index during editing is a
+            # bit confusing. The user can still decide to show the index by
+            # setting hide_index explicitly to False.
+            hide_index = True
 
         if hide_index is not None:
             update_column_config(

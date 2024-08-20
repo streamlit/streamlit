@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
+
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 export interface StyledChatInputContainerProps {

@@ -18,8 +18,8 @@ import React, { ReactElement } from "react"
 
 import {
   IImage,
-  Image as ImageProto,
   ImageList as ImageListProto,
+  Image as ImageProto,
 } from "@streamlit/lib/src/proto"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
@@ -53,7 +53,7 @@ export function ImageList({
   element,
   height,
   endpoints,
-}: ImageListProps): ReactElement {
+}: Readonly<ImageListProps>): ReactElement {
   // The width field in the proto sets the image width, but has special
   // cases for -1, -2, and -3.
   let containerWidth: number | undefined
@@ -90,11 +90,15 @@ export function ImageList({
   }
 
   return (
-    <StyledImageList style={{ width }}>
+    <StyledImageList
+      className="stImage"
+      data-testid="stImage"
+      style={{ width }}
+    >
       {element.imgs.map((iimage: IImage, idx: number): ReactElement => {
         const image = iimage as ImageProto
         return (
-          <StyledImageContainer key={idx} data-testid="stImage">
+          <StyledImageContainer data-testid="stImageContainer" key={idx}>
             <img
               style={imgStyle}
               src={endpoints.buildMediaURL(image.url)}

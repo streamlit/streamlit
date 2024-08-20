@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement } from "react"
+
 import classNames from "classnames"
+
 import { isPresetTheme } from "@streamlit/lib/src/theme"
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
@@ -32,14 +34,14 @@ export interface SpinnerProps {
   element: SpinnerProto
 }
 
-function Spinner({ width, element }: SpinnerProps): ReactElement {
+function Spinner({ width, element }: Readonly<SpinnerProps>): ReactElement {
   const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
   const { cache } = element
 
   return (
     <StyledSpinner
-      className={classNames({ stSpinner: true, cacheSpinner: cache })}
+      className={classNames({ stSpinner: true, stCacheSpinner: cache })}
       data-testid="stSpinner"
       width={width}
       cache={cache}

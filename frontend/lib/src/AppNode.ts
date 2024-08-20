@@ -15,9 +15,20 @@
  */
 
 import { produce } from "immer"
+
 import {
-  Arrow as ArrowProto,
+  getLoadingScreenType,
+  isNullOrUndefined,
+  LoadingScreenType,
+  makeAppSkeletonElement,
+  makeElementWithErrorText,
+  makeElementWithInfoText,
+  notUndefined,
+} from "@streamlit/lib/src/util/utils"
+
+import {
   ArrowNamedDataSet,
+  Arrow as ArrowProto,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Block as BlockProto,
   Delta,
@@ -33,14 +44,6 @@ import {
 } from "./components/elements/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
-import {
-  getLoadingScreenType,
-  LoadingScreenType,
-  makeElementWithErrorText,
-  makeElementWithInfoText,
-  makeAppSkeletonElement,
-  notUndefined,
-} from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 interface AppLogo {
@@ -257,18 +260,12 @@ export class ElementNode implements AppNode {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,
       //   1. This element doesn't correspond to a fragment at all.
-      //   2. This element corresponds to a fragment, but not one that's
-      //      currently being run.
-      //   3. This element was added by a fragment, but the element's
-      //      *parent block* does not correspond to the same fragment. This is
-      //      possible when a fragment writes to a container defined outside of
-      //      itself. We don't clear out these types of elements in this case
-      //      as we don't want fragment runs to result in changes to externally
-      //      defined containers.
+      //   2. This element is a fragment but is in no path that was modified.
+      //   3. This element belongs to a path that was modified, but it was modified in the same run.
       if (
         !this.fragmentId ||
-        !fragmentIdsThisRun.includes(this.fragmentId) ||
-        this.fragmentId != fragmentIdOfBlock
+        !fragmentIdOfBlock ||
+        this.scriptRunId === currentScriptRunId
       ) {
         return this
       }
@@ -277,7 +274,7 @@ export class ElementNode implements AppNode {
   }
 
   public getElements(elements?: Set<Element>): Set<Element> {
-    if (elements == null) {
+    if (isNullOrUndefined(elements)) {
       elements = new Set<Element>()
     }
     elements.add(this.element)
@@ -496,32 +493,31 @@ export class BlockNode implements AppNode {
       // Otherwise, we are currently running a fragment, and our behavior
       // depends on the fragmentId of this BlockNode.
 
-      if (this.fragmentId) {
-        if (!fragmentIdsThisRun.includes(this.fragmentId)) {
-          // This BlockNode corresponds to a different fragment, so we know we
-          // won't be modifying it and can return early.
-          return this
-        }
-
-        // If this BlockNode *does* correspond to a currently running fragment,
-        // we recurse into it below and set the fragmentIdOfBlock parameter to
-        // keep track of which fragment this BlockNode belongs to.
-        fragmentIdOfBlock = this.fragmentId
+      // The parent block was modified but this element wasn't, so it's stale.
+      if (fragmentIdOfBlock && this.scriptRunId !== currentScriptRunId) {
+        return undefined
       }
 
-      // If this BlockNode doesn't correspond to a fragment at all, we recurse
-      // into it below as one of its children might.
+      // This block is modified by the current run, so we indicate this to our children in case
+      // they were not modified by the current run, which means they are stale.
+      if (
+        this.fragmentId &&
+        fragmentIdsThisRun.includes(this.fragmentId) &&
+        this.scriptRunId === currentScriptRunId
+      ) {
+        fragmentIdOfBlock = this.fragmentId
+      }
     }
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child =>
-        child.clearStaleNodes(
+      .map(child => {
+        return child.clearStaleNodes(
           currentScriptRunId,
           fragmentIdsThisRun,
           fragmentIdOfBlock
         )
-      )
+      })
       .filter(notUndefined)
 
     return new BlockNode(
@@ -534,7 +530,7 @@ export class BlockNode implements AppNode {
   }
 
   public getElements(elementSet?: Set<Element>): Set<Element> {
-    if (elementSet == null) {
+    if (isNullOrUndefined(elementSet)) {
       elementSet = new Set<Element>()
     }
 
@@ -647,10 +643,10 @@ export class AppRoot {
     // a 'sidebar' block, a `bottom` block and an 'event' block.
     if (
       this.root.children.length !== 4 ||
-      this.main == null ||
-      this.sidebar == null ||
-      this.event == null ||
-      this.bottom == null
+      isNullOrUndefined(this.main) ||
+      isNullOrUndefined(this.sidebar) ||
+      isNullOrUndefined(this.event) ||
+      isNullOrUndefined(this.bottom)
     ) {
       throw new Error(`Invalid root node children! ${root}`)
     }
@@ -848,11 +844,17 @@ export class AppRoot {
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
-    // If we're replacing an existing Block, this new Block inherits
-    // the existing Block's children. This prevents existing widgets from
-    // having their values reset.
-    const children: AppNode[] =
-      existingNode instanceof BlockNode ? existingNode.children : []
+    // If we're replacing an existing Block of the same type, this new Block
+    // inherits the existing Block's children. This preserves two things:
+    //  1. Widget State
+    //  2. React state of all elements
+    let children: AppNode[] = []
+    if (
+      existingNode instanceof BlockNode &&
+      existingNode.deltaBlock.type === block.type
+    ) {
+      children = existingNode.children
+    }
 
     const blockNode = new BlockNode(
       activeScriptHash,
@@ -874,7 +876,7 @@ export class AppRoot {
     scriptRunId: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
-    if (existingNode == null) {
+    if (isNullOrUndefined(existingNode)) {
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 

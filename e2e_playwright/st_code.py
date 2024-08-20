@@ -34,6 +34,22 @@ st.code("foo bar baz " * 10, wrap_lines=True, line_numbers=True)
 
 st.markdown("```python\n" + code + "\n```")
 
+st.code(
+    """
+--- main
++++ develop
+@@ -52,21 +52,19 @@
+     "title": "Democracy index",
+     "yAxis": {
+         "max": 10,
+-        "min": -10,
+-        "facetDomain": "shared"
++        "min": -10
+     },
+""",
+    language="diff",
+)
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")

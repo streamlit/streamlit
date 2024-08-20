@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+
 import { StyledWidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget/styled-components"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
@@ -56,7 +57,7 @@ export const StyledMetricLabelText = styled(
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
-  color: theme.colors.textColor,
+  color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
 }))
 

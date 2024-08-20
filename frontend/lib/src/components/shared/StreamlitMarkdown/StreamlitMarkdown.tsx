@@ -22,6 +22,7 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
+
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
 import ReactMarkdown from "react-markdown"
@@ -40,28 +41,28 @@ import { Link2 as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { findAndReplace } from "mdast-util-find-and-replace"
+import xxhash from "xxhashjs"
 
-import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
+import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import { InlineTooltipIcon } from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
-  getMarkdownTextColors,
   getMarkdownBgColors,
+  getMarkdownTextColors,
 } from "@streamlit/lib/src/theme"
-
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+
 import {
-  StyledLinkIcon,
   StyledHeadingActionElements,
-  StyledStreamlitMarkdown,
   StyledHeadingWithActionElements,
+  StyledLinkIcon,
+  StyledPreWrapper,
+  StyledStreamlitMarkdown,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
-import xxhash from "xxhashjs"
-import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 export enum Tags {
   H1 = "h1",
@@ -213,7 +214,8 @@ export const HeadingWithActionElements: FunctionComponent<
 
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
-      if (window.location.hash.slice(1) === anchor) {
+      const windowHash = window.location.hash.slice(1)
+      if (windowHash && windowHash === anchor) {
         setTarget(node)
       }
     },
@@ -323,6 +325,17 @@ export const CustomCodeTag: FunctionComponent<
   )
 }
 
+/**
+ * Renders pre tag with added margin.
+ */
+export const CustomPreTag: FunctionComponent<
+  React.PropsWithChildren<ReactMarkdownProps>
+> = ({ children }) => {
+  return (
+    <StyledPreWrapper data-testid="stMarkdownPre">{children}</StyledPreWrapper>
+  )
+}
+
 export function RenderedMarkdown({
   allowHTML,
   source,
@@ -331,7 +344,7 @@ export function RenderedMarkdown({
   disableLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const renderers: Components = {
-    pre: CodeBlock,
+    pre: CustomPreTag,
     code: CustomCodeTag,
     a: LinkWithTargetBlank,
     h1: CustomHeading,
@@ -479,6 +492,9 @@ export function RenderedMarkdown({
     "h1",
     "h2",
     "h3",
+    "h4",
+    "h5",
+    "h6",
     "ul",
     "ol",
     "li",

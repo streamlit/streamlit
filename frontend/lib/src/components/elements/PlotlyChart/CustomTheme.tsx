@@ -17,16 +17,16 @@
 import merge from "lodash/merge"
 
 import {
+  EmotionTheme,
+  getCategoricalColorsArray,
   getDecreasingRed,
+  getDivergingColorsArray,
   getGray30,
   getGray70,
   getGray90,
   getIncreasingGreen,
-  hasLightBackgroundColor,
-  EmotionTheme,
   getSequentialColorsArray,
-  getCategoricalColorsArray,
-  getDivergingColorsArray,
+  hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { logError } from "@streamlit/lib/src/util/log"
@@ -137,7 +137,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
-      bordercolor: colors.fadedText10,
+      bordercolor: colors.borderColor,
       font: {
         color: getGray70(theme),
         family: genericFonts.bodyFont,

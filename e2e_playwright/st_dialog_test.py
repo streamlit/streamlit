@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import COMMAND_KEY, get_markdown
 
-modal_test_id = "stModal"
+modal_test_id = "stDialog"
 
 
 def open_dialog_with_images(app: Page):
@@ -59,6 +61,12 @@ def open_dialog_with_copy_buttons(app: Page):
     app.get_by_role("button").filter(has_text="Open Dialog with Copy Buttons").click()
 
 
+def open_dialog_with_deprecation_warning(app: Page):
+    app.get_by_role("button").filter(
+        has_text="Open Dialog with deprecation warning"
+    ).click()
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -70,6 +78,10 @@ def test_displays_dialog_properly(app: Page):
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
+
+    # Verify that we don't print a deprecation warning for usage of @st.dialog. We check
+    # that a warning is printed for @st.experimental_dialog in a later test.
+    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
 
 
 def test_dialog_closes_properly(app: Page):
@@ -332,3 +344,16 @@ def test_dialog_copy_buttons_work(app: Page):
 
     # we should see the pasted content written to the dialog
     expect(app.get_by_test_id("stMarkdown")).to_have_text("[1,2,3]")
+
+
+def test_experimental_dialog_deprecation_warning(app: Page):
+    """Test that using @st.experimental_dialog instead of @st.dialog results in a
+    deprecation warning being displayed in the dialog.
+    """
+    expect(app.get_by_test_id("stAlert")).not_to_be_attached()
+
+    open_dialog_with_deprecation_warning(app)
+
+    expect(app.get_by_test_id("stAlert")).to_have_text(
+        re.compile("Please replace st.experimental_dialog with st.dialog.\n.*")
+    )

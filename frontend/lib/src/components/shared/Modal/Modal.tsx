@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import React, { ReactNode, ReactElement, FunctionComponent } from "react"
+import React, { FunctionComponent, ReactElement, ReactNode } from "react"
+
 import { useTheme } from "@emotion/react"
 import {
+  ModalProps,
   Modal as UIModal,
-  ModalHeader as UIModalHeader,
   ModalBody as UIModalBody,
   ModalFooter as UIModalFooter,
-  ModalProps,
+  ModalHeader as UIModalHeader,
 } from "baseui/modal"
+import merge from "lodash/merge"
+
 import BaseButton, {
   BaseButtonProps,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import merge from "lodash/merge"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
@@ -35,7 +38,8 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { genericFonts, fontSizes, spacing, fontWeights }: EmotionTheme =
+    useTheme()
 
   return (
     <UIModalHeader
@@ -50,7 +54,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         paddingLeft: spacing.twoXL,
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.xl,
-        fontWeight: 600,
+        fontWeight: fontWeights.bold,
         margin: spacing.none,
         lineHeight: 1.5,
         textTransform: "none",
@@ -113,7 +117,7 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
         paddingLeft: spacing.md,
       }}
     >
-      <div className="ModalBody">{children}</div>
+      <div>{children}</div>
     </UIModalFooter>
   )
 }
@@ -135,7 +139,8 @@ function Modal(props: ModalProps): ReactElement {
         background: colors.darkenedBgMix25,
       },
       props: {
-        "data-testid": "stModal",
+        className: "stDialog",
+        "data-testid": "stDialog",
       },
     },
     DialogContainer: {
