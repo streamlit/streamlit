@@ -56,7 +56,8 @@ const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   <Particles
-    className="balloons"
+    className="stBalloons"
+    data-testid="stBalloons"
     scriptRunId={scriptRunId}
     numParticleTypes={NUM_BALLOON_TYPES}
     numParticles={NUM_BALLOONS}

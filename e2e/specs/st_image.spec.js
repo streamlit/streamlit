@@ -36,7 +36,7 @@ describe("st.image", () => {
   });
 
   it("displays the image and caption together", () => {
-    cy.get(".element-container [data-testid='stImage']")
+    cy.get(".element-container [data-testid='stImageContainer']")
       .eq(0)
       .matchImageSnapshot("image-with-caption");
   });
@@ -103,7 +103,7 @@ describe("st.image", () => {
 
   it("displays a GIF image and a caption together", () => {
     cy.getIndexed(
-      ".element-container [data-testid='stImage']",
+      ".element-container [data-testid='stImageContainer']",
       14
     ).matchImageSnapshot("gif-with-caption");
   });

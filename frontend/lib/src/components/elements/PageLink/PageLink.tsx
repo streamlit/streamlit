@@ -51,7 +51,7 @@ function shouldUseContainerWidth(
   return useContainerWidth === true ? true : false
 }
 
-function PageLink(props: Props): ReactElement {
+function PageLink(props: Readonly<Props>): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
   const isInSidebar = React.useContext(IsSidebarContext)
 
@@ -77,20 +77,13 @@ function PageLink(props: Props): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(
-          element.pageScriptHash as string,
-          element.queryString as string
-        )
+        onPageChange(element.pageScriptHash, element.queryString)
       }
     }
   }
 
   return (
-    <div
-      className="row-widget stPageLink"
-      data-testid="stPageLink"
-      style={style}
-    >
+    <div className="stPageLink" data-testid="stPageLink" style={style}>
       <BaseButtonTooltip help={element.help} placement={Placement.TOP_RIGHT}>
         <StyledNavLinkContainer>
           <StyledNavLink

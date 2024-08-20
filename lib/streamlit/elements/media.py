@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
-import streamlit as st
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.errors import StreamlitAPIException
@@ -30,9 +29,10 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
 
 MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
@@ -167,7 +168,6 @@ class MediaMixin:
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         audio_proto = AudioProto()
-        coordinates = self.dg._get_delta_path_str()
 
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
@@ -176,11 +176,11 @@ class MediaMixin:
                 "`sample_rate` must be specified when `data` is a numpy array."
             )
         if not is_data_numpy_array and sample_rate is not None:
-            st.warning(
+            self.dg.warning(
                 "Warning: `sample_rate` will be ignored since data is not a numpy "
                 "array."
             )
-
+        coordinates = self.dg._get_delta_path_str()
         marshall_audio(
             coordinates,
             audio_proto,
@@ -633,29 +633,29 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data: npt.NDArray[Any] = np.array(data, dtype=float)
+    transformed_data: npt.NDArray[Any] = np.array(data, dtype=float)
 
-    if len(data.shape) == 1:
+    if len(cast(NumpyShape, transformed_data.shape)) == 1:
         nchan = 1
-    elif len(data.shape) == 2:
+    elif len(transformed_data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
         # "L1R1L2R2..." for stereo. See
         # http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
         # for channel ordering
-        nchan = data.shape[0]
-        data = data.T.ravel()
+        nchan = transformed_data.shape[0]
+        transformed_data = transformed_data.T.ravel()
     else:
         raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
 
-    if data.size == 0:
-        return data.astype(np.int16).tobytes(), nchan
+    if transformed_data.size == 0:
+        return transformed_data.astype(np.int16).tobytes(), nchan
 
-    max_abs_value = np.max(np.abs(data))
+    max_abs_value = np.max(np.abs(transformed_data))
     # 16-bit samples are stored as 2's-complement signed integers,
     # ranging from -32768 to 32767.
     # scaled_data is PCM 16 bit numpy array, that's why we multiply [-1, 1] float
     # values to 32_767 == 2 ** 15 - 1.
-    np_array = (data / max_abs_value) * 32767
+    np_array = (transformed_data / max_abs_value) * 32767
     scaled_data = np_array.astype(np.int16)
     return scaled_data.tobytes(), nchan
 

@@ -44,7 +44,7 @@ export function BokehChart({
   width,
   element,
   height,
-}: BokehChartProps): ReactElement {
+}: Readonly<BokehChartProps>): ReactElement {
   const chartId = `bokeh-chart-${element.elementId}`
 
   const memoizedGetChartData = useCallback(() => {

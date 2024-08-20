@@ -979,6 +979,94 @@ describe("AppRoot.applyDelta", () => {
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
   })
 
+  it("removes a block's children if the block type changes for the same delta path", () => {
+    const newRoot = ROOT.applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          expandable: {
+            expanded: true,
+            label: "label",
+            icon: "",
+          },
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    ).applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+      }),
+      forwardMsgMetadata([0, 1, 1, 0])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode).toBeDefined()
+    expect(newNode.deltaBlock.type).toBe("expandable")
+    expect(newNode.children.length).toBe(1)
+
+    const newRoot2 = newRoot.applyDelta(
+      "new_script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          tabContainer: {},
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const replacedBlock = newRoot2.main.getIn([1, 1]) as BlockNode
+    expect(replacedBlock).toBeDefined()
+    expect(replacedBlock.deltaBlock.type).toBe("tabContainer")
+    expect(replacedBlock.children.length).toBe(0)
+  })
+
+  it("will not remove a block's children if the block type is the same for the same delta path", () => {
+    const newRoot = ROOT.applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          expandable: {
+            expanded: true,
+            label: "label",
+            icon: "",
+          },
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    ).applyDelta(
+      "script_run_id",
+      makeProto(DeltaProto, {
+        newElement: { text: { body: "newElement!" } },
+      }),
+      forwardMsgMetadata([0, 1, 1, 0])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode).toBeDefined()
+    expect(newNode.deltaBlock.type).toBe("expandable")
+    expect(newNode.children.length).toBe(1)
+
+    const newRoot2 = newRoot.applyDelta(
+      "new_script_run_id",
+      makeProto(DeltaProto, {
+        addBlock: {
+          expandable: {
+            expanded: true,
+            label: "other label",
+            icon: "",
+          },
+        },
+      }),
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const replacedBlock = newRoot2.main.getIn([1, 1]) as BlockNode
+    expect(replacedBlock).toBeDefined()
+    expect(replacedBlock.deltaBlock.type).toBe("expandable")
+    expect(replacedBlock.children.length).toBe(1)
+  })
+
   it("specifies active script hash on 'newElement' deltas", () => {
     const delta = makeProto(DeltaProto, {
       newElement: { text: { body: "newElement!" } },
@@ -1172,6 +1260,66 @@ describe("AppRoot.clearStaleNodes", () => {
     expect(
       (pruned.main.getIn([2, 0]) as BlockNode).deltaBlock.tab?.label
     ).toContain("tab1")
+  })
+
+  it("clear childNodes of a block node in fragment run", () => {
+    // Add a new element and clear stale nodes
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "newElement!" } },
+      fragmentId: "my_fragment_id",
+    })
+    const newRoot = AppRoot.empty(FAKE_SCRIPT_HASH)
+      // Block corresponding to my_fragment_id
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          addBlock: { vertical: {}, allowEmpty: false },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 0])
+      )
+      .applyDelta("new_session_id", delta, forwardMsgMetadata([0, 0, 0]))
+      // Block with child where scriptRunId is different
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          addBlock: { vertical: {}, allowEmpty: false },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1])
+      )
+      .applyDelta("new_session_id", delta, forwardMsgMetadata([0, 1, 0]))
+      .applyDelta("new_session_id", delta, forwardMsgMetadata([0, 1, 1]))
+      // this child is a nested fragment_id from an old run and should be pruned
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement!" } },
+          fragmentId: "my_nested_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1, 2])
+      )
+      // this child is a nested fragment_id from the same run and should be preserved
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "newElement!" } },
+          fragmentId: "my_nested_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1, 3])
+      )
+
+    expect((newRoot.main.getIn([1]) as BlockNode).children).toHaveLength(4)
+
+    const pruned = newRoot.clearStaleNodes("new_session_id", [
+      "my_fragment_id",
+    ])
+
+    expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
+    expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(1)
+    expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
+    // the stale nested fragment child should have been pruned
+    expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(3)
   })
 })
 

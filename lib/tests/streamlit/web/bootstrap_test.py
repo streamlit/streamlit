@@ -16,67 +16,14 @@ from __future__ import annotations
 
 import os.path
 import sys
-import unittest
 from io import StringIO
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, patch
 
-import pytest
-
 from streamlit import config
 from streamlit.web import bootstrap
-from streamlit.web.bootstrap import _fix_pydantic_duplicate_validators_error
 from tests import testutil
-from tests.testutil import patch_config_options, should_skip_pydantic_tests
-
-
-class BootstrapPydanticFixTest(unittest.TestCase):
-    def pydantic_model_definition(self):
-        from pydantic import BaseModel, root_validator, validator
-
-        class UserModel(BaseModel):
-            name: str
-            username: str
-            password1: str
-            password2: str
-
-            @validator("name")
-            def name_must_contain_space(cls, v):
-                if " " not in v:
-                    raise ValueError("must contain a space")
-                return v.title()
-
-            @root_validator()
-            def passwords_should_match(cls, values):
-                if values["password1"] != values["password2"]:
-                    raise ValueError("passwords do not match")
-                return values
-
-        UserModel(
-            name="John Doe",
-            username="johndoe",
-            password1="abcd",
-            password2="abcd",
-        )
-
-    @pytest.mark.skipif(
-        should_skip_pydantic_tests(), reason="We test fix only for pydantic 1.*"
-    )
-    @patch("pydantic.class_validators.in_ipython", Mock(return_value=False))
-    def test_fix_pydantic_crash(self):
-        import pydantic
-
-        # Check that without fix it crashes when model with validator
-        # defined two times (we emulate Streamlit rerun).
-        with self.assertRaises(pydantic.errors.ConfigError):
-            self.pydantic_model_definition()
-            self.pydantic_model_definition()
-
-        _fix_pydantic_duplicate_validators_error()
-
-        # Check that after fix model could be redefined without exception.
-        self.pydantic_model_definition()
-        self.pydantic_model_definition()
+from tests.testutil import patch_config_options
 
 
 class BootstrapPrintTest(IsolatedAsyncioTestCase):

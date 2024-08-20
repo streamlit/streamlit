@@ -40,7 +40,7 @@ export default function Video({
   width,
   endpoints,
   elementMgr,
-}: VideoProps): ReactElement {
+}: Readonly<VideoProps>): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
@@ -98,7 +98,9 @@ export default function Video({
   // Stop the video at 'endTime' and handle loop
   useEffect(() => {
     const videoNode = videoRef.current
-    if (!videoNode) return
+    if (!videoNode) {
+      return
+    }
 
     // Flag to avoid calling 'videoNode.pause()' multiple times
     let stoppedByEndTime = false
@@ -130,7 +132,9 @@ export default function Video({
   // Handle looping the video
   useEffect(() => {
     const videoNode = videoRef.current
-    if (!videoNode) return
+    if (!videoNode) {
+      return
+    }
 
     // Loop the video when it has ended
     const handleVideoEnd = (): void => {
@@ -196,6 +200,7 @@ export default function Video({
 
     return (
       <iframe
+        className="stVideo"
         data-testid="stVideo"
         title={url}
         src={getYoutubeSrc(url)}
@@ -213,13 +218,13 @@ export default function Video({
   // when streamlit frontend and backend are running on different ports
   return (
     <video
+      className="stVideo"
       data-testid="stVideo"
       ref={videoRef}
       controls
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
-      className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
       crossOrigin={
         IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined

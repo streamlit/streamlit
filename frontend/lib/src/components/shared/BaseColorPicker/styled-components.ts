@@ -48,7 +48,7 @@ export const StyledColorPreview = styled.div<StyledColorPreviewProps>(
   ({ disabled, theme }) => ({
     height: theme.sizes.minElementHeight,
     borderRadius: theme.radii.default,
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     cursor: disabled ? "not-allowed" : "pointer",
     pointerEvents: disabled ? "none" : "auto",
     boxShadow: "none",
@@ -70,7 +70,7 @@ export const StyledColorBlock = styled.div<StyledColorBlockProps>(
     width: theme.sizes.minElementHeight,
     height: theme.sizes.minElementHeight,
     borderRadius: theme.radii.default,
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     borderWidth: theme.sizes.borderWidth,
     opacity: disabled ? "0.4" : "",
     backgroundColor,

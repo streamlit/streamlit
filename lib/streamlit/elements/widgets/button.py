@@ -33,7 +33,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import runtime
-from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
@@ -756,10 +756,13 @@ class ButtonMixin:
                     page_link_proto.page = page_name
                     break
 
-        if page_link_proto.page_script_hash == "":
-            raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
-            )
+            if page_link_proto.page_script_hash == "":
+                raise StreamlitAPIException(
+                    f"Could not find page: `{page}`. Must be the file path relative to "
+                    "the main script, from the directory: "
+                    f"`{os.path.basename(main_script_directory)}`. Only the main app "
+                    "file and files in the `pages/` directory are supported."
+                )
 
         if query_params is not None:
             if not hasattr(query_params, "get_all"):

@@ -130,7 +130,7 @@ describe("ElementNodeRenderer Block Component", () => {
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("balloons")
+      expect(elementRendererChildren[0]).toHaveClass("stBalloons")
     })
   })
 
@@ -168,7 +168,7 @@ describe("ElementNodeRenderer Block Component", () => {
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("snow")
+      expect(elementRendererChildren[0]).toHaveClass("stSnow")
     })
   })
 })
