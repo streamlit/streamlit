@@ -24,6 +24,8 @@ TEST_ASSETS_DIR = os.path.join(
 
 st.sidebar.button("Sidebar!")
 st.markdown("Main!")
+with st.expander("Expander in main"):
+    st.write("Text in expander")
 
 
 def preceding_command_in_callback():
