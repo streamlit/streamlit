@@ -57,6 +57,10 @@ def test_image_formats(app: Page):
         get_image(app, "Transparent Black Square.").locator("img")
     ).to_have_attribute("src", re.compile(r"^.*\.png$"))
 
+    expect(get_image(app, "Image from jpg file.").locator("img")).to_have_attribute(
+        "src", re.compile(r"^.*\.jpg$")
+    )
+
     # GIF:
     expect(get_image(app, "Black Circle as GIF.").locator("img")).to_have_attribute(
         "src", re.compile(r"^.*\.gif$")
@@ -75,6 +79,13 @@ def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunc
 def test_fullscreen_button_exists(app: Page):
     """Test that element has the fullscreen button."""
     expect(app.get_by_test_id("StyledFullScreenButton").first).to_be_attached()
+
+
+def test_image_from_file(app: Page, assert_snapshot: ImageCompareFunction):
+    gif_image = get_image(app, "Image from jpg file.").locator("img")
+    expect(gif_image).to_have_css("width", "200px")
+    expect(gif_image).to_have_attribute("src", re.compile(r"^.*\.jpg$"))
+    assert_snapshot(gif_image, name="st_image-image_from_file")
 
 
 def test_gif_image(app: Page, assert_snapshot: ImageCompareFunction):
