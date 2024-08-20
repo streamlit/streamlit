@@ -25,7 +25,7 @@ import io
 import os
 import re
 from enum import IntEnum
-from typing import TYPE_CHECKING, Final, List, Literal, Sequence, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -54,7 +54,7 @@ PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes]
-ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
+ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
