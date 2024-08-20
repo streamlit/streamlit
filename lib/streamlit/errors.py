@@ -274,3 +274,29 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
             error_message = f"Could not find page: `{page}`. You must provide a file path relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). Only the entrypoint file and files in the `pages/` directory are supported."
 
         super().__init__(error_message)
+
+
+# policies
+class StreamlitFragmentWidgetsNotAllowedOutsideError(LocalizableStreamlitException):
+    """Exception raised when the fragment attempts to write to an element outside of its container."""
+
+    def __init__(self):
+        super().__init__(" Fragments cannot write widgets to outside containers.")
+
+
+class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
+    """Exception raised a `on_change` callback is set on any element in a form except for the `st.form_submit_button`."""
+
+    def __init__(self):
+        super().__init__(
+            "Within a form, callbacks can only be defined on st.form_submit_button. Defining callbacks on other widgets inside a form is not allowed."
+        )
+
+
+class StreamlitWidgetValueAssignmentNotAllowedError(LocalizableStreamlitException):
+    """Exception raised when trying to set values for a widget where writes are not allowed."""
+
+    def __init__(self, key: str):
+        super().__init__(
+            f"Values for the widget with `key` '{key}' cannot be set using `st.session_state`."
+        )
