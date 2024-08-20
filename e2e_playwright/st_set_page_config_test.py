@@ -40,30 +40,33 @@ def test_sets_page_in_wide_mode(app: Page):
     expect(app_view_container).to_have_attribute("data-layout", "wide")
 
 
-def test_double_setting_set_page_config(app: Page):
-    # Test: should not display an error when st.set_page_config is used after an st.*
-    # command in a callback
+def test_no_error_with_callback(app: Page):
+    """Should not display an error when st.set_page_config is used after an st.*
+    command in a callback.
+    """
     click_button(app, "Balloons")
     expect(app.get_by_test_id("stException")).not_to_be_visible()
     expect(app).to_have_title("Heya, world?")
 
-    # Test: should display an error when st.set_page_config is called
-    # multiple times in a callback
+
+def test_double_set_page_config(app: Page):
+    """Should display an error when st.set_page_config is called
+    multiple times in a callback."""
     click_button(app, "Double Set Page Config")
     expect_exception(app, "set_page_config() can only be called once per app page")
     expect(app).to_have_title("Change 1")
 
-    # Test: should display an error when st.set_page_config is called after
-    # being called in a callback
+
+def test_single_set_page_config(app: Page):
+    """Should display an error when st.set_page_config is called after
+    being called in a callback"""
     click_button(app, "Single Set Page Config")
     expect_exception(app, "set_page_config() can only be called once per app page")
-
     expect(app).to_have_title("Change 3")
 
 
 def test_st_set_page_config_sets_page_icon(app: Page):
     click_button(app, "Page Config With Local Icon")
-
     expect(app).to_have_title("With Local Icon")
     favicon_element = app.locator("link[rel='shortcut icon']")
     expect(favicon_element).to_have_count(1)
