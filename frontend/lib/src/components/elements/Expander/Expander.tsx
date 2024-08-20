@@ -230,7 +230,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   }
 
   return (
-    <StyledExpandableContainer data-testid="stExpander">
+    <StyledExpandableContainer className="stExpander" data-testid="stExpander">
       <StyledDetails isStale={isStale} ref={detailsRef}>
         <StyledSummary onClick={toggle} empty={empty} ref={summaryRef}>
           <StyledSummaryHeading>

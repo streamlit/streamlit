@@ -20,7 +20,7 @@ import threading
 import time
 import unittest
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 from parameterized import parameterized
@@ -30,10 +30,6 @@ from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_utils import CachedResult
-from streamlit.runtime.caching.cached_message_replay import (
-    MultiCacheResults,
-    _make_widget_key,
-)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -45,17 +41,14 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
-    script_run_context,
 )
+from streamlit.runtime.scriptrunner_utils import script_run_context
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx
-
-if TYPE_CHECKING:
-    from streamlit.runtime.caching.cache_type import CacheType
 
 
 def get_text_or_block(delta):
@@ -67,15 +60,11 @@ def get_text_or_block(delta):
         return "new_block"
 
 
-def as_cached_result(value: Any, cache_type: CacheType) -> MultiCacheResults:
+def as_cached_result(value: Any) -> CachedResult:
     """Creates cached results for a function that returned `value`
     and did not execute any elements.
     """
-    result = CachedResult(value, [], st._main.id, st.sidebar.id)
-    widget_key = _make_widget_key([], cache_type)
-    d = {widget_key: result}
-    initial = MultiCacheResults(set(), d)
-    return initial
+    return CachedResult(value, [], st._main.id, st.sidebar.id)
 
 
 class CommonCacheTest(DeltaGeneratorTestCase):
@@ -327,20 +316,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("foo")
             warning.assert_not_called()
 
-            # Test st.cache functions with widgets enabled
-            @cache_decorator(experimental_allow_widgets=True)
-            def cached_widget_enabled():
-                st.button("Press me too!")
-
-            cached_widget_enabled()
-
-            warning.assert_not_called()
-            warning.reset_mock()
-
-            # Make sure everything got reset properly
-            st.text("foo")
-            warning.assert_not_called()
-
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
     @parameterized.expand(
@@ -542,23 +517,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         img_fn_multi()
         img_fn_multi()
-
-    @parameterized.expand(
-        [("cache_data", cache_data), ("cache_resource", cache_resource)]
-    )
-    def test_nested_widget_replay(self, _, cache_decorator):
-        """Regression test for GH#5677"""
-
-        @cache_decorator(experimental_allow_widgets=True)
-        def foo():
-            x = st.number_input("AAAA", 1, 100, 12)
-            return x**2
-
-        @cache_decorator(experimental_allow_widgets=True)
-        def baz(y):
-            return foo() + y
-
-        st.write(baz(10))
 
     @parameterized.expand(
         [
@@ -950,24 +908,6 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         # Sanity check: ensure we can still call our cached function.
         self.assertEqual(42, foo())
-
-
-def test_dynamic_widget_replay():
-    at = AppTest.from_file("test_data/cached_widget_replay_dynamic.py").run()
-
-    assert at.checkbox.len == 1
-    assert at.text[0].value == "['foo']"
-
-    at.checkbox[0].check().run()
-    assert at.multiselect.len == 1
-    assert at.text[0].value == "[]"
-
-    at.multiselect[0].select("baz").run()
-    assert at.text[0].value == "['baz']"
-
-    at.checkbox[0].uncheck().run()
-    at.button[0].click().run()
-    assert at.text[0].value == "['foo']"
 
 
 def test_arrow_replay():

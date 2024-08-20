@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import platform
 import re
-from typing import Pattern
+from typing import Literal, Pattern
 
 from playwright.sync_api import Locator, Page, expect
 
@@ -250,7 +250,7 @@ def expect_markdown(
 
 def expect_exception(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | Pattern[str] | None = None,
 ) -> None:
     """Expect an exception to be displayed in the app.
 
@@ -260,13 +260,22 @@ def expect_exception(
     locator : Locator
         The locator to search for the exception element.
 
-    expected_message : str or Pattern[str]
+    expected_message : str or Pattern[str] or None
         The expected message to be displayed in the exception.
     """
-    exception_el = locator.get_by_test_id("stException").filter(
-        has_text=expected_message
-    )
+
+    if expected_message is None:
+        exception_el = locator.get_by_test_id("stException")
+    else:
+        exception_el = locator.get_by_test_id("stException").filter(
+            has_text=expected_message
+        )
     expect(exception_el).to_be_visible()
+
+
+def expect_no_exception(locator: Locator | Page):
+    exception_el = locator.get_by_test_id("stException")
+    expect(exception_el).not_to_be_attached()
 
 
 def expect_warning(
@@ -410,3 +419,45 @@ def expect_help_tooltip(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
     expect(tooltip_content).not_to_be_attached()
+
+
+def expect_script_state(
+    page: Page,
+    state: Literal[
+        "initial",
+        "running",
+        "notRunning",
+        "rerunRequested",
+        "stopRequested",
+        "compilationError",
+    ],
+) -> None:
+    """Expect the app to be in a specific script state.
+
+    Parameters
+    ----------
+    page : Page
+        The page to search for the script state.
+
+    state :
+        The expected script state.
+    """
+    page.wait_for_selector(
+        f"[data-testid='stApp'][data-test-script-state='{state}']",
+        timeout=10000,
+        state="attached",
+    )
+
+
+def expand_sidebar(app: Page) -> Locator:
+    """Expands the sidebar.
+
+    Returns
+    -------
+    Locator
+        The sidebar element.
+    """
+    app.get_by_test_id("stSidebarCollapsedControl").click()
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    return sidebar

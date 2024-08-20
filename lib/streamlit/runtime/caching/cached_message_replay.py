@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterator, Literal, Union
@@ -24,12 +23,9 @@ import streamlit as st
 from streamlit import runtime, util
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
-from streamlit.runtime.caching.hashing import update_hash
-from streamlit.runtime.scriptrunner.script_run_context import (
-    ScriptRunContext,
-    get_script_run_ctx,
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    in_cached_function,
 )
-from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from types import FunctionType
@@ -39,18 +35,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.Block_pb2 import Block
     from streamlit.runtime.caching.cache_type import CacheType
-    from streamlit.runtime.state.common import WidgetMetadata
-
-
-@dataclass(frozen=True)
-class WidgetMsgMetadata:
-    """Everything needed for replaying a widget and treating it as an implicit
-    argument to a cached function, beyond what is stored for all elements.
-    """
-
-    widget_id: str
-    widget_value: Any
-    metadata: WidgetMetadata[Any]
 
 
 @dataclass(frozen=True)
@@ -65,7 +49,6 @@ class ElementMsgData:
     """An element's message and related metadata for
     replaying that element's function call.
 
-    widget_metadata is filled in if and only if this element is a widget.
     media_data is filled in iff this is a media element (image, audio, video).
     """
 
@@ -73,7 +56,6 @@ class ElementMsgData:
     message: Message
     id_of_dg_called_on: str
     returned_dgs_id: str
-    widget_metadata: WidgetMsgMetadata | None = None
     media_data: list[MediaMsgData] | None = None
 
 
@@ -86,62 +68,6 @@ class BlockMsgData:
 
 MsgData = Union[ElementMsgData, BlockMsgData]
 
-"""
-Note [Cache result structure]
-
-The cache for a decorated function's results is split into two parts to enable
-handling widgets invoked by the function.
-
-Widgets act as implicit additional inputs to the cached function, so they should
-be used when deriving the cache key. However, we don't know what widgets are
-involved without first calling the function! So, we use the first execution
-of the function with a particular cache key to record what widgets are used,
-and use the current values of those widgets to derive a second cache key to
-look up the function execution's results. The combination of first and second
-cache keys act as one true cache key, just split up because the second part depends
-on the first.
-
-We need to treat widgets as implicit arguments of the cached function, because
-the behavior of the function, including what elements are created and what it
-returns, can be and usually will be influenced by the values of those widgets.
-For example:
-> @st.cache_data
-> def example_fn(x):
->     y = x + 1
->     if st.checkbox("hi"):
->         st.write("you checked the thing")
->         y = 0
->     return y
->
-> example_fn(2)
-
-If the checkbox is checked, the function call should return 0 and the checkbox and
-message should be rendered. If the checkbox isn't checked, only the checkbox should
-render, and the function will return 3.
-
-
-There is a small catch in this. Since what widgets execute could depend on the values of
-any prior widgets, if we replace the `st.write` call in the example with a slider,
-the first time it runs, we would miss the slider because it wasn't called,
-so when we later execute the function with the checkbox checked, the widget cache key
-would not include the state of the slider, and would incorrectly get a cache hit
-for a different slider value.
-
-In principle the cache could be function+args key -> 1st widget key -> 2nd widget key
-... -> final widget key, with each widget dependent on the exact values of the widgets
-seen prior. This would prevent unnecessary cache misses due to differing values of widgets
-that wouldn't affect the function's execution because they aren't even created.
-But this would add even more complexity and both conceptual and runtime overhead, so it is
-unclear if it would be worth doing.
-
-Instead, we can keep the widgets as one cache key, and if we encounter a new widget
-while executing the function, we just update the list of widgets to include it.
-This will cause existing cached results to be invalidated, which is bad, but to
-avoid it we would need to keep around the full list of widgets and values for each
-widget cache key so we could compute the updated key, which is probably too expensive
-to be worth it.
-"""
-
 
 @dataclass
 class CachedResult:
@@ -153,32 +79,6 @@ class CachedResult:
     messages: list[MsgData]
     main_id: str
     sidebar_id: str
-
-
-@dataclass
-class MultiCacheResults:
-    """Widgets called by a cache-decorated function, and a mapping of the
-    widget-derived cache key to the final results of executing the function.
-    """
-
-    widget_ids: set[str]
-    results: dict[str, CachedResult]
-
-    def get_current_widget_key(
-        self, ctx: ScriptRunContext, cache_type: CacheType
-    ) -> str:
-        state = ctx.session_state
-        # Compute the key using only widgets that have values. A missing widget
-        # can be ignored because we only care about getting different keys
-        # for different widget values, and for that purpose doing nothing
-        # to the running hash is just as good as including the widget with a
-        # sentinel value. But by excluding it, we might get to reuse a result
-        # saved before we knew about that widget.
-        widget_values = [
-            (wid, state[wid]) for wid in sorted(self.widget_ids) if wid in state
-        ]
-        widget_key = _make_widget_key(widget_values, cache_type)
-        return widget_key
 
 
 """
@@ -224,52 +124,37 @@ class CachedMessageReplayContext(threading.local):
         self._cached_message_stack: list[list[MsgData]] = []
         self._seen_dg_stack: list[set[str]] = []
         self._most_recent_messages: list[MsgData] = []
-        self._registered_metadata: WidgetMetadata[Any] | None = None
         self._media_data: list[MediaMsgData] = []
         self._cache_type = cache_type
-        self._allow_widgets: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(
-        self, func: FunctionType, allow_widgets: bool
-    ) -> Iterator[None]:
+    def calling_cached_function(self, func: FunctionType) -> Iterator[None]:
         """Context manager that should wrap the invocation of a cached function.
-        It allows us to track any `st.foo` messages that are generated from inside the function
-        for playback during cache retrieval.
+        It allows us to track any `st.foo` messages that are generated from inside the
+        function for playback during cache retrieval.
         """
         self._cached_message_stack.append([])
         self._seen_dg_stack.append(set())
-        self._allow_widgets = allow_widgets
-
         nested_call = False
-        ctx = get_script_run_ctx()
-        if ctx:
-            if ctx.disallow_cached_widget_usage:
-                # The disallow_cached_widget_usage is already set to true.
-                # This indicates that this cached function run is called from another
-                # cached function that disallows widget usage.
-                # We need to deactivate the widget usage for this cached function run
-                # even if it was allowed.
-                self._allow_widgets = False
-                nested_call = True
+        if in_cached_function.get():
+            nested_call = True
+        # If we're in a cached function. To disallow usage of widget-like element,
+        # we need to set the in_cached_function to true for this cached function run
+        # to prevent widget usage (triggers a warning).
+        in_cached_function.set(True)
 
-            if not self._allow_widgets:
-                # If we're in a cached function that disallows widget usage, we need to set
-                # the disallow_cached_widget_usage to true for this cached function run
-                # to prevent widget usage (triggers a warning).
-                ctx.disallow_cached_widget_usage = True
         try:
             yield
         finally:
             self._most_recent_messages = self._cached_message_stack.pop()
             self._seen_dg_stack.pop()
-            if ctx and not nested_call:
-                # Reset the disallow_cached_widget_usage flag. But only if this
+            if not nested_call:
+                # Reset the in_cached_function flag. But only if this
                 # is not nested inside a cached function that disallows widget usage.
-                ctx.disallow_cached_widget_usage = False
+                in_cached_function.set(False)
 
     def save_element_message(
         self,
@@ -288,23 +173,6 @@ class CachedMessageReplayContext(threading.local):
         if len(self._cached_message_stack) >= 1:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
 
-            # Widget replay is deprecated and will be removed soon:
-            # https://github.com/streamlit/streamlit/pull/8817.
-            # Therefore, its fine to keep this part a bit messy for now.
-
-            if (
-                hasattr(element_proto, "id")
-                and element_proto.id
-                and self._registered_metadata
-            ):
-                # The element has an ID and has associated widget metadata
-                # -> looks like a valid registered widget
-                widget_meta = WidgetMsgMetadata(
-                    element_proto.id, None, metadata=self._registered_metadata
-                )
-            else:
-                widget_meta = None
-
             media_data = self._media_data
 
             element_msg_data = ElementMsgData(
@@ -312,17 +180,14 @@ class CachedMessageReplayContext(threading.local):
                 element_proto,
                 id_to_save,
                 returned_dg_id,
-                widget_meta,
                 media_data,
             )
             for msgs in self._cached_message_stack:
-                if self._allow_widgets or widget_meta is None:
-                    msgs.append(element_msg_data)
+                msgs.append(element_msg_data)
 
         # Reset instance state, now that it has been used for the
         # associated element.
         self._media_data = []
-        self._registered_metadata = None
 
         for s in self._seen_dg_stack:
             s.add(returned_dg_id)
@@ -355,9 +220,6 @@ class CachedMessageReplayContext(threading.local):
         else:
             return invoked_id
 
-    def save_widget_metadata(self, metadata: WidgetMetadata[Any]) -> None:
-        self._registered_metadata = metadata
-
     def save_image_data(
         self, image_data: bytes | str, mimetype: str, image_id: str
     ) -> None:
@@ -384,24 +246,15 @@ def replay_cached_messages(
     call is on one of them.
     """
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.runtime.state.widgets import register_widget_from_metadata
 
     # Maps originally recorded dg ids to this script run's version of that dg
-    returned_dgs: dict[str, DeltaGenerator] = {}
-    returned_dgs[result.main_id] = st._main
-    returned_dgs[result.sidebar_id] = st.sidebar
-    ctx = get_script_run_ctx()
-
+    returned_dgs: dict[str, DeltaGenerator] = {
+        result.main_id: st._main,
+        result.sidebar_id: st.sidebar,
+    }
     try:
         for msg in result.messages:
             if isinstance(msg, ElementMsgData):
-                if msg.widget_metadata is not None:
-                    register_widget_from_metadata(
-                        msg.widget_metadata.metadata,
-                        ctx,
-                        None,
-                        msg.delta_type,
-                    )
                 if msg.media_data is not None:
                     for data in msg.media_data:
                         runtime.get_instance().media_file_mgr.add(
@@ -415,31 +268,22 @@ def replay_cached_messages(
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 new_dg = dg._block(msg.message)
                 returned_dgs[msg.returned_dgs_id] = new_dg
-    except KeyError:
-        raise CacheReplayClosureError(cache_type, cached_func)
-
-
-def _make_widget_key(widgets: list[tuple[str, Any]], cache_type: CacheType) -> str:
-    """Generate a key for the given list of widgets used in a cache-decorated function.
-
-    Keys are generated by hashing the IDs and values of the widgets in the given list.
-    """
-    func_hasher = hashlib.new("md5", **HASHLIB_KWARGS)
-    for widget_id_val in widgets:
-        update_hash(widget_id_val, func_hasher, cache_type)
-
-    return func_hasher.hexdigest()
+    except KeyError as ex:
+        raise CacheReplayClosureError(cache_type, cached_func) from ex
 
 
 def show_widget_replay_deprecation(
     decorator: Literal["cache_data", "cache_resource"],
 ) -> None:
     show_deprecation_warning(
-        "The `experimental_allow_widgets` parameter is deprecated and will be removed "
+        "The cached widget replay feature was removed in 1.38. The "
+        "`experimental_allow_widgets` parameter will also be removed "
         "in a future release. Please remove the `experimental_allow_widgets` parameter "
         f"from the `@st.{decorator}` decorator and move all widget commands outside of "
-        "cached functions.\n\nTo speed up your app, we recommend moving your widgets into fragments. "
-        "Find out more about fragments in [our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
-        "\n\nIf you have a specific use-case that requires the `experimental_allow_widgets` functionality, "
-        "please tell us via an [issue on Github](https://github.com/streamlit/streamlit/issues)."
+        "cached functions.\n\nTo speed up your app, we recommend moving your widgets "
+        "into fragments. Find out more about fragments in "
+        "[our docs](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment). "
+        "\n\nIf you have a specific use-case that requires the "
+        "`experimental_allow_widgets` functionality, please tell us via an "
+        "[issue on Github](https://github.com/streamlit/streamlit/issues)."
     )

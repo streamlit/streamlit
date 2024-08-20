@@ -18,8 +18,9 @@ export const sizes = {
   full: "100%",
   headerHeight: "3.75rem",
   sidebarTopSpace: "6rem",
-  sidebar: "21rem",
+  toastWidth: "21rem",
   contentMaxWidth: "46rem",
   borderWidth: "1px",
   minElementHeight: "2.5rem",
+  logoHeight: "1.5rem",
 }

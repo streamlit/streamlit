@@ -121,7 +121,7 @@ describe("Sidebar Component", () => {
 
     // Click the expand sidebar > button
     const expandButton = within(
-      screen.getByTestId("collapsedControl")
+      screen.getByTestId("stSidebarCollapsedControl")
     ).getByRole("button")
     fireEvent.click(expandButton)
 
@@ -136,7 +136,9 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
-    expect(screen.queryByTestId("collapsedControl")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSidebarCollapsedControl")
+    ).not.toBeInTheDocument()
   })
 
   it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
@@ -190,7 +192,9 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(screen.getByTestId("collapsedControl")).toHaveStyle("top: 1.25rem")
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
+      "top: 1.25rem"
+    )
   })
 
   it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
@@ -199,7 +203,9 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(screen.getByTestId("collapsedControl")).toHaveStyle("top: 50px")
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
+      "top: 50px"
+    )
   })
 
   it("renders SidebarNav component", () => {
@@ -257,7 +263,9 @@ describe("Sidebar Component", () => {
         initialSidebarState: PageConfig.SidebarState.COLLAPSED,
         appLogo: fullAppLogo,
       })
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -272,7 +280,9 @@ describe("Sidebar Component", () => {
         initialSidebarState: PageConfig.SidebarState.COLLAPSED,
         appLogo: imageOnly,
       })
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -306,6 +316,16 @@ describe("Sidebar Component", () => {
         "www.example.com"
       )
       expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+    })
+
+    it("sets maxWidth of logo based on sidebar width", () => {
+      renderSidebar({ appLogo: imageWithLink })
+      const sidebarWidth = window.getComputedStyle(
+        screen.getByTestId("stSidebar")
+      ).width
+      expect(screen.getByTestId("stLogo")).toHaveStyle(
+        `max-width: calc(${sidebarWidth} - 5.75rem)`
+      )
     })
   })
 })

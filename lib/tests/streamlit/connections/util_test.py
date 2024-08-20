@@ -39,7 +39,7 @@ class ConnectionUtilTest(unittest.TestCase):
     def test_not_running_in_sis(self):
         assert not running_in_sis()
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     @patch(
         "snowflake.snowpark._internal.utils.is_in_stored_procedure",
         MagicMock(return_value=True),
@@ -47,7 +47,7 @@ class ConnectionUtilTest(unittest.TestCase):
     def test_running_in_sis(self):
         assert running_in_sis()
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     @patch(
         "snowflake.snowpark._internal.utils.is_in_stored_procedure",
         MagicMock(side_effect=ModuleNotFoundError("oh no")),

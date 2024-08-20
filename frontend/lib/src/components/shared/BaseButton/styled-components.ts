@@ -122,7 +122,7 @@ export const StyledPrimaryButton = styled(
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
@@ -133,7 +133,7 @@ export const StyledSecondaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   "&:hover": {
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
@@ -148,7 +148,7 @@ export const StyledSecondaryButton = styled(
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",

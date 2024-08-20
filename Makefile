@@ -146,20 +146,21 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
-# Run Python integration tests for snowflake.
-pytest-snowflake:
+# Run Python integration tests.
+# This requires the integration-requirements to be installed.
+pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
-			--require-snowflake \
+			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
 .PHONY: mypy
 # Run Mypy static type checker.
 mypy:
-	./scripts/mypy
+	mypy --config-file=lib/mypy.ini --namespace-packages lib/streamlit/ lib/tests/streamlit/typing/ scripts/
 
 .PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.

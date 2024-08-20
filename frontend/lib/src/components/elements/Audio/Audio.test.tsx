@@ -51,7 +51,9 @@ describe("Audio Element", () => {
 
   it("renders without crashing", () => {
     render(<Audio {...getProps()} />)
-    expect(screen.getByTestId("stAudio")).toBeInTheDocument()
+    const audioElement = screen.getByTestId("stAudio")
+    expect(audioElement).toBeInTheDocument()
+    expect(audioElement).toHaveClass("stAudio")
   })
 
   it("has controls", () => {

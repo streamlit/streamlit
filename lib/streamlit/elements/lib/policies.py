@@ -17,9 +17,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
-from streamlit.elements.form import is_in_form
+from streamlit.elements.form_utils import is_in_form
 from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_script_run_ctx,
+    in_cached_function,
+)
 from streamlit.runtime.state import WidgetCallback, get_session_state
 
 if TYPE_CHECKING:
@@ -114,14 +117,12 @@ def check_cache_replay_rules() -> None:
     If there are other similar checks in the future, we could extend this
     function to check for those as well. And rename it to check_widget_usage_rules.
     """
-    if runtime.exists():
-        ctx = get_script_run_ctx()
-        if ctx and ctx.disallow_cached_widget_usage:
-            from streamlit import exception
+    if in_cached_function.get():
+        from streamlit import exception
 
-            # We use an exception here to show a proper stack trace
-            # that indicates to the user where the issue is.
-            exception(CachedWidgetWarning())
+        # We use an exception here to show a proper stack trace
+        # that indicates to the user where the issue is.
+        exception(CachedWidgetWarning())
 
 
 _fragment_writes_widget_to_outside_error = (

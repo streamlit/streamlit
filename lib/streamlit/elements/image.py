@@ -25,7 +25,7 @@ import io
 import os
 import re
 from enum import IntEnum
-from typing import TYPE_CHECKING, Final, List, Literal, Sequence, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -34,6 +34,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import NumpyShape
 
 if TYPE_CHECKING:
     from typing import Any
@@ -53,7 +54,7 @@ PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes]
-ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
+ImageOrImageList: TypeAlias = Union[AtomicImage, Sequence[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
@@ -177,14 +178,11 @@ class ImageMixin:
 
 
 def _image_may_have_alpha_channel(image: PILImage) -> bool:
-    if image.mode in ("RGBA", "LA", "P"):
-        return True
-    else:
-        return False
+    return image.mode in ("RGBA", "LA", "P")
 
 
 def _image_is_gif(image: PILImage) -> bool:
-    return bool(image.format == "GIF")
+    return image.format == "GIF"
 
 
 def _validate_image_format_string(
@@ -198,7 +196,7 @@ def _validate_image_format_string(
     "GIF" if the image is a GIF, and "JPEG" otherwise.
     """
     format = format.upper()
-    if format == "JPEG" or format == "PNG":
+    if format in {"JPEG", "PNG"}:
         return cast(ImageFormat, format)
 
     # We are forgiving on the spelling of JPEG
@@ -259,16 +257,17 @@ def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
 
 
 def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
-    if len(array.shape) not in (2, 3):
+    shape: NumpyShape = array.shape
+    if len(shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
-    if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
+    if len(shape) == 3 and shape[-1] not in (1, 3, 4):
         raise StreamlitAPIException(
             "Channel can only be 1, 3, or 4 got %d. Shape is %s"
-            % (array.shape[-1], str(array.shape))
+            % (shape[-1], str(shape))
         )
 
     # If there's only one channel, convert is to x, y
-    if len(array.shape) == 3 and array.shape[-1] == 1:
+    if len(shape) == 3 and shape[-1] == 1:
         array = array[:, :, 0]
 
     return array
@@ -418,7 +417,7 @@ def image_to_url(
         )
 
         if channels == "BGR":
-            if len(image.shape) == 3:
+            if len(cast(NumpyShape, image.shape)) == 3:
                 image = image[:, :, [2, 1, 0]]
             else:
                 raise StreamlitAPIException(
@@ -507,27 +506,23 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
-    if isinstance(image, list):
-        images = image
-    elif isinstance(image, np.ndarray) and len(image.shape) == 4:
+    if isinstance(image, (list, set, tuple)):
+        images = list(image)
+    elif isinstance(image, np.ndarray) and len(cast(NumpyShape, image.shape)) == 4:
         images = _4d_to_list_3d(image)
     else:
-        images = [image]
+        images = [image]  # type: ignore
 
     if isinstance(caption, list):
         captions: Sequence[str | None] = caption
+    elif isinstance(caption, str):
+        captions = [caption]
+    elif isinstance(caption, np.ndarray) and len(cast(NumpyShape, caption.shape)) == 1:
+        captions = caption.tolist()
+    elif caption is None:
+        captions = [None] * len(images)
     else:
-        if isinstance(caption, str):
-            captions = [caption]
-        # You can pass in a 1-D Numpy array as captions.
-        elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
-            captions = caption.tolist()
-        # If there are no captions then make the captions list the same size
-        # as the images list.
-        elif caption is None:
-            captions = [None] * len(images)
-        else:
-            captions = [str(caption)]
+        captions = [str(caption)]
 
     assert isinstance(
         captions, list

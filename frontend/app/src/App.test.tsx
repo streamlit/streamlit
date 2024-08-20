@@ -343,6 +343,48 @@ describe("App", () => {
     expect(getMockConnectionManager().disconnect).toHaveBeenCalled()
   })
 
+  it("correctly sets the data-test-script-state attribute", async () => {
+    renderApp(getProps())
+
+    expect(screen.getByTestId("stApp")).toHaveAttribute(
+      "data-test-script-state",
+      "initial"
+    )
+
+    sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: true,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-script-state",
+        ScriptRunState.RUNNING
+      )
+    })
+
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: false,
+    })
+
+    expect(screen.getByTestId("stApp")).toHaveAttribute(
+      "data-test-script-state",
+      ScriptRunState.NOT_RUNNING
+    )
+
+    sendForwardMessage("sessionEvent", {
+      type: "scriptCompilationException",
+    })
+
+    expect(screen.getByTestId("stApp")).toHaveAttribute(
+      "data-test-script-state",
+      ScriptRunState.COMPILATION_ERROR
+    )
+  })
+
   describe("streamlit server version changes", () => {
     let prevWindowLocation: Location
 
@@ -1974,6 +2016,39 @@ describe("App", () => {
         type: "WEBSOCKET_DISCONNECTED",
         attemptingToReconnect: true,
       })
+    })
+
+    it("Correctly sets the data-test-connection-state attribute", () => {
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager(false)
+
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-connection-state",
+        ConnectionState.INITIAL
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.CONNECTED
+        )
+      )
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-connection-state",
+        ConnectionState.CONNECTED
+      )
+
+      act(() =>
+        // @ts-expect-error - connectionManager.props is private
+        connectionManager.props.connectionStateChanged(
+          ConnectionState.PINGING_SERVER
+        )
+      )
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-connection-state",
+        ConnectionState.PINGING_SERVER
+      )
     })
 
     it("Sets attemptingToReconnect to false if DISCONNECTED_FOREVER", () => {

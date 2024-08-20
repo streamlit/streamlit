@@ -31,16 +31,16 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import (
+from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
+from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.data_mocks.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
     TestObject,
 )
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
@@ -449,7 +449,84 @@ class DataframeUtilTest(unittest.TestCase):
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
         self.assertTrue(dataframe_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
-    @pytest.mark.require_snowflake
+    def test_verify_sqlite3_integration(self):
+        """Verify that sqlite3 cursor can be used as a data source."""
+        import sqlite3
+
+        con = sqlite3.connect("file::memory:")
+        cur = con.cursor()
+        cur.execute("CREATE TABLE movie(title, year, score)")
+        cur.execute("""
+            INSERT INTO movie VALUES
+                ('Monty Python and the Holy Grail', 1975, 8.2),
+                ('And Now for Something Completely Different', 1971, 7.5)
+        """)
+        con.commit()
+        db_cursor = cur.execute("SELECT * FROM movie")
+        assert dataframe_util.is_dbapi_cursor(db_cursor) is True
+        assert (
+            dataframe_util.determine_data_format(db_cursor)
+            is dataframe_util.DataFormat.DBAPI_CURSOR
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(db_cursor)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == (2, 3)
+        con.close()
+
+    @pytest.mark.require_integration
+    def test_verify_duckdb_db_api_integration(self):
+        """Test that duckdb cursor can be used as a data source.
+
+        https://duckdb.org/docs/api/python/dbapi
+        """
+        import duckdb
+
+        con = duckdb.connect(database=":memory:")
+        con.execute(
+            "CREATE TABLE items (item VARCHAR, value DECIMAL(10, 2), count INTEGER)"
+        )
+        con.execute("INSERT INTO items VALUES ('jeans', 20.0, 1), ('hammer', 42.2, 2)")
+        con.execute("SELECT * FROM items")
+
+        assert dataframe_util.is_dbapi_cursor(con) is True
+        assert (
+            dataframe_util.determine_data_format(con)
+            is dataframe_util.DataFormat.DBAPI_CURSOR
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(con)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == (2, 3)
+        con.close()
+
+    @pytest.mark.require_integration
+    def test_verify_duckdb_relational_api_integration(self):
+        """Test that duckdb relational API can be used as a data source.
+
+        https://duckdb.org/docs/api/python/relational_api
+        """
+        import duckdb
+
+        items = pd.DataFrame([["foo", 1], ["bar", 2]], columns=["name", "value"])
+        db_relation = duckdb.sql("SELECT * from items")
+        assert dataframe_util.is_duckdb_relation(db_relation) is True
+        assert (
+            dataframe_util.determine_data_format(db_relation)
+            is dataframe_util.DataFormat.DUCKDB_RELATION
+        )
+        converted_df = dataframe_util.convert_anything_to_pandas_df(db_relation)
+        assert isinstance(
+            converted_df,
+            pd.DataFrame,
+        )
+        assert converted_df.shape == items.shape
+
+    @pytest.mark.require_integration
     def test_verify_snowpark_integration(self):
         """Integration test snowpark object handling.
         This is in addition to the tests using the mocks to verify that
@@ -482,7 +559,7 @@ class DataframeUtilTest(unittest.TestCase):
                 pd.DataFrame,
             )
 
-    @pytest.mark.require_snowflake
+    @pytest.mark.require_integration
     def test_verify_snowpandas_integration(self):
         """Integration test snowpark pandas object handling.
         This is in addition to the tests using the mocks to verify that
@@ -514,6 +591,55 @@ class DataframeUtilTest(unittest.TestCase):
                 dataframe_util.convert_anything_to_pandas_df(snowpandas_index),
                 pd.DataFrame,
             )
+
+    @pytest.mark.require_integration
+    def test_verify_dask_integration(self):
+        """Integration test dask object handling.
+
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
+        import dask
+
+        dask_df = dask.datasets.timeseries()
+
+        assert dataframe_util.is_dask_object(dask_df) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(dask_df),
+            pd.DataFrame,
+        )
+
+        dask_series = dask_df["x"]
+        assert dataframe_util.is_dask_object(dask_series) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(dask_series),
+            pd.DataFrame,
+        )
+
+        dask_index = dask_df.index
+        assert dataframe_util.is_dask_object(dask_index) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(dask_index),
+            pd.DataFrame,
+        )
+
+    @pytest.mark.require_integration
+    def test_verify_ray_integration(self):
+        """Integration test ray object handling.
+
+        This is in addition to the tests using the mocks to verify that
+        the latest version of the library is still supported.
+        """
+        import ray
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        ray_dataset = ray.data.from_pandas(df)
+
+        assert dataframe_util.is_ray_dataset(ray_dataset) is True
+        assert isinstance(
+            dataframe_util.convert_anything_to_pandas_df(ray_dataset),
+            pd.DataFrame,
+        )
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -666,14 +792,14 @@ class DataframeUtilTest(unittest.TestCase):
 
     def test_convert_anything_to_sequence_object_is_indexable(self):
         l1 = ["a", "b", "c"]
-        l2 = dataframe_util.convert_anything_to_sequence(l1)
+        l2 = dataframe_util.convert_anything_to_list(l1)
 
         # Assert that l1 was shallow copied into l2.
         self.assertFalse(l1 is l2)
         self.assertEqual(l1, l2)
 
     def test_convert_anything_to_sequence_object_not_indexable(self):
-        converted_list = dataframe_util.convert_anything_to_sequence({"a", "b", "c"})
+        converted_list = dataframe_util.convert_anything_to_list({"a", "b", "c"})
         self.assertIn("a", converted_list)
         self.assertIn("b", converted_list)
         self.assertIn("c", converted_list)
@@ -689,10 +815,10 @@ class DataframeUtilTest(unittest.TestCase):
             OPT1 = "a"
             OPT2 = "b"
 
-        converted_list = dataframe_util.convert_anything_to_sequence(Opt)
+        converted_list = dataframe_util.convert_anything_to_list(Opt)
         self.assertEqual(list(Opt), converted_list)
 
-        converted_list = dataframe_util.convert_anything_to_sequence(StrOpt)
+        converted_list = dataframe_util.convert_anything_to_list(StrOpt)
         self.assertEqual(list(StrOpt), converted_list)
 
     @parameterized.expand(
@@ -707,7 +833,7 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_sequence` correctly converts
         a variety of types to a sequence.
         """
-        converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
+        converted_sequence = dataframe_util.convert_anything_to_list(input_data)
 
         # We convert to a set for the check since some of the formats don't
         # have a guaranteed order.

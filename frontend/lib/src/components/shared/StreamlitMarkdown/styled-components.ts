@@ -82,12 +82,12 @@ export const StyledStreamlitMarkdown =
         },
 
         tr: {
-          borderTop: `1px solid ${theme.colors.fadedText10}`,
+          borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         },
 
         "th, td": {
           padding: "6px 13px",
-          border: `1px solid ${theme.colors.fadedText10}`,
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         },
 
         "span.has-background-color": {

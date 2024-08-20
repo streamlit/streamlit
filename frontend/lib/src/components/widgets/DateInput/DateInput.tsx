@@ -285,7 +285,7 @@ class DateInput extends React.PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: {
-                      border: `${theme.sizes.borderWidth} solid ${colors.fadedText10}`,
+                      border: `${theme.sizes.borderWidth} solid ${colors.borderColor}`,
                     },
                   },
                 },

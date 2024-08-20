@@ -44,6 +44,7 @@ describe("Markdown element", () => {
     render(<Markdown {...props} />)
     const markdown = screen.getByTestId("stMarkdown")
     expect(markdown).toBeInTheDocument()
+    expect(markdown).toHaveClass("stMarkdown")
     expect(markdown).toHaveStyle("width: 100px")
   })
 })

@@ -108,7 +108,7 @@ jobs:
         env:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
-        run: scripts/mypy --report
+        run: make mypy
       - name: Run Python Tests
         run: make pytest
       - name: CLI Smoke Tests
@@ -189,7 +189,7 @@ jobs:
         env:
           TARGET_BRANCH: constraints-${{ github.ref_name }}
 
-  py-snowflake-integration-tests:
+  py-integration-tests:
     needs:
       - build_info
 
@@ -206,9 +206,6 @@ jobs:
       (github.event_name == 'schedule')
       )
 
-    name: >
-      py-unit-tests (snowflake)
-
     env:
       USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
       CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
@@ -224,7 +221,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Decrypt credentials
+      - name: Decrypt Snowflake credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
           PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
@@ -232,7 +229,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
-      - name: Install lib with snowflake dependencies
-        run: uv pip install --editable ./lib[snowflake]
-      - name: Run Python Tests for Snowflake
-        run: make pytest-snowflake
+      - name: Install integration dependencies
+        run: uv pip install -r lib/integration-requirements.txt --force-reinstall
+      - name: Run Python integration tests
+        run: make pytest-integration
