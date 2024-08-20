@@ -247,6 +247,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         src={source}
         sidebarWidth={sidebarWidth}
         alt="Logo"
+        className="stLogo"
         data-testid="stLogo"
       />
     )

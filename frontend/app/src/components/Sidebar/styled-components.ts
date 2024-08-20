@@ -259,8 +259,11 @@ export interface StyledLogoProps {
 
 export const StyledLogo = styled.img<StyledLogoProps>(
   ({ theme, sidebarWidth }) => ({
-    height: "1.5rem",
-    margin: "0.25rem 0.5rem 0.25rem 0",
+    height: theme.sizes.logoHeight,
+    marginTop: theme.spacing.twoXS,
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.twoXS,
+    marginLeft: theme.spacing.none,
     zIndex: theme.zIndices.header,
 
     ...(sidebarWidth && {
