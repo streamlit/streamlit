@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import collections
+import contextvars
 import threading
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Counter, Dict, Final, Union
@@ -37,6 +38,13 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
+
+
+# If true, it indicates that we are in a cached function that disallows the usage of
+# widgets. Using contextvars to be thread-safe.
+in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "in_cached_function", default=False
+)
 
 
 @dataclass
@@ -80,9 +88,6 @@ class ScriptRunContext:
     new_fragment_ids: set[str] = field(default_factory=set)
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
-    # If true, it indicates that we are in a cached function that disallows
-    # the usage of widgets.
-    disallow_cached_widget_usage: bool = False
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -119,7 +124,7 @@ class ScriptRunContext:
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids = set()
         self.has_dialog_opened = False
-        self.disallow_cached_widget_usage = False
+        in_cached_function.set(False)
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
