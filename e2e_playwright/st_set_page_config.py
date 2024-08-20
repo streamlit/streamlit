@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import streamlit as st
+
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
+TEST_ASSETS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "test_assets"
+)
 
 st.set_page_config(
     page_title="Heya, world?",
@@ -60,3 +68,15 @@ def single_set_page_config():
 
 
 st.button("Single Set Page Config", on_click=single_set_page_config)
+
+
+def page_config_with_local_icon():
+    ICON_PATH = os.path.join(TEST_ASSETS_DIR, "favicon.ico")
+
+    st.set_page_config(
+        page_title="With Local Icon",
+        page_icon=ICON_PATH,
+    )
+
+
+st.button("Page Config With Local Icon", on_click=page_config_with_local_icon)
