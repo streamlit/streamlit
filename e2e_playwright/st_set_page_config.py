@@ -80,3 +80,15 @@ def page_config_with_local_icon():
 
 
 st.button("Page Config With Local Icon", on_click=page_config_with_local_icon)
+
+
+def page_config_with_material_icon():
+    st.set_page_config(
+        page_title="With Material Icon",
+        page_icon=":material/thumb_up:",
+    )
+
+
+st.button("Page Config With Material Icon", on_click=page_config_with_material_icon)
+
+# The menu_items parameter is covered by the `main_menu.py` script

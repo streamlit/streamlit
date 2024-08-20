@@ -65,7 +65,7 @@ def test_single_set_page_config(app: Page):
     expect(app).to_have_title("Change 3")
 
 
-def test_st_set_page_config_sets_page_icon(app: Page):
+def test_set_page_config_sets_page_icon(app: Page):
     click_button(app, "Page Config With Local Icon")
     expect(app).to_have_title("With Local Icon")
     favicon_element = app.locator("link[rel='shortcut icon']")
@@ -73,4 +73,14 @@ def test_st_set_page_config_sets_page_icon(app: Page):
     expect(favicon_element).to_have_attribute(
         "href",
         re.compile(r"d1e92a291d26c1e0cb9b316a93c929b3be15899677ef3bc6e3bf3573\.png"),
+    )
+
+
+def test_set_page_config_sets_page_icon_with_material_icon(app: Page):
+    click_button(app, "Page Config With Material Icon")
+    expect(app).to_have_title("With Material Icon")
+    favicon = app.locator("link[rel='shortcut icon']")
+    expect(favicon).to_have_attribute(
+        "href",
+        "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/thumb_up/default/24px.svg",
     )
