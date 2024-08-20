@@ -431,16 +431,16 @@ describe("CustomCodeTag Element", () => {
     const props = getCustomCodeTagProps()
     render(<CustomCodeTag {...props} />)
 
-    const codeTag = screen.getByText(`st.write("Hello")`).closest("code")
-    expect(codeTag).toBeInTheDocument()
+    const stCode = screen.getByTestId("stCode")
+    expect(stCode).toBeInTheDocument()
   })
 
   it("should render as plaintext", () => {
     const props = getCustomCodeTagProps({ className: "language-plaintext" })
     render(<CustomCodeTag {...props} />)
 
-    const codeTag = screen.getByText(`st.write("Hello")`).closest("code")
-    expect(codeTag).toHaveClass("language-plaintext")
+    const stCode = screen.getByTestId("stCode")
+    expect(stCode.innerHTML.indexOf(`class="language-plaintext"`)).not.toBe(-1)
   })
 
   it("should render copy button when code block has content", () => {
