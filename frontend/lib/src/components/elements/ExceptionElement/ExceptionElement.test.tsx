@@ -43,6 +43,7 @@ describe("ExceptionElement Element", () => {
 
     const exceptionContainer = screen.getByTestId("stException")
     expect(exceptionContainer).toBeInTheDocument()
+    expect(exceptionContainer).toHaveClass("stException")
   })
 
   it("should render the complete stack", () => {

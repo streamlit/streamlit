@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
+import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
-import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
 
 // Check for custom text color & handle colors in SidebarNav accordingly
 const conditionalCustomColor = (
@@ -253,12 +253,26 @@ export const StyledLogoLink = styled.a(({}) => ({
   },
 }))
 
-export const StyledLogo = styled.img(({ theme }) => ({
-  height: "1.5rem",
-  maxWidth: "15rem",
-  margin: "0.25rem 0.5rem 0.25rem 0",
-  zIndex: theme.zIndices.header,
-}))
+export interface StyledLogoProps {
+  sidebarWidth?: string
+}
+
+export const StyledLogo = styled.img<StyledLogoProps>(
+  ({ theme, sidebarWidth }) => ({
+    height: theme.sizes.logoHeight,
+    marginTop: theme.spacing.twoXS,
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.twoXS,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+
+    ...(sidebarWidth && {
+      // Control max width of logo so sidebar collapse button always shows (issue #8707)
+      // L & R padding (3rem) + R margin (.5rem) + collapse button (2.25rem) = 5.75rem
+      maxWidth: `calc(${sidebarWidth}px - 5.75rem)`,
+    }),
+  })
+)
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
   height: "2.0rem",
@@ -393,5 +407,5 @@ export const StyledViewButton = styled.button(({ theme }) => {
 
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: theme.spacing.lg,
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
 }))

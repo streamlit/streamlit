@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Final, TypedDict, cast
+from typing import Callable, Final, TypedDict
 
 from blinker import Signal
 from typing_extensions import NotRequired, TypeAlias
@@ -88,14 +88,9 @@ def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     URL-encode them. To solve this, we only swap the underscores for spaces
     right before we render page names.
     """
-    extraction = re.search(PAGE_FILENAME_REGEX, script_path.name)
+    extraction: re.Match[str] | None = re.search(PAGE_FILENAME_REGEX, script_path.name)
     if extraction is None:
         return "", ""
-
-    # This cast to Any+type annotation weirdness is done because
-    # cast(re.Match[str], ...) explodes at runtime since Python interprets it
-    # as an attempt to index into re.Match instead of as a type annotation.
-    extraction: re.Match[str] = cast(Any, extraction)
 
     icon_and_name = re.sub(
         r"[_ ]+", "_", extraction.group(2)

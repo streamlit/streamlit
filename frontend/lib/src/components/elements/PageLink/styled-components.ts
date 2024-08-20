@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledNavLinkContainer = styled.div(({}) => ({
+export const StyledNavLinkContainer = styled.div(() => ({
   display: "flex",
   flexDirection: "column",
 }))
@@ -37,7 +37,7 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
     alignItems: "center",
     justifyContent: "flex-start",
     gap: theme.spacing.sm,
-    borderRadius: theme.spacing.twoXS,
+    borderRadius: theme.radii.default,
 
     paddingLeft: theme.spacing.sm,
     paddingRight: theme.spacing.sm,
@@ -73,7 +73,7 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
 
     ...(disabled
       ? {
-          borderColor: theme.colors.fadedText10,
+          borderColor: theme.colors.borderColor,
           backgroundColor: theme.colors.transparent,
           color: theme.colors.fadedText40,
           cursor: "not-allowed",
@@ -100,7 +100,7 @@ export const StyledNavLinkText = styled.span<StyledNavLinkTextProps>(
 
     ...(disabled
       ? {
-          borderColor: theme.colors.fadedText10,
+          borderColor: theme.colors.borderColor,
           backgroundColor: theme.colors.transparent,
           color: theme.colors.fadedText40,
           cursor: "not-allowed",

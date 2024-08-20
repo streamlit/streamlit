@@ -17,7 +17,15 @@ from __future__ import annotations
 import array
 import enum
 import random
-from collections import ChainMap, Counter, OrderedDict, UserDict, defaultdict, deque
+from collections import (
+    ChainMap,
+    Counter,
+    OrderedDict,
+    UserDict,
+    UserList,
+    defaultdict,
+    deque,
+)
 from dataclasses import dataclass
 from datetime import date
 from types import MappingProxyType
@@ -27,16 +35,23 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from streamlit.dataframe_util import DataFormat
-from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
-from tests.streamlit.modin_mocks import Series as ModinSeries
-from tests.streamlit.pyspark_mocks import DataFrame as PySparkDataFrame
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
+from streamlit.dataframe_util import DataFormat, is_pandas_version_less_than
+from tests.streamlit.data_mocks.dask_mocks import DataFrame as DaskDataFrame
+from tests.streamlit.data_mocks.dask_mocks import Index as DaskIndex
+from tests.streamlit.data_mocks.dask_mocks import Series as DaskSeries
+from tests.streamlit.data_mocks.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.data_mocks.modin_mocks import Series as ModinSeries
+from tests.streamlit.data_mocks.pyspark_mocks import DataFrame as PySparkDataFrame
+from tests.streamlit.data_mocks.ray_mocks import Dataset as RayDataset
+from tests.streamlit.data_mocks.ray_mocks import (
+    MaterializedDataset as RayMaterializedDataset,
+)
+from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
+from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.data_mocks.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.data_mocks.snowpark_mocks import Table as SnowparkTable
 
 np.random.seed(0)
 random.seed(0)
@@ -51,7 +66,7 @@ class CaseMetadata(NamedTuple):
     expected_data_format: DataFormat
     # The expected sequence when the data is converted to a sequence
     # If None, the sequence is not checked.
-    expected_sequence: list[Any] | None
+    expected_sequence: list[Any]
     # The expected command used when the data is written via `st.write`
     expected_write_command: Literal[
         "markdown", "dataframe", "json", "help", "write_stream"
@@ -90,6 +105,18 @@ class UserDictExample(UserDict):  # type: ignore
 class TestObject:
     def __str__(self):
         return "TestObject"
+
+
+class CustomDataframe:
+    """A dummy dataframe-like class that supports the dataframe interchange protocol
+    (__dataframe__ method).
+    """
+
+    def __init__(self, data: pd.DataFrame):
+        self._data: pd.DataFrame = data
+
+    def __dataframe__(self, allow_copy: bool = True):
+        return self._data.__dataframe__(allow_copy=allow_copy)
 
 
 class StrTestEnum(str, enum.Enum):
@@ -247,7 +274,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.LIST_OF_VALUES,
             ["st.number_input", "st.text_area", "st.text_input"],
-            "markdown",
+            "json",
             False,
             list,
         ),
@@ -264,7 +291,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             1,
             DataFormat.LIST_OF_VALUES,
             ["number", "text", "text"],
-            "markdown",
+            "json",
             False,
             list,
         ),
@@ -280,8 +307,12 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             2,
             DataFormat.LIST_OF_ROWS,
-            None,
-            "markdown",
+            [
+                ("st.number_input", "number"),
+                ("st.text_area", "text"),
+                ("st.text_input", "text"),
+            ],
+            "json",
             False,
             list,
         ),
@@ -356,10 +387,23 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             3,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["number", "text", "text"],
+            ["st.number_input", "st.text_area", "st.text_input"],
             "json",
             False,
             dict,
+        ),
+    ),
+    (
+        "collections.UserList",
+        UserList(["st.number_input", "st.text_area", "st.text_input"]),
+        CaseMetadata(
+            3,
+            1,
+            DataFormat.LIST_OF_VALUES,
+            ["st.number_input", "st.text_area", "st.text_input"],
+            "json",
+            False,
+            list,
         ),
     ),
     (
@@ -460,7 +504,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["widget", "element"],
+            ["st.text_area", "st.markdown"],
             "json",
             False,
             dict,
@@ -473,7 +517,7 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             1,
             DataFormat.KEY_VALUE_DICT,
-            ["widget", "element"],
+            ["st.text_area", "st.markdown"],
             "json",
             False,
             dict,
@@ -482,7 +526,14 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
     (
         "List of rows",  # List[list[scalar]]
         [["st.text_area", "widget"], ["st.markdown", "element"]],
-        CaseMetadata(2, 2, DataFormat.LIST_OF_ROWS, None, "json", False),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.LIST_OF_ROWS,
+            [["st.text_area", "widget"], ["st.markdown", "element"]],
+            "json",
+            False,
+        ),
     ),
     (
         "List of records",  # List[Dict[str, Scalar]]
@@ -494,7 +545,10 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             2,
             2,
             DataFormat.LIST_OF_RECORDS,
-            None,
+            [
+                {"name": "st.text_area", "type": "widget"},
+                {"name": "st.markdown", "type": "element"},
+            ],
             "json",
             False,
         ),
@@ -911,7 +965,124 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             pd.DataFrame,
         ),
     ),
+    (
+        "Dask DataFrame",
+        DaskDataFrame(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask Series",
+        DaskSeries(pd.Series(["st.text_area", "st.markdown"])),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Dask Index",
+        DaskIndex(
+            pd.Index(["st.text_area", "st.markdown"]),
+        ),
+        CaseMetadata(
+            2,
+            1,
+            DataFormat.DASK_OBJECT,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Ray Dataset",
+        RayDataset(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.RAY_DATASET,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
+    (
+        "Ray Materialized Dataset",
+        RayMaterializedDataset(
+            pd.DataFrame(
+                [
+                    {"name": "st.text_area", "type": "widget"},
+                    {"name": "st.markdown", "type": "element"},
+                ]
+            )
+        ),
+        CaseMetadata(
+            2,
+            2,
+            DataFormat.RAY_DATASET,
+            ["st.text_area", "st.markdown"],
+            "dataframe",
+            True,
+            pd.DataFrame,
+        ),
+    ),
 ]
+
+###################################
+###### Dataframe Interchange ######
+###################################
+if is_pandas_version_less_than("1.5.0") is False:
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Dataframe-interchange compatible",
+                CustomDataframe(
+                    pd.DataFrame(
+                        [
+                            {"name": "st.text_area", "type": "widget"},
+                            {"name": "st.markdown", "type": "element"},
+                        ]
+                    )
+                ),
+                CaseMetadata(
+                    2,
+                    2,
+                    DataFormat.UNKNOWN,
+                    ["st.text_area", "st.markdown"],
+                    "dataframe",
+                    False,
+                    None,
+                ),
+            ),
+        ]
+    )
 
 ###################################
 ########### Polars Types ##########
@@ -995,7 +1166,7 @@ try:
                     2,
                     2,
                     DataFormat.XARRAY_DATASET,
-                    ["st.text_area", "st.markdown"],
+                    ["name", "type"],
                     "dataframe",
                     False,
                 ),
@@ -1021,3 +1192,36 @@ try:
     )
 except ModuleNotFoundError:
     print("Xarray not installed. Skipping Xarray dataframe integration tests.")  # noqa: T201
+
+###################################
+########## Pydantic Types #########
+###################################
+try:
+    from pydantic import BaseModel
+
+    class ElementPydanticModel(BaseModel):
+        name: str
+        is_widget: bool
+        usage: float
+
+    SHARED_TEST_CASES.extend(
+        [
+            (
+                "Pydantic Model",
+                ElementPydanticModel(
+                    name="st.number_input", is_widget=True, usage=0.32
+                ),
+                CaseMetadata(
+                    3,
+                    1,
+                    DataFormat.KEY_VALUE_DICT,
+                    ["st.number_input", True, 0.32],
+                    "json",
+                    False,
+                    dict,
+                ),
+            ),
+        ]
+    )
+except ModuleNotFoundError:
+    print("Pydantic not installed. Skipping Pydantic dataframe tests.")  # noqa: T201

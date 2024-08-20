@@ -56,7 +56,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const fluidButtonWidth = element.help ? width : true
 
   return (
-    <div data-testid="stPopover">
+    <div data-testid="stPopover" className="stPopover">
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
@@ -103,20 +103,20 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               borderTopWidth: theme.sizes.borderWidth,
               borderBottomWidth: theme.sizes.borderWidth,
 
-              paddingRight: `calc(${theme.spacing.twoXL} - 1px)`, // 1px to account for border.
-              paddingLeft: `calc(${theme.spacing.twoXL} - 1px)`,
-              paddingBottom: `calc(${theme.spacing.twoXL} - 1px)`,
-              paddingTop: `calc(${theme.spacing.twoXL} - 1px)`,
+              paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
+              paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+              paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+              paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
 
               borderLeftStyle: "solid",
               borderRightStyle: "solid",
               borderTopStyle: "solid",
               borderBottomStyle: "solid",
 
-              borderLeftColor: theme.colors.fadedText10,
-              borderRightColor: theme.colors.fadedText10,
-              borderTopColor: theme.colors.fadedText10,
-              borderBottomColor: theme.colors.fadedText10,
+              borderLeftColor: theme.colors.borderColor,
+              borderRightColor: theme.colors.borderColor,
+              borderTopColor: theme.colors.borderColor,
+              borderBottomColor: theme.colors.borderColor,
 
               boxShadow: lightBackground
                 ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
@@ -130,11 +130,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         <div>
           <BaseButtonTooltip help={element.help}>
             <BaseButton
+              data-testid="stPopoverButton"
               kind={BaseButtonKind.SECONDARY}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
               fluidWidth={element.useContainerWidth ? fluidButtonWidth : false}
-              data-testid="stPopoverButton"
               onClick={() => setOpen(!open)}
             >
               <StreamlitMarkdown

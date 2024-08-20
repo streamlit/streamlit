@@ -19,11 +19,14 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
 
-from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    enqueue_message,
+    get_script_run_ctx,
+)
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -127,7 +130,7 @@ class Dialog(DeltaGenerator):
         # We add a sleep here to give the web app time to react to the update. Otherwise,
         #  we might run into issues where the dialog cannot be opened again after closing
         time.sleep(0.05)
-        _enqueue_message(msg)
+        enqueue_message(msg)
 
     def open(self) -> None:
         self._update(True)

@@ -49,6 +49,7 @@ describe("Particles element", () => {
 
     const particleElement = screen.getByTestId("particles")
     expect(particleElement).toBeInTheDocument()
+    expect(particleElement).toHaveClass("particles")
 
     // eslint-disable-next-line testing-library/no-node-access
     const particleComponents = particleElement.children

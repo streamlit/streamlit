@@ -17,9 +17,19 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import types
-from collections import ChainMap, UserDict
+from collections import ChainMap, UserDict, UserList
+from collections.abc import ItemsView, KeysView, ValuesView
 from io import StringIO
-from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Generator,
+    Iterable,
+    List,
+    cast,
+)
 
 from streamlit import dataframe_util, type_util
 from streamlit.errors import StreamlitAPIException
@@ -249,13 +259,13 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame)     : Displays any dataframe-compatible value
-                as read-only table.
+            - write(dataframe)      : Displays any dataframe-like object in a table.
+            - write(dict)           : Displays dict-like in an interactive viewer.
+            - write(list)           : Displays list-like in an interactive viewer.
             - write(error)          : Prints an exception specially.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
             - write(class)          : Displays information about a class.
-            - write(dict)           : Displays dict in an interactive widget.
             - write(mpl_fig)        : Displays a Matplotlib figure.
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
@@ -267,7 +277,9 @@ class WriteMixin:
             - write(bokeh_fig)      : Displays a Bokeh figure.
             - write(sympy_expr)     : Prints SymPy expression using LaTeX.
             - write(htmlable)       : Prints _repr_html_() for the object if available.
+            - write(db_cursor)      : Displays DB API 2.0 cursor results in a table.
             - write(obj)            : Prints str(obj) if otherwise unknown.
+
 
         unsafe_allow_html : bool
             Whether to render HTML within ``*args``. This only applies to
@@ -447,10 +459,15 @@ class WriteMixin:
                         types.MappingProxyType,
                         UserDict,
                         ChainMap,
+                        UserList,
+                        ItemsView,
+                        KeysView,
+                        ValuesView,
                     ),
                 )
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
+                or type_util.is_pydantic_model(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)
@@ -485,6 +502,14 @@ class WriteMixin:
             ):
                 # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
+            elif type_util.has_callable_attr(
+                arg, "to_pandas"
+            ) or type_util.has_callable_attr(arg, "__dataframe__"):
+                # This object can very likely be converted to a DataFrame
+                # using the to_pandas, to_arrow, or the dataframe interchange
+                # protocol.
+                flush_buffer()
+                self.dg.dataframe(arg)
             else:
                 stringified_arg = str(arg)
 

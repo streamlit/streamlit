@@ -489,7 +489,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      expect(screen.getByTestId("stNotificationContentError")).toBeVisible()
+      expect(screen.getByTestId("stAlertContentError")).toBeVisible()
     })
 
     it("errors on unrecognized special args", () => {

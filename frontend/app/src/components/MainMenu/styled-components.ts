@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
+import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib"
@@ -45,7 +45,7 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 }))
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
-  borderTop: `1px solid ${theme.colors.fadedText10}`,
+  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   margin: `${theme.spacing.sm} ${theme.spacing.none}`,
 }))
 

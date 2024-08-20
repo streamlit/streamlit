@@ -22,8 +22,7 @@ from urllib import parse
 
 from typing_extensions import TypeAlias
 
-from streamlit import runtime
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
     from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
+    from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
@@ -224,15 +223,28 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
     """
     thread = threading.current_thread()
     ctx: ScriptRunContext | None = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
-    if ctx is None and runtime.exists() and not suppress_warning:
+    if ctx is None and not suppress_warning:
         # Only warn about a missing ScriptRunContext if suppress_warning is False, and
         # we were started via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
-        _LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
+        _LOGGER.warning(
+            "Thread '%s': missing ScriptRunContext! This warning can be ignored when "
+            "running in bare mode.",
+            thread.name,
+        )
 
     return ctx
 
 
-# Needed to avoid circular dependencies while running tests.
-import streamlit  # noqa: E402, F401
+def enqueue_message(msg: ForwardMsg) -> None:
+    """Enqueues a ForwardMsg proto to send to the app."""
+    ctx = get_script_run_ctx()
+
+    if ctx is None:
+        raise NoSessionContext()
+
+    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ctx.current_fragment_id
+
+    ctx.enqueue(msg)

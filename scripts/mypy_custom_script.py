@@ -19,27 +19,16 @@
 from __future__ import annotations
 
 
-import glob
 import itertools
 import os
-import os.path
 import shlex
 import sys
 import tempfile
-from typing import Iterable
 
 import click
 import mypy.main as mypy_main
 
-PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
-
-
-def shlex_join(split_command: Iterable[str]):
-    """Return a shell-escaped string from *split_command*.
-
-    This function is backported from Python 3.8 - shlex.join
-    """
-    return " ".join(shlex.quote(arg) for arg in split_command)
+PATHS = ["lib/streamlit/", "lib/tests/streamlit/typing/", "scripts/", "e2e/scripts/"]
 
 
 class Module:
@@ -109,24 +98,15 @@ def process_report(path: str) -> None:
     help=("Verbose mode. Causes this command to print mypy command being executed."),
 )
 def main(report: bool = False, verbose: bool = False) -> None:
-    paths: list[str] = []
-    for path in PATHS:
-        if "*" in path:
-            for filename in glob.glob(path):
-                if not (filename.endswith(".sh") or filename.endswith(".txt")):
-                    paths.append(filename)
-        else:
-            paths.append(path)
-
     args = ["--config-file=lib/mypy.ini", "--namespace-packages"]
     if report:
         tempdir = tempfile.TemporaryDirectory()
         args.append("--lineprecision-report=%s" % tempdir.name)
     args.append("--")
-    args.extend(paths)
+    args.extend(PATHS)
 
     if verbose:
-        shell_command = shlex_join(itertools.chain(["mypy"], args))
+        shell_command = shlex.join(itertools.chain(["mypy"], args))
         print("Executing command:", shell_command)
     mypy_main.main(stdout=sys.stdout, stderr=sys.stderr, args=args)
     if report:

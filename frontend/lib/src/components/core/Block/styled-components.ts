@@ -18,9 +18,9 @@ import React from "react"
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { StyledCheckbox } from "@streamlit/lib/src/components/widgets/Checkbox/styled-components"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 function translateGapWidth(gap: string, theme: EmotionTheme): string {
   let gapWidth = theme.spacing.lg
@@ -73,11 +73,11 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
-    ":is(.empty-html)": {
+    ":is(.stHtml-empty)": {
       display: "none",
     },
 
-    ":has(> .cacheSpinner)": {
+    ":has(> .stCacheSpinner)": {
       height: 0,
       overflow: "visible",
       visibility: "visible",
@@ -85,7 +85,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: 1000,
     },
 
-    ":has(> .stPageLink)": {
+    [`:has(> .stPageLink))`]: {
       marginTop: "-0.375rem",
       marginBottom: "-0.375rem",
     },
@@ -197,7 +197,7 @@ export const StyledVerticalBlockBorderWrapper =
   styled.div<StyledVerticalBlockBorderWrapperProps>(
     ({ theme, border, height }) => ({
       ...(border && {
-        border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - 1px)`, // 1px to account for border.
       }),
