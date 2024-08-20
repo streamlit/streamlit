@@ -121,7 +121,7 @@ describe("Sidebar Component", () => {
 
     // Click the expand sidebar > button
     const expandButton = within(
-      screen.getByTestId("stSidebarCollapseControl")
+      screen.getByTestId("stSidebarCollapsedControl")
     ).getByRole("button")
     fireEvent.click(expandButton)
 
@@ -137,7 +137,7 @@ describe("Sidebar Component", () => {
     })
 
     expect(
-      screen.queryByTestId("stSidebarCollapseControl")
+      screen.queryByTestId("stSidebarCollapsedControl")
     ).not.toBeInTheDocument()
   })
 
@@ -150,7 +150,7 @@ describe("Sidebar Component", () => {
     renderSidebar({ appPages })
 
     // Hidden when not hovering near the top of sidebar
-    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
       "display: none"
     )
 
@@ -158,7 +158,7 @@ describe("Sidebar Component", () => {
     fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
 
     // Displays the collapse <
-    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
       "display: inline"
     )
   })
@@ -192,7 +192,7 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(screen.getByTestId("stSidebarCollapseControl")).toHaveStyle(
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
       "top: 1.25rem"
     )
   })
@@ -203,7 +203,7 @@ describe("Sidebar Component", () => {
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(screen.getByTestId("stSidebarCollapseControl")).toHaveStyle(
+    expect(screen.getByTestId("stSidebarCollapsedControl")).toHaveStyle(
       "top: 50px"
     )
   })
@@ -264,7 +264,7 @@ describe("Sidebar Component", () => {
         appLogo: fullAppLogo,
       })
       const openSidebarContainer = screen.getByTestId(
-        "stSidebarCollapseControl"
+        "stSidebarCollapsedControl"
       )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
@@ -281,7 +281,7 @@ describe("Sidebar Component", () => {
         appLogo: imageOnly,
       })
       const openSidebarContainer = screen.getByTestId(
-        "stSidebarCollapseControl"
+        "stSidebarCollapsedControl"
       )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")

@@ -55,7 +55,7 @@ def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
     app.set_viewport_size({"width": 400, "height": 800})
 
     # Expand the sidebar on mobile
-    app.get_by_test_id("stSidebarCollapseControl").locator("button").click()
+    app.get_by_test_id("stSidebarCollapsedControl").locator("button").click()
 
     app.get_by_test_id("stSidebar").get_by_test_id("stTextInput").locator(
         "input"

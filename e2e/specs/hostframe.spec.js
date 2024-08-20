@@ -135,7 +135,7 @@ describe("Host communication", () => {
       // Close sidebar
       cy.get("[data-testid='stSidebar'] button").click();
       // Check chevron positioning
-      cy.get("[data-testid='stSidebarCollapseControl']").should(
+      cy.get("[data-testid='stSidebarCollapsedControl']").should(
         "have.css",
         "top",
         "50px"

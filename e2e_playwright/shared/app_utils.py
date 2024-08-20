@@ -438,3 +438,17 @@ def expect_script_state(
         timeout=10000,
         state="attached",
     )
+
+
+def expand_sidebar(app: Page) -> Locator:
+    """Expands the sidebar.
+
+    Returns
+    -------
+    Locator
+        The sidebar element.
+    """
+    app.get_by_test_id("stSidebarCollapsedControl").click()
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    return sidebar
