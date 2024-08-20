@@ -1063,7 +1063,7 @@ export class App extends PureComponent<Props, State> {
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
-      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+      this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
         clearInterval(value)
       })
       this.setState({ autoReruns: [] })

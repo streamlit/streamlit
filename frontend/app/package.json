@@ -52,7 +52,8 @@
     "sass": "^1.58.0",
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0",
-    "typed-signals": "^2.5.0"
+    "typed-signals": "^2.5.0",
+    "typescript": "^5.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.7",
@@ -106,7 +107,6 @@
     "source-map-explorer": "^2.5.3",
     "start-server-and-test": "^1.15.3",
     "tsconfig-paths-webpack-plugin": "^4.0.1",
-    "typescript": "^4.9.5",
     "util": "^0.12.5",
     "webpack": "5.76.0"
   },

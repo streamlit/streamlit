@@ -16,7 +16,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "es5"
+    "target": "es6"
   },
   "include": ["lib", "app"],
   "exclude": ["*/proto.js", "*/proto.d.ts"]

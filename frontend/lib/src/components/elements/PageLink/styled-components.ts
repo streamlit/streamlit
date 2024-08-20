@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 export const StyledNavLinkContainer = styled.div(() => ({
   display: "flex",
-  flexDirection: "column",
+  flexDirection: "column" as const,
 }))
 
 export interface StyledNavLinkProps {

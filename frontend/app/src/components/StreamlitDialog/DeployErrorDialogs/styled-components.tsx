@@ -17,5 +17,5 @@
 import styled from "@emotion/styled"
 
 export const StyledParagraph = styled.p(() => ({
-  textAlign: "justify",
+  textAlign: "justify" as const,
 }))

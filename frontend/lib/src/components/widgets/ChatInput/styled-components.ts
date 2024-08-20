@@ -96,9 +96,9 @@ export const StyledSendIconButtonContainer = styled.div(() => ({
   display: "flex",
   alignItems: "flex-end",
   height: "100%",
-  position: "absolute",
+  position: "absolute" as const,
   right: "0px",
-  pointerEvents: "none",
+  pointerEvents: "none" as const,
 }))
 
 export const StyledInputInstructionsContainer = styled.div({

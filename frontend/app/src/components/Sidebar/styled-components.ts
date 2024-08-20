@@ -85,7 +85,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
 )
 
 export const StyledSidebarNavContainer = styled.div(() => ({
-  position: "relative",
+  position: "relative" as const,
 }))
 
 export interface StyledSidebarNavItemsProps {
@@ -108,7 +108,7 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
 
 export const StyledSidebarNavLinkContainer = styled.div(() => ({
   display: "flex",
-  flexDirection: "column",
+  flexDirection: "column" as const,
 }))
 
 export interface StyledSidebarNavLinkProps {

@@ -34,9 +34,9 @@ export const StyledTooltipIconWrapper =
 
 export const StyledLabelHelpWrapper = styled.div(() => ({
   display: "flex",
-  visibility: "visible",
+  visibility: "visible" as const,
   verticalAlign: "middle",
-  flexDirection: "row",
+  flexDirection: "row" as const,
   alignItems: "center",
 }))
 

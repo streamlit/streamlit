@@ -18,11 +18,11 @@ import styled from "@emotion/styled"
 
 export const StyledAppViewContainer = styled.div(() => ({
   display: "flex",
-  flexDirection: "row",
+  flexDirection: "row" as const,
   justifyContent: "flex-start",
   alignItems: "stretch",
   alignContent: "flex-start",
-  position: "absolute",
+  position: "absolute" as const,
   top: 0,
   left: 0,
   right: 0,
@@ -220,6 +220,6 @@ export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
 })
 
 export const StyledIFrameResizerAnchor = styled.div(() => ({
-  position: "relative",
+  position: "relative" as const,
   bottom: "0",
 }))

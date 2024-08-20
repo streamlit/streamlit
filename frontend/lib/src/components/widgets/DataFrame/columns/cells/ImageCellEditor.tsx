@@ -21,7 +21,7 @@ import styled from "@emotion/styled"
 const StyledImage = styled.img(() => ({
   maxWidth: "100%",
   maxHeight: "600px",
-  objectFit: "scale-down",
+  objectFit: "scale-down" as const,
 }))
 
 export const ImageCellEditor: ImageEditorType = ({ urls }) => {
