@@ -24,7 +24,6 @@ import { render } from "@streamlit/lib/src/test_util"
 import Pagination, { Props } from "./Pagination"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  className: "",
   currentPage: 1,
   totalPages: 2,
   pageSize: 3,
@@ -38,7 +37,8 @@ describe("Pagination widget", () => {
   render(<Pagination {...props} />)
 
   it("renders without crashing", () => {
-    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
+    const paginationElement = screen.getByTestId("stFileUploaderPagination")
+    expect(paginationElement).toBeInTheDocument()
   })
 
   it("should show current and total pages", () => {
