@@ -15,38 +15,37 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.shared.app_utils import click_button, expect_exception
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    expect_exception,
+    expect_no_exception,
+)
 
 
-def test_sets_page_favicon(app: Page):
-    favicon = app.locator("link[rel='shortcut icon']")
-    expect(favicon).to_have_attribute(
-        "href",
-        "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f988.png",
-    )
-
-
-def test_sets_page_title(app: Page):
-    expect(app).to_have_title("Heya, world?")
-
-
-def test_collapses_sidebar(app: Page):
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
-
-
-def test_sets_page_in_wide_mode(app: Page):
+def test_wide_layout(app: Page):
     app_view_container = app.get_by_test_id("stAppViewContainer")
+    # The default layout is "centered":
+    expect(app_view_container).to_have_attribute("data-layout", "narrow")
+
+    click_button(app, "Wide Layout")
+    expect(app).to_have_title("Wide Layout")
     expect(app_view_container).to_have_attribute("data-layout", "wide")
 
 
-def test_no_error_with_callback(app: Page):
+def test_centered_layout(app: Page):
+    click_button(app, "Centered Layout")
+    expect(app).to_have_title("Centered Layout")
+    app_view_container = app.get_by_test_id("stAppViewContainer")
+    expect(app_view_container).to_have_attribute("data-layout", "narrow")
+
+
+def test_allows_preceding_command_in_callback(app: Page):
     """Should not display an error when st.set_page_config is used after an st.*
     command in a callback.
     """
-    click_button(app, "Balloons")
-    expect(app.get_by_test_id("stException")).not_to_be_visible()
-    expect(app).to_have_title("Heya, world?")
+    click_button(app, "Preceding Command in Callback")
+    expect(app).to_have_title("Allows preceding command in callback")
+    expect_no_exception(app)
 
 
 def test_double_set_page_config(app: Page):
@@ -54,18 +53,47 @@ def test_double_set_page_config(app: Page):
     multiple times in a callback."""
     click_button(app, "Double Set Page Config")
     expect_exception(app, "set_page_config() can only be called once per app page")
-    expect(app).to_have_title("Change 1")
+    expect(app).to_have_title("Page Config 1")
 
 
-def test_single_set_page_config(app: Page):
-    """Should display an error when st.set_page_config is called after
-    being called in a callback"""
-    click_button(app, "Single Set Page Config")
-    expect_exception(app, "set_page_config() can only be called once per app page")
-    expect(app).to_have_title("Change 3")
+def test_with_collapsed_sidebar(app: Page):
+    click_button(app, "Collapsed Sidebar")
+    expect(app).to_have_title("Collapsed Sidebar")
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect_no_exception(app)
 
 
-def test_set_page_config_sets_page_icon(app: Page):
+def test_with_expanded_sidebar(app: Page):
+    click_button(app, "Expanded Sidebar")
+    expect(app).to_have_title("Expanded Sidebar")
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect_no_exception(app)
+
+
+def test_page_icon_with_emoji_shortcode(app: Page):
+    click_button(app, "Page Config With Emoji Shortcode")
+    expect(app).to_have_title("With Emoji Shortcode")
+    favicon = app.locator("link[rel='shortcut icon']")
+    expect(favicon).to_have_attribute(
+        "href",
+        "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f988.png",
+    )
+    expect_no_exception(app)
+
+
+def test_page_icon_with_emoji_symbol(app: Page):
+    click_button(app, "Page Config With Emoji Symbol")
+    expect(app).to_have_title("With Emoji Symbol")
+    favicon = app.locator("link[rel='shortcut icon']")
+    expect(favicon).to_have_attribute(
+        "href",
+        "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f419.png",
+    )
+
+
+def test_page_icon_with_local_icon(app: Page):
     click_button(app, "Page Config With Local Icon")
     expect(app).to_have_title("With Local Icon")
     favicon_element = app.locator("link[rel='shortcut icon']")
@@ -74,9 +102,10 @@ def test_set_page_config_sets_page_icon(app: Page):
         "href",
         re.compile(r"d1e92a291d26c1e0cb9b316a93c929b3be15899677ef3bc6e3bf3573\.png"),
     )
+    expect_no_exception(app)
 
 
-def test_set_page_config_sets_page_icon_with_material_icon(app: Page):
+def test_page_icon_with_material_icon(app: Page):
     click_button(app, "Page Config With Material Icon")
     expect(app).to_have_title("With Material Icon")
     favicon = app.locator("link[rel='shortcut icon']")
@@ -84,3 +113,4 @@ def test_set_page_config_sets_page_icon_with_material_icon(app: Page):
         "href",
         "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/thumb_up/default/24px.svg",
     )
+    expect_no_exception(app)

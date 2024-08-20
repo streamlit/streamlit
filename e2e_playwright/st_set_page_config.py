@@ -22,52 +22,74 @@ TEST_ASSETS_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "test_assets"
 )
 
-st.set_page_config(
-    page_title="Heya, world?",
-    page_icon=":shark:",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
 st.sidebar.button("Sidebar!")
 st.markdown("Main!")
 
 
-def show_balloons():
+def preceding_command_in_callback():
     st.balloons()
+    st.set_page_config(page_title="Allows preceding command in callback")
 
 
-st.button("Balloons", on_click=show_balloons)
+st.button("Preceding Command in Callback", on_click=preceding_command_in_callback)
+
+
+def collapsed_sidebar():
+    st.set_page_config(
+        page_title="Collapsed Sidebar", initial_sidebar_state="collapsed"
+    )
+
+
+st.button("Collapsed Sidebar", on_click=collapsed_sidebar)
+
+
+def expanded_sidebar():
+    st.set_page_config(page_title="Expanded Sidebar", initial_sidebar_state="expanded")
+
+
+st.button("Expanded Sidebar", on_click=expanded_sidebar)
+
+
+def wide_layout():
+    st.set_page_config(page_title="Wide Layout", layout="wide")
+
+
+st.button("Wide Layout", on_click=wide_layout)
+
+
+def centered_layout():
+    st.set_page_config(page_title="Centered Layout", layout="centered")
+
+
+st.button("Centered Layout", on_click=centered_layout)
 
 
 def double_set_page_config():
-    st.set_page_config(
-        page_title="Change 1",
-        page_icon=":shark:",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
-
-    st.set_page_config(
-        page_title="Change 2",
-        page_icon=":shark:",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
+    st.set_page_config(page_title="Page Config 1")
+    st.set_page_config(page_title="Page Config 2")
 
 
 st.button("Double Set Page Config", on_click=double_set_page_config)
 
 
-def single_set_page_config():
+def page_config_with_emoji_shortcode():
     st.set_page_config(
-        page_title="Change 3",
+        page_title="With Emoji Shortcode",
         page_icon=":shark:",
-        layout="wide",
-        initial_sidebar_state="collapsed",
     )
 
 
-st.button("Single Set Page Config", on_click=single_set_page_config)
+st.button("Page Config With Emoji Shortcode", on_click=page_config_with_emoji_shortcode)
+
+
+def page_config_with_emoji_symbol():
+    st.set_page_config(
+        page_title="With Emoji Symbol",
+        page_icon="🐙",
+    )
+
+
+st.button("Page Config With Emoji Symbol", on_click=page_config_with_emoji_symbol)
 
 
 def page_config_with_local_icon():
@@ -92,3 +114,4 @@ def page_config_with_material_icon():
 st.button("Page Config With Material Icon", on_click=page_config_with_material_icon)
 
 # The menu_items parameter is covered by the `main_menu.py` script
+# initial_sidebar_state = auto is covered by the `st_sidebar.py` script

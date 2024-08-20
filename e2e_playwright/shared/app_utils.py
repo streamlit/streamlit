@@ -273,6 +273,11 @@ def expect_exception(
     expect(exception_el).to_be_visible()
 
 
+def expect_no_exception(locator: Locator | Page):
+    exception_el = locator.get_by_test_id("stException")
+    expect(exception_el).not_to_be_attached()
+
+
 def expect_warning(
     locator: Locator | Page,
     expected_message: str | Pattern[str],
