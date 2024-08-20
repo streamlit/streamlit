@@ -250,7 +250,7 @@ def expect_markdown(
 
 def expect_exception(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | Pattern[str] | None = None,
 ) -> None:
     """Expect an exception to be displayed in the app.
 
@@ -260,13 +260,22 @@ def expect_exception(
     locator : Locator
         The locator to search for the exception element.
 
-    expected_message : str or Pattern[str]
+    expected_message : str or Pattern[str] or None
         The expected message to be displayed in the exception.
     """
-    exception_el = locator.get_by_test_id("stException").filter(
-        has_text=expected_message
-    )
+
+    if expected_message is None:
+        exception_el = locator.get_by_test_id("stException")
+    else:
+        exception_el = locator.get_by_test_id("stException").filter(
+            has_text=expected_message
+        )
     expect(exception_el).to_be_visible()
+
+
+def expect_no_exception(locator: Locator | Page):
+    exception_el = locator.get_by_test_id("stException")
+    expect(exception_el).not_to_be_attached()
 
 
 def expect_warning(
