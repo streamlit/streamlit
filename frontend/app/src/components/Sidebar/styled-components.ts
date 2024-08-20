@@ -253,12 +253,26 @@ export const StyledLogoLink = styled.a(({}) => ({
   },
 }))
 
-export const StyledLogo = styled.img(({ theme }) => ({
-  height: "1.5rem",
-  maxWidth: "15rem",
-  margin: "0.25rem 0.5rem 0.25rem 0",
-  zIndex: theme.zIndices.header,
-}))
+export interface StyledLogoProps {
+  sidebarWidth?: string
+}
+
+export const StyledLogo = styled.img<StyledLogoProps>(
+  ({ theme, sidebarWidth }) => ({
+    height: theme.sizes.logoHeight,
+    marginTop: theme.spacing.twoXS,
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.twoXS,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+
+    ...(sidebarWidth && {
+      // Control max width of logo so sidebar collapse button always shows (issue #8707)
+      // L & R padding (3rem) + R margin (.5rem) + collapse button (2.25rem) = 5.75rem
+      maxWidth: `calc(${sidebarWidth}px - 5.75rem)`,
+    }),
+  })
+)
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
   height: "2.0rem",
