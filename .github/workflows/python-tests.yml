@@ -108,7 +108,7 @@ jobs:
         env:
           RUFF_OUTPUT_FORMAT: github
       - name: Run Type Checkers
-        run: scripts/mypy_custom_script.py --report
+        run: make mypy
       - name: Run Python Tests
         run: make pytest
       - name: CLI Smoke Tests
