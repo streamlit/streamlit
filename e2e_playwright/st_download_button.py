@@ -12,9 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from random import random
 
 import streamlit as st
+from streamlit import runtime
+
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
+TEST_ASSETS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "test_assets"
+)
+
+CAT_IMAGE = os.path.join(TEST_ASSETS_DIR, "cat.jpg")
 
 st.download_button(
     "Download button label",
@@ -35,6 +45,12 @@ st.download_button(
     data=b"bytes",
     file_name="archive.rar",
     mime="application/vnd.rar",
+)
+
+st.download_button(
+    "Download image file",
+    data=CAT_IMAGE,
+    file_name="cat.jpg",
 )
 
 st.download_button(
@@ -63,3 +79,35 @@ random_str = str(random())
 clicked = st.download_button(label="Download random text", data=random_str)
 
 st.write(f"value: {clicked}")
+
+# st.session_state can only be used in streamlit
+if runtime.exists():
+
+    def on_click(x, y):
+        if "click_count" not in st.session_state:
+            st.session_state.click_count = 0
+
+        st.session_state.click_count += 1
+        st.session_state.x = x
+        st.session_state.y = y
+
+    i1 = st.download_button(
+        "Download + On Click",
+        key="download_button",
+        data="Hello world!",
+        on_click=on_click,
+        args=(1,),
+        kwargs={"y": 2},
+    )
+    st.write("value:", i1)
+    st.write("value from state:", st.session_state["download_button"])
+
+    button_was_clicked = "click_count" in st.session_state
+    st.write("Download Button was clicked:", button_was_clicked)
+
+    if button_was_clicked:
+        st.write("times clicked:", st.session_state.click_count)
+        st.write("arg value:", st.session_state.x)
+        st.write("kwarg value:", st.session_state.y)
+
+i2 = st.checkbox("reset button return value")
