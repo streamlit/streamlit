@@ -432,8 +432,6 @@ describe("CustomCodeTag Element", () => {
     render(<CustomCodeTag {...props} />)
 
     const codeTag = screen.getByText(`st.write("Hello")`).closest("code")
-    const tagName = codeTag.nodeName.toLowerCase()
-
     expect(codeTag).toBeInTheDocument()
   })
 
