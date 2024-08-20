@@ -51,8 +51,8 @@ function Button(props: Props): ReactElement {
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
 
-  // Material icons need to be larger to render similar size of emojis
-  const iconSizing = element.icon.startsWith(":material") ? "lg" : "md"
+  // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
+  const isMaterialIcon = element.icon.startsWith(":material")
 
   return (
     <div className="stButton" data-testid="stButton" style={style}>
@@ -68,8 +68,8 @@ function Button(props: Props): ReactElement {
         >
           {element.icon && (
             <DynamicIcon
-              size={iconSizing}
-              margin={"0 sm 0 0"}
+              size={isMaterialIcon ? "lg" : "twoMd"}
+              margin={isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"}
               color={colors.bodyText}
               iconValue={element.icon}
             />
