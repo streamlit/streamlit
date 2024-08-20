@@ -119,7 +119,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                     user_info["access_token"] = cookie_value.get("access_token")
                     user_info["provider"] = cookie_value.get("provider")
 
-                # user_info["userinfo"] = cookie_value
+                user_info["userinfo"] = cookie_value
 
         existing_session_id = None
         try:
