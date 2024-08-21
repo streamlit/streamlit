@@ -31,7 +31,9 @@ class CodeMixin:
         self,
         body: SupportsStr,
         language: str | None = "python",
+        *,
         line_numbers: bool = False,
+        wrap_lines: bool = False,
     ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
 
@@ -52,6 +54,10 @@ class CodeMixin:
             An optional boolean indicating whether to show line numbers to the
             left of the code block. Defaults to ``False``.
 
+        wrap_lines : bool
+            An optional boolean indicating whether to wrap lines. Defaults
+            to ``False``.
+
         Example
         -------
         >>> import streamlit as st
@@ -65,6 +71,7 @@ class CodeMixin:
         code_proto.code_text = clean_text(body)
         code_proto.language = language or "plaintext"
         code_proto.show_line_numbers = line_numbers
+        code_proto.wrap_lines = wrap_lines
         return self.dg._enqueue("code", code_proto)
 
     @property
