@@ -360,9 +360,9 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledCameraInput
-        width={width}
-        className="row-widget"
+        className="stCameraInput"
         data-testid="stCameraInput"
+        width={width}
       >
         <WidgetLabel
           label={element.label}
