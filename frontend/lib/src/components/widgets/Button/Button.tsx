@@ -68,7 +68,7 @@ function Button(props: Props): ReactElement {
         >
           {element.icon && (
             <DynamicIcon
-              size={isMaterialIcon ? "lg" : "twoMd"}
+              size={isMaterialIcon ? "lg" : "base"}
               margin={isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"}
               color={colors.bodyText}
               iconValue={element.icon}
