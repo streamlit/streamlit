@@ -32,7 +32,7 @@ export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
   language?: string
   showLineNumbers?: boolean
-  wrapLines?: boolean | undefined
+  wrapLines?: boolean
 }
 
 export default function StreamlitSyntaxHighlighter({
