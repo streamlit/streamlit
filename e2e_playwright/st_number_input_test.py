@@ -98,8 +98,8 @@ def test_number_input_updates_value_correctly_on_enter(app: Page):
 
 def test_number_input_has_correct_value_on_increment_click(app: Page):
     """Test that st.number_input has the correct value on increment click."""
-    number_input_up_buttons = app.get_by_test_id("stNumberInput").locator(
-        "button.step-up"
+    number_input_up_buttons = app.get_by_test_id("stNumberInput").get_by_test_id(
+        "stNumberInputStepUp"
     )
     expect(number_input_up_buttons).to_have_count(11)
     for i, button in enumerate(number_input_up_buttons.all()):
