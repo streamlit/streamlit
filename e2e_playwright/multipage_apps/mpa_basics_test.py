@@ -284,10 +284,12 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")
 
 
 def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
@@ -309,10 +311,12 @@ def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="small-collapsed-logo"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="small-collapsed-logo")
 
 
 def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
@@ -334,7 +338,9 @@ def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="large-collapsed-logo"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="large-collapsed-logo")

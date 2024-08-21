@@ -30,6 +30,7 @@ from streamlit.elements.lib.policies import (
     check_widget_policies,
 )
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
 
 _KEY: Final = "the key"
 
@@ -173,28 +174,21 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
 
 
 class CheckCacheReplayTest(ElementPoliciesTest):
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch(
-        "streamlit.elements.lib.policies.get_script_run_ctx",
-        MagicMock(return_value=MagicMock(disallow_cached_widget_usage=False)),
-    )
     @patch("streamlit.exception")
     def test_cache_replay_rules_succeeds(self, patched_st_exception):
         check_cache_replay_rules()
         patched_st_exception.assert_not_called()
 
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    @patch(
-        "streamlit.elements.lib.policies.get_script_run_ctx",
-        MagicMock(return_value=MagicMock(disallow_cached_widget_usage=True)),
-    )
     @patch("streamlit.exception")
     def test_cache_replay_rules_fails(self, patched_st_exception):
+        in_cached_function.set(True)
         check_cache_replay_rules()
         patched_st_exception.assert_called()
+        # Reset the global flag to avoid affecting other tests
+        in_cached_function.set(False)
 
 
-class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
+class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):  #
     def setUp(self):
         ctx = MagicMock()
         ctx.current_fragment_id = "my_fragment_id"

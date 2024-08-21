@@ -347,7 +347,9 @@ describe("AppView element", () => {
     it("uses iconImage if provided", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       render(<AppView {...getProps({ appLogo: fullAppLogo })} />)
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -359,7 +361,9 @@ describe("AppView element", () => {
     it("defaults to image if no iconImage", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       render(<AppView {...getProps({ appLogo: imageOnly })} />)
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()

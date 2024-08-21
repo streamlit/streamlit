@@ -42,7 +42,7 @@ describe("VideoRecordedDialog", () => {
         <VideoRecordedDialog {...props} />
       </BaseProvider>
     )
-    expect(screen.getByTestId("stModal")).toBeInTheDocument()
+    expect(screen.getByTestId("stDialog")).toBeInTheDocument()
     expect(screen.getByTestId("stVideoRecordedDialog")).toBeInTheDocument()
   })
 

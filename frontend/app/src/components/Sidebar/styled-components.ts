@@ -255,11 +255,12 @@ export const StyledLogoLink = styled.a(({}) => ({
 
 export interface StyledLogoProps {
   size: string
+  sidebarWidth?: string
 }
 
-function translateLogoHeight(size: string): string {
+function translateLogoHeight(theme: any, size: string): string {
   // Default logo size
-  let logoSize = "1.5rem"
+  let logoSize = theme.sizes.logoHeight
   if (size === "small") {
     logoSize = "1.25rem"
   } else if (size === "large") {
@@ -268,18 +269,23 @@ function translateLogoHeight(size: string): string {
   return logoSize
 }
 
-export const StyledLogo = styled.img<StyledLogoProps>(({ size, theme }) => ({
-  height: translateLogoHeight(size),
-  maxWidth: "15rem",
-  // Extra margin to align small logo with sidebar collapse arrow
-  marginTop:
-    size == "small" ? `${theme.spacing.xs}` : `${theme.spacing.twoXS}`,
-  marginBottom:
-    size == "small" ? `${theme.spacing.xs}` : `${theme.spacing.twoXS}`,
-  marginLeft: 0,
-  marginRight: theme.spacing.sm,
-  zIndex: theme.zIndices.header,
-}))
+export const StyledLogo = styled.img<StyledLogoProps>(
+  ({ theme, size, sidebarWidth }) => ({
+    height: translateLogoHeight(theme, size),
+    // Extra margin to align small logo with sidebar collapse arrow
+    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginRight: theme.spacing.sm,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+
+    ...(sidebarWidth && {
+      // Control max width of logo so sidebar collapse button always shows (issue #8707)
+      // L & R padding (3rem) + R margin (.5rem) + collapse button (2.25rem) = 5.75rem
+      maxWidth: `calc(${sidebarWidth}px - 5.75rem)`,
+    }),
+  })
+)
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
   height: "2.0rem",

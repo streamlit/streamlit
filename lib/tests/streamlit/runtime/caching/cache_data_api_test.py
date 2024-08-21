@@ -35,12 +35,9 @@ from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
 from streamlit.runtime.caching.cache_errors import CacheError
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     ElementMsgData,
-    MultiCacheResults,
-    _make_widget_key,
 )
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.caching.storage import (
@@ -73,23 +70,20 @@ from tests.streamlit.runtime.caching.common_cache_test import (
 from tests.testutil import create_mock_script_run_ctx
 
 
-def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.DATA)
+def as_cached_result(value: Any) -> CachedResult:
+    return _as_cached_result(value)
 
 
-def as_replay_test_data() -> MultiCacheResults:
+def as_replay_test_data() -> CachedResult:
     """Creates cached results for a function that returned 1
     and executed `st.text(1)`.
     """
-    widget_key = _make_widget_key([], CacheType.DATA)
-    d = {}
-    d[widget_key] = CachedResult(
+    return CachedResult(
         1,
         [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
         st._main.id,
         st.sidebar.id,
     )
-    return MultiCacheResults(set(), d)
 
 
 class CacheDataTest(unittest.TestCase):
