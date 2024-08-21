@@ -149,7 +149,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
     return (
       <StyledCheckbox
-        className="row-widget stCheckbox"
+        className="stCheckbox"
         data-testid="stCheckbox"
         width={width}
       >
@@ -185,9 +185,9 @@ class Checkbox extends React.PureComponent<Props, State> {
                   backgroundColor = lightTheme ? colors.gray70 : colors.gray90
                 }
                 return {
-                  width: "12px",
-                  height: "12px",
-                  transform: $checked ? "translateX(16px)" : "",
+                  width: `calc(${sizes.checkbox} - ${theme.spacing.twoXS})`,
+                  height: `calc(${sizes.checkbox} - ${theme.spacing.twoXS})`,
+                  transform: $checked ? `translateX(${sizes.checkbox})` : "",
                   backgroundColor,
                   boxShadow: "",
                 }
@@ -215,13 +215,13 @@ class Checkbox extends React.PureComponent<Props, State> {
                   marginRight: 0,
                   marginLeft: 0,
                   marginBottom: 0,
-                  marginTop: "0.25rem",
-                  paddingLeft: "2px",
-                  paddingRight: "2px",
-                  width: "32px",
-                  minWidth: "32px",
-                  height: "16px",
-                  minHeight: "16px",
+                  marginTop: theme.spacing.twoXS,
+                  paddingLeft: theme.spacing.threeXS,
+                  paddingRight: theme.spacing.threeXS,
+                  width: `calc(2 * ${sizes.checkbox})`,
+                  minWidth: `calc(2 * ${sizes.checkbox})`,
+                  height: sizes.checkbox,
+                  minHeight: sizes.checkbox,
                   borderBottomLeftRadius: theme.radii.lg,
                   borderTopLeftRadius: theme.radii.lg,
                   borderBottomRightRadius: theme.radii.lg,
@@ -243,9 +243,9 @@ class Checkbox extends React.PureComponent<Props, State> {
 
                 return {
                   outline: 0,
-                  width: "1rem",
-                  height: "1rem",
-                  marginTop: "0.25rem",
+                  width: sizes.checkbox,
+                  height: sizes.checkbox,
+                  marginTop: theme.spacing.twoXS,
                   marginLeft: 0,
                   marginBottom: 0,
                   boxShadow:

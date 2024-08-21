@@ -20,6 +20,7 @@ export const sizes = {
   sidebarTopSpace: "6rem",
   toastWidth: "21rem",
   contentMaxWidth: "46rem",
+  checkbox: "1rem",
   borderWidth: "1px",
   minElementHeight: "2.5rem",
   logoHeight: "1.5rem",
