@@ -74,8 +74,8 @@ const getProps = (
 describe("ArrowVegaLiteChart", () => {
   it("renders without crashing", () => {
     render(<ArrowVegaLiteChart {...getProps()} />)
-    const vegaLiteChart = screen.getByTestId("stArrowVegaLiteChart")
+    const vegaLiteChart = screen.getByTestId("stVegaLiteChart")
     expect(vegaLiteChart).toBeInTheDocument()
-    expect(vegaLiteChart).toHaveClass("stArrowVegaLiteChart")
+    expect(vegaLiteChart).toHaveClass("stVegaLiteChart")
   })
 })

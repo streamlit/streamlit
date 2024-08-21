@@ -22,9 +22,9 @@ def test_altair_chart_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     expect(
-        themed_app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
+        themed_app.get_by_test_id("stVegaLiteChart").locator("canvas")
     ).to_have_count(10)
-    charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(10)
     snapshot_names = [
         "st_altair_chart-scatter_chart_default_theme",
@@ -47,4 +47,4 @@ def test_altair_chart_displays_correctly(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    check_top_level_class(app, "stArrowVegaLiteChart")
+    check_top_level_class(app, "stVegaLiteChart")

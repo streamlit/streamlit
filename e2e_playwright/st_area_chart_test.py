@@ -22,7 +22,7 @@ TOTAL_AREA_CHARTS = 15
 
 def test_area_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.area_chart renders correctly via snapshot testing."""
-    area_chart_elements = app.get_by_test_id("stArrowVegaLiteChart")
+    area_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(area_chart_elements).to_have_count(TOTAL_AREA_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
@@ -36,7 +36,7 @@ def test_themed_area_chart_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.area_chart renders with different theming."""
-    area_chart_elements = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    area_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(area_chart_elements).to_have_count(TOTAL_AREA_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
@@ -48,4 +48,4 @@ def test_themed_area_chart_rendering(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    check_top_level_class(app, "stArrowVegaLiteChart")
+    check_top_level_class(app, "stVegaLiteChart")
