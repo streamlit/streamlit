@@ -34,11 +34,7 @@ from streamlit.elements.lib.options_selector_utils import (
     get_default_indices,
 )
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import (
-    Key,
-    # maybe_coerce_enum_sequence,
-    to_key,
-)
+from streamlit.elements.lib.utils import Key, to_key  # maybe_coerce_enum_sequence,
 from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -56,11 +52,7 @@ from streamlit.runtime.state.common import (
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.runtime.state import (
-        WidgetArgs,
-        WidgetCallback,
-        WidgetKwargs,
-    )
+    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
     from streamlit.type_util import T
 
 
@@ -153,7 +145,7 @@ def _build_proto(
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
     style: Literal["normal", "pills"] = "normal",
-    width: Literal["small", "medium", "large"] = "medium",
+    width: Literal["small", "medium", "large", "variable"] = "variable",
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -307,7 +299,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         format_func: Callable[[V], dict[str, str]] | None = None,
         style: Literal["normal", "pills"] = "normal",
-        width: Literal["small", "medium", "large"] = "medium",
+        width: Literal["small", "medium", "large", "variable"] = "variable",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -382,7 +374,7 @@ class ButtonGroupMixin:
         ),
         disabled: bool = False,
         style: Literal["normal", "pills"] = "normal",
-        width: Literal["small", "medium", "large"] = "medium",
+        width: Literal["small", "medium", "large", "variable"] = "variable",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],

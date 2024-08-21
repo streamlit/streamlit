@@ -188,7 +188,9 @@ function createOptionChild(
       } else if (isVisuallySelected || option.selectedContent) {
         buttonKind = BaseButtonKind.ICON_ACTIVE
       }
-
+      if (width === "variable") {
+        width = BaseButtonSize.XSMALL
+      }
       size = BaseButtonSize[width.toUpperCase() as keyof typeof BaseButtonSize]
       console.log("parsed size", width, size)
     } else if (contentElement.type === DynamicIcon) {

@@ -20,6 +20,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { min } from "lodash"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
@@ -227,27 +228,36 @@ export const StyledSecondaryFormSubmitButton = styled(
 export const StyledIconButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ size, theme }) => {
-  // const iconPadding: Record<BaseButtonSize, string> = {
-  //   [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
-  //   [BaseButtonSize.SMALL]: theme.spacing.twoXS,
-  //   [BaseButtonSize.MEDIUM]: theme.spacing.md,
-  //   [BaseButtonSize.LARGE]: theme.spacing.lg,
-  // }
+  const iconPadding: Record<BaseButtonSize, string> = {
+    [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
+    [BaseButtonSize.SMALL]: theme.spacing.twoXS,
+    [BaseButtonSize.MEDIUM]: theme.spacing.md,
+    [BaseButtonSize.LARGE]: theme.spacing.lg,
+  }
   console.log("size", size)
-  let minWidth = "12rem"
+  // let minWidth = "12rem"
+  let minWidth = "max-content"
   if (size === BaseButtonSize.SMALL) {
     minWidth = "8rem"
+  } else if (size === BaseButtonSize.MEDIUM) {
+    minWidth = "12rem"
   } else if (size === BaseButtonSize.LARGE) {
     minWidth = "20rem"
+  }
+  // if min width is max-content, then set padding to 0.25rem 0.75rem. Else padding is iconPadding[size]
+  let padding = "0.25rem 0.75rem"
+  let maxWidth = "fit-content"
+  if (minWidth !== "max-content") {
+    padding = "0px"
+    maxWidth = minWidth
   }
 
   return {
     backgroundColor: theme.colors.transparent,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    // padding: iconPadding[size],
+    padding: padding,
     flex: "1 1 0",
-    padding: 0,
-    maxWidth: minWidth, //theme.sizes.contentMaxWidth,
+    maxWidth: maxWidth,
     minWidth: minWidth,
     // width: "max-content",
 
