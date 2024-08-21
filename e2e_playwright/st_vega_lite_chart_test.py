@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 VEGA_LITE_CHART_COUNT = 14
 
@@ -127,6 +128,4 @@ def test_empty_vega_lite_chart(app: Page, assert_snapshot: ImageCompareFunction)
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stArrowVegaLiteChart").first).to_have_class(
-        "stArrowVegaLiteChart"
-    )
+    check_top_level_class(app, "stArrowVegaLiteChart")

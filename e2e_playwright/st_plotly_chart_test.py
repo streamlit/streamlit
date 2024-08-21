@@ -17,6 +17,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 # Only do chromium as this can create a lot of screenshots
@@ -121,4 +122,4 @@ def test_allows_custom_toolbar_modifications(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stPlotlyChart").first).to_have_class("stPlotlyChart")
+    check_top_level_class(app, "stPlotlyChart")

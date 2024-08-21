@@ -26,6 +26,16 @@ from e2e_playwright.conftest import wait_for_app_run
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"
 
 
+def check_top_level_class(app: Page, test_id: str):
+    """Check that the top level class is correctly set.
+
+    It should be the same as the test id of the element
+    and set on the same component.
+
+    """
+    expect(app.get_by_test_id(test_id).first).to_have_class(re.compile(f"{test_id} "))
+
+
 def get_checkbox(locator: Locator | Page, label: str | Pattern[str]) -> Locator:
     """Get a checkbox widget with the given label.
 

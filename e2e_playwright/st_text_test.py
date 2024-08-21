@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
 
 
 def test_st_text_shows_correct_text(app: Page):
@@ -44,4 +44,4 @@ def test_help_tooltip_works(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stText").first).to_have_class("stText")
+    check_top_level_class(app, "stText")

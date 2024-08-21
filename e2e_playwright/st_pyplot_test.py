@@ -17,7 +17,7 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_warning
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_warning
 
 
 def test_displays_a_pyplot_figures(
@@ -52,4 +52,4 @@ def test_shows_deprecation_warning(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stImage").first).to_have_class("stImage")
+    check_top_level_class(app, "stImage")

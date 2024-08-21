@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -311,4 +311,4 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stDateInput").first).to_have_class("stDateInput")
+    check_top_level_class(app, "stDateInput")

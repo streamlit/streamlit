@@ -17,7 +17,11 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_until
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    click_checkbox,
+)
 
 
 def test_audio_has_correct_properties(app: Page):
@@ -110,4 +114,4 @@ def test_audio_remount_no_autoplay(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stAudio").first).to_have_class("stAudio")
+    check_top_level_class(app, "stAudio")

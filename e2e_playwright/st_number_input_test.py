@@ -16,7 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
 
 
 def test_number_input_widget_display(
@@ -197,4 +197,4 @@ def test_empty_number_input_behaves_correctly(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stNumberInput").first).to_have_class("stNumberInput")
+    check_top_level_class(app, "stNumberInput")

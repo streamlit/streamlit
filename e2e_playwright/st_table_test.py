@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 TOTAL_TABLE_ELEMENTS = 31
 
@@ -41,4 +42,4 @@ def test_themed_table_rendering(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stTable").first).to_have_class("stTable")
+    check_top_level_class(app, "stTable")

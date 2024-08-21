@@ -16,6 +16,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
     expand_sidebar,
     expect_help_tooltip,
     get_markdown,
@@ -224,4 +225,4 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stMarkdown").first).to_have_class("stMarkdown")
+    check_top_level_class(app, "stMarkdown")

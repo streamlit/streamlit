@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    click_checkbox,
+)
 
 
 def test_button_widget_rendering(
@@ -107,4 +111,4 @@ def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction)
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stButton").first).to_have_class("stButton")
+    check_top_level_class(app, "stButton")

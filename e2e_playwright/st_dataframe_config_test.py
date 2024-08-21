@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_dataframe_supports_various_configurations(
@@ -54,4 +55,4 @@ def test_dataframe_supports_various_configurations(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stDataFrame").first).to_have_class("stDataFrame")
+    check_top_level_class(app, "stDataFrame")

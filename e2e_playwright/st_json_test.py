@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
@@ -41,4 +42,4 @@ def test_st_json_displays_correctly_when_themed(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stJson").first).to_have_class("stJson")
+    check_top_level_class(app, "stJson")

@@ -17,7 +17,11 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button, get_markdown
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    get_markdown,
+)
 
 
 def get_button_group(app: Page, index: int) -> Locator:
@@ -125,4 +129,4 @@ def test_feedback_remount_keep_value(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stButtonGroup").first).to_have_class("stButtonGroup")
+    check_top_level_class(app, "stButtonGroup")

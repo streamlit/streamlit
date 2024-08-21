@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, click_toggle
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_checkbox,
+    click_toggle,
+)
 
 
 def change_widget_values(app: Page):
@@ -139,4 +143,4 @@ def test_borderless_form(app: Page, assert_snapshot: ImageCompareFunction):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
-    expect(app.get_by_test_id("stForm").first).to_have_class("stForm")
+    check_top_level_class(app, "stForm")
