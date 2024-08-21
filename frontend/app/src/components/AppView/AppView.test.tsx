@@ -116,7 +116,9 @@ describe("AppView element", () => {
 
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
-    expect(screen.getByTestId("stAppViewContainer")).toBeInTheDocument()
+    const appViewContainer = screen.getByTestId("stAppViewContainer")
+    expect(appViewContainer).toBeInTheDocument()
+    expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {

@@ -28,4 +28,6 @@ export const sizes = {
   minElementHeight: "2.5rem",
   logoHeight: "1.5rem",
   sliderThumb: "0.75rem",
+  wideSidePadding: "5rem",
+  headerDecorationHeight: "0.125rem",
 }

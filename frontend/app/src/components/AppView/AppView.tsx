@@ -255,7 +255,7 @@ function AppView(props: AppViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
-        className="stAppViewMain main"
+        className="stMain main"
       >
         <StyledAppViewBlockContainer
           className="stAppViewBlockContainer block-container"
@@ -276,7 +276,7 @@ function AppView(props: AppViewProps): ReactElement {
         well together. */}
         {!hasBottomElements && (
           <StyledIFrameResizerAnchor
-            data-testid="IframeResizerAnchor"
+            data-testid="stAppIframeResizerAnchor"
             data-iframe-height
           />
         )}
@@ -288,7 +288,10 @@ function AppView(props: AppViewProps): ReactElement {
            height in the scroll area. Thereby, the bottom container will never
            cover something if you scroll to the end.*/}
             <StyledAppViewBlockSpacer />
-            <StyledStickyBottomContainer data-testid="stBottom">
+            <StyledStickyBottomContainer
+              className="stBottom"
+              data-testid="stBottom"
+            >
               <StyledInnerBottomContainer>
                 <StyledBottomBlockContainer
                   data-testid="stBottomBlockContainer"

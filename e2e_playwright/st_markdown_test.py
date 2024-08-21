@@ -47,9 +47,7 @@ def test_displays_individual_markdowns(app: Page):
     """Verifies the correct text content of markdown elements."""
 
     # get markdown elements in main app view, not sidebar
-    markdown_elements = app.get_by_test_id("stAppViewBlockContainer").get_by_test_id(
-        "stMarkdown"
-    )
+    markdown_elements = app.get_by_test_id("stMain").get_by_test_id("stMarkdown")
 
     # Assert the text content of each markdown element
     text = [
@@ -187,9 +185,7 @@ def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
     # Get the first element in the main view:
     markdown_with_help = (
-        app.get_by_test_id("stAppViewBlockContainer")
-        .get_by_test_id("stMarkdown")
-        .nth(0)
+        app.get_by_test_id("stMain").get_by_test_id("stMarkdown").nth(0)
     )
     expect_help_tooltip(app, markdown_with_help, "This is a help tooltip!")
 
