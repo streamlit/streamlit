@@ -41,7 +41,7 @@ def test_clicking_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
 
@@ -57,7 +57,7 @@ def test_typing_new_hex_color_on_color_picker_works_with_callback(
 ):
     expect(app.get_by_text("Hello world")).to_have_count(0)
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
@@ -76,7 +76,7 @@ def test_typing_new_RGB_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     color_picker_popover = app.get_by_test_id("stColorPickerPopover")
 
@@ -99,7 +99,7 @@ def test_typing_new_HSL_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     color_picker_popover = app.get_by_test_id("stColorPickerPopover")
 
@@ -126,7 +126,9 @@ def test_in_form_selection_and_session_state(app: Page):
         app.get_by_text("color_picker-in-form selection in session state: #000000")
     ).to_be_visible()
 
-    app.get_by_test_id("stColorPicker").nth(5).get_by_test_id("stColorBlock").click()
+    app.get_by_test_id("stColorPicker").nth(5).get_by_test_id(
+        "stColorPickerBlock"
+    ).click()
 
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
@@ -149,7 +151,9 @@ def test_color_picker_in_fragment(app: Page):
         app.get_by_text("color_picker-in-fragment selection: #000000")
     ).to_be_visible()
 
-    app.get_by_test_id("stColorPicker").nth(6).get_by_test_id("stColorBlock").click()
+    app.get_by_test_id("stColorPicker").nth(6).get_by_test_id(
+        "stColorPickerBlock"
+    ).click()
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
 
