@@ -16,7 +16,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Sequence,
+    Tuple,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeGuard
 
@@ -80,7 +89,7 @@ class SelectSliderSerde(Generic[T]):
 
         # The widget always returns floats, so convert to ints before indexing
         return_value: tuple[T, T] = cast(
-            tuple[T, T],
+            Tuple[T, T],
             tuple(self.options[int(x)] for x in ui_value),
         )
 
@@ -402,7 +411,7 @@ class SelectSliderMixin:
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(
-                cast(RegisterWidgetResult[tuple[T, T]], widget_state), options, opt
+                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options, opt
             )
         else:
             widget_state = maybe_coerce_enum(widget_state, options, opt)
