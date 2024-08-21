@@ -259,14 +259,13 @@ export interface StyledLogoProps {
 }
 
 function translateLogoHeight(theme: any, size: string): string {
-  // Default logo size
-  let logoSize = theme.sizes.logoHeight
   if (size === "small") {
-    logoSize = "1.25rem"
+    return theme.sizes.smallLogoHeight
   } else if (size === "large") {
-    logoSize = "2.0rem"
+    return theme.sizes.largeLogoHeight
   }
-  return logoSize
+  // Default logo size
+  return theme.sizes.defaultLogoHeight
 }
 
 export const StyledLogo = styled.img<StyledLogoProps>(
@@ -287,8 +286,8 @@ export const StyledLogo = styled.img<StyledLogoProps>(
   })
 )
 
-export const StyledNoLogoSpacer = styled.div(({}) => ({
-  height: "2.0rem",
+export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
+  height: theme.sizes.defaultLogoHeight,
 }))
 
 export interface StyledSidebarOpenContainerProps {

@@ -34,10 +34,9 @@ def _invalid_logo_text(field_name: str):
 def logo(
     image: AtomicImage,
     *,  # keyword-only args:
+    size: Literal["small", "medium", "large"] = "medium",
     link: str | None = None,
     icon_image: AtomicImage | None = None,
-    image_size: Literal["small", "medium", "large"] = "medium",
-    icon_size: Literal["small", "medium", "large"] = "medium",
 ) -> None:
     """
     Renders a logo in the upper-left corner of your app and its sidebar.
@@ -62,6 +61,9 @@ def logo(
         Streamlit scales the image to a height of 24 pixels and a maximum
         width of 240 pixels. Use images with an aspect ratio of 10:1 or less to
         avoid distortion.
+    size: "small", "medium", or "large"
+        The size of the image displayed in the upper-left corner of the app and its
+        sidebar. The default is ``"medium"``.
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
         start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
@@ -77,12 +79,6 @@ def logo(
         Streamlit scales the image to a height of 24 pixels and a maximum
         width of 240 pixels. Use images with an aspect ratio of 10:1 or less to
         avoid distortion.
-    image_size: "small", "medium", or "large"
-        The size of the image in the upper-left corner of the app and its
-        sidebar. The default is ``"medium"``.
-    icon_size: "small", "medium", or "large"
-        The size of the image in the upper-left corner of the app's main body.
-        The default is ``"medium"``.
 
     Examples
     --------
@@ -161,7 +157,7 @@ def logo(
         except Exception as ex:
             raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
 
-    def sizing_check(argument: str, size):
+    def sizing_check(size):
         if isinstance(size, str):
             image_size = size.lower()
             valid_sizes = ["small", "medium", "large"]
@@ -170,11 +166,10 @@ def logo(
                 return image_size
 
         raise StreamlitAPIException(
-            f'The {argument} argument to st.logo must be "small", "medium", or "large". \n'
+            f'The size argument to st.logo must be "small", "medium", or "large". \n'
             f"The argument passed was {size}."
         )
 
-    fwd_msg.logo.image_size = sizing_check("image_size", image_size)
-    fwd_msg.logo.icon_size = sizing_check("icon_size", icon_size)
+    fwd_msg.logo.size = sizing_check(size)
 
     ctx.enqueue(fwd_msg)

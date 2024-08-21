@@ -181,15 +181,12 @@ function AppView(props: AppViewProps): ReactElement {
 
   const renderLogo = (appLogo: Logo): ReactElement => {
     const displayImage = appLogo.iconImage ? appLogo.iconImage : appLogo.image
-    const displaySize = appLogo.iconImage
-      ? appLogo.iconSize
-      : appLogo.imageSize
     const source = endpoints.buildMediaURL(displayImage)
 
     const logo = (
       <StyledLogo
         src={source}
-        size={displaySize}
+        size={appLogo.size}
         alt="Logo"
         data-testid="stLogo"
       />

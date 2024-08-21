@@ -29,8 +29,7 @@ st.logo(
     logo,
     link="https://www.example.com",
     icon_image=small_logo,
-    image_size="small",
-    icon_size="small",
+    size="small",
 )
 
 with st.sidebar:

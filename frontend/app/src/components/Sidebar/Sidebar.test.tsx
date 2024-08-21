@@ -257,7 +257,7 @@ describe("Sidebar Component", () => {
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
       link: "www.example.com",
       iconImage: "https://docs.streamlit.io/logo.svg",
-      imageSize: "small",
+      size: "small",
     })
 
     it("renders spacer if no logo provided", () => {

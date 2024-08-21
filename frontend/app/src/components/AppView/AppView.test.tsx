@@ -329,7 +329,7 @@ describe("AppView element", () => {
     const imageWithSize = LogoProto.create({
       image:
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
-      imageSize: "large",
+      size: "large",
     })
 
     const fullAppLogo = LogoProto.create({
@@ -388,7 +388,7 @@ describe("AppView element", () => {
 
     it("renders logo - large size when specified", () => {
       render(<AppView {...getProps({ appLogo: imageWithSize })} />)
-      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "2.0rem" })
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "2rem" })
     })
   })
 

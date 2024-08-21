@@ -240,14 +240,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const displayImage =
       collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
-    const displaySize =
-      collapsed && appLogo.iconImage ? appLogo.iconSize : appLogo.imageSize
     const source = endpoints.buildMediaURL(displayImage)
 
     const logo = (
       <StyledLogo
         src={source}
-        size={displaySize}
+        size={appLogo.size}
         sidebarWidth={sidebarWidth}
         alt="Logo"
         className="stLogo"
