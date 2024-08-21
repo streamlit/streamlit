@@ -54,7 +54,9 @@ export default function StreamlitSyntaxHighlighter({
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}
           wrapLongLines={wrapLines}
-          // Fix bug in link below by using a renderer that wraps code in a span.
+          // Fix bug with wrapLongLines+showLineNumbers (see link below) by
+          // using a renderer that wraps individual lines of code in their
+          // own spans.
           // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
           renderer={({ rows, stylesheet, useInlineStyles }) =>
             rows.map((row, index) => {
