@@ -15,11 +15,8 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import (
-    ImageCompareFunction,
-    check_top_level_class,
-    wait_for_app_run,
-)
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox

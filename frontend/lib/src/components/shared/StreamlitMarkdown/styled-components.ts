@@ -59,8 +59,8 @@ export const StyledStreamlitMarkdown =
 
         p: {
           wordBreak: "break-word",
-          marginBottom: isLabel ? 0 : "",
-          fontWeight: boldLabel ? 600 : "",
+          marginBottom: isLabel ? theme.spacing.none : "",
+          fontWeight: boldLabel ? theme.fontWeights.bold : "",
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 
@@ -91,8 +91,8 @@ export const StyledStreamlitMarkdown =
         },
 
         "span.has-background-color": {
-          padding: "0.125em 0.25em",
-          margin: "0",
+          padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
+          margin: theme.spacing.none,
           borderRadius: theme.radii.md,
         },
 
@@ -123,21 +123,23 @@ export const StyledStreamlitMarkdown =
               h1: {
                 fontSize: isInSidebar
                   ? convertRemToEm(theme.fontSizes.xl)
-                  : "2.25em",
+                  : convertRemToEm(theme.fontSizes.threeXL),
               },
               h2: {
                 fontSize: isInSidebar
                   ? convertRemToEm(theme.fontSizes.lg)
-                  : "1.75em",
+                  : convertRemToEm(theme.fontSizes.twoXL),
               },
               h3: {
-                fontSize: isInSidebar ? "1.125em" : "1.25em",
+                fontSize: isInSidebar
+                  ? convertRemToEm(theme.fontSizes.mdLg)
+                  : convertRemToEm(theme.fontSizes.lg),
               },
 
               // these are normally shrunk further to 0.8rem, but since we're already
               // inside a small, just make them 1em.
               "h4, h5, h6": {
-                fontSize: "1em",
+                fontSize: convertRemToEm(theme.fontSizes.md),
               },
             }
           : {}),
