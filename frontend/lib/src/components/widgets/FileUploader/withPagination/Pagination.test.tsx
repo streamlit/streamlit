@@ -52,14 +52,18 @@ describe("Pagination widget", () => {
 
   it("should be able to go to previous page", () => {
     render(<Pagination {...props} />)
-    const prevPaginationButton = screen.getAllByTestId("baseButton-minimal")[0]
+    const prevPaginationButton = screen.getAllByTestId(
+      "stBaseButton-minimal"
+    )[0]
     fireEvent.click(prevPaginationButton)
     expect(props.onPrevious).toHaveBeenCalledTimes(1)
   })
 
   it("should be able to go to next page", () => {
     render(<Pagination {...props} />)
-    const nextPaginationButton = screen.getAllByTestId("baseButton-minimal")[1]
+    const nextPaginationButton = screen.getAllByTestId(
+      "stBaseButton-minimal"
+    )[1]
     fireEvent.click(nextPaginationButton)
     expect(props.onNext).toHaveBeenCalledTimes(1)
   })

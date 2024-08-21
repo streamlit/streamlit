@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_form_button,
+    expect_help_tooltip,
+)
 
 
 def test_select_slider_rendering(
@@ -108,8 +112,7 @@ def test_select_slider_works_in_forms(app: Page):
 
     # need to wait for the actual component value to update and then submit
     app.wait_for_timeout(200)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expect(app.get_by_text("select_slider-in-form selection: 3")).to_be_visible()
 

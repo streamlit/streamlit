@@ -16,7 +16,11 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_form_button,
+    expect_help_tooltip,
+)
 
 
 def test_color_picker_widget_display(
@@ -137,8 +141,7 @@ def test_in_form_selection_and_session_state(app: Page):
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
 
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expect(app.get_by_text("color_picker-in-form selection: #ffffff")).to_be_visible()
     expect(

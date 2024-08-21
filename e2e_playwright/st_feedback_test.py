@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_form_button,
     get_markdown,
 )
 
@@ -30,7 +31,7 @@ def get_button_group(app: Page, index: int) -> Locator:
 
 def get_feedback_icon_buttons(locator: Locator, type: str) -> Locator:
     return locator.get_by_test_id(
-        re.compile("baseButton-borderlessIcon(Active)?")
+        re.compile("stBaseButton-borderlessIcon(Active)?")
     ).filter(has_text=type)
 
 
@@ -91,7 +92,7 @@ def test_feedback_works_in_forms(app: Page):
     thumbs = get_button_group(app, 4)
     get_feedback_icon_button(thumbs, "thumb_up").click()
     expect(app.get_by_text("feedback-in-form: None")).to_be_visible()
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
+    click_form_button(app, "Submit")
     wait_for_app_run(app)
 
     text = get_markdown(app, "feedback-in-form: 1")

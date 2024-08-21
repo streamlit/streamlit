@@ -22,7 +22,7 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_prefixed_markdown
+from e2e_playwright.shared.app_utils import click_form_button, expect_prefixed_markdown
 
 
 @dataclass
@@ -286,8 +286,7 @@ def test_in_form_selection_and_session_state(app: Page):
 
     # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
     # app.wait_for_timeout(210)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expected_selection = re.compile(
         "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"

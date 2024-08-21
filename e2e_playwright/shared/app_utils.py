@@ -116,9 +116,7 @@ def get_form_submit_button(
     Locator
         The element.
     """
-    element = locator.get_by_test_id("baseButton-secondaryFormSubmit").filter(
-        has_text=label
-    )
+    element = locator.get_by_test_id("stFormSubmitButton").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
