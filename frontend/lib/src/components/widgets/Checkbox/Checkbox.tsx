@@ -167,8 +167,8 @@ class Checkbox extends React.PureComponent<Props, State> {
           overrides={{
             Root: {
               style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
-                marginBottom: 0,
-                marginTop: 0,
+                marginBottom: spacing.none,
+                marginTop: spacing.none,
                 paddingRight: spacing.twoThirdsSmFont,
                 backgroundColor: $isFocusVisible ? colors.darkenedBgMix25 : "",
                 display: "flex",
