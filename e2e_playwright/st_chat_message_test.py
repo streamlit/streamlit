@@ -35,3 +35,8 @@ def test_renders_chat_messages_correctly_1(
         # Wait a bit more to allow the avatar images to load:
         themed_app.wait_for_timeout(100)
         assert_snapshot(element, name=f"st_chat_message-{i}")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stChatMessage").first).to_have_class("stChatMessage")

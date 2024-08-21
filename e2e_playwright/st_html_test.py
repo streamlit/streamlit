@@ -63,3 +63,8 @@ def test_html_style_tag_spacing(
     assert_snapshot(
         themed_app.get_by_test_id("stVerticalBlock"), name="st_html-style_tag_spacing"
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stHtml").first).to_have_class("stHtml")

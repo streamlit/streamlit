@@ -42,3 +42,10 @@ def test_altair_chart_displays_correctly(
         # We should probably remove this once we have refactored the
         # altair frontend component.
         assert_snapshot(charts.nth(i), name=name, image_threshold=0.6)
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stArrowVegaLiteChart").first).to_have_class(
+        "stArrowVegaLiteChart"
+    )

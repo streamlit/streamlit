@@ -103,3 +103,8 @@ def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction)
     button_element.hover()
     assert_snapshot(button_element, name="st_button-on_hover")
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stButton").first).to_have_class("stButton")

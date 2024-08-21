@@ -26,3 +26,8 @@ def test_bokeh_chart(app: Page):
 
     # show a bokeh slider
     expect(bokeh_chart_elements.nth(3).locator("canvas").nth(0)).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stBokehChart").first).to_have_class("stBokehChart")

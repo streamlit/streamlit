@@ -168,3 +168,8 @@ def test_image_list(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.image can display a list of images."""
     image_list = get_image(app, "Image list")
     assert_snapshot(image_list, name="st_image-image_list")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stImage").first).to_have_class("stImage")

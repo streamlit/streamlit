@@ -124,3 +124,8 @@ def test_dot_string(app: Page, assert_snapshot: ImageCompareFunction):
         app.get_by_test_id("stGraphVizChart").nth(5).locator("svg"),
         name="st_graphviz-chart_dot_string",
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stGraphVizChart").first).to_have_class("stGraphVizChart")

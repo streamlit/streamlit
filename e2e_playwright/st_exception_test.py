@@ -28,3 +28,8 @@ def test_st_exception_displays_correctly(
         assert_snapshot(
             themed_app.get_by_test_id("stException").nth(i), name=f"st_exception-{i}"
         )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stException").first).to_have_class("stException")

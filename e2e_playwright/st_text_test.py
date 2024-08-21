@@ -40,3 +40,8 @@ def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
     text_with_help = app.get_by_test_id("stText").nth(3)
     expect_help_tooltip(app, text_with_help, "This is a help tooltip!")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stText").first).to_have_class("stText")

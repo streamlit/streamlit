@@ -170,3 +170,8 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     wait_for_app_run(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
     assert_snapshot(slider, name="st_slider-float_formatting")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stSlider").first).to_have_class("stSlider")

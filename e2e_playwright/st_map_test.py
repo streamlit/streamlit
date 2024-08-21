@@ -56,3 +56,10 @@ def test_st_map_has_consistent_visuals(
         name="st_map-map_with_color_and_size_layers",
         pixel_threshold=1.0,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stDeckGlJsonChart").first).to_have_class(
+        "stDeckGlJsonChart"
+    )

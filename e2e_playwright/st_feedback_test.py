@@ -121,3 +121,8 @@ def test_feedback_remount_keep_value(app: Page):
         "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect(app.get_by_text("feedback-after-sleep: 1")).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stButtonGroup").first).to_have_class("stButtonGroup")

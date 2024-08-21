@@ -48,3 +48,8 @@ def test_displays_a_pyplot_figures(
 def test_shows_deprecation_warning(app: Page):
     """Test that the deprecation warning is displayed correctly."""
     expect_warning(app, "without providing a figure argument has been deprecated")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stImage").first).to_have_class("stImage")

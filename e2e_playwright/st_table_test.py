@@ -37,3 +37,8 @@ def test_themed_table_rendering(
 
     # Only test a single table element to ensure theming is applied correctly:
     assert_snapshot(table_elements.nth(30), name="st_table-themed")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stTable").first).to_have_class("stTable")

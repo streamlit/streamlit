@@ -219,3 +219,8 @@ def test_multiselect_double_selection(app: Page):
     expect(app.get_by_test_id("stText").nth(1)).to_have_text(
         "value 2: ['female', 'male']"
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stMultiSelect").first).to_have_class("stMultiSelect")

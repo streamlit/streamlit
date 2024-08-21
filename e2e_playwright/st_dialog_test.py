@@ -357,3 +357,8 @@ def test_experimental_dialog_deprecation_warning(app: Page):
     expect(app.get_by_test_id("stAlert")).to_have_text(
         re.compile("Please replace st.experimental_dialog with st.dialog.\n.*")
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stDialog").first).to_have_class("stDialog")

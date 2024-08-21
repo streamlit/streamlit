@@ -220,3 +220,8 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
     #  since sometimes the image is not rendered yet
     app.wait_for_timeout(2000)
     assert_snapshot(markdown_element, name="st_markdown-with_large_image")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stMarkdown").first).to_have_class("stMarkdown")

@@ -282,3 +282,8 @@ def test_not_scrolled_on_empty_anchor_tag(app: Page):
     # Usage of assert is fine here since we just need to verify that
     # this is still scrolled to top, no need to wait for this to happen.
     assert scroll_position == 0
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stHeading").first).to_have_class("stHeading")

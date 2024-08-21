@@ -135,3 +135,8 @@ def test_borderless_form(app: Page, assert_snapshot: ImageCompareFunction):
     form_3 = app.get_by_test_id("stForm").nth(2)
 
     assert_snapshot(form_3, name="st_form-borderless")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stForm").first).to_have_class("stForm")

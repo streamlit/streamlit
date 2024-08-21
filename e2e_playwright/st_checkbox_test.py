@@ -116,3 +116,8 @@ def test_grouped_checkboxes_height(app: Page, assert_snapshot: ImageCompareFunct
     expect(expander_details.get_by_test_id("stCheckbox").nth(0)).to_have_css(
         "height", "24px"
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stCheckbox").first).to_have_class("stCheckbox")

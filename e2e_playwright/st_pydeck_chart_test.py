@@ -61,3 +61,10 @@ def test_pydeck_chart_has_consistent_visuals(
         name="st_pydeck_chart-no_overridden_theme",
         pixel_threshold=1.0,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stDeckGlJsonChart").first).to_have_class(
+        "stDeckGlJsonChart"
+    )

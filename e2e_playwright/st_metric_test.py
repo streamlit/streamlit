@@ -105,3 +105,8 @@ def test_ellipses_and_help_shows_up_properly(
         metric_element,
         name="st_metric-help_and_ellipses",
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stMetric").first).to_have_class("stMetric")

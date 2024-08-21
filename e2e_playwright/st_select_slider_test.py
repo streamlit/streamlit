@@ -125,3 +125,8 @@ def test_select_slider_works_with_fragments(app: Page):
     wait_for_app_run(app)
     expect(app.get_by_text("select_slider-in-fragment selection: 3")).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stSlider").first).to_have_class("stSlider")

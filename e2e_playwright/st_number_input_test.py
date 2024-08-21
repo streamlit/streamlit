@@ -193,3 +193,8 @@ def test_empty_number_input_behaves_correctly(
     expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
         "number input 12 (value from state & min=1) - value: 15", use_inner_text=True
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stNumberInput").first).to_have_class("stNumberInput")

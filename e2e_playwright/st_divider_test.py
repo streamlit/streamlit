@@ -18,5 +18,10 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    expect(themed_app.locator(".element-container .stMarkdown hr")).to_be_visible()
+    expect(themed_app.get_by_test_id("stMarkdown").locator("hr")).to_be_visible()
     assert_snapshot(themed_app.get_by_test_id("stMarkdown"), name="st_divider")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stMarkdown").first).to_have_class("stMarkdown")

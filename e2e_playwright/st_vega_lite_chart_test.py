@@ -123,3 +123,10 @@ def test_empty_vega_lite_chart(app: Page, assert_snapshot: ImageCompareFunction)
         vega_lite_charts.nth(13),
         name="st_vega_lite_chart-empty",
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stArrowVegaLiteChart").first).to_have_class(
+        "stArrowVegaLiteChart"
+    )

@@ -444,3 +444,8 @@ def test_works_inside_form(app: Page):
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stFileUploader").first).to_have_class("stFileUploader")

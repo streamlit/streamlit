@@ -63,3 +63,8 @@ def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
 
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stSidebar").first).to_have_class("stSidebar")

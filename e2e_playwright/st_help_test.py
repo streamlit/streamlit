@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
@@ -24,3 +24,8 @@ def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
 
     for i, element in enumerate(help_elements.all()):
         assert_snapshot(element, name=f"st_help-{i}")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stHelp").first).to_have_class("stHelp")

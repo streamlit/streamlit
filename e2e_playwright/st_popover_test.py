@@ -166,3 +166,8 @@ def test_show_tooltip_on_hover(app: Page):
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stPopover").first).to_have_class("stPopover")

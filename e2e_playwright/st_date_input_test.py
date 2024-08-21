@@ -307,3 +307,8 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
         "Value 5: ()",
         use_inner_text=True,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stDateInput").first).to_have_class("stDateInput")

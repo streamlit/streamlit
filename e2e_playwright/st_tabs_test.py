@@ -37,3 +37,8 @@ def test_displays_correctly_in_sidebar(app: Page):
 
 def test_contains_all_tabs_when_overflowing(app: Page):
     expect(get_expander(app, "Expander").get_by_test_id("stTab")).to_have_count(25)
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stTabs").first).to_have_class("stTabs")

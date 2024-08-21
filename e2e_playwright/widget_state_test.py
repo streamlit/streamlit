@@ -22,7 +22,7 @@ def test_clicking_a_lot_still_keeps_state(app: Page):
     Related to: https://github.com/streamlit/streamlit/issues/4836
     """
     number_input_down_button = app.get_by_test_id("stNumberInput").locator(
-        "button.step-up"
+        "stNumberInputStepUp"
     )
     for _ in range(40):
         number_input_down_button.click()

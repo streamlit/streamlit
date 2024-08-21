@@ -37,3 +37,8 @@ def test_st_json_displays_correctly_when_themed(
     """Test st.json uses renders the data correctly with different themes."""
     json_elements = themed_app.get_by_test_id("stJson")
     assert_snapshot(json_elements.nth(3), name="st_json-complex_dict")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stJson").first).to_have_class("stJson")

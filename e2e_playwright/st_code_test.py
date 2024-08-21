@@ -57,3 +57,8 @@ def test_correct_bottom_spacing_for_code_blocks(app: Page):
     expect(
         app.get_by_test_id("stExpander").nth(1).get_by_test_id("stMarkdownPre").first
     ).to_have_css("margin-bottom", "16px")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stCode").first).to_have_class("stCode")

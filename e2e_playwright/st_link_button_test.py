@@ -29,3 +29,8 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
         assert_snapshot(element, name=f"st_link_button-hover_{i}")
         element.focus()
         assert_snapshot(element, name=f"st_link_button-focus_{i}")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stLinkButton").first).to_have_class("stLinkButton")

@@ -192,3 +192,8 @@ def test_calls_callback_on_submit(app: Page):
         "Chat input 3 (callback) - value: None",
         use_inner_text=True,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stChatInput").first).to_have_class("stChatInput")

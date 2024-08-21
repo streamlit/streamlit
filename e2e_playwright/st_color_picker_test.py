@@ -166,3 +166,8 @@ def test_color_picker_in_fragment(app: Page):
         app.get_by_text("color_picker-in-fragment selection: #ffffff")
     ).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    expect(app.get_by_test_id("stColorPicker").first).to_have_class("stColorPicker")

@@ -18,3 +18,4 @@ from playwright.sync_api import Page, expect
 def test_spinner_execution(app: Page):
     app.get_by_test_id("stButton").locator("button").click()
     expect(app.get_by_test_id("stSpinner")).to_have_text("Loading...")
+    expect(app.get_by_test_id("stSpinner").first).to_have_class("stSpinner")
