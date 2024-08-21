@@ -287,7 +287,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(
 )
 
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
-  height: theme.sizes.defaultLogoHeight,
+  height: theme.sizes.largeLogoHeight,
 }))
 
 export interface StyledSidebarOpenContainerProps {
