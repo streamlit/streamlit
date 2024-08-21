@@ -365,4 +365,5 @@ def test_experimental_dialog_deprecation_warning(app: Page):
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
+    open_dialog_with_images(app)
     check_top_level_class(app, "stDialog")
