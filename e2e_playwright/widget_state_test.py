@@ -21,7 +21,7 @@ def test_clicking_a_lot_still_keeps_state(app: Page):
     """Test the the widget state is correctly handled on very fast clicks.
     Related to: https://github.com/streamlit/streamlit/issues/4836
     """
-    number_input_down_button = app.get_by_test_id("stNumberInput").locator(
+    number_input_down_button = app.get_by_test_id("stNumberInput").get_by_test_id(
         "stNumberInputStepUp"
     )
     for _ in range(40):
