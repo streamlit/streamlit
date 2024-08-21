@@ -187,10 +187,10 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledHeadingActionElements = styled.span(() => ({
-  marginLeft: "0.5rem",
+export const StyledHeadingActionElements = styled.span(({ theme }) => ({
+  marginLeft: theme.spacing.sm,
   display: "inline-flex",
-  gap: "0.5rem",
+  gap: theme.spacing.sm,
 
   verticalAlign: "middle",
 
@@ -206,12 +206,12 @@ export interface StyledDividerProps {
 }
 
 export const StyledDivider = styled.hr<StyledDividerProps>(
-  ({ rainbow, color }) => {
+  ({ theme, rainbow, color }) => {
     return {
       // Height needs to be !important due to globalStyles.tsx hr height override - line #170
       height: "2px !important",
-      marginTop: "0.5rem",
-      marginBottom: "0px",
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.none,
       border: "none",
       borderRadius: "3px",
       ...(rainbow ? { background: color } : { backgroundColor: color }),

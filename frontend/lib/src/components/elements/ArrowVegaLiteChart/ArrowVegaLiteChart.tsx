@@ -595,6 +595,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       // Create the container Vega draws inside.
       <StyledVegaLiteChartContainer
         data-testid="stArrowVegaLiteChart"
+        className="stArrowVegaLiteChart"
         useContainerWidth={this.props.element.useContainerWidth}
         isFullScreen={this.props.isFullScreen}
         ref={c => {
