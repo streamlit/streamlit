@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useCallback } from "react"
 
 import {
   createElement,
@@ -41,6 +41,37 @@ export default function StreamlitSyntaxHighlighter({
   wrapLines,
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
+  const renderer = useCallback(
+    ({ rows, stylesheet, useInlineStyles }: any): any =>
+      rows.map((row: any, index: any): any => {
+        const children = row.children
+
+        if (children) {
+          const lineNumberElement = children.shift()
+
+          if (lineNumberElement) {
+            row.children = [
+              lineNumberElement,
+              {
+                children,
+                properties: { className: [] },
+                tagName: "span",
+                type: "element",
+              },
+            ]
+          }
+        }
+
+        return createElement({
+          node: row,
+          stylesheet,
+          useInlineStyles,
+          key: index,
+        })
+      }),
+    []
+  )
+
   return (
     <StyledCodeBlock className="stCode" data-testid="stCode">
       <StyledPre>
@@ -58,34 +89,7 @@ export default function StreamlitSyntaxHighlighter({
           // using a renderer that wraps individual lines of code in their
           // own spans.
           // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
-          renderer={({ rows, stylesheet, useInlineStyles }) =>
-            rows.map((row, index) => {
-              const children = row.children
-
-              if (children && showLineNumbers && wrapLines) {
-                const lineNumberElement = children.shift()
-
-                if (lineNumberElement) {
-                  row.children = [
-                    lineNumberElement,
-                    {
-                      children,
-                      properties: { className: [] },
-                      tagName: "span",
-                      type: "element",
-                    },
-                  ]
-                }
-              }
-
-              return createElement({
-                node: row,
-                stylesheet,
-                useInlineStyles,
-                key: index,
-              })
-            })
-          }
+          renderer={showLineNumbers && wrapLines ? renderer : undefined}
         >
           {children}
         </SyntaxHighlighter>
