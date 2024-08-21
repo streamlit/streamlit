@@ -563,7 +563,8 @@ export function keysToSnakeCase(
 export function areURLSearchParamsEqual(
   params1: URLSearchParams,
   params2: URLSearchParams
-) {
+): boolean {
+  // Short circuit some obvious mis-match conditions.
   // Needed a newer version of typescript for these:
   // https://github.com/microsoft/TypeScript/blob/2170e6c6cc12f08bfa2975955da2f145e4be6101/src/lib/dom.generated.d.ts#L22555-L22557
   if (params1.size != params2.size) {
@@ -573,21 +574,43 @@ export function areURLSearchParamsEqual(
     return true
   }
 
-  // Loop over keys and values and check that they're all the same. Sad that we
-  // have to do this but URLSearchParams doesn't have a built-in comparison operator.
-  const keys = [...params1.keys(), ...params2.keys()]
+  // Loop over keys and check their entries are all the same
+  const keys = new Set([...params1.keys(), ...params2.keys()])
   for (const key of keys) {
     const p1_values = params1.getAll(key)
     const p2_values = params2.getAll(key)
-    if (p1_values.length != p2_values.length) {
+    // If entries are not the same length, get out
+    if (p1_values.length !== p2_values.length) {
       return false
     }
-    for (const p1_value of params1.getAll(key)) {
-      if (!p2_values.includes(p1_value)) {
+    // Check that all entries for the key are the same and in the same order
+    for (const [index, entry] of p1_values.entries()) {
+      if (p1_values[index] !== p2_values[index]) {
         return false
       }
     }
   }
 
   return true
+}
+
+export function areUserURLSearchParamsEqual(
+  params1: string | URLSearchParams,
+  params2: string | URLSearchParams
+): boolean {
+  // make mutable copies
+  const queryParams1 = new URLSearchParams(params1)
+  const queryParams2 = new URLSearchParams(params2)
+
+  // remove Embed params
+  for (const embed_key in [
+    EMBED_QUERY_PARAM_KEY,
+    EMBED_OPTIONS_QUERY_PARAM_KEY,
+  ]) {
+    queryParams1.delete(embed_key)
+    queryParams2.delete(embed_key)
+  }
+
+  // Compare the remaining
+  return areURLSearchParamsEqual(queryParams1, queryParams2)
 }

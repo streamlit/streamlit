@@ -99,7 +99,7 @@ import {
   WidgetStates,
 } from "@streamlit/lib"
 import {
-  areURLSearchParamsEqual,
+  areUserURLSearchParamsEqual,
   isNullOrUndefined,
   notNullOrUndefined,
   preserveEmbedQueryParams,
@@ -996,38 +996,29 @@ export class App extends PureComponent<Props, State> {
     }
 
     // Extract the query string
-    const prevQueryParams = new URLSearchParams(this.getQueryString())
-    const newQueryParams = preserveEmbedQueryParams(
-      notNullOrUndefined(queryString)
-        ? new URLSearchParams(queryString)
-        : prevQueryParams
-    )
+    const prevQueryString = this.getQueryString()
+    const requestedQueryString = notNullOrUndefined(queryString)
+      ? queryString
+      : prevQueryString
 
     // If either the page name or the query params have changed, push a new URL to the page history.
     console.debug("Detecting new URL ", {
       prevPageName,
       newPageName,
-      prevQPSize: prevQueryParams.size,
-      newQPSize: newQueryParams.size,
-      prevQueryParams: Array.from(prevQueryParams.entries()),
-      newQueryParams: Array.from(newQueryParams.entries()),
     })
     if (
       prevPageName !== newPageName ||
-      !areURLSearchParamsEqual(prevQueryParams, newQueryParams)
+      !areUserURLSearchParamsEqual(prevQueryString, requestedQueryString)
     ) {
       console.debug("New URL detected")
 
-      const queryStringFromParams = newQueryParams.toString()
+      const newQueryParams = preserveEmbedQueryParams(requestedQueryString)
       const queryString =
-        queryStringFromParams != "" ? "?" + newQueryParams.toString() : ""
+        newQueryParams.size > 0 ? "?" + newQueryParams.toString() : ""
       const basePathPrefix = basePath ? `/${basePath}` : ""
       const pageUrl = `${basePathPrefix}/${newPagePath}${queryString}`
 
-      console.debug("pushing to history", pageUrl)
-      console.debug("history length before is ", history.length)
       window.history.pushState({}, "", pageUrl)
-      console.debug("history length after is ", history.length)
 
       // If queryString was specified, send a host message
       if (queryString) {
