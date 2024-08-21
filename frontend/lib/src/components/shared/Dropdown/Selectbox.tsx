@@ -279,7 +279,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: "1px",
+                      marginTop: theme.spacing.px,
                     }),
                   },
                 },

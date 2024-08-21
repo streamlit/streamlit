@@ -211,7 +211,7 @@ class TimeInput extends PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: "1px",
+                      marginTop: theme.spacing.px,
                     }),
                   },
                 },

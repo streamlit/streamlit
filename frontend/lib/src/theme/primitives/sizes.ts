@@ -17,6 +17,8 @@
 export const sizes = {
   full: "100%",
   headerHeight: "3.75rem",
+  // Old header height to avoid addtl cascading visual/snapshot changes
+  fullScreenHeaderHeight: "2.875rem",
   sidebarTopSpace: "6rem",
   toastWidth: "21rem",
   contentMaxWidth: "46rem",
