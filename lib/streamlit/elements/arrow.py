@@ -281,10 +281,14 @@ class ArrowMixin:
 
             Dataframe-like objects include dataframe and series objects from
             popular libraries like Dask, Modin, Numpy, pandas, Polars, PyArrow,
-            Snowpark, Xarray, and more. Additionally, you can use anything that supports the
-            `Python dataframe interchange protocol
-            <https://data-apis.org/dataframe-protocol/latest/>`_. For example,
-            you can use the following:
+            Snowpark, Xarray, and more. You can use database cursors and
+            clients that comply with the
+            `Python Database API Specification v2.0 (PEP 249)
+            <https://peps.python.org/pep-0249/>`_. Additionally, you can use
+            anything that supports the `Python dataframe interchange protocol
+            <https://data-apis.org/dataframe-protocol/latest/>`_.
+
+            For example, you can use the following:
 
             - ``pandas.DataFrame``, ``pandas.Series``, ``pandas.Index``,
               ``pandas.Styler``, and ``pandas.Array``
@@ -304,7 +308,7 @@ class ArrowMixin:
             these styling options, use column configuration instead.
 
             Collection-like objects include all Python-native ``Collection``
-            types, such as ``dataset``, ``dict``, ``list``, and ``set``.
+            types, such as ``dict``, ``list``, and ``set``.
 
             If ``data`` is ``None``, Streamlit renders an empty table.
 
