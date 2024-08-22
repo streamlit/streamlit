@@ -315,15 +315,17 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
 
     def __init__(self, current_selections_count: int, max_selections_count: int):
         curr_selections_noun = (
-            "selections" if current_selections_count > 1 else "selection"
+            "selection" if current_selections_count == 1 else "selections"
         )
+        options_noun = "option" if max_selections_count == 1 else "options"
+
         super().__init__(
             f"Multiselect has {current_selections_count} {curr_selections_noun} "
             f"selected but `max_selections` is set to {max_selections_count}. "
             "This happened because you either gave too many options to `default` "
             "or you manipulated the widget's state through `st.session_state`. "
             "Note that the latter can happen before the line indicated in the traceback. "
-            f"Please select at most {max_selections_count} options."
+            f"Please select at most {max_selections_count} {options_noun}."
         )
 
 
