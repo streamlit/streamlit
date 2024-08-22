@@ -946,7 +946,6 @@ class DataEditorMixin:
         widget_state = register_widget(
             "data_editor",
             proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

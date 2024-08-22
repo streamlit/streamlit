@@ -500,7 +500,6 @@ class TimeWidgetsMixin:
         widget_state = register_widget(
             "time_input",
             time_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -804,7 +803,6 @@ class TimeWidgetsMixin:
         widget_state = register_widget(
             "date_input",
             date_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

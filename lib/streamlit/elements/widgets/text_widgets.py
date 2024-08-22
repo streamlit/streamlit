@@ -335,7 +335,6 @@ class TextWidgetsMixin:
         widget_state = register_widget(
             "text_input",
             text_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -593,7 +592,6 @@ class TextWidgetsMixin:
         widget_state = register_widget(
             "text_area",
             text_area_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

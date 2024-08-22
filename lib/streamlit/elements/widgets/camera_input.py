@@ -230,7 +230,6 @@ class CameraInputMixin:
         camera_input_state = register_widget(
             "camera_input",
             camera_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

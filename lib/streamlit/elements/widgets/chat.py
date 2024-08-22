@@ -368,7 +368,6 @@ class ChatMixin:
         widget_state = register_widget(
             "chat_input",
             chat_input_proto,
-            user_key=key,
             on_change_handler=on_submit,
             args=args,
             kwargs=kwargs,

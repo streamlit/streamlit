@@ -641,7 +641,6 @@ class ButtonMixin:
         button_state = register_widget(
             "download_button",
             download_button_proto,
-            user_key=key,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
@@ -821,7 +820,6 @@ class ButtonMixin:
         button_state = register_widget(
             "button",
             button_proto,
-            user_key=key,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,

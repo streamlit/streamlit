@@ -586,7 +586,6 @@ class ArrowMixin:
             widget_state = register_widget(
                 "dataframe",
                 proto,
-                user_key=key,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

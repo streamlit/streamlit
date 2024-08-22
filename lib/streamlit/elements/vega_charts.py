@@ -1910,7 +1910,6 @@ class VegaChartsMixin:
             widget_state = register_widget(
                 "vega_lite_chart",
                 vega_lite_proto,
-                user_key=key,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

@@ -202,8 +202,6 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             component_state = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
-                user_key=key,
-                widget_func_name=self.name,
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=ctx,

@@ -92,8 +92,6 @@ def register_widget(
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
-    user_key: str | None = None,
-    widget_func_name: str | None = None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
@@ -114,14 +112,6 @@ def register_widget(
         Called to convert a widget's value to its protobuf representation.
     ctx : ScriptRunContext or None
         Used to ensure uniqueness of widget IDs, and to look up widget values.
-    user_key : str or None
-        Optional user-specified string to use as the widget ID.
-        If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
-        The widget's DeltaGenerator function name, if it's different from
-        its element_type. Custom components are a special case: they all have
-        the element_type "component_instance", but are instantiated with
-        dynamically-named functions.
     on_change_handler : WidgetCallback or None
         An optional callback invoked when the widget's value changes.
     args : WidgetArgs or None
@@ -164,7 +154,7 @@ def register_widget(
         callback_kwargs=kwargs,
         fragment_id=ctx.current_fragment_id if ctx else None,
     )
-    return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
+    return register_widget_from_metadata(metadata, ctx)
 
 
 def register_element_id(id: str) -> None:
