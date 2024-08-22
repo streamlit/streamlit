@@ -46,6 +46,7 @@ import {
   convertKeyToClassName,
   isComponentStale,
   shouldComponentBeEnabled,
+  getKeyFromID,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 import {
@@ -325,7 +326,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ...props,
     ...{ width },
   }
-  const userKey = props.node.deltaBlock.key
+  const userKey = getKeyFromID(props.node.deltaBlock.id)
 
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use

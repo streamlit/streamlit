@@ -34,7 +34,7 @@ message Block {
   }
 
   bool allow_empty = 8;
-  optional string key = 12;
+  optional string id = 12;
 
   message Vertical {
     bool border = 1;

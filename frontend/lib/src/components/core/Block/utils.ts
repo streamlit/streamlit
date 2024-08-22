@@ -22,7 +22,7 @@ import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { EmotionTheme, getDividerColors } from "@streamlit/lib/src/theme"
-import { getElementID } from "@streamlit/lib/src/util/utils"
+import { getElementID, isValidElementID } from "@streamlit/lib/src/util/utils"
 import {
   FormsData,
   WidgetStateManager,
@@ -197,6 +197,17 @@ export function convertKeyToClassName(key: string): string {
 export function getElementKey(element: Element): string | undefined {
   const elementId = getElementID(element)
   if (!elementId) {
+    return undefined
+  }
+
+  const userKey = elementId.split("-", 3).pop()
+  return userKey === "None" ? undefined : userKey
+}
+
+export function getKeyFromID(
+  elementId: string | undefined | null
+): string | undefined {
+  if (!elementId || !isValidElementID(elementId)) {
     return undefined
   }
 

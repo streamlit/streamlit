@@ -167,6 +167,26 @@ def register_widget(
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
 
+def register_element_id(id: str) -> None:
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return
+
+    if user_key := user_key_from_element_id(id):
+        if user_key not in ctx.widget_user_keys_this_run:
+            ctx.widget_user_keys_this_run.add(user_key)
+        # TODO: better error message:  _build_duplicate_widget_message
+        raise DuplicateWidgetID(f"Duplicate element key: {user_key}")
+
+    if id not in ctx.widget_ids_this_run:
+        ctx.widget_ids_this_run.add(id)
+    else:
+        # TODO: better error message:  _build_duplicate_widget_message
+        raise DuplicateWidgetID(f"Duplicate element id: {id}")
+
+
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: ScriptRunContext | None,
@@ -189,29 +209,9 @@ def register_widget_from_metadata(
     widget_id = metadata.id
     user_key = user_key_from_element_id(widget_id)
 
-    # Ensure another widget with the same user key hasn't already been registered.
-    if user_key is not None:
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            raise DuplicateWidgetID(
-                _build_duplicate_widget_message(
-                    widget_func_name if widget_func_name is not None else element_type,
-                    user_key,
-                )
-            )
-
-    # Ensure another widget with the same id hasn't already been registered.
-    new_widget = widget_id not in ctx.widget_ids_this_run
-    if new_widget:
-        ctx.widget_ids_this_run.add(widget_id)
-    else:
-        raise DuplicateWidgetID(
-            _build_duplicate_widget_message(
-                widget_func_name if widget_func_name is not None else element_type,
-                user_key,
-            )
-        )
+    # Ensure another widget with the same id or key hasn't already been registered.
+    if widget_id:
+        register_element_id(widget_id)
     return ctx.session_state.register_widget(metadata, user_key)
 
 

@@ -351,11 +351,15 @@ export function setCookie(
  */
 export function getElementID(element: Element): string | undefined {
   const elementId = get(element as any, [requireNonNull(element.type), "id"])
-  if (elementId && elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)) {
+  if (elementId && isValidElementID(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
   }
   return undefined
+}
+
+export function isValidElementID(elementId: string): boolean {
+  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
 /** True if the given form ID is non-null and non-empty. */

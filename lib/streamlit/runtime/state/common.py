@@ -269,8 +269,7 @@ def user_key_from_element_id(element_id: str) -> str | None:
     string representation of the no-user-key sentinel as part of the widget id.
     """
     user_key: str | None = element_id.split("-", maxsplit=2)[-1]
-    user_key = None if user_key == "None" else user_key
-    return user_key
+    return None if user_key == "None" else user_key
 
 
 def is_element_id(key: str) -> bool:
