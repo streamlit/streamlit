@@ -46,7 +46,7 @@ import {
   ForwardMsgMetadata,
   generateUID,
   getCachedTheme,
-  getElementWidgetID,
+  getElementID,
   getEmbeddingIdClassName,
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
@@ -1220,7 +1220,7 @@ export class App extends PureComponent<Props, State> {
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementID(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1274,7 +1274,7 @@ export class App extends PureComponent<Props, State> {
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementID(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1449,7 +1449,7 @@ export class App extends PureComponent<Props, State> {
     )
     const activeWidgetIds = new Set(
       Array.from(nextPageElements.getElements())
-        .map(element => getElementWidgetID(element))
+        .map(element => getElementID(element))
         .filter(notUndefined)
     )
 
