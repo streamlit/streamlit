@@ -313,3 +313,16 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
         super().__init__(
             f"Multiselect has {current_selections_count} {curr_selections_noun} selected but `max_selections` is set to {max_selections_count}. This happened because you either gave too many options to `default` or you manipulated the widget's state through `st.session_state`. Note that the latter can happen before the line indicated in the traceback. Please select at most {max_selections_count} options."
         )
+
+
+# st.columns
+class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
+    """Exception raised when no weights are specified, or a negative weight is specified."""
+
+    def __init__(self):
+        super().__init__(
+            "The spec argument to `st.columns` must be either a "
+            "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
+            "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
+            "for more information."
+        )

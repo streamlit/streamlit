@@ -20,7 +20,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidColumnSpecError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
@@ -294,12 +294,7 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise StreamlitAPIException(
-                "The input argument to st.columns must be either a "
-                "positive integer or a list of positive numeric weights. "
-                "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
-                "for more information."
-            )
+            raise StreamlitInvalidColumnSpecError()
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
