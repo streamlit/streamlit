@@ -82,7 +82,7 @@ export enum LoadingScreenType {
 }
 
 // This prefix should be in sync with the value on the python side:
-const GENERATED_ELEMENT_ID_PREFIX = "$$WIDGET_ID"
+const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
 
 /**
  * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key

@@ -95,7 +95,7 @@ WidgetProto: TypeAlias = Union[
     TimeInput,
 ]
 
-GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
+GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
 
@@ -257,7 +257,7 @@ def compute_widget_id(
     for k, v in kwargs.items():
         h.update(str(k).encode("utf-8"))
         h.update(str(v).encode("utf-8"))
-    return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
+    return f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
 def user_key_from_widget_id(widget_id: str) -> str | None:
@@ -275,7 +275,7 @@ def user_key_from_widget_id(widget_id: str) -> str | None:
 
 def is_widget_id(key: str) -> bool:
     """True if the given session_state key has the structure of a widget ID."""
-    return key.startswith(GENERATED_WIDGET_ID_PREFIX)
+    return key.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
 def is_keyed_widget_id(key: str) -> bool:
@@ -287,7 +287,7 @@ def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
     if is_widget_id(key):
         raise StreamlitAPIException(
-            f"Keys beginning with {GENERATED_WIDGET_ID_PREFIX} are reserved."
+            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
 
 

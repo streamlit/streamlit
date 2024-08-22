@@ -26,7 +26,10 @@ from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueP
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX, compute_widget_id
+from streamlit.runtime.state.common import (
+    GENERATED_ELEMENT_ID_PREFIX,
+    compute_widget_id,
+)
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import user_key_from_widget_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -330,7 +333,7 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         id = compute_widget_id("button", label="the label")
-        assert id.startswith(GENERATED_WIDGET_ID_PREFIX)
+        assert id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
 class ComputeWidgetIdTests(DeltaGeneratorTestCase):
