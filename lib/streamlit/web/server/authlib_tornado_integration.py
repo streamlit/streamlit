@@ -17,16 +17,20 @@ from authlib.integrations.base_client import FrameworkIntegration
 
 class TornadoIntegration(FrameworkIntegration):
     def update_token(self, token, refresh_token=None, access_token=None):
-        pass
+        """We do not support token refresh, since we obtain and operate user
+        identity tokens"""
 
     @staticmethod
     def load_config(oauth, name, params):
+        """Configure Authlib integration with provider parameters
+        specified in secrets.toml
+        """
         if not oauth.config:
             return {}
 
-        rv = {}
-        for k in params:
-            v = oauth.config.get(name, {}).get(k, None)
-            if v is not None:
-                rv[k] = v
-        return rv
+        prepared_config = {}
+        for key in params:
+            value = oauth.config.get(name, {}).get(key, None)
+            if value is not None:
+                prepared_config[key] = value
+        return prepared_config
