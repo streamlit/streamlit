@@ -29,11 +29,11 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
     check_widget_policies,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitWidgetValueAssignmentNotAllowedError,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
 
 _KEY: Final = "the key"
 

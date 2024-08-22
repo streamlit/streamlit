@@ -18,15 +18,15 @@ from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
 from streamlit.elements.form_utils import is_in_form
-from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    get_script_run_ctx,
-    in_cached_function,
-)
 from streamlit.errors import (
     StreamlitAPIWarning,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
     StreamlitInvalidFormCallbackError,
     StreamlitWidgetValueAssignmentNotAllowedError,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_script_run_ctx,
+    in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
 
