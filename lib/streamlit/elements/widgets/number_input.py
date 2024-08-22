@@ -34,9 +34,9 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StNumberInputDifferentTypesError,
     StreamlitInputInvalidValueError,
     StreamlitJSNumberBoundsError,
+    StreamlitNumberInputDifferentTypesError,
     StreamlitNumberInputInvalidFormatError,
 )
 from streamlit.js_number import JSNumber, JSNumberBoundsException
@@ -384,7 +384,7 @@ class NumberInputMixin:
         )
 
         if not all_int_args and not all_float_args:
-            raise StNumberInputDifferentTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
+            raise StreamlitNumberInputDifferentTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:

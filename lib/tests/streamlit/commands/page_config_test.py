@@ -18,7 +18,11 @@ from parameterized import param, parameterized
 
 import streamlit as st
 from streamlit.commands.page_config import ENG_EMOJIS, RANDOM_EMOJIS, PageIcon
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidSidebarStateError,
+    StreamlitInvalidURLError,
+)
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.string_util import is_emoji
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -93,12 +97,8 @@ class PageConfigTest(DeltaGeneratorTestCase):
         self.assertEqual(c.initial_sidebar_state, PageConfigProto.COLLAPSED)
 
     def test_set_page_config_sidebar_invalid(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitInvalidSidebarStateError):
             st.set_page_config(initial_sidebar_state="INVALID")
-        self.assertEqual(
-            str(e.exception),
-            '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")',
-        )
 
     def test_set_page_config_menu_items_about(self):
         menu_items = {" about": "*This is an about. This accepts markdown.*"}
@@ -122,10 +122,9 @@ class PageConfigTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get_help_url, "https://get_help.com")
 
     def test_set_page_config_menu_items_empty_string(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitInvalidURLError):
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
-        self.assertEqual(str(e.exception), '"" is a not a valid URL!')
 
     def test_set_page_config_menu_items_none(self):
         menu_items = {"report a bug": None, "GET HELP": None, "about": None}

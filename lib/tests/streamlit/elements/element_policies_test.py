@@ -29,8 +29,11 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
     check_widget_policies,
 )
-from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitWidgetValueAssignmentNotAllowedError,
+)
 
 _KEY: Final = "the key"
 
@@ -119,10 +122,8 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitWidgetValueAssignmentNotAllowedError):
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
-
-        assert "Values for the widget with key 'the key'" in str(e.value)
 
 
 class SpecialSessionStatesTest(ElementPoliciesTest):
