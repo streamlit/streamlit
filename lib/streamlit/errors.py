@@ -208,24 +208,22 @@ class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
 class StreamlitNumberInputInvalidMinValueError(LocalizableStreamlitException):
     """Exception raised when the `min_value` is greater than the `value` in `st.number_input`."""
 
-    def __init__(self, value: int | float, max_value: int | float):
+    def __init__(self, value: int | float, min_value: int | float):
         super().__init__(
-            "The `value` {value} is greater than the `max_value` {max_value}.",
+            "The `value` {value} is less than the `min_value` {min_value}.",
             value=value,
-            max_value=max_value,
+            min_value=min_value,
         )
 
 
 class StreamlitNumberInputInvalidMaxValueError(LocalizableStreamlitException):
     """Exception raised when the `max_value` is less than the `value` in `st.number_input`."""
 
-    def __init__(
-        self, value: int | float, min_value: int | float, max_value: int | float
-    ):
+    def __init__(self, value: int | float, max_value: int | float):
         super().__init__(
-            "The `value` {value} is less than the `min_value` {min_value}.",
+            "The `value` {value} is greater than than the `max_value` {max_value}.",
             value=value,
-            min_value=min_value,
+            max_value=max_value,
         )
 
 
