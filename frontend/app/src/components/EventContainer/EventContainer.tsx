@@ -51,7 +51,8 @@ function EventContainer({
               zIndex: 100,
             },
             props: {
-              "data-testid": "toastContainer",
+              "data-testid": "stToastContainer",
+              className: "stToastContainer",
             },
           },
         }}

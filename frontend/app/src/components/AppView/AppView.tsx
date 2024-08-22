@@ -255,11 +255,12 @@ function AppView(props: AppViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
-        className="stMain main"
+        className="stMain"
+        data-testid="stMain"
       >
         <StyledAppViewBlockContainer
-          className="stAppViewBlockContainer block-container"
-          data-testid="stAppViewBlockContainer"
+          className="stMainBlockContainer block-container"
+          data-testid="stMainBlockContainer"
           isWideMode={wideMode}
           showPadding={showPadding}
           addPaddingForHeader={showToolbar || showColoredLine}
@@ -307,7 +308,7 @@ function AppView(props: AppViewProps): ReactElement {
       </Component>
       {hasEventElements && (
         <EventContainer scriptRunId={elements.event.scriptRunId}>
-          <StyledEventBlockContainer>
+          <StyledEventBlockContainer className="stEvent" data-testid="stEvent">
             {renderBlock(elements.event)}
           </StyledEventBlockContainer>
         </EventContainer>
