@@ -212,24 +212,28 @@ class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
         super().__init__(error_message)
 
 
-class StreamlitInputInvalidValueError(LocalizableStreamlitException):
-    """Exception raised when the `min_value` is greater or the `max_value` is less than the `value` in `st.number_input`."""
+class StreamlitNumberInputInvalidMinValueError(LocalizableStreamlitException):
+    """Exception raised when the `min_value` is greater than the `value` in `st.number_input`."""
+
+    def __init__(self, value: int | float, max_value: int | float):
+        super().__init__(
+            "The `value` {value} is greater than the `max_value` {max_value}.",
+            value=value,
+            max_value=max_value,
+        )
+
+
+class StreamlitNumberInputInvalidMaxValueError(LocalizableStreamlitException):
+    """Exception raised when the `max_value` is less than the `value` in `st.number_input`."""
 
     def __init__(
         self, value: int | float, min_value: int | float, max_value: int | float
     ):
-        error_message = None
-
-        if min_value is not None and value < min_value:
-            error_message = (
-                f"The `value` {value} is less than the `min_value` {min_value}."
-            )
-        elif max_value is not None and value > max_value:
-            error_message = (
-                f"The `value` {value} is greater than the `max_value` {max_value}."
-            )
-
-        super().__init__(error_message)
+        super().__init__(
+            "The `value` {value} is less than the `min_value` {min_value}.",
+            value=value,
+            min_value=min_value,
+        )
 
 
 class StreamlitJSNumberBoundsError(LocalizableStreamlitException):
@@ -263,23 +267,24 @@ class StreamlitMissingPageLabelError(LocalizableStreamlitException):
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 
-    def __init__(self, page: str, main_script_directory: str, is_mpav2: bool):
-        error_message = None
+    def __init__(self, page: str, main_script_directory: str):
+        super().__init__(
+            f"Could not find page: `{page}`. You must provide a file path "
+            f"relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). "
+            "Only the entrypoint file and files in the `pages/` directory are supported."
+        )
 
-        if is_mpav2:
-            error_message = (
-                f"Could not find page: `{page}`. You must provide a `StreamlitPage` "
-                "object or file path relative to the entrypoint file. Only pages "
-                "previously defined by [st.Page](http://st.page/) and passed to "
-                "`st.navigation` are allowed."
-            )
-        else:
-            error_message = (
-                f"Could not find page: `{page}`. You must provide a file path "
-                f"relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). "
-                "Only the entrypoint file and files in the `pages/` directory are supported."
-            )
-        super().__init__(error_message)
+
+class StreamlitPageNotFoundMPAV2Error(LocalizableStreamlitException):
+    """Exception raised the linked page can not be found."""
+
+    def __init__(self, page: str):
+        super().__init__(
+            f"Could not find page: `{page}`. You must provide a `StreamlitPage` "
+            "object or file path relative to the entrypoint file. Only pages "
+            "previously defined by [st.Page](http://st.page/) and passed to "
+            "`st.navigation` are allowed."
+        )
 
 
 # policies

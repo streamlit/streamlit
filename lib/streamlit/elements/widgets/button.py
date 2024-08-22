@@ -38,6 +38,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingPageLabelError,
     StreamlitPageNotFoundError,
+    StreamlitPageNotFoundMPAV2Error,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
@@ -811,16 +812,19 @@ class ButtonMixin:
 
             if page_link_proto.page_script_hash == "":
                 ctx = get_script_run_ctx()
-                is_mpav2 = (
+                if (
                     ctx is not None
                     and ctx.pages_manager is not None
                     and ctx.pages_manager.mpa_version == 2
-                )
-                raise StreamlitPageNotFoundError(
-                    page=page,
-                    main_script_directory=main_script_directory,
-                    is_mpav2=is_mpav2,
-                )
+                ):
+                    raise StreamlitPageNotFoundMPAV2Error(
+                        page=page,
+                    )
+                else:
+                    raise StreamlitPageNotFoundError(
+                        page=page,
+                        main_script_directory=main_script_directory,
+                    )
 
         return self.dg._enqueue("page_link", page_link_proto)
 

@@ -34,10 +34,11 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitInputInvalidValueError,
     StreamlitJSNumberBoundsError,
     StreamlitNumberInputDifferentTypesError,
     StreamlitNumberInputInvalidFormatError,
+    StreamlitNumberInputInvalidMaxValueError,
+    StreamlitNumberInputInvalidMinValueError,
 )
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -442,8 +443,12 @@ class NumberInputMixin:
         # Ensure that the value matches arguments' types.
         all_ints = int_value and all_int_args
 
-        if ((min_value is not None and value is not None and min_value > value) or (max_value is not None and value is not None and max_value < value)):
-            raise StreamlitInputInvalidValueError(value=value, min_value=min_value, max_value=max_value)
+        if min_value is not None and value is not None and min_value > value:
+            raise StreamlitNumberInputInvalidMinValueError(value=value, min_value=min_value)
+
+
+        if max_value is not None and value is not None and max_value < value:
+            raise StreamlitNumberInputInvalidMaxValueError(value=value, max_value=max_value)
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
