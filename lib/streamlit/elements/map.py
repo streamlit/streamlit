@@ -105,10 +105,7 @@ class MapMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, pyspark.sql.DataFrame,\
-            snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table,\
-            Iterable, dict, or None
-
+        data : Anything supported by st.dataframe
             The data to be plotted.
 
         latitude : str or None
@@ -170,8 +167,8 @@ class MapMixin:
         >>>
         >>> df = pd.DataFrame(
         ...     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-        ...     columns=['lat', 'lon'])
-        ...
+        ...     columns=["lat", "lon"],
+        ... )
         >>> st.map(df)
 
         .. output::
@@ -180,7 +177,7 @@ class MapMixin:
 
         You can also customize the size and color of the datapoints:
 
-        >>> st.map(df, size=20, color='#0044ff')
+        >>> st.map(df, size=20, color="#0044ff")
 
         And finally, you can choose different columns to use for the latitude
         and longitude components, as well as set size and color of each
@@ -190,18 +187,16 @@ class MapMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame({
-        ...     "col1": np.random.randn(1000) / 50 + 37.76,
-        ...     "col2": np.random.randn(1000) / 50 + -122.4,
-        ...     "col3": np.random.randn(1000) * 100,
-        ...     "col4": np.random.rand(1000, 4).tolist(),
-        ... })
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "col1": np.random.randn(1000) / 50 + 37.76,
+        ...         "col2": np.random.randn(1000) / 50 + -122.4,
+        ...         "col3": np.random.randn(1000) * 100,
+        ...         "col4": np.random.rand(1000, 4).tolist(),
+        ...     }
+        ... )
         >>>
-        >>> st.map(df,
-        ...     latitude='col1',
-        ...     longitude='col2',
-        ...     size='col3',
-        ...     color='col4')
+        >>> st.map(df, latitude="col1", longitude="col2", size="col3", color="col4")
 
         .. output::
            https://doc-map-color.streamlit.app/

@@ -264,7 +264,7 @@ class ButtonGroupMixin:
 
         .. output ::
             https://doc-feedback-stars.streamlit.app/
-            height: 350px
+            height: 200px
 
         Display a feedback widget with thumbs, and show the selected sentiment:
 
@@ -277,7 +277,7 @@ class ButtonGroupMixin:
 
         .. output ::
             https://doc-feedback-thumbs.streamlit.app/
-            height: 350px
+            height: 200px
 
         """
 
