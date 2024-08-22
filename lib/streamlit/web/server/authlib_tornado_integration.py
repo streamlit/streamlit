@@ -14,6 +14,8 @@
 
 from authlib.integrations.base_client import FrameworkIntegration
 
+from streamlit.runtime.secrets import AttrDict
+
 
 class TornadoIntegration(FrameworkIntegration):
     def update_token(self, token, refresh_token=None, access_token=None):
@@ -31,6 +33,9 @@ class TornadoIntegration(FrameworkIntegration):
         prepared_config = {}
         for key in params:
             value = oauth.config.get(name, {}).get(key, None)
+            if isinstance(value, AttrDict):
+                # We want to modify client_kwargs further after loading server metadata
+                value = value.to_dict()
             if value is not None:
                 prepared_config[key] = value
         return prepared_config
