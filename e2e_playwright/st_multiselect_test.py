@@ -225,7 +225,7 @@ def test_multiselect_option_over_max_selections(app: Page):
     """Should show an error when more than max_selections got selected."""
     click_checkbox(app, "set_multiselect_9")
     expect(app.get_by_test_id("stException")).to_contain_text(
-        "Multiselect has 2 options selected but max_selections\nis set to 1"
+        "Multiselect has 2 selections selected but max_selections is set to 1"
     )
 
 
