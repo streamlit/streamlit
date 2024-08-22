@@ -220,11 +220,11 @@ class StreamlitInputInvalidValueError(LocalizableStreamlitException):
     ):
         error_message = None
 
-        if value < min_value:
+        if min_value is not None and value < min_value:
             error_message = (
                 f"The `value` {value} is less than the `min_value` {min_value}."
             )
-        elif value > max_value:
+        elif max_value is not None and value > max_value:
             error_message = (
                 f"The `value` {value} is greater than the `max_value` {max_value}."
             )
