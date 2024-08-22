@@ -326,3 +326,50 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
             "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
             "for more information."
         )
+
+
+# st.set_page_config
+class StreamlitSetPageConfigMustBeFirstCommandError(LocalizableStreamlitException):
+    """Exception raised when the set_page_config command is not the first executed streamlit command."""
+
+    def __init__(self):
+        super().__init__(
+            "`set_page_config()` can only be called once per app page, "
+            "and must be called as the first Streamlit command in your script.\n\n"
+            "For more information refer to the [docs]"
+            "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
+        )
+
+
+class StreamlitInvalidLayoutError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for layout."""
+
+    def __init__(self, layout: str):
+        super().__init__(f'layout must be "centered" or "wide" (got "{layout}")')
+
+
+class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
+
+    def __init__(self, initial_sidebar_state: str):
+        super().__init__(
+            f'initial_sidebar_state must be "auto" or "expanded" or "collapsed" (got "{initial_sidebar_state}")'
+        )
+
+
+class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
+    """Exception raised when an invalid key is specified."""
+
+    def __init__(self, key: str):
+        super().__init__(
+            f'We only accept the keys: "Get help", "Report a bug", and "About" ("{key}" is not a valid key.)'
+        )
+
+
+class StreamlitInvalidURLError(LocalizableStreamlitException):
+    """Exception raised when an invalid URL is specified for any of the menu items except for “About”."""
+
+    def __init__(self, url: str):
+        super().__init__(
+            f'"{url}" is a not a valid URL. You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`.'
+        )
