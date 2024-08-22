@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import gettext
 import os
 from typing import Any
 
@@ -166,13 +165,7 @@ class StreamlitModuleNotFoundError(StreamlitAPIWarning):
 
 class LocalizableStreamlitException(StreamlitAPIException):
     def __init__(self, message: str, **kwargs):
-        exception_name = type(self).__name__
-        exception_message = gettext.gettext(exception_name)
-        if exception_message == exception_name:
-            # gettext returns the message ID if there is no translation.
-            # In this case, we want to use the message provided in the constructor.
-            exception_message = message
-        super().__init__((exception_message).format(**kwargs))
+        super().__init__((message).format(**kwargs))
         self._exec_kwargs = kwargs
 
     @property
