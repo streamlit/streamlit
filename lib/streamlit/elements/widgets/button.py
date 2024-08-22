@@ -46,6 +46,7 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonP
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetArgs,
@@ -811,7 +812,9 @@ class ButtonMixin:
 
             if page_link_proto.page_script_hash == "":
                 raise StreamlitPageNotFoundError(
-                    page=page, main_script_directory=main_script_directory
+                    page=page,
+                    main_script_directory=main_script_directory,
+                    is_mpav2=PagesManager.mpa_version == 2,
                 )
 
         return self.dg._enqueue("page_link", page_link_proto)

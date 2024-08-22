@@ -263,10 +263,7 @@ class StreamlitMissingPageLabelError(LocalizableStreamlitException):
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 
-    def __init__(self, page: str, main_script_directory: str):
-        from streamlit.runtime.pages_manager import PagesManager
-
-        is_mpav2 = PagesManager.mpa_version == 2
+    def __init__(self, page: str, main_script_directory: str, is_mpav2: bool):
         error_message = None
 
         if is_mpav2:
