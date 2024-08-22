@@ -179,10 +179,10 @@ class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
 
     def __init__(
         self,
-        value: int | float,
-        min_value: int | float,
-        max_value: int | float,
-        step: int | float,
+        value: int | float | None,
+        min_value: int | float | None,
+        max_value: int | float | None,
+        step: int | float | None,
     ):
         error_message = "All numerical arguments must be of the same type."
 
