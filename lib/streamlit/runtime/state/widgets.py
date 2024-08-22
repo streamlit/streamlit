@@ -171,14 +171,15 @@ def register_element_id(id: str) -> None:
     from streamlit.runtime.scriptrunner import get_script_run_ctx
 
     ctx = get_script_run_ctx()
-    if ctx is None:
+    if ctx is None or not id:
         return
 
     if user_key := user_key_from_element_id(id):
         if user_key not in ctx.widget_user_keys_this_run:
             ctx.widget_user_keys_this_run.add(user_key)
-        # TODO: better error message:  _build_duplicate_widget_message
-        raise DuplicateWidgetID(f"Duplicate element key: {user_key}")
+        else:
+            # TODO: better error message:  _build_duplicate_widget_message
+            raise DuplicateWidgetID(f"Duplicate element key: {user_key}")
 
     if id not in ctx.widget_ids_this_run:
         ctx.widget_ids_this_run.add(id)
@@ -190,8 +191,6 @@ def register_element_id(id: str) -> None:
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: ScriptRunContext | None,
-    widget_func_name: str | None,
-    element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
     """Register a widget and return its value, using an already constructed
     `WidgetMetadata`.
