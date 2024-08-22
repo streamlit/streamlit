@@ -577,15 +577,15 @@ export function areURLSearchParamsEqual(
   // Loop over keys and check their entries are all the same
   const keys = new Set([...params1.keys(), ...params2.keys()])
   for (const key of keys) {
-    const p1_values = params1.getAll(key)
-    const p2_values = params2.getAll(key)
+    const p1Values = params1.getAll(key)
+    const p2Values = params2.getAll(key)
     // If entries are not the same length, get out
-    if (p1_values.length !== p2_values.length) {
+    if (p1Values.length !== p2Values.length) {
       return false
     }
     // Check that all entries for the key are the same and in the same order
-    for (const [index, entry] of p1_values.entries()) {
-      if (p1_values[index] !== p2_values[index]) {
+    for (const [index] of p1Values.entries()) {
+      if (p1Values[index] !== p2Values[index]) {
         return false
       }
     }
@@ -603,12 +603,12 @@ export function areUserURLSearchParamsEqual(
   const queryParams2 = new URLSearchParams(params2)
 
   // remove Embed params
-  for (const embed_key in [
+  for (const embedKey of [
     EMBED_QUERY_PARAM_KEY,
     EMBED_OPTIONS_QUERY_PARAM_KEY,
   ]) {
-    queryParams1.delete(embed_key)
-    queryParams2.delete(embed_key)
+    queryParams1.delete(embedKey)
+    queryParams2.delete(embedKey)
   }
 
   // Compare the remaining

@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useEffect, useMemo, useRef } from "react"
 
-import { Video as VideoProto } from "@streamlit/lib/src/proto"
+import { ISubtitleTrack, Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -231,12 +231,12 @@ export default function Video({
       }
     >
       {subtitles &&
-        subtitles.map((subtitle: Subtitle, idx: number) => (
+        subtitles.map((subtitle: ISubtitleTrack, idx: number) => (
           <track
             key={idx}
             kind="captions"
-            src={endpoints.buildMediaURL(subtitle.url)}
-            label={subtitle.label}
+            src={endpoints.buildMediaURL(subtitle.url ?? "")}
+            label={subtitle.label ?? ""}
             default={idx === 0}
           />
         ))}

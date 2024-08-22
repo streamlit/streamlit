@@ -112,12 +112,12 @@ test("caches messages as a deep copy", async () => {
 
   // Modify specific values inside the message structure:
   // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-  msg.delta!.newElement!.text.body = "foo"
+  msg.delta!.newElement!.text!.body = "foo"
   // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   msg.metadata!.deltaPath = [10]
 
   // Check that it does not impact the cached message
-  expect(getCachedMessage("Cacheable")?.delta?.newElement?.text.body).toEqual(
+  expect(getCachedMessage("Cacheable")?.delta?.newElement?.text?.body).toEqual(
     "test"
   )
   expect(getCachedMessage("Cacheable")?.metadata?.deltaPath).toEqual([2])
