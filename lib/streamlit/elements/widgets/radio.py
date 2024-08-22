@@ -163,9 +163,10 @@ class RadioMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
 
             Labels can include markdown as described in the ``label`` parameter
             and will be cast to str internally by default.
