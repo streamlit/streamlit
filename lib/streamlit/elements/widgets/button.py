@@ -780,9 +780,7 @@ class ButtonMixin:
             # Handle external links:
             if is_url(page):
                 if label is None or label == "":
-                    raise StreamlitMissingPageLabelError(
-                        "The label param is required for external links used with st.page_link - please provide a label."
-                    )
+                    raise StreamlitMissingPageLabelError()
                 else:
                     page_link_proto.page = page
                     page_link_proto.external = True
