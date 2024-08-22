@@ -19,6 +19,7 @@ import os
 from typing import Any
 
 from streamlit import util
+from streamlit.runtime.pages_manager import PagesManager
 
 
 class Error(Exception):
@@ -264,15 +265,22 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 
     def __init__(self, page: str, main_script_directory: str):
-        # TODO: how to determine MPAv1 vs MPAv2?
-        is_mpav2 = False
+        is_mpav2 = PagesManager.mpa_version == 2
         error_message = None
 
         if is_mpav2:
-            error_message = f"Could not find page: `{page}`. You must provide a `StreamlitPage` object or file path relative to the entrypoint file. Only pages previously defined by [st.Page](http://st.page/) and passed to `st.navigation` are allowed."
+            error_message = (
+                f"Could not find page: `{page}`. You must provide a `StreamlitPage` "
+                "object or file path relative to the entrypoint file. Only pages "
+                "previously defined by [st.Page](http://st.page/) and passed to "
+                "`st.navigation` are allowed."
+            )
         else:
-            error_message = f"Could not find page: `{page}`. You must provide a file path relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). Only the entrypoint file and files in the `pages/` directory are supported."
-
+            error_message = (
+                f"Could not find page: `{page}`. You must provide a file path "
+                f"relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). "
+                "Only the entrypoint file and files in the `pages/` directory are supported."
+            )
         super().__init__(error_message)
 
 
@@ -289,7 +297,8 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
 
     def __init__(self):
         super().__init__(
-            "Within a form, callbacks can only be defined on st.form_submit_button. Defining callbacks on other widgets inside a form is not allowed."
+            "Within a form, callbacks can only be defined on st.form_submit_button. "
+            "Defining callbacks on other widgets inside a form is not allowed."
         )
 
 
@@ -311,7 +320,12 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
             "selections" if current_selections_count > 1 else "selection"
         )
         super().__init__(
-            f"Multiselect has {current_selections_count} {curr_selections_noun} selected but `max_selections` is set to {max_selections_count}. This happened because you either gave too many options to `default` or you manipulated the widget's state through `st.session_state`. Note that the latter can happen before the line indicated in the traceback. Please select at most {max_selections_count} options."
+            f"Multiselect has {current_selections_count} {curr_selections_noun} "
+            f"selected but `max_selections` is set to {max_selections_count}. "
+            "This happened because you either gave too many options to `default` "
+            "or you manipulated the widget's state through `st.session_state`. "
+            "Note that the latter can happen before the line indicated in the traceback. "
+            f"Please select at most {max_selections_count} options."
         )
 
 
@@ -371,5 +385,6 @@ class StreamlitInvalidURLError(LocalizableStreamlitException):
 
     def __init__(self, url: str):
         super().__init__(
-            f'"{url}" is a not a valid URL. You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`.'
+            f'"{url}" is a not a valid URL. '
+            "You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`."
         )
