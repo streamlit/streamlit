@@ -55,7 +55,6 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(selectbox).toHaveClass("stSelectbox")
-    expect(selectbox).toHaveClass("row-widget")
     expect(selectbox).toHaveStyle(`width: ${props.width}px`)
   })
 

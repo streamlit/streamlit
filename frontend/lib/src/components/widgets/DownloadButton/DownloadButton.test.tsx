@@ -64,7 +64,6 @@ describe("DownloadButton widget", () => {
 
     const downloadButton = screen.getByTestId("stDownloadButton")
 
-    expect(downloadButton).toHaveClass("row-widget")
     expect(downloadButton).toHaveClass("stDownloadButton")
     expect(downloadButton).toHaveStyle(`width: ${props.width}px`)
   })

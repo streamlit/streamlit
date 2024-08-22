@@ -308,6 +308,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           </StyledSidebarOpenContainer>
         )}
         <Resizable
+          className="stSidebar"
           data-testid="stSidebar"
           aria-expanded={!collapsedSidebar}
           enable={{

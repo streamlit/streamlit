@@ -27,7 +27,6 @@ import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import { StyledPagination, StyledPaginators } from "./styled-components"
 
 export interface Props {
-  className: string
   currentPage: number
   totalPages: number
   pageSize: number
@@ -36,14 +35,13 @@ export interface Props {
 }
 
 const Pagination = ({
-  className,
   currentPage,
   totalPages,
   onNext,
   onPrevious,
 }: Props): React.ReactElement => {
   return (
-    <StyledPagination className={className} data-testid="stPagination">
+    <StyledPagination data-testid="stFileUploaderPagination">
       <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <StyledPaginators>
         <BaseButton onClick={onPrevious} kind={BaseButtonKind.MINIMAL}>

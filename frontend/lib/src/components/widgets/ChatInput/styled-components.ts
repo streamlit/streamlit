@@ -64,7 +64,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       alignItems: "center",
       justifyContent: "center",
       lineHeight: theme.lineHeights.none,
-      margin: 0,
+      margin: theme.spacing.none,
       padding: theme.spacing.sm,
       color: disabled ? cleanIconColor : dirtyIconColor,
       pointerEvents: "auto",
