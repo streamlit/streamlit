@@ -231,7 +231,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   renderLogo(collapsed: boolean): ReactElement {
-    const { appLogo } = this.props
+    const { appLogo, endpoints } = this.props
+    const { sidebarWidth } = this.state
 
     if (!appLogo) {
       return <StyledNoLogoSpacer data-testid="stLogoSpacer" />
@@ -239,7 +240,18 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const displayImage =
       collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
-    const source = this.props.endpoints.buildMediaURL(displayImage)
+    const source = endpoints.buildMediaURL(displayImage)
+
+    const logo = (
+      <StyledLogo
+        src={source}
+        sidebarWidth={sidebarWidth}
+        alt="Logo"
+        className="stLogo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -248,11 +260,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   public render(): ReactNode {
@@ -282,7 +294,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           <StyledSidebarOpenContainer
             chevronDownshift={chevronDownshift}
             isCollapsed={collapsedSidebar}
-            data-testid="collapsedControl"
+            data-testid="stSidebarCollapsedControl"
           >
             {this.renderLogo(true)}
             <StyledOpenSidebarButton>
@@ -296,6 +308,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           </StyledSidebarOpenContainer>
         )}
         <Resizable
+          className="stSidebar"
           data-testid="stSidebar"
           aria-expanded={!collapsedSidebar}
           enable={{

@@ -16,7 +16,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_help_tooltip, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_help_tooltip,
+    get_element_by_key,
+)
 
 
 def test_number_input_widget_display(
@@ -98,8 +102,8 @@ def test_number_input_updates_value_correctly_on_enter(app: Page):
 
 def test_number_input_has_correct_value_on_increment_click(app: Page):
     """Test that st.number_input has the correct value on increment click."""
-    number_input_up_buttons = app.get_by_test_id("stNumberInput").locator(
-        "button.step-up"
+    number_input_up_buttons = app.get_by_test_id("stNumberInput").get_by_test_id(
+        "stNumberInputStepUp"
     )
     expect(number_input_up_buttons).to_have_count(11)
     for i, button in enumerate(number_input_up_buttons.all()):
@@ -198,3 +202,8 @@ def test_empty_number_input_behaves_correctly(
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "number_input_9")).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stNumberInput")

@@ -181,9 +181,6 @@ def register_widget_from_metadata(
 
     See `register_widget` for details on what this returns.
     """
-    # Local import to avoid import cycle
-    import streamlit.runtime.caching as caching
-
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
@@ -215,8 +212,6 @@ def register_widget_from_metadata(
                 user_key,
             )
         )
-    # Save the widget metadata for cached result replay
-    caching.save_widget_metadata(metadata)
     return ctx.session_state.register_widget(metadata, user_key)
 
 

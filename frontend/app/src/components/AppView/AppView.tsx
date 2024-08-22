@@ -221,7 +221,7 @@ function AppView(props: AppViewProps): ReactElement {
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <StyledAppViewContainer
-      className="appview-container"
+      className="stAppViewContainer appview-container"
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
@@ -246,7 +246,7 @@ function AppView(props: AppViewProps): ReactElement {
         <StyledSidebarOpenContainer
           chevronDownshift={sidebarChevronDownshift}
           isCollapsed={true}
-          data-testid="collapsedControl"
+          data-testid="stSidebarCollapsedControl"
         >
           {renderLogo(appLogo)}
         </StyledSidebarOpenContainer>
@@ -255,10 +255,10 @@ function AppView(props: AppViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
-        className="main"
+        className="stAppViewMain main"
       >
         <StyledAppViewBlockContainer
-          className="block-container"
+          className="stAppViewBlockContainer block-container"
           data-testid="stAppViewBlockContainer"
           isWideMode={wideMode}
           showPadding={showPadding}

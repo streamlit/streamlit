@@ -85,7 +85,7 @@ describe("Host communication", () => {
       // Check that new menu item exists
       cy.getIndexed('[data-testid="main-menu-list"] > ul', 4).should(
         "have.text",
-        "Adopt a Corgi",
+        "Adopt a Corgi"
       );
       // Exit main menu
       cy.get(".main").type("{esc}");
@@ -100,11 +100,11 @@ describe("Host communication", () => {
       cy.get(".stActionButton").should("exist");
       cy.getIndexed('[data-testid="stActionButton"]', 0).should(
         "have.text",
-        "Favorite",
+        "Favorite"
       );
       cy.getIndexed('[data-testid="stActionButton"]', 1).should(
         "have.text",
-        "Share",
+        "Share"
       );
     });
   });
@@ -135,10 +135,10 @@ describe("Host communication", () => {
       // Close sidebar
       cy.get("[data-testid='stSidebar'] button").click();
       // Check chevron positioning
-      cy.get("[data-testid='collapsedControl']").should(
+      cy.get("[data-testid='stSidebarCollapsedControl']").should(
         "have.css",
         "top",
-        "50px",
+        "50px"
       );
     });
   });

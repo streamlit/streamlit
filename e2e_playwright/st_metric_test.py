@@ -14,7 +14,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
 
 
 def test_first_metric_in_first_row(app: Page):
@@ -105,3 +105,8 @@ def test_ellipses_and_help_shows_up_properly(
         metric_element,
         name="st_metric-help_and_ellipses",
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stMetric")

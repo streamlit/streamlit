@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_file_uploader_render_correctly(
@@ -444,3 +445,8 @@ def test_works_inside_form(app: Page):
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stFileUploader")

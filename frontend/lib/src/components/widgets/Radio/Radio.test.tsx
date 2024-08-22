@@ -88,7 +88,6 @@ describe("Radio widget", () => {
     render(<Radio {...props} />)
     const radioElement = screen.getByTestId("stRadio")
 
-    expect(radioElement).toHaveClass("row-widget")
     expect(radioElement).toHaveClass("stRadio")
     expect(radioElement).toHaveStyle(`width: ${props.width}px`)
   })

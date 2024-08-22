@@ -265,9 +265,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
+        data-testid="stDeckGlJsonChart"
         width={width}
         height={deck.initialViewState.height}
-        data-testid="stDeckGlJsonChart"
       >
         <DeckGL
           viewState={viewState}
@@ -293,7 +293,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
           />
           <StyledNavigationControlContainer>
-            <NavigationControl className="zoomButton" showCompass={false} />
+            <NavigationControl
+              data-testid="stDeckGlJsonChartZoomButton"
+              showCompass={false}
+            />
           </StyledNavigationControlContainer>
         </DeckGL>
       </StyledDeckGlChart>

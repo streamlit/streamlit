@@ -86,7 +86,7 @@ describe("ToolbarActions", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
 
-    const favoriteButton = screen.getAllByTestId("baseButton-header")[0]
+    const favoriteButton = screen.getAllByTestId("stBaseButton-header")[0]
     fireEvent.click(favoriteButton)
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",

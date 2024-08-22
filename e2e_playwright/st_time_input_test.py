@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
 
 
 def test_time_input_widget_rendering(
@@ -213,3 +213,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(6)).to_have_text(
         "time input changed: False", use_inner_text=True
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stTimeInput")
