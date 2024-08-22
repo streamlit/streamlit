@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Literal
 
 from streamlit import util
 
@@ -179,7 +179,7 @@ class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
 
     def __init__(
         self,
-        value: int | float | None,
+        value: int | float | Literal["min"] | None,
         min_value: int | float | None,
         max_value: int | float | None,
         step: int | float | None,
