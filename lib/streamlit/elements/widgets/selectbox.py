@@ -41,7 +41,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.state.common import compute_element_id, save_for_app_testing
 from streamlit.type_util import (
     T,
     check_python_comparable,
@@ -284,7 +284,7 @@ class SelectboxMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_widget_id(
+        id = compute_element_id(
             "selectbox",
             user_key=key,
             label=label,

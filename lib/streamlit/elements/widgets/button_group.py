@@ -47,7 +47,7 @@ from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     WidgetDeserializer,
     WidgetSerializer,
-    compute_widget_id,
+    compute_element_id,
     save_for_app_testing,
 )
 
@@ -396,7 +396,7 @@ class ButtonGroupMixin:
             if format_func is None
             else [format_func(option) for option in indexable_options]
         )
-        widget_id = compute_widget_id(
+        widget_id = compute_element_id(
             widget_name,
             user_key=key,
             key=key,

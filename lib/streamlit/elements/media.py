@@ -30,7 +30,7 @@ from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import NumpyShape
 
@@ -567,7 +567,7 @@ def marshall_video(
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        id = compute_element_id(
             "video",
             url=proto.url,
             mimetype=mimetype,
@@ -743,7 +743,7 @@ def marshall_audio(
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        id = compute_element_id(
             "audio",
             url=proto.url,
             mimetype=mimetype,

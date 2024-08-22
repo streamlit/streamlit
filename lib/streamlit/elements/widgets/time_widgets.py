@@ -55,7 +55,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.time_util import adjust_years
 
 if TYPE_CHECKING:
@@ -454,7 +454,7 @@ class TimeWidgetsMixin:
                 "The type of value should be one of datetime, time or None"
             )
 
-        id = compute_widget_id(
+        id = compute_element_id(
             "time_input",
             user_key=key,
             label=label,
@@ -730,7 +730,7 @@ class TimeWidgetsMixin:
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
-        id = compute_widget_id(
+        id = compute_element_id(
             "date_input",
             user_key=key,
             label=label,

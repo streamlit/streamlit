@@ -28,10 +28,10 @@ from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widge
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
-    compute_widget_id,
+    compute_element_id,
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
-from streamlit.runtime.state.widgets import user_key_from_widget_id
+from streamlit.runtime.state.widgets import user_key_from_element_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -332,7 +332,7 @@ class WidgetManagerTests(unittest.TestCase):
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
-        id = compute_widget_id("button", label="the label")
+        id = compute_element_id("button", label="the label")
         assert id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
@@ -389,7 +389,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     def test_widget_id_computation(self, widget_func, module_name):
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_widget_id",
-            wraps=compute_widget_id,
+            wraps=compute_element_id,
         ) as patched_compute_widget_id:
             widget_func("my_widget")
 
@@ -413,7 +413,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     def test_widget_id_computation_no_form_widgets(self, widget_func, module_name):
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_widget_id",
-            wraps=compute_widget_id,
+            wraps=compute_element_id,
         ) as patched_compute_widget_id:
             if widget_func == st.download_button:
                 widget_func("my_widget", data="")
@@ -461,7 +461,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_widget_id",
-            wraps=compute_widget_id,
+            wraps=compute_element_id,
         ) as patched_compute_widget_id:
             widget_func("my_widget", options)
 
@@ -478,7 +478,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     def test_widget_id_computation_data_editor(self):
         with patch(
             "streamlit.elements.widgets.data_editor.compute_widget_id",
-            wraps=compute_widget_id,
+            wraps=compute_element_id,
         ) as patched_compute_widget_id:
             st.data_editor(data=[])
 
@@ -505,7 +505,7 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="c")
 
         k = list(state._keys())[0]
-        assert user_key_from_widget_id(k) == "c"
+        assert user_key_from_element_id(k) == "c"
 
     def test_get_widget_user_key_none(self):
         state = get_script_run_ctx().session_state._state
@@ -513,14 +513,14 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Absence of a user key is represented as None throughout our code
-        assert user_key_from_widget_id(k) is None
+        assert user_key_from_element_id(k) is None
 
     def test_get_widget_user_key_hyphens(self):
         state = get_script_run_ctx().session_state._state
         st.slider("slider", key="my-slider")
 
         k = list(state._keys())[0]
-        assert user_key_from_widget_id(k) == "my-slider"
+        assert user_key_from_element_id(k) == "my-slider"
 
     def test_get_widget_user_key_incorrect_none(self):
         state = get_script_run_ctx().session_state._state
@@ -528,4 +528,4 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Incorrectly inidcates no user key
-        assert user_key_from_widget_id(k) is None
+        assert user_key_from_element_id(k) is None
