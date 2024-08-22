@@ -287,8 +287,11 @@ export const StyledSidebarOpenContainer =
   styled.div<StyledSidebarOpenContainerProps>(
     ({ theme, chevronDownshift, isCollapsed }) => ({
       position: "fixed",
+      // top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
+      // left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+
       top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
-      left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+      left: theme.spacing.twoXL,
       zIndex: theme.zIndices.header,
       display: "flex",
       justifyContent: "center",
