@@ -24,7 +24,6 @@ import { render } from "@streamlit/lib/src/test_util"
 import Pagination, { Props } from "./Pagination"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  className: "",
   currentPage: 1,
   totalPages: 2,
   pageSize: 3,
@@ -38,7 +37,8 @@ describe("Pagination widget", () => {
   render(<Pagination {...props} />)
 
   it("renders without crashing", () => {
-    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
+    const paginationElement = screen.getByTestId("stFileUploaderPagination")
+    expect(paginationElement).toBeInTheDocument()
   })
 
   it("should show current and total pages", () => {
@@ -52,14 +52,18 @@ describe("Pagination widget", () => {
 
   it("should be able to go to previous page", () => {
     render(<Pagination {...props} />)
-    const prevPaginationButton = screen.getAllByTestId("baseButton-minimal")[0]
+    const prevPaginationButton = screen.getAllByTestId(
+      "stBaseButton-minimal"
+    )[0]
     fireEvent.click(prevPaginationButton)
     expect(props.onPrevious).toHaveBeenCalledTimes(1)
   })
 
   it("should be able to go to next page", () => {
     render(<Pagination {...props} />)
-    const nextPaginationButton = screen.getAllByTestId("baseButton-minimal")[1]
+    const nextPaginationButton = screen.getAllByTestId(
+      "stBaseButton-minimal"
+    )[1]
     fireEvent.click(nextPaginationButton)
     expect(props.onNext).toHaveBeenCalledTimes(1)
   })

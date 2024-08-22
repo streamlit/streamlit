@@ -178,7 +178,7 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(themeColorPickers).toHaveLength(4)
 
     const primaryColorPicker = within(themeColorPickers[0]).getByTestId(
-      "stColorBlock"
+      "stColorPickerBlock"
     )
     fireEvent.click(primaryColorPicker)
 

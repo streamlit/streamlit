@@ -48,10 +48,10 @@ def test_match_snapshot_for_caption_with_html_and_unsafe_html_true(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the unsafe_html caption matches the snapshot."""
-    # fetching the element-container so that when we capture a snapshot, it contains
+    # fetching the stMarkdown so that when we capture a snapshot, it contains
     # the tooltip
     caption_container = (
-        app.get_by_test_id("element-container")
+        app.get_by_test_id("stMarkdown")
         .filter(has=app.get_by_test_id("stCaptionContainer"))
         .nth(2)
     )

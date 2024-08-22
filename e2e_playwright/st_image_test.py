@@ -17,7 +17,7 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_image
+from e2e_playwright.shared.app_utils import check_top_level_class, get_image
 
 
 def test_image_display(app: Page):
@@ -168,3 +168,8 @@ def test_image_list(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.image can display a list of images."""
     image_list = get_image(app, "Image list")
     assert_snapshot(image_list, name="st_image-image_list")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stImage")

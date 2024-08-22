@@ -18,8 +18,9 @@ import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import Pagination from "@streamlit/lib/src/hocs/withPagination/Pagination"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
+
+import Pagination from "./Pagination"
 
 export interface Props {
   items: any[]
@@ -76,7 +77,6 @@ const withPagination = (
         <WrappedComponent items={paginatedItems} {...props} />
         {items.length > pageSize ? (
           <Pagination
-            className="streamlit-paginator"
             pageSize={pageSize}
             totalPages={totalPages}
             currentPage={currentPage + 1}

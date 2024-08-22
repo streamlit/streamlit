@@ -84,7 +84,7 @@ def test_display_images(app: Page):
 
 def test_display_altair(app: Page):
     """Test that st.write displays altair charts."""
-    altair_elements = app.get_by_test_id("stArrowVegaLiteChart")
+    altair_elements = app.get_by_test_id("stVegaLiteChart")
     expect(altair_elements).to_have_count(1)
 
 

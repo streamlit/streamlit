@@ -16,6 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -29,3 +30,8 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
         assert_snapshot(element, name=f"st_link_button-hover_{i}")
         element.focus()
         assert_snapshot(element, name=f"st_link_button-focus_{i}")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stLinkButton")

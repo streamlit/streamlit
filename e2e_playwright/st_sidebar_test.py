@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_sidebar_displays_correctly(
@@ -63,3 +64,8 @@ def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
 
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stSidebar")

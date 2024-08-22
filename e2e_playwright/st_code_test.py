@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_code_display(app: Page):
@@ -63,6 +64,11 @@ def test_correct_bottom_spacing_for_code_blocks(app: Page):
     expect(
         app.get_by_test_id("stExpander").nth(1).get_by_test_id("stMarkdownPre").first
     ).to_have_css("margin-bottom", "16px")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stCode")
 
 
 def test_line_wrap(app: Page):
