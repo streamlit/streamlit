@@ -44,9 +44,9 @@ import {
   assignDividerColor,
   BaseBlockProps,
   convertKeyToClassName,
+  getKeyFromID,
   isComponentStale,
   shouldComponentBeEnabled,
-  getKeyFromID,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 import {
