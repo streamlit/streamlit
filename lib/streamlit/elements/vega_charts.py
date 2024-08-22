@@ -574,9 +574,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, dict or None
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -773,9 +771,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, or dict
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -1012,9 +1008,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, or dict
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -1278,9 +1272,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, dict or None
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -1661,7 +1653,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : Anything supported by st.dataframe
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
 

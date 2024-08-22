@@ -259,7 +259,7 @@ class WriteMixin:
             - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(dataframe)      : Displays any dataframe-like object in a table.
+            - write(dataframe)      : Displays any dataframe-like object in an interactive viewer.
             - write(dict)           : Displays dict-like in an interactive viewer.
             - write(list)           : Displays list-like in an interactive viewer.
             - write(error)          : Prints an exception specially.
