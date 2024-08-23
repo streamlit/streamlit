@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement, useState, useEffect, useCallback } from "react"
 
 import { withTheme } from "@emotion/react"
 import {
@@ -64,242 +64,270 @@ interface State {
   value: boolean
 }
 
-class Checkbox extends React.PureComponent<Props, State> {
-  private readonly formClearHelper = new FormClearHelper()
+function Checkbox({
+  theme,
+  width,
+  element,
+  disabled,
+  widgetMgr,
+}: Readonly<Props>): ReactElement {
+  const [mounted, setMounted] = useState(false)
 
-  public state: State = {
-    value: this.initialValue,
-  }
-
-  get initialValue(): boolean {
+  const [componentValue, setComponentValue] = useState((): boolean => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const storedValue = this.props.widgetMgr.getBoolValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
-  }
+    const storedValue = widgetMgr.getBoolValue(element)
+    return storedValue ?? element.default
+  })
 
-  public componentDidMount(): void {
-    if (this.props.element.setValue) {
-      this.updateFromProtobuf()
-    } else {
-      this.commitWidgetValue({ fromUi: false })
-    }
-  }
+  const formClearHelper = new FormClearHelper()
 
-  public componentDidUpdate(): void {
-    this.maybeUpdateFromProtobuf()
-  }
+  // On mount...
+  useEffect(
+    (): void => {
+      setMounted(true)
 
-  public componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
-  }
+      if (element.setValue) {
+        updateFromProtobuf()
+      } else {
+        commitWidgetValue({ fromUi: false })
+      }
 
-  private maybeUpdateFromProtobuf(): void {
-    const { setValue } = this.props.element
-    if (setValue) {
-      this.updateFromProtobuf()
-    }
-  }
+      // On unmount...
+      return (): void => {
+        formClearHelper.disconnect()
+      }
+    },
+    [
+      /* Run only once */
+    ]
+  )
 
-  private updateFromProtobuf(): void {
-    const { value } = this.props.element
-    this.props.element.setValue = false
-    this.setState({ value }, () => {
-      this.commitWidgetValue({ fromUi: false })
+  // On update...
+  useEffect(
+    (): void => {
+      if (!mounted) return
+
+      if (element.setValue) {
+        updateFromProtobuf()
+      }
+    } /* Run every time */
+  )
+
+  // XXX
+  const updateFromProtobuf = (): void => {
+    element.setValue = false
+    this.setState({ componentValue: element.value }, () => {
+      commitWidgetValue({ fromUi: false })
     })
   }
 
-  /** Commit state.value to the WidgetStateManager. */
-  private commitWidgetValue = (source: Source): void => {
-    const { widgetMgr, element, fragmentId } = this.props
-    widgetMgr.setBoolValue(element, this.state.value, source, fragmentId)
-  }
+  // XXX
+  /** Commit componentValue to the WidgetStateManager. */
+  const commitWidgetValue = useCallback(
+    (source: Source): void => {
+      widgetMgr.setBoolValue(element, componentValue, source, fragmentId)
+    },
+    [widgetMgr, element, componentValue, fragmentId]
+  )
 
+  // XXX
   /**
    * If we're part of a clear_on_submit form, this will be called when our
    * form is submitted. Restore our default value and update the WidgetManager.
    */
-  private onFormCleared = (): void => {
-    this.setState(
-      (_, prevProps) => {
-        return { value: prevProps.element.default }
-      },
-      () => this.commitWidgetValue({ fromUi: true })
-    )
-  }
+  const onFormCleared = useCallback(
+    (): void => {
+      this.setState(
+        (_, prevProps) => {
+          return { componentValue: prevProps.element.default }
+        },
+        () => commitWidgetValue({ fromUi: true })
+      )
+    },
+    [
+      /* XXX */
+    ]
+  )
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.checked
-    this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
-  }
+  // XXX
+  const onChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = e.target.checked
+      this.setState({ componentValue: value }, () =>
+        commitWidgetValue({ fromUi: true })
+      )
+    },
+    [
+      /* XXX */
+    ]
+  )
 
-  public render(): React.ReactNode {
-    const { theme, width, element, disabled, widgetMgr } = this.props
-    const { colors, spacing, sizes } = theme
-    const lightTheme = hasLightBackgroundColor(theme)
+  const { colors, spacing, sizes } = theme
+  const lightTheme = hasLightBackgroundColor(theme)
 
-    const color = disabled ? colors.fadedText40 : colors.bodyText
+  const color = disabled ? colors.fadedText40 : colors.bodyText
 
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      this.onFormCleared
-    )
+  // Manage our form-clear event handler.
+  formClearHelper.manageFormClearListener(
+    widgetMgr,
+    element.formId,
+    onFormCleared
+  )
 
-    return (
-      <StyledCheckbox
-        className="stCheckbox"
-        data-testid="stCheckbox"
-        width={width}
+  return (
+    <StyledCheckbox
+      className="row-widget stCheckbox"
+      data-testid="stCheckbox"
+      width={width}
+    >
+      <UICheckbox
+        checked={componentValue}
+        disabled={disabled}
+        onChange={onChange}
+        aria-label={element.label}
+        checkmarkType={
+          element.type === CheckboxProto.StyleType.TOGGLE
+            ? STYLE_TYPE.toggle
+            : STYLE_TYPE.default
+        }
+        labelPlacement={LABEL_PLACEMENT.right}
+        overrides={{
+          Root: {
+            style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
+              marginBottom: spacing.none,
+              marginTop: spacing.none,
+              paddingRight: spacing.twoThirdsSmFont,
+              backgroundColor: $isFocusVisible ? colors.darkenedBgMix25 : "",
+              display: "flex",
+              alignItems: "start",
+            }),
+          },
+          Toggle: {
+            style: ({ $checked }: { $checked: boolean }) => {
+              let backgroundColor = lightTheme
+                ? colors.bgColor
+                : colors.bodyText
+
+              if (disabled) {
+                backgroundColor = lightTheme ? colors.gray70 : colors.gray90
+              }
+              return {
+                width: `calc(${sizes.checkbox} - ${theme.spacing.twoXS})`,
+                height: `calc(${sizes.checkbox} - ${theme.spacing.twoXS})`,
+                transform: $checked ? `translateX(${sizes.checkbox})` : "",
+                backgroundColor,
+                boxShadow: "",
+              }
+            },
+          },
+          ToggleTrack: {
+            style: ({
+              $checked,
+              $isHovered,
+            }: {
+              $checked: boolean
+              $isHovered: boolean
+            }) => {
+              let backgroundColor = colors.fadedText40
+
+              if ($isHovered && !disabled) {
+                backgroundColor = colors.fadedText20
+              }
+
+              if ($checked && !disabled) {
+                backgroundColor = colors.primary
+              }
+
+              return {
+                marginRight: 0,
+                marginLeft: 0,
+                marginBottom: 0,
+                marginTop: theme.spacing.twoXS,
+                paddingLeft: theme.spacing.threeXS,
+                paddingRight: theme.spacing.threeXS,
+                width: `calc(2 * ${sizes.checkbox})`,
+                minWidth: `calc(2 * ${sizes.checkbox})`,
+                height: sizes.checkbox,
+                minHeight: sizes.checkbox,
+                borderBottomLeftRadius: theme.radii.lg,
+                borderTopLeftRadius: theme.radii.lg,
+                borderBottomRightRadius: theme.radii.lg,
+                borderTopRightRadius: theme.radii.lg,
+                backgroundColor,
+              }
+            },
+          },
+          Checkmark: {
+            style: ({
+              $isFocusVisible,
+              $checked,
+            }: {
+              $isFocusVisible: boolean
+              $checked: boolean
+            }) => {
+              const borderColor =
+                $checked && !disabled ? colors.primary : colors.fadedText40
+
+              return {
+                outline: 0,
+                width: sizes.checkbox,
+                height: sizes.checkbox,
+                marginTop: theme.spacing.twoXS,
+                marginLeft: 0,
+                marginBottom: 0,
+                boxShadow:
+                  $isFocusVisible && $checked
+                    ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
+                    : "",
+                // This is painfully verbose, but baseweb seems to internally
+                // use the long-hand version, which means we can't use the
+                // shorthand names here as if we do we'll end up with warn
+                // logs spamming us every time a checkbox is rendered.
+                borderLeftWidth: sizes.borderWidth,
+                borderRightWidth: sizes.borderWidth,
+                borderTopWidth: sizes.borderWidth,
+                borderBottomWidth: sizes.borderWidth,
+                borderLeftColor: borderColor,
+                borderRightColor: borderColor,
+                borderTopColor: borderColor,
+                borderBottomColor: borderColor,
+              }
+            },
+          },
+          Label: {
+            style: {
+              position: "relative",
+              color,
+            },
+          },
+        }}
       >
-        <UICheckbox
-          checked={this.state.value}
-          disabled={disabled}
-          onChange={this.onChange}
-          aria-label={element.label}
-          checkmarkType={
-            element.type === CheckboxProto.StyleType.TOGGLE
-              ? STYLE_TYPE.toggle
-              : STYLE_TYPE.default
-          }
-          labelPlacement={LABEL_PLACEMENT.right}
-          overrides={{
-            Root: {
-              style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
-                marginBottom: spacing.none,
-                marginTop: spacing.none,
-                paddingRight: spacing.twoThirdsSmFont,
-                backgroundColor: $isFocusVisible ? colors.darkenedBgMix25 : "",
-                display: "flex",
-                alignItems: "start",
-              }),
-            },
-            Toggle: {
-              style: ({ $checked }: { $checked: boolean }) => {
-                let backgroundColor = lightTheme
-                  ? colors.bgColor
-                  : colors.bodyText
-
-                if (disabled) {
-                  backgroundColor = lightTheme ? colors.gray70 : colors.gray90
-                }
-                return {
-                  width: `calc(${sizes.checkbox} - ${theme.spacing.twoXS})`,
-                  height: `calc(${sizes.checkbox} - ${theme.spacing.twoXS})`,
-                  transform: $checked ? `translateX(${sizes.checkbox})` : "",
-                  backgroundColor,
-                  boxShadow: "",
-                }
-              },
-            },
-            ToggleTrack: {
-              style: ({
-                $checked,
-                $isHovered,
-              }: {
-                $checked: boolean
-                $isHovered: boolean
-              }) => {
-                let backgroundColor = colors.fadedText40
-
-                if ($isHovered && !disabled) {
-                  backgroundColor = colors.fadedText20
-                }
-
-                if ($checked && !disabled) {
-                  backgroundColor = colors.primary
-                }
-
-                return {
-                  marginRight: 0,
-                  marginLeft: 0,
-                  marginBottom: 0,
-                  marginTop: theme.spacing.twoXS,
-                  paddingLeft: theme.spacing.threeXS,
-                  paddingRight: theme.spacing.threeXS,
-                  width: `calc(2 * ${sizes.checkbox})`,
-                  minWidth: `calc(2 * ${sizes.checkbox})`,
-                  height: sizes.checkbox,
-                  minHeight: sizes.checkbox,
-                  borderBottomLeftRadius: theme.radii.lg,
-                  borderTopLeftRadius: theme.radii.lg,
-                  borderBottomRightRadius: theme.radii.lg,
-                  borderTopRightRadius: theme.radii.lg,
-                  backgroundColor,
-                }
-              },
-            },
-            Checkmark: {
-              style: ({
-                $isFocusVisible,
-                $checked,
-              }: {
-                $isFocusVisible: boolean
-                $checked: boolean
-              }) => {
-                const borderColor =
-                  $checked && !disabled ? colors.primary : colors.fadedText40
-
-                return {
-                  outline: 0,
-                  width: sizes.checkbox,
-                  height: sizes.checkbox,
-                  marginTop: theme.spacing.twoXS,
-                  marginLeft: 0,
-                  marginBottom: 0,
-                  boxShadow:
-                    $isFocusVisible && $checked
-                      ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
-                      : "",
-                  // This is painfully verbose, but baseweb seems to internally
-                  // use the long-hand version, which means we can't use the
-                  // shorthand names here as if we do we'll end up with warn
-                  // logs spamming us every time a checkbox is rendered.
-                  borderLeftWidth: sizes.borderWidth,
-                  borderRightWidth: sizes.borderWidth,
-                  borderTopWidth: sizes.borderWidth,
-                  borderBottomWidth: sizes.borderWidth,
-                  borderLeftColor: borderColor,
-                  borderRightColor: borderColor,
-                  borderTopColor: borderColor,
-                  borderBottomColor: borderColor,
-                }
-              },
-            },
-            Label: {
-              style: {
-                position: "relative",
-                color,
-              },
-            },
-          }}
+        <StyledContent
+          visibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
+          data-testid="stWidgetLabel"
         >
-          <StyledContent
-            visibility={labelVisibilityProtoValueToEnum(
-              element.labelVisibility?.value
-            )}
-            data-testid="stWidgetLabel"
-          >
-            <StreamlitMarkdown
-              source={element.label}
-              allowHTML={false}
-              isLabel
-              largerLabel
-            />
-            {element.help && (
-              <StyledWidgetLabelHelpInline color={color}>
-                <TooltipIcon
-                  content={element.help}
-                  placement={Placement.TOP_RIGHT}
-                />
-              </StyledWidgetLabelHelpInline>
-            )}
-          </StyledContent>
-        </UICheckbox>
-      </StyledCheckbox>
-    )
-  }
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isLabel
+            largerLabel
+          />
+          {element.help && (
+            <StyledWidgetLabelHelpInline color={color}>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelpInline>
+          )}
+        </StyledContent>
+      </UICheckbox>
+    </StyledCheckbox>
+  )
 }
 
+// XXX React.memo
 export default withTheme(Checkbox)
