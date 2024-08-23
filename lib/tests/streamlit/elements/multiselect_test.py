@@ -328,7 +328,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 1,
                 1,
                 (
-                    "Multiselect has 1 selection selected but `max_selections` is set to 1. "
+                    "Multiselect has 1 option selected but `max_selections` is set to 1. "
                     "This happened because you either gave too many options to `default` or "
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
@@ -339,7 +339,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 1,
                 0,
                 (
-                    "Multiselect has 1 selection selected but `max_selections` is set to 0. "
+                    "Multiselect has 1 option selected but `max_selections` is set to 0. "
                     "This happened because you either gave too many options to `default` or "
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
@@ -350,7 +350,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 2,
                 1,
                 (
-                    "Multiselect has 2 selections selected but `max_selections` is set to 1. "
+                    "Multiselect has 2 options selected but `max_selections` is set to 1. "
                     "This happened because you either gave too many options to `default` or "
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
@@ -361,7 +361,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 3,
                 2,
                 (
-                    "Multiselect has 3 selections selected but `max_selections` is set to 2. "
+                    "Multiselect has 3 options selected but `max_selections` is set to 2. "
                     "This happened because you either gave too many options to `default` or "
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
