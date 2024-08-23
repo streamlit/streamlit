@@ -162,7 +162,7 @@ export const StyledCameraInputBaseButton =
     },
     fontWeight: theme.fontWeights.normal,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-    margin: 0,
+    margin: theme.spacing.none,
     lineHeight: theme.lineHeights.base,
     color: "inherit",
     width: "100%",

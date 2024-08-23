@@ -78,8 +78,7 @@ describe("FormSubmitButton", () => {
 
     const formSubmitButton = screen.getByTestId("stFormSubmitButton")
 
-    expect(formSubmitButton).toHaveClass("row-widget")
-    expect(formSubmitButton).toHaveClass("stButton")
+    expect(formSubmitButton).toHaveClass("stFormSubmitButton")
     expect(formSubmitButton).toHaveStyle(`width: ${props.width}px`)
   })
 

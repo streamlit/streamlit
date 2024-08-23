@@ -181,11 +181,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
     const showKeyboardOnMobile = options.length > 10
 
     return (
-      <div
-        className="row-widget stSelectbox"
-        data-testid="stSelectbox"
-        style={style}
-      >
+      <div className="stSelectbox" data-testid="stSelectbox" style={style}>
         <WidgetLabel
           label={label}
           labelVisibility={labelVisibility}
@@ -283,7 +279,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: "1px",
+                      marginTop: theme.spacing.px,
                     }),
                   },
                 },

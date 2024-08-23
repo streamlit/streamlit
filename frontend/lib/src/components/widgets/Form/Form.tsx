@@ -92,7 +92,7 @@ export function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm border={border} data-testid="stForm">
+    <StyledForm className="stForm" data-testid="stForm" border={border}>
       {children}
       {submitWarning}
     </StyledForm>

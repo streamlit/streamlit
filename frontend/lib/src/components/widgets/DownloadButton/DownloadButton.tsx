@@ -83,7 +83,7 @@ function DownloadButton(props: Props): ReactElement {
 
   return (
     <div
-      className="row-widget stDownloadButton"
+      className="stDownloadButton"
       data-testid="stDownloadButton"
       style={style}
     >

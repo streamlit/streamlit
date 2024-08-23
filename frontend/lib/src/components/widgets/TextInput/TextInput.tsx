@@ -217,7 +217,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput
-        className="row-widget stTextInput"
+        className="stTextInput"
         data-testid="stTextInput"
         width={width}
       >
@@ -270,7 +270,7 @@ class TextInput extends React.PureComponent<Props, State> {
             },
             Root: {
               props: {
-                "data-testid": "stTextInput-RootElement",
+                "data-testid": "stTextInputRootElement",
               },
               style: {
                 height: theme.sizes.minElementHeight,

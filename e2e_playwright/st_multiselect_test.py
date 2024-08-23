@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_checkbox,
+    expect_help_tooltip,
+)
 
 
 def select_for_kth_multiselect(
@@ -219,3 +223,8 @@ def test_multiselect_double_selection(app: Page):
     expect(app.get_by_test_id("stText").nth(1)).to_have_text(
         "value 2: ['female', 'male']"
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stMultiSelect")

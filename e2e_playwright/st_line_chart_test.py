@@ -21,7 +21,7 @@ TOTAL_LINE_CHARTS = 11
 
 def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.line_chart renders correctly via snapshot testing."""
-    line_chart_elements = app.get_by_test_id("stArrowVegaLiteChart")
+    line_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
     # Also make sure that all canvas objects are rendered:
@@ -35,7 +35,7 @@ def test_themed_line_chart_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.line_chart renders with different theming."""
-    line_chart_elements = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    line_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(line_chart_elements).to_have_count(TOTAL_LINE_CHARTS)
 
     # Also make sure that all canvas objects are rendered:

@@ -28,7 +28,7 @@ class DeployButton extends React.Component<IDeployButtonProps> {
   render(): ReactElement {
     const { onClick } = this.props
     return (
-      <div className="stDeployButton" data-testid="stDeployButton">
+      <div className="stAppDeployButton" data-testid="stAppDeployButton">
         <BaseButton kind={BaseButtonKind.HEADER_BUTTON} onClick={onClick}>
           <DeployButtonContainer>
             <span>Deploy</span>

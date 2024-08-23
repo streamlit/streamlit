@@ -92,7 +92,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
       borderRadius: theme.radii.default,
       minHeight: theme.sizes.minElementHeight,
-      margin: 0,
+      margin: theme.spacing.none,
       lineHeight: theme.lineHeights.base,
       color: "inherit",
       width: fluidWidth ? buttonWidth : "auto",
@@ -184,7 +184,7 @@ export const StyledLinkButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
-  padding: 0,
+  padding: theme.spacing.none,
   border: "none",
   color: theme.colors.primary,
   "&:hover": {
@@ -208,7 +208,7 @@ export const StyledMinimalButton = styled(
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
-  padding: 0,
+  padding: theme.spacing.none,
   "&:hover, &:active, &:focus-visible": {
     color: theme.colors.primary,
   },

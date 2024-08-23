@@ -46,7 +46,7 @@ class JsonMixin:
         *,  # keyword-only arguments:
         expanded: bool | int = True,
     ) -> DeltaGenerator:
-        """Display object or string as a pretty-printed JSON string.
+        """Display an object or string as a pretty-printed, interactive JSON string.
 
         Parameters
         ----------
@@ -57,10 +57,17 @@ class JsonMixin:
             contains serialized JSON.
 
         expanded : bool or int
-            Controls the initial expansion state of the json element.
-            If bool, ``True`` expands all levels, ``False`` collapses all levels.
-            If int, specifies the depth to which the json should be expanded,
-            collapsing deeper levels. Defaults to ``True``.
+            The initial expansion state of the JSON element. This can be one
+            of the following:
+
+            - ``True`` (default): The element is fully expanded.
+            - ``False``: The element is fully collapsed.
+            - An integer: The element is expanded to the depth specified. The
+              integer must be non-negative. ``expanded=0`` is equivalent to
+              ``expanded=False``.
+
+            Regardless of the initial expansion state, users can collapse or
+            expand any key-value pair to show or hide any part of the object.
 
         Example
         -------
