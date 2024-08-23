@@ -184,25 +184,36 @@ class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
         max_value: int | float | None,
         step: int | float | None,
     ):
+        value_type = None
+        min_value_type = None
+        max_value_type = None
+        step_type = None
+
         error_message = "All numerical arguments must be of the same type."
 
         if value:
             value_type = type(value).__name__
-            error_message += f"\n`value` has {value_type} type."
+            error_message += "\n`value` has {value_type} type."
 
         if min_value:
             min_value_type = type(min_value).__name__
-            error_message += f"\n`min_value` has {min_value_type} type."
+            error_message += "\n`min_value` has {min_value_type} type."
 
         if max_value:
             max_value_type = type(max_value).__name__
-            error_message += f"\n`max_value` has {max_value_type} type."
+            error_message += "\n`max_value` has {max_value_type} type."
 
         if step:
             step_type = type(step).__name__
-            error_message += f"\n`step` has {step_type} type."
+            error_message += "\n`step` has {step_type} type."
 
-        super().__init__(error_message)
+        super().__init__(
+            error_message,
+            value_type=value_type,
+            min_value_type=min_value_type,
+            max_value_type=max_value_type,
+            step_type=step_type,
+        )
 
 
 class StreamlitNumberInputInvalidMinValueError(LocalizableStreamlitException):
@@ -241,7 +252,8 @@ class StreamlitNumberInputInvalidFormatError(LocalizableStreamlitException):
 
     def __init__(self, format: str):
         super().__init__(
-            f"Format string for st.number_input contains invalid characters: {format}"
+            "Format string for st.number_input contains invalid characters: {format}",
+            format=format,
         )
 
 
@@ -259,10 +271,13 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 
     def __init__(self, page: str, main_script_directory: str):
+        directory = os.path.basename(main_script_directory)
         super().__init__(
-            f"Could not find page: `{page}`. You must provide a file path "
-            f"relative to the entrypoint file (from the directory `{os.path.basename(main_script_directory)}`). "
-            "Only the entrypoint file and files in the `pages/` directory are supported."
+            "Could not find page: `{page}`. You must provide a file path "
+            "relative to the entrypoint file (from the directory `{directory}`). "
+            "Only the entrypoint file and files in the `pages/` directory are supported.",
+            page=page,
+            directory=directory,
         )
 
 
@@ -271,10 +286,11 @@ class StreamlitPageNotFoundMPAV2Error(LocalizableStreamlitException):
 
     def __init__(self, page: str):
         super().__init__(
-            f"Could not find page: `{page}`. You must provide a `StreamlitPage` "
+            "Could not find page: `{page}`. You must provide a `StreamlitPage` "
             "object or file path relative to the entrypoint file. Only pages "
             "previously defined by [st.Page](http://st.page/) and passed to "
-            "`st.navigation` are allowed."
+            "`st.navigation` are allowed.",
+            page=page,
         )
 
 
@@ -283,7 +299,7 @@ class StreamlitFragmentWidgetsNotAllowedOutsideError(LocalizableStreamlitExcepti
     """Exception raised when the fragment attempts to write to an element outside of its container."""
 
     def __init__(self):
-        super().__init__(" Fragments cannot write widgets to outside containers.")
+        super().__init__("Fragments cannot write widgets to outside containers.")
 
 
 class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
@@ -301,7 +317,8 @@ class StreamlitWidgetValueAssignmentNotAllowedError(LocalizableStreamlitExceptio
 
     def __init__(self, key: str):
         super().__init__(
-            f"Values for the widget with `key` '{key}' cannot be set using `st.session_state`."
+            "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
+            key=key,
         )
 
 
@@ -310,18 +327,19 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""
 
     def __init__(self, current_selections_count: int, max_selections_count: int):
-        curr_selections_noun = (
-            "selection" if current_selections_count == 1 else "selections"
-        )
-        options_noun = "option" if max_selections_count == 1 else "options"
-
         super().__init__(
-            f"Multiselect has {current_selections_count} {curr_selections_noun} "
-            f"selected but `max_selections` is set to {max_selections_count}. "
+            "Multiselect has {current_selections_count} {current_selections_noun} "
+            "selected but `max_selections` is set to {max_selections_count}. "
             "This happened because you either gave too many options to `default` "
             "or you manipulated the widget's state through `st.session_state`. "
             "Note that the latter can happen before the line indicated in the traceback. "
-            f"Please select at most {max_selections_count} {options_noun}."
+            "Please select at most {max_selections_count} {options_noun}.",
+            current_selections_count=current_selections_count,
+            current_selections_noun="option"
+            if current_selections_count == 1
+            else "options",
+            max_selections_count=max_selections_count,
+            options_noun="option" if max_selections_count == 1 else "options",
         )
 
 
@@ -355,7 +373,9 @@ class StreamlitInvalidLayoutError(LocalizableStreamlitException):
     """Exception raised when an invalid value is specified for layout."""
 
     def __init__(self, layout: str):
-        super().__init__(f'layout must be "centered" or "wide" (got "{layout}")')
+        super().__init__(
+            'layout must be "centered" or "wide" (got "{layout}")', layout=layout
+        )
 
 
 class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
@@ -363,7 +383,8 @@ class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
 
     def __init__(self, initial_sidebar_state: str):
         super().__init__(
-            f'initial_sidebar_state must be "auto" or "expanded" or "collapsed" (got "{initial_sidebar_state}")'
+            'initial_sidebar_state must be "auto" or "expanded" or "collapsed" (got "{initial_sidebar_state}")',
+            initial_sidebar_state=initial_sidebar_state,
         )
 
 
@@ -372,7 +393,8 @@ class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
 
     def __init__(self, key: str):
         super().__init__(
-            f'We only accept the keys: "Get help", "Report a bug", and "About" ("{key}" is not a valid key.)'
+            'We only accept the keys: "Get help", "Report a bug", and "About" ("{key}" is not a valid key.)',
+            key=key,
         )
 
 
@@ -381,6 +403,7 @@ class StreamlitInvalidURLError(LocalizableStreamlitException):
 
     def __init__(self, url: str):
         super().__init__(
-            f'"{url}" is a not a valid URL. '
-            "You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`."
+            '"{url}" is a not a valid URL. '
+            "You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`.",
+            url=url,
         )
