@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useEffect, useCallback } from "react"
+import React, {
+  ReactElement,
+  useEffect,
+  useCallback,
+  useState,
+  memo,
+} from "react"
 
 import { withTheme } from "@emotion/react"
 import {
@@ -28,7 +34,8 @@ import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
-  Source,
+  useWatchedState,
+  WatchedValue,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import {
@@ -56,12 +63,11 @@ interface ThemeProps {
 
 export type Props = OwnProps & ThemeProps
 
-interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: boolean
+// Values with provenance labels attached to them.
+// "Pvnd" is short for "Provenanced".
+interface PvndValue<T> {
+  value: T
+  fromUi: boolean
 }
 
 function Checkbox({
@@ -70,97 +76,42 @@ function Checkbox({
   element,
   disabled,
   widgetMgr,
+  fragmentId,
 }: Readonly<Props>): ReactElement {
-  const [mounted, setMounted] = useState(false)
+  const [formClearHelper, _] = useState(() => new FormClearHelper())
+  useEffect(() => () => formClearHelper.disconnect(), [])
 
-  const [componentValue, setComponentValue] = useState((): boolean => {
-    // If WidgetStateManager knew a value for this widget, initialize to that.
-    // Otherwise, use the default value from the widget protobuf.
-    const storedValue = widgetMgr.getBoolValue(element)
-    return storedValue ?? element.default
+  const [value, setWatchedValue] = useWatchedState<boolean>({
+    init: (): boolean => {
+      // If WidgetStateManager knew a value for this widget, initialize to that.
+      // Otherwise, use the default value from the widget protobuf.
+      return widgetMgr.getBoolValue(element) ?? element.default
+    },
+
+    onChange(pv: PvndValue<boolean>): void {
+      widgetMgr.setBoolValue(
+        element,
+        pv.value,
+        { fromUi: pv.fromUi },
+        fragmentId
+      )
+    },
   })
 
-  const formClearHelper = new FormClearHelper()
-
-  // On mount...
-  useEffect(
-    (): void => {
-      setMounted(true)
-
-      if (element.setValue) {
-        updateFromProtobuf()
-      } else {
-        commitWidgetValue({ fromUi: false })
-      }
-
-      // On unmount...
-      return (): void => {
-        formClearHelper.disconnect()
-      }
-    },
-    [
-      /* Run only once */
-    ]
-  )
-
-  // On update...
-  useEffect(
-    (): void => {
-      if (!mounted) return
-
-      if (element.setValue) {
-        updateFromProtobuf()
-      }
-    } /* Run every time */
-  )
-
-  // XXX
-  const updateFromProtobuf = (): void => {
-    element.setValue = false
-    this.setState({ componentValue: element.value }, () => {
-      commitWidgetValue({ fromUi: false })
-    })
-  }
-
-  // XXX
-  /** Commit componentValue to the WidgetStateManager. */
-  const commitWidgetValue = useCallback(
-    (source: Source): void => {
-      widgetMgr.setBoolValue(element, componentValue, source, fragmentId)
-    },
-    [widgetMgr, element, componentValue, fragmentId]
-  )
-
-  // XXX
   /**
    * If we're part of a clear_on_submit form, this will be called when our
    * form is submitted. Restore our default value and update the WidgetManager.
    */
-  const onFormCleared = useCallback(
-    (): void => {
-      this.setState(
-        (_, prevProps) => {
-          return { componentValue: prevProps.element.default }
-        },
-        () => commitWidgetValue({ fromUi: true })
-      )
-    },
-    [
-      /* XXX */
-    ]
-  )
+  const onFormCleared = useCallback((): void => {
+    console.log("Clearing form. Element.default:", element.default)
+    setWatchedValue({ value: element.default, fromUi: true })
+  }, [setWatchedValue, element])
 
-  // XXX
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
-      const value = e.target.checked
-      this.setState({ componentValue: value }, () =>
-        commitWidgetValue({ fromUi: true })
-      )
+      setWatchedValue({ value: e.target.checked, fromUi: true })
     },
-    [
-      /* XXX */
-    ]
+    [setWatchedValue]
   )
 
   const { colors, spacing, sizes } = theme
@@ -175,6 +126,8 @@ function Checkbox({
     onFormCleared
   )
 
+  console.log("Rendering with:", value)
+
   return (
     <StyledCheckbox
       className="row-widget stCheckbox"
@@ -182,7 +135,7 @@ function Checkbox({
       width={width}
     >
       <UICheckbox
-        checked={componentValue}
+        checked={value}
         disabled={disabled}
         onChange={onChange}
         aria-label={element.label}
@@ -329,5 +282,4 @@ function Checkbox({
   )
 }
 
-// XXX React.memo
-export default withTheme(Checkbox)
+export default withTheme(memo(Checkbox))

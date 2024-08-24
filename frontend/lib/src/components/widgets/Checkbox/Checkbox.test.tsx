@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -178,7 +178,9 @@ describe("Checkbox widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByRole("checkbox")).not.toBeChecked()

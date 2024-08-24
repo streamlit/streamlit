@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { useState, useEffect, Dispatch, SetStateAction } from "react"
 import produce, { Draft } from "immer"
 import { Long, util } from "protobufjs"
 import { Signal, SignalConnection } from "typed-signals"
@@ -814,4 +815,57 @@ function requireNumberInt(value: number | Long): number {
   throw new Error(
     `value ${value} cannot be converted to number without a loss of precision!`
   )
+}
+
+export type WatchedValue<T> = {
+  value: T
+} & Source
+
+export interface UseWatchedValueArgs<T> {
+  init: T | (() => T)
+  onChange: (pv: WatchedValue<T>) => void
+}
+
+/**
+ * A replacement for useState to be used with Streamlit widgets.
+ *
+ * Usage:
+ *
+ *   const [value, setValue] = useWatchedState(initValue, onChange)
+ *
+ * ...where onChange is a function that accepts a Provenanced-Value {value,
+ * fromUi} and updates the WidgetStateManager accordingly.
+ */
+export function useWatchedState<T>({
+  init,
+  onChange,
+}: UseWatchedValueArgs<T>): [
+  T,
+  Dispatch<SetStateAction<WatchedValue<T> | null>>
+] {
+  const [currentValue, setCurrentValue] = useState<T>(init)
+
+  // This acts as an "event":
+  // - It's null most of the time
+  // - It only has a value the moment when the user calls setValue (internally
+  //   called setNextWatchedValue). And then it's immediately set to null
+  //   internally.
+  const [nextWatchedValue, setNextWatchedValue] =
+    useState<WatchedValue<T> | null>({
+      value: currentValue,
+      fromUi: false,
+    })
+
+  useEffect(() => {
+    // If there's no next value, leave.
+    if (nextWatchedValue == null) return
+
+    setCurrentValue(nextWatchedValue.value)
+    onChange(nextWatchedValue)
+
+    // Clear WatchedValue.
+    setNextWatchedValue(null)
+  }, [nextWatchedValue, setNextWatchedValue])
+
+  return [currentValue, setNextWatchedValue]
 }
