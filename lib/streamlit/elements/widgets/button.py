@@ -86,6 +86,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -133,6 +134,23 @@ class ButtonMixin:
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
         disabled : bool
             An optional boolean, which disables the button if set to True. The
@@ -188,6 +206,7 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -761,6 +780,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
@@ -780,6 +800,7 @@ class ButtonMixin:
             "button",
             user_key=key,
             label=label,
+            icon=icon,
             key=key,
             help=help,
             is_form_submitter=is_form_submitter,
@@ -815,6 +836,9 @@ class ButtonMixin:
 
         if help is not None:
             button_proto.help = dedent(help)
+
+        if icon is not None:
+            button_proto.icon = validate_icon_or_emoji(icon)
 
         serde = ButtonSerde()
 

@@ -27,7 +27,7 @@ def test_button_widget_rendering(
 ):
     """Test that the button widgets are correctly rendered via screenshot matching."""
     button_elements = themed_app.get_by_test_id("stButton")
-    expect(button_elements).to_have_count(15)
+    expect(button_elements).to_have_count(17)
 
     assert_snapshot(button_elements.nth(0), name="st_button-default")
     assert_snapshot(button_elements.nth(1), name="st_button-disabled")
@@ -36,6 +36,8 @@ def test_button_widget_rendering(
     assert_snapshot(button_elements.nth(4), name="st_button-use_container_width")
     assert_snapshot(button_elements.nth(5), name="st_button-use_container_width_help")
     assert_snapshot(button_elements.nth(6), name="st_button-styled_label")
+    assert_snapshot(button_elements.nth(7), name="st_button-material_icon")
+    assert_snapshot(button_elements.nth(8), name="st_button-emoji_icon")
 
     # The rest is tested in one screenshot in the following test
 
