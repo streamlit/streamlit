@@ -98,7 +98,7 @@ class Radio extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div className="row-widget stRadio" data-testid="stRadio" style={style}>
+      <div className="stRadio" data-testid="stRadio" style={style}>
         <WidgetLabel
           label={label}
           disabled={disabled}
@@ -139,15 +139,15 @@ class Radio extends React.PureComponent<Props, State> {
                   }: {
                     $isFocusVisible: boolean
                   }) => ({
-                    marginBottom: 0,
-                    marginTop: 0,
+                    marginBottom: theme.spacing.none,
+                    marginTop: theme.spacing.none,
                     marginRight: hasCaptions
                       ? theme.spacing.sm
                       : theme.spacing.lg,
                     // Make left and right padding look the same visually.
-                    paddingLeft: 0,
+                    paddingLeft: theme.spacing.none,
                     alignItems: "start",
-                    paddingRight: "2px",
+                    paddingRight: theme.spacing.threeXS,
                     backgroundColor: $isFocusVisible
                       ? colors.darkenedBgMix25
                       : "",
@@ -159,11 +159,11 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkOuter: {
                   style: ({ $checked }: { $checked: boolean }) => ({
-                    width: "1rem",
-                    height: "1rem",
+                    width: theme.sizes.checkbox,
+                    height: theme.sizes.checkbox,
                     marginTop: "0.35rem",
-                    marginRight: "0",
-                    marginLeft: "0",
+                    marginRight: theme.spacing.none,
+                    marginLeft: theme.spacing.none,
                     backgroundColor:
                       $checked && !disabled
                         ? colors.primary
@@ -172,15 +172,19 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkInner: {
                   style: ({ $checked }: { $checked: boolean }) => ({
-                    height: $checked ? "6px" : "14px",
-                    width: $checked ? "6px" : "14px",
+                    height: $checked
+                      ? "6px"
+                      : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
+                    width: $checked
+                      ? "6px"
+                      : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
                   }),
                 },
                 Label: {
                   style: {
                     color: disabled ? colors.fadedText40 : colors.bodyText,
                     position: "relative",
-                    top: "1px",
+                    top: theme.spacing.px,
                   },
                 },
               }}

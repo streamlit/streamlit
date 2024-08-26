@@ -46,7 +46,7 @@ describe("withPagination HOC", () => {
     render(<WithHoc {...props} />)
 
     expect(screen.getByText("test")).toBeInTheDocument()
-    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileUploaderPagination")).toBeInTheDocument()
   })
 
   it("should render a paginated component", () => {
@@ -57,7 +57,7 @@ describe("withPagination HOC", () => {
     const WithHoc = withPagination(TestComponent)
     render(<WithHoc {...props} />)
     expect(screen.getByText("test")).toBeInTheDocument()
-    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileUploaderPagination")).toBeInTheDocument()
     expect(screen.getByText("Showing page 1 of 2")).toBeInTheDocument()
   })
 
@@ -69,7 +69,9 @@ describe("withPagination HOC", () => {
     const WithHoc = withPagination(TestComponent)
     render(<WithHoc {...props} />)
     expect(screen.getByText("test")).toBeInTheDocument()
-    expect(screen.queryByTestId("stPagination")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stFileUploaderPagination")
+    ).not.toBeInTheDocument()
   })
 
   it("should reset on add", () => {

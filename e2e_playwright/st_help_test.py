@@ -16,6 +16,7 @@
 from playwright.sync_api import Page
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
@@ -24,3 +25,8 @@ def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
 
     for i, element in enumerate(help_elements.all()):
         assert_snapshot(element, name=f"st_help-{i}")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stHelp")

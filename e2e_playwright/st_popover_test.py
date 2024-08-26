@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_popover_button_rendering(
@@ -136,7 +137,7 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     # Get the fullscreen elements popover container:
     popover_element = app.get_by_test_id("stPopover").nth(4)
     # Click the button to open it:
-    popover_element.get_by_test_id("baseButton-secondary").first.click()
+    popover_element.get_by_test_id("stBaseButton-secondary").first.click()
 
     popover_container = app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
@@ -159,10 +160,15 @@ def test_show_tooltip_on_hover(app: Page):
     popover_button = (
         app.get_by_test_id("stPopover")
         .nth(4)
-        .get_by_test_id("baseButton-secondary")
+        .get_by_test_id("stBaseButton-secondary")
         .first
     )
     # Click the button to open it:
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stPopover")

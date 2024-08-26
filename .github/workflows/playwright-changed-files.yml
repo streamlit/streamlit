@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 2
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v45
         with:
           path: e2e_playwright
           # Exclude all files in custom_components folder as they require external dependencies

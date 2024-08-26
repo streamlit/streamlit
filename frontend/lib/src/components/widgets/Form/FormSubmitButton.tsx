@@ -61,7 +61,7 @@ export function FormSubmitButton(props: Props): ReactElement {
 
   return (
     <div
-      className="row-widget stButton"
+      className="stFormSubmitButton"
       data-testid="stFormSubmitButton"
       style={style}
     >

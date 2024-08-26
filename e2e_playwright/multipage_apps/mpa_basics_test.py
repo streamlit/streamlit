@@ -19,6 +19,7 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import click_button
 
 
 def test_loads_main_script_on_initial_page_load(app: Page):
@@ -147,13 +148,11 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
     # st.switch_page using relative path & leading /
-    app.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(app)
+    click_button(app, "pages/06_page_6.py")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 6")
 
     # st.switch_page using relative path & leading ./
-    app.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(app)
+    click_button(app, "./mpa_basics.py")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 

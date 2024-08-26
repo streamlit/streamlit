@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_loaded
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -192,3 +193,8 @@ def test_calls_callback_on_submit(app: Page):
         "Chat input 3 (callback) - value: None",
         use_inner_text=True,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stChatInput")

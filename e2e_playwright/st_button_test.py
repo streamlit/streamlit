@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    click_checkbox,
+)
 
 
 def test_button_widget_rendering(
@@ -23,7 +27,7 @@ def test_button_widget_rendering(
 ):
     """Test that the button widgets are correctly rendered via screenshot matching."""
     button_elements = themed_app.get_by_test_id("stButton")
-    expect(button_elements).to_have_count(15)
+    expect(button_elements).to_have_count(17)
 
     assert_snapshot(button_elements.nth(0), name="st_button-default")
     assert_snapshot(button_elements.nth(1), name="st_button-disabled")
@@ -32,6 +36,8 @@ def test_button_widget_rendering(
     assert_snapshot(button_elements.nth(4), name="st_button-use_container_width")
     assert_snapshot(button_elements.nth(5), name="st_button-use_container_width_help")
     assert_snapshot(button_elements.nth(6), name="st_button-styled_label")
+    assert_snapshot(button_elements.nth(7), name="st_button-material_icon")
+    assert_snapshot(button_elements.nth(8), name="st_button-emoji_icon")
 
     # The rest is tested in one screenshot in the following test
 
@@ -103,3 +109,8 @@ def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction)
     button_element.hover()
     assert_snapshot(button_element, name="st_button-on_hover")
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stButton")

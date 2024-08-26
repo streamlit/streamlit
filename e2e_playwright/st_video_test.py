@@ -17,7 +17,11 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    click_checkbox,
+)
 
 VIDEO_ELEMENTS_COUNT = 11
 
@@ -92,7 +96,7 @@ def test_handles_changes_in_start_time(
     app.wait_for_timeout(2000)
 
     # Change the start time of second video from 6 to 5
-    app.get_by_test_id("stNumberInput").locator("button.step-down").click()
+    app.get_by_test_id("stNumberInput").get_by_test_id("stNumberInputStepDown").click()
     # Wait for the video start time to update
     app.wait_for_timeout(2000)
 
@@ -209,3 +213,8 @@ def test_video_remount_no_autoplay(app: Page):
 
     expect(video_element).to_have_js_property("autoplay", False)
     expect(video_element).to_have_js_property("paused", True)
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stVideo")

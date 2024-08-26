@@ -528,7 +528,10 @@ class FileUploader extends React.PureComponent<Props, State> {
     const newestToOldestFiles = files.slice().reverse()
 
     return (
-      <StyledFileUploader data-testid="stFileUploader">
+      <StyledFileUploader
+        className="stFileUploader"
+        data-testid="stFileUploader"
+      >
         <WidgetLabel
           label={element.label}
           disabled={disabled}

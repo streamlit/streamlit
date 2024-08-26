@@ -16,7 +16,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_expander
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 TOGGLE_ELEMENTS = 11
 
@@ -101,3 +101,8 @@ def test_grouped_toggles_height(app: Page, assert_snapshot: ImageCompareFunction
     expect(expander_details.get_by_test_id("stCheckbox").nth(0)).to_have_css(
         "height", "24px"
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stCheckbox")
