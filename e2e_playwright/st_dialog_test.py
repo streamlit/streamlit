@@ -128,25 +128,13 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
         wait_for_app_run(app)
 
         main_dialog = app.get_by_test_id(modal_test_id)
-
-        # sometimes the dialog does not seem to open in the test, so retry opening it by
-        # clicking on it. if it does not open after the second attempt, fail the test.
-        if main_dialog.count() == 0:
-            # app.wait_for_timeout(100)
-            open_dialog_without_images(app)
-            wait_for_app_run(app)
-
         expect(main_dialog).to_have_count(1)
-        # app.wait_for_timeout(1000)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
 
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
-
-        # don't click indefinitely fast to give the dialog time to set the state
-        # app.wait_for_timeout(500)
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
