@@ -74,6 +74,7 @@ message Block {
     bool dismissible = 2;
     DialogWidth width = 3;
     optional bool is_open = 4;
+    optional string update_id = 5;
   }
 
   message Form {

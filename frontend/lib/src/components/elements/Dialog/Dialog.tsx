@@ -54,7 +54,13 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
   children,
 }): ReactElement => {
-  const { title, dismissible, width, isOpen: initialIsOpen } = element
+  const {
+    title,
+    dismissible,
+    width,
+    isOpen: initialIsOpen,
+    updateId,
+  } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -62,7 +68,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (notNullOrUndefined(initialIsOpen)) {
       setIsOpen(initialIsOpen)
     }
-  }, [initialIsOpen])
+  }, [initialIsOpen, updateId])
 
   const theme = useTheme()
   const size: string = useMemo(

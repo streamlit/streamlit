@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-import time
+import uuid
 from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
@@ -96,9 +96,6 @@ class Dialog(DeltaGenerator):
 
         dialog._delta_path = delta_path
         dialog._current_proto = block_proto
-        # We add a sleep here to give the web app time to react to the update. Otherwise,
-        #  we might run into issues where the dialog cannot be opened again after closing
-        time.sleep(0.05)
         return dialog
 
     def __init__(
@@ -124,12 +121,9 @@ class Dialog(DeltaGenerator):
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
         msg.delta.add_block.dialog.is_open = should_open
-
+        msg.delta.add_block.dialog.update_id = str(uuid.uuid4())
         self._current_proto = msg.delta.add_block
 
-        # We add a sleep here to give the web app time to react to the update. Otherwise,
-        #  we might run into issues where the dialog cannot be opened again after closing
-        time.sleep(0.05)
         enqueue_message(msg)
 
     def open(self) -> None:
