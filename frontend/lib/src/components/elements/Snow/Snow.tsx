@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useContext } from "react"
-
-import { createPortal } from "react-dom"
+import React, { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -27,7 +25,7 @@ import Flake1 from "@streamlit/lib/src/assets/img/snow/flake-1.png"
 import Flake2 from "@streamlit/lib/src/assets/img/snow/flake-2.png"
 import Particles from "@streamlit/lib/src/components/elements/Particles"
 import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
-import { PortalContext } from "@streamlit/lib/src/components/core/Portal/PortalContext"
+import { RenderInPortalIfExists } from "@streamlit/lib/src/components/core/Portal/RenderInPortalIfExists"
 
 import { StyledFlake } from "./styled-components"
 
@@ -48,22 +46,20 @@ const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
 const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
   scriptRunId,
 }) {
-  const portalElement = useContext(PortalContext)?.()
-
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  const content = (
-    <Particles
-      className="stSnow"
-      data-testid="stSnow"
-      scriptRunId={scriptRunId}
-      numParticleTypes={NUM_FLAKE_TYPES}
-      numParticles={NUM_FLAKES}
-      ParticleComponent={Flake}
-    />
+  return (
+    <RenderInPortalIfExists>
+      <Particles
+        className="stSnow"
+        data-testid="stSnow"
+        scriptRunId={scriptRunId}
+        numParticleTypes={NUM_FLAKE_TYPES}
+        numParticles={NUM_FLAKES}
+        ParticleComponent={Flake}
+      />
+    </RenderInPortalIfExists>
   )
-
-  return portalElement ? createPortal(content, portalElement) : content
 }
 
 export default memo(Snow)

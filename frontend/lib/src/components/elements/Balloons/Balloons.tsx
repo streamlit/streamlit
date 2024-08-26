@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useContext } from "react"
-
-import { createPortal } from "react-dom"
+import React, { FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -30,7 +28,7 @@ import Balloon4 from "@streamlit/lib/src/assets/img/balloons/balloon-4.png"
 import Balloon5 from "@streamlit/lib/src/assets/img/balloons/balloon-5.png"
 import Particles from "@streamlit/lib/src/components/elements/Particles"
 import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
-import { PortalContext } from "@streamlit/lib/src/components/core/Portal/PortalContext"
+import { RenderInPortalIfExists } from "@streamlit/lib/src/components/core/Portal/RenderInPortalIfExists"
 
 import { StyledBalloon } from "./styled-components"
 
@@ -55,12 +53,10 @@ const Balloon: FC<React.PropsWithChildren<ParticleProps>> = ({
   particleType,
 }) => <StyledBalloon src={BALLOON_IMAGES[particleType]} />
 
-const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => {
-  const portalElement = useContext(PortalContext)?.()
-
+const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  const content = (
+  <RenderInPortalIfExists>
     <Particles
       className="stBalloons"
       data-testid="stBalloons"
@@ -69,9 +65,7 @@ const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => {
       numParticles={NUM_BALLOONS}
       ParticleComponent={Balloon}
     />
-  )
-
-  return portalElement ? createPortal(content, portalElement) : content
-}
+  </RenderInPortalIfExists>
+)
 
 export default memo(Balloons)
