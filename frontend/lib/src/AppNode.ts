@@ -50,6 +50,9 @@ interface AppLogo {
   logo: Logo
   // Associated scriptHash that created the logo
   activeScriptHash: string
+
+  // Script run id when the logo was created
+  scriptRunId: string
 }
 
 /**
@@ -676,11 +679,15 @@ export class AppRoot {
     return this.appLogo?.logo ?? null
   }
 
-  public appRootWithLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
-    const { activeScriptHash } = metadata
+  public appRootWithLogo(
+    logo: Logo,
+    activeScriptHash: string,
+    scriptRunId: string
+  ): AppRoot {
     return new AppRoot(this.mainScriptHash, this.root, {
       logo,
       activeScriptHash,
+      scriptRunId,
     })
   }
 
@@ -791,6 +798,9 @@ export class AppRoot {
       this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode(this.mainScriptHash)
 
+    const appLogo =
+      this.appLogo?.scriptRunId === currentScriptRunId ? this.appLogo : null
+
     return new AppRoot(
       this.mainScriptHash,
       new BlockNode(
@@ -799,7 +809,7 @@ export class AppRoot {
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),
-      this.appLogo
+      appLogo
     )
   }
 

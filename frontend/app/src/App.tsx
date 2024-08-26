@@ -739,9 +739,16 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    const { scriptRunId } = this.state
+    const { activeScriptHash } = metadata
+
     this.setState(
       {
-        elements: this.pendingElementsBuffer.appRootWithLogo(logo, metadata),
+        elements: this.pendingElementsBuffer.appRootWithLogo(
+          logo,
+          activeScriptHash,
+          scriptRunId
+        ),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
