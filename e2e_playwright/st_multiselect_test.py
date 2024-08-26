@@ -68,7 +68,7 @@ def del_from_kth_multiselect(page: Page, option_text: str, k: int):
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Should show widgets correctly when loaded."""
     multiselect_elements = themed_app.get_by_test_id("stMultiSelect")
-    expect(multiselect_elements).to_have_count(11)
+    expect(multiselect_elements).to_have_count(12)
     for idx, el in enumerate(multiselect_elements.all()):
         assert_snapshot(el, name="st_multiselect-" + str(idx))
 
@@ -81,7 +81,7 @@ def test_help_tooltip_works(app: Page):
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")
-    expect(text_elements).to_have_count(12)
+    expect(text_elements).to_have_count(13)
 
     expected = [
         "value 1: []",
@@ -96,6 +96,7 @@ def test_multiselect_initial_value(app: Page):
         "value 10: []",
         "value 11: []",
         "multiselect changed: False",
+        "value 12: ['A long option']",
     ]
 
     for text_element, expected_text in zip(text_elements.all(), expected):
@@ -132,6 +133,17 @@ def test_multiselect_long_values_in_dropdown(
     dropdown_elems = app.locator("li").all()
     for idx, el in enumerate(dropdown_elems):
         assert_snapshot(el, name="st_multiselect-dropdown_long_label_" + str(idx))
+
+
+def test_multiselect_long_values_in_narrow_column(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Should show long values correctly (with ellipses) when in narrow column widths."""
+    multiselect_elem = app.get_by_test_id("stMultiSelect").nth(11)
+    wait_for_app_run(app)
+    # Wait for list items to be loaded in
+    app.locator("li").all()
+    assert_snapshot(multiselect_elem, name="st_multiselect-dropdown_narrow_column")
 
 
 def test_multiselect_register_callback(app: Page):

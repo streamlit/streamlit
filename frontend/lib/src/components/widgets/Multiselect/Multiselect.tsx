@@ -359,6 +359,7 @@ class Multiselect extends React.PureComponent<Props, State> {
                         marginLeft: theme.spacing.none,
                         marginRight: theme.spacing.sm,
                         height: "28px",
+                        maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       },
                     },
                     Action: {
