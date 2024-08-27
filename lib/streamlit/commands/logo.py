@@ -157,7 +157,7 @@ def logo(
         except Exception as ex:
             raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
 
-    def sizing_check(size):
+    def validate_size(size):
         if isinstance(size, str):
             image_size = size.lower()
             valid_sizes = ["small", "medium", "large"]
@@ -170,6 +170,6 @@ def logo(
             f"The argument passed was {size}."
         )
 
-    fwd_msg.logo.size = sizing_check(size)
+    fwd_msg.logo.size = validate_size(size)
 
     ctx.enqueue(fwd_msg)
