@@ -1,4 +1,4 @@
-altair==5.4.0
+altair==5.4.1
 attrs==24.2.0
 backports.tarfile==1.2.0
 blinker==1.8.2
@@ -114,7 +114,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.3.4
+uv==0.3.5
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.2
