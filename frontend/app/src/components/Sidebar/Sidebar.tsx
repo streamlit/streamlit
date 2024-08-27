@@ -292,7 +292,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       <>
         <StyledSidebarOpenContainer
           chevronDownshift={chevronDownshift}
-          isCollapsed={collapsedSidebar}
           data-testid="stSidebarCollapsedControl"
         >
           {this.renderLogo(true)}
