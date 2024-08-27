@@ -26,4 +26,5 @@ message LinkButton {
   bool disabled = 7;
   bool use_container_width = 8;
   string type = 9;
+  string icon = 10;
 }
