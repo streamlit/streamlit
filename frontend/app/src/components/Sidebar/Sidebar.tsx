@@ -245,6 +245,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const logo = (
       <StyledLogo
         src={source}
+        size={appLogo.size}
         sidebarWidth={sidebarWidth}
         alt="Logo"
         className="stLogo"
