@@ -75,6 +75,18 @@ st.download_button(
     type="primary",
 )
 
+st.download_button(
+    "Button with emoji icon",
+    data="Hello world!",
+    icon="⬇️",
+)
+
+st.download_button(
+    "Button with material icon",
+    data="Hello world!",
+    icon=":material/download:",
+)
+
 random_str = str(random())
 clicked = st.download_button(label="Download random text", data=random_str)
 

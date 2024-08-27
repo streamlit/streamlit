@@ -40,6 +40,20 @@ class ButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button
         self.assertEqual(c.type, "primary")
 
+    def test_emoji_icon(self):
+        """Test that it can be called with emoji icon."""
+        st.button("the label", icon="⚡")
+
+        c = self.get_delta_from_queue().new_element.button
+        self.assertEqual(c.icon, "⚡")
+
+    def test_material_icon(self):
+        """Test that it can be called with material icon."""
+        st.button("the label", icon=":material/thumb_up:")
+
+        c = self.get_delta_from_queue().new_element.button
+        self.assertEqual(c.icon, ":material/thumb_up:")
+
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.button("the label", disabled=True)
