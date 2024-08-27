@@ -23,6 +23,7 @@ const sidebarMobile = balloons - 5
 const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
 const tablePortal = fullscreenWrapper + 60
+const vegaTooltips = 1000110
 const cacheSpinner = sidebar + 1
 
 export const zIndices = {
@@ -39,4 +40,5 @@ export const zIndices = {
   tablePortal,
   bottom,
   cacheSpinner,
+  vegaTooltips,
 }
