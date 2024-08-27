@@ -436,11 +436,6 @@ class CacheDataAPI:
         experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
 
-            .. deprecated::
-                The cached widget replay functionality was removed in 1.38. Please
-                remove the ``experimental_allow_widgets`` parameter from your
-                caching decorators.
-
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
             This is used to override the behavior of the hasher inside Streamlit's
@@ -448,6 +443,12 @@ class CacheDataAPI:
             check to see if its type matches a key in this dict and, if so, will use
             the provided function to generate a hash for it. See below for an example
             of how this can be used.
+
+        .. deprecated::
+            The cached widget replay functionality was removed in 1.38. Please
+            remove the ``experimental_allow_widgets`` parameter from your
+            caching decorators. This parameter will be removed in a future
+            version.
 
         Example
         -------

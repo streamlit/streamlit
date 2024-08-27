@@ -62,7 +62,7 @@ describe("StreamlitDialog", () => {
     )
 
     const baseButtonSecondary = await screen.findByTestId(
-      "baseButton-secondary"
+      "stBaseButton-secondary"
     )
     expect(baseButtonSecondary).toBeDefined()
   })
@@ -80,7 +80,7 @@ describe("StreamlitDialog", () => {
     )
 
     const baseButtonSecondary = await screen.findByTestId(
-      "baseButton-tertiary"
+      "stBaseButton-tertiary"
     )
     expect(baseButtonSecondary).toBeDefined()
   })

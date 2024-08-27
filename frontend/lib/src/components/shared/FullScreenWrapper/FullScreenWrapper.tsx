@@ -120,8 +120,7 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       this.props.theme.spacing.md
     )
     const paddingTop = this.convertScssRemValueToPixels(
-      // Old header height to avoid addtl cascading visual/snapshot changes
-      "2.875rem"
+      this.props.theme.sizes.fullScreenHeaderHeight
     )
 
     return {

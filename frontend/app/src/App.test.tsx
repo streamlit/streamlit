@@ -1195,7 +1195,7 @@ describe("App", () => {
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("button should be visible in development mode", () => {
@@ -1209,7 +1209,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.getByTestId("stDeployButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
 
     it("button should be hidden in viewer mode", () => {
@@ -1223,7 +1223,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("button should be hidden for hello app", () => {
@@ -1241,7 +1241,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
   })
 
@@ -2602,14 +2602,14 @@ describe("App", () => {
         },
       })
 
-      expect(screen.getByTestId("stDeployButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
 
       fireWindowPostMessage({
         type: "SET_MENU_ITEMS",
         items: [{ label: "Host menu item", key: "host-item", type: "text" }],
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("does not relay custom parent messages by default", () => {

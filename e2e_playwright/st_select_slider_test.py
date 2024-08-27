@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_form_button,
+    expect_help_tooltip,
+)
 
 
 def test_select_slider_rendering(
@@ -91,7 +95,9 @@ def test_select_slider_calls_callback(app: Page):
 def test_select_slider_label_realigns_when_expander_opens(app: Page):
     app.get_by_test_id("stExpander").locator("summary").click()
     app.get_by_test_id("stExpander").locator("summary").click()
-    expect(app.get_by_test_id("stThumbValue").nth(11)).not_to_have_css("left", "0px")
+    expect(app.get_by_test_id("stSliderThumbValue").nth(11)).not_to_have_css(
+        "left", "0px"
+    )
 
 
 def test_select_slider_works_in_forms(app: Page):
@@ -106,8 +112,7 @@ def test_select_slider_works_in_forms(app: Page):
 
     # need to wait for the actual component value to update and then submit
     app.wait_for_timeout(200)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expect(app.get_by_text("select_slider-in-form selection: 3")).to_be_visible()
 
@@ -123,3 +128,8 @@ def test_select_slider_works_with_fragments(app: Page):
     wait_for_app_run(app)
     expect(app.get_by_text("select_slider-in-fragment selection: 3")).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stSlider")
