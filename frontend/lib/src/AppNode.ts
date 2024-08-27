@@ -51,7 +51,7 @@ interface AppLogo {
   // Associated scriptHash that created the logo
   activeScriptHash: string
 
-  // Script run id when the logo was created
+  // Associated scriptRunId that created the logo
   scriptRunId: string
 }
 
