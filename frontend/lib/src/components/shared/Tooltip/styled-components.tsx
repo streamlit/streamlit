@@ -39,7 +39,7 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
-    maxWidth: `calc(100% - 2rem)`,
+    maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
   },
   img: {
     maxWidth: "100%",
