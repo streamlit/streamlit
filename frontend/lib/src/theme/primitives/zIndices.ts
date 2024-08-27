@@ -21,7 +21,7 @@ const header = balloons - 10
 const bottom = sidebar - 1
 const sidebarMobile = balloons - 5
 const popupMenu = balloons + 40
-const fullscreenWrapper = balloons + 50Å
+const fullscreenWrapper = balloons + 50
 const tablePortal = fullscreenWrapper + 60
 const cacheSpinner = sidebar + 1
 
