@@ -29,12 +29,7 @@ export const PortalProvider: FC<PropsWithChildren> = ({ children }) => {
   return (
     <PortalContext.Provider value={getRefElement}>
       {children}
-      <StyledDataFrameOverlay
-        data-testid="portal"
-        id="portal"
-        ref={ref}
-        tabIndex={-1}
-      />
+      <StyledDataFrameOverlay data-testid="portal" id="portal" ref={ref} />
     </PortalContext.Provider>
   )
 }
