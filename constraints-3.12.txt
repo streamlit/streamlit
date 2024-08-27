@@ -1,4 +1,4 @@
-altair==5.4.1
+altair==5.4.0
 attrs==24.2.0
 blinker==1.8.2
 bokeh==2.4.3
