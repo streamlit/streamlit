@@ -26,6 +26,8 @@ export const sizes = {
   checkbox: "1rem",
   borderWidth: "1px",
   minElementHeight: "2.5rem",
-  logoHeight: "1.5rem",
+  smallLogoHeight: "1.25rem",
+  defaultLogoHeight: "1.5rem",
+  largeLogoHeight: "2rem",
   sliderThumb: "0.75rem",
 }

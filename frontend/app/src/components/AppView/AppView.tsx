@@ -183,6 +183,15 @@ function AppView(props: AppViewProps): ReactElement {
     const displayImage = appLogo.iconImage ? appLogo.iconImage : appLogo.image
     const source = endpoints.buildMediaURL(displayImage)
 
+    const logo = (
+      <StyledLogo
+        src={source}
+        size={appLogo.size}
+        alt="Logo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -191,11 +200,11 @@ function AppView(props: AppViewProps): ReactElement {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   // Activate scroll to bottom whenever there are bottom elements:
