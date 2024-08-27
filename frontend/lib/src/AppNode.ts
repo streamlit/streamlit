@@ -116,6 +116,12 @@ export interface AppNode {
    */
   readonly activeScriptHash?: string
 
+  // An id indicating based on which delta message the node was created.
+  // If the node was created without a delta message, this field is undefined.
+  // This helps us to update React components based on a new backend message even though other
+  // props have not chnged.
+  readonly deltaMessageId?: number
+
   /**
    * Return the AppNode for the given index path, or undefined if the path
    * is invalid.
@@ -392,14 +398,10 @@ export class BlockNode implements AppNode {
 
   public readonly fragmentId?: string
 
+  public readonly deltaMessageId?: number
+
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
-
-  // A timestamp indicating when this node was created based on an incoming delta
-  // message. If the node was created without a delta message, this field is undefined.
-  // This helps us to update React components based on a new backend message even though other
-  // props have not chnged.
-  public readonly appliedAt?: number
 
   public constructor(
     activeScriptHash: string,
@@ -407,14 +409,14 @@ export class BlockNode implements AppNode {
     deltaBlock?: BlockProto,
     scriptRunId?: string,
     fragmentId?: string,
-    appliedAt?: number
+    deltaMessageId?: number
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
-    this.appliedAt = appliedAt
+    this.deltaMessageId = deltaMessageId
   }
 
   /** True if this Block has no children. */
@@ -470,7 +472,7 @@ export class BlockNode implements AppNode {
       this.deltaBlock,
       scriptRunId,
       this.fragmentId,
-      this.appliedAt
+      this.deltaMessageId
     )
   }
 
@@ -490,7 +492,7 @@ export class BlockNode implements AppNode {
       this.deltaBlock,
       this.scriptRunId,
       this.fragmentId,
-      this.appliedAt
+      this.deltaMessageId
     )
   }
 
@@ -542,7 +544,7 @@ export class BlockNode implements AppNode {
       this.deltaBlock,
       currentScriptRunId,
       this.fragmentId,
-      this.appliedAt
+      this.deltaMessageId
     )
   }
 
@@ -732,14 +734,14 @@ export class AppRoot {
       }
 
       case "addBlock": {
-        const appliedAt = Date.now()
+        const deltaMessageId = Date.now()
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
           scriptRunId,
           activeScriptHash,
           delta.fragmentId,
-          appliedAt
+          deltaMessageId
         )
       }
 
@@ -871,7 +873,7 @@ export class AppRoot {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    appliedAt?: number
+    deltaMessageId?: number
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -893,7 +895,7 @@ export class AppRoot {
       block,
       scriptRunId,
       fragmentId,
-      appliedAt
+      deltaMessageId
     )
     return new AppRoot(
       this.mainScriptHash,
