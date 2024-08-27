@@ -65,7 +65,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       setIsOpen(initialIsOpen)
     }
 
-    // when the deltaMessageId changes, we might want to open the dialog again
+    // when the deltaMessageId changes, we might want to open the dialog again.
+    // since dismissing is a UI-only action, the initialIsOpen prop might not have
+    // changed which would lead to the dialog not opening again.
   }, [initialIsOpen, deltaMessageId])
 
   const theme = useTheme()
