@@ -21,6 +21,8 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
     check_top_level_class,
+    click_button,
+    expect_markdown,
     get_button,
     get_markdown,
 )
@@ -116,9 +118,6 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
-# on webkit this test was flaky and manually reproducing the flaky error did not work,
-# so we skip it for now
-@pytest.mark.skip_browser("webkit")
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
 
@@ -153,6 +152,42 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
+    """Dismissing a dialog is a UI-only interaction as of today (the Python backend does
+    not know about this). We use a deltaMessageId to differentiate React renders
+    for dialogs triggered via a new backend message which changes the id vs. other
+    interactions. This test ensures that the dialog stays dismissed when interacting
+    with a different fragment.
+    """
+
+    open_dialog_without_images(app)
+    wait_for_app_run(app)
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    click_to_dismiss(app)
+    expect(main_dialog).not_to_be_attached()
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(0)
+
+    # interact with unrelated fragment
+    click_button(app, "Fragment Button")
+    expect_markdown(app, "Fragment Button clicked")
+
+    # dialog is still closed and did not reopen
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(0)
+
+    # reopen dialog
+    open_dialog_without_images(app)
+    wait_for_app_run(app)
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
 
 
 def test_dialog_is_scrollable(app: Page):

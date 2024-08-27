@@ -64,6 +64,8 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (notNullOrUndefined(initialIsOpen)) {
       setIsOpen(initialIsOpen)
     }
+
+    // when the deltaMessageId changes, we might want to open the dialog again
   }, [initialIsOpen, deltaMessageId])
 
   const theme = useTheme()
