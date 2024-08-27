@@ -32,6 +32,7 @@ import { StyledDialogContent } from "./styled-components"
 
 export interface Props {
   element: BlockProto.Dialog
+  appliedAt?: number
 }
 
 function parseWidthConfig(
@@ -52,15 +53,10 @@ function parseWidthConfig(
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
+  appliedAt,
   children,
 }): ReactElement => {
-  const {
-    title,
-    dismissible,
-    width,
-    isOpen: initialIsOpen,
-    updateId,
-  } = element
+  const { title, dismissible, width, isOpen: initialIsOpen } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -68,7 +64,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (notNullOrUndefined(initialIsOpen)) {
       setIsOpen(initialIsOpen)
     }
-  }, [initialIsOpen, updateId])
+  }, [initialIsOpen, appliedAt])
 
   const theme = useTheme()
   const size: string = useMemo(

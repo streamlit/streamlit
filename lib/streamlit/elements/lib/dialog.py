@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
@@ -87,8 +86,9 @@ class Dialog(DeltaGenerator):
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
 
-        # We store the delta path here, because in _update we enqueue a new proto message to update the
-        # open status. Without this, the dialog content is gone when the _update message is sent
+        # We store the delta path here, because in _update we enqueue a new proto
+        # message to update the open status. Without this, the dialog content is gone
+        # when the _update message is sent
         delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )
@@ -121,7 +121,6 @@ class Dialog(DeltaGenerator):
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
         msg.delta.add_block.dialog.is_open = should_open
-        msg.delta.add_block.dialog.update_id = str(uuid.uuid4())
         self._current_proto = msg.delta.add_block
 
         enqueue_message(msg)

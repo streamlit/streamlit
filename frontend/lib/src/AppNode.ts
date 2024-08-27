@@ -395,18 +395,26 @@ export class BlockNode implements AppNode {
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
 
+  // A timestamp indicating when this node was created based on an incoming delta
+  // message. If the node was created without a delta message, this field is undefined.
+  // This helps us to update React components based on a new backend message even though other
+  // props have not chnged.
+  public readonly appliedAt?: number
+
   public constructor(
     activeScriptHash: string,
     children?: AppNode[],
     deltaBlock?: BlockProto,
     scriptRunId?: string,
-    fragmentId?: string
+    fragmentId?: string,
+    appliedAt?: number
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
+    this.appliedAt = appliedAt
   }
 
   /** True if this Block has no children. */
@@ -461,7 +469,8 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       scriptRunId,
-      this.fragmentId
+      this.fragmentId,
+      this.appliedAt
     )
   }
 
@@ -480,7 +489,8 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       this.scriptRunId,
-      this.fragmentId
+      this.fragmentId,
+      this.appliedAt
     )
   }
 
@@ -531,7 +541,8 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       currentScriptRunId,
-      this.fragmentId
+      this.fragmentId,
+      this.appliedAt
     )
   }
 
@@ -707,7 +718,6 @@ export class AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
-
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
@@ -722,12 +732,14 @@ export class AppRoot {
       }
 
       case "addBlock": {
+        const appliedAt = Date.now()
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
           scriptRunId,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          appliedAt
         )
       }
 
@@ -858,7 +870,8 @@ export class AppRoot {
     block: BlockProto,
     scriptRunId: string,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    appliedAt?: number
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -879,7 +892,8 @@ export class AppRoot {
       children,
       block,
       scriptRunId,
-      fragmentId
+      fragmentId,
+      appliedAt
     )
     return new AppRoot(
       this.mainScriptHash,
