@@ -87,7 +87,7 @@ requests==2.32.3
 requests-mock==1.12.1
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
-rich==13.7.1
+rich==13.8.0
 rpds-py==0.20.0
 ruff==0.5.0
 seaborn==0.13.2
@@ -114,8 +114,8 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.3.3
+uv==0.3.4
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.2
-zipp==3.20.0
+zipp==3.20.1
