@@ -169,7 +169,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
-        data-testid="column"
+        className="stColumn"
+        data-testid="stColumn"
       >
         {child}
       </StyledColumn>
