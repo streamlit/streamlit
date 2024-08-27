@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.37.1"  # PEP-440
+VERSION = "1.37.2.dev20240826"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -101,7 +101,7 @@ else:
     long_description = ""
 
 setup(
-    name="streamlit",
+    name="streamlit-nightly",
     version=VERSION,
     description="A faster way to build and share data apps",
     long_description=long_description,
