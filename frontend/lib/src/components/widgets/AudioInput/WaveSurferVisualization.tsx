@@ -39,25 +39,25 @@ const WaveSurferVisualization = ({
 
   const [plugins, setPlugins] = React.useState<GenericPlugin[]>([])
 
-  React.useEffect(() => {
-    if (plugins.length === 0) {
-      setPlugins([
-        Record.create({
-          audio: true,
-          video: false,
-          maxLength: 10,
-          audioChannels: 1,
-          audioSampleRate: 44100,
-          audioBufferSize: 4096,
-          audioType: "audio/wav",
-          encoderOptions: {
-            type: "audio/wav",
-            ext: ".wav",
-          },
-        }),
-      ])
-    }
-  }, [plugins])
+  // React.useEffect(() => {
+  //   if (plugins.length === 0) {
+  //     setPlugins([
+  //       Record.create({
+  //         audio: true,
+  //         video: false,
+  //         maxLength: 10,
+  //         audioChannels: 1,
+  //         audioSampleRate: 44100,
+  //         audioBufferSize: 4096,
+  //         audioType: "audio/wav",
+  //         encoderOptions: {
+  //           type: "audio/wav",
+  //           ext: ".wav",
+  //         },
+  //       }),
+  //     ])
+  //   }
+  // }, [plugins])
 
   const [state, setState] = React.useState<{ [key: string]: number }>({
     barWidth: 4,
