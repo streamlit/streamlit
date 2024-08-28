@@ -326,72 +326,80 @@ const AudioInput: React.FC<Props> = ({
           <span style={{ margin: 8, font: "monospace" }}>T0:D0</span>
         </div>
       </Container>
-      {isRecording ? (
-        <span>
-          to prevent bugs, you can only change these while not recording
-        </span>
-      ) : (
-        <span>
-          DISCLAIMER: very buggy prototype but should give the general feel for
-          the different options if you squint just right
-        </span>
-      )}
-      <div>
-        <input
-          type="checkbox"
-          checked={barMode}
-          disabled={isRecording}
-          onChange={() => {
-            handleClear()
-            setBarMode(!barMode)
-          }}
-        />
-        <span> Toggle Bar Mode</span>
-      </div>
-      <div>
-        <input
-          type="checkbox"
-          checked={isScrolling}
-          disabled={isRecording}
-          onChange={() => {
-            handleClear()
-            setIsScrolling(!isScrolling)
-          }}
-        />
-        <span> Toggle "Scrolling" Mode</span>
-      </div>
-      <div>
-        <input
-          type="checkbox"
-          checked={isAutoUpload}
-          disabled={isRecording}
-          onChange={() => {
-            handleClear()
-            setIsAutoUpload(!isAutoUpload)
-          }}
-        />
-        <span> Toggle "Auto upload" mode</span>
-      </div>
-      <div>
-        <input
-          type="number"
-          value={configuredHeight}
-          disabled={isRecording}
-          onChange={e => {
-            handleClear()
-            setConfiguredHeight(parseInt(e.target.value))
-          }}
-        />
-        <span> Height in px</span>
-      </div>
-      {isRecording && isScrolling && barMode && (
-        <div>
+      <div
+        style={{
+          border: `1px solid ${theme.colors.gray20}`,
+          padding: 16,
+          margin: 16,
+        }}
+      >
+        {isRecording ? (
           <span>
-            you have scrolling and bars on, it should look buggy/jittery right
-            now while you are recording
+            to prevent bugs, you can only change these while not recording
           </span>
+        ) : (
+          <span>
+            DISCLAIMER: very buggy prototype but should give the general feel
+            for the different options if you squint just right
+          </span>
+        )}
+        <div>
+          <input
+            type="checkbox"
+            checked={barMode}
+            disabled={isRecording}
+            onChange={() => {
+              handleClear()
+              setBarMode(!barMode)
+            }}
+          />
+          <span> Toggle Bar Mode</span>
         </div>
-      )}
+        <div>
+          <input
+            type="checkbox"
+            checked={isScrolling}
+            disabled={isRecording}
+            onChange={() => {
+              handleClear()
+              setIsScrolling(!isScrolling)
+            }}
+          />
+          <span> Toggle "Scrolling" Mode</span>
+        </div>
+        <div>
+          <input
+            type="checkbox"
+            checked={isAutoUpload}
+            disabled={isRecording}
+            onChange={() => {
+              handleClear()
+              setIsAutoUpload(!isAutoUpload)
+            }}
+          />
+          <span> Toggle "Auto upload" mode</span>
+        </div>
+        <div>
+          <input
+            type="number"
+            value={configuredHeight}
+            disabled={isRecording}
+            onChange={e => {
+              handleClear()
+              setConfiguredHeight(parseInt(e.target.value))
+            }}
+          />
+          <span> Height in px</span>
+        </div>
+        {isRecording && isScrolling && barMode && (
+          <div>
+            <span>
+              you have scrolling and bars on, it should look buggy/jittery
+              right now while you are recording
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
