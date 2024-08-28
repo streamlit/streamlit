@@ -254,7 +254,6 @@ function AppView(props: AppViewProps): ReactElement {
       {!showSidebar && appLogo && (
         <StyledSidebarOpenContainer
           chevronDownshift={sidebarChevronDownshift}
-          isCollapsed={true}
           data-testid="stSidebarCollapsedControl"
         >
           {renderLogo(appLogo)}

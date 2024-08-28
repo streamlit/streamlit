@@ -292,22 +292,18 @@ export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
 
 export interface StyledSidebarOpenContainerProps {
   chevronDownshift: number
-  isCollapsed: boolean
 }
 
 export const StyledSidebarOpenContainer =
   styled.div<StyledSidebarOpenContainerProps>(
-    ({ theme, chevronDownshift, isCollapsed }) => ({
+    ({ theme, chevronDownshift }) => ({
       position: "fixed",
       top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
-      left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+      left: theme.spacing.twoXL,
       zIndex: theme.zIndices.header,
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-
-      transition: "left 300ms",
-      transitionDelay: "left 300ms",
 
       [`@media print`]: {
         position: "static",
