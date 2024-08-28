@@ -99,11 +99,13 @@ const AudioInput: React.FC<Props> = ({
   }
 
   useEffect(() => {
-    RecordPlugin.getAvailableAudioDevices().then(devices => {
-      setAvailableAudioDevices(devices)
-      if (devices.length > 0) {
-        setActiveAudioDeviceId(devices[0].deviceId)
-      }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
+      RecordPlugin.getAvailableAudioDevices().then(devices => {
+        setAvailableAudioDevices(devices)
+        if (devices.length > 0) {
+          setActiveAudioDeviceId(devices[0].deviceId)
+        }
+      })
     })
   }, [])
 
@@ -323,7 +325,9 @@ const AudioInput: React.FC<Props> = ({
             <div ref={waveSurferRef} />
           </div>
 
-          <span style={{ margin: 8, font: "monospace" }}>T0:D0</span>
+          <span style={{ margin: 8, font: "monospace", color: "black" }}>
+            T0:D0
+          </span>
         </div>
       </Container>
       <div
