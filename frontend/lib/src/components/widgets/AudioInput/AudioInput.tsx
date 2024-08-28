@@ -40,6 +40,8 @@ import {
   FileDownload,
   Search,
 } from "@emotion-icons/material-outlined"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
