@@ -17,6 +17,8 @@
 import React, { ReactElement } from "react"
 import WavesurferPlayer from "@wavesurfer/react"
 import WaveSurfer from "wavesurfer.js"
+import Record from "wavesurfer.js/dist/plugins/record.esm.js"
+import { GenericPlugin } from "wavesurfer.js/dist/base-plugin"
 
 interface Props {
   setWavesurfer(wavesurfer: WaveSurfer): void
@@ -34,17 +36,66 @@ const WaveSurferVisualization = ({
     setIsPlaying(false)
   }
 
+  const [plugins, setPlugins] = React.useState<GenericPlugin[]>([])
+
+  React.useEffect(() => {
+    if (plugins.length === 0) {
+      setPlugins([
+        Record.create({
+          audio: true,
+          video: false,
+          maxLength: 10,
+          audioChannels: 1,
+          audioSampleRate: 44100,
+          audioBufferSize: 4096,
+          audioType: "audio/wav",
+          encoderOptions: {
+            type: "audio/wav",
+            ext: ".wav",
+          },
+        }),
+      ])
+    }
+  }, [plugins])
+
+  const [state, setState] = React.useState<{ [key: string]: number }>({
+    barWidth: 4,
+    barGap: 4,
+    height: 50,
+    barRadius: 4,
+  })
+
   return (
-    <WavesurferPlayer
-      barWidth={2}
-      barGap={2}
-      height={120}
-      waveColor="red"
-      url={mediaBlobUrl}
-      onReady={onReady}
-      onPlay={() => setIsPlaying(true)}
-      onPause={() => setIsPlaying(false)}
-    />
+    <div>
+      {/* {Object.keys(state).map(key => (
+        <div>
+          {key}
+          <input
+            key={key}
+            value={state[key]}
+            placeholder={key}
+            onChange={event =>
+              setState({
+                ...state,
+                [key]: event.target.value ? parseInt(event.target.value) : 0,
+              })
+            }
+          />
+        </div>
+      ))} */}
+      <WavesurferPlayer
+        barWidth={state.barWidth}
+        barGap={state.barGap}
+        height={state.height}
+        barRadius={state.barRadius}
+        waveColor="red"
+        url={mediaBlobUrl}
+        onReady={onReady}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        plugins={plugins}
+      />
+    </div>
   )
 }
 
