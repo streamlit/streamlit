@@ -1704,7 +1704,7 @@ describe("App", () => {
       })
 
       // Since the logo was added with a different activeScriptHash, it should be removed
-      waitFor(() => {
+      await waitFor(() => {
         expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
       })
     })
@@ -1725,14 +1725,18 @@ describe("App", () => {
 
       expect(screen.getByTestId("stLogo")).toBeInTheDocument()
 
-      // Trigger a rerun for new scriptRunId
-      const widgetStateManager =
-        getStoredValue<WidgetStateManager>(WidgetStateManager)
-      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+      // Trigger a new scriptRunId via new session
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // Trigger cleanup in script finished handler
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
 
       // Since no logo is sent in this script run, logo must not be present in the script anymore
       // Stale logo should be removed
-      waitFor(() => {
+      await waitFor(() => {
         expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
       })
     })
