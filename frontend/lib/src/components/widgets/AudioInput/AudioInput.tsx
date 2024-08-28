@@ -25,7 +25,6 @@ import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
 import { uploadFiles } from "./uploadFiles"
-import { EmotionTheme } from "@streamlit/lib"
 import RecordIcon from "./RecordIcon"
 import PlayIcon from "./PlayIcon"
 import MicIcon from "./MicIcon"
@@ -75,6 +74,8 @@ const AudioInput: React.FC<Props> = ({
   const [fileToUpload, setFileToUpload] = useState<File | null>(null)
   const [isAutoUpload, setIsAutoUpload] = useState(true)
 
+  const [configuredHeight, setConfiguredHeight] = useState<number>(64)
+
   const barValues = {
     barWidth: 4,
     barGap: 4,
@@ -117,7 +118,7 @@ const AudioInput: React.FC<Props> = ({
       container: waveSurferRef.current,
       waveColor: "#FF4B4B",
       progressColor: "#8d1515",
-      height: 58,
+      height: configuredHeight - 8,
       ...(barMode ? barValues : {}),
       // barGap: 4,
       // barWidth: 4,
@@ -202,7 +203,7 @@ const AudioInput: React.FC<Props> = ({
         wavesurfer.destroy()
       }
     }
-  }, [barMode, isScrolling, isAutoUpload])
+  }, [barMode, isScrolling, isAutoUpload, configuredHeight])
 
   const onPlayPause = () => {
     wavesurfer && wavesurfer.playPause()
@@ -305,7 +306,7 @@ const AudioInput: React.FC<Props> = ({
 
         <div
           style={{
-            height: 64,
+            height: configuredHeight,
             width: "100%",
             background: theme.colors.gray20,
             borderRadius: 8,
@@ -323,9 +324,14 @@ const AudioInput: React.FC<Props> = ({
           <span style={{ margin: 8, font: "monospace" }}>T0:D0</span>
         </div>
       </Container>
-      {isRecording && (
+      {isRecording ? (
         <span>
           to prevent bugs, you can only change these while not recording
+        </span>
+      ) : (
+        <span>
+          DISCLAIMER: very buggy prototype but should give the general feel for
+          the different options if you squint just right
         </span>
       )}
       <div>
@@ -364,6 +370,26 @@ const AudioInput: React.FC<Props> = ({
         />
         <span> Toggle "Auto upload" mode</span>
       </div>
+      <div>
+        <input
+          type="number"
+          value={configuredHeight}
+          disabled={isRecording}
+          onChange={e => {
+            handleClear()
+            setConfiguredHeight(parseInt(e.target.value))
+          }}
+        />
+        <span> Height in px</span>
+      </div>
+      {isRecording && isScrolling && barMode && (
+        <div>
+          <span>
+            you have scrolling and bars on, it should look buggy/jittery right
+            now while you are recording
+          </span>
+        </div>
+      )}
     </div>
   )
 }
