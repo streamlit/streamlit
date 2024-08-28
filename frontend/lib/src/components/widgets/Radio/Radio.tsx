@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo, ReactElement, useCallback } from "react"
 
 import UIRadio from "@streamlit/lib/src/components/shared/Radio"
 import { Radio as RadioProto } from "@streamlit/lib/src/proto"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  Source,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
+  useBasicWidgetState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
@@ -33,113 +33,73 @@ export interface Props {
   fragmentId?: string
 }
 
-interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: number | null
-}
+type RadioValue = number | null | undefined
 
-class Radio extends React.PureComponent<Props, State> {
-  private readonly formClearHelper = new FormClearHelper()
-
-  public state: State = {
-    value: this.initialValue,
-  }
-
-  get initialValue(): number | null {
-    // If WidgetStateManager knew a value for this widget, initialize to that.
-    // Otherwise, use the default value from the widget protobuf.
-    const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
-    return storedValue ?? this.props.element.default ?? null
-  }
-
-  public componentDidMount(): void {
-    if (this.props.element.setValue) {
-      this.updateFromProtobuf()
-    } else {
-      this.commitWidgetValue({ fromUi: false })
-    }
-  }
-
-  public componentDidUpdate(): void {
-    this.maybeUpdateFromProtobuf()
-  }
-
-  public componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
-  }
-
-  private maybeUpdateFromProtobuf(): void {
-    const { setValue } = this.props.element
-    if (setValue) {
-      this.updateFromProtobuf()
-    }
-  }
-
-  private updateFromProtobuf(): void {
-    const { value } = this.props.element
-    this.props.element.setValue = false
-    this.setState({ value: value ?? null }, () => {
-      this.commitWidgetValue({ fromUi: false })
-    })
-  }
-
-  /** Commit state.value to the WidgetStateManager. */
-  private commitWidgetValue = (source: Source): void => {
-    const { widgetMgr, element, fragmentId } = this.props
-    widgetMgr.setIntValue(element, this.state.value, source, fragmentId)
-  }
-
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  private onFormCleared = (): void => {
-    this.setState(
-      (_, prevProps) => {
-        return { value: prevProps.element.default ?? null }
+function Radio({
+  disabled,
+  element,
+  widgetMgr,
+  width,
+  fragmentId,
+}: Readonly<Props>): ReactElement {
+  const [value, setValueWSource] = useBasicWidgetState<RadioValue, RadioProto>(
+    {
+      getStateFromWidgetMgr(
+        widgetMgr: WidgetStateManager,
+        element: RadioProto
+      ): RadioValue {
+        return widgetMgr.getIntValue(element)
       },
-      () => this.commitWidgetValue({ fromUi: true })
-    )
-  }
 
-  private onChange = (selectedIndex: number): void => {
-    this.setState({ value: selectedIndex }, () =>
-      this.commitWidgetValue({ fromUi: true })
-    )
-  }
+      getDefaultStateFromProto(element: RadioProto): RadioValue {
+        return element.default ?? null
+      },
 
-  public render(): React.ReactNode {
-    const { disabled, element, width, widgetMgr } = this.props
-    const { horizontal, options, captions, label, labelVisibility, help } =
-      element
+      getCurrStateFromProto(element: RadioProto): RadioValue {
+        return element.value ?? null
+      },
 
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
+      updateWidgetMgrState(
+        WidgetMgr: WidgetStateManager,
+        vws: ValueWSource<RadioValue>
+      ): void {
+        widgetMgr.setIntValue(
+          element,
+          vws.value ?? null,
+          { fromUi: vws.fromUi },
+          fragmentId
+        )
+      },
+
+      element,
       widgetMgr,
-      element.formId,
-      this.onFormCleared
-    )
+    }
+  )
 
-    return (
-      <UIRadio
-        label={label}
-        onChange={this.onChange}
-        options={options}
-        captions={captions}
-        width={width}
-        disabled={disabled}
-        horizontal={horizontal}
-        labelVisibility={labelVisibilityProtoValueToEnum(
-          labelVisibility?.value
-        )}
-        value={this.state.value}
-        help={help}
-      />
-    )
-  }
+  const onChange = useCallback(
+    (selectedIndex: number): void => {
+      setValueWSource({ value: selectedIndex, fromUi: true })
+    },
+    [setValueWSource]
+  )
+
+  const { horizontal, options, captions, label, labelVisibility, help } =
+    element
+
+  return (
+    <UIRadio
+      label={label}
+      onChange={onChange}
+      options={options}
+      captions={captions}
+      width={width}
+      disabled={disabled}
+      horizontal={horizontal}
+      labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
+      value={value ?? null}
+      help={help}
+    />
+  )
 }
 
-export default Radio
+export default memo(Radio)

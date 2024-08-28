@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useEffect,
-  useCallback,
-  useState,
-  memo,
-} from "react"
+import React, { memo, ReactElement, useCallback } from "react"
 
 import { withTheme } from "@emotion/react"
 import {
@@ -32,12 +26,11 @@ import { transparentize } from "color2k"
 
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  useWatchedState,
-  WatchedValue,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
+  useBasicWidgetState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 import {
   EmotionTheme,
   hasLightBackgroundColor,
@@ -63,13 +56,6 @@ interface ThemeProps {
 
 export type Props = OwnProps & ThemeProps
 
-// Values with provenance labels attached to them.
-// "Pvnd" is short for "Provenanced".
-interface PvndValue<T> {
-  value: T
-  fromUi: boolean
-}
-
 function Checkbox({
   theme,
   width,
@@ -78,55 +64,51 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const [formClearHelper, _] = useState(() => new FormClearHelper())
-  useEffect(() => () => formClearHelper.disconnect(), [])
+  const [value, setValueWSource] = useBasicWidgetState<boolean, CheckboxProto>(
+    {
+      getStateFromWidgetMgr(
+        widgetMgr: WidgetStateManager,
+        element: CheckboxProto
+      ): boolean | undefined {
+        return widgetMgr.getBoolValue(element)
+      },
 
-  const [value, setWatchedValue] = useWatchedState<boolean>({
-    init: (): boolean => {
-      // If WidgetStateManager knew a value for this widget, initialize to that.
-      // Otherwise, use the default value from the widget protobuf.
-      return widgetMgr.getBoolValue(element) ?? element.default
-    },
+      getDefaultStateFromProto(element: CheckboxProto): boolean {
+        return element.default ?? null
+      },
 
-    onChange(pv: PvndValue<boolean>): void {
-      widgetMgr.setBoolValue(
-        element,
-        pv.value,
-        { fromUi: pv.fromUi },
-        fragmentId
-      )
-    },
-  })
+      getCurrStateFromProto(element: CheckboxProto): boolean {
+        return element.value ?? null
+      },
 
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  const onFormCleared = useCallback((): void => {
-    console.log("Clearing form. Element.default:", element.default)
-    setWatchedValue({ value: element.default, fromUi: true })
-  }, [setWatchedValue, element])
+      updateWidgetMgrState(
+        widgetMgr: WidgetStateManager,
+        vws: ValueWSource<boolean>
+      ): void {
+        widgetMgr.setBoolValue(
+          element,
+          vws.value,
+          { fromUi: vws.fromUi },
+          fragmentId
+        )
+      },
+
+      element,
+      widgetMgr,
+    }
+  )
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
-      setWatchedValue({ value: e.target.checked, fromUi: true })
+      setValueWSource({ value: e.target.checked, fromUi: true })
     },
-    [setWatchedValue]
+    [setValueWSource]
   )
 
   const { colors, spacing, sizes } = theme
   const lightTheme = hasLightBackgroundColor(theme)
 
   const color = disabled ? colors.fadedText40 : colors.bodyText
-
-  // Manage our form-clear event handler.
-  formClearHelper.manageFormClearListener(
-    widgetMgr,
-    element.formId,
-    onFormCleared
-  )
-
-  console.log("Rendering with:", value)
 
   return (
     <StyledCheckbox
