@@ -45,10 +45,7 @@ export function RootStyleProvider(
 ): ReactElement {
   const { children, theme } = props
   return (
-    <BaseProvider
-      theme={theme.basewebTheme}
-      zIndex={theme.emotion.zIndices.popupMenu}
-    >
+    <BaseProvider theme={theme.basewebTheme}>
       <CacheProvider value={cache}>
         <EmotionThemeProvider theme={theme.emotion}>
           <Global styles={globalStyles} />
