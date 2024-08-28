@@ -75,4 +75,18 @@ describe("Popover container", () => {
     // Text should be visible now
     expect(screen.queryByText("test")).toBeVisible()
   })
+
+  it("renders an emoji icon if provided", () => {
+    render(<Popover {...getProps({ icon: "🦄" })} />)
+
+    const icon = screen.getByTestId("stIconEmoji")
+    expect(icon).toHaveTextContent("🦄")
+  })
+
+  it("renders a material icon if provided", () => {
+    render(<Popover {...getProps({ icon: ":material/thumb_up:" })} />)
+
+    const icon = screen.getByTestId("stIconMaterial")
+    expect(icon).toHaveTextContent("thumb_up")
+  })
 })
