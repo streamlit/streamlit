@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useState, useEffect } from "react"
 import { withTheme } from "@emotion/react"
 import { useReactMediaRecorder } from "./useReactMediaRecorder"
 import WaveSurfer from "wavesurfer.js"
@@ -24,130 +24,345 @@ import BaseButton, {
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
-import MediaStreamVisualizer from "./MediaStreamVisualizer"
-
-import WaveSurferVisualization from "./WaveSurferVisualization"
 import { uploadFiles } from "./uploadFiles"
-
+import { EmotionTheme } from "@streamlit/lib"
+import RecordIcon from "./RecordIcon"
+import PlayIcon from "./PlayIcon"
+import MicIcon from "./MicIcon"
+import RecordPlugin from "wavesurfer.js/dist/plugins/record"
+import Toolbar, {
+  ToolbarAction,
+} from "@streamlit/lib/src/components/shared/Toolbar"
+import { Container } from "./styled-components"
+import {
+  Add,
+  Close,
+  Delete,
+  FileDownload,
+  Search,
+} from "@emotion-icons/material-outlined"
 interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
+  theme: EmotionTheme
 }
 
 const AudioInput: React.FC<Props> = ({
   element,
   uploadClient,
   widgetMgr,
+  theme,
 }): ReactElement => {
-  const {
-    status,
-    startRecording,
-    stopRecording,
-    mediaBlobUrl,
-    pauseRecording,
-    clearBlobUrl,
-    previewAudioStream,
-  } = useReactMediaRecorder({
-    audio: true,
-    video: false,
-    mediaRecorderOptions: { mimeType: "audio/wav" },
-  })
-
   // WAVE SURFER SPECIFIC STUFF
-  const [wavesurfer, setWavesurfer] = React.useState<WaveSurfer | null>(null)
+  const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
+  const waveSurferRef = React.useRef<HTMLDivElement | null>(null)
+  const [deleteFileUrl, setDeleteFileUrl] = useState<string | null>(null)
+  const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
+  const [availableAudioDevices, setAvailableAudioDevices] = useState<
+    MediaDeviceInfo[]
+  >([])
+  const [activeAudioDeviceId, setActiveAudioDeviceId] = useState<
+    string | null
+  >(null)
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
+  const [, setRerender] = useState(0)
+  const forceRerender = () => {
+    setRerender(prev => prev + 1)
+  }
+  const [barMode, setBarMode] = useState(false)
+  const [isScrolling, setIsScrolling] = useState(true)
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null)
+  const [isAutoUpload, setIsAutoUpload] = useState(true)
+
+  const barValues = {
+    barWidth: 4,
+    barGap: 4,
+    barRadius: 4,
+  }
+
+  const uploadTheFile = (file: File) => {
+    uploadFiles({
+      files: [file],
+      uploadClient,
+      widgetMgr,
+      widgetInfo: element,
+    }).then(({ successfulUploads }) => {
+      const upload = successfulUploads[0]
+      if (upload && upload.fileUrl.deleteUrl) {
+        setDeleteFileUrl(upload.fileUrl.deleteUrl)
+      }
+    })
+  }
+
+  useEffect(() => {
+    RecordPlugin.getAvailableAudioDevices().then(devices => {
+      setAvailableAudioDevices(devices)
+      if (devices.length > 0) {
+        setActiveAudioDeviceId(devices[0].deviceId)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    if (waveSurferRef.current === null) {
+      return
+    }
+
+    if (wavesurfer) {
+      wavesurfer.destroy()
+    }
+
+    const ws = WaveSurfer.create({
+      container: waveSurferRef.current,
+      waveColor: "#FF4B4B",
+      progressColor: "#8d1515",
+      height: 58,
+      ...(barMode ? barValues : {}),
+      // barGap: 4,
+      // barWidth: 4,
+      // barRadius: 2,
+
+      // renderFunction: (channels, ctx) => {
+      //   const { width, height } = ctx.canvas
+      //   const scale = channels[0].length / width
+      //   const barWidth = 4
+      //   const gap = 4
+      //   const step = barWidth + gap
+
+      //   ctx.clearRect(0, 0, width, height) // Clear previous frame
+      //   ctx.translate(0, height / 2)
+      //   ctx.fillStyle = ctx.strokeStyle
+
+      //   for (let i = 0; i < width; i += step) {
+      //     const start = Math.floor(i * scale)
+      //     const end = Math.floor((i + barWidth) * scale)
+      //     const segment = channels[0].slice(start, end)
+
+      //     // Calculate the average absolute value for the segment
+      //     const avg =
+      //       segment.reduce((sum, val) => sum + Math.abs(val), 0) /
+      //       segment.length
+      //     const barHeight = avg * height
+
+      //     // Draw the bar
+      //     ctx.fillStyle = "#FF4B4B"
+      //     ctx.fillRect(i, -barHeight / 2, barWidth, barHeight)
+      //   }
+      // },
+    })
+
+    const recordPlugin = ws.registerPlugin(
+      RecordPlugin.create({
+        scrollingWaveform: isScrolling,
+        renderRecordedAudio: true,
+      })
+    )
+
+    recordPlugin.on("record-end", blob => {
+      const url = URL.createObjectURL(blob)
+      console.log({ blob })
+      setRecordingUrl(url)
+
+      const file = new File([blob], "audio.wav", { type: blob.type })
+      setFileToUpload(file)
+      if (isAutoUpload) {
+        uploadTheFile(file)
+      }
+
+      // TODO error handling
+      // setDownloadFilename(blob.type.split(";")[0].split("/")[1] || "webm")
+
+      // if (downloadLinkRef.current) {
+      //   downloadLinkRef.current.style.display = "inline"
+      //   downloadLinkRef.current.href = url
+      //   downloadLinkRef.current.download =
+      //     "recording." + blob.type.split(";")[0].split("/")[1] || "webm"
+      // }
+    })
+
+    // recordPlugin.on("record-progress", time => {
+    //   updateProgress(time)
+    // })
+
+    setWavesurfer(ws)
+    setRecordPlugin(recordPlugin)
+
+    // const updateProgress = (time: number) => {
+    //   const formattedTime = [
+    //     Math.floor((time % 3600000) / 60000), // minutes
+    //     Math.floor((time % 60000) / 1000), // seconds
+    //   ]
+    //     .map(v => (v < 10 ? "0" + v : v))
+    //     .join(":")
+    //   setProgressTime(formattedTime)
+    // }
+    return () => {
+      if (wavesurfer) {
+        wavesurfer.destroy()
+      }
+    }
+  }, [barMode, isScrolling, isAutoUpload])
+
   const onPlayPause = () => {
     wavesurfer && wavesurfer.playPause()
   }
 
   const [isPlaying, setIsPlaying] = React.useState(false)
 
-  const isRecording = status === "recording"
-  const buttonDisabled = status !== "idle" && status !== "recording"
+  // const isRecording = status === "recording"
+  // const buttonDisabled = status !== "idle" && status !== "recording"
 
-  const onSubmit = async () => {
-    if (!mediaBlobUrl) {
+  const handleRecord = () => {
+    if (!recordPlugin || !activeAudioDeviceId) {
       return
     }
 
-    const blob = await (await fetch(mediaBlobUrl)).blob()
-    const file = new File([blob], "audio.wav", { type: blob.type })
-    console.log({ file, blob, type: blob.type, mediaBlobUrl })
+    if (recordPlugin.isRecording() || recordPlugin.isPaused()) {
+      recordPlugin.stopRecording()
+    } else {
+      const deviceId = activeAudioDeviceId
+      if (deviceId == null) {
+        return
+      }
 
-    uploadFiles({
-      files: [file],
-      uploadClient,
-      widgetMgr,
-      widgetInfo: element,
-    }) // TODO error handling
+      recordPlugin
+        .startRecording({ deviceId: activeAudioDeviceId })
+        .then(() => {
+          forceRerender()
+          // Update the record button to show the user that they can stop recording
+        })
+    }
   }
 
+  const handleClear = () => {
+    if (wavesurfer == null || deleteFileUrl == null) {
+      return
+    }
+    setRecordingUrl(null)
+    wavesurfer.empty()
+    uploadClient.deleteFile(deleteFileUrl).then(() => {})
+    // TODO revoke the url so that it gets gced
+  }
+
+  const isRecording = recordPlugin?.isRecording()
+
+  const button = (() => {
+    if (recordPlugin && recordPlugin.isRecording()) {
+      return (
+        <BaseButton
+          kind={BaseButtonKind.BORDERLESS_ICON}
+          onClick={handleRecord}
+        >
+          {recordPlugin && recordPlugin.isRecording()}
+          <RecordIcon />
+        </BaseButton>
+      )
+    } else if (recordingUrl) {
+      return (
+        <BaseButton
+          kind={BaseButtonKind.BORDERLESS_ICON}
+          onClick={onPlayPause}
+        >
+          <PlayIcon />
+        </BaseButton>
+      )
+    } else {
+      return (
+        <BaseButton
+          kind={BaseButtonKind.BORDERLESS_ICON}
+          onClick={handleRecord}
+        >
+          <MicIcon />
+        </BaseButton>
+      )
+    }
+  })()
+
   return (
-    <div data-testid="stAudioInput">
-      <div
-        style={{
-          height: 128,
-          width: "100%",
-          paddingTop: 4,
-          paddingBottom: 4,
-          border: `1px solid gray`,
-          borderRadius: 8,
-          marginBottom: 2,
-        }}
-      >
-        {isRecording && previewAudioStream ? (
-          <MediaStreamVisualizer
-            mediaStream={previewAudioStream}
-            heightPx={120}
-          />
-        ) : (
-          <WaveSurferVisualization
-            setWavesurfer={setWavesurfer}
-            setIsPlaying={setIsPlaying}
-            mediaBlobUrl={mediaBlobUrl}
-          ></WaveSurferVisualization>
-        )}
-      </div>
-      {/* <p style={{ position: "absolute", top: 20, right: 20 }}>{status}</p> */}
-      <div>
+    <div>
+      <Container data-testid="stAudioInput">
+        <Toolbar
+          isFullScreen={false}
+          disableFullscreenMode={true}
+          target={Container}
+        >
+          {!isAutoUpload && fileToUpload && (
+            <ToolbarAction
+              label="Upload"
+              icon={FileDownload}
+              onClick={() => uploadTheFile(fileToUpload)}
+            />
+          )}
+          {deleteFileUrl && (
+            <ToolbarAction
+              label="Clear recording"
+              icon={Close}
+              onClick={handleClear}
+            />
+          )}
+        </Toolbar>
+
         <div
           style={{
+            height: 64,
+            width: "100%",
+            background: theme.colors.gray20,
+            borderRadius: 8,
+            marginBottom: 2,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: 4,
-            border: `1px solid gray`,
-            borderRadius: 8,
+            // padding: 16,
           }}
         >
-          {isRecording ? (
-            <BaseButton kind={BaseButtonKind.PRIMARY} onClick={stopRecording}>
-              Stop Recording
-            </BaseButton>
-          ) : (
-            <BaseButton kind={BaseButtonKind.PRIMARY} onClick={startRecording}>
-              Start Recording
-            </BaseButton>
-          )}
+          {button}
+          <div style={{ flex: 1 }}>
+            <div ref={waveSurferRef} />
+          </div>
 
-          <BaseButton kind={BaseButtonKind.SECONDARY} onClick={onPlayPause}>
-            {isPlaying ? "Pause" : "Play"}
-          </BaseButton>
-          <BaseButton
-            kind={BaseButtonKind.SECONDARY}
-            disabled={!mediaBlobUrl}
-            onClick={clearBlobUrl}
-          >
-            Clear
-          </BaseButton>
-          <BaseButton
-            kind={BaseButtonKind.SECONDARY}
-            onClick={onSubmit}
-            disabled={!mediaBlobUrl}
-          >
-            Submit
-          </BaseButton>
+          <span style={{ margin: 8, font: "monospace" }}>T0:D0</span>
         </div>
+      </Container>
+      {isRecording && (
+        <span>
+          to prevent bugs, you can only change these while not recording
+        </span>
+      )}
+      <div>
+        <input
+          type="checkbox"
+          checked={barMode}
+          disabled={isRecording}
+          onChange={() => {
+            handleClear()
+            setBarMode(!barMode)
+          }}
+        />
+        <span> Toggle Bar Mode</span>
+      </div>
+      <div>
+        <input
+          type="checkbox"
+          checked={isScrolling}
+          disabled={isRecording}
+          onChange={() => {
+            handleClear()
+            setIsScrolling(!isScrolling)
+          }}
+        />
+        <span> Toggle "Scrolling" Mode</span>
+      </div>
+      <div>
+        <input
+          type="checkbox"
+          checked={isAutoUpload}
+          disabled={isRecording}
+          onChange={() => {
+            handleClear()
+            setIsAutoUpload(!isAutoUpload)
+          }}
+        />
+        <span> Toggle "Auto upload" mode</span>
       </div>
     </div>
   )
