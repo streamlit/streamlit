@@ -23,10 +23,10 @@ import {
   ArrowNamedDataSet,
   Block as BlockProto,
   Delta as DeltaProto,
-  Logo as LogoProto,
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
+  Logo as LogoProto,
 } from "./proto"
 import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
 import { IndexTypeName } from "./dataframes/Quiver"
