@@ -1,5 +1,0 @@
-# Exclude all files to avoid accidentally commiting
-/*
-
-# Allow example files to be commited
-!*.example.*

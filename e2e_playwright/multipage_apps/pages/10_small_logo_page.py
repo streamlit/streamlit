@@ -12,9 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
+import pathlib
 
-from pathlib import Path
+from PIL import Image
 
-CREDENTIAL_DIR = Path(__file__).resolve().parents[2] / ".credentials"
-SNOWFLAKE_CREDENTIAL_FILE = CREDENTIAL_DIR / "snowflake.json"
+import streamlit as st
+
+small_logo = Image.open(
+    str(pathlib.Path(__file__).parent.parent / "small-streamlit.png")
+)
+
+logo = Image.open(str(pathlib.Path(__file__).parent.parent / "full-streamlit.png"))
+
+st.header("Logo page")
+st.logo(
+    logo,
+    link="https://www.example.com",
+    icon_image=small_logo,
+    size="small",
+)
+
+with st.sidebar:
+    st.radio("Example Sidebar Content", ["Home", "About", "Contact"])
