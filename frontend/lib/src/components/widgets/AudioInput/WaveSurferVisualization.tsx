@@ -17,7 +17,8 @@
 import React, { ReactElement } from "react"
 import WavesurferPlayer from "@wavesurfer/react"
 import WaveSurfer from "wavesurfer.js"
-import Record from "wavesurfer.js/dist/plugins/record.esm.js"
+import RecordPlugin from "wavesurfer.js/dist/plugins/record"
+
 import { GenericPlugin } from "wavesurfer.js/dist/base-plugin"
 
 interface Props {
