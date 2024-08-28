@@ -28,6 +28,7 @@ import Balloon4 from "@streamlit/lib/src/assets/img/balloons/balloon-4.png"
 import Balloon5 from "@streamlit/lib/src/assets/img/balloons/balloon-5.png"
 import Particles from "@streamlit/lib/src/components/elements/Particles"
 import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
+import { RenderInPortalIfExists } from "@streamlit/lib/src/components/core/Portal/RenderInPortalIfExists"
 
 import { StyledBalloon } from "./styled-components"
 
@@ -55,14 +56,16 @@ const Balloon: FC<React.PropsWithChildren<ParticleProps>> = ({
 const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  <Particles
-    className="stBalloons"
-    data-testid="stBalloons"
-    scriptRunId={scriptRunId}
-    numParticleTypes={NUM_BALLOON_TYPES}
-    numParticles={NUM_BALLOONS}
-    ParticleComponent={Balloon}
-  />
+  <RenderInPortalIfExists>
+    <Particles
+      className="stBalloons"
+      data-testid="stBalloons"
+      scriptRunId={scriptRunId}
+      numParticleTypes={NUM_BALLOON_TYPES}
+      numParticles={NUM_BALLOONS}
+      ParticleComponent={Balloon}
+    />
+  </RenderInPortalIfExists>
 )
 
 export default memo(Balloons)

@@ -134,6 +134,22 @@ def test_form_with_stretched_button(
     )
 
 
+def test_form_submit_with_emoji_icon(app: Page, assert_snapshot: ImageCompareFunction):
+    """Tests if the form submit button with emoji icon renders correctly."""
+    form_2 = app.get_by_test_id("stForm").nth(3)
+
+    assert_snapshot(form_2, name="st_form_submit-emoji_icon")
+
+
+def test_form_submit_with_material_icon(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Tests if the form submit button with material icon renders correctly."""
+    form_2 = app.get_by_test_id("stForm").nth(4)
+
+    assert_snapshot(form_2, name="st_form_submit-material_icon")
+
+
 def test_borderless_form(app: Page, assert_snapshot: ImageCompareFunction):
     """Tests if the borderless form (border=False) renders correctly."""
     form_3 = app.get_by_test_id("stForm").nth(2)
