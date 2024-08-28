@@ -63,7 +63,7 @@ playwright==1.44.0
 plotly==5.23.0
 pluggy==1.5.0
 pre-commit==3.5.0
-protobuf==5.27.3
+protobuf==5.27.4
 pyarrow==17.0.0
 pycparser==2.22
 pydeck==0.9.1
