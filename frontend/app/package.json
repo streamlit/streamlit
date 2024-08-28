@@ -108,7 +108,7 @@
     "tsconfig-paths-webpack-plugin": "^4.0.1",
     "typescript": "^4.9.5",
     "util": "^0.12.5",
-    "webpack": "5.76.0"
+    "webpack": "5.94.0"
   },
   "resolutions": {
     "@types/html-minifier-terser": "^7.0.0",
