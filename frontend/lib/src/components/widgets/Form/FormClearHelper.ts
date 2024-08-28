@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 
 import { SignalConnection } from "typed-signals"
 
@@ -81,11 +81,35 @@ export class FormClearHelper {
   }
 }
 
-export function useFormClearHelper(): FormClearHelper {
-  const [formClearHelper] = useState(() => new FormClearHelper())
-  useEffect(() => {
-    return () => formClearHelper.disconnect()
-  }, [formClearHelper])
+interface FormElementProtoInterface {
+  formId: string
+}
 
-  return formClearHelper
+interface FormClearHelperArgs {
+  element: FormElementProtoInterface
+  widgetMgr: WidgetStateManager
+  onFormCleared: () => void
+}
+
+export function useFormClearHelper({
+  element,
+  widgetMgr,
+  onFormCleared,
+}: FormClearHelperArgs): void {
+  useEffect(() => {
+    if (!element.formId) {
+      return
+    }
+
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      onFormCleared
+    )
+
+    return () => {
+      formClearHelper.disconnect()
+    }
+  }, [element, widgetMgr, onFormCleared])
 }

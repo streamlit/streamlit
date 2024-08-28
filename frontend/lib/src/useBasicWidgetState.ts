@@ -111,9 +111,6 @@ export function useBasicWidgetState<
     })
   }, [element, getCurrStateFromProto, setNextValueWSource])
 
-  // Manage our form-clear event handler.
-  const formClearHelper = useFormClearHelper()
-
   /**
    * If we're part of a clear_on_submit form, this will be called when our
    * form is submitted. Restore our default value and update the WidgetManager.
@@ -125,11 +122,8 @@ export function useBasicWidgetState<
     })
   }, [setNextValueWSource, element, getDefaultStateFromProto])
 
-  formClearHelper.manageFormClearListener(
-    widgetMgr,
-    element.formId,
-    onFormCleared
-  )
+  // Manage our form-clear event handler.
+  useFormClearHelper({ widgetMgr, element, onFormCleared })
 
   return [currentValue, setNextValueWSource]
 }
