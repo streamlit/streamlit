@@ -124,17 +124,17 @@ describe("DeckGlJsonChart element", () => {
 
     it("should return false if info is undefined", () => {
       const result = deckGlInstance.createTooltip(undefined)
-      expect(result).toBe(false)
+      expect(result).toBe(null)
     })
 
     it("should return false if info.object is undefined", () => {
       const result = deckGlInstance.createTooltip({})
-      expect(result).toBe(false)
+      expect(result).toBe(null)
     })
 
     it("should return false if element.tooltip is undefined", () => {
       const result = deckGlInstance.createTooltip({ object: {} })
-      expect(result).toBe(false)
+      expect(result).toBe(null)
     })
 
     it("should interpolate the html with the correct object", () => {
@@ -178,7 +178,7 @@ describe("DeckGlJsonChart element", () => {
         object: { elevationValue: 10 },
       })
 
-      expect(result.html).toBe(undefined)
+      expect(result?.html).toBe(undefined)
     })
   })
 
