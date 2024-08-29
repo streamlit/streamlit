@@ -94,14 +94,14 @@ export interface StyledSidebarNavItemsProps {
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, hasSidebarElements }) => {
+  ({ theme, isExpanded, hasSidebarElements }) => {
     return {
       maxHeight: isExpanded ? "none" : "30vh",
       listStyle: "none",
       overflow:
         isExpanded && hasSidebarElements ? ["auto", "overlay"] : "hidden",
-      margin: 0,
-      paddingBottom: "0.125rem",
+      margin: theme.spacing.none,
+      paddingBottom: theme.spacing.threeXS,
     }
   }
 )
@@ -116,7 +116,7 @@ export interface StyledSidebarNavLinkProps {
 }
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
-  ({ isActive, theme }) => {
+  ({ theme, isActive }) => {
     const color = conditionalCustomColor(
       theme,
       theme.colors.bodyText,
@@ -135,7 +135,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
     const defaultPageLinkStyles = {
       textDecoration: "none",
-      fontWeight: isActive ? 600 : 400,
+      fontWeight: isActive ? theme.fontWeights.bold : theme.fontWeights.normal,
     }
 
     return {
@@ -144,7 +144,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
-      borderRadius: theme.radii.lg,
+      borderRadius: theme.radii.default,
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
       marginLeft: theme.spacing.twoXL,
@@ -158,7 +158,9 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       [StyledMaterialIcon as any]: {
         color: isActive ? activeSvgColor : svgColor,
-        fontWeight: isActive ? 600 : 400,
+        fontWeight: isActive
+          ? theme.fontWeights.bold
+          : theme.fontWeights.normal,
       },
 
       "&:hover": {
@@ -395,11 +397,11 @@ export const StyledViewButton = styled.button(({ theme }) => {
 
   return {
     fontSize: theme.fontSizes.sm,
-    lineHeight: "1.4rem",
+    lineHeight: theme.lineHeights.viewMoreButton,
     color,
     backgroundColor: theme.colors.transparent,
     border: "none",
-    borderRadius: theme.radii.lg,
+    borderRadius: theme.radii.default,
     marginTop: theme.spacing.twoXS,
     marginLeft: theme.spacing.xl,
     padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,

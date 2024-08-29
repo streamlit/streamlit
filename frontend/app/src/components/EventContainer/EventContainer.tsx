@@ -29,8 +29,8 @@ export interface EventContainerProps {
 function EventContainer({
   scriptRunId,
   children,
-}: EventContainerProps): ReactElement {
-  const { sizes }: EmotionTheme = useTheme()
+}: Readonly<EventContainerProps>): ReactElement {
+  const theme: EmotionTheme = useTheme()
 
   useEffect(() => {
     // Ensure all toasts cleared on script re-run
@@ -46,9 +46,8 @@ function EventContainer({
           Root: {
             style: {
               // Avoids blocking the header
-              top: sizes.headerHeight,
-              // Toasts overlap chatInput container
-              zIndex: 100,
+              top: theme.sizes.headerHeight,
+              zIndex: theme.zIndices.toast,
             },
             props: {
               "data-testid": "stToastContainer",

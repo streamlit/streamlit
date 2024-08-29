@@ -32,7 +32,7 @@ export function getMenuStructure(
   ).map(listBoxElement => {
     return Array.from(
       listBoxElement.querySelectorAll(
-        '[role=option] span:first-of-type, [data-testid="main-menu-divider"]'
+        '[role=option] span:first-of-type, [data-testid="stMainMenuDivider"]'
       )
     ).map(d =>
       d.getAttribute("data-testid") == "main-menu-divider"

@@ -177,7 +177,7 @@ function buildMenuItemComponent(
       return (
         <>
           {hasDividerAbove && (
-            <StyledMenuDivider data-testid="main-menu-divider" />
+            <StyledMenuDivider data-testid="stMainMenuDivider" />
           )}
           <StyledMenuItem
             ref={ref}
@@ -218,7 +218,7 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
         Option: buildMenuItemComponent(StyledMenuItemType, props.metricsMgr),
         List: {
           props: {
-            "data-testid": "main-menu-list",
+            "data-testid": "stMainMenuList",
           },
           style: {
             backgroundColor: "inherit",
@@ -239,7 +239,10 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
   )
 }
 
-function getDevMenuItems(coreDevMenuItems: Record<string, any>): any[] {
+function getDevMenuItems(
+  theme: EmotionTheme,
+  coreDevMenuItems: Record<string, any>
+): any[] {
   const devMenuItems = []
   const preferredDevMenuOrder: any[] = [
     coreDevMenuItems.developerOptions,
@@ -264,8 +267,11 @@ function getDevMenuItems(coreDevMenuItems: Record<string, any>): any[] {
 
   if (notNullOrUndefined(devLastMenuItem)) {
     devLastMenuItem.styleProps = {
-      margin: "0 0 -.5rem 0",
-      padding: ".25rem 0 .25rem 1.5rem",
+      margin: `0 0 -${theme.spacing.sm} 0`,
+      paddingTop: theme.spacing.twoXS,
+      paddingRight: theme.spacing.none,
+      paddingBottom: theme.spacing.twoXS,
+      paddingLeft: theme.spacing.twoXL,
     }
   }
   return devMenuItems
@@ -324,7 +330,9 @@ function getPreferredMenuOrder(
   ]
 }
 
-function MainMenu(props: Props): ReactElement {
+function MainMenu(props: Readonly<Props>): ReactElement {
+  const theme: EmotionTheme = useTheme()
+
   const isServerDisconnected = !props.isServerConnected
 
   const showAboutMenu =
@@ -378,9 +386,12 @@ function MainMenu(props: Props): ReactElement {
       noHighlight: true,
       interactions: {},
       styleProps: {
-        fontSize: "0.75rem",
-        margin: "-.5rem 0 0 0",
-        padding: ".25rem 0 .25rem 1.5rem",
+        fontSize: theme.fontSizes.twoSmPx,
+        margin: `-${theme.spacing.sm} 0 0 0`,
+        paddingTop: theme.spacing.twoXS,
+        paddingRight: theme.spacing.none,
+        paddingBottom: theme.spacing.twoXS,
+        paddingLeft: theme.spacing.twoXL,
         pointerEvents: "none",
       },
     },
@@ -397,16 +408,12 @@ function MainMenu(props: Props): ReactElement {
       return coreMenuItems.DIVIDER
     }
 
-    if (item.key === "reportBug") {
-      if (props.menuItems?.hideGetHelp) {
-        return null
-      }
+    if (item.key === "reportBug" && props.menuItems?.hideGetHelp) {
+      return null
     }
 
-    if (item.key === "about") {
-      if (props.menuItems?.aboutSectionMd !== "") {
-        return null
-      }
+    if (item.key === "about" && props.menuItems?.aboutSectionMd !== "") {
+      return null
     }
 
     return {
@@ -443,7 +450,7 @@ function MainMenu(props: Props): ReactElement {
   }
 
   const devMenuItems: any[] = props.developmentMode
-    ? getDevMenuItems(coreDevMenuItems)
+    ? getDevMenuItems(theme, coreDevMenuItems)
     : []
 
   if (menuItems.length == 0 && devMenuItems.length == 0) {
@@ -479,11 +486,16 @@ function MainMenu(props: Props): ReactElement {
         Body: {
           props: {
             "data-testid": "stMainMenuPopover",
+            className: "stMainMenuPopover",
           },
         },
       }}
     >
-      <StyledMainMenuContainer id="MainMenu" data-testid="stMainMenu">
+      <StyledMainMenuContainer
+        id="MainMenu"
+        className="stMainMenu"
+        data-testid="stMainMenu"
+      >
         <BaseButton kind={BaseButtonKind.HEADER_NO_PADDING}>
           <Icon content={MoreVert} size="lg" />
         </BaseButton>

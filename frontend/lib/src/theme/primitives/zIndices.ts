@@ -24,6 +24,8 @@ const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
 const tablePortal = fullscreenWrapper + 60
 const cacheSpinner = sidebar + 1
+// Toasts should overlap chatInput container
+const toast = bottom + 1
 
 export const zIndices = {
   hide: -1,
@@ -39,4 +41,5 @@ export const zIndices = {
   tablePortal,
   bottom,
   cacheSpinner,
+  toast,
 }

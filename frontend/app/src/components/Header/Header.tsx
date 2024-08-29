@@ -29,7 +29,7 @@ export interface HeaderProps {
   isStale?: boolean
 }
 
-function Header({ isStale, children }: HeaderProps): ReactElement {
+function Header({ isStale, children }: Readonly<HeaderProps>): ReactElement {
   const { wideMode, embedded, showToolbar, showColoredLine } =
     React.useContext(AppContext)
 

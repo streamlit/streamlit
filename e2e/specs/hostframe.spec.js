@@ -63,7 +63,7 @@ describe("Host communication", () => {
       // Open the Main Menu
       cy.get("#MainMenu > button").click();
       // Open the Settings Modal
-      cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click({
+      cy.getIndexed('[data-testid="stMainMenuList"] > ul', 1).click({
         force: true,
       });
       cy.get("div[role='dialog']").should("exist");
@@ -83,7 +83,7 @@ describe("Host communication", () => {
       // Open the Main Menu
       cy.get("#MainMenu > button").click();
       // Check that new menu item exists
-      cy.getIndexed('[data-testid="main-menu-list"] > ul', 4).should(
+      cy.getIndexed('[data-testid="stMainMenuList"] > ul', 4).should(
         "have.text",
         "Adopt a Corgi"
       );
