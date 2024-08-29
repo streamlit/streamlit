@@ -226,6 +226,8 @@ jobs:
           python-version: "3.11"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          use_cached_venv: false
       - name: Run make develop
         run: make develop
       - name: Install integration dependencies
