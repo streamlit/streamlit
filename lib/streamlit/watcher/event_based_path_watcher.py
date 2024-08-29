@@ -323,7 +323,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         # Check for both modified and moved files, because many programs write
         # to a backup file then rename (i.e. move) it.
         if event.event_type == events.EVENT_TYPE_MODIFIED:
-            changed_path = os.path.abspath(event.src_path)
+            changed_path = event.src_path
         elif event.event_type == events.EVENT_TYPE_MOVED:
             # Teach mypy that this event has a dest_path, because it can't infer
             # the desired subtype from the event_type check
@@ -332,27 +332,32 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug(
                 "Move event: src %s; dest %s", event.src_path, event.dest_path
             )
-            changed_path = os.path.abspath(event.dest_path)
+            changed_path = event.dest_path
         # On OSX with VI, on save, the file is deleted, the swap file is
         # modified and then the original file is created hence why we
         # capture EVENT_TYPE_CREATED
         elif event.event_type == events.EVENT_TYPE_CREATED:
-            changed_path = os.path.abspath(event.src_path)
+            changed_path = event.src_path
         else:
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        changed_path_info = self._watched_paths.get(changed_path, None)
+        # changed_path can technically be a bytes object, but this is
+        # never the case in Streamlit.
+        assert isinstance(changed_path, str)
+        abs_changed_path = os.path.abspath(changed_path)
+
+        changed_path_info = self._watched_paths.get(abs_changed_path, None)
         if changed_path_info is None:
             _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",
-                changed_path,
+                abs_changed_path,
                 self._watched_paths,
             )
             return
 
         modification_time = util.path_modification_time(
-            changed_path, changed_path_info.allow_nonexistent
+            abs_changed_path, changed_path_info.allow_nonexistent
         )
 
         # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
@@ -361,23 +366,23 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             modification_time != 0.0
             and modification_time == changed_path_info.modification_time
         ):
-            _LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
+            _LOGGER.debug("File/dir timestamp did not change: %s", abs_changed_path)
             return
 
         changed_path_info.modification_time = modification_time
 
         new_md5 = util.calc_md5_with_blocking_retries(
-            changed_path,
+            abs_changed_path,
             glob_pattern=changed_path_info.glob_pattern,
             allow_nonexistent=changed_path_info.allow_nonexistent,
         )
         if new_md5 == changed_path_info.md5:
-            _LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
+            _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
             return
 
-        _LOGGER.debug("File/dir MD5 changed: %s", changed_path)
+        _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
         changed_path_info.md5 = new_md5
-        changed_path_info.on_changed.send(changed_path)
+        changed_path_info.on_changed.send(abs_changed_path)
 
     def on_created(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)
