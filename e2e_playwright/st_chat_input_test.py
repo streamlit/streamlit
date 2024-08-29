@@ -81,7 +81,7 @@ def test_embedded_app_with_bottom_chat_input(
 
 def test_app_with_bottom_chat_input(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that an app with bottom chat input renders correctly."""
-    app_view_block = app.get_by_test_id("stAppViewBlockContainer")
+    app_view_block = app.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
     expect(app_view_block).to_have_css("padding-bottom", "16px")
 
