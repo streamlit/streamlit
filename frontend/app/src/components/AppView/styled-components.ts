@@ -128,9 +128,6 @@ export const StyledAppViewBlockContainer =
       }
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
-      const wideSidePadding = isWideMode
-        ? theme.sizes.wideSidePadding
-        : theme.spacing.lg
 
       // Full screen-enabled elements can overflow the page when the screen
       // size is slightly over the content max width.
