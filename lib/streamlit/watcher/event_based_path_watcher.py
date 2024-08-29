@@ -201,7 +201,7 @@ class _MultiPathWatcher:
 
             folder_handler.remove_path_change_listener(path, callback)
 
-            if not folder_handler.is_watching_paths():
+            if not folder_handler.is_watching_paths() and folder_handler.watch is not None:
                 self._observer.unschedule(folder_handler.watch)
                 del self._folder_handlers[folder_path]
 
@@ -340,6 +340,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             return
 
         changed_path = os.path.abspath(changed_path)
+        assert isinstance(changed_path, str)
 
         changed_path_info = self._watched_paths.get(changed_path, None)
         if changed_path_info is None:
