@@ -52,7 +52,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
     return {
       position: "relative",
       // Nudge the sidebar by 2px so the header decoration doesn't go below it
-      top: adjustTop ? theme.sizes.headerDecorationHeight : "0px",
+      top: adjustTop ? theme.sizes.headerDecorationHeight : theme.spacing.none,
       backgroundColor: theme.colors.bgColor,
       zIndex: theme.zIndices.header + 1,
 

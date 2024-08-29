@@ -49,7 +49,7 @@ function Header({ isStale, children }: Readonly<HeaderProps>): ReactElement {
     >
       {showColoredLine && (
         <StyledHeaderDecoration
-          className="stAppDecoration"
+          className="stDecoration"
           data-testid="stDecoration"
           id="stDecoration"
         />
