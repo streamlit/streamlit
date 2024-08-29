@@ -268,10 +268,7 @@ function getDevMenuItems(
   if (notNullOrUndefined(devLastMenuItem)) {
     devLastMenuItem.styleProps = {
       margin: `0 0 -${theme.spacing.sm} 0`,
-      paddingTop: theme.spacing.twoXS,
-      paddingRight: theme.spacing.none,
-      paddingBottom: theme.spacing.twoXS,
-      paddingLeft: theme.spacing.twoXL,
+      padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
     }
   }
   return devMenuItems
@@ -388,10 +385,7 @@ function MainMenu(props: Readonly<Props>): ReactElement {
       styleProps: {
         fontSize: theme.fontSizes.twoSmPx,
         margin: `-${theme.spacing.sm} 0 0 0`,
-        paddingTop: theme.spacing.twoXS,
-        paddingRight: theme.spacing.none,
-        paddingBottom: theme.spacing.twoXS,
-        paddingLeft: theme.spacing.twoXL,
+        padding: `${theme.spacing.twoXS} ${theme.spacing.none} ${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
         pointerEvents: "none",
       },
     },
