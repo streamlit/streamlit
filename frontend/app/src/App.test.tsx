@@ -2550,7 +2550,9 @@ describe("App", () => {
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      expect(screen.queryByTestId("stActionButton")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stToolbarActionButton")
+      ).not.toBeInTheDocument()
 
       fireWindowPostMessage({
         type: "SET_TOOLBAR_ITEMS",
@@ -2562,7 +2564,7 @@ describe("App", () => {
         ],
       })
 
-      expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
     })
 
     it("sets hideSidebarNav based on the server config option and host setting", () => {

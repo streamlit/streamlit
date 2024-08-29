@@ -97,12 +97,12 @@ describe("Host communication", () => {
     cy.get("#toolbar").contains("Add Toolbar Item").click();
     cy.get("iframe").iframe(() => {
       // Check toolbar contents
-      cy.get(".stActionButton").should("exist");
-      cy.getIndexed('[data-testid="stActionButton"]', 0).should(
+      cy.get(".stToolbarActionButton").should("exist");
+      cy.getIndexed('[data-testid="stToolbarActionButton"]', 0).should(
         "have.text",
         "Favorite"
       );
-      cy.getIndexed('[data-testid="stActionButton"]', 1).should(
+      cy.getIndexed('[data-testid="stToolbarActionButton"]', 1).should(
         "have.text",
         "Share"
       );
