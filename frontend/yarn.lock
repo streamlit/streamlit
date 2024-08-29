@@ -1300,7 +1300,7 @@
   dependencies:
     "@date-io/core" "^2.10.6"
 
-"@deck.gl/aggregation-layers@8.9.36":
+"@deck.gl/aggregation-layers@8.9.36", "@deck.gl/aggregation-layers@^8.9.36":
   version "8.9.36"
   resolved "https://registry.yarnpkg.com/@deck.gl/aggregation-layers/-/aggregation-layers-8.9.36.tgz#a4cfd03b2cb8245076310b702138627b538f72e5"
   integrity sha512-EwUJ1bwhhAG6LF9hAdZDaIAwIFDUGC8XpQgHmitTLohciVrIp70p9zpgHNNU6oPy+iQvccmWctLcSC9TpgjsIg==
@@ -1362,7 +1362,7 @@
     "@babel/runtime" "^7.0.0"
     "@luma.gl/shadertools" "^8.5.21"
 
-"@deck.gl/geo-layers@8.9.36":
+"@deck.gl/geo-layers@8.9.36", "@deck.gl/geo-layers@^8.9.36":
   version "8.9.36"
   resolved "https://registry.yarnpkg.com/@deck.gl/geo-layers/-/geo-layers-8.9.36.tgz#ae376405bd5b926067aa3b46748bd244743a933f"
   integrity sha512-OmJhbRpNK2MPVfEWqWR45Q1e8Sz90fGuFOkcl8Ecl6HZJV7IWcAlnybtaAeJNWO2OohN2TI53UdRKUNGFYS4AQ==
@@ -1401,7 +1401,7 @@
     d3-dsv "^1.0.8"
     expression-eval "^2.0.0"
 
-"@deck.gl/layers@8.9.36":
+"@deck.gl/layers@8.9.36", "@deck.gl/layers@^8.9.36":
   version "8.9.36"
   resolved "https://registry.yarnpkg.com/@deck.gl/layers/-/layers-8.9.36.tgz#1f8a224fba4568d6fa3a4afec2f9a0b2f9ecdbf6"
   integrity sha512-sr/QKELXZ4W0ZHb12QC2+EV1bZJOM6cU6kAfOJD5jOVixOcyccr+FnPPGn39VK9cl/VFY0S339ZPs9reyhDFVg==
@@ -1424,7 +1424,7 @@
     "@babel/runtime" "^7.0.0"
     "@types/mapbox-gl" "^2.6.3"
 
-"@deck.gl/mesh-layers@8.9.36":
+"@deck.gl/mesh-layers@8.9.36", "@deck.gl/mesh-layers@^8.9.36":
   version "8.9.36"
   resolved "https://registry.yarnpkg.com/@deck.gl/mesh-layers/-/mesh-layers-8.9.36.tgz#d1d3005f0403f441f25cf9abef7fdb94a217beb3"
   integrity sha512-xQ+OSdU3z3HIgaHJfxbcNIxmWYPUBMJZAM+fAbynojGVzGYLJo2MUjUJLtCsw0Ejs3YtnocyuFRM+zObB0I3jw==
@@ -1435,7 +1435,7 @@
     "@luma.gl/experimental" "^8.5.21"
     "@luma.gl/shadertools" "^8.5.21"
 
-"@deck.gl/react@8.9.36":
+"@deck.gl/react@8.9.36", "@deck.gl/react@^8.9.36":
   version "8.9.36"
   resolved "https://registry.yarnpkg.com/@deck.gl/react/-/react-8.9.36.tgz#6fb0daef9b3f7c146aab082107875d90e969a985"
   integrity sha512-/WIvHK0aJwppLnpA6GZrOhfanx5WVWihx/o6U88kX53VsyJQMZU10+EXKc1FkI3nd5/jsLbLc8fC0dUtiXiSVw==
