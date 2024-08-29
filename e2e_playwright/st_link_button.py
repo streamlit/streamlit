@@ -41,3 +41,15 @@ st.link_button(
     use_container_width=True,
     help="help text here",
 )
+
+st.link_button(
+    "Link Button with emoji icon",
+    "https://streamlit.io",
+    icon="🎈",
+)
+
+st.link_button(
+    "Link Button with Material icon",
+    "https://streamlit.io",
+    icon=":material/bolt:",
+)

@@ -109,4 +109,20 @@ describe("LinkButton widget", () => {
       expect(linkButton).toHaveStyle("width: 100%")
     })
   })
+
+  describe("icons", () => {
+    it("renders an emoji icon", () => {
+      const props = getProps({ icon: "🎈" })
+      render(<LinkButton {...props} />)
+
+      expect(screen.getByText("🎈")).toBeVisible()
+    })
+
+    it("renders a Material icon", () => {
+      const props = getProps({ icon: ":material/bolt:" })
+      render(<LinkButton {...props} />)
+
+      expect(screen.getByTestId("stIconMaterial")).toBeVisible()
+    })
+  })
 })
