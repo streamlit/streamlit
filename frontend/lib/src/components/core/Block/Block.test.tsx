@@ -90,7 +90,7 @@ describe("Vertical Block Component", () => {
     const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
     render(makeVerticalBlockComponent(block))
 
-    expect(screen.getAllByTestId("column")).toHaveLength(4)
+    expect(screen.getAllByTestId("stColumn")).toHaveLength(4)
     expect(
       screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
     ).not.toHaveStyle("overflow: auto")

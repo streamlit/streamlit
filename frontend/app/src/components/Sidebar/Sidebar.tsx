@@ -36,6 +36,7 @@ import {
 } from "@streamlit/lib"
 
 import {
+  RESIZE_HANDLE_WIDTH,
   StyledCollapseSidebarButton,
   StyledLogo,
   StyledLogoLink,
@@ -315,7 +316,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             bottom: false,
             left: false,
           }}
-          handleStyles={{ right: { width: "8px", right: "-6px" } }}
+          handleStyles={{
+            right: {
+              width: RESIZE_HANDLE_WIDTH,
+              right: "-6px",
+            },
+          }}
           handleComponent={{
             right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}

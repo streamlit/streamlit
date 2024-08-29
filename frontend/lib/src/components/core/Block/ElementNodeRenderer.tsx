@@ -761,8 +761,8 @@ const ElementNodeRenderer = (
         // causes the fullscreen overlay to be transparent.
         isStale={isStale && !isFullScreen}
         width={width}
-        className={"element-container"}
-        data-testid={"element-container"}
+        className="stElementContainer element-container"
+        data-testid="stElementContainer"
         elementType={elementType}
       >
         <ErrorBoundary width={width}>

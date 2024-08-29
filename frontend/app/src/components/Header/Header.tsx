@@ -29,7 +29,7 @@ export interface HeaderProps {
   isStale?: boolean
 }
 
-function Header({ isStale, children }: HeaderProps): ReactElement {
+function Header({ isStale, children }: Readonly<HeaderProps>): ReactElement {
   const { wideMode, embedded, showToolbar, showColoredLine } =
     React.useContext(AppContext)
 
@@ -44,13 +44,18 @@ function Header({ isStale, children }: HeaderProps): ReactElement {
       // The tabindex below is required for testing.
       tabIndex={-1}
       isStale={isStale}
+      className="stAppHeader"
       data-testid="stHeader"
     >
       {showColoredLine && (
-        <StyledHeaderDecoration data-testid="stDecoration" id="stDecoration" />
+        <StyledHeaderDecoration
+          className="stDecoration"
+          data-testid="stDecoration"
+          id="stDecoration"
+        />
       )}
       {showToolbar && (
-        <StyledHeaderToolbar data-testid="stToolbar">
+        <StyledHeaderToolbar className="stAppToolbar" data-testid="stToolbar">
           {children}
         </StyledHeaderToolbar>
       )}
