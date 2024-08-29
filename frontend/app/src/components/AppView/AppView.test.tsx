@@ -358,6 +358,7 @@ describe("AppView element", () => {
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://docs.streamlit.io/logo.svg"
       )
+      expect(collapsedLogo).toHaveClass("stLogo")
     })
 
     it("defaults to image if no iconImage", () => {

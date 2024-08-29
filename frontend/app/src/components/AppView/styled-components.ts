@@ -223,7 +223,7 @@ export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
   }
 })
 
-export const StyledIFrameResizerAnchor = styled.div(() => ({
+export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
   position: "relative",
-  bottom: "0",
+  bottom: theme.spacing.none,
 }))

@@ -188,6 +188,7 @@ function AppView(props: AppViewProps): ReactElement {
         src={source}
         size={appLogo.size}
         alt="Logo"
+        className="stLogo"
         data-testid="stLogo"
       />
     )
