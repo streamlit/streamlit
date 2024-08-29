@@ -342,9 +342,10 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        # changed_path can technically be a bytes object, but this is
-        # never the case in Streamlit.
-        assert isinstance(changed_path, str)
+        # changed_path can be a bytes object, convert it to a string when this is the case
+        if isinstance(changed_path, bytes):
+            changed_path = changed_path.decode("utf-8")
+
         abs_changed_path = os.path.abspath(changed_path)
 
         changed_path_info = self._watched_paths.get(abs_changed_path, None)
