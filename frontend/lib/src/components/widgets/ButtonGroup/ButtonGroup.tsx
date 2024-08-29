@@ -40,6 +40,14 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
+import {
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+
 export interface Props {
   disabled: boolean
   element: ButtonGroupProto
@@ -225,6 +233,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     selectionVisualization,
     style,
     width,
+    label,
+    labelVisibility,
+    help,
   } = element
   console.log("element", element)
   const theme: EmotionTheme = useTheme()
@@ -325,6 +336,19 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   })
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
+      <WidgetLabel
+        label={label}
+        disabled={disabled}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
+      >
+        {help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon content={help} placement={Placement.LEFT} />
+          </StyledWidgetLabelHelp>
+        )}
+      </WidgetLabel>
       <BasewebButtonGroup
         disabled={disabled}
         mode={mode}

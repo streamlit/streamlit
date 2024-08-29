@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ButtonGroupProto";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message ButtonGroup {
   enum ClickMode {
       SINGLE_SELECT = 0;
@@ -55,4 +57,8 @@ message ButtonGroup {
   Style style = 10;
 
   string width = 11;
+
+  string label = 12;
+  LabelVisibilityMessage label_visibility = 13;
+  string help = 14;
 }

@@ -31,10 +31,15 @@ from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
 )
-from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.policies import (
+    check_widget_policies,
+    maybe_raise_label_warnings,
+)
 from streamlit.elements.lib.utils import (
     Key,
+    LabelVisibility,
     compute_and_register_element_id,
+    get_label_visibility_proto_value,
     to_key,
 )
 from streamlit.elements.widgets.multiselect import MultiSelectSerde
@@ -149,6 +154,9 @@ def _build_proto(
     ),
     style: Literal["normal", "pills"] = "normal",
     width: Literal["small", "medium", "large"] = "medium",
+    label: str | None = None,
+    label_visibility: LabelVisibility = "visible",
+    help: str | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -159,6 +167,14 @@ def _build_proto(
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
     proto.width = width
+
+    if label is not None:
+        proto.label = label
+        proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+        if help is not None:
+            proto.help = help
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -314,6 +330,68 @@ class ButtonGroupMixin:
         )
         return sentiment.value
 
+    @gather_metrics("pills")
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        default: Sequence[V] | V | None = None,
+        selection_mode: Literal["select", "multiselect"] = "select",
+        format_func: Callable[[V], dict[str, str]] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ):
+        maybe_raise_label_warnings(label, label_visibility)
+
+        def _transformed_format_func(x: V) -> ButtonGroupProto.Option:
+            if format_func is None:
+                return ButtonGroupProto.Option(content=str(x))
+
+            transformed = format_func(x)
+            return ButtonGroupProto.Option(
+                content=transformed["content"],
+                selected_content=transformed["selected_content"],
+            )
+
+        indexable_options = convert_to_sequence_and_check_comparable(options)
+        default_values = get_default_indices(indexable_options, default)
+
+        serde = MultiSelectSerde(indexable_options, default_values)
+        res = self._button_group(
+            indexable_options,
+            key=key,
+            default=default_values,
+            selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
+            if selection_mode == "multiselect"
+            else ButtonGroupProto.SINGLE_SELECT,
+            disabled=disabled,
+            format_func=_transformed_format_func,
+            serializer=serde.serialize,
+            deserializer=serde.deserialize,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            style="pills",
+            label=label,
+            label_visibility=label_visibility,
+            help=help,
+        )
+
+        if selection_mode == "multiselect" and len(res.value) > 0:
+            return res.value
+
+        return (
+            res.value[0]
+            if selection_mode == "select" and res.value and len(res.value) > 0
+            else None
+        )
+
     @gather_metrics("button_group")
     def button_group(
         self,
@@ -375,9 +453,6 @@ class ButtonGroupMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
-            # after_register_callback=lambda widget_state: maybe_coerce_enum_sequence(
-            #     widget_state, options, indexable_options
-            # ),
         )
 
         if selection_mode == "multiselect" and len(res.value) > 0:
@@ -410,10 +485,9 @@ class ButtonGroupMixin:
         selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
             ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         ),
-        after_register_callback: Callable[
-            [RegisterWidgetResult[T]], RegisterWidgetResult[T]
-        ]
-        | None = None,
+        label: str | None = None,
+        label_visibility: LabelVisibility = "visible",
+        help: str | None = None,
     ) -> RegisterWidgetResult[T]:
         key = to_key(key)
 
@@ -454,6 +528,9 @@ class ButtonGroupMixin:
             selection_visualization=selection_visualization,
             style=style,
             width=width,
+            label=label,
+            label_visibility=label_visibility,
+            help=help,
         )
 
         widget_state = register_widget(
@@ -466,9 +543,6 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
         )
-
-        if after_register_callback is not None:
-            widget_state = after_register_callback(widget_state)
 
         if widget_state.value_changed:
             proto.value[:] = serializer(widget_state.value)
