@@ -57,7 +57,7 @@ pixelmatch==0.3.0
 pkginfo==1.10.0
 platformdirs==4.2.2
 playwright==1.44.0
-plotly==5.23.0
+plotly==5.24.0
 pluggy==1.5.0
 pre-commit==3.8.0
 protobuf==5.28.0
