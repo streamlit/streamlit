@@ -88,7 +88,7 @@ describe("Host communication", () => {
         "Adopt a Corgi"
       );
       // Exit main menu
-      cy.get(".main").type("{esc}");
+      cy.get('[data-testid="stMain"]').type("{esc}");
     });
   });
 
