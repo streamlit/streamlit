@@ -61,7 +61,7 @@ playwright==1.44.0
 plotly==5.23.0
 pluggy==1.5.0
 pre-commit==3.8.0
-protobuf==5.27.4
+protobuf==5.28.0
 pyarrow==17.0.0
 pycparser==2.22
 pydeck==0.9.1
@@ -112,7 +112,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.3.5
+uv==0.4.0
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==4.0.2
