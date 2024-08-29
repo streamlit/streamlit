@@ -38,7 +38,6 @@ with st.popover(
     col3.text_input("Column 3")
     st.selectbox("Selectbox", ["a", "b", "c"])
 
-
 with st.popover("popover 4 (with dataframe)", help="help text"):
     st.markdown("Popover with dataframe")
     st.dataframe(df, use_container_width=False)
@@ -50,6 +49,12 @@ with st.sidebar.popover("popover 5 (in sidebar)"):
 
 with st.popover("popover 6 (disabled)", disabled=True):
     st.markdown("Hello World 👋")
+
+with st.popover("popover 7 (emoji)", icon="🦄"):
+    st.markdown("Hello emoji")
+
+with st.popover("popover 8 (like button)", icon=":material/thumb_up:"):
+    st.markdown("Hello material icon")
 
 with st.expander("Output"):
     st.markdown(text)
