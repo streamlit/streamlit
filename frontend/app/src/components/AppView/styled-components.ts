@@ -155,8 +155,12 @@ export const StyledAppViewBlockContainer =
         paddingRight: theme.spacing.lg,
         // Increase side padding, if layout = wide and we're not on mobile
         [`@media (min-width: ${theme.breakpoints.sm})`]: {
-          paddingLeft: wideSidePadding,
-          paddingRight: wideSidePadding,
+          paddingLeft: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
+          paddingRight: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
         },
         paddingTop: topEmbedPadding,
         paddingBottom: bottomEmbedPadding,
@@ -192,17 +196,18 @@ export interface StyledBottomBlockContainerProps {
 export const StyledBottomBlockContainer =
   styled.div<StyledBottomBlockContainerProps>(
     ({ isWideMode, showPadding, theme }) => {
-      const wideSidePadding = isWideMode
-        ? theme.sizes.wideSidePadding
-        : theme.spacing.lg
       return {
         width: theme.sizes.full,
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
         // Increase side padding, if layout = wide and we're not on mobile
         [`@media (min-width: ${theme.breakpoints.sm})`]: {
-          paddingLeft: wideSidePadding,
-          paddingRight: wideSidePadding,
+          paddingLeft: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
+          paddingRight: isWideMode
+            ? theme.sizes.wideSidePadding
+            : theme.spacing.lg,
         },
         paddingTop: theme.spacing.lg,
         paddingBottom: showPadding ? "55px" : theme.spacing.threeXL,
