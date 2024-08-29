@@ -401,7 +401,7 @@ export const StyledViewButton = styled.button(({ theme }) => {
 
   return {
     fontSize: theme.fontSizes.sm,
-    lineHeight: theme.lineHeights.viewMoreButton,
+    lineHeight: theme.lineHeights.base,
     color,
     backgroundColor: theme.colors.transparent,
     border: "none",
