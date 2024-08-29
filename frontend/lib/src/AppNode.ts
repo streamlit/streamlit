@@ -46,10 +46,16 @@ import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
-interface AppLogo {
-  logo: Logo
+
+interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
+
+  // Associated scriptRunId that created the logo
+  scriptRunId: string
+}
+interface AppLogo extends LogoMetadata {
+  logo: Logo
 }
 
 /**
@@ -676,11 +682,10 @@ export class AppRoot {
     return this.appLogo?.logo ?? null
   }
 
-  public appRootWithLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
-    const { activeScriptHash } = metadata
+  public appRootWithLogo(logo: Logo, metadata: LogoMetadata): AppRoot {
     return new AppRoot(this.mainScriptHash, this.root, {
       logo,
-      activeScriptHash,
+      ...metadata,
     })
   }
 
@@ -791,6 +796,9 @@ export class AppRoot {
       this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode(this.mainScriptHash)
 
+    const appLogo =
+      this.appLogo?.scriptRunId === currentScriptRunId ? this.appLogo : null
+
     return new AppRoot(
       this.mainScriptHash,
       new BlockNode(
@@ -799,7 +807,7 @@ export class AppRoot {
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),
-      this.appLogo
+      appLogo
     )
   }
 
