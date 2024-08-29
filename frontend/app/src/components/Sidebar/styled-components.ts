@@ -283,6 +283,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(
     marginRight: theme.spacing.sm,
     marginLeft: theme.spacing.none,
     zIndex: theme.zIndices.header,
+    objectFit: "contain",
 
     ...(sidebarWidth && {
       // Control max width of logo so sidebar collapse button always shows (issue #8707)
