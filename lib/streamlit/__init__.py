@@ -205,6 +205,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pills = _main.pills
 plotly_chart = _main.plotly_chart
 popover = _main.popover
 progress = _main.progress
