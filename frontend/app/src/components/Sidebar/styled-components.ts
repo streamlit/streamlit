@@ -50,9 +50,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
     const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
 
     return {
-      // Nudge the sidebar by 2px so the header decoration doesn't go below it
       position: "relative",
-      top: adjustTop ? "2px" : "0px",
+      // Nudge the sidebar by 2px so the header decoration doesn't go below it
+      top: adjustTop ? theme.sizes.headerDecorationHeight : "0px",
       backgroundColor: theme.colors.bgColor,
       zIndex: theme.zIndices.header + 1,
 
@@ -230,9 +230,11 @@ export const StyledSidebarContent = styled.div(({}) => ({
   overflow: ["auto", "overlay"],
 }))
 
+export const RESIZE_HANDLE_WIDTH = "8px"
+
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
-  width: "8px",
+  width: RESIZE_HANDLE_WIDTH,
   height: "100%",
   cursor: "col-resize",
   zIndex: theme.zIndices.sidebarMobile,
@@ -246,7 +248,9 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "start",
-  padding: `1.375rem ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
+  padding: theme.spacing.twoXL,
+  // Adjust top padding based on the header decoration height
+  paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.headerDecorationHeight})`,
 }))
 
 export const StyledLogoLink = styled.a(({}) => ({
@@ -282,8 +286,8 @@ export const StyledLogo = styled.img<StyledLogoProps>(
 
     ...(sidebarWidth && {
       // Control max width of logo so sidebar collapse button always shows (issue #8707)
-      // L & R padding (3rem) + R margin (.5rem) + collapse button (2.25rem) = 5.75rem
-      maxWidth: `calc(${sidebarWidth}px - 5.75rem)`,
+      // L & R padding (twoXL) + R margin (sm) + collapse button (2.25rem)
+      maxWidth: `calc(${sidebarWidth}px - 2 * ${theme.spacing.twoXL} - ${theme.spacing.sm} - 2.25rem)`,
     }),
   })
 )
