@@ -1663,6 +1663,85 @@ describe("App", () => {
     })
   })
 
+  describe("Logo handling", () => {
+    it("adds logo on receipt of logo ForwardMsg", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+    })
+
+    it("will remove logo if activeScriptHash does not match", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new session with a different pageScriptHash
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "different_page_script_hash",
+      })
+
+      // Since the logo was added with a different activeScriptHash, it should be removed
+      await waitFor(() => {
+        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      })
+    })
+
+    it("will remove logo if scriptRunId does not match", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new scriptRunId via new session
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // Trigger cleanup in script finished handler
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      // Since no logo is sent in this script run, logo must not be present in the script anymore
+      // Stale logo should be removed
+      await waitFor(() => {
+        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      })
+    })
+  })
+
   //   * handlePageNotFound has branching error messages depending on pageName
   describe("App.handlePageNotFound", () => {
     it("includes the missing page name in error modal message if available", () => {

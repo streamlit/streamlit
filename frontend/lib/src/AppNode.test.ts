@@ -26,6 +26,7 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
+  Logo as LogoProto,
 } from "./proto"
 import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
 import { IndexTypeName } from "./dataframes/Quiver"
@@ -1149,6 +1150,21 @@ describe("AppRoot.clearStaleNodes", () => {
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
     expect(newRoot.getElements().size).toBe(1)
+  })
+
+  it("clears a stale logo", () => {
+    const logo = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+    })
+    const newRoot = ROOT.appRootWithLogo(logo, {
+      activeScriptHash: "hash",
+      scriptRunId: "script_run_id",
+    })
+    expect(newRoot.logo).not.toBeNull()
+
+    const newNewRoot = newRoot.clearStaleNodes("new_script_run_id", [])
+    expect(newNewRoot.logo).toBeNull()
   })
 
   it("handles currentFragmentId correctly", () => {
