@@ -417,7 +417,7 @@ describe("AppView element", () => {
     const props = getProps()
     render(<AppView {...props} />)
 
-    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
     expect(stbContainer).not.toBeInTheDocument()
   })
 
@@ -466,7 +466,7 @@ describe("AppView element", () => {
 
     render(<AppView {...props} />)
 
-    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
     expect(stbContainer).toBeInTheDocument()
   })
 })
