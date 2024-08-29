@@ -51,10 +51,10 @@ with st.popover("popover 6 (disabled)", disabled=True):
     st.markdown("Hello World 👋")
 
 with st.popover("popover 7 (emoji)", icon="🦄"):
-    st.markdown("Hello emoji")
+    st.markdown("Hello unicorn")
 
-with st.popover("popover 8 (like button)", icon=":material/thumb_up:"):
-    st.markdown("Hello material icon")
+with st.popover("popover 8 (material icon)", icon=":material/thumb_up:"):
+    st.markdown("Hello thumb up")
 
 with st.expander("Output"):
     st.markdown(text)
