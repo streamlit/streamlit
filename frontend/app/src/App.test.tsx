@@ -1705,7 +1705,7 @@ describe("App", () => {
 
       // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
       await waitFor(() => {
-        expect(screen.queryByTestId("stLogo")).toBeInTheDocument()
+        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
       })
     })
 
