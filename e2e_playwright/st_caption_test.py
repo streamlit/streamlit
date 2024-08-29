@@ -64,7 +64,7 @@ def test_match_snapshot_for_caption_with_tooltip(
     """Test that the caption with matches the snapshot. Also test dark-theme to make
     sure icon is visible."""
     caption_container = (
-        themed_app.get_by_test_id("element-container")
+        themed_app.get_by_test_id("stElementContainer")
         .filter(has=themed_app.get_by_test_id("stCaptionContainer"))
         .nth(3)
     )
@@ -76,7 +76,7 @@ def test_match_snapshot_for_mixed_markdown_content(
 ):
     """Test that the big markdown caption with the mixed content matches the snapshot."""
     caption_container = (
-        app.get_by_test_id("element-container")
+        app.get_by_test_id("stElementContainer")
         .filter(has=app.get_by_test_id("stCaptionContainer"))
         .nth(4)
     )

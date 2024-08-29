@@ -41,21 +41,25 @@ describe("ActionButton", () => {
   it("renders without crashing", () => {
     render(<ActionButton {...getProps()} />)
 
-    expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
+    expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
   })
 
   it("does not render icon if not provided", () => {
     render(<ActionButton {...getProps({ icon: undefined })} />)
 
-    expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
-    expect(screen.queryByTestId("stActionButtonIcon")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stToolbarActionButtonIcon")
+    ).not.toBeInTheDocument()
   })
 
   it("does not render label if not provided", () => {
     render(<ActionButton {...getProps({ label: undefined })} />)
 
-    expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
-    expect(screen.queryByTestId("stActionButtonLabel")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stToolbarActionButtonLabel")
+    ).not.toBeInTheDocument()
   })
 })
 
