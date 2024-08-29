@@ -295,7 +295,7 @@ describe("AppView element", () => {
     render(<AppView {...props} />)
 
     const style = window.getComputedStyle(
-      screen.getByTestId("stAppViewBlockContainer")
+      screen.getByTestId("stMainBlockContainer")
     )
     expect(style.maxWidth).not.toEqual("initial")
   })
@@ -311,7 +311,7 @@ describe("AppView element", () => {
     })
     render(<AppView {...getProps()} />)
     const style = window.getComputedStyle(
-      screen.getByTestId("stAppViewBlockContainer")
+      screen.getByTestId("stMainBlockContainer")
     )
     expect(style.maxWidth).toEqual("initial")
   })

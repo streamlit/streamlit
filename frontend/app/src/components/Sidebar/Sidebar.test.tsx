@@ -348,7 +348,7 @@ describe("Sidebar Component", () => {
         "stLogo"
       )
       expect(sidebarLogo).toHaveStyle(
-        `max-width: calc(${sidebarWidth} - 5.75rem)`
+        `max-width: calc(${sidebarWidth} - 2 * 1.5rem - 0.5rem - 2.25rem)`
       )
     })
   })
