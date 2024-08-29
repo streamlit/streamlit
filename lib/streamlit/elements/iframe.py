@@ -39,7 +39,7 @@ class IframeMixin:
 
         .. warning::
             Using ``st.components.v1.iframe`` directly (instead of importing
-            its module) is deprecated and will be disallowd in a later version.
+            its module) is deprecated and will be disallowed in a later version.
 
         Parameters
         ----------
@@ -95,7 +95,7 @@ class IframeMixin:
 
         .. warning::
             Using ``st.components.v1.html`` directly (instead of importing
-            its module) is deprecated and will be disallowd in a later version.
+            its module) is deprecated and will be disallowed in a later version.
 
         Parameters
         ----------
