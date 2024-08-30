@@ -96,9 +96,12 @@ function syncWithWidgetManager(
 }
 
 function getContentElement(content: string): ReactElement {
+  // if the content contains more than a single material icon (e.g. additional text)
   if (content.match(ICON_REGEXP) === null) {
     return <StreamlitMarkdown source={content} allowHTML={false} />
   }
+
+  // used for single icons
   return <DynamicIcon size="lg" iconValue={content} />
 }
 
@@ -146,6 +149,29 @@ function getContent(
   return fallbackContent
 }
 
+function getButtonKindAndSize(
+  isVisuallySelected: boolean,
+  type: string | React.JSXElementConstructor<any>,
+  style: ButtonGroupProto.Style,
+  width: string
+): [BaseButtonKind, BaseButtonSize] {
+  let size = BaseButtonSize[width.toUpperCase() as keyof typeof BaseButtonSize]
+  let buttonKind = BaseButtonKind.ICON
+
+  if (type === StreamlitMarkdown && style === ButtonGroupProto.Style.PILLS) {
+    buttonKind = BaseButtonKind.PILLS
+  } else if (type === DynamicIcon) {
+    buttonKind = BaseButtonKind.BORDERLESS_ICON
+    size = BaseButtonSize.XSMALL
+  }
+
+  if (isVisuallySelected) {
+    buttonKind = `${buttonKind}Active` as BaseButtonKind
+  }
+
+  return [buttonKind, size]
+}
+
 function createOptionChild(
   option: ButtonGroupProto.IOption,
   index: number,
@@ -174,39 +200,12 @@ function createOptionChild(
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
     const contentElement = getContentElement(content)
-
-    // const buttonKind =
-    //   contentElement.type === StreamlitMarkdown &&
-    //   (!isVisuallySelected || option.selectedContent || false)
-    //     ? BaseButtonKind.ICON
-    //     : !isVisuallySelected || option.selectedContent || false
-    //     ? BaseButtonKind.BORDERLESS_ICON
-    //     : BaseButtonKind.BORDERLESS_ICON_ACTIVE
-
-    let size = BaseButtonSize.XSMALL
-    let buttonKind = BaseButtonKind.ICON
-    console.log("contentElement", contentElement, style, width)
-    if (contentElement.type === StreamlitMarkdown) {
-      if (style === ButtonGroupProto.Style.PILLS) {
-        buttonKind = BaseButtonKind.PILLS
-
-        if (isVisuallySelected || option.selectedContent) {
-          buttonKind = BaseButtonKind.PILLS_ACTIVE
-        }
-      } else if (isVisuallySelected || option.selectedContent) {
-        buttonKind = BaseButtonKind.ICON_ACTIVE
-      }
-
-      size = BaseButtonSize[width.toUpperCase() as keyof typeof BaseButtonSize]
-      console.log("parsed size", width, size)
-    } else if (contentElement.type === DynamicIcon) {
-      if (isVisuallySelected) {
-        buttonKind = BaseButtonKind.BORDERLESS_ICON_ACTIVE
-      } else {
-        buttonKind = BaseButtonKind.BORDERLESS_ICON
-      }
-    }
-
+    const [buttonKind, size] = getButtonKindAndSize(
+      isVisuallySelected || option.selectedContent ? true : false,
+      contentElement.type,
+      style,
+      width
+    )
     return (
       <BaseButton {...props} size={size} kind={buttonKind}>
         {contentElement}
