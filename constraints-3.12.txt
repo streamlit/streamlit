@@ -3,7 +3,7 @@ attrs==24.2.0
 blinker==1.8.2
 bokeh==2.4.3
 cachetools==5.5.0
-certifi==2024.7.4
+certifi==2024.8.30
 cffi==1.17.0
 cfgv==3.4.0
 charset-normalizer==3.3.2
@@ -56,7 +56,7 @@ pixelmatch==0.3.0
 pkginfo==1.10.0
 platformdirs==4.2.2
 playwright==1.44.0
-plotly==5.23.0
+plotly==5.24.0
 pluggy==1.5.0
 pre-commit==3.8.0
 protobuf==5.28.0
@@ -104,7 +104,7 @@ types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417
 types-requests==2.32.0.20240712
-types-setuptools==73.0.0.20240822
+types-setuptools==74.0.0.20240830
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
