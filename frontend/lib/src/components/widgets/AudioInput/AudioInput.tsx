@@ -39,7 +39,7 @@ import {
   Mic,
 } from "@emotion-icons/material-outlined"
 import { PlayArrow, StopCircle, Pause } from "@emotion-icons/material-rounded"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { EmotionTheme, darkTheme } from "@streamlit/lib/src/theme"
 
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 
@@ -61,7 +61,7 @@ const DotArray = withTheme((props: { theme: Theme }) => {
           height: 10,
           opacity: 0.2, // we cool with doing this to get a "lighter" color?
           width: "100%",
-          backgroundImage: `radial-gradient(${props.theme.colors.gray85} 40%, transparent 40%)`,
+          backgroundImage: `radial-gradient(${props.theme.colors.fadedText10} 40%, transparent 40%)`,
           backgroundSize: "10px 10px",
           backgroundRepeat: "repeat",
         }}
@@ -137,8 +137,8 @@ const AudioInput: React.FC<Props> = ({
 
     const ws = WaveSurfer.create({
       container: waveSurferRef.current,
-      waveColor: "#FF4B4B",
-      progressColor: "#8d1515",
+      waveColor: theme.colors.primary,
+      progressColor: theme.colors.bodyText,
       height: HEIGHT - 2 * WAVEFORM_PADDING,
       barWidth: 4,
       barGap: 4,
@@ -164,7 +164,10 @@ const AudioInput: React.FC<Props> = ({
       const file = new File([blob], "audio.wav", { type: blob.type })
       uploadTheFile(file)
 
-      ws.setOptions({ waveColor: "#A5A5AA", progressColor: "#31333F" })
+      ws.setOptions({
+        waveColor: "#A5A5AA",
+        progressColor: theme.colors.bodyText,
+      })
     })
 
     recordPlugin.on("record-progress", time => {
@@ -182,7 +185,6 @@ const AudioInput: React.FC<Props> = ({
         .map(v => (v < 10 ? "0" + v : v))
         .join(":")
 
-      console.log({ time, formattedTime })
       setProgressTime(formattedTime)
     }
 
@@ -191,7 +193,7 @@ const AudioInput: React.FC<Props> = ({
         wavesurfer.destroy()
       }
     }
-  }, [])
+  }, [theme])
 
   const onPlayPause = () => {
     wavesurfer && wavesurfer.playPause()
@@ -214,8 +216,7 @@ const AudioInput: React.FC<Props> = ({
       }
 
       wavesurfer.setOptions({
-        waveColor: "#FF4B4B",
-        progressColor: "#8d1515",
+        waveColor: theme.colors.primary,
       })
 
       recordPlugin
@@ -255,14 +256,17 @@ const AudioInput: React.FC<Props> = ({
         </BaseButton>
       )
     } else if (recordingUrl) {
-      console.log({ wavesurfer, isPlaying: wavesurfer?.isPlaying() })
       if (wavesurfer && wavesurfer.isPlaying()) {
         return (
           <BaseButton
             kind={BaseButtonKind.BORDERLESS_ICON}
             onClick={onPlayPause}
           >
-            <Icon content={Pause} size="lg"></Icon>
+            <Icon
+              content={Pause}
+              size="lg"
+              color={theme.colors.fadedText60}
+            ></Icon>
           </BaseButton>
         )
       } else {
@@ -271,7 +275,11 @@ const AudioInput: React.FC<Props> = ({
             kind={BaseButtonKind.BORDERLESS_ICON}
             onClick={onPlayPause}
           >
-            <Icon content={PlayArrow} size="lg"></Icon>
+            <Icon
+              content={PlayArrow}
+              size="lg"
+              color={theme.colors.fadedText60}
+            ></Icon>
           </BaseButton>
         )
       }
@@ -281,7 +289,11 @@ const AudioInput: React.FC<Props> = ({
           kind={BaseButtonKind.BORDERLESS_ICON}
           onClick={handleRecord}
         >
-          <Icon content={Mic} size="lg"></Icon>
+          <Icon
+            content={Mic}
+            size="lg"
+            color={theme.colors.fadedText60}
+          ></Icon>
         </BaseButton>
       )
     }
@@ -290,6 +302,7 @@ const AudioInput: React.FC<Props> = ({
   const showPlaceholder =
     !(recordPlugin && recordPlugin.isRecording()) && !recordingUrl
 
+  console.log({ theme })
   return (
     <div>
       <Container data-testid="stAudioInput">
@@ -310,7 +323,7 @@ const AudioInput: React.FC<Props> = ({
           style={{
             height: HEIGHT,
             width: "100%",
-            background: theme.colors.gray20,
+            background: theme.genericColors.secondaryBg,
             borderRadius: 8,
             marginBottom: 2,
             display: "flex",
@@ -330,8 +343,8 @@ const AudioInput: React.FC<Props> = ({
             style={{
               margin: 8,
               font: "Source Code Pro",
-              color: theme.colors.black,
-              backgroundColor: theme.colors.gray20,
+              color: theme.colors.fadedText60,
+              backgroundColor: theme.genericColors.secondaryBg,
               fontSize: 14,
             }}
           >
