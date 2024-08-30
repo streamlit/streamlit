@@ -346,7 +346,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         # In Watchdog 5.X, the path can be bytes or str, but in Watchdog 4.X, the path is always str,
         # that's why we convert the path to str, but we need to ignore the unreachable code warning for Python 3.8.
         if isinstance(changed_path, bytes):  # type: ignore[unreachable]
-            changed_path = changed_path.decode("utf-8") # type: ignore[unreachable]
+            changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable]
 
         abs_changed_path = os.path.abspath(changed_path)
 
