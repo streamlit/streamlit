@@ -363,7 +363,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
             style: {
               display: "inline-flex",
               flexWrap: "wrap",
-              gap: theme.spacing.threeXS,
+              gap: theme.spacing.twoXS,
             },
           },
         }}

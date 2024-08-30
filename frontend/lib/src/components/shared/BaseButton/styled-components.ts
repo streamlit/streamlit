@@ -293,10 +293,14 @@ export const StyledPillsButton = styled(
     background: theme.colors.white,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: theme.radii.xxl,
-    padding: `${theme.spacing.twoXS}`,
+    padding: `${theme.spacing.xs}`,
     fontSize: theme.fontSizes.sm,
     fontWeight: 400,
     minHeight: 0,
+
+    "& p": {
+      fontSize: theme.fontSizes.sm,
+    },
 
     "&:hover": {
       borderColor: theme.colors.primary,
