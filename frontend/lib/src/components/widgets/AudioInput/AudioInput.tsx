@@ -322,6 +322,9 @@ const AudioInput: React.FC<Props> = ({
   const showPlaceholder =
     !(recordPlugin && recordPlugin.isRecording()) && !recordingUrl
 
+  const isPlayingOrRecording =
+    (recordPlugin && recordPlugin.isRecording()) ||
+    (wavesurfer && wavesurfer.isPlaying())
   console.log({ theme })
   return (
     <div>
@@ -363,7 +366,9 @@ const AudioInput: React.FC<Props> = ({
             style={{
               margin: 8,
               font: "Source Code Pro",
-              color: theme.colors.fadedText60,
+              color: isPlayingOrRecording
+                ? theme.genericColors.gray85
+                : theme.colors.fadedText60,
               backgroundColor: theme.genericColors.secondaryBg,
               fontSize: 14,
             }}
