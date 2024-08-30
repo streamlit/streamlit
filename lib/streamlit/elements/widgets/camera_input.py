@@ -43,7 +43,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 if TYPE_CHECKING:
@@ -203,7 +203,7 @@ class CameraInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        id = compute_element_id(
             "camera_input",
             user_key=key,
             label=label,
