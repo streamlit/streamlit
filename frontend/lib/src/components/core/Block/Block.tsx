@@ -29,7 +29,7 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
-  getElementWidgetID,
+  getElementID,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
@@ -216,7 +216,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
                 node: node as ElementNode,
               }
 
-              const key = getElementWidgetID(node.element) || index
+              const key = getElementID(node.element) || index
               return <ElementNodeRenderer key={key} {...childProps} />
             }
 

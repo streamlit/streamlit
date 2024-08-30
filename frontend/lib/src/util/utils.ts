@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import decamelize from "decamelize"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
-import decamelize from "decamelize"
 
 import {
   Alert as AlertProto,
@@ -24,6 +24,9 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
+
+// This prefix should be in sync with the value on the python side:
+const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -343,15 +346,20 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-/** Return an Element's widget ID if it's a widget, and undefined otherwise. */
-export function getElementWidgetID(element: Element): string | undefined {
-  // NOTE: This is a temporary fix until the selections in maps work is done.
-  // We believe that this will be easier to fix when we get to that point so in
-  // the meantime we will be doing this simple fix to prevent this error: https://github.com/streamlit/streamlit/issues/8329
-  if (notNull(element.deckGlJsonChart)) {
-    return undefined
+/**
+ * If the element has a valid ID, returns it. Otherwise, returns undefined.
+ */
+export function getElementID(element: Element): string | undefined {
+  const elementId = get(element as any, [requireNonNull(element.type), "id"])
+  if (elementId && isValidElementID(elementId)) {
+    // We only care about valid element IDs (with the correct prefix)
+    return elementId
   }
-  return get(element as any, [requireNonNull(element.type), "id"])
+  return undefined
+}
+
+export function isValidElementID(elementId: string): boolean {
+  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
 /** True if the given form ID is non-null and non-empty. */
