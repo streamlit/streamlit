@@ -16,9 +16,10 @@
 
 import React, {
   ReactElement,
+  ReactNode,
   useCallback,
   useContext,
-  useRef,
+  useEffect,
   useState,
 } from "react"
 
@@ -27,7 +28,7 @@ import groupBy from "lodash/groupBy"
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
 
-import { IAppPage, StreamlitEndpoints, useIsOverflowing } from "@streamlit/lib"
+import { IAppPage, StreamlitEndpoints } from "@streamlit/lib"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
 import NavSection from "./NavSection"
@@ -49,6 +50,9 @@ export interface Props {
   onPageChange: (pageName: string) => void
 }
 
+const COLLAPSE_THRESHOLD = 13
+const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
+
 /** Displays a list of navigable app page links for multi-page apps. */
 const SidebarNav = ({
   endpoints,
@@ -60,8 +64,6 @@ const SidebarNav = ({
   onPageChange,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
-  const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef, expanded)
   const { pageLinkBaseUrl } = useContext(AppContext)
 
   const handleViewButtonClick = useCallback(() => {
@@ -102,60 +104,70 @@ const SidebarNav = ({
     ]
   )
 
-  let contents = null
+  let contents: ReactNode[] = []
+  const totalPages = appPages.length
+  const shouldShowViewButton =
+    hasSidebarElements && totalPages >= COLLAPSE_THRESHOLD
   if (navSections.length > 0) {
     const pagesBySectionHeader = groupBy(
       appPages,
       page => page.sectionHeader || ""
     )
     // For MPAv2: renders each NavSection with its respective header
-    contents = navSections.map(header => {
-      return (
+    contents = []
+    let currentPageCount = 0
+    navSections.forEach(header => {
+      const sectionPages = pagesBySectionHeader[header] ?? []
+      let viewablePages = sectionPages
+      if (shouldShowViewButton && !expanded) {
+        if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
+          // We cannot even show the section
+          return
+        } else if (
+          currentPageCount + sectionPages.length >
+          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+        ) {
+          // We can partially show the section
+          viewablePages = sectionPages.slice(
+            0,
+            NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+          )
+        }
+      }
+      currentPageCount += viewablePages.length
+
+      contents.push(
         <NavSection key={header} header={header}>
-          {(pagesBySectionHeader[header] ?? []).map(generateNavLinks)}
+          {viewablePages.map(generateNavLinks)}
         </NavSection>
       )
     })
   } else {
+    let viewablePages = appPages
+    if (shouldShowViewButton && !expanded) {
+      viewablePages = appPages.slice(0, NUM_PAGES_TO_SHOW_WHEN_COLLAPSED)
+    }
     // For MPAv1: single NavSection with all pages displayed
-    contents = appPages.map(generateNavLinks)
+    contents = viewablePages.map(generateNavLinks)
   }
-
-  // We should show the nav items as expanded if
-  // - there are no sidebar elements
-  // - the user has explicitly expanded the sidebar
-  const shouldShowNavItemsAsExpanded = !hasSidebarElements || expanded
-
-  // We should show the "View more" button if
-  // - there are sidebar elements and it produce an overflow
-  // - the user has explicitly expanded the sidebar indicating
-  //   the possibility to collapse it
-  const shouldShowViewButton =
-    (hasSidebarElements && isOverflowing) || expanded
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
-      <StyledSidebarNavItems
-        ref={navItemsRef}
-        isExpanded={shouldShowNavItemsAsExpanded}
-        hasSidebarElements={hasSidebarElements}
-        data-testid="stSidebarNavItems"
-      >
+      <StyledSidebarNavItems data-testid="stSidebarNavItems">
         {contents}
       </StyledSidebarNavItems>
-
+      {shouldShowViewButton && (
+        <StyledViewButton
+          onClick={handleViewButtonClick}
+          data-testid="stSidebarNavViewButton"
+        >
+          {expanded
+            ? "View less"
+            : `View ${totalPages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED} more`}
+        </StyledViewButton>
+      )}
       {hasSidebarElements && (
-        <>
-          {shouldShowViewButton && (
-            <StyledViewButton
-              onClick={handleViewButtonClick}
-              data-testid="stSidebarNavViewButton"
-            >
-              {expanded ? "View less" : "View more"}
-            </StyledViewButton>
-          )}
-          <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
-        </>
+        <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
       )}
     </StyledSidebarNavContainer>
   )
