@@ -183,8 +183,13 @@ def _build_proto(
 
 
 class ButtonGroupMixin:
-    @overload  # These overloads are not documented in the docstring, at least not at this time, on the theory that most people won't know what it means. And the Literals here are a subclass of int anyway.
-    # Usually, we would make a type alias for Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too many other places, and it's a more helpful autocomplete if we just enumerate the values explicitly, so a decision has been made to keep it as not an alias.
+    # These overloads are not documented in the docstring, at least not at this time, on
+    # the theory that most people won't know what it means. And the Literals here are a
+    # subclass of int anyway. Usually, we would make a type alias for
+    # Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too
+    # many other places, and it's a more helpful autocomplete if we just enumerate the
+    # values explicitly, so a decision has been made to keep it as not an alias.
+    @overload
     def feedback(
         self,
         options: Literal["thumbs"] = ...,
@@ -514,7 +519,7 @@ class ButtonGroupMixin:
             form_id=form_id,
             click_mode=selection_mode,
             style=style,
-            width=width,
+            # width=width,
             page=ctx.active_script_hash if ctx else None,
         )
 

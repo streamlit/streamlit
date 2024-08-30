@@ -204,7 +204,7 @@ function createOptionChild(
   ): ReactElement {
     const contentElement = getContentElement(content)
     const [buttonKind, size] = getButtonKindAndSize(
-      isVisuallySelected || option.selectedContent ? true : false,
+      isVisuallySelected && !option.selectedContent ? true : false,
       contentElement.type,
       style,
       width
