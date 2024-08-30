@@ -16,7 +16,6 @@
 
 import React, { ReactElement, useState, useEffect } from "react"
 import { Theme, withTheme } from "@emotion/react"
-import { useReactMediaRecorder } from "./useReactMediaRecorder"
 import WaveSurfer from "wavesurfer.js"
 import BaseButton, {
   BaseButtonKind,
@@ -100,6 +99,9 @@ const AudioInput: React.FC<Props> = ({
     setRerender(prev => prev + 1)
   }
   const [progressTime, setProgressTime] = useState("00:00")
+  const [recordingTime, setRecordingTime] = useState("00:00")
+  const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
+    useState(false)
 
   const uploadTheFile = (file: File) => {
     uploadFiles({
@@ -125,6 +127,17 @@ const AudioInput: React.FC<Props> = ({
       })
     })
   }, [])
+
+  const formatTime = (time: number) => {
+    const formattedTime = [
+      Math.floor((time % 3600000) / 60000), // minutes
+      Math.floor((time % 60000) / 1000), // seconds
+    ]
+      .map(v => (v < 10 ? "0" + v : v))
+      .join(":")
+
+    return formattedTime
+  }
 
   useEffect(() => {
     if (waveSurferRef.current === null) {
@@ -175,21 +188,21 @@ const AudioInput: React.FC<Props> = ({
     })
 
     recordPlugin.on("record-progress", time => {
-      updateProgress(time)
+      updateRecordingTime(time)
     })
 
     setWavesurfer(ws)
     setRecordPlugin(recordPlugin)
 
     const updateProgress = (time: number) => {
-      const formattedTime = [
-        Math.floor((time % 3600000) / 60000), // minutes
-        Math.floor((time % 60000) / 1000), // seconds
-      ]
-        .map(v => (v < 10 ? "0" + v : v))
-        .join(":")
+      const formattedTime = formatTime(time)
 
       setProgressTime(formattedTime)
+    }
+
+    const updateRecordingTime = (time: number) => {
+      const formattedTime = formatTime(time)
+      setRecordingTime(formattedTime)
     }
 
     return () => {
@@ -201,6 +214,8 @@ const AudioInput: React.FC<Props> = ({
 
   const onPlayPause = () => {
     wavesurfer && wavesurfer.playPause()
+
+    setShouldUpdatePlaybackTime(true)
 
     // to get the pause button to show
     forceRerender()
@@ -241,6 +256,7 @@ const AudioInput: React.FC<Props> = ({
     uploadClient.deleteFile(deleteFileUrl).then(() => {})
     setProgressTime("00:00")
     setDeleteFileUrl(null)
+    setShouldUpdatePlaybackTime(false)
     // TODO revoke the url so that it gets gced
   }
 
@@ -352,7 +368,7 @@ const AudioInput: React.FC<Props> = ({
               fontSize: 14,
             }}
           >
-            {progressTime}
+            {shouldUpdatePlaybackTime ? progressTime : recordingTime}
           </code>
         </div>
       </Container>
