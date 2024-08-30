@@ -206,6 +206,12 @@ class StreamlitPage:
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
         self._icon: str = icon or inferred_icon
+
+        if self._title.strip() == "":
+            raise StreamlitAPIException(
+                "The title of the page cannot be an empty string. Please provide a title."
+            )
+
         if url_path is not None and url_path.strip() == "" and not default:
             raise StreamlitAPIException(
                 "The URL path cannot be an empty string unless the page is the default page."
