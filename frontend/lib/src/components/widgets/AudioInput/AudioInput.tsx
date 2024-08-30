@@ -58,11 +58,11 @@ const DotArray = withTheme((props: { theme: Theme }) => {
     >
       <div
         style={{
-          height: 16,
+          height: 10,
           opacity: 0.2, // we cool with doing this to get a "lighter" color?
           width: "100%",
-          backgroundImage: `radial-gradient(${props.theme.colors.gray85} 25%, transparent 25%)`,
-          backgroundSize: "16px 16px",
+          backgroundImage: `radial-gradient(${props.theme.colors.gray85} 40%, transparent 40%)`,
+          backgroundSize: "10px 10px",
           backgroundRepeat: "repeat",
         }}
       ></div>
