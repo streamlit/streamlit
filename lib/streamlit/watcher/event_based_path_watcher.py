@@ -342,7 +342,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        # Watchdog 5.X is supports Python >=3.9, so watchdog 4.X is used for Python 3.8.
+        # Watchdog 5.X is supported Python >=3.9, so watchdog 4.X is used for Python 3.8.
         # In Watchdog 5.X, the path can be bytes or str, but in Watchdog 4.X, the path is always str,
         # that's why we convert the path to str, but we need to ignore the unreachable code warning for Python 3.8.
         if isinstance(changed_path, bytes):  # type: ignore[unreachable]
