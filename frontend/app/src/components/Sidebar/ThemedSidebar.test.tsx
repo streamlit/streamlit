@@ -23,7 +23,6 @@ import { emotionLightTheme, mockEndpoints, render } from "@streamlit/lib"
 
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
-import { url } from "inspector"
 
 function getProps(
   props: Partial<SidebarProps> = {}
