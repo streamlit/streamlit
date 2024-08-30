@@ -37,7 +37,10 @@ import {
   ICON_REGEXP,
 } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
+import {
+  ButtonGroup as ButtonGroupProto,
+  LabelVisibilityMessage,
+} from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
 import {
@@ -339,7 +342,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         label={label}
         disabled={disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
-          labelVisibility?.value
+          labelVisibility?.value ??
+            LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
         )}
       >
         {help && (
