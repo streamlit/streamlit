@@ -89,7 +89,6 @@ import {
   SessionEvent,
   SessionInfo,
   SessionStatus,
-  setCookie,
   StreamlitEndpoints,
   ThemeConfig,
   toExportedTheme,
@@ -653,8 +652,6 @@ export class App extends PureComponent<Props, State> {
             newState !== ConnectionState.DISCONNECTED_FOREVER,
         })
       }
-
-      setCookie("_streamlit_xsrf", "")
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()

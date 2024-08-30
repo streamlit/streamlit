@@ -244,7 +244,7 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "start",
-  padding: `${theme.spacing.xl} ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
+  padding: `1.375rem ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
 }))
 
 export const StyledLogoLink = styled.a(({}) => ({
@@ -254,15 +254,27 @@ export const StyledLogoLink = styled.a(({}) => ({
 }))
 
 export interface StyledLogoProps {
+  size: string
   sidebarWidth?: string
 }
 
+function translateLogoHeight(theme: any, size: string): string {
+  if (size === "small") {
+    return theme.sizes.smallLogoHeight
+  } else if (size === "large") {
+    return theme.sizes.largeLogoHeight
+  }
+  // Default logo size
+  return theme.sizes.defaultLogoHeight
+}
+
 export const StyledLogo = styled.img<StyledLogoProps>(
-  ({ theme, sidebarWidth }) => ({
-    height: theme.sizes.logoHeight,
-    marginTop: theme.spacing.twoXS,
+  ({ theme, size, sidebarWidth }) => ({
+    height: translateLogoHeight(theme, size),
+    // Extra margin to align small logo with sidebar collapse arrow
+    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
     marginRight: theme.spacing.sm,
-    marginBottom: theme.spacing.twoXS,
     marginLeft: theme.spacing.none,
     zIndex: theme.zIndices.header,
 
@@ -274,28 +286,24 @@ export const StyledLogo = styled.img<StyledLogoProps>(
   })
 )
 
-export const StyledNoLogoSpacer = styled.div(({}) => ({
-  height: "2.0rem",
+export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
+  height: theme.sizes.largeLogoHeight,
 }))
 
 export interface StyledSidebarOpenContainerProps {
   chevronDownshift: number
-  isCollapsed: boolean
 }
 
 export const StyledSidebarOpenContainer =
   styled.div<StyledSidebarOpenContainerProps>(
-    ({ theme, chevronDownshift, isCollapsed }) => ({
+    ({ theme, chevronDownshift }) => ({
       position: "fixed",
       top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
-      left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+      left: theme.spacing.twoXL,
       zIndex: theme.zIndices.header,
       display: "flex",
       justifyContent: "center",
-      alignItems: "start",
-
-      transition: "left 300ms",
-      transitionDelay: "left 300ms",
+      alignItems: "center",
 
       [`@media print`]: {
         position: "static",
@@ -313,6 +321,7 @@ export const StyledOpenSidebarButton = styled.div(({ theme }) => {
   return {
     zIndex: theme.zIndices.header,
     color,
+    marginTop: theme.spacing.twoXS,
 
     button: {
       "&:hover": {

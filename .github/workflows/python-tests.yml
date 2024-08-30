@@ -23,8 +23,11 @@ on:
         default: "constraints-develop"
         type: string
     secrets:
-      PARAMETER_PASSWORD:
-        description: "Token passed from caller workflows for snowflake integration tests"
+      SNOWFLAKE_ACCOUNT:
+        description: "Snowflake account passed from caller workflows for snowflake integration tests"
+        required: true
+      SNOWFLAKE_PASSWORD:
+        description: "Snowflake account password passed from caller workflows for snowflake integration tests"
         required: true
 
 # Avoid duplicate workflows on same branch
@@ -221,10 +224,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Decrypt Snowflake credentials
-        run: ./.github/scripts/decrypt_credentials.sh
-        env:
-          PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
@@ -233,3 +232,6 @@ jobs:
         run: uv pip install -r lib/integration-requirements.txt --force-reinstall
       - name: Run Python integration tests
         run: make pytest-integration
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}

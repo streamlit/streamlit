@@ -101,7 +101,10 @@ describe("Sidebar Component", () => {
 
     // Click the close sidebar <
     fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
-    fireEvent.click(screen.getByRole("button"))
+    const sidebarCollapseButton = within(
+      screen.getByTestId("stSidebarCollapseButton")
+    ).getByRole("button")
+    fireEvent.click(sidebarCollapseButton)
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
       "aria-expanded",
@@ -129,16 +132,6 @@ describe("Sidebar Component", () => {
       "aria-expanded",
       "true"
     )
-  })
-
-  it("chevron does not render if sidebar expanded", () => {
-    renderSidebar({
-      initialSidebarState: PageConfig.SidebarState.EXPANDED,
-    })
-
-    expect(
-      screen.queryByTestId("stSidebarCollapsedControl")
-    ).not.toBeInTheDocument()
   })
 
   it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
@@ -252,9 +245,20 @@ describe("Sidebar Component", () => {
       iconImage: "https://docs.streamlit.io/logo.svg",
     })
 
+    const logoWithSize = Logo.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      link: "www.example.com",
+      iconImage: "https://docs.streamlit.io/logo.svg",
+      size: "small",
+    })
+
     it("renders spacer if no logo provided", () => {
       renderSidebar({ appLogo: null })
-      expect(screen.getByTestId("stLogoSpacer")).toBeInTheDocument()
+      const sidebarLogoSpacer = within(
+        screen.getByTestId("stSidebar")
+      ).getByTestId("stLogoSpacer")
+      expect(sidebarLogoSpacer).toBeInTheDocument()
     })
 
     it("renders logo when sidebar collapsed - uses iconImage if provided", () => {
@@ -303,19 +307,36 @@ describe("Sidebar Component", () => {
       )
     })
 
-    it("renders logo - default image has no link", () => {
+    it("renders logo - default image has no link & medium size", () => {
       renderSidebar({ appLogo: imageOnly })
-      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      const sidebarLogoLink = within(
+        screen.getByTestId("stSidebar")
+      ).queryByTestId("stLogoLink")
+      expect(sidebarLogoLink).not.toBeInTheDocument()
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
+      )
+      expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
     })
 
     it("renders logo - image has link if provided", () => {
       renderSidebar({ appLogo: imageWithLink })
-      expect(screen.getByTestId("stLogoLink")).toHaveAttribute(
-        "href",
-        "www.example.com"
+      const sidebarLogoLink = within(
+        screen.getByTestId("stSidebar")
+      ).getByTestId("stLogoLink")
+      expect(sidebarLogoLink).toHaveAttribute("href", "www.example.com")
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
       )
-      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      expect(sidebarLogo).toHaveStyle({ height: "1.5rem" })
+    })
+
+    it("renders logo - small size when specified", () => {
+      renderSidebar({ appLogo: logoWithSize })
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
+      )
+      expect(sidebarLogo).toHaveStyle({ height: "1.25rem" })
     })
 
     it("sets maxWidth of logo based on sidebar width", () => {
@@ -323,7 +344,10 @@ describe("Sidebar Component", () => {
       const sidebarWidth = window.getComputedStyle(
         screen.getByTestId("stSidebar")
       ).width
-      expect(screen.getByTestId("stLogo")).toHaveStyle(
+      const sidebarLogo = within(screen.getByTestId("stSidebar")).getByTestId(
+        "stLogo"
+      )
+      expect(sidebarLogo).toHaveStyle(
         `max-width: calc(${sidebarWidth} - 5.75rem)`
       )
     })

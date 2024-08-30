@@ -23,7 +23,7 @@ def test_download_button_widget_rendering(
 ):
     """Test that download buttons are correctly rendered via screenshot matching."""
     download_buttons = themed_app.get_by_test_id("stDownloadButton")
-    expect(download_buttons).to_have_count(9)
+    expect(download_buttons).to_have_count(11)
 
     assert_snapshot(download_buttons.nth(0), name="st_download_button-default")
     assert_snapshot(download_buttons.nth(1), name="st_download_button-disabled")
@@ -35,6 +35,8 @@ def test_download_button_widget_rendering(
         download_buttons.nth(5), name="st_download_button-use_container_width_help"
     )
     assert_snapshot(download_buttons.nth(6), name="st_download_button-primary")
+    assert_snapshot(download_buttons.nth(7), name="st_download_button-emoji_icon")
+    assert_snapshot(download_buttons.nth(8), name="st_download_button-material_icon")
 
 
 def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction):
@@ -44,22 +46,20 @@ def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction)
 
 
 def test_value_correct_on_click(app: Page):
-    download_buttons = app.get_by_test_id("stDownloadButton")
-    expect(download_buttons).to_have_count(9)
-    download_button = app.get_by_test_id("stDownloadButton").nth(7).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(9).locator("button")
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
 
 
 def test_value_not_reset_on_reclick(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(7).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(9).locator("button")
     download_button.click()
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").first).to_have_text("value: True")
 
 
 def test_click_calls_callback(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(8).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     expect(app.get_by_test_id("stMarkdown").nth(3)).to_contain_text(
         "Download Button was clicked: False"
     )
@@ -73,7 +73,7 @@ def test_click_calls_callback(app: Page):
 
 
 def test_reset_on_other_widget_change(app: Page):
-    download_button = app.get_by_test_id("stDownloadButton").nth(8).locator("button")
+    download_button = app.get_by_test_id("stDownloadButton").nth(10).locator("button")
     download_button.click()
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_have_text("value: True")
     expect(app.get_by_test_id("stMarkdown").nth(2)).to_have_text(

@@ -10,7 +10,8 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
     secrets:
-      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
     permissions:
       # Permission needed to upload constraints file
       contents: write
