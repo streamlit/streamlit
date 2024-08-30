@@ -55,9 +55,9 @@ function BaseButton({
     ComponentType = StyledTertiaryButton
   } else if (kind === BaseButtonKind.LINK) {
     ComponentType = StyledLinkButton
-  } else if (kind === BaseButtonKind.ICON) {
+  } else if (kind === BaseButtonKind.SEGMENT) {
     ComponentType = StyledIconButton
-  } else if (kind === BaseButtonKind.ICON_ACTIVE) {
+  } else if (kind === BaseButtonKind.SEGMENT_ACTIVE) {
     ComponentType = StyledIconButtonActive
   } else if (kind === BaseButtonKind.PILLS) {
     ComponentType = StyledPillsButton

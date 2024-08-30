@@ -159,7 +159,7 @@ function getButtonKindAndSize(
   width: string
 ): [BaseButtonKind, BaseButtonSize] {
   let size = BaseButtonSize[width.toUpperCase() as keyof typeof BaseButtonSize]
-  let buttonKind = BaseButtonKind.ICON
+  let buttonKind = BaseButtonKind.SEGMENT
 
   if (type === StreamlitMarkdown && style === ButtonGroupProto.Style.PILLS) {
     buttonKind = BaseButtonKind.PILLS
