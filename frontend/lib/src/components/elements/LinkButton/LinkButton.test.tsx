@@ -124,5 +124,12 @@ describe("LinkButton widget", () => {
 
       expect(screen.getByTestId("stIconMaterial")).toBeVisible()
     })
+
+    it("renders an icon with no margin, if there is no label", () => {
+      const props = getProps({ label: "", icon: "🎈" })
+      render(<LinkButton {...props} />)
+
+      expect(screen.getByTestId("stIconEmoji")).toHaveStyle("margin: 0")
+    })
   })
 })

@@ -53,6 +53,7 @@ function Button(props: Props): ReactElement {
 
   // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
   const isMaterialIcon = element.icon.startsWith(":material")
+  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
 
   return (
     <div className="stButton" data-testid="stButton" style={style}>
@@ -69,7 +70,7 @@ function Button(props: Props): ReactElement {
           {element.icon && (
             <DynamicIcon
               size={isMaterialIcon ? "lg" : "base"}
-              margin={isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"}
+              margin={element.label ? iconMargin : "0"}
               color={colors.bodyText}
               iconValue={element.icon}
             />

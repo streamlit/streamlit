@@ -89,4 +89,10 @@ describe("Popover container", () => {
     const icon = screen.getByTestId("stIconMaterial")
     expect(icon).toHaveTextContent("thumb_up")
   })
+
+  it("renders an icon with no margin, if there is no label", () => {
+    render(<Popover {...getProps({ label: "", icon: "🦄" })} />)
+
+    expect(screen.getByTestId("stIconEmoji")).toHaveStyle("margin: 0")
+  })
 })

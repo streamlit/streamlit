@@ -60,6 +60,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
   const isMaterialIcon = element.icon.startsWith(":material")
+  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
 
   return (
     <div data-testid="stPopover" className="stPopover">
@@ -146,7 +147,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               {element.icon && (
                 <DynamicIcon
                   size={isMaterialIcon ? "lg" : "base"}
-                  margin={isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"}
+                  margin={element.label ? iconMargin : "0"}
                   color={theme.colors.bodyText}
                   iconValue={element.icon}
                 />

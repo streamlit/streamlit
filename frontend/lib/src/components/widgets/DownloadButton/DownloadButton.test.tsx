@@ -184,4 +184,10 @@ describe("DownloadButton widget", () => {
     const icon = screen.getByTestId("stIconMaterial")
     expect(icon).toHaveTextContent("thumb_up")
   })
+
+  it("renders an icon with no margin, if there is no label", () => {
+    render(<DownloadButton {...getProps({ label: "", icon: "😀" })} />)
+
+    expect(screen.getByTestId("stIconEmoji")).toHaveStyle("margin: 0")
+  })
 })
