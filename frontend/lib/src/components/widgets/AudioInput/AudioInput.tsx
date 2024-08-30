@@ -150,6 +150,10 @@ const AudioInput: React.FC<Props> = ({
       updateProgress(time * 1000) // get from seconds to milliseconds
     })
 
+    ws.on("pause", () => {
+      forceRerender()
+    })
+
     const recordPlugin = ws.registerPlugin(
       RecordPlugin.create({
         scrollingWaveform: false,
