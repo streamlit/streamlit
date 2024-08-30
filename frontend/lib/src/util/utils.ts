@@ -346,6 +346,10 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
+function isValidElementID(elementId: string): boolean {
+  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
+}
+
 /**
  * If the element has a valid ID, returns it. Otherwise, returns undefined.
  */
@@ -356,10 +360,6 @@ export function getElementID(element: Element): string | undefined {
     return elementId
   }
   return undefined
-}
-
-export function isValidElementID(elementId: string): boolean {
-  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
 /** True if the given form ID is non-null and non-empty. */
