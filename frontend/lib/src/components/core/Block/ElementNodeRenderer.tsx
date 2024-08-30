@@ -763,10 +763,11 @@ const ElementNodeRenderer = (
     <Maybe enable={enable}>
       <StyledElementContainer
         className={classNames(
+          "stElementContainer",
           "element-container",
           convertKeyToClassName(userKey ?? "")
         )}
-        data-testid="element-container"
+        data-testid="stElementContainer"
         data-stale={isStale}
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.

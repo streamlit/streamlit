@@ -226,6 +226,11 @@ jobs:
           python-version: "3.11"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          # Deactivate usage of cached venv to avoid inferring with the Python 3.11
+          # unit test job. The key generation for the cache resolves to the same key,
+          # which might cause some unexpected issues with dependencies.
+          use_cached_venv: false
       - name: Run make develop
         run: make develop
       - name: Install integration dependencies

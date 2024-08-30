@@ -22,7 +22,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.link_button renders correctly."""
     link_elements = themed_app.get_by_test_id("stLinkButton")
-    expect(link_elements).to_have_count(6)
+    expect(link_elements).to_have_count(8)
 
     for i, element in enumerate(link_elements.all()):
         assert_snapshot(element, name=f"st_link_button-{i}")

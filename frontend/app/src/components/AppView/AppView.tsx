@@ -188,6 +188,7 @@ function AppView(props: AppViewProps): ReactElement {
         src={source}
         size={appLogo.size}
         alt="Logo"
+        className="stLogo"
         data-testid="stLogo"
       />
     )
@@ -263,11 +264,12 @@ function AppView(props: AppViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
-        className="stAppViewMain main"
+        className="stMain"
+        data-testid="stMain"
       >
         <StyledAppViewBlockContainer
-          className="stAppViewBlockContainer block-container"
-          data-testid="stAppViewBlockContainer"
+          className="stMainBlockContainer block-container"
+          data-testid="stMainBlockContainer"
           isWideMode={wideMode}
           showPadding={showPadding}
           addPaddingForHeader={showToolbar || showColoredLine}
@@ -284,7 +286,7 @@ function AppView(props: AppViewProps): ReactElement {
         well together. */}
         {!hasBottomElements && (
           <StyledIFrameResizerAnchor
-            data-testid="IframeResizerAnchor"
+            data-testid="stAppIframeResizerAnchor"
             data-iframe-height
           />
         )}
@@ -296,7 +298,10 @@ function AppView(props: AppViewProps): ReactElement {
            height in the scroll area. Thereby, the bottom container will never
            cover something if you scroll to the end.*/}
             <StyledAppViewBlockSpacer />
-            <StyledStickyBottomContainer data-testid="stBottom">
+            <StyledStickyBottomContainer
+              className="stBottom"
+              data-testid="stBottom"
+            >
               <StyledInnerBottomContainer>
                 <StyledBottomBlockContainer
                   data-testid="stBottomBlockContainer"
@@ -312,7 +317,7 @@ function AppView(props: AppViewProps): ReactElement {
       </Component>
       {hasEventElements && (
         <EventContainer scriptRunId={elements.event.scriptRunId}>
-          <StyledEventBlockContainer>
+          <StyledEventBlockContainer className="stEvent" data-testid="stEvent">
             {renderBlock(elements.event)}
           </StyledEventBlockContainer>
         </EventContainer>

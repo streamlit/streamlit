@@ -23,6 +23,7 @@ import React, {
   useRef,
 } from "react"
 
+import classNames from "classnames"
 import { useTheme } from "@emotion/react"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
@@ -171,7 +172,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
-        data-testid="column"
+        className="stColumn"
+        data-testid="stColumn"
       >
         {child}
       </StyledColumn>
@@ -344,8 +346,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       <StyledVerticalBlockWrapper ref={wrapperElement}>
         <StyledVerticalBlock
           width={width}
+          className={classNames(
+            "stVerticalBlock",
+            convertKeyToClassName(userKey ?? "")
+          )}
           data-testid="stVerticalBlock"
-          className={userKey ? convertKeyToClassName(userKey) : undefined}
         >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
@@ -361,7 +366,11 @@ const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {
   const gap = props.node.deltaBlock.horizontal?.gap ?? ""
 
   return (
-    <StyledHorizontalBlock gap={gap} data-testid="stHorizontalBlock">
+    <StyledHorizontalBlock
+      gap={gap}
+      className="stHorizontalBlock"
+      data-testid="stHorizontalBlock"
+    >
       <ChildRenderer {...props} />
     </StyledHorizontalBlock>
   )
