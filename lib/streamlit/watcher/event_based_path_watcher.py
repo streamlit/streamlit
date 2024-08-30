@@ -342,11 +342,12 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        # changed_path can be a bytes object, convert it to a string when this is the case
+        # If the path is a bytes object, convert it to a string before getting
+        # the absolute path, otherwise get the absolute path directly.
         if isinstance(changed_path, bytes):
-            changed_path = changed_path.decode("utf-8")
-
-        abs_changed_path = os.path.abspath(changed_path)
+            abs_changed_path = os.path.abspath(changed_path.decode("utf-8"))
+        else:
+            abs_changed_path = os.path.abspath(changed_path)
 
         changed_path_info = self._watched_paths.get(abs_changed_path, None)
         if changed_path_info is None:
