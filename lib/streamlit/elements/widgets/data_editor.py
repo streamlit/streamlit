@@ -381,6 +381,8 @@ def _apply_dataframe_edits(
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
 
     if data_editor_state.get("added_rows"):
+        # The addition of new rows needs to happen after the deletion to not have
+        # unexpected side-effects, like https://github.com/streamlit/streamlit/issues/8854
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
