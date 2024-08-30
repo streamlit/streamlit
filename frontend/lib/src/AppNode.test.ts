@@ -897,6 +897,21 @@ describe("AppRoot.empty", () => {
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
+
+  it("passes logo to new Root if empty is called with logo", async () => {
+    const logo = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+    })
+
+    // Replicate .empty call on initial render
+    const empty = AppRoot.empty("", true)
+    expect(empty.logo).toBeNull()
+
+    // Replicate .empty call in AppNav's clearPageElements for MPA V1
+    const empty2 = AppRoot.empty(FAKE_SCRIPT_HASH, false, undefined, logo)
+    expect(empty2.logo).not.toBeNull()
+  })
 })
 
 describe("AppRoot.filterMainScriptElements", () => {
