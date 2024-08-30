@@ -93,6 +93,7 @@ message Block {
     bool use_container_width = 2;
     string help = 3;
     bool disabled = 4;
+    string icon = 5;
   }
 
 

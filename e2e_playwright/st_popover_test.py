@@ -23,7 +23,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(6)
+    expect(popover_elements).to_have_count(8)
 
     assert_snapshot(popover_elements.nth(0), name="st_popover-sidebar")
     assert_snapshot(popover_elements.nth(1), name="st_popover-empty")
@@ -31,6 +31,8 @@ def test_popover_button_rendering(
     assert_snapshot(popover_elements.nth(3), name="st_popover-normal")
     # Popover button 4 is almost the same as 3, so we don't need to test it
     assert_snapshot(popover_elements.nth(5), name="st_popover-disabled")
+    assert_snapshot(popover_elements.nth(6), name="st_popover-emoji_icon")
+    assert_snapshot(popover_elements.nth(7), name="st_popover-material_icon")
 
 
 def test_popover_container_rendering(

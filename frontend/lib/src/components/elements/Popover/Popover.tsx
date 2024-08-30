@@ -21,7 +21,10 @@ import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
+import {
+  DynamicIcon,
+  StyledIcon,
+} from "@streamlit/lib/src/components/shared/Icon"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
   BaseButtonKind,
@@ -54,6 +57,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // When useContainerWidth true & has help tooltip,
   // we need to pass the container width down to the button
   const fluidButtonWidth = element.help ? width : true
+
+  // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
+  const isMaterialIcon = element.icon.startsWith(":material")
 
   return (
     <div data-testid="stPopover" className="stPopover">
@@ -137,6 +143,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               fluidWidth={element.useContainerWidth ? fluidButtonWidth : false}
               onClick={() => setOpen(!open)}
             >
+              {element.icon && (
+                <DynamicIcon
+                  size={isMaterialIcon ? "lg" : "base"}
+                  margin={isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"}
+                  color={theme.colors.bodyText}
+                  iconValue={element.icon}
+                />
+              )}
               <StreamlitMarkdown
                 source={element.label}
                 allowHTML={false}
