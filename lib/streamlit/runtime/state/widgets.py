@@ -32,7 +32,7 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    user_key_from_widget_id,
+    user_key_from_element_id,
 )
 
 if TYPE_CHECKING:
@@ -187,7 +187,7 @@ def register_widget_from_metadata(
         return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
 
     widget_id = metadata.id
-    user_key = user_key_from_widget_id(widget_id)
+    user_key = user_key_from_element_id(widget_id)
 
     # Ensure another widget with the same user key hasn't already been registered.
     if user_key is not None:
