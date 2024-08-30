@@ -100,6 +100,7 @@ const AudioInput: React.FC<Props> = ({
     setRerender(prev => prev + 1)
   }
   const [progressTime, setProgressTime] = useState("00:00")
+  const [isDurationReady, setIsDurationReady] = useState(false)
 
   const uploadTheFile = (file: File) => {
     uploadFiles({
@@ -164,6 +165,17 @@ const AudioInput: React.FC<Props> = ({
       const file = new File([blob], "audio.wav", { type: blob.type })
       uploadTheFile(file)
 
+      ws.load(url) // load the audio into wavesurfer to trigger duration calculation
+
+      ws.on("ready", () => {
+        const duration = ws.getDuration()
+        if (duration && !isNaN(duration)) {
+          const formattedDuration = formatTime(duration * 1000)
+          setProgressTime(formattedDuration)
+          setIsDurationReady(true)
+        }
+      })
+
       ws.setOptions({
         waveColor: "#A5A5AA",
         progressColor: theme.colors.bodyText,
@@ -178,13 +190,7 @@ const AudioInput: React.FC<Props> = ({
     setRecordPlugin(recordPlugin)
 
     const updateProgress = (time: number) => {
-      const formattedTime = [
-        Math.floor((time % 3600000) / 60000), // minutes
-        Math.floor((time % 60000) / 1000), // seconds
-      ]
-        .map(v => (v < 10 ? "0" + v : v))
-        .join(":")
-
+      const formattedTime = formatTime(time)
       setProgressTime(formattedTime)
     }
 
@@ -194,6 +200,15 @@ const AudioInput: React.FC<Props> = ({
       }
     }
   }, [theme])
+
+  const formatTime = (time: number) => {
+    return [
+      Math.floor((time % 3600000) / 60000), // minutes
+      Math.floor((time % 60000) / 1000), // seconds
+    ]
+      .map(v => (v < 10 ? "0" + v : v))
+      .join(":")
+  }
 
   const onPlayPause = () => {
     wavesurfer && wavesurfer.playPause()
@@ -236,6 +251,7 @@ const AudioInput: React.FC<Props> = ({
     wavesurfer.empty()
     uploadClient.deleteFile(deleteFileUrl).then(() => {})
     setProgressTime("00:00")
+    setIsDurationReady(false)
     setDeleteFileUrl(null)
     // TODO revoke the url so that it gets gced
   }
