@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,18 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -euo pipefail
+import pathlib
 
-: "${PARAMETER_PASSWORD:?"ERROR: PARAMETER_PASSWORD not set !!!!"}"
+from PIL import Image
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR"
+import streamlit as st
 
-gpg \
-  --quiet \
-  --batch \
-  --yes \
-  --decrypt \
-  --passphrase="$PARAMETER_PASSWORD" \
-  --output ../../.credentials/snowflake.json \
-  ./encrypted_credentials_snowflake.json.gpg
+small_logo = Image.open(
+    str(pathlib.Path(__file__).parent.parent / "small-streamlit.png")
+)
+
+logo = Image.open(str(pathlib.Path(__file__).parent.parent / "full-streamlit.png"))
+
+st.header("Logo page")
+st.logo(
+    logo,
+    link="https://www.example.com",
+    icon_image=small_logo,
+    size="large",
+)
+
+with st.sidebar:
+    st.radio("Example Sidebar Content", ["Home", "About", "Contact"])

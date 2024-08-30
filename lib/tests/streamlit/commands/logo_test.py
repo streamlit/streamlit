@@ -39,6 +39,7 @@ class LogoTest(DeltaGeneratorTestCase):
         self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
         self.assertEqual(c.link, "")
         self.assertEqual(c.icon_image, "")
+        self.assertEqual(c.size, "medium")
 
     def test_image_and_link(self):
         """Test that it can be called with image & link."""
@@ -52,6 +53,7 @@ class LogoTest(DeltaGeneratorTestCase):
         self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
         self.assertEqual(c.link, "http://www.example.com")
         self.assertEqual(c.icon_image, "")
+        self.assertEqual(c.size, "medium")
 
     def test_invalid_link(self):
         """Test that it can be only be called with a valid link."""
@@ -79,4 +81,41 @@ class LogoTest(DeltaGeneratorTestCase):
         self.assertTrue(c.image.endswith(png_extension))
         self.assertEqual(c.link, "https://www.example.com")
         self.assertTrue(c.icon_image.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(c.image.endswith(png_extension))
+        self.assertTrue(c.icon_image.endswith(png_extension))
+        self.assertEqual(c.size, "medium")
+
+    def test_small_image_size(self):
+        """Test that it can be called with small image size."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        st.logo(streamlit, size="small")
+
+        c = self.get_message_from_queue().logo
+        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
+        self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
+        self.assertEqual(c.link, "")
+        self.assertEqual(c.icon_image, "")
+        self.assertEqual(c.size, "small")
+
+    def test_large_image_size(self):
+        """Test that it can be called with large image size."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        st.logo(streamlit, size="large")
+
+        c = self.get_message_from_queue().logo
+        self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
+        self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
+        self.assertEqual(c.link, "")
+        self.assertEqual(c.icon_image, "")
+        self.assertEqual(c.size, "large")
+
+    def test_invalid_image_size(self):
+        """Test that it can be only be called with a valid image size."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        with pytest.raises(StreamlitAPIException):
+            st.logo(streamlit, size="corgi")

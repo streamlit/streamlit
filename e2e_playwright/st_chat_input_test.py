@@ -59,7 +59,7 @@ def test_embedded_app_with_bottom_chat_input(
     page.goto(f"http://localhost:{app_port}/?embed=true")
     wait_for_app_loaded(page, embedded=True)
 
-    app_view_block = page.get_by_test_id("stAppViewBlockContainer")
+    app_view_block = page.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
     expect(app_view_block).to_have_css("padding-bottom", "16px")
     bottom_block = page.get_by_test_id("stBottomBlockContainer")
@@ -69,9 +69,9 @@ def test_embedded_app_with_bottom_chat_input(
     expect(bottom_block).to_have_css("padding-top", "16px")
 
     # There shouldn't be an iframe resizer anchor:
-    expect(page.get_by_test_id("IframeResizerAnchor")).to_be_hidden()
+    expect(page.get_by_test_id("stAppIframeResizerAnchor")).to_be_hidden()
     # The scroll container should be switched to scroll to bottom:
-    expect(page.get_by_test_id("ScrollToBottomContainer")).to_be_attached()
+    expect(page.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
 
     assert_snapshot(
         page.get_by_test_id("stAppViewContainer"),
@@ -81,7 +81,7 @@ def test_embedded_app_with_bottom_chat_input(
 
 def test_app_with_bottom_chat_input(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that an app with bottom chat input renders correctly."""
-    app_view_block = app.get_by_test_id("stAppViewBlockContainer")
+    app_view_block = app.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
     expect(app_view_block).to_have_css("padding-bottom", "16px")
 
@@ -92,9 +92,9 @@ def test_app_with_bottom_chat_input(app: Page, assert_snapshot: ImageCompareFunc
     expect(bottom_block).to_have_css("padding-top", "16px")
 
     # There shouldn't be an iframe resizer anchor:
-    expect(app.get_by_test_id("IframeResizerAnchor")).to_be_hidden()
+    expect(app.get_by_test_id("stAppIframeResizerAnchor")).to_be_hidden()
     # The scroll container should be switched to scroll to bottom:
-    expect(app.get_by_test_id("ScrollToBottomContainer")).to_be_attached()
+    expect(app.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
 
     assert_snapshot(app.get_by_test_id("stBottom"), name="st_chat_input-app_bottom")
 

@@ -169,7 +169,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
-        data-testid="column"
+        className="stColumn"
+        data-testid="stColumn"
       >
         {child}
       </StyledColumn>
@@ -338,7 +339,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       data-test-scroll-behavior="normal"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
-        <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+        <StyledVerticalBlock
+          width={width}
+          className="stVerticalBlock"
+          data-testid="stVerticalBlock"
+        >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
       </StyledVerticalBlockWrapper>
@@ -353,7 +358,11 @@ const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {
   const gap = props.node.deltaBlock.horizontal?.gap ?? ""
 
   return (
-    <StyledHorizontalBlock gap={gap} data-testid="stHorizontalBlock">
+    <StyledHorizontalBlock
+      gap={gap}
+      className="stHorizontalBlock"
+      data-testid="stHorizontalBlock"
+    >
       <ChildRenderer {...props} />
     </StyledHorizontalBlock>
   )
