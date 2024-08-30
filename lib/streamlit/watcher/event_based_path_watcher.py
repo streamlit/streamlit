@@ -342,12 +342,13 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        # If the path is a bytes object, convert it to a string before getting
-        # the absolute path, otherwise get the absolute path directly.
-        if isinstance(changed_path, bytes):
-            abs_changed_path = os.path.abspath(changed_path.decode("utf-8"))
-        else:
-            abs_changed_path = os.path.abspath(changed_path)
+        # Watchdog 5.X is supports Python >=3.9, so watchdog 4.X is used for Python 3.8.
+        # In Watchdog 5.X, the path can be bytes or str, but in Watchdog 4.X, the path is always str,
+        # that's why we convert the path to str, but we need to ignore the unreachable code warning for Python 3.8.
+        if isinstance(changed_path, bytes):  # type: ignore[unreachable]
+            changed_path = changed_path.decode("utf-8") # type: ignore[unreachable]
+
+        abs_changed_path = os.path.abspath(changed_path)
 
         changed_path_info = self._watched_paths.get(abs_changed_path, None)
         if changed_path_info is None:
