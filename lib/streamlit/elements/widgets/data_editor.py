@@ -66,7 +66,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
@@ -885,7 +885,7 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
-        id = compute_widget_id(
+        element_id = compute_element_id(
             "data_editor",
             user_key=key,
             data=arrow_bytes,
@@ -901,7 +901,7 @@ class DataEditorMixin:
         )
 
         proto = ArrowProto()
-        proto.id = id
+        proto.id = element_id
 
         proto.use_container_width = use_container_width
 

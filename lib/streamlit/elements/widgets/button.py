@@ -49,7 +49,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.state.common import compute_element_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 
@@ -662,7 +662,7 @@ class ButtonMixin:
             writes_allowed=False,
         )
 
-        id = compute_widget_id(
+        element_id = compute_element_id(
             "download_button",
             user_key=key,
             label=label,
@@ -682,7 +682,7 @@ class ButtonMixin:
             )
 
         download_button_proto = DownloadButtonProto()
-        download_button_proto.id = id
+        download_button_proto.id = element_id
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
@@ -843,7 +843,7 @@ class ButtonMixin:
             enable_check_callback_rules=not is_form_submitter,
         )
 
-        id = compute_widget_id(
+        element_id = compute_element_id(
             "button",
             user_key=key,
             label=label,
@@ -872,7 +872,7 @@ class ButtonMixin:
                 )
 
         button_proto = ButtonProto()
-        button_proto.id = id
+        button_proto.id = element_id
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
@@ -902,7 +902,7 @@ class ButtonMixin:
         )
 
         if ctx:
-            save_for_app_testing(ctx, id, button_state.value)
+            save_for_app_testing(ctx, element_id, button_state.value)
         self.dg._enqueue("button", button_proto)
 
         return button_state.value

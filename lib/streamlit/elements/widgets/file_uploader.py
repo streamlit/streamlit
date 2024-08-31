@@ -43,7 +43,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 if TYPE_CHECKING:
@@ -405,7 +405,7 @@ class FileUploaderMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_element_id(
             "file_uploader",
             user_key=key,
             label=label,
@@ -437,7 +437,7 @@ class FileUploaderMixin:
                     type.append(x)
 
         file_uploader_proto = FileUploaderProto()
-        file_uploader_proto.id = id
+        file_uploader_proto.id = element_id
         file_uploader_proto.label = label
         file_uploader_proto.type[:] = type if type is not None else []
         file_uploader_proto.max_upload_size_mb = config.get_option(

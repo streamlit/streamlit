@@ -95,7 +95,7 @@ WidgetProto: TypeAlias = Union[
     TimeInput,
 ]
 
-GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
+GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
 
@@ -232,22 +232,22 @@ SAFE_VALUES = Union[
 ]
 
 
-def compute_widget_id(
+def compute_element_id(
     element_type: str,
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
-    """Compute the widget id for the given widget. This id is stable: a given
-    set of inputs to this function will always produce the same widget id output.
+    """Compute the id for the given element. This id is stable: a given
+    set of inputs to this function will always produce the same id output.
 
-    Only stable, deterministic values should be used to compute widget ids. Using
-    nondeterministic values as inputs can cause the resulting widget id to
+    Only stable, deterministic values should be used to compute element ids. Using
+    nondeterministic values as inputs can cause the resulting element id to
     change between runs.
 
-    The widget id includes the user_key so widgets with identical arguments can
+    The element id includes the user_key so elements with identical arguments can
     use it to be distinct.
 
-    The widget id includes an easily identified prefix, and the user_key as a
+    The element id includes an easily identified prefix, and the user_key as a
     suffix, to make it easy to identify it and know if a key maps to it.
     """
     h = hashlib.new("md5", **HASHLIB_KWARGS)
@@ -257,37 +257,38 @@ def compute_widget_id(
     for k, v in kwargs.items():
         h.update(str(k).encode("utf-8"))
         h.update(str(v).encode("utf-8"))
-    return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
+    return f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
-def user_key_from_widget_id(widget_id: str) -> str | None:
-    """Return the user key portion of a widget id, or None if the id does not
+def user_key_from_element_id(element_id: str) -> str | None:
+    """Return the user key portion of a element id, or None if the id does not
     have a user key.
 
     TODO This will incorrectly indicate no user key if the user actually provides
     "None" as a key, but we can't avoid this kind of problem while storing the
-    string representation of the no-user-key sentinel as part of the widget id.
+    string representation of the no-user-key sentinel as part of the element id.
     """
-    user_key: str | None = widget_id.split("-", maxsplit=2)[-1]
-    user_key = None if user_key == "None" else user_key
-    return user_key
+    user_key: str | None = element_id.split("-", maxsplit=2)[-1]
+    return None if user_key == "None" else user_key
 
 
-def is_widget_id(key: str) -> bool:
-    """True if the given session_state key has the structure of a widget ID."""
-    return key.startswith(GENERATED_WIDGET_ID_PREFIX)
+def is_element_id(key: str) -> bool:
+    """True if the given session_state key has the structure of a element ID."""
+    return key.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
-def is_keyed_widget_id(key: str) -> bool:
-    """True if the given session_state key has the structure of a widget ID with a user_key."""
-    return is_widget_id(key) and not key.endswith("-None")
+def is_keyed_element_id(key: str) -> bool:
+    """True if the given session_state key has the structure of a element ID
+    with a user_key.
+    """
+    return is_element_id(key) and not key.endswith("-None")
 
 
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
-    if is_widget_id(key):
+    if is_element_id(key):
         raise StreamlitAPIException(
-            f"Keys beginning with {GENERATED_WIDGET_ID_PREFIX} are reserved."
+            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
 
 

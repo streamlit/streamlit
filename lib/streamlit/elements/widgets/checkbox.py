@@ -38,7 +38,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_element_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -291,7 +291,7 @@ class CheckboxMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
             label=label,
@@ -303,7 +303,7 @@ class CheckboxMixin:
         )
 
         checkbox_proto = CheckboxProto()
-        checkbox_proto.id = id
+        checkbox_proto.id = element_id
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.type = type
