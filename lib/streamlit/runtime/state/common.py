@@ -237,7 +237,7 @@ def compute_element_id(
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
-    """Compute the id for the given elements. This id is stable: a given
+    """Compute the id for the given element. This id is stable: a given
     set of inputs to this function will always produce the same id output.
 
     Only stable, deterministic values should be used to compute element ids. Using

@@ -567,7 +567,7 @@ def marshall_video(
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_element_id(
+        proto.id = compute_element_id(
             "video",
             url=proto.url,
             mimetype=mimetype,
@@ -578,8 +578,6 @@ def marshall_video(
             muted=muted,
             page=ctx.active_script_hash if ctx else None,
         )
-
-        proto.id = id
 
 
 def _parse_start_time_end_time(
@@ -743,7 +741,7 @@ def marshall_audio(
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_element_id(
+        proto.id = compute_element_id(
             "audio",
             url=proto.url,
             mimetype=mimetype,
@@ -754,4 +752,3 @@ def marshall_audio(
             autoplay=autoplay,
             page=ctx.active_script_hash if ctx else None,
         )
-        proto.id = id
