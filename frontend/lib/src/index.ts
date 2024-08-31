@@ -113,7 +113,7 @@ export {
   extractPageNameFromPathName,
   generateUID,
   getCookie,
-  getElementID,
+  getElementId,
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   hashString,

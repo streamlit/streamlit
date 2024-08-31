@@ -346,16 +346,16 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-function isValidElementID(elementId: string): boolean {
+function isValidElementId(elementId: string): boolean {
   return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
 /**
  * If the element has a valid ID, returns it. Otherwise, returns undefined.
  */
-export function getElementID(element: Element): string | undefined {
+export function getElementId(element: Element): string | undefined {
   const elementId = get(element as any, [requireNonNull(element.type), "id"])
-  if (elementId && isValidElementID(elementId)) {
+  if (elementId && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
   }

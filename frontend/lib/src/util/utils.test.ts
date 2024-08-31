@@ -18,6 +18,7 @@ import {
   EMBED_QUERY_PARAM_KEY,
   EMBED_QUERY_PARAM_VALUES,
   getCookie,
+  getElementId,
   getEmbedUrlParams,
   getLoadingScreenType,
   isColoredLineDisplayed,
@@ -524,4 +525,19 @@ describe("keysToSnakeCase", () => {
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
   })
+})
+
+describe("getElementID", () => {
+  const testCases = [
+    { input: "invalid_id", expected: undefined },
+    { input: "hello world!", expected: "st-key-hello-world-" },
+    { input: "123Start", expected: "st-key-123Start" },
+  ]
+
+  test.each(testCases)(
+    "converts $input to $expected",
+    ({ input, expected }) => {
+      expect(getElementId(input)).toBe(expected)
+    }
+  )
 })
