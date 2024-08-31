@@ -16,6 +16,7 @@
 
 import { BaseButtonProps as BaseButtonPropsT } from "./BaseButton"
 
+export { DynamicButtonLabel } from "./DynamicButtonLabel"
 export { default, BaseButtonKind, BaseButtonSize } from "./BaseButton"
 export { BaseButtonTooltip as BaseButtonTooltip } from "./BaseButtonTooltip"
 export type BaseButtonProps = BaseButtonPropsT
