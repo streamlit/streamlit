@@ -16,18 +16,14 @@
 
 import React, { ReactElement, useEffect } from "react"
 
-import { useTheme } from "@emotion/react"
-
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
   disabled: boolean
@@ -39,7 +35,6 @@ export interface Props {
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { colors }: EmotionTheme = useTheme()
   const {
     disabled,
     element,
@@ -64,10 +59,6 @@ export function FormSubmitButton(props: Props): ReactElement {
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
 
-  // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
-  const isMaterialIcon = element.icon.startsWith(":material")
-  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
-
   return (
     <div
       className="stFormSubmitButton"
@@ -84,21 +75,7 @@ export function FormSubmitButton(props: Props): ReactElement {
             widgetMgr.submitForm(element.formId, fragmentId, element)
           }}
         >
-          {element.icon && (
-            <DynamicIcon
-              size={isMaterialIcon ? "lg" : "base"}
-              margin={element.label ? iconMargin : "0"}
-              color={colors.bodyText}
-              iconValue={element.icon}
-            />
-          )}
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
+          <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
       </BaseButtonTooltip>
     </div>

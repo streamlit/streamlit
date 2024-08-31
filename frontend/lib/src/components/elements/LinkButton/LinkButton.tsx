@@ -16,17 +16,13 @@
 
 import React, { MouseEvent, ReactElement } from "react"
 
-import { useTheme } from "@emotion/react"
-
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
 import {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 import BaseLinkButton from "./BaseLinkButton"
 
@@ -38,11 +34,6 @@ export interface Props {
 
 function LinkButton(props: Readonly<Props>): ReactElement {
   const { disabled, element, width } = props
-  const { colors }: EmotionTheme = useTheme()
-  // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
-  const isMaterialIcon = element.icon.startsWith(":material")
-  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
-
   const style = { width }
 
   const kind =
@@ -77,21 +68,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           rel="noreferrer"
           aria-disabled={disabled}
         >
-          {element.icon && (
-            <DynamicIcon
-              iconValue={element.icon}
-              color={colors.bodyText}
-              size={isMaterialIcon ? "lg" : "base"}
-              margin={element.label ? iconMargin : "0"}
-            />
-          )}
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
+          <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseLinkButton>
       </BaseButtonTooltip>
     </div>

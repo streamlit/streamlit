@@ -53,14 +53,18 @@ describe("Popover container", () => {
     expect(popoverButton).toHaveClass("stPopover")
   })
 
-  it("renders label as expected", () => {
+  it("renders label on the popover", () => {
     const props = getProps()
     render(
       <Popover {...props}>
         <div>test</div>
       </Popover>
     )
-    expect(screen.getByText(props.element.label)).toBeInTheDocument()
+
+    const popover = screen.getByRole("button", {
+      name: `${props.element.label}`,
+    })
+    expect(popover).toBeInTheDocument()
   })
 
   it("should render the text when opened", () => {
@@ -74,25 +78,5 @@ describe("Popover container", () => {
     fireEvent.click(screen.getByText("label"))
     // Text should be visible now
     expect(screen.queryByText("test")).toBeVisible()
-  })
-
-  it("renders an emoji icon if provided", () => {
-    render(<Popover {...getProps({ icon: "🦄" })} />)
-
-    const icon = screen.getByTestId("stIconEmoji")
-    expect(icon).toHaveTextContent("🦄")
-  })
-
-  it("renders a material icon if provided", () => {
-    render(<Popover {...getProps({ icon: ":material/thumb_up:" })} />)
-
-    const icon = screen.getByTestId("stIconMaterial")
-    expect(icon).toHaveTextContent("thumb_up")
-  })
-
-  it("renders an icon with no margin, if there is no label", () => {
-    render(<Popover {...getProps({ label: "", icon: "🦄" })} />)
-
-    expect(screen.getByTestId("stIconEmoji")).toHaveStyle("margin: 0")
   })
 })

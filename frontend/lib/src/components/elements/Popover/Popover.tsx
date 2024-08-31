@@ -21,17 +21,14 @@ import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import {
-  DynamicIcon,
-  StyledIcon,
-} from "@streamlit/lib/src/components/shared/Icon"
+import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
@@ -57,10 +54,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // When useContainerWidth true & has help tooltip,
   // we need to pass the container width down to the button
   const fluidButtonWidth = element.help ? width : true
-
-  // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
-  const isMaterialIcon = element.icon.startsWith(":material")
-  const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
 
   return (
     <div data-testid="stPopover" className="stPopover">
@@ -144,21 +137,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               fluidWidth={element.useContainerWidth ? fluidButtonWidth : false}
               onClick={() => setOpen(!open)}
             >
-              {element.icon && (
-                <DynamicIcon
-                  size={isMaterialIcon ? "lg" : "base"}
-                  margin={element.label ? iconMargin : "0"}
-                  color={theme.colors.bodyText}
-                  iconValue={element.icon}
-                />
-              )}
-              <StreamlitMarkdown
-                source={element.label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-                disableLinks
-              />
+              <DynamicButtonLabel icon={element.icon} label={element.label} />
               <StyledPopoverButtonIcon>
                 <StyledIcon
                   as={open ? ExpandLess : ExpandMore}
