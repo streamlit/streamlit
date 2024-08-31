@@ -278,7 +278,8 @@ def is_element_id(key: str) -> bool:
 
 
 def is_keyed_element_id(key: str) -> bool:
-    """True if the given session_state key has the structure of a element ID with a user_key."""
+    """True if the given session_state key has the structure of a element ID
+    with a user_key."""
     return is_element_id(key) and not key.endswith("-None")
 
 
