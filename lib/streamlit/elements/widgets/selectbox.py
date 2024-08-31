@@ -284,7 +284,7 @@ class SelectboxMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "selectbox",
             user_key=key,
             label=label,
@@ -312,7 +312,7 @@ class SelectboxMixin:
             index = None
 
         selectbox_proto = SelectboxProto()
-        selectbox_proto.id = id
+        selectbox_proto.id = element_id
         selectbox_proto.label = label
         if index is not None:
             selectbox_proto.default = index
@@ -349,7 +349,7 @@ class SelectboxMixin:
             selectbox_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("selectbox", selectbox_proto)
         return widget_state.value
 

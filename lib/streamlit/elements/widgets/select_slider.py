@@ -365,7 +365,7 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "select_slider",
             user_key=key,
             label=label,
@@ -378,7 +378,7 @@ class SelectSliderMixin:
         )
 
         slider_proto = SliderProto()
-        slider_proto.id = id
+        slider_proto.id = element_id
         slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
@@ -421,7 +421,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue("slider", slider_proto)
         return widget_state.value

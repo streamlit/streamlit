@@ -885,7 +885,7 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
-        id = compute_element_id(
+        element_id = compute_element_id(
             "data_editor",
             user_key=key,
             data=arrow_bytes,
@@ -901,7 +901,7 @@ class DataEditorMixin:
         )
 
         proto = ArrowProto()
-        proto.id = id
+        proto.id = element_id
 
         proto.use_container_width = use_container_width
 

@@ -280,7 +280,7 @@ class MultiSelectMixin:
         default_values = get_default_indices(indexable_options, default)
 
         form_id = current_form_id(self.dg)
-        widget_id = compute_element_id(
+        element_id = compute_element_id(
             widget_name,
             user_key=key,
             label=label,
@@ -295,7 +295,7 @@ class MultiSelectMixin:
         )
 
         proto = MultiSelectProto()
-        proto.id = widget_id
+        proto.id = element_id
         proto.default[:] = default_values
         proto.form_id = form_id
         proto.disabled = disabled
@@ -332,7 +332,7 @@ class MultiSelectMixin:
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, widget_id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue(widget_name, proto)
 

@@ -312,7 +312,7 @@ class RadioMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "radio",
             user_key=key,
             label=label,
@@ -351,7 +351,7 @@ class RadioMixin:
             index = None
 
         radio_proto = RadioProto()
-        radio_proto.id = id
+        radio_proto.id = element_id
         radio_proto.label = label
         if index is not None:
             radio_proto.default = index
@@ -392,7 +392,7 @@ class RadioMixin:
             radio_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("radio", radio_proto)
         return widget_state.value
 
