@@ -237,6 +237,29 @@ SAFE_VALUES = Union[
 
 
 def register_element_id(element_type: str, element_id: str) -> None:
+    """Register the element ID and key for the given element.
+
+    If the element ID or key is not unique, an error is raised.
+
+    Parameters
+    ----------
+
+    element_type : str
+        The type of the element to register.
+
+    element_id : str
+        The ID of the element to register.
+
+    Raises
+    ------
+
+    StreamlitDuplicateElementKey
+        If the element key is not unique.
+
+    StreamlitDuplicateElementID
+        If the element ID is not unique.
+
+    """
     from streamlit.runtime.scriptrunner import get_script_run_ctx
 
     ctx = get_script_run_ctx()
