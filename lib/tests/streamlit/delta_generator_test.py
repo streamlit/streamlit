@@ -217,7 +217,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
             "number_input": lambda key=None: st.number_input("", key=key),
         }
 
-        for widget_type, create_widget in widgets.items():
+        for _, create_widget in widgets.items():
             create_widget()
             with self.assertRaises(StreamlitDuplicateElementID):
                 # Test creating a widget with a duplicate c
