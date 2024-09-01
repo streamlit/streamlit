@@ -323,7 +323,7 @@ class ChatMixin:
         )
 
         ctx = get_script_run_ctx()
-        id = compute_element_id(
+        element_id = compute_element_id(
             "chat_input",
             user_key=key,
             key=key,
@@ -356,7 +356,7 @@ class ChatMixin:
             position = "inline"
 
         chat_input_proto = ChatInputProto()
-        chat_input_proto.id = id
+        chat_input_proto.id = element_id
         chat_input_proto.placeholder = str(placeholder)
 
         if max_chars is not None:
@@ -382,7 +382,7 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, widget_state.value)
+            save_for_app_testing(ctx, element_id, widget_state.value)
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.

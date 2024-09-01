@@ -1681,7 +1681,7 @@ describe("App", () => {
       expect(screen.getByTestId("stLogo")).toBeInTheDocument()
     })
 
-    it("will remove logo if activeScriptHash does not match", async () => {
+    it("MPA V1 - won't remove logo on page change (based on activeScriptHash)", async () => {
       renderApp(getProps())
 
       sendForwardMessage(
@@ -1703,7 +1703,50 @@ describe("App", () => {
         pageScriptHash: "different_page_script_hash",
       })
 
-      // Since the logo was added with a different activeScriptHash, it should be removed
+      // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
+      await waitFor(() => {
+        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      })
+    })
+
+    it("MPA V2 - will remove logo if activeScriptHash does not match", async () => {
+      renderApp(getProps())
+
+      // Trigger handleNavigation (MPA V2)
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit_app",
+            isDefault: true,
+          },
+          { pageScriptHash: "other_page_script_hash", pageName: "Page 1" },
+        ],
+        pageScriptHash: "other_page_script_hash",
+        position: 0,
+      })
+
+      // Logo outside common script
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "other_page_script_hash",
+        }
+      )
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new session with a different pageScriptHash
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "page_script_hash",
+      })
+
+      // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
+      // Cleanup for MPA V2 in filterMainScriptElements
       await waitFor(() => {
         expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
       })

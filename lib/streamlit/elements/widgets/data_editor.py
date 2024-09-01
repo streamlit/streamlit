@@ -377,11 +377,13 @@ def _apply_dataframe_edits(
     if data_editor_state.get("edited_rows"):
         _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
-    if data_editor_state.get("added_rows"):
-        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
-
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
+
+    if data_editor_state.get("added_rows"):
+        # The addition of new rows needs to happen after the deletion to not have
+        # unexpected side-effects, like https://github.com/streamlit/streamlit/issues/8854
+        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
 def _is_supported_index(df_index: pd.Index) -> bool:
@@ -883,7 +885,7 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
-        id = compute_element_id(
+        element_id = compute_element_id(
             "data_editor",
             user_key=key,
             data=arrow_bytes,
@@ -899,7 +901,7 @@ class DataEditorMixin:
         )
 
         proto = ArrowProto()
-        proto.id = id
+        proto.id = element_id
 
         proto.use_container_width = use_container_width
 

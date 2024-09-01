@@ -565,7 +565,8 @@ export class AppRoot {
   public static empty(
     mainScriptHash = "",
     isInitialRender = true,
-    sidebarElements?: BlockNode | undefined
+    sidebarElements?: BlockNode | undefined,
+    logo?: Logo | null
   ): AppRoot {
     const mainNodes: AppNode[] = []
 
@@ -629,10 +630,19 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
+    // Persist logo between pages to avoid flicker (MPA V1 - Issue #8815)
+    const appLogo = logo
+      ? {
+          logo,
+          activeScriptHash: mainScriptHash,
+          scriptRunId: NO_SCRIPT_RUN_ID,
+        }
+      : null
+
     return new AppRoot(
       mainScriptHash,
       new BlockNode(mainScriptHash, [main, sidebar, event, bottom]),
-      null
+      appLogo
     )
   }
 

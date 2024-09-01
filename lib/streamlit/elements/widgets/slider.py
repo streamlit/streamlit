@@ -542,7 +542,7 @@ class SliderMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "slider",
             user_key=key,
             label=label,
@@ -803,7 +803,7 @@ class SliderMixin:
 
         slider_proto = SliderProto()
         slider_proto.type = SliderProto.Type.SLIDER
-        slider_proto.id = id
+        slider_proto.id = element_id
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value

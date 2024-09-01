@@ -396,7 +396,7 @@ class ButtonGroupMixin:
             if format_func is None
             else [format_func(option) for option in indexable_options]
         )
-        widget_id = compute_element_id(
+        element_id = compute_element_id(
             widget_name,
             user_key=key,
             key=key,
@@ -408,7 +408,7 @@ class ButtonGroupMixin:
         )
 
         proto = _build_proto(
-            widget_id,
+            element_id,
             formatted_options,
             default or [],
             disabled,
@@ -436,7 +436,7 @@ class ButtonGroupMixin:
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, widget_id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue(widget_name, proto)
 

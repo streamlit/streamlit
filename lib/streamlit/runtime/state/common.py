@@ -237,7 +237,7 @@ def compute_element_id(
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
-    """Compute the id for the given elements. This id is stable: a given
+    """Compute the id for the given element. This id is stable: a given
     set of inputs to this function will always produce the same id output.
 
     Only stable, deterministic values should be used to compute element ids. Using
@@ -266,7 +266,7 @@ def user_key_from_element_id(element_id: str) -> str | None:
 
     TODO This will incorrectly indicate no user key if the user actually provides
     "None" as a key, but we can't avoid this kind of problem while storing the
-    string representation of the no-user-key sentinel as part of the widget id.
+    string representation of the no-user-key sentinel as part of the element id.
     """
     user_key: str | None = element_id.split("-", maxsplit=2)[-1]
     return None if user_key == "None" else user_key
@@ -278,7 +278,9 @@ def is_element_id(key: str) -> bool:
 
 
 def is_keyed_element_id(key: str) -> bool:
-    """True if the given session_state key has the structure of a element ID with a user_key."""
+    """True if the given session_state key has the structure of a element ID
+    with a user_key.
+    """
     return is_element_id(key) and not key.endswith("-None")
 
 

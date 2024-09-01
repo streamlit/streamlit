@@ -350,7 +350,7 @@ class NumberInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "number_input",
             user_key=key,
             label=label,
@@ -481,7 +481,7 @@ class NumberInputMixin:
         data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
 
         number_input_proto = NumberInputProto()
-        number_input_proto.id = id
+        number_input_proto.id = element_id
         number_input_proto.data_type = data_type
         number_input_proto.label = label
         if value is not None:

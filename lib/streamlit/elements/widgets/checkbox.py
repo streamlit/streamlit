@@ -291,7 +291,7 @@ class CheckboxMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
             label=label,
@@ -303,7 +303,7 @@ class CheckboxMixin:
         )
 
         checkbox_proto = CheckboxProto()
-        checkbox_proto.id = id
+        checkbox_proto.id = element_id
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.type = type

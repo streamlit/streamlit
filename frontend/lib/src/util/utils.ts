@@ -25,6 +25,9 @@ import {
   Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 
+// This prefix should be in sync with the value on the python side:
+const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
+
 /**
  * Wraps a function to allow it to be called, at most, once per interval
  * (specified in milliseconds). If the wrapper function is called N times
@@ -346,20 +349,20 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
+function isValidElementId(elementId: string): boolean {
+  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
+}
+
 /**
  * If the element has a valid ID, returns it. Otherwise, returns undefined.
  */
-export function getElementID(element: Element): string | undefined {
+export function getElementId(element: Element): string | undefined {
   const elementId = get(element as any, [requireNonNull(element.type), "id"])
-  if (elementId && isValidElementID(elementId)) {
+  if (elementId && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
   }
   return undefined
-}
-
-export function isValidElementID(elementId: string): boolean {
-  return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
 /** True if the given form ID is non-null and non-empty. */

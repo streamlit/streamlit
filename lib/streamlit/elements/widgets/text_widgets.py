@@ -275,7 +275,7 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "text_input",
             user_key=key,
             label=label,
@@ -295,7 +295,7 @@ class TextWidgetsMixin:
             value = None
 
         text_input_proto = TextInputProto()
-        text_input_proto.id = id
+        text_input_proto.id = element_id
         text_input_proto.label = label
         if value is not None:
             text_input_proto.default = value
@@ -547,7 +547,7 @@ class TextWidgetsMixin:
 
         value = str(value) if value is not None else None
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "text_area",
             user_key=key,
             label=label,
@@ -566,7 +566,7 @@ class TextWidgetsMixin:
             value = None
 
         text_area_proto = TextAreaProto()
-        text_area_proto.id = id
+        text_area_proto.id = element_id
         text_area_proto.label = label
         if value is not None:
             text_area_proto.default = value

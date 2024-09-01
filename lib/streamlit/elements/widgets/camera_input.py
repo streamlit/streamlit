@@ -203,7 +203,7 @@ class CameraInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_element_id(
+        element_id = compute_element_id(
             "camera_input",
             user_key=key,
             label=label,
@@ -214,7 +214,7 @@ class CameraInputMixin:
         )
 
         camera_input_proto = CameraInputProto()
-        camera_input_proto.id = id
+        camera_input_proto.id = element_id
         camera_input_proto.label = label
         camera_input_proto.form_id = current_form_id(self.dg)
         camera_input_proto.disabled = disabled

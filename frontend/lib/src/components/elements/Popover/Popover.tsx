@@ -27,8 +27,8 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
@@ -137,13 +137,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               fluidWidth={element.useContainerWidth ? fluidButtonWidth : false}
               onClick={() => setOpen(!open)}
             >
-              <StreamlitMarkdown
-                source={element.label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-                disableLinks
-              />
+              <DynamicButtonLabel icon={element.icon} label={element.label} />
               <StyledPopoverButtonIcon>
                 <StyledIcon
                   as={open ? ExpandLess : ExpandMore}
