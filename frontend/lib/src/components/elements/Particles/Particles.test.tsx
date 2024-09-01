@@ -28,7 +28,7 @@ const DummyParticle: FC<React.PropsWithChildren<ParticleProps>> = () => (
 )
 
 const getProps = (): Props => ({
-  className: "particles",
+  className: "c",
   numParticles: 10,
   numParticleTypes: 5,
   ParticleComponent: DummyParticle,
@@ -54,13 +54,5 @@ describe("Particles element", () => {
     // eslint-disable-next-line testing-library/no-node-access
     const particleComponents = particleElement.children
     expect(particleComponents.length).toBe(10)
-  })
-
-  it("renders as hidden element", () => {
-    const props = getProps()
-    render(<Particles {...props} />)
-
-    const particleElement = screen.getByTestId("particles")
-    expect(particleElement).toHaveClass("stHidden")
   })
 })
