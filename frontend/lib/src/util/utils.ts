@@ -84,9 +84,6 @@ export enum LoadingScreenType {
   V2,
 }
 
-// This prefix should be in sync with the value on the python side:
-const GENERATED_ELEMENT_ID_PREFIX = "$$ID"
-
 /**
  * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key
  * (EMBED_QUERY_PARAM_KEY, EMBED_OPTIONS_QUERY_PARAM_KEY). Is case insensitive.
@@ -349,7 +346,7 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-function isValidElementId(elementId: string): boolean {
+export function isValidElementId(elementId: string): boolean {
   return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
