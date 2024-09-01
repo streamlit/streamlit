@@ -28,7 +28,7 @@ const DummyParticle: FC<React.PropsWithChildren<ParticleProps>> = () => (
 )
 
 const getProps = (): Props => ({
-  className: "c",
+  className: "particles",
   numParticles: 10,
   numParticleTypes: 5,
   ParticleComponent: DummyParticle,

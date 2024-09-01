@@ -17,7 +17,6 @@
 import React, { FC, memo } from "react"
 
 import range from "lodash/range"
-import classNames from "classnames"
 
 import { StyledParticles } from "./styled-components"
 
