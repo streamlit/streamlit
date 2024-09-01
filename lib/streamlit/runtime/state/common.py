@@ -260,18 +260,20 @@ def compute_element_id(
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
-    """Compute the id for the given element. This id is stable: a given
-    set of inputs to this function will always produce the same id output.
+    """Compute and register the ID for the given element.
 
-    Only stable, deterministic values should be used to compute element ids. Using
-    nondeterministic values as inputs can cause the resulting element id to
-    change between runs.
+    This ID is stable: a given set of inputs to this function will always produce
+    the same ID output. Only stable, deterministic values should be used to compute
+    element IDs. Using nondeterministic values as inputs can cause the resulting
+    element ID to change between runs.
 
-    The element id includes the user_key so elements with identical arguments can
-    use it to be distinct.
+    The element ID includes the user_key so elements with identical arguments can
+    use it to be distinct. The element ID includes an easily identified prefix, and the
+    user_key as a suffix, to make it easy to identify it and know if a key maps to it.
 
-    The element id includes an easily identified prefix, and the user_key as a
-    suffix, to make it easy to identify it and know if a key maps to it.
+    The element ID gets registered to make sure that only one ID and user-specified
+    key exists at the same time. If there are duplicated IDs or keys, an error
+    is raised.
     """
     h = hashlib.new("md5", **HASHLIB_KWARGS)
     h.update(element_type.encode("utf-8"))
