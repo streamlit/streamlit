@@ -16,7 +16,11 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    get_element_by_key,
+)
 
 
 def test_box_select_on_scatter_chart_displays_a_df(app: Page):
@@ -236,3 +240,13 @@ def test_supports_points_and_box_if_activated(app: Page):
     app.mouse.up()
     wait_for_app_run(app)
     expect(app.get_by_text("Selected points: 25")).to_be_attached()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stPlotlyChart")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "line_chart")).to_be_visible()

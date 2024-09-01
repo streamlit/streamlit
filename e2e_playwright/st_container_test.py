@@ -16,6 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
     click_button,
     click_checkbox,
     get_checkbox,
@@ -107,6 +108,11 @@ def test_correctly_handles_first_chat_message(
         app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
         name="st_container-added_chat_message",
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stVerticalBlock")
 
 
 def test_custom_css_class_via_key(app: Page):
