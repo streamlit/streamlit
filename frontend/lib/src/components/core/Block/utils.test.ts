@@ -17,7 +17,7 @@
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
-import { convertKeyToClassName, isElementStale } from "./utils"
+import { convertKeyToClassName, getKeyFromId, isElementStale } from "./utils"
 
 describe("isElementStale", () => {
   const node = new ElementNode(
@@ -105,6 +105,43 @@ describe("convertKeyToClassName", () => {
     "converts $input to $expected",
     ({ input, expected }) => {
       expect(convertKeyToClassName(input)).toBe(expected)
+    }
+  )
+})
+
+describe("getKeyFromId", () => {
+  const testCases = [
+    {
+      input: "",
+      expected: undefined,
+    },
+    {
+      input: undefined,
+      expected: undefined,
+    },
+    {
+      input: "$ID-899e9b72e1539f21f8e82565d36609d0-foo",
+      expected: undefined,
+    },
+    {
+      input: "$$ID-899e9b72e1539f21f8e82565d36609d0-None",
+      expected: undefined,
+    },
+    { input: "helloWorld", expected: undefined },
+    {
+      input: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
+      expected: "first container",
+    },
+    {
+      input: "$$ID-foo-bar",
+      expected: "bar",
+    },
+  ]
+
+  test.each(testCases)(
+    "extracts the key from $input",
+    ({ input, expected }) => {
+      expect(getKeyFromId(input)).toBe(expected)
     }
   )
 })
