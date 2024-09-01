@@ -236,7 +236,7 @@ SAFE_VALUES = Union[
 ]
 
 
-def register_element_id(element_type: str, element_id: str) -> None:
+def _register_element_id(element_type: str, element_id: str) -> None:
     """Register the element ID and key for the given element.
 
     If the element ID or key is not unique, an error is raised.
@@ -306,7 +306,7 @@ def compute_element_id(
         h.update(str(k).encode("utf-8"))
         h.update(str(v).encode("utf-8"))
     element_id = f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
-    register_element_id(element_type, element_id)
+    _register_element_id(element_type, element_id)
     return element_id
 
 
