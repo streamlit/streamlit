@@ -77,7 +77,6 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
-
     def test_works_with_bytes_path(self):
         """Test that when a file path in bytes, the callback is called."""
         cb = mock.Mock()
