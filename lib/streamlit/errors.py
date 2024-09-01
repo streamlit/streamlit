@@ -103,7 +103,7 @@ class DuplicateWidgetID(StreamlitAPIException):
 class StreamlitDuplicateElementID(DuplicateWidgetID):
     """An exception raised when the auto-generated ID of an element is not unique."""
 
-    def __init__(self, user_key: str):
+    def __init__(self):
         super().__init__(
             "There are multiple elements with the same generated generated ID. "
             "When this element is created, it is assigned an internal ID based on "
