@@ -30,7 +30,7 @@ from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state.common import compute_element_id, register_element_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import NumpyShape
 
@@ -578,7 +578,6 @@ def marshall_video(
             muted=muted,
             page=ctx.active_script_hash if ctx else None,
         )
-        register_element_id(proto.id)
 
 
 def _parse_start_time_end_time(
@@ -753,4 +752,3 @@ def marshall_audio(
             autoplay=autoplay,
             page=ctx.active_script_hash if ctx else None,
         )
-        register_element_id(proto.id)

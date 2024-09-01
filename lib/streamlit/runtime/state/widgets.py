@@ -30,7 +30,6 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    register_element_id,
     user_key_from_element_id,
 )
 
@@ -176,7 +175,4 @@ def register_widget_from_metadata(
     widget_id = metadata.id
     user_key = user_key_from_element_id(widget_id)
 
-    # Ensure another widget with the same id or key hasn't already been registered.
-    if widget_id:
-        register_element_id(widget_id)
     return ctx.session_state.register_widget(metadata, user_key)

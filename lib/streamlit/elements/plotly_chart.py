@@ -48,7 +48,7 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_element_id, register_element_id
+from streamlit.runtime.state.common import compute_element_id
 
 if TYPE_CHECKING:
     import matplotlib
@@ -538,11 +538,6 @@ class PlotlyMixin:
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
             return cast(PlotlyState, widget_state.value)
         else:
-            # Since the ID is always set for Plotly charts, we need to register
-            # it in case selections are not activated. If selections are activated,
-            # it will be registered as a widget -> which will take care of registering
-            # the element ID.
-            register_element_id(plotly_chart_proto.id)
             return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property

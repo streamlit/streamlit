@@ -23,7 +23,7 @@ from streamlit.elements.lib.utils import Key, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state.common import compute_element_id, register_element_id
+from streamlit.runtime.state.common import compute_element_id
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -158,9 +158,9 @@ class LayoutsMixin:
                 block_proto.vertical.border = True
 
         if key:
-            container_id = compute_element_id("container", user_key=key, key=key)
-            register_element_id(container_id)
-            block_proto.id = container_id
+            block_proto.id = compute_element_id(
+                "container", user_key=key, height=height, border=border
+            )
 
         return self.dg._block(block_proto)
 

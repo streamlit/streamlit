@@ -236,6 +236,25 @@ SAFE_VALUES = Union[
 ]
 
 
+def register_element_id(element_type: str, element_id: str) -> None:
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+    ctx = get_script_run_ctx()
+    if ctx is None or not element_id:
+        return
+
+    if user_key := user_key_from_element_id(element_id):
+        if user_key not in ctx.widget_user_keys_this_run:
+            ctx.widget_user_keys_this_run.add(user_key)
+        else:
+            raise StreamlitDuplicateElementKey(user_key)
+
+    if element_id not in ctx.widget_ids_this_run:
+        ctx.widget_ids_this_run.add(element_id)
+    else:
+        raise StreamlitDuplicateElementID(element_type)
+
+
 def compute_element_id(
     element_type: str,
     user_key: str | None = None,
@@ -261,7 +280,9 @@ def compute_element_id(
     for k, v in kwargs.items():
         h.update(str(k).encode("utf-8"))
         h.update(str(v).encode("utf-8"))
-    return f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
+    element_id = f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
+    register_element_id(element_type, element_id)
+    return element_id
 
 
 def user_key_from_element_id(element_id: str) -> str | None:
@@ -294,25 +315,6 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
-
-
-def register_element_id(id: str) -> None:
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-    ctx = get_script_run_ctx()
-    if ctx is None or not id:
-        return
-
-    if user_key := user_key_from_element_id(id):
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            raise StreamlitDuplicateElementKey(user_key)
-
-    if id not in ctx.widget_ids_this_run:
-        ctx.widget_ids_this_run.add(id)
-    else:
-        raise StreamlitDuplicateElementID()
 
 
 def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
