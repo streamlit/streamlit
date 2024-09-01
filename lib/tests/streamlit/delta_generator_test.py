@@ -36,14 +36,17 @@ import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementID,
+    StreamlitDuplicateElementKey,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.state.common import compute_element_id
-from streamlit.runtime.state.widgets import _build_duplicate_widget_message
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -216,30 +219,18 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
 
         for widget_type, create_widget in widgets.items():
             create_widget()
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                # Test creating a widget with a duplicate auto-generated key
+            with self.assertRaises(StreamlitDuplicateElementID):
+                # Test creating a widget with a duplicate c
                 # raises an exception.
                 create_widget()
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=None
-                ),
-                str(ctx.exception),
-            )
 
         for widget_type, create_widget in widgets.items():
             # widgets with keys are distinct from the unkeyed ones created above
             create_widget(widget_type)
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                # Test creating a widget with a duplicate auto-generated key
+            with self.assertRaises(StreamlitDuplicateElementKey):
+                # Test creating a widget with a duplicate key
                 # raises an exception.
                 create_widget(widget_type)
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=widget_type
-                ),
-                str(ctx.exception),
-            )
 
     def test_duplicate_widget_id_error_when_user_key_specified(self):
         """Multiple widgets with the different generated key, but same user specified
@@ -280,18 +271,12 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         for widget_type, create_widget in widgets.items():
             user_key = widget_type
             create_widget(label="LABEL_A", key=user_key)
-            with self.assertRaises(DuplicateWidgetID) as ctx:
+            with self.assertRaises(StreamlitDuplicateElementKey()):
                 # We specify different labels for widgets, so auto-generated keys
                 # (widget_ids) will be different.
                 # Test creating a widget with a different auto-generated key but same
                 # user specified key raises an exception.
                 create_widget(label="LABEL_B", key=user_key)
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=user_key
-                ),
-                str(ctx.exception),
-            )
 
 
 class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
