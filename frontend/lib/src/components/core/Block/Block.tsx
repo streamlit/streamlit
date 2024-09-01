@@ -329,6 +329,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ...{ width },
   }
   // Extract the user-specified key from the block ID (if provided):
+  console.log("props.node.deltaBlock.id", props.node.deltaBlock.id)
   const userKey = getKeyFromId(props.node.deltaBlock.id)
 
   // Widths of children autosizes to container width (and therefore window width).
