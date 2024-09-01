@@ -100,6 +100,26 @@ class DuplicateWidgetID(StreamlitAPIException):
     pass
 
 
+class StreamlitDuplicateElementID(DuplicateWidgetID):
+    def __init__(self, user_key: str):
+        super().__init__(
+            "There are multiple elements with the same generated generated ID. "
+            "When this element is created, it is assigned an internal ID based on "
+            "the element type and provided parameters. Multiple elements with the "
+            "same type and parameters will cause this error.\n\n"
+            "To fix this error, please pass a unique `key` argument to the element."
+        )
+
+
+class StreamlitDuplicateElementKey(DuplicateWidgetID):
+    def __init__(self, user_key: str):
+        super().__init__(
+            f"There are multiple elements with the same `key='{user_key}'`. "
+            "To fix this, please make sure that the `key` argument is unique for "
+            "each element you create."
+        )
+
+
 class UnserializableSessionStateError(StreamlitAPIException):
     pass
 

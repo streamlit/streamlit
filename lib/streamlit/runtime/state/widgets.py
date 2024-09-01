@@ -14,13 +14,11 @@
 
 from __future__ import annotations
 
-import textwrap
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final, Mapping
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import DuplicateWidgetID
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -32,6 +30,7 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
+    register_element_id,
     user_key_from_element_id,
 )
 
@@ -157,27 +156,6 @@ def register_widget(
     return register_widget_from_metadata(metadata, ctx)
 
 
-def register_element_id(id: str) -> None:
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-    ctx = get_script_run_ctx()
-    if ctx is None or not id:
-        return
-
-    if user_key := user_key_from_element_id(id):
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            # TODO: better error message:  _build_duplicate_widget_message
-            raise DuplicateWidgetID(f"Duplicate element key: {user_key}")
-
-    if id not in ctx.widget_ids_this_run:
-        ctx.widget_ids_this_run.add(id)
-    else:
-        # TODO: better error message:  _build_duplicate_widget_message
-        raise DuplicateWidgetID(f"Duplicate element id: {id}")
-
-
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: ScriptRunContext | None,
@@ -202,33 +180,3 @@ def register_widget_from_metadata(
     if widget_id:
         register_element_id(widget_id)
     return ctx.session_state.register_widget(metadata, user_key)
-
-
-def _build_duplicate_widget_message(
-    widget_func_name: str, user_key: str | None = None
-) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            """
-            There are multiple widgets with the same `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for each
-            widget you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical `st.{widget_type}` widgets with the
-            same generated key.
-
-            When a widget is created, it's assigned an internal key based on
-            its structure. Multiple widgets with an identical structure will
-            result in the same internal key, which causes this error.
-
-            To fix this error, please pass a unique `key` argument to
-            `st.{widget_type}`.
-            """
-        )
-
-    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)

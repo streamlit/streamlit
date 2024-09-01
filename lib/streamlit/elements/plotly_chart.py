@@ -48,7 +48,7 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_element_id
+from streamlit.runtime.state.common import compute_element_id, register_element_id
 
 if TYPE_CHECKING:
     import matplotlib
@@ -212,7 +212,9 @@ class PlotlyState(TypedDict, total=False):
 
 @dataclass
 class PlotlyChartSelectionSerde:
-    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
+    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart
+    selection state.
+    """
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
         empty_selection_state: PlotlyState = {
@@ -442,18 +444,22 @@ class PlotlyMixin:
 
         if "sharing" in kwargs:
             show_deprecation_warning(
-                "The `sharing` parameter has been deprecated and will be removed in a future release. "
-                "Plotly charts will always be rendered using Streamlit's offline mode."
+                "The `sharing` parameter has been deprecated and will be removed "
+                "in a future release. Plotly charts will always be rendered using "
+                "Streamlit's offline mode."
             )
 
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+                f'You set theme="{theme}" while Streamlit charts only support '
+                "theme=”streamlit” or theme=None to fallback to the default "
+                "library theme."
             )
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+                f"You have passed {on_select} to `on_select`. But only 'ignore', "
+                "'rerun', or a callable is supported."
             )
 
         key = to_key(key)
@@ -532,6 +538,11 @@ class PlotlyMixin:
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
             return cast(PlotlyState, widget_state.value)
         else:
+            # Since the ID is always set for Plotly charts, we need to register
+            # it in case selections are not activated. If selections are activated,
+            # it will be registered as a widget -> which will take care of registering
+            # the element ID.
+            register_element_id(plotly_chart_proto.id)
             return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property

@@ -39,7 +39,11 @@ from google.protobuf.message import Message
 from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementID,
+    StreamlitDuplicateElementKey,
+)
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
@@ -290,6 +294,25 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
+
+
+def register_element_id(id: str) -> None:
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+    ctx = get_script_run_ctx()
+    if ctx is None or not id:
+        return
+
+    if user_key := user_key_from_element_id(id):
+        if user_key not in ctx.widget_user_keys_this_run:
+            ctx.widget_user_keys_this_run.add(user_key)
+        else:
+            raise StreamlitDuplicateElementKey(user_key)
+
+    if id not in ctx.widget_ids_this_run:
+        ctx.widget_ids_this_run.add(id)
+    else:
+        raise StreamlitDuplicateElementID()
 
 
 def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
