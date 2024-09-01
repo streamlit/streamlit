@@ -271,7 +271,7 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
         for widget_type, create_widget in widgets.items():
             user_key = widget_type
             create_widget(label="LABEL_A", key=user_key)
-            with self.assertRaises(StreamlitDuplicateElementKey()):
+            with self.assertRaises(StreamlitDuplicateElementKey):
                 # We specify different labels for widgets, so auto-generated keys
                 # (widget_ids) will be different.
                 # Test creating a widget with a different auto-generated key but same
