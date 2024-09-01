@@ -347,6 +347,9 @@ export function setCookie(
 }
 
 export function isValidElementId(elementId: string): boolean {
+  if (!elementId) {
+    return false
+  }
   return elementId.startsWith(GENERATED_ELEMENT_ID_PREFIX)
 }
 
