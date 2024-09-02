@@ -113,11 +113,21 @@ class ForwardMsgQueue:
                     "parent_message",
                 }
                 or (
-                    msg.delta is not None
-                    and fragment_ids_this_run is not None
+                    # preserve all messages if this is a fragment rerun and...
+                    fragment_ids_this_run is not None
                     and (
-                        msg.delta.fragment_id is None
-                        or msg.delta.fragment_id not in fragment_ids_this_run
+                        # the message is not a delta message
+                        # (not associated with a fragment) or...
+                        msg.delta is None
+                        or (
+                            # it is a delta but not associated with any of the passed
+                            # fragments
+                            msg.delta is not None
+                            and (
+                                msg.delta.fragment_id is None
+                                or msg.delta.fragment_id not in fragment_ids_this_run
+                            )
+                        )
                     )
                 )
             ]
