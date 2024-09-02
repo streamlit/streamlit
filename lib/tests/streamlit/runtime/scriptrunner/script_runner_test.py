@@ -730,7 +730,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
-        assert "loop_forever" in scriptrunner.text_deltas()
+        self._assert_text_deltas(scriptrunner, ["loop_forever"])
 
     def test_shutdown(self):
         """Test that we can shutdown while a script is running."""
@@ -751,7 +751,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
-        assert "loop_forever" in scriptrunner.text_deltas()
+        self._assert_text_deltas(scriptrunner, ["loop_forever"])
 
     def test_widgets(self):
         """Tests that widget values behave as expected."""

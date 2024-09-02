@@ -35,12 +35,19 @@ class ForwardMsgQueue:
 
     def __init__(self):
         self._queue: list[ForwardMsg] = []
+        # A mapping of (delta_path -> _queue.indexof(msg)) for each
+        # Delta message in the queue. We use this for coalescing
+        # redundant outgoing Deltas (where a newer Delta supersedes
+        # an older Delta, with the same delta_path, that's still in the
+        # queue).
+        self._delta_index_map: dict[tuple[int, ...], int] = {}
 
     def get_debug(self) -> dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
 
         return {
             "queue": [MessageToDict(m) for m in self._queue],
+            "ids": list(self._delta_index_map.keys()),
         }
 
     def is_empty(self) -> bool:
@@ -48,6 +55,30 @@ class ForwardMsgQueue:
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message."""
+        if not _is_composable_message(msg):
+            self._queue.append(msg)
+            return
+
+        # If there's a Delta message with the same delta_path already in
+        # the queue - meaning that it refers to the same location in
+        # the app - we attempt to combine this new Delta into the old
+        # one. This is an optimization that prevents redundant Deltas
+        # from being sent to the frontend.
+        delta_key = tuple(msg.metadata.delta_path)
+        if delta_key in self._delta_index_map:
+            index = self._delta_index_map[delta_key]
+            old_msg = self._queue[index]
+            composed_delta = _maybe_compose_deltas(old_msg.delta, msg.delta)
+            if composed_delta is not None:
+                new_msg = ForwardMsg()
+                new_msg.delta.CopyFrom(composed_delta)
+                new_msg.metadata.CopyFrom(msg.metadata)
+                self._queue[index] = new_msg
+                return
+
+        # No composition occurred. Append this message to the queue, and
+        # store its index for potential future composition.
+        self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)
 
     def clear(self, retain_lifecycle_msgs: bool = False) -> None:
@@ -74,6 +105,8 @@ class ForwardMsgQueue:
                 }
             ]
 
+        self._delta_index_map = {}
+
     def flush(self) -> list[ForwardMsg]:
         """Clear the queue and return a list of the messages it contained
         before being cleared.
@@ -84,6 +117,19 @@ class ForwardMsgQueue:
 
     def __len__(self) -> int:
         return len(self._queue)
+
+
+def _is_composable_message(msg: ForwardMsg) -> bool:
+    """True if the ForwardMsg is potentially composable with other ForwardMsgs."""
+    if not msg.HasField("delta"):
+        # Non-delta messages are never composable.
+        return False
+
+    # We never compose add_rows messages in Python, because the add_rows
+    # operation can raise errors, and we don't have a good way of handling
+    # those errors in the message queue.
+    delta_type = msg.delta.WhichOneof("type")
+    return delta_type != "add_rows" and delta_type != "arrow_add_rows"
 
 
 def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta | None:
