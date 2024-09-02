@@ -1213,6 +1213,8 @@ export class App extends PureComponent<Props, State> {
         // leftover elements will be cleared after finished successfully.
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
+        // (We don't do this if our script had a compilation error and didn't
+        // finish successfully.)
         this.setState(
           ({ scriptRunId, fragmentIdsThisRun }) => ({
             // Apply any pending elements that haven't been applied.
