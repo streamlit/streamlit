@@ -365,7 +365,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
             if kwarg not in excluded_kwargs
         }
 
-        # Add some kwargs that are passed to compute_element_id but don't appear in widget
+        # Add some kwargs that are passed to compute_and_register_element_id but don't appear in widget
         # signatures.
         for kwarg in ["form_id", "user_key", "page"]:
             kwargs[kwarg] = ANY
@@ -388,15 +388,15 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     )
     def test_widget_id_computation(self, widget_func, module_name):
         with patch(
-            f"streamlit.elements.widgets.{module_name}.compute_element_id",
+            f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
             wraps=compute_and_register_element_id,
-        ) as patched_compute_element_id:
+        ) as patched_compute_and_register_element_id:
             widget_func("my_widget")
 
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
-        patched_compute_element_id.assert_called_with(ANY, **expected_sig)
+        patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
@@ -414,7 +414,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
             wraps=compute_and_register_element_id,
-        ) as patched_compute_element_id:
+        ) as patched_compute_and_register_element_id:
             if widget_func == st.download_button:
                 widget_func("my_widget", data="")
             else:
@@ -424,7 +424,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         expected_sig = self.signature_to_expected_kwargs(sig)
 
         # button and chat widgets don't include a form_id param in their calls to
-        # compute_element_id because having either in forms (aside from the form's
+        # compute_and_register_element_id because having either in forms (aside from the form's
         # submit button) is illegal.
         del expected_sig["form_id"]
         if widget_func == st.button:
@@ -435,13 +435,13 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         if widget_func == st.download_button:
             del expected_sig["data"]
 
-        patched_compute_element_id.assert_called_with(ANY, **expected_sig)
+        patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
     @parameterized.expand(
         [
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_element_id, because st.feedback doesn't take a label
+                # passing to compute_and_register_element_id, because st.feedback doesn't take a label
                 # and its arguments are different.
                 lambda key,
                 options,
@@ -462,11 +462,11 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
             wraps=compute_and_register_element_id,
-        ) as patched_compute_element_id:
+        ) as patched_compute_and_register_element_id:
             widget_func("my_widget", options)
 
         sig = inspect.signature(widget_func)
-        patched_compute_element_id.assert_called_with(
+        patched_compute_and_register_element_id.assert_called_with(
             ANY, **self.signature_to_expected_kwargs(sig)
         )
 
@@ -479,7 +479,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         with patch(
             "streamlit.elements.widgets.data_editor.compute_and_register_element_id",
             wraps=compute_and_register_element_id,
-        ) as patched_compute_element_id:
+        ) as patched_compute_and_register_element_id:
             st.data_editor(data=[])
 
         sig = inspect.signature(st.data_editor)
@@ -490,7 +490,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         del expected_sig["hide_index"]
         del expected_sig["column_config"]
 
-        patched_compute_element_id.assert_called_with(ANY, **expected_sig)
+        patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
