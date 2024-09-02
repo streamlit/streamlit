@@ -98,6 +98,7 @@ class ForwardMsgQueue:
         fragment or belonging to a fragment not in fragment_ids_this_run will be
         preserved to prevent clearing messages unrelated to the running fragments.
         """
+
         if not retain_lifecycle_msgs:
             self._queue = []
         else:
@@ -116,7 +117,7 @@ class ForwardMsgQueue:
                     and fragment_ids_this_run is not None
                     and (
                         msg.delta.fragment_id is None
-                        or (msg.delta.fragment_id not in fragment_ids_this_run)
+                        or msg.delta.fragment_id not in fragment_ids_this_run
                     )
                 )
             ]
