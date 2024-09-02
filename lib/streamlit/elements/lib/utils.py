@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import hashlib
+from datetime import date, datetime, time, timedelta
 from enum import Enum, EnumMeta
 from typing import (
     TYPE_CHECKING,
@@ -27,6 +29,7 @@ from typing import (
     overload,
 )
 
+from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
 from streamlit import config, dataframe_util, errors, logger
@@ -40,14 +43,29 @@ from streamlit.runtime.state.common import (
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
-    from streamlit.type_util import T
+    from builtins import ellipsis
 
+    from streamlit.runtime.state.widgets import NoValue
+    from streamlit.type_util import T
 
 _LOGGER: Final = logger.get_logger(__name__)
 
 Key: TypeAlias = Union[str, int]
 
 LabelVisibility: TypeAlias = Literal["visible", "hidden", "collapsed"]
+
+PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
+SAFE_VALUES = Union[
+    date,
+    time,
+    datetime,
+    timedelta,
+    None,
+    "NoValue",
+    "ellipsis",
+    Message,
+    PROTO_SCALAR_VALUE,
+]
 
 
 def get_label_visibility_proto_value(

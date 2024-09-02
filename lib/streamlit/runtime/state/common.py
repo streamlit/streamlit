@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -33,7 +32,6 @@ from typing import (
     get_args,
 )
 
-from google.protobuf.message import Message
 from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, util
@@ -63,10 +61,7 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 
 if TYPE_CHECKING:
-    from builtins import ellipsis
-
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
-    from streamlit.runtime.state.widgets import NoValue
 
 
 # Protobuf types for all widgets.
@@ -215,20 +210,6 @@ class RegisterWidgetResult(Generic[T_co]):
         where the true widget value could not be determined.
         """
         return cls(value=deserializer(None, ""), value_changed=False)
-
-
-PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
-SAFE_VALUES = Union[
-    date,
-    time,
-    datetime,
-    timedelta,
-    None,
-    "NoValue",
-    "ellipsis",
-    Message,
-    PROTO_SCALAR_VALUE,
-]
 
 
 def user_key_from_element_id(element_id: str) -> str | None:
