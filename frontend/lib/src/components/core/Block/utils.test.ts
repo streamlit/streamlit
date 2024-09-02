@@ -90,6 +90,9 @@ describe("isElementStale", () => {
 
 describe("convertKeyToClassName", () => {
   const testCases = [
+    { input: undefined, expected: "" },
+    { input: null, expected: "" },
+    { input: "", expected: "" },
     { input: "helloWorld", expected: "st-key-helloWorld" },
     { input: "hello world!", expected: "st-key-hello-world-" },
     { input: "123Start", expected: "st-key-123Start" },

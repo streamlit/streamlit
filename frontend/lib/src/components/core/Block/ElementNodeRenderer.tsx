@@ -767,7 +767,7 @@ const ElementNodeRenderer = (
         className={classNames(
           "stElementContainer",
           "element-container",
-          convertKeyToClassName(userKey ?? "")
+          convertKeyToClassName(userKey)
         )}
         data-testid="stElementContainer"
         data-stale={isStale}

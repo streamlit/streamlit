@@ -181,7 +181,7 @@ export interface BaseBlockProps {
  * @param key - The key to convert.
  * @returns A valid CSS class name.
  */
-export function convertKeyToClassName(key: string): string {
+export function convertKeyToClassName(key: string | undefined | null): string {
   if (!key) {
     return ""
   }

@@ -41,7 +41,7 @@ from typing_extensions import TypeAlias, TypeGuard
 from streamlit import config, util
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitDuplicateElementID,
+    StreamlitDuplicateElementId,
     StreamlitDuplicateElementKey,
 )
 from streamlit.proto.Arrow_pb2 import Arrow
@@ -65,6 +65,7 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -260,8 +261,6 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         If the element ID is not unique.
 
     """
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-
     ctx = get_script_run_ctx()
     if ctx is None or not element_id:
         return
@@ -275,7 +274,7 @@ def _register_element_id(element_type: str, element_id: str) -> None:
     if element_id not in ctx.widget_ids_this_run:
         ctx.widget_ids_this_run.add(element_id)
     else:
-        raise StreamlitDuplicateElementID(element_type)
+        raise StreamlitDuplicateElementId(element_type)
 
 
 def compute_element_id(

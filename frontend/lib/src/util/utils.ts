@@ -346,7 +346,9 @@ export function setCookie(
   document.cookie = `${name}=${value};${expirationStr}path=/`
 }
 
-export function isValidElementId(elementId: string): boolean {
+export function isValidElementId(
+  elementId: string | undefined | null
+): boolean {
   if (!elementId) {
     return false
   }

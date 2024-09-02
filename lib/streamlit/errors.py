@@ -100,7 +100,7 @@ class DuplicateWidgetID(StreamlitAPIException):
     pass
 
 
-class StreamlitDuplicateElementID(DuplicateWidgetID):
+class StreamlitDuplicateElementId(DuplicateWidgetID):
     """An exception raised when the auto-generated ID of an element is not unique."""
 
     def __init__(self, element_type: str):
