@@ -65,7 +65,6 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
-from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -261,6 +260,9 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         If the element ID is not unique.
 
     """
+    # Import here to avoid circular import
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+
     ctx = get_script_run_ctx()
     if ctx is None or not element_id:
         return
@@ -275,6 +277,32 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         ctx.widget_ids_this_run.add(element_id)
     else:
         raise StreamlitDuplicateElementId(element_type)
+
+
+def _compute_element_id(
+    element_type: str,
+    user_key: str | None = None,
+    **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
+) -> str:
+    """Compute the ID for the given element.
+
+    This ID is stable: a given set of inputs to this function will always produce
+    the same ID output. Only stable, deterministic values should be used to compute
+    element IDs. Using nondeterministic values as inputs can cause the resulting
+    element ID to change between runs.
+
+    The element ID includes the user_key so elements with identical arguments can
+    use it to be distinct. The element ID includes an easily identified prefix, and the
+    user_key as a suffix, to make it easy to identify it and know if a key maps to it.
+    """
+    h = hashlib.new("md5", **HASHLIB_KWARGS)
+    h.update(element_type.encode("utf-8"))
+    # This will iterate in a consistent order when the provided arguments have
+    # consistent order; dicts are always in insertion order.
+    for k, v in kwargs.items():
+        h.update(str(k).encode("utf-8"))
+        h.update(str(v).encode("utf-8"))
+    return f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
 def compute_and_register_element_id(
@@ -297,14 +325,7 @@ def compute_and_register_element_id(
     key exists at the same time. If there are duplicated IDs or keys, an error
     is raised.
     """
-    h = hashlib.new("md5", **HASHLIB_KWARGS)
-    h.update(element_type.encode("utf-8"))
-    # This will iterate in a consistent order when the provided arguments have
-    # consistent order; dicts are always in insertion order.
-    for k, v in kwargs.items():
-        h.update(str(k).encode("utf-8"))
-        h.update(str(v).encode("utf-8"))
-    element_id = f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
+    element_id = _compute_element_id(element_type, user_key, **kwargs)
     _register_element_id(element_type, element_id)
     return element_id
 
