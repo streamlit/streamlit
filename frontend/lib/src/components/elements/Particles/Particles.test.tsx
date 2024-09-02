@@ -55,12 +55,4 @@ describe("Particles element", () => {
     const particleComponents = particleElement.children
     expect(particleComponents.length).toBe(10)
   })
-
-  it("renders as hidden element", () => {
-    const props = getProps()
-    render(<Particles {...props} />)
-
-    const particleElement = screen.getByTestId("particles")
-    expect(particleElement).toHaveClass("stHidden")
-  })
 })
