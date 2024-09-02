@@ -35,6 +35,9 @@ from typing_extensions import TypeAlias
 from streamlit import config, dataframe_util, errors, logger
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     RegisterWidgetResult,
@@ -276,9 +279,6 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         If the element ID is not unique.
 
     """
-    # Import here to avoid circular import
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-
     ctx = get_script_run_ctx()
     if ctx is None or not element_id:
         return
