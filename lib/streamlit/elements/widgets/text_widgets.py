@@ -41,7 +41,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id
+from streamlit.runtime.state.common import compute_and_register_element_id
 from streamlit.type_util import (
     SupportsStr,
 )
@@ -275,7 +275,7 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
             label=label,
@@ -547,7 +547,7 @@ class TextWidgetsMixin:
 
         value = str(value) if value is not None else None
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
             label=label,

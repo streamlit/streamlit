@@ -37,7 +37,10 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id, save_for_app_testing
+from streamlit.runtime.state.common import (
+    compute_and_register_element_id,
+    save_for_app_testing,
+)
 from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
@@ -323,7 +326,7 @@ class ChatMixin:
         )
 
         ctx = get_script_run_ctx()
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
             key=key,

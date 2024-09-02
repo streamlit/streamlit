@@ -49,7 +49,10 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id, save_for_app_testing
+from streamlit.runtime.state.common import (
+    compute_and_register_element_id,
+    save_for_app_testing,
+)
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 
@@ -662,7 +665,7 @@ class ButtonMixin:
             writes_allowed=False,
         )
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
             label=label,
@@ -842,7 +845,7 @@ class ButtonMixin:
             enable_check_callback_rules=not is_form_submitter,
         )
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "button",
             user_key=key,
             label=label,

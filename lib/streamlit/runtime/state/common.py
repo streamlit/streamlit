@@ -277,7 +277,7 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         raise StreamlitDuplicateElementId(element_type)
 
 
-def compute_element_id(
+def compute_and_register_element_id(
     element_type: str,
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],

@@ -55,7 +55,7 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
-    compute_element_id,
+    compute_and_register_element_id,
     save_for_app_testing,
 )
 from streamlit.type_util import T, check_python_comparable
@@ -365,7 +365,7 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
             label=label,

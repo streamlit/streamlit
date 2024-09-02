@@ -48,7 +48,7 @@ from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_element_id
+from streamlit.runtime.state.common import compute_and_register_element_id
 
 if TYPE_CHECKING:
     import matplotlib
@@ -504,7 +504,7 @@ class PlotlyMixin:
         # We are computing the widget id for all plotly uses
         # to also allow non-widget Plotly charts to keep their state
         # when the frontend component gets unmounted and remounted.
-        plotly_chart_proto.id = compute_element_id(
+        plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
             key=key,

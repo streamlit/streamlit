@@ -40,7 +40,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id
+from streamlit.runtime.state.common import compute_and_register_element_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -186,7 +186,7 @@ class ColorPickerMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
             label=label,

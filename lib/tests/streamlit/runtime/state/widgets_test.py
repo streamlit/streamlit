@@ -28,7 +28,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widge
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
-    compute_element_id,
+    compute_and_register_element_id,
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import user_key_from_element_id
@@ -332,7 +332,7 @@ class WidgetManagerTests(unittest.TestCase):
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
-        id = compute_element_id("button", label="the label")
+        id = compute_and_register_element_id("button", label="the label")
         assert id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
@@ -389,7 +389,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     def test_widget_id_computation(self, widget_func, module_name):
         with patch(
             f"streamlit.elements.widgets.{module_name}.compute_element_id",
-            wraps=compute_element_id,
+            wraps=compute_and_register_element_id,
         ) as patched_compute_element_id:
             widget_func("my_widget")
 
@@ -412,8 +412,8 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     )
     def test_widget_id_computation_no_form_widgets(self, widget_func, module_name):
         with patch(
-            f"streamlit.elements.widgets.{module_name}.compute_element_id",
-            wraps=compute_element_id,
+            f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
         ) as patched_compute_element_id:
             if widget_func == st.download_button:
                 widget_func("my_widget", data="")
@@ -460,8 +460,8 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         options = ["a", "b", "c"]
 
         with patch(
-            f"streamlit.elements.widgets.{module_name}.compute_element_id",
-            wraps=compute_element_id,
+            f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
         ) as patched_compute_element_id:
             widget_func("my_widget", options)
 
@@ -477,8 +477,8 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     def test_widget_id_computation_data_editor(self):
         with patch(
-            "streamlit.elements.widgets.data_editor.compute_element_id",
-            wraps=compute_element_id,
+            "streamlit.elements.widgets.data_editor.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
         ) as patched_compute_element_id:
             st.data_editor(data=[])
 

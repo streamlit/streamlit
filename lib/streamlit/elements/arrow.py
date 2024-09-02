@@ -53,7 +53,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_element_id
+from streamlit.runtime.state.common import compute_and_register_element_id
 
 if TYPE_CHECKING:
     from numpy import typing as npt
@@ -566,7 +566,7 @@ class ArrowMixin:
             proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
-            proto.id = compute_element_id(
+            proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
                 data=proto.data,

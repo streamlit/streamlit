@@ -41,7 +41,10 @@ from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.runtime.state.common import compute_element_id, save_for_app_testing
+from streamlit.runtime.state.common import (
+    compute_and_register_element_id,
+    save_for_app_testing,
+)
 from streamlit.type_util import (
     T,
     is_iterable,
@@ -280,7 +283,7 @@ class MultiSelectMixin:
         default_values = get_default_indices(indexable_options, default)
 
         form_id = current_form_id(self.dg)
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
             label=label,
