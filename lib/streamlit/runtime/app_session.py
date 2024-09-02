@@ -468,8 +468,10 @@ class AppSession:
         if self._local_sources_watcher is not None:
             self._local_sources_watcher.update_watched_pages()
 
-    def _clear_queue(self) -> None:
-        self._browser_queue.clear(retain_lifecycle_msgs=True)
+    def _clear_queue(self, fragment_ids_this_run: list[str] | None = None) -> None:
+        self._browser_queue.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=fragment_ids_this_run
+        )
 
     def _on_scriptrunner_event(
         self,
@@ -481,7 +483,6 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
-        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -499,7 +500,6 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
-                clear_forward_msg_queue,
             )
         )
 
@@ -513,7 +513,6 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
-        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -585,8 +584,7 @@ class AppSession:
             if page_script_hash != self._client_state.page_script_hash:
                 self._client_state.page_script_hash = page_script_hash
 
-            if clear_forward_msg_queue:
-                self._clear_queue()
+            self._clear_queue(fragment_ids_this_run)
 
             self._enqueue_forward_msg(
                 self._create_new_session_message(
