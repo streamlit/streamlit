@@ -22,13 +22,13 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
-    compute_and_register_element_id,
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import user_key_from_element_id

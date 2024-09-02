@@ -19,11 +19,10 @@ from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state.common import compute_and_register_element_id
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:

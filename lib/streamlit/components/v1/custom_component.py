@@ -22,6 +22,7 @@ from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
@@ -29,7 +30,6 @@ from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
-from streamlit.runtime.state.common import compute_and_register_element_id
 from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:

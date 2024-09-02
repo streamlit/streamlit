@@ -33,7 +33,7 @@ from typing_extensions import TypeAlias
 from streamlit import runtime
 from streamlit.elements.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
@@ -50,7 +50,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import (
-    compute_and_register_element_id,
     save_for_app_testing,
 )
 from streamlit.string_util import validate_icon_or_emoji

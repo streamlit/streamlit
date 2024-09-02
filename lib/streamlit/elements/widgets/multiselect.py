@@ -32,6 +32,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum_sequence,
     to_key,
@@ -42,7 +43,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import (
-    compute_and_register_element_id,
     save_for_app_testing,
 )
 from streamlit.type_util import (

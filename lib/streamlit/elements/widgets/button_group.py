@@ -34,6 +34,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
+    compute_and_register_element_id,
     maybe_coerce_enum_sequence,
     to_key,
 )
@@ -47,7 +48,6 @@ from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     WidgetDeserializer,
     WidgetSerializer,
-    compute_and_register_element_id,
     save_for_app_testing,
 )
 

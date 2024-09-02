@@ -36,6 +36,7 @@ import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
@@ -46,7 +47,6 @@ from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-from streamlit.runtime.state.common import compute_and_register_element_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 

@@ -23,7 +23,7 @@ from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.form_utils import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -38,7 +38,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import (
-    compute_and_register_element_id,
     save_for_app_testing,
 )
 from streamlit.string_util import is_emoji, validate_material_icon

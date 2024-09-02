@@ -38,6 +38,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -55,7 +56,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
-    compute_and_register_element_id,
     save_for_app_testing,
 )
 from streamlit.type_util import T, check_python_comparable
