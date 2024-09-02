@@ -51,11 +51,11 @@ describe("Balloons element", () => {
     })
   })
 
-  it("renders as hidden element", () => {
+  it("uses correct top-level class", () => {
     const props = getProps()
     render(<Balloons {...props} />)
 
     const balloonElement = screen.getByTestId("stBalloons")
-    expect(balloonElement).toHaveClass("stHidden")
+    expect(balloonElement).toHaveClass("stBalloons")
   })
 })

@@ -325,7 +325,7 @@ const RawElementNodeRenderer = (
       )
 
     case "empty":
-      return <div className="stHidden" data-testid="stEmpty" />
+      return <div className="stEmpty" data-testid="stEmpty" />
 
     case "exception":
       return (
@@ -748,10 +748,6 @@ const ElementNodeRenderer = (
     props.scriptRunId,
     fragmentIdsThisRun
   )
-
-  // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
-  // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
-  // stable hash of some sort.
 
   return (
     <Maybe enable={enable}>
