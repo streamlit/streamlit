@@ -44,33 +44,11 @@ import Icon from "@streamlit/lib/src/components/shared/Icon"
 import NoMicPermissions from "./NoMicPermissions"
 import { WidgetLabel } from "../BaseWidget"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import Placeholder from "./Placeholder"
 
-const HEIGHT = 68
+import { HEIGHT } from "./constants"
+
 const WAVEFORM_PADDING = 4
-
-const DotArray = withTheme((props: { theme: Theme }) => {
-  return (
-    <div
-      style={{
-        height: HEIGHT,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          height: 10,
-          opacity: 0.2, // we cool with doing this to get a "lighter" color?
-          width: "100%",
-          backgroundImage: `radial-gradient(${props.theme.colors.fadedText10} 40%, transparent 40%)`,
-          backgroundSize: "10px 10px",
-          backgroundRepeat: "repeat",
-        }}
-      ></div>
-    </div>
-  )
-})
 
 interface Props {
   element: AudioInputProto
@@ -386,7 +364,7 @@ const AudioInput: React.FC<Props> = ({
         >
           {button}
           <div style={{ flex: 1 }}>
-            {showPlaceholder && <DotArray theme={theme} />}
+            {showPlaceholder && <Placeholder theme={theme} />}
             {hasNoMicPermissions && <NoMicPermissions />}
             <div
               ref={waveSurferRef}
