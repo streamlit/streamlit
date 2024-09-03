@@ -38,11 +38,12 @@ import {
   Mic,
 } from "@emotion-icons/material-outlined"
 import { PlayArrow, StopCircle, Pause } from "@emotion-icons/material-rounded"
-import { EmotionTheme, darkTheme } from "@streamlit/lib/src/theme"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import Icon from "@streamlit/lib/src/components/shared/Icon"
+import NoMicPermissions from "./NoMicPermissions"
 
-const HEIGHT = 40
+const HEIGHT = 68
 const WAVEFORM_PADDING = 4
 
 const DotArray = withTheme((props: { theme: Theme }) => {
@@ -102,6 +103,7 @@ const AudioInput: React.FC<Props> = ({
   const [recordingTime, setRecordingTime] = useState("00:00")
   const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
     useState(false)
+  const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
 
   const uploadTheFile = (file: File) => {
     uploadFiles({
@@ -118,14 +120,20 @@ const AudioInput: React.FC<Props> = ({
   }
 
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
-      RecordPlugin.getAvailableAudioDevices().then(devices => {
-        setAvailableAudioDevices(devices)
-        if (devices.length > 0) {
-          setActiveAudioDeviceId(devices[0].deviceId)
-        }
+    // this first part is to ensure we prompt for getting the user's media devices
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(() => {
+        RecordPlugin.getAvailableAudioDevices().then(devices => {
+          setAvailableAudioDevices(devices)
+          if (devices.length > 0) {
+            setActiveAudioDeviceId(devices[0].deviceId)
+          }
+        })
       })
-    })
+      .catch(_err => {
+        setHasNoMicPermissions(true)
+      })
   }, [])
 
   const formatTime = (time: number) => {
@@ -320,12 +328,17 @@ const AudioInput: React.FC<Props> = ({
   })()
 
   const showPlaceholder =
-    !(recordPlugin && recordPlugin.isRecording()) && !recordingUrl
+    !(recordPlugin && recordPlugin.isRecording()) &&
+    !recordingUrl &&
+    !hasNoMicPermissions
+
+  const showNoMicPermissionsOrPlaceholder =
+    hasNoMicPermissions || showPlaceholder
 
   const isPlayingOrRecording =
     (recordPlugin && recordPlugin.isRecording()) ||
     (wavesurfer && wavesurfer.isPlaying())
-  console.log({ theme })
+
   return (
     <div>
       <Container data-testid="stAudioInput">
@@ -356,9 +369,12 @@ const AudioInput: React.FC<Props> = ({
           {button}
           <div style={{ flex: 1 }}>
             {showPlaceholder && <DotArray theme={theme} />}
+            {hasNoMicPermissions && <NoMicPermissions />}
             <div
               ref={waveSurferRef}
-              style={{ display: showPlaceholder ? "none" : "block" }}
+              style={{
+                display: showNoMicPermissionsOrPlaceholder ? "none" : "block",
+              }}
             />
           </div>
 
