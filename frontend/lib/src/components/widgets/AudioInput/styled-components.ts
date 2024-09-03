@@ -15,6 +15,8 @@
  */
 
 import styled from "@emotion/styled"
+import { HEIGHT } from "./constants"
+import { Theme, withTheme } from "@emotion/react"
 
 export const Container = styled.div(({ theme }) => ({}))
 
@@ -28,3 +30,21 @@ export const StyledNoMicPermissionsErrorTextSpan = styled.span(
 )
 
 export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({}))
+
+export const StyledPlaceholderContainerDiv = styled.div(() => ({
+  height: `${HEIGHT}px`,
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+}))
+
+export const StyledPlaceholderDotsDiv = styled.div(
+  ({ theme }: { theme: Theme }) => ({
+    height: "10px",
+    opacity: 0.2,
+    width: "100%",
+    backgroundImage: `radial-gradient(${theme.colors.fadedText10} 40%, transparent 40%)`,
+    backgroundSize: "10px 10px",
+    backgroundRepeat: "repeat",
+  })
+)
