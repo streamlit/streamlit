@@ -22,3 +22,5 @@ export const BAR_WIDTH = 4
 export const BAR_GAP = 4
 export const BAR_RADIUS = 4
 export const CURSOR_WIDTH = 0
+
+export const STARTING_TIME_STRING = "00:00"
