@@ -209,7 +209,7 @@ class StreamlitPage:
 
         if self._title.strip() == "":
             raise StreamlitAPIException(
-                "The title of the page cannot be an empty string. Please provide a title."
+                "The title of the page cannot be empty or consist of underscores/spaces only"
             )
 
         if url_path is not None and url_path.strip() == "" and not default:
