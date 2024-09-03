@@ -1754,6 +1754,145 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
       expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
     })
+
+    it("will clear stale nodes if finished successfully", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      // Run the script with one new element
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      // this message now belongs to this^ session
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      // start new session
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "different_script_run_id",
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText("Here is some text")).toBeInTheDocument()
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
+      })
+    })
+
+    it("will not clear stale nodes if finished with rerun", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      // Run the script with one new element
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      // these messages now belongs to this^ session
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some other text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 1] }
+      )
+
+      // start new session
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "different_script_run_id",
+      })
+
+      // this message now belongs to this^ session. It overrides the first message of
+      // the previous session because the same delta path is used
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some new text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("Here is some new text")).toBeInTheDocument()
+      })
+      // this message was overridden because same delta-path was used be the 'new text' message
+      await waitFor(() => {
+        expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
+      })
+      await waitFor(() => {
+        expect(screen.getByText("Here is some other text")).toBeInTheDocument()
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY // use finished_fragment_run_successfully here because in the other test we used the finished_successfully status
+      )
+
+      // this message was sent in the new session
+      await waitFor(() => {
+        expect(screen.getByText("Here is some new text")).toBeInTheDocument()
+      })
+
+      // this message was cleaned up because it was sent in the old session
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Here is some other text")
+        ).not.toBeInTheDocument()
+      })
+    })
   })
 
   describe("Logo handling", () => {
