@@ -35,9 +35,9 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
         # This ensures that common mime-types are robust against
         # system misconfiguration.
-        mimetypes.add_type('text/html', '.html')
-        mimetypes.add_type('application/javascript', '.js')
-        mimetypes.add_type('text/css', '.css')
+        mimetypes.add_type("text/html", ".html")
+        mimetypes.add_type("application/javascript", ".js")
+        mimetypes.add_type("text/css", ".css")
 
     def get(self, path: str) -> None:
         parts = path.split("/")
