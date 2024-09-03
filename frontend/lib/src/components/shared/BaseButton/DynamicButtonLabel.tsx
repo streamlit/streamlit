@@ -38,7 +38,7 @@ export const DynamicButtonLabel = ({
         <DynamicIcon
           size={isMaterialIcon ? "lg" : "base"}
           margin={label ? iconMargin : "0"}
-          color={"inherit"}
+          color="inherit"
           iconValue={icon}
         />
       )}
