@@ -47,6 +47,7 @@ import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import Placeholder from "./Placeholder"
 
 import { HEIGHT } from "./constants"
+import formatTime from "./formatTime"
 
 const WAVEFORM_PADDING = 4
 
@@ -115,17 +116,6 @@ const AudioInput: React.FC<Props> = ({
         setHasNoMicPermissions(true)
       })
   }, [])
-
-  const formatTime = (time: number) => {
-    const formattedTime = [
-      Math.floor((time % 3600000) / 60000), // minutes
-      Math.floor((time % 60000) / 1000), // seconds
-    ]
-      .map(v => (v < 10 ? "0" + v : v))
-      .join(":")
-
-    return formattedTime
-  }
 
   useEffect(() => {
     if (waveSurferRef.current === null) {
@@ -364,7 +354,7 @@ const AudioInput: React.FC<Props> = ({
         >
           {button}
           <div style={{ flex: 1 }}>
-            {showPlaceholder && <Placeholder theme={theme} />}
+            {showPlaceholder && <Placeholder />}
             {hasNoMicPermissions && <NoMicPermissions />}
             <div
               ref={waveSurferRef}
