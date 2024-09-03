@@ -171,6 +171,20 @@ with st.container():
 
 "---"
 
+# with st.container():
+#     st.text("Headers with bold text")
+
+#     a, b = st.columns(2)
+
+#     with a:
+#         draw_header_test(False)
+
+#     with b:
+#         st.text_input("This is a label", key="2")
+
+# "---"
+
+
 st.latex(r"\LaTeX")
 
 st.latex(
