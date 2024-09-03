@@ -49,7 +49,7 @@ export const StyledWaveformTimeCode = styled.code<{
   margin: 8,
   fontFamily: "Source Code Pro, monospace",
   color: isPlayingOrRecording
-    ? theme.genericColors.gray85
+    ? theme.genericColors.bodyText
     : theme.colors.fadedText60,
   backgroundColor: theme.genericColors.secondaryBg,
   fontSize: 14,
