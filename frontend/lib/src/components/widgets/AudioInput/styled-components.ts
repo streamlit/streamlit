@@ -15,11 +15,47 @@
  */
 
 import styled from "@emotion/styled"
-import { HEIGHT } from "./constants"
-import { Theme, withTheme } from "@emotion/react"
+import { TOTAL_HEIGHT, WAVEFORM_HEIGHT } from "./constants"
+import { Theme } from "@emotion/react"
 
-export const Container = styled.div(({ theme }) => ({}))
+export const StyledAudioInputContainerDiv = styled.div(() => ({
+  height: TOTAL_HEIGHT,
+}))
 
+export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
+  height: WAVEFORM_HEIGHT,
+  width: "100%",
+  background: theme.genericColors.secondaryBg,
+  borderRadius: 8,
+  marginBottom: 2,
+  display: "flex",
+  alignItems: "center",
+  position: "relative",
+}))
+
+export const StyledWaveformInnerDiv = styled.div({
+  flex: 1,
+})
+
+export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
+  ({ show }) => ({
+    display: show ? "block" : "none",
+  })
+)
+
+export const StyledWaveformTimeCode = styled.code<{
+  isPlayingOrRecording: boolean
+}>(({ theme, isPlayingOrRecording }) => ({
+  margin: 8,
+  fontFamily: "Source Code Pro, monospace",
+  color: isPlayingOrRecording
+    ? theme.genericColors.gray85
+    : theme.colors.fadedText60,
+  backgroundColor: theme.genericColors.secondaryBg,
+  fontSize: 14,
+}))
+
+// NoMicPermissions
 export const StyledNoMicInputContainerDiv = styled.div(({ theme }) => ({
   width: "100%",
   textAlign: "center",
@@ -31,20 +67,19 @@ export const StyledNoMicPermissionsErrorTextSpan = styled.span(
 
 export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({}))
 
+// Placeholder
 export const StyledPlaceholderContainerDiv = styled.div(() => ({
-  height: `${HEIGHT}px`,
+  height: WAVEFORM_HEIGHT,
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
 }))
 
-export const StyledPlaceholderDotsDiv = styled.div(
-  ({ theme }: { theme: Theme }) => ({
-    height: "10px",
-    opacity: 0.2,
-    width: "100%",
-    backgroundImage: `radial-gradient(${theme.colors.fadedText10} 40%, transparent 40%)`,
-    backgroundSize: "10px 10px",
-    backgroundRepeat: "repeat",
-  })
-)
+export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => ({
+  height: 10,
+  opacity: 0.2,
+  width: "100%",
+  backgroundImage: `radial-gradient(${theme.colors.fadedText10} 40%, transparent 40%)`,
+  backgroundSize: "10px 10px",
+  backgroundRepeat: "repeat",
+}))

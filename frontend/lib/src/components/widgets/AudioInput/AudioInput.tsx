@@ -28,7 +28,13 @@ import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
-import { Container } from "./styled-components"
+import {
+  StyledAudioInputContainerDiv,
+  StyledWaveformContainerDiv,
+  StyledWaveformInnerDiv,
+  StyledWaveformTimeCode,
+  StyledWaveSurferDiv,
+} from "./styled-components"
 import {
   Add,
   Close,
@@ -46,10 +52,15 @@ import { WidgetLabel } from "../BaseWidget"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import Placeholder from "./Placeholder"
 
-import { HEIGHT } from "./constants"
+import {
+  BAR_GAP,
+  BAR_RADIUS,
+  BAR_WIDTH,
+  CURSOR_WIDTH,
+  WAVEFORM_HEIGHT,
+  WAVEFORM_PADDING,
+} from "./constants"
 import formatTime from "./formatTime"
-
-const WAVEFORM_PADDING = 4
 
 interface Props {
   element: AudioInputProto
@@ -130,11 +141,11 @@ const AudioInput: React.FC<Props> = ({
       container: waveSurferRef.current,
       waveColor: theme.colors.primary,
       progressColor: theme.colors.bodyText,
-      height: HEIGHT - 2 * WAVEFORM_PADDING,
-      barWidth: 4,
-      barGap: 4,
-      barRadius: 4,
-      cursorWidth: 0,
+      height: WAVEFORM_HEIGHT - 2 * WAVEFORM_PADDING,
+      barWidth: BAR_WIDTH,
+      barGap: BAR_GAP,
+      barRadius: BAR_RADIUS,
+      cursorWidth: CURSOR_WIDTH,
     })
 
     ws.on("timeupdate", time => {
@@ -193,6 +204,9 @@ const AudioInput: React.FC<Props> = ({
   const onPlayPause = () => {
     wavesurfer && wavesurfer.playPause()
 
+    // This is because we want the time to be the duration of the audio when they stop recording,
+    // but once they start playing it, we want it to be the current time. So, once they start playing it
+    // we'll start keeping track of the playback time from that point onwards (until re-recording).
     setShouldUpdatePlaybackTime(true)
 
     // to get the pause button to show
@@ -231,14 +245,14 @@ const AudioInput: React.FC<Props> = ({
     }
     setRecordingUrl(null)
     wavesurfer.empty()
-    uploadClient.deleteFile(deleteFileUrl).then(() => {})
+    uploadClient.deleteFile(deleteFileUrl)
     setProgressTime("00:00")
     setDeleteFileUrl(null)
     setShouldUpdatePlaybackTime(false)
     // TODO revoke the url so that it gets gced
   }
 
-  const button = (() => {
+  const renderButton = () => {
     if (recordPlugin && recordPlugin.isRecording()) {
       // It's currently recording, so show the stop recording button
       return (
@@ -304,7 +318,7 @@ const AudioInput: React.FC<Props> = ({
         </BaseButton>
       )
     }
-  })()
+  }
 
   const showPlaceholder =
     !(recordPlugin && recordPlugin.isRecording()) &&
@@ -314,12 +328,13 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholder =
     hasNoMicPermissions || showPlaceholder
 
-  const isPlayingOrRecording =
+  const isPlayingOrRecording = Boolean(
     (recordPlugin && recordPlugin.isRecording()) ||
-    (wavesurfer && wavesurfer.isPlaying())
+      (wavesurfer && wavesurfer.isPlaying())
+  )
 
   return (
-    <div>
+    <StyledAudioInputContainerDiv>
       <WidgetLabel
         label={element.label}
         disabled={hasNoMicPermissions}
@@ -327,11 +342,11 @@ const AudioInput: React.FC<Props> = ({
           element.labelVisibility?.value
         )}
       ></WidgetLabel>
-      <Container data-testid="stAudioInput">
+      <StyledWaveformContainerDiv data-testid="stAudioInput">
         <Toolbar
           isFullScreen={false}
           disableFullscreenMode={true}
-          target={Container}
+          target={StyledWaveformContainerDiv}
         >
           {deleteFileUrl && (
             <ToolbarAction
@@ -341,45 +356,20 @@ const AudioInput: React.FC<Props> = ({
             />
           )}
         </Toolbar>
-        <div
-          style={{
-            height: HEIGHT,
-            width: "100%",
-            background: theme.genericColors.secondaryBg,
-            borderRadius: 8,
-            marginBottom: 2,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          {button}
-          <div style={{ flex: 1 }}>
-            {showPlaceholder && <Placeholder />}
-            {hasNoMicPermissions && <NoMicPermissions />}
-            <div
-              ref={waveSurferRef}
-              style={{
-                display: showNoMicPermissionsOrPlaceholder ? "none" : "block",
-              }}
-            />
-          </div>
-
-          <code
-            style={{
-              margin: 8,
-              font: "Source Code Pro",
-              color: isPlayingOrRecording
-                ? theme.genericColors.gray85
-                : theme.colors.fadedText60,
-              backgroundColor: theme.genericColors.secondaryBg,
-              fontSize: 14,
-            }}
-          >
-            {shouldUpdatePlaybackTime ? progressTime : recordingTime}
-          </code>
-        </div>
-      </Container>
-    </div>
+        {renderButton()}
+        <StyledWaveformInnerDiv>
+          {showPlaceholder && <Placeholder />}
+          {hasNoMicPermissions && <NoMicPermissions />}
+          <StyledWaveSurferDiv
+            ref={waveSurferRef}
+            show={!showNoMicPermissionsOrPlaceholder}
+          />
+        </StyledWaveformInnerDiv>
+        <StyledWaveformTimeCode isPlayingOrRecording={isPlayingOrRecording}>
+          {shouldUpdatePlaybackTime ? progressTime : recordingTime}
+        </StyledWaveformTimeCode>
+      </StyledWaveformContainerDiv>
+    </StyledAudioInputContainerDiv>
   )
 }
 
