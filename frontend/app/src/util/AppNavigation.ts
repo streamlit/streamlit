@@ -157,8 +157,6 @@ export class StrategyV1 {
 
     return (
       this.appPages.find(appPage =>
-        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
-        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
         pathname.endsWith("/" + appPage.urlPathname)
       ) ?? this.appPages[0]
     )
