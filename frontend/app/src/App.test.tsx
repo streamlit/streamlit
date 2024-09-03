@@ -32,12 +32,10 @@ import {
   CUSTOM_THEME_NAME,
   CustomThemeConfig,
   FileUploadClient,
-  ForwardMsg,
   getDefaultTheme,
   getHostSpecifiedTheme,
   HOST_COMM_VERSION,
   HostCommunicationManager,
-  INewSession,
   lightTheme,
   LocalStore,
   mockEndpoints,
@@ -50,6 +48,23 @@ import {
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
+import {
+  Delta,
+  Element,
+  ForwardMsg,
+  ForwardMsgMetadata,
+  IAutoRerun,
+  ILogo,
+  INavigation,
+  INewSession,
+  IPageConfig,
+  IPageInfo,
+  IPageNotFound,
+  IPagesChanged,
+  IParentMessage,
+  SessionEvent,
+  SessionStatus,
+} from "@streamlit/lib/src/proto"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
@@ -296,14 +311,32 @@ function getMockConnectionManagerProp(propName: string): any {
   return getStoredValue<ConnectionManager>(ConnectionManager).props[propName]
 }
 
+type DeltaWithElement = Omit<Delta, "fragmentId" | "newElement" | "toJSON"> & {
+  newElement: Omit<Element, "toJSON">
+}
+
+type ForwardMsgType =
+  | DeltaWithElement
+  | ForwardMsg.ScriptFinishedStatus
+  | IAutoRerun
+  | ILogo
+  | INavigation
+  | INewSession
+  | IPagesChanged
+  | IPageConfig
+  | IPageInfo
+  | IParentMessage
+  | IPageNotFound
+  | Omit<SessionEvent, "toJSON">
+  | Omit<SessionStatus, "toJSON">
+
 function sendForwardMessage(
-  type: string,
-  message: any,
-  metadata: any = null
+  type: keyof ForwardMsg,
+  message: ForwardMsgType,
+  metadata: Partial<ForwardMsgMetadata> | null = null
 ): void {
   act(() => {
     const fwMessage = new ForwardMsg()
-    // @ts-expect-error
     fwMessage[type] = cloneDeep(message)
     if (metadata) {
       fwMessage.metadata = metadata
