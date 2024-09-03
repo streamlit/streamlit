@@ -43,10 +43,15 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   appPages: [
     {
       pageScriptHash: "main_page_hash",
-      pageName: "streamlit_app",
+      pageName: "streamlit app",
+      urlPathname: "streamlit_app",
       isDefault: true,
     },
-    { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
+    {
+      pageScriptHash: "other_page_hash",
+      pageName: "my other page",
+      urlPathname: "my_other_page",
+    },
   ],
   navSections: [],
   collapseSidebar: jest.fn(),
@@ -91,7 +96,7 @@ describe("SidebarNav", () => {
       const buildAppPageURL = jest
         .fn()
         .mockImplementation((pageLinkBaseURL: string, page: IAppPage) => {
-          return `http://mock/app/page/${page.pageName}`
+          return `http://mock/app/page/${page.urlPathname}`
         })
       const props = getProps({ endpoints: mockEndpoints({ buildAppPageURL }) })
 

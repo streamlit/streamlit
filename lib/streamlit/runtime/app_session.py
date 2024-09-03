@@ -854,7 +854,8 @@ class AppSession:
             page_proto = msg.app_pages.add()
 
             page_proto.page_script_hash = page_script_hash
-            page_proto.page_name = page_info["page_name"]
+            page_proto.page_name = page_info["page_name"].replace("_", " ")
+            page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
 
 

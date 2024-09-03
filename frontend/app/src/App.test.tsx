@@ -240,7 +240,11 @@ const NEW_SESSION_JSON: INewSession = {
     isHello: false,
   },
   appPages: [
-    { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+    {
+      pageScriptHash: "page_script_hash",
+      pageName: "streamlit app",
+      urlPathname: "streamlit_app",
+    },
   ],
   pageScriptHash: "page_script_hash",
   mainScriptPath: "path/to/file.py",
@@ -864,8 +868,8 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
 
       const appPages = [
-        { pageScriptHash: "hash1", pageName: "page1" },
-        { pageScriptHash: "hash2", pageName: "page2" },
+        { pageScriptHash: "hash1", pageName: "page1", urlPathname: "page1" },
+        { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
       sendForwardMessage("newSession", {
@@ -988,8 +992,16 @@ describe("App", () => {
         sendForwardMessage("newSession", {
           ...NEW_SESSION_JSON,
           appPages: [
-            { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-            { pageScriptHash: "hash2", pageName: "page2" },
+            {
+              pageScriptHash: "page_script_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+            },
+            {
+              pageScriptHash: "hash2",
+              pageName: "page2",
+              urlPathname: "page2",
+            },
           ],
           pageScriptHash: "hash2",
         })
@@ -1026,8 +1038,16 @@ describe("App", () => {
         )
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1069,8 +1089,16 @@ describe("App", () => {
         sendForwardMessage("newSession", {
           ...NEW_SESSION_JSON,
           appPages: [
-            { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-            { pageScriptHash: "hash2", pageName: "page2" },
+            {
+              pageScriptHash: "page_script_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+            },
+            {
+              pageScriptHash: "hash2",
+              pageName: "page2",
+              urlPathname: "page2",
+            },
           ],
           pageScriptHash: "hash2",
         })
@@ -1087,8 +1115,16 @@ describe("App", () => {
         history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1122,8 +1158,16 @@ describe("App", () => {
         history.replaceState({}, "", "/page2") // Starting from a not main page.
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1275,8 +1319,16 @@ describe("App", () => {
         isHello: false,
       },
       appPages: [
-        { pageScriptHash: "top_hash", pageName: "streamlit_app" },
-        { pageScriptHash: "sub_hash", pageName: "page2" },
+        {
+          pageScriptHash: "top_hash",
+          pageName: "streamlit app",
+          urlPathname: "",
+        },
+        {
+          pageScriptHash: "sub_hash",
+          pageName: "page2",
+          urlPathname: "page2",
+        },
       ],
       pageScriptHash: "top_hash",
       fragmentIdsThisRun: [],
@@ -1574,8 +1626,16 @@ describe("App", () => {
       )
 
       const appPages = [
-        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-        { pageScriptHash: "subpage_hash", pageName: "page2" },
+        {
+          pageScriptHash: "toppage_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+        },
+        {
+          pageScriptHash: "subpage_hash",
+          pageName: "page2",
+          urlPathname: "page2",
+        },
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1791,7 +1851,13 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+        appPages: [
+          {
+            pageScriptHash: "page_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+        ],
         pageScriptHash: "page_hash",
       })
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -1817,7 +1883,13 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+        appPages: [
+          {
+            pageScriptHash: "page_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+        ],
         pageScriptHash: "page_hash",
       })
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -2543,8 +2615,18 @@ describe("App", () => {
       const hostCommunicationMgr = prepareHostCommunicationManager()
 
       const appPages = [
-        { icon: "", pageName: "bob", scriptPath: "bob.py" },
-        { icon: "", pageName: "carl", scriptPath: "carl.py" },
+        {
+          icon: "",
+          pageName: "bob",
+          scriptPath: "bob.py",
+          urlPathname: "bob",
+        },
+        {
+          icon: "",
+          pageName: "carl",
+          scriptPath: "carl.py",
+          urlPathname: "carl",
+        },
       ]
 
       sendForwardMessage("pagesChanged", {
@@ -2695,8 +2777,8 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
 
       const appPages = [
-        { pageScriptHash: "hash1", pageName: "page1" },
-        { pageScriptHash: "hash2", pageName: "page2" },
+        { pageScriptHash: "hash1", pageName: "page1", urlPathname: "page1" },
+        { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
       sendForwardMessage("newSession", {

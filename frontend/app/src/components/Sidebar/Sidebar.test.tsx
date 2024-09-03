@@ -203,8 +203,16 @@ describe("Sidebar Component", () => {
 
   it("renders SidebarNav component", () => {
     const appPages = [
-      { pageName: "first_page", pageScriptHash: "page_hash" },
-      { pageName: "second_page", pageScriptHash: "page_hash2" },
+      {
+        pageName: "first page",
+        pageScriptHash: "page_hash",
+        urlPathname: "first_page",
+      },
+      {
+        pageName: "second page",
+        pageScriptHash: "page_hash2",
+        urlPathname: "second_page",
+      },
     ]
     renderSidebar({ appPages })
 

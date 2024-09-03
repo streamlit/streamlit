@@ -91,8 +91,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     pageLinkBaseURL: string | undefined,
     page: IAppPage
   ): string {
-    const pageName = page.pageName as string
-    const urlPath = page.urlPathname || pageName
+    const urlPath = page.urlPathname as string
     const navigateTo = page.isDefault ? "" : urlPath
 
     if (notNullOrUndefined(pageLinkBaseURL) && pageLinkBaseURL.length > 0) {

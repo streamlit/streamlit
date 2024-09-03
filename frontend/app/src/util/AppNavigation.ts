@@ -78,13 +78,13 @@ export class StrategyV1 {
     // Otherwise, we'd either have no main script or a nameless main script,
     // neither of which can happen.
     const mainPage = this.appPages[0] as IAppPage
-    const mainPageName = mainPage.pageName ?? ""
+    const mainPageName = mainPage.urlPathname ?? ""
     // We're similarly guaranteed that newPageName will be found / truthy
     // here.
     const newPageName =
       this.appPages.find(
         page => page.pageScriptHash === this.currentPageScriptHash
-      )?.pageName ?? ""
+      )?.urlPathname ?? ""
 
     const isViewingMainPage =
       mainPage.pageScriptHash === this.currentPageScriptHash
@@ -157,9 +157,7 @@ export class StrategyV1 {
 
     return (
       this.appPages.find(appPage =>
-        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
-        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
-        pathname.endsWith("/" + appPage.pageName)
+        pathname.endsWith("/" + appPage.urlPathname)
       ) ?? this.appPages[0]
     )
   }

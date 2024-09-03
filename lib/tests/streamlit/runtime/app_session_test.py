@@ -426,8 +426,12 @@ class AppSessionTest(unittest.TestCase):
         "get_pages",
         MagicMock(
             return_value={
-                "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
-                "hash2": {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
+                "hash1": {"page_name": "page_1", "icon": "", "script_path": "script1"},
+                "hash2": {
+                    "page_name": "page_2",
+                    "icon": "🎉",
+                    "script_path": "script2",
+                },
             }
         ),
     )
@@ -439,8 +443,18 @@ class AppSessionTest(unittest.TestCase):
         expected_msg = ForwardMsg()
         expected_msg.pages_changed.app_pages.extend(
             [
-                AppPage(page_script_hash="hash1", page_name="page1", icon=""),
-                AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
+                AppPage(
+                    page_script_hash="hash1",
+                    page_name="page 1",
+                    icon="",
+                    url_pathname="page_1",
+                ),
+                AppPage(
+                    page_script_hash="hash2",
+                    page_name="page 2",
+                    icon="🎉",
+                    url_pathname="page_2",
+                ),
             ]
         )
 
@@ -658,8 +672,12 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         "get_pages",
         MagicMock(
             return_value={
-                "hash1": {"page_name": "page1", "icon": "", "script_path": "script1"},
-                "hash2": {"page_name": "page2", "icon": "🎉", "script_path": "script2"},
+                "hash1": {"page_name": "page_1", "icon": "", "script_path": "script1"},
+                "hash2": {
+                    "page_name": "page_2",
+                    "icon": "🎉",
+                    "script_path": "script2",
+                },
             }
         ),
     )
@@ -722,8 +740,18 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         assert init_msg.HasField("user_info")
 
         assert list(new_session_msg.app_pages) == [
-            AppPage(page_script_hash="hash1", page_name="page1", icon=""),
-            AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
+            AppPage(
+                page_script_hash="hash1",
+                page_name="page 1",
+                icon="",
+                url_pathname="page_1",
+            ),
+            AppPage(
+                page_script_hash="hash2",
+                page_name="page 2",
+                icon="🎉",
+                url_pathname="page_2",
+            ),
         ]
 
         add_script_run_ctx(ctx=orig_ctx)
