@@ -62,8 +62,6 @@
     "decamelize": "^6.0.0",
     "deck.gl": "^8.9.36",
     "dompurify": "^3.0.9",
-    "extendable-media-recorder": "^9.2.9",
-    "extendable-media-recorder-wav-encoder": "^7.0.113",
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "immer": "^9.0.19",
