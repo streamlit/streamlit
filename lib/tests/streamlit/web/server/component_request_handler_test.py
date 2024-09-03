@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import mimetypes
+import threading
 from unittest import mock
 
 import tornado.testing
@@ -24,7 +26,9 @@ from streamlit.components.v1.component_registry import declare_component
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.web.server import ComponentRequestHandler
+from tests.testutil import create_mock_script_run_ctx
 
 URL = "http://not.a.real.url:3001"
 PATH = "/not/a/real/path"
@@ -45,6 +49,9 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
         self.runtime = Runtime(config)
         super().setUp()
+
+        # declare_component needs a script_run_ctx to be set
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self) -> None:
         super().tearDown()
@@ -210,3 +217,26 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             payload,
             response.body,
         )
+
+    def test_mimetype_is_overridden_by_component_request_handler(self):
+        """Test get_content_type function."""
+        mimetypes.add_type("custom/html", ".html")
+        mimetypes.add_type("custom/js", ".js")
+        mimetypes.add_type("custom/css", ".css")
+
+        assert ComponentRequestHandler.get_content_type("test.html") == "custom/html"
+        assert ComponentRequestHandler.get_content_type("test.js") == "custom/js"
+        assert ComponentRequestHandler.get_content_type("test.css") == "custom/css"
+
+        # make a request so that our ComponentRequestHandler.initialize function is
+        # called by tornado
+        self._request_component(
+            "tests.streamlit.web.server.component_request_handler_test.test"
+        )
+
+        assert ComponentRequestHandler.get_content_type("test.html") == "text/html"
+        assert (
+            ComponentRequestHandler.get_content_type("test.js")
+            == "application/javascript"
+        )
+        assert ComponentRequestHandler.get_content_type("test.css") == "text/css"
