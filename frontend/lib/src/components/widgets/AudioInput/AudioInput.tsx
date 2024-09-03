@@ -42,6 +42,8 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import NoMicPermissions from "./NoMicPermissions"
+import { WidgetLabel } from "../BaseWidget"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 const HEIGHT = 68
 const WAVEFORM_PADDING = 4
@@ -270,6 +272,7 @@ const AudioInput: React.FC<Props> = ({
 
   const button = (() => {
     if (recordPlugin && recordPlugin.isRecording()) {
+      // It's currently recording, so show the stop recording button
       return (
         <BaseButton
           kind={BaseButtonKind.BORDERLESS_ICON}
@@ -285,6 +288,7 @@ const AudioInput: React.FC<Props> = ({
       )
     } else if (recordingUrl) {
       if (wavesurfer && wavesurfer.isPlaying()) {
+        // It's playing, so show the pause button
         return (
           <BaseButton
             kind={BaseButtonKind.BORDERLESS_ICON}
@@ -298,6 +302,7 @@ const AudioInput: React.FC<Props> = ({
           </BaseButton>
         )
       } else {
+        // It's paused, so show the play button
         return (
           <BaseButton
             kind={BaseButtonKind.BORDERLESS_ICON}
@@ -312,15 +317,21 @@ const AudioInput: React.FC<Props> = ({
         )
       }
     } else {
+      // Press the button to record
       return (
         <BaseButton
           kind={BaseButtonKind.BORDERLESS_ICON}
           onClick={handleRecord}
+          disabled={hasNoMicPermissions}
         >
           <Icon
             content={Mic}
             size="lg"
-            color={theme.colors.fadedText60}
+            color={
+              hasNoMicPermissions
+                ? theme.colors.fadedText40
+                : theme.colors.fadedText60
+            }
           ></Icon>
         </BaseButton>
       )
@@ -341,6 +352,13 @@ const AudioInput: React.FC<Props> = ({
 
   return (
     <div>
+      <WidgetLabel
+        label={element.label}
+        disabled={hasNoMicPermissions}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
+        )}
+      ></WidgetLabel>
       <Container data-testid="stAudioInput">
         <Toolbar
           isFullScreen={false}
