@@ -14,31 +14,17 @@
  * limitations under the License.
  */
 
-import { Theme, withTheme } from "@emotion/react"
-import { HEIGHT } from "./constants"
+import {
+  StyledPlaceholderContainerDiv,
+  StyledPlaceholderDotsDiv,
+} from "./styled-components"
 
-const Placeholder = withTheme((props: { theme: Theme }) => {
+const Placeholder = () => {
   return (
-    <div
-      style={{
-        height: HEIGHT,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          height: 10,
-          opacity: 0.2, // we cool with doing this to get a "lighter" color?
-          width: "100%",
-          backgroundImage: `radial-gradient(${props.theme.colors.fadedText10} 40%, transparent 40%)`,
-          backgroundSize: "10px 10px",
-          backgroundRepeat: "repeat",
-        }}
-      ></div>
-    </div>
+    <StyledPlaceholderContainerDiv>
+      <StyledPlaceholderDotsDiv />
+    </StyledPlaceholderContainerDiv>
   )
-})
+}
 
 export default Placeholder
