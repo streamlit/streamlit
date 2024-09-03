@@ -29,16 +29,16 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-_common_mime_types = {
-    '.html' : 'text/html',
-    '.js' : 'application/javascript',
-    '.css' : 'text/css',
-}
-
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
     def initialize(self, registry: BaseComponentRegistry):
         self._registry = registry
+
+        # This ensures that common mime-types are robust against
+        # system misconfiguration.
+        mimetypes.add_type('text/html', '.html')
+        mimetypes.add_type('application/javascript', '.js')
+        mimetypes.add_type('text/css', '.css')
 
     def get(self, path: str) -> None:
         parts = path.split("/")
@@ -102,13 +102,6 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         """Returns the ``Content-Type`` header to be used for this request.
         From tornado.web.StaticFileHandler.
         """
-        # Common mime types can be detected using the extension.
-        # This is more robust than mimetypes.guess_type() as it is immune 
-        # against system misconfiguration.
-        _, ext = posixpath.splitext(abspath)
-        if ext in _common_mime_types:
-            return _common_mime_types[ext]
-
         mime_type, encoding = mimetypes.guess_type(abspath)
         # per RFC 6713, use the appropriate type for a gzip compressed file
         if encoding == "gzip":
