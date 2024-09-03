@@ -14,17 +14,25 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import React from "react"
+import {
+  StyledNoMicInputContainerDiv,
+  StyledNoMicInputLearnMoreLink,
+  StyledNoMicPermissionsErrorTextSpan,
+} from "./styled-components"
 
-export const Container = styled.div(({ theme }) => ({}))
+const NoMicPermissions = () => {
+  return (
+    <StyledNoMicInputContainerDiv>
+      <StyledNoMicPermissionsErrorTextSpan>
+        This app would like to use your microphone.
+      </StyledNoMicPermissionsErrorTextSpan>{" "}
+      {/* TODO: actually add the link */}
+      <StyledNoMicInputLearnMoreLink>
+        Learn how to allow access.
+      </StyledNoMicInputLearnMoreLink>
+    </StyledNoMicInputContainerDiv>
+  )
+}
 
-export const StyledNoMicInputContainerDiv = styled.div(({ theme }) => ({
-  width: "100%",
-  textAlign: "center",
-}))
-
-export const StyledNoMicPermissionsErrorTextSpan = styled.span(
-  ({ theme }) => ({})
-)
-
-export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({}))
+export default NoMicPermissions
