@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import mimetypes
-import posixpath
 import os
 from typing import TYPE_CHECKING, Final
 
