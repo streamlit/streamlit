@@ -253,7 +253,9 @@ const AudioInput: React.FC<Props> = ({
     setProgressTime("00:00")
     setDeleteFileUrl(null)
     setShouldUpdatePlaybackTime(false)
-    // TODO revoke the url so that it gets gced
+    if (recordingUrl != null) {
+      URL.revokeObjectURL(recordingUrl)
+    }
   }
 
   const renderButton = () => {
