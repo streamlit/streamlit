@@ -47,7 +47,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -55,7 +55,6 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_element_id
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -1887,7 +1886,7 @@ class VegaChartsMixin:
             vega_lite_proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
-            vega_lite_proto.id = compute_element_id(
+            vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
                 key=key,
@@ -1910,7 +1909,6 @@ class VegaChartsMixin:
             widget_state = register_widget(
                 "vega_lite_chart",
                 vega_lite_proto,
-                user_key=key,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

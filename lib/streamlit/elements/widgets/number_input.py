@@ -29,6 +29,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -44,7 +45,6 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -350,7 +350,7 @@ class NumberInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
             label=label,
@@ -515,7 +515,6 @@ class NumberInputMixin:
         widget_state = register_widget(
             "number_input",
             number_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

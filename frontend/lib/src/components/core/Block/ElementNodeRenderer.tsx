@@ -17,6 +17,7 @@
 import React, { ReactElement, Suspense } from "react"
 
 import debounceRender from "react-debounce-render"
+import classNames from "classnames"
 
 import {
   Alert as AlertProto,
@@ -83,9 +84,12 @@ import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { getElementId } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseBlockProps,
+  convertKeyToClassName,
+  getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -749,16 +753,28 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
+  // Get the user key - if it was specified - and use it as CSS class name:
+  const elementId = getElementId(node.element)
+  const userKey = getKeyFromId(elementId)
+
+  // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
+  // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
+  // stable hash of some sort.
+
   return (
     <Maybe enable={enable}>
       <StyledElementContainer
+        className={classNames(
+          "stElementContainer",
+          "element-container",
+          convertKeyToClassName(userKey)
+        )}
+        data-testid="stElementContainer"
         data-stale={isStale}
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.
         isStale={isStale && !isFullScreen}
         width={width}
-        className="stElementContainer element-container"
-        data-testid="stElementContainer"
         elementType={elementType}
       >
         <ErrorBoundary width={width}>

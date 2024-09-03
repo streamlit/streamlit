@@ -42,13 +42,12 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_element_id
 
 if TYPE_CHECKING:
     import matplotlib
@@ -212,7 +211,9 @@ class PlotlyState(TypedDict, total=False):
 
 @dataclass
 class PlotlyChartSelectionSerde:
-    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
+    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart
+    selection state.
+    """
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
         empty_selection_state: PlotlyState = {
@@ -442,18 +443,22 @@ class PlotlyMixin:
 
         if "sharing" in kwargs:
             show_deprecation_warning(
-                "The `sharing` parameter has been deprecated and will be removed in a future release. "
-                "Plotly charts will always be rendered using Streamlit's offline mode."
+                "The `sharing` parameter has been deprecated and will be removed "
+                "in a future release. Plotly charts will always be rendered using "
+                "Streamlit's offline mode."
             )
 
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+                f'You set theme="{theme}" while Streamlit charts only support '
+                "theme=”streamlit” or theme=None to fallback to the default "
+                "library theme."
             )
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+                f"You have passed {on_select} to `on_select`. But only 'ignore', "
+                "'rerun', or a callable is supported."
             )
 
         key = to_key(key)
@@ -498,7 +503,7 @@ class PlotlyMixin:
         # We are computing the widget id for all plotly uses
         # to also allow non-widget Plotly charts to keep their state
         # when the frontend component gets unmounted and remounted.
-        plotly_chart_proto.id = compute_element_id(
+        plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
             key=key,
@@ -523,7 +528,6 @@ class PlotlyMixin:
             widget_state = register_widget(
                 "plotly_chart",
                 plotly_chart_proto,
-                user_key=key,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

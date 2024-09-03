@@ -38,6 +38,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
@@ -55,7 +56,6 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
-    compute_element_id,
     save_for_app_testing,
 )
 from streamlit.type_util import T, check_python_comparable
@@ -365,7 +365,7 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
             label=label,
@@ -401,7 +401,6 @@ class SelectSliderMixin:
         widget_state = register_widget(
             "slider",
             slider_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

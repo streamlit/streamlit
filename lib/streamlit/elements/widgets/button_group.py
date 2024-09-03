@@ -34,6 +34,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
+    compute_and_register_element_id,
     maybe_coerce_enum_sequence,
     to_key,
 )
@@ -47,7 +48,6 @@ from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     WidgetDeserializer,
     WidgetSerializer,
-    compute_element_id,
     save_for_app_testing,
 )
 
@@ -396,7 +396,7 @@ class ButtonGroupMixin:
             if format_func is None
             else [format_func(option) for option in indexable_options]
         )
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
             key=key,
@@ -420,7 +420,6 @@ class ButtonGroupMixin:
         widget_state = register_widget(
             widget_name,
             proto,
-            # user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

@@ -19,6 +19,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
     expect_help_tooltip,
+    get_element_by_key,
 )
 
 
@@ -133,3 +134,8 @@ def test_select_slider_works_with_fragments(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stSlider")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "select_slider8")).to_be_visible()

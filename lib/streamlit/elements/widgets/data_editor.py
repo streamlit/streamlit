@@ -55,7 +55,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -66,7 +66,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id
 from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
@@ -885,7 +884,7 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
             data=arrow_bytes,
@@ -948,7 +947,6 @@ class DataEditorMixin:
         widget_state = register_widget(
             "data_editor",
             proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

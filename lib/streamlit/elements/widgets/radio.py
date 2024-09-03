@@ -27,6 +27,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     to_key,
@@ -42,7 +43,9 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_element_id, save_for_app_testing
+from streamlit.runtime.state.common import (
+    save_for_app_testing,
+)
 from streamlit.type_util import (
     T,
     check_python_comparable,
@@ -312,7 +315,7 @@ class RadioMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        element_id = compute_element_id(
+        element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
             label=label,
@@ -374,7 +377,6 @@ class RadioMixin:
         widget_state = register_widget(
             "radio",
             radio_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

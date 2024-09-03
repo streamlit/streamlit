@@ -23,6 +23,7 @@ import React, {
   useRef,
 } from "react"
 
+import classNames from "classnames"
 import { useTheme } from "@emotion/react"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
@@ -43,6 +44,8 @@ import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 import {
   assignDividerColor,
   BaseBlockProps,
+  convertKeyToClassName,
+  getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -325,6 +328,9 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ...props,
     ...{ width },
   }
+  // Extract the user-specified key from the block ID (if provided):
+  const userKey = getKeyFromId(props.node.deltaBlock.id)
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -341,7 +347,10 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       <StyledVerticalBlockWrapper ref={wrapperElement}>
         <StyledVerticalBlock
           width={width}
-          className="stVerticalBlock"
+          className={classNames(
+            "stVerticalBlock",
+            convertKeyToClassName(userKey)
+          )}
           data-testid="stVerticalBlock"
         >
           <ChildRenderer {...propsWithNewWidth} />

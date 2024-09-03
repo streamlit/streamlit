@@ -28,4 +28,4 @@ st.query_params["hello"] = "world"
 url = "http://not.a.real.url"
 test_component = components.declare_component("test_component", url=url)
 
-test_component()
+test_component(key="component_1")

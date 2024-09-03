@@ -19,7 +19,7 @@ def callback():
     st.write("Hello world")
 
 
-c1 = st.color_picker("Default Color", on_change=callback)
+c1 = st.color_picker("Default Color", on_change=callback, key="color_picker_1")
 st.write("Color 1", c1)
 
 c2 = st.color_picker("New Color", "#EB144C", help="help string")

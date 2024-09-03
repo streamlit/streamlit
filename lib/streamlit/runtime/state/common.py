@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,7 +24,6 @@ from typing import (
     Dict,
     Final,
     Generic,
-    Iterable,
     Literal,
     Tuple,
     TypeVar,
@@ -35,11 +32,12 @@ from typing import (
     get_args,
 )
 
-from google.protobuf.message import Message
 from typing_extensions import TypeAlias, TypeGuard
 
 from streamlit import config, util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+)
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
@@ -61,13 +59,9 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
-from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
-    from builtins import ellipsis
-
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
-    from streamlit.runtime.state.widgets import NoValue
 
 
 # Protobuf types for all widgets.
@@ -216,48 +210,6 @@ class RegisterWidgetResult(Generic[T_co]):
         where the true widget value could not be determined.
         """
         return cls(value=deserializer(None, ""), value_changed=False)
-
-
-PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
-SAFE_VALUES = Union[
-    date,
-    time,
-    datetime,
-    timedelta,
-    None,
-    "NoValue",
-    "ellipsis",
-    Message,
-    PROTO_SCALAR_VALUE,
-]
-
-
-def compute_element_id(
-    element_type: str,
-    user_key: str | None = None,
-    **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
-) -> str:
-    """Compute the id for the given element. This id is stable: a given
-    set of inputs to this function will always produce the same id output.
-
-    Only stable, deterministic values should be used to compute element ids. Using
-    nondeterministic values as inputs can cause the resulting element id to
-    change between runs.
-
-    The element id includes the user_key so elements with identical arguments can
-    use it to be distinct.
-
-    The element id includes an easily identified prefix, and the user_key as a
-    suffix, to make it easy to identify it and know if a key maps to it.
-    """
-    h = hashlib.new("md5", **HASHLIB_KWARGS)
-    h.update(element_type.encode("utf-8"))
-    # This will iterate in a consistent order when the provided arguments have
-    # consistent order; dicts are always in insertion order.
-    for k, v in kwargs.items():
-        h.update(str(k).encode("utf-8"))
-        h.update(str(v).encode("utf-8"))
-    return f"{GENERATED_ELEMENT_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
 def user_key_from_element_id(element_id: str) -> str | None:
