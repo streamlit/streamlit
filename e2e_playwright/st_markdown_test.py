@@ -181,6 +181,14 @@ def test_match_snapshot_for_column_beside_widget(
     assert_snapshot(container, name="st_markdown-headers_beside_widget")
 
 
+def test_match_snapshot_for_headers_bold_text(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the headers with bold markdown syntex is correct."""
+    container = _get_container_of_text(app, "Headers with bold text")
+    assert_snapshot(container, name="st_markdown-headers_bold_text")
+
+
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
     # Get the first element in the main view:

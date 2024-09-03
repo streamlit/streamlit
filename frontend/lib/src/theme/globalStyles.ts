@@ -313,6 +313,11 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-weight: ${theme.fontWeights.bold};
   }
 
+  // h1 defaults to a bolder font than strong. Setting it to the same weight here.
+  h1 strong {
+    font-weight: ${theme.fontWeights.extrabold};
+  }
+
   // Mark
 
   mark {

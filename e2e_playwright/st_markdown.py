@@ -171,6 +171,13 @@ with st.container():
 
 "---"
 
+with st.container():
+    st.text("H1 Header with bold text")
+
+    st.write("# Header header")
+    st.write("# **Header header**")
+
+
 st.latex(r"\LaTeX")
 
 st.latex(
