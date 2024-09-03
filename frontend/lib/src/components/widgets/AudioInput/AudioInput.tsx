@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useEffect } from "react"
+import React, {
+  ReactElement,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react"
 import { Theme, withTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
-import BaseButton, {
-  BaseButtonKind,
-} from "@streamlit/lib/src/components/shared/BaseButton"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
@@ -35,18 +38,9 @@ import {
   StyledWaveformTimeCode,
   StyledWaveSurferDiv,
 } from "./styled-components"
-import {
-  Add,
-  Close,
-  Delete,
-  FileDownload,
-  Search,
-  Mic,
-} from "@emotion-icons/material-outlined"
-import { PlayArrow, StopCircle, Pause } from "@emotion-icons/material-rounded"
+import { Delete } from "@emotion-icons/material-outlined"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-import Icon from "@streamlit/lib/src/components/shared/Icon"
 import NoMicPermissions from "./NoMicPermissions"
 import { WidgetLabel } from "../BaseWidget"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
@@ -57,10 +51,12 @@ import {
   BAR_RADIUS,
   BAR_WIDTH,
   CURSOR_WIDTH,
+  STARTING_TIME_STRING,
   WAVEFORM_HEIGHT,
   WAVEFORM_PADDING,
 } from "./constants"
 import formatTime from "./formatTime"
+import ActionButton from "./ActionButton"
 
 interface Props {
   element: AudioInputProto
@@ -75,11 +71,11 @@ const AudioInput: React.FC<Props> = ({
   widgetMgr,
   theme,
 }): ReactElement => {
-  // WAVE SURFER SPECIFIC STUFF
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
   const waveSurferRef = React.useRef<HTMLDivElement | null>(null)
   const [deleteFileUrl, setDeleteFileUrl] = useState<string | null>(null)
   const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
+  // to eventually show the user the available audio devices
   const [availableAudioDevices, setAvailableAudioDevices] = useState<
     MediaDeviceInfo[]
   >([])
@@ -91,25 +87,28 @@ const AudioInput: React.FC<Props> = ({
   const forceRerender = () => {
     setRerender(prev => prev + 1)
   }
-  const [progressTime, setProgressTime] = useState("00:00")
-  const [recordingTime, setRecordingTime] = useState("00:00")
+  const [progressTime, setProgressTime] = useState(STARTING_TIME_STRING)
+  const [recordingTime, setRecordingTime] = useState(STARTING_TIME_STRING)
   const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
     useState(false)
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
 
-  const uploadTheFile = (file: File) => {
-    uploadFiles({
-      files: [file],
-      uploadClient,
-      widgetMgr,
-      widgetInfo: element,
-    }).then(({ successfulUploads }) => {
-      const upload = successfulUploads[0]
-      if (upload && upload.fileUrl.deleteUrl) {
-        setDeleteFileUrl(upload.fileUrl.deleteUrl)
-      }
-    })
-  }
+  const uploadTheFile = useCallback(
+    (file: File) => {
+      uploadFiles({
+        files: [file],
+        uploadClient,
+        widgetMgr,
+        widgetInfo: element,
+      }).then(({ successfulUploads }) => {
+        const upload = successfulUploads[0]
+        if (upload && upload.fileUrl.deleteUrl) {
+          setDeleteFileUrl(upload.fileUrl.deleteUrl)
+        }
+      })
+    },
+    [element, uploadClient, widgetMgr]
+  )
 
   useEffect(() => {
     // this first part is to ensure we prompt for getting the user's media devices
@@ -128,14 +127,9 @@ const AudioInput: React.FC<Props> = ({
       })
   }, [])
 
-  useEffect(() => {
-    if (waveSurferRef.current === null) {
-      return
-    }
-
-    if (wavesurfer) {
-      wavesurfer.destroy()
-    }
+  const initializeWaveSurfer = useCallback(() => {
+    if (waveSurferRef.current === null) return
+    if (wavesurfer) wavesurfer.destroy()
 
     const ws = WaveSurfer.create({
       container: waveSurferRef.current,
@@ -149,7 +143,7 @@ const AudioInput: React.FC<Props> = ({
     })
 
     ws.on("timeupdate", time => {
-      updateProgress(time * 1000) // get from seconds to milliseconds
+      setProgressTime(formatTime(time * 1000)) // get from seconds to milliseconds
     })
 
     ws.on("pause", () => {
@@ -181,31 +175,22 @@ const AudioInput: React.FC<Props> = ({
     })
 
     recordPlugin.on("record-progress", time => {
-      updateRecordingTime(time)
+      setRecordingTime(formatTime(time))
     })
 
     setWavesurfer(ws)
     setRecordPlugin(recordPlugin)
 
-    const updateProgress = (time: number) => {
-      const formattedTime = formatTime(time)
-
-      setProgressTime(formattedTime)
-    }
-
-    const updateRecordingTime = (time: number) => {
-      const formattedTime = formatTime(time)
-      setRecordingTime(formattedTime)
-    }
-
     return () => {
-      if (wavesurfer) {
-        wavesurfer.destroy()
-      }
+      if (wavesurfer) wavesurfer.destroy()
     }
   }, [theme])
 
-  const onPlayPause = () => {
+  useEffect(() => {
+    initializeWaveSurfer()
+  }, [initializeWaveSurfer])
+
+  const onClickPlayPause = useCallback(() => {
     wavesurfer && wavesurfer.playPause()
 
     // This is because we want the time to be the duration of the audio when they stop recording,
@@ -215,128 +200,64 @@ const AudioInput: React.FC<Props> = ({
 
     // to get the pause button to show
     forceRerender()
-  }
+  }, [wavesurfer])
 
-  const handleRecord = () => {
+  const startRecording = useCallback(() => {
     if (!recordPlugin || !activeAudioDeviceId || !wavesurfer) {
       return
     }
 
-    if (recordPlugin.isRecording() || recordPlugin.isPaused()) {
-      recordPlugin.stopRecording()
-    } else {
-      const deviceId = activeAudioDeviceId
-      if (deviceId == null) {
-        return
-      }
-
-      wavesurfer.setOptions({
-        waveColor: theme.colors.primary,
-      })
-
-      recordPlugin
-        .startRecording({ deviceId: activeAudioDeviceId })
-        .then(() => {
-          // Update the record button to show the user that they can stop recording
-          forceRerender()
-        })
+    const deviceId = activeAudioDeviceId
+    if (deviceId == null) {
+      return
     }
-  }
 
-  const handleClear = () => {
+    wavesurfer.setOptions({
+      waveColor: theme.colors.primary,
+    })
+
+    recordPlugin.startRecording({ deviceId: activeAudioDeviceId }).then(() => {
+      // Update the record button to show the user that they can stop recording
+      forceRerender()
+    })
+  }, [activeAudioDeviceId, recordPlugin, theme, wavesurfer])
+
+  const stopRecording = useCallback(() => {
+    if (!recordPlugin) return
+
+    recordPlugin.stopRecording()
+  }, [recordPlugin])
+
+  const handleClear = useCallback(() => {
     if (wavesurfer == null || deleteFileUrl == null) {
       return
     }
     setRecordingUrl(null)
     wavesurfer.empty()
     uploadClient.deleteFile(deleteFileUrl)
-    setProgressTime("00:00")
+    setProgressTime(STARTING_TIME_STRING)
     setDeleteFileUrl(null)
     setShouldUpdatePlaybackTime(false)
     if (recordingUrl != null) {
       URL.revokeObjectURL(recordingUrl)
     }
-  }
+  }, [deleteFileUrl, recordingUrl, uploadClient, wavesurfer])
 
-  const renderButton = () => {
-    if (recordPlugin && recordPlugin.isRecording()) {
-      // It's currently recording, so show the stop recording button
-      return (
-        <BaseButton
-          kind={BaseButtonKind.BORDERLESS_ICON}
-          onClick={handleRecord}
-        >
-          {recordPlugin && recordPlugin.isRecording()}
-          <Icon
-            content={StopCircle}
-            size="lg"
-            color={theme.colors.primary}
-          ></Icon>
-        </BaseButton>
-      )
-    } else if (recordingUrl) {
-      if (wavesurfer && wavesurfer.isPlaying()) {
-        // It's playing, so show the pause button
-        return (
-          <BaseButton
-            kind={BaseButtonKind.BORDERLESS_ICON}
-            onClick={onPlayPause}
-          >
-            <Icon
-              content={Pause}
-              size="lg"
-              color={theme.colors.fadedText60}
-            ></Icon>
-          </BaseButton>
-        )
-      } else {
-        // It's paused, so show the play button
-        return (
-          <BaseButton
-            kind={BaseButtonKind.BORDERLESS_ICON}
-            onClick={onPlayPause}
-          >
-            <Icon
-              content={PlayArrow}
-              size="lg"
-              color={theme.colors.fadedText60}
-            ></Icon>
-          </BaseButton>
-        )
-      }
-    } else {
-      // Press the button to record
-      return (
-        <BaseButton
-          kind={BaseButtonKind.BORDERLESS_ICON}
-          onClick={handleRecord}
-          disabled={hasNoMicPermissions}
-        >
-          <Icon
-            content={Mic}
-            size="lg"
-            color={
-              hasNoMicPermissions
-                ? theme.colors.fadedText40
-                : theme.colors.fadedText60
-            }
-          ></Icon>
-        </BaseButton>
-      )
-    }
-  }
-
-  const showPlaceholder =
-    !(recordPlugin && recordPlugin.isRecording()) &&
-    !recordingUrl &&
-    !hasNoMicPermissions
-
-  const showNoMicPermissionsOrPlaceholder =
-    hasNoMicPermissions || showPlaceholder
-
+  // Note: these can't be memoized due to the reliance on calling .isRecording() & .isPlaying()
   const isPlayingOrRecording = Boolean(
     (recordPlugin && recordPlugin.isRecording()) ||
       (wavesurfer && wavesurfer.isPlaying())
+  )
+
+  const showPlaceholder = Boolean(
+    !(recordPlugin && recordPlugin.isRecording()) &&
+      !recordingUrl &&
+      !hasNoMicPermissions
+  )
+
+  const showNoMicPermissionsOrPlaceholder = useMemo(
+    () => Boolean(hasNoMicPermissions || showPlaceholder),
+    [hasNoMicPermissions, showPlaceholder]
   )
 
   return (
@@ -362,7 +283,15 @@ const AudioInput: React.FC<Props> = ({
             />
           )}
         </Toolbar>
-        {renderButton()}
+        <ActionButton
+          hasNoMicPermissions={hasNoMicPermissions}
+          recordPlugin={recordPlugin}
+          recordingUrl={recordingUrl}
+          wavesurfer={wavesurfer}
+          startRecording={startRecording}
+          stopRecording={stopRecording}
+          onClickPlayPause={onClickPlayPause}
+        />
         <StyledWaveformInnerDiv>
           {showPlaceholder && <Placeholder />}
           {hasNoMicPermissions && <NoMicPermissions />}
