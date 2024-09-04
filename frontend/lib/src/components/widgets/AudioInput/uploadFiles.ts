@@ -15,15 +15,18 @@
  */
 
 import _ from "lodash"
+
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import {
+  WidgetInfo,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
 import {
   FileUploaderState as FileUploaderStateProto,
   IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
-import { WidgetInfo } from "@streamlit/lib/src/WidgetStateManager"
 
 type SuccessfulUpload = {
   fileUrl: IFileURLs
