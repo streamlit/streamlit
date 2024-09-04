@@ -43,7 +43,7 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
   })
 )
 
-export const StyledWaveformTimeCode = styled.code<{
+export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
 }>(({ theme, isPlayingOrRecording }) => ({
   margin: 8,

@@ -236,6 +236,7 @@ const AudioInput: React.FC<Props> = ({
     wavesurfer.empty()
     uploadClient.deleteFile(deleteFileUrl)
     setProgressTime(STARTING_TIME_STRING)
+    setRecordingTime(STARTING_TIME_STRING)
     setDeleteFileUrl(null)
     setShouldUpdatePlaybackTime(false)
     if (recordingUrl != null) {
@@ -280,6 +281,7 @@ const AudioInput: React.FC<Props> = ({
               label="Clear recording"
               icon={Delete}
               onClick={handleClear}
+              data-testid="stAudioInputClearRecordingButton"
             />
           )}
         </Toolbar>
@@ -300,7 +302,10 @@ const AudioInput: React.FC<Props> = ({
             show={!showNoMicPermissionsOrPlaceholder}
           />
         </StyledWaveformInnerDiv>
-        <StyledWaveformTimeCode isPlayingOrRecording={isPlayingOrRecording}>
+        <StyledWaveformTimeCode
+          isPlayingOrRecording={isPlayingOrRecording}
+          data-testid="StyledWaveformTimeCode"
+        >
           {shouldUpdatePlaybackTime ? progressTime : recordingTime}
         </StyledWaveformTimeCode>
       </StyledWaveformContainerDiv>
