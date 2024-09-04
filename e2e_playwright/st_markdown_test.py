@@ -185,8 +185,10 @@ def test_match_snapshot_for_headers_bold_text(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the headers with bold markdown syntex is correct."""
-    container = _get_container_of_text(app, "Headers with bold text")
-    assert_snapshot(container, name="st_markdown-headers_bold_text")
+    container = _get_container_of_text(
+        app, "Headers with bold syntax should have same weight"
+    )
+    assert_snapshot(container, name="st_markdown-headers_bold_syntax")
 
 
 def test_help_tooltip_works(app: Page):
