@@ -16,21 +16,33 @@
 
 import React, {
   ReactElement,
-  useState,
-  useEffect,
   useCallback,
+  useEffect,
   useMemo,
+  useState,
 } from "react"
+
 import { Theme, withTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
+import RecordPlugin from "wavesurfer.js/dist/plugins/record"
+import { Delete } from "@emotion-icons/material-outlined"
+
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
-import { uploadFiles } from "./uploadFiles"
-import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import {
+  isNullOrUndefined,
+  labelVisibilityProtoValueToEnum,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
+
+import { WidgetLabel } from "src/components/widgets/BaseWidget"
+
+import { uploadFiles } from "./uploadFiles"
 import {
   StyledAudioInputContainerDiv,
   StyledWaveformContainerDiv,
@@ -38,14 +50,8 @@ import {
   StyledWaveformTimeCode,
   StyledWaveSurferDiv,
 } from "./styled-components"
-import { Delete } from "@emotion-icons/material-outlined"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
-
 import NoMicPermissions from "./NoMicPermissions"
-import { WidgetLabel } from "../BaseWidget"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import Placeholder from "./Placeholder"
-
 import {
   BAR_GAP,
   BAR_RADIUS,
@@ -208,7 +214,7 @@ const AudioInput: React.FC<Props> = ({
     }
 
     const deviceId = activeAudioDeviceId
-    if (deviceId == null) {
+    if (isNullOrUndefined(deviceId)) {
       return
     }
 
@@ -229,7 +235,7 @@ const AudioInput: React.FC<Props> = ({
   }, [recordPlugin])
 
   const handleClear = useCallback(() => {
-    if (wavesurfer == null || deleteFileUrl == null) {
+    if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
       return
     }
     setRecordingUrl(null)
@@ -245,7 +251,7 @@ const AudioInput: React.FC<Props> = ({
       undefined
     )
     setShouldUpdatePlaybackTime(false)
-    if (recordingUrl != null) {
+    if (notNullOrUndefined(recordingUrl)) {
       URL.revokeObjectURL(recordingUrl)
     }
   }, [deleteFileUrl, recordingUrl, uploadClient, wavesurfer])

@@ -22,8 +22,8 @@ import classNames from "classnames"
 import {
   Alert as AlertProto,
   Arrow as ArrowProto,
-  Audio as AudioProto,
   AudioInput as AudioInputProto,
+  Audio as AudioProto,
   BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
   Button as ButtonProto,
