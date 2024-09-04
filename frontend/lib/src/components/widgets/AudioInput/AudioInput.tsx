@@ -238,6 +238,12 @@ const AudioInput: React.FC<Props> = ({
     setProgressTime(STARTING_TIME_STRING)
     setRecordingTime(STARTING_TIME_STRING)
     setDeleteFileUrl(null)
+    widgetMgr.setFileUploaderStateValue(
+      element,
+      {},
+      { fromUi: true },
+      undefined
+    )
     setShouldUpdatePlaybackTime(false)
     if (recordingUrl != null) {
       URL.revokeObjectURL(recordingUrl)
