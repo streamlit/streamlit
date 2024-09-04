@@ -32,3 +32,6 @@ export const STREAMLIT_COMMUNITY_CLOUD_DOCS_URL =
   "https://docs.streamlit.io/deploy/streamlit-community-cloud/get-started"
 export const STREAMLIT_DEPLOY_TUTORIAL_URL =
   "https://docs.streamlit.io/deploy/tutorials"
+
+export const ENABLE_PERIPHERALS_DOCS_URL =
+  "https://docs.streamlit.io/end-users/enable-peripherals"

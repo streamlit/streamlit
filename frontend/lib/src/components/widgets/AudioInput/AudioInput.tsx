@@ -22,7 +22,7 @@ import React, {
   useState,
 } from "react"
 
-import { Theme, withTheme } from "@emotion/react"
+import { withTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete } from "@emotion-icons/material-outlined"
@@ -39,8 +39,7 @@ import {
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-
-import { WidgetLabel } from "src/components/widgets/BaseWidget"
+import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 
 import { uploadFiles } from "./uploadFiles"
 import {
@@ -82,6 +81,7 @@ const AudioInput: React.FC<Props> = ({
   const [deleteFileUrl, setDeleteFileUrl] = useState<string | null>(null)
   const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
   // to eventually show the user the available audio devices
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [availableAudioDevices, setAvailableAudioDevices] = useState<
     MediaDeviceInfo[]
   >([])
@@ -90,7 +90,7 @@ const AudioInput: React.FC<Props> = ({
   >(null)
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
   const [, setRerender] = useState(0)
-  const forceRerender = () => {
+  const forceRerender = (): void => {
     setRerender(prev => prev + 1)
   }
   const [progressTime, setProgressTime] = useState(STARTING_TIME_STRING)
@@ -190,22 +190,23 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       if (wavesurfer) wavesurfer.destroy()
     }
-  }, [theme])
+  }, [theme, wavesurfer, uploadTheFile])
 
   useEffect(() => {
     initializeWaveSurfer()
   }, [initializeWaveSurfer])
 
   const onClickPlayPause = useCallback(() => {
-    wavesurfer && wavesurfer.playPause()
+    if (wavesurfer) {
+      wavesurfer.playPause()
+      // This is because we want the time to be the duration of the audio when they stop recording,
+      // but once they start playing it, we want it to be the current time. So, once they start playing it
+      // we'll start keeping track of the playback time from that point onwards (until re-recording).
+      setShouldUpdatePlaybackTime(true)
 
-    // This is because we want the time to be the duration of the audio when they stop recording,
-    // but once they start playing it, we want it to be the current time. So, once they start playing it
-    // we'll start keeping track of the playback time from that point onwards (until re-recording).
-    setShouldUpdatePlaybackTime(true)
-
-    // to get the pause button to show
-    forceRerender()
+      // to get the pause button to show
+      forceRerender()
+    }
   }, [wavesurfer])
 
   const startRecording = useCallback(() => {
@@ -254,7 +255,14 @@ const AudioInput: React.FC<Props> = ({
     if (notNullOrUndefined(recordingUrl)) {
       URL.revokeObjectURL(recordingUrl)
     }
-  }, [deleteFileUrl, recordingUrl, uploadClient, wavesurfer])
+  }, [
+    deleteFileUrl,
+    recordingUrl,
+    uploadClient,
+    wavesurfer,
+    element,
+    widgetMgr,
+  ])
 
   // Note: these can't be memoized due to the reliance on calling .isRecording() & .isPlaying()
   const isPlayingOrRecording = Boolean(

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import _ from "lodash"
+import zip from "lodash/zip"
 
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import {
@@ -64,7 +64,7 @@ export const uploadFiles = async ({
     }
   }
 
-  const filesWithUrls = _.zip(files, fileUrls)
+  const filesWithUrls = zip(files, fileUrls)
 
   const successfulUploads: SuccessfulUpload[] = []
   const failedUploads: FailedUpload[] = []

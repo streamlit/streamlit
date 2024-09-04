@@ -42,6 +42,7 @@ export interface ToolbarActionProps {
 }
 
 export function ToolbarAction(props: ToolbarActionProps): ReactElement {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   const { label, show_label, icon, onClick } = props
 
   const theme: EmotionTheme = useTheme()
