@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
+
+import { ENABLE_PERIPHERALS_DOCS_URL } from "@streamlit/lib/src/urls"
 
 import {
   StyledNoMicInputContainerDiv,
@@ -22,14 +24,13 @@ import {
   StyledNoMicPermissionsErrorTextSpan,
 } from "./styled-components"
 
-const NoMicPermissions = () => {
+const NoMicPermissions = (): ReactElement => {
   return (
     <StyledNoMicInputContainerDiv>
       <StyledNoMicPermissionsErrorTextSpan>
         This app would like to use your microphone.
       </StyledNoMicPermissionsErrorTextSpan>{" "}
-      {/* TODO: actually add the link */}
-      <StyledNoMicInputLearnMoreLink>
+      <StyledNoMicInputLearnMoreLink href={ENABLE_PERIPHERALS_DOCS_URL}>
         Learn how to allow access.
       </StyledNoMicInputLearnMoreLink>
     </StyledNoMicInputContainerDiv>
