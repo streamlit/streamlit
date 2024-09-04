@@ -246,8 +246,6 @@ const RawElementNodeRenderer = (
 ): ReactElement => {
   const { node } = props
 
-  console.log({ props })
-
   if (!node) {
     throw new Error("ElementNode not found.")
   }
@@ -263,8 +261,6 @@ const RawElementNodeRenderer = (
     disabled: props.widgetsDisabled,
     fragmentId: node.fragmentId,
   }
-
-  console.log({ type: node.element.type })
 
   switch (node.element.type) {
     case "alert": {
