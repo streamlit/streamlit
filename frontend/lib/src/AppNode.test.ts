@@ -965,7 +965,7 @@ describe("AppRoot.applyDelta", () => {
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.fragmentId).toBe(undefined)
-    expect(newRoot.main.deltaMessageId).toBe(undefined)
+    expect(newRoot.main.deltaMsgReceivedAt).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
@@ -988,7 +988,7 @@ describe("AppRoot.applyDelta", () => {
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.fragmentId).toBe(undefined)
-    expect(newRoot.main.deltaMessageId).toBe(undefined)
+    expect(newRoot.main.deltaMsgReceivedAt).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
@@ -1164,7 +1164,7 @@ describe("AppRoot.applyDelta", () => {
     )
 
     const newNode = newRoot.main.getIn([1, 1]) as BlockNode
-    expect(newNode.deltaMessageId).toBe(timestamp)
+    expect(newNode.deltaMsgReceivedAt).toBe(timestamp)
   })
 })
 

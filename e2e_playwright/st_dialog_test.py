@@ -156,7 +156,7 @@ def test_dialog_reopens_properly_after_close(app: Page):
 
 def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
     """Dismissing a dialog is a UI-only interaction as of today (the Python backend does
-    not know about this). We use a deltaMessageId to differentiate React renders
+    not know about this). We use a deltaMsgReceivedAt to differentiate React renders
     for dialogs triggered via a new backend message which changes the id vs. other
     interactions. This test ensures that the dialog stays dismissed when interacting
     with a different fragment.
