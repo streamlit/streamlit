@@ -244,8 +244,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     line-height: 1.2;
   }
 
-  // Header fonts
-
   // Abbreviations
   //
   // 1. Duplicate behavior to the data-* attribute for our tooltip plugin
