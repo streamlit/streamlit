@@ -64,8 +64,16 @@ def is_material_icon(maybe_icon: str) -> bool:
 
 def validate_icon_or_emoji(icon: str | None) -> str:
     """Validate an icon or emoji and return it in normalized format if valid."""
-    if icon is not None and icon.startswith(":material"):
+    if icon is not None and ":material" in icon:
+        match = re.search(r"^:(?:blue|green|red|violet|orange|gray|rainbow)\[(.+)\]$", icon)
+        # Return the normalized icon with the color if it has a color
+        if match:
+            icon_without_color = match.group(1)
+            return re.sub(icon_without_color, validate_material_icon(icon_without_color), icon or "")
+
+        # Otherwise return the normalized icon
         return validate_material_icon(icon)
+
     return validate_emoji(icon)
 
 
