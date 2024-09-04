@@ -16,9 +16,6 @@
 
 import React from "react"
 
-import { useTheme } from "@emotion/react"
-
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
@@ -31,8 +28,6 @@ export const DynamicButtonLabel = ({
   icon,
   label,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
-  const { colors }: EmotionTheme = useTheme()
-
   // Material icons need to be larger to render similar size of emojis, emojis need addtl margin
   const isMaterialIcon = icon.startsWith(":material")
   const iconMargin = isMaterialIcon ? "0 sm 0 0" : "0 md 0 0"
@@ -43,7 +38,7 @@ export const DynamicButtonLabel = ({
         <DynamicIcon
           size={isMaterialIcon ? "lg" : "base"}
           margin={label ? iconMargin : "0"}
-          color={colors.bodyText}
+          color="inherit"
           iconValue={icon}
         />
       )}

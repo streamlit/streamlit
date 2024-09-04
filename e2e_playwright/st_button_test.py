@@ -43,6 +43,12 @@ def test_button_widget_rendering(
     # The rest is tested in one screenshot in the following test
 
 
+def test_material_icon_hover(app: Page, assert_snapshot: ImageCompareFunction):
+    material_icon_button = app.get_by_test_id("stButton").nth(7)
+    app.get_by_text("Like Button").hover()
+    assert_snapshot(material_icon_button, name="st_button-material_icon_hover")
+
+
 def test_buttons_in_columns(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the button widgets are correctly rendered in columns via screenshot matching."""
     columns_container = themed_app.get_by_test_id("stHorizontalBlock")
