@@ -180,12 +180,23 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       state.id = element.id
     }
 
-    // If unset, use either the Mapbox light or dark style based on Streamlit's theme
+    // If mapProvider is mapbox and if style is unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if (!state.pydeckJson?.mapStyle) {
+    if (
+      state.pydeckJson?.mapProvider === "mapbox" &&
+      !state.pydeckJson?.mapStyle
+    ) {
       state.pydeckJson.mapStyle = `mapbox://styles/mapbox/${
         hasLightBackgroundColor(theme) ? "light" : "dark"
       }-v9`
+    }
+
+    // By default, use the Carto Positron or Dark Matter style based on Streamlit's theme
+    // See https://docs.carto.com/carto-for-developers/carto-for-react/guides/basemaps
+    if (!state.pydeckJson?.mapStyle) {
+      state.pydeckJson.mapStyle = `https://basemaps.cartocdn.com/gl/${
+        hasLightBackgroundColor(theme) ? "positron" : "dark-matter"
+      }-gl-style/style.json`
     }
 
     // Set width and height based on the fullscreen state
