@@ -38,19 +38,17 @@ export interface ToolbarActionProps {
   icon?: EmotionIcon
   show_label?: boolean
   onClick: () => void
+  "data-testid"?: string
 }
 
-export function ToolbarAction({
-  label,
-  show_label,
-  icon,
-  onClick,
-}: ToolbarActionProps): ReactElement {
+export function ToolbarAction(props: ToolbarActionProps): ReactElement {
+  const { label, show_label, icon, onClick } = props
+
   const theme: EmotionTheme = useTheme()
 
   const displayLabel = show_label ? label : ""
   return (
-    <div data-testid="stElementToolbarButton">
+    <div data-testid={props["data-testid"] ?? "stElementToolbarButton"}>
       <Tooltip
         content={
           <StreamlitMarkdown

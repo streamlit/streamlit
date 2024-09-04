@@ -16,6 +16,3 @@ import streamlit as st
 
 audio1 = st.audio_input(label="Audio Input 1")
 st.audio(audio1)
-
-audio2 = st.audio_input(label="Audio Input 2")
-st.audio(audio2)
