@@ -130,7 +130,7 @@ class AudioInputMixin:
             not share the same key.
 
         on_change : callable
-            An optional callback invoked when this camera_input's value
+            An optional callback invoked when this audio_input's value
             changes.
 
         args : tuple
@@ -140,7 +140,7 @@ class AudioInputMixin:
             An optional dict of kwargs to pass to the callback.
 
         disabled : bool
-            An optional boolean, which disables the camera input if set to
+            An optional boolean, which disables the audio input if set to
             True. Default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
