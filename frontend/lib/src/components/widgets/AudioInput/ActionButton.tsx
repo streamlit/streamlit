@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import { useTheme } from "@emotion/react"
 import React from "react"
+
+import { useTheme } from "@emotion/react"
+import { Mic } from "@emotion-icons/material-outlined"
+import { Pause, PlayArrow, StopCircle } from "@emotion-icons/material-rounded"
+import RecordPlugin from "wavesurfer.js/dist/plugins/record"
+import WaveSurfer from "wavesurfer.js"
+
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import { Mic } from "@emotion-icons/material-outlined"
-import { PlayArrow, StopCircle, Pause } from "@emotion-icons/material-rounded"
-
 import Icon from "@streamlit/lib/src/components/shared/Icon"
-import RecordPlugin from "wavesurfer.js/dist/plugins/record"
-import WaveSurfer from "wavesurfer.js"
 
 interface ActionButtonProps {
   recordPlugin: RecordPlugin | null
@@ -70,43 +71,37 @@ const ActionButton: React.FC<ActionButtonProps> = ({
           <Icon content={Pause} size="lg" color={theme.colors.fadedText60} />
         </BaseButton>
       )
-    } else {
-      // It's paused, so show the play button
-      return (
-        <BaseButton
-          kind={BaseButtonKind.BORDERLESS_ICON}
-          onClick={onClickPlayPause}
-          data-testid="stAudioInputPlayButton"
-        >
-          <Icon
-            content={PlayArrow}
-            size="lg"
-            color={theme.colors.fadedText60}
-          />
-        </BaseButton>
-      )
     }
-  } else {
-    // Press the button to record
+    // It's paused, so show the play button
     return (
       <BaseButton
         kind={BaseButtonKind.BORDERLESS_ICON}
-        onClick={startRecording}
-        disabled={hasNoMicPermissions}
-        data-testid="stAudioInputRecordButton"
+        onClick={onClickPlayPause}
+        data-testid="stAudioInputPlayButton"
       >
-        <Icon
-          content={Mic}
-          size="lg"
-          color={
-            hasNoMicPermissions
-              ? theme.colors.fadedText40
-              : theme.colors.fadedText60
-          }
-        />
+        <Icon content={PlayArrow} size="lg" color={theme.colors.fadedText60} />
       </BaseButton>
     )
   }
+  // Press the button to record
+  return (
+    <BaseButton
+      kind={BaseButtonKind.BORDERLESS_ICON}
+      onClick={startRecording}
+      disabled={hasNoMicPermissions}
+      data-testid="stAudioInputRecordButton"
+    >
+      <Icon
+        content={Mic}
+        size="lg"
+        color={
+          hasNoMicPermissions
+            ? theme.colors.fadedText40
+            : theme.colors.fadedText60
+        }
+      />
+    </BaseButton>
+  )
 }
 
 export default ActionButton
