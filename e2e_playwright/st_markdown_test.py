@@ -48,7 +48,6 @@ def test_displays_individual_markdowns(app: Page):
 
     # get markdown elements in main app view, not sidebar
     markdown_elements = app.get_by_test_id("stMain").get_by_test_id("stMarkdown")
-    print(markdown_elements)
 
     # Assert the text content of each markdown element
     text = [

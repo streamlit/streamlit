@@ -174,20 +174,15 @@ with st.container():
 with st.container():
     st.text("Headers with bold syntax")
 
-    # a, b = st.columns(2)
-
-    # with a:
-    #     draw_header_test(False)
-
-    # with b:
-    for string in [
+    strings = [
         "# Bold **header1**",
         "## Bold **header2**",
         "### Bold **header3**",
         "#### Bold **header4**",
         "##### Bold **header5**",
         "###### Bold **header6**",
-    ]:
+    ]
+    for string in strings:
         st.markdown(string)
 
 "---"
