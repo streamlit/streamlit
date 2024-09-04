@@ -31,7 +31,7 @@ def test_different_markdown_elements_in_one_block_displayed(
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
-    expect(markdown_elements).to_have_count(52)
+    expect(markdown_elements).to_have_count(59)
 
     # Snapshot one big markdown block containing a variety of elements to reduce number
     # of snapshots
@@ -48,6 +48,7 @@ def test_displays_individual_markdowns(app: Page):
 
     # get markdown elements in main app view, not sidebar
     markdown_elements = app.get_by_test_id("stMain").get_by_test_id("stMarkdown")
+    print(markdown_elements)
 
     # Assert the text content of each markdown element
     text = [
@@ -185,10 +186,23 @@ def test_match_snapshot_for_headers_bold_text(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the headers with bold markdown syntex is correct."""
-    container = _get_container_of_text(
-        app, "Headers with bold syntax should have same weight"
-    )
+    container = _get_container_of_text(app, "Headers with bold syntax")
     assert_snapshot(container, name="st_markdown-headers_bold_syntax")
+
+    # H1 defaults to extra bold
+    h1 = app.locator("h1#bold-header1")
+    expect(h1.locator("strong").first).to_have_css("font-weight", "700")
+
+    header_ids = [
+        "h2#bold-header2",
+        "h3#bold-header3",
+        "h4#bold-header4",
+        "h5#bold-header5",
+        "h6#bold-header6",
+    ]
+    for header_id in header_ids:
+        header = app.locator(header_id)
+        expect(header.locator("strong").first).to_have_css("font-weight", "600")
 
 
 def test_help_tooltip_works(app: Page):
@@ -202,13 +216,13 @@ def test_help_tooltip_works(app: Page):
 
 def test_latex_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
     latex_elements = themed_app.get_by_test_id("stMarkdown")
-    assert_snapshot(latex_elements.nth(48), name="st_latex-latex")
-    expect(themed_app.get_by_test_id("stMarkdown").nth(48)).to_contain_text("LATE​X")
+    assert_snapshot(latex_elements.nth(55), name="st_latex-latex")
+    expect(themed_app.get_by_test_id("stMarkdown").nth(55)).to_contain_text("LATE​X")
 
-    assert_snapshot(latex_elements.nth(49), name="st_latex-formula")
+    assert_snapshot(latex_elements.nth(56), name="st_latex-formula")
 
-    expect(themed_app.get_by_test_id("stMarkdown").nth(50)).to_contain_text("a + b")
-    assert_snapshot(latex_elements.nth(50), name="st_latex-sympy")
+    expect(themed_app.get_by_test_id("stMarkdown").nth(57)).to_contain_text("a + b")
+    assert_snapshot(latex_elements.nth(57), name="st_latex-sympy")
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
