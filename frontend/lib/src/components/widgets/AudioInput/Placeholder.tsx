@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
+
 import {
   StyledPlaceholderContainerDiv,
   StyledPlaceholderDotsDiv,
 } from "./styled-components"
 
-const Placeholder = () => {
+const Placeholder = (): ReactElement => {
   return (
     <StyledPlaceholderContainerDiv>
       <StyledPlaceholderDotsDiv />

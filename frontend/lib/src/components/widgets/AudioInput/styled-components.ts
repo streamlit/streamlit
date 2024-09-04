@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { Theme } from "@emotion/react"
 
 import { TOTAL_HEIGHT, WAVEFORM_HEIGHT } from "./constants"
 
@@ -57,16 +56,14 @@ export const StyledWaveformTimeCode = styled.span<{
 }))
 
 // NoMicPermissions
-export const StyledNoMicInputContainerDiv = styled.div(({ theme }) => ({
+export const StyledNoMicInputContainerDiv = styled.div(() => ({
   width: "100%",
   textAlign: "center",
 }))
 
-export const StyledNoMicPermissionsErrorTextSpan = styled.span(
-  ({ theme }) => ({})
-)
+export const StyledNoMicPermissionsErrorTextSpan = styled.span()
 
-export const StyledNoMicInputLearnMoreLink = styled.a(({ theme }) => ({}))
+export const StyledNoMicInputLearnMoreLink = styled.a()
 
 // Placeholder
 export const StyledPlaceholderContainerDiv = styled.div(() => ({
