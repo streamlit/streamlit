@@ -56,6 +56,7 @@ export interface BaseButtonProps {
   fluidWidth?: boolean | number
   children: ReactNode
   autoFocus?: boolean
+  "data-testid"?: string
 }
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
