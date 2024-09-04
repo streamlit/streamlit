@@ -299,6 +299,7 @@ export const StyledPillsButton = styled(
     lineHeight: theme.lineHeights.base,
     fontWeight: 400,
     maxHeight: theme.sizes.minElementHeight,
+    gap: theme.spacing.xs,
 
     "&:hover": {
       borderColor: theme.colors.primary,

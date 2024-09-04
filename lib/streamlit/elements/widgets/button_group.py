@@ -154,7 +154,6 @@ def _build_proto(
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
     style: Literal["normal", "pills"] = "normal",
-    width: Literal["small", "medium", "large"] = "medium",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -167,7 +166,6 @@ def _build_proto(
     proto.disabled = disabled
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
-    proto.width = width
 
     if label is not None:
         proto.label = label
@@ -350,19 +348,23 @@ class ButtonGroupMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
+        icons: list[str] | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ):
         maybe_raise_label_warnings(label, label_visibility)
 
-        def _transformed_format_func(x: V) -> ButtonGroupProto.Option:
+        def _transformed_format_func(
+            option: V, icon: str | None = None
+        ) -> ButtonGroupProto.Option:
             if format_func is None:
-                return ButtonGroupProto.Option(content=str(x))
+                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
 
-            transformed = format_func(x)
+            transformed = format_func(option)
             return ButtonGroupProto.Option(
                 content=transformed["content"],
                 selected_content=transformed["selected_content"],
+                content_icon=icon,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
@@ -372,6 +374,7 @@ class ButtonGroupMixin:
         res = self._button_group(
             indexable_options,
             key=key,
+            icons=icons,
             default=default_values,
             selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
             if selection_mode == "multiselect"
@@ -404,12 +407,12 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         key: Key | None = None,
+        icons: list[str] | None = None,
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["select", "multiselect"] = "select",
         disabled: bool = False,
         format_func: Callable[[V], dict[str, str]] | None = None,
         style: Literal["normal", "pills"] = "normal",
-        width: Literal["small", "medium", "large"] = "medium",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -428,11 +431,13 @@ class ButtonGroupMixin:
                 "`selection_mode='select'`."
             )
 
-        def _transformed_format_func(x: V) -> ButtonGroupProto.Option:
+        def _transformed_format_func(
+            option: V, _: str | None
+        ) -> ButtonGroupProto.Option:
             if format_func is None:
-                return ButtonGroupProto.Option(content=str(x))
+                return ButtonGroupProto.Option(content=str(option))
 
-            transformed = format_func(x)
+            transformed = format_func(option)
             return ButtonGroupProto.Option(
                 content=transformed["content"],
                 selected_content=transformed["selected_content"],
@@ -446,6 +451,7 @@ class ButtonGroupMixin:
         res = self._button_group(
             indexable_options,
             key=key,
+            icons=icons,
             default=default_values,
             selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
             if selection_mode == "multiselect"
@@ -453,7 +459,6 @@ class ButtonGroupMixin:
             disabled=disabled,
             format_func=_transformed_format_func,
             style=style,
-            width=width,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
@@ -475,14 +480,14 @@ class ButtonGroupMixin:
         indexable_options: Sequence[Any],
         *,
         key: Key | None = None,
+        icons: list[str] | None = None,
         default: list[int] | None = None,
         selection_mode: ButtonGroupProto.ClickMode.ValueType = (
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
         style: Literal["normal", "pills"] = "normal",
-        width: Literal["small", "medium", "large"] = "medium",
-        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
+        format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
@@ -502,6 +507,10 @@ class ButtonGroupMixin:
             _default = None
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
+        if icons is not None and len(icons) != len(indexable_options):
+            raise StreamlitAPIException(
+                "The number of icons must match the number of options."
+            )
 
         widget_name = "button_group"
         ctx = get_script_run_ctx()
@@ -509,7 +518,10 @@ class ButtonGroupMixin:
         formatted_options = (
             indexable_options
             if format_func is None
-            else [format_func(option) for option in indexable_options]
+            else [
+                format_func(indexable_options[index], icons[index] if icons else None)
+                for index, _ in enumerate(indexable_options)
+            ]
         )
         element_id = compute_and_register_element_id(
             widget_name,
@@ -519,7 +531,6 @@ class ButtonGroupMixin:
             default=default,
             click_mode=selection_mode,
             style=style,
-            width=width,
         )
 
         proto = _build_proto(
@@ -531,7 +542,6 @@ class ButtonGroupMixin:
             click_mode=selection_mode,
             selection_visualization=selection_visualization,
             style=style,
-            width=width,
             label=label,
             label_visibility=label_visibility,
             help=help,

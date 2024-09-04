@@ -98,14 +98,32 @@ function syncWithWidgetManager(
   widgetMgr.setIntArrayValue(element, selected, { fromUi: fromUi }, fragmentId)
 }
 
-function getContentElement(content: string): ReactElement {
+function getContentElement(
+  content: string,
+  icon?: string,
+  style?: ButtonGroupProto.Style
+): { element: ReactElement; kind: BaseButtonKind } {
   // if the content contains more than a single material icon (e.g. additional text)
   if (content.match(ICON_REGEXP) === null) {
-    return <StreamlitMarkdown source={content} allowHTML={false} />
+    return {
+      element: (
+        <>
+          {icon && <DynamicIcon size="lg" iconValue={icon} />}
+          <StreamlitMarkdown source={content} allowHTML={false} />
+        </>
+      ),
+      kind:
+        style === ButtonGroupProto.Style.PILLS
+          ? BaseButtonKind.PILLS
+          : BaseButtonKind.SEGMENT,
+    }
   }
 
   // used for single icons
-  return <DynamicIcon size="lg" iconValue={content} />
+  return {
+    element: <DynamicIcon size="lg" iconValue={content} />,
+    kind: BaseButtonKind.BORDERLESS_ICON,
+  }
 }
 
 /**
@@ -154,17 +172,11 @@ function getContent(
 
 function getButtonKindAndSize(
   isVisuallySelected: boolean,
-  type: string | React.JSXElementConstructor<any>,
-  style: ButtonGroupProto.Style,
-  width: string
+  buttonKind: BaseButtonKind,
+  type: string | React.JSXElementConstructor<any>
 ): [BaseButtonKind, BaseButtonSize] {
-  let size = BaseButtonSize[width.toUpperCase() as keyof typeof BaseButtonSize]
-  let buttonKind = BaseButtonKind.SEGMENT
-
-  if (type === StreamlitMarkdown && style === ButtonGroupProto.Style.PILLS) {
-    buttonKind = BaseButtonKind.PILLS
-  } else if (type === DynamicIcon) {
-    buttonKind = BaseButtonKind.BORDERLESS_ICON
+  let size = BaseButtonSize.MEDIUM
+  if (type === DynamicIcon) {
     size = BaseButtonSize.XSMALL
   }
 
@@ -181,8 +193,7 @@ function createOptionChild(
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
   selected: number[],
-  style: ButtonGroupProto.Style,
-  width: string
+  style: ButtonGroupProto.Style
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -195,6 +206,7 @@ function createOptionChild(
     option.content ?? "",
     option.selectedContent
   )
+  const icon = option.contentIcon || undefined
 
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
@@ -202,16 +214,15 @@ function createOptionChild(
     props: any,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
-    const contentElement = getContentElement(content)
+    const { element, kind } = getContentElement(content, icon, style)
     const [buttonKind, size] = getButtonKindAndSize(
       !!(isVisuallySelected && !option.selectedContent),
-      contentElement.type,
-      style,
-      width
+      kind,
+      element.type
     )
     return (
       <BaseButton {...props} size={size} kind={buttonKind}>
-        {contentElement}
+        {element}
       </BaseButton>
     )
   })
@@ -234,7 +245,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     value,
     selectionVisualization,
     style,
-    width,
     label,
     labelVisibility,
     help,
@@ -297,7 +307,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     if (isEqual(selected, selectedRef.current)) {
       return
     }
-    const fromUi = selectedRef.current === undefined ? false : true
+    const fromUi = selectedRef.current !== undefined
     syncWithWidgetManager(
       selected,
       elementRef.current,
@@ -331,8 +341,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       selectionVisualization,
       clickMode,
       selected,
-      style,
-      width
+      style
     )
     return <Element key={`${option.content}-${index}`} />
   })
