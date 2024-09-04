@@ -102,7 +102,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.dialog) {
     return (
-      <Dialog element={node.deltaBlock.dialog as BlockProto.Dialog}>
+      <Dialog
+        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        deltaMsgReceivedAt={node.deltaMsgReceivedAt}
+      >
         {child}
       </Dialog>
     )

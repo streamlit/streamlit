@@ -21,6 +21,8 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
     check_top_level_class,
+    click_button,
+    expect_markdown,
     get_button,
     get_markdown,
 )
@@ -116,37 +118,22 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
-# on webkit this test was flaky and manually reproducing the flaky error did not work,
-# so we skip it for now
-@pytest.mark.skip_browser("webkit")
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
 
     # open and close the dialog multiple times
-    for _ in range(0, 3):
+    for _ in range(0, 10):
         open_dialog_without_images(app)
-        wait_for_app_run(app, wait_delay=250)
+        wait_for_app_run(app)
 
         main_dialog = app.get_by_test_id(modal_test_id)
-
-        # sometimes the dialog does not seem to open in the test, so retry opening it by
-        # clicking on it. if it does not open after the second attempt, fail the test.
-        if main_dialog.count() == 0:
-            app.wait_for_timeout(100)
-            open_dialog_without_images(app)
-            wait_for_app_run(app)
-
         expect(main_dialog).to_have_count(1)
-        app.wait_for_timeout(1000)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
 
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
-
-        # don't click indefinitely fast to give the dialog time to set the state
-        app.wait_for_timeout(500)
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
@@ -165,6 +152,42 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_stays_dismissed_when_interacting_with_different_fragment(app: Page):
+    """Dismissing a dialog is a UI-only interaction as of today (the Python backend does
+    not know about this). We use a deltaMsgReceivedAt to differentiate React renders
+    for dialogs triggered via a new backend message which changes the id vs. other
+    interactions. This test ensures that the dialog stays dismissed when interacting
+    with a different fragment.
+    """
+
+    open_dialog_without_images(app)
+    wait_for_app_run(app)
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    click_to_dismiss(app)
+    expect(main_dialog).not_to_be_attached()
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(0)
+
+    # interact with unrelated fragment
+    click_button(app, "Fragment Button")
+    expect_markdown(app, "Fragment Button clicked")
+
+    # dialog is still closed and did not reopen
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(0)
+
+    # reopen dialog
+    open_dialog_without_images(app)
+    wait_for_app_run(app)
+
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
 
 
 def test_dialog_is_scrollable(app: Page):
