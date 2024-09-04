@@ -29,7 +29,8 @@ message ButtonGroup {
 
   message Option {
     string content = 1;
-    string selected_content = 2;
+    optional string selected_content = 2;
+    optional string content_icon = 3;
   }
 
   string id = 1;
@@ -56,9 +57,9 @@ message ButtonGroup {
   }
   Style style = 10;
 
-  string width = 11;
+  string label = 11;
+  LabelVisibilityMessage label_visibility = 12;
+  optional string help = 13;
 
-  string label = 12;
-  LabelVisibilityMessage label_visibility = 13;
-  string help = 14;
+  // next id: 14
 }
