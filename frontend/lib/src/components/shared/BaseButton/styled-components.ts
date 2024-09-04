@@ -290,17 +290,15 @@ export const StyledPillsButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    background: theme.colors.white,
+    background: theme.colors.bgColor,
+    color: theme.colors.text,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    borderRadius: theme.radii.xxl,
-    padding: `${theme.spacing.xs}`,
-    fontSize: theme.fontSizes.sm,
+    borderRadius: theme.radii.xxxl,
+    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+    fontSize: theme.fontSizes.md,
+    lineHeight: theme.lineHeights.base,
     fontWeight: 400,
-    minHeight: 0,
-
-    "& p": {
-      fontSize: theme.fontSizes.sm,
-    },
+    maxHeight: theme.sizes.minElementHeight,
 
     "&:hover": {
       borderColor: theme.colors.primary,
