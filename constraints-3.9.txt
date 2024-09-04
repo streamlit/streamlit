@@ -38,7 +38,7 @@ Jinja2==3.1.4
 jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.3.0
-kiwisolver==1.4.6
+kiwisolver==1.4.7
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.9.2
