@@ -12,12 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 from playwright.sync_api import Page, expect
 
 
 def test_audio_input_renders(app: Page):
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    expect(audio_input_elements).to_have_count(2)
+    expect(audio_input_elements).to_have_count(1)
 
     expect(audio_input_elements.nth(0)).to_be_visible()
-    expect(audio_input_elements.nth(1)).to_be_visible()
+
+
+def test_audio_input_basic_flow(app: Page):
+    app.wait_for_timeout(2000)
+
+    record_button = app.get_by_test_id("stAudioInputRecordButton").first
+    clock = app.get_by_test_id("StyledWaveformTimeCode").first
+
+    expect(clock).to_have_text("00:00")
+
+    record_button.click()
+
+    stop_button = app.get_by_test_id("stAudioInputStopRecordingButton").first
+    expect(stop_button).to_be_visible()
+
+    time.sleep(2)
+
+    stop_button.click()
+
+    play_button = app.get_by_test_id("stAudioInputPlayButton").first
+
+    expect(clock).not_to_have_text("00:00")
+
+    play_button.click()
+
+    pause_button = app.get_by_test_id("stAudioInputPauseButton").first
+    expect(pause_button).to_be_visible()
+
+    pause_button.click()
+
+    expect(play_button).to_be_visible()
+
+    app.get_by_test_id("stAudioInput").first.hover()
+
+    clear_button = app.get_by_test_id("stAudioInputClearRecordingButton").first
+    expect(clear_button).to_be_visible()
+
+    clear_button.click()
+
+    expect(app.get_by_test_id("stAudioInputRecordButton").first).to_be_visible()
+    expect(clock).to_have_text("00:00")
