@@ -16,11 +16,9 @@
 
 import styled from "@emotion/styled"
 
-import { TOTAL_HEIGHT, WAVEFORM_HEIGHT } from "./constants"
+import { WAVEFORM_HEIGHT } from "./constants"
 
-export const StyledAudioInputContainerDiv = styled.div(() => ({
-  height: TOTAL_HEIGHT,
-}))
+export const StyledAudioInputContainerDiv = styled.div()
 
 export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
   height: WAVEFORM_HEIGHT,
@@ -31,6 +29,8 @@ export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   position: "relative",
+  paddingLeft: 8,
+  paddingRight: 12,
 }))
 
 export const StyledWaveformInnerDiv = styled.div({
