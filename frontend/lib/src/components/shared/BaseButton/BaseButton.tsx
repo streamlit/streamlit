@@ -76,6 +76,7 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
+      aria-label={props["aria-label"] ?? ""}
     >
       {children}
     </ComponentType>

@@ -26,7 +26,7 @@ import {
 
 const NoMicPermissions = (): ReactElement => {
   return (
-    <StyledNoMicInputContainerDiv data-testid="StyledNoMicInputContainerDiv">
+    <StyledNoMicInputContainerDiv>
       <StyledNoMicPermissionsErrorTextSpan>
         This app would like to use your microphone.
       </StyledNoMicPermissionsErrorTextSpan>{" "}
