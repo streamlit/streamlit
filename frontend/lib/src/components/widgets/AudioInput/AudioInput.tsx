@@ -113,7 +113,8 @@ const AudioInput: React.FC<Props> = ({
         }
       })
     },
-    [element, uploadClient, widgetMgr]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [uploadClient, widgetMgr]
   )
 
   useEffect(() => {
