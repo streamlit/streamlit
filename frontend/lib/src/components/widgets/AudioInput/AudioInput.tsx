@@ -136,7 +136,6 @@ const AudioInput: React.FC<Props> = ({
 
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
-    if (wavesurfer) wavesurfer.destroy()
 
     const ws = WaveSurfer.create({
       container: waveSurferRef.current,
@@ -191,7 +190,6 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       if (ws) ws.destroy()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, uploadTheFile])
 
   useEffect(() => {
