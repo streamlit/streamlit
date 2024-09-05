@@ -106,7 +106,7 @@ types-cachetools==5.5.0.20240820
 types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417
-types-requests==2.32.0.20240905
+types-requests==2.32.0.20240712
 types-setuptools==74.0.0.20240831
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
