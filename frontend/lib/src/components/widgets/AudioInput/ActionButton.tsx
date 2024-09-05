@@ -50,7 +50,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   const theme = useTheme()
 
-  if (recordPlugin && recordPlugin.isRecording()) {
+  if (recordPlugin?.isRecording()) {
     // It's currently recording, so show the stop recording button
     return (
       <BaseButton
