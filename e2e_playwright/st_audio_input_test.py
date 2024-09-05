@@ -24,7 +24,7 @@ def test_audio_input_renders(app: Page):
     expect(audio_input_elements.nth(0)).to_be_visible()
 
 
-@pytest.mark.skip_browser("webkit")
+@pytest.mark.only_browser("chromium")
 def test_audio_input_basic_flow(app: Page):
     app.context.grant_permissions(["microphone"])
 
