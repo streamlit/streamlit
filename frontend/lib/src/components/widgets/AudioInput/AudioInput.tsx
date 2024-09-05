@@ -191,6 +191,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       if (ws) ws.destroy()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, uploadTheFile])
 
   useEffect(() => {
