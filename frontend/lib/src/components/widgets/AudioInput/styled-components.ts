@@ -29,8 +29,8 @@ export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   position: "relative",
-  paddingLeft: 8,
-  paddingRight: 12,
+  paddingLeft: 4,
+  paddingRight: 8,
 }))
 
 export const StyledWaveformInnerDiv = styled.div({
