@@ -30,6 +30,8 @@ def test_audio_input_basic_flow(app: Page):
 
     app.wait_for_timeout(2000)
 
+    expect(app.get_by_test_id("StyledNoMicInputContainerDiv").first).not_to_be_visible()
+
     record_button = app.get_by_test_id("stAudioInputRecordButton").first
     clock = app.get_by_test_id("StyledWaveformTimeCode").first
 
