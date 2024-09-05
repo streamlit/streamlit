@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-export const TOTAL_HEIGHT = 96
-export const LABEL_HEIGHT = 28
-export const WAVEFORM_HEIGHT = TOTAL_HEIGHT - LABEL_HEIGHT
+export const WAVEFORM_HEIGHT = 68
 export const WAVEFORM_PADDING = 4
 export const BAR_WIDTH = 4
 export const BAR_GAP = 4
