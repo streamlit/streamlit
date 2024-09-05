@@ -184,15 +184,17 @@ class TextInput extends React.PureComponent<Props, State> {
   private onKeyPress = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
+    const { element, widgetMgr, fragmentId } = this.props
+    const disableEntertoSubmit = widgetMgr.isFormSubmitOnEnterDisabled(
+      this.props.element.formId
+    )
+
     if (e.key === "Enter") {
       if (this.state.dirty) {
         this.commitWidgetValue({ fromUi: true })
       }
-      if (isInForm(this.props.element)) {
-        this.props.widgetMgr.submitForm(
-          this.props.element.formId,
-          this.props.fragmentId
-        )
+      if (isInForm(element) && !disableEntertoSubmit) {
+        widgetMgr.submitForm(element.formId, fragmentId)
       }
     }
   }
@@ -206,7 +208,9 @@ class TextInput extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { dirty, value } = this.state
     const { element, width, disabled, widgetMgr, theme } = this.props
-    const { placeholder } = element
+    const { placeholder, formId } = element
+    // Hide input instructions if Enter to submit is disabled
+    const disableEnterToSubmit = widgetMgr.isFormSubmitOnEnterDisabled(formId)
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -290,6 +294,7 @@ class TextInput extends React.PureComponent<Props, State> {
             value={value ?? ""}
             maxLength={element.maxChars}
             inForm={isInForm({ formId: element.formId })}
+            enterToSubmitDisabled={disableEnterToSubmit}
           />
         )}
       </StyledTextInput>

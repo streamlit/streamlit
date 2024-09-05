@@ -234,12 +234,6 @@ export class WidgetStateManager {
     const form = this.getOrCreateFormState(formId)
 
     const submitButtons = this.formsData.submitButtons.get(formId)
-    const disableForm = submitButtons?.some(
-      submitButton => submitButton.disabled
-    )
-    if (disableForm) {
-      return
-    }
 
     let selectedSubmitButton
 
@@ -718,6 +712,22 @@ export class WidgetStateManager {
       }
       this.setSubmitButtons(formId, copySubmitButtons)
     }
+  }
+
+  /**
+   * Called by form input widgets to determine whether to allow enter to submit
+   */
+  public isFormSubmitOnEnterDisabled(formId: string): boolean {
+    const submitButtons = this.formsData.submitButtons.get(formId)
+    const firstSubmitButton = submitButtons?.[0]
+
+    // If there are no submit buttons, the form is disabled
+    if (!firstSubmitButton) {
+      return true
+    }
+
+    // If the first submit button is disabled, disable enter to submit
+    return firstSubmitButton.disabled
   }
 
   private setSubmitButtons(
