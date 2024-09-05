@@ -117,6 +117,7 @@ const SidebarNav = ({
     navSections.forEach(header => {
       const sectionPages = pagesBySectionHeader[header] ?? []
       let viewablePages = sectionPages
+
       if (shouldShowViewButton && !expanded) {
         if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
           // We cannot even show the section
