@@ -47,7 +47,7 @@ export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
 }>(({ theme, isPlayingOrRecording }) => ({
   margin: 8,
-  fontFamily: "Source Code Pro, monospace",
+  fontFamily: theme.fonts.monospace,
   color: isPlayingOrRecording
     ? theme.genericColors.bodyText
     : theme.colors.fadedText60,
