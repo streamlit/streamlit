@@ -57,7 +57,6 @@ export const uploadFiles = async ({
   try {
     fileUrls = await uploadClient.fetchFileURLs(files)
   } catch (e) {
-    console.error("Error fetching file URLs")
     return {
       successfulUploads: [],
       failedUploads: files.map(file => ({ file, error: ensureError(e) })),
@@ -72,7 +71,6 @@ export const uploadFiles = async ({
   await Promise.all(
     filesWithUrls.map(async ([file, fileUrl]) => {
       if (!file || !fileUrl || !fileUrl.uploadUrl || !fileUrl.fileId) {
-        console.error("No upload URL found")
         return { file, fileUrl, error: new Error("No upload URL found") }
       }
 
