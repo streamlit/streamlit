@@ -28,7 +28,7 @@ import {
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import { useFormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
 import {
@@ -192,7 +192,6 @@ export const NumberInput: React.FC<Props> = ({
   )
   const [isFocused, setIsFocused] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const formClearHelper = React.useRef(new FormClearHelper())
   const id = React.useRef(uniqueId("number_input_"))
 
   const canDec = canDecrement(value, step, min)
@@ -279,15 +278,10 @@ export const NumberInput: React.FC<Props> = ({
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
   React.useEffect(() => {
-    const formClearHelperCopy = formClearHelper.current
     if (element.setValue) {
       updateFromProtobuf()
     } else {
       commitValue({ value, source: { fromUi: false } })
-    }
-
-    return () => {
-      formClearHelperCopy.disconnect()
     }
 
     // I don't want to run this effect on every render, only on mount.
@@ -303,14 +297,16 @@ export const NumberInput: React.FC<Props> = ({
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
-  formClearHelper.current.manageFormClearListener(
+  const onFormCleared = React.useCallback(() => {
+    setValue(element.default ?? null)
+    commitValue({ value, source: { fromUi: true } })
+  }, [setValue, commitValue, element, value])
+
+  useFormClearHelper({
+    element,
     widgetMgr,
-    element.formId,
-    () => {
-      setValue(element.default ?? null)
-      commitValue({ value, source: { fromUi: true } })
-    }
-  )
+    onFormCleared,
+  })
 
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>

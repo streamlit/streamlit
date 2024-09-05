@@ -16,7 +16,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -173,7 +173,7 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveAttribute("max", "10")
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getIntProps({ formId: "form", default: 10 })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -188,7 +188,9 @@ describe("NumberInput widget", () => {
     })
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    await act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)

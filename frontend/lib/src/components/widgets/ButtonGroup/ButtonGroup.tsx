@@ -18,6 +18,7 @@ import React, {
   forwardRef,
   ReactElement,
   Ref,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -35,7 +36,7 @@ import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
+import { useFormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
 
 export interface Props {
   disabled: boolean
@@ -194,24 +195,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   // set to undefined for the first render so we know when its mounted
   const selectedRef = React.useRef<number[] | undefined>(undefined)
 
-  // This is required for the form clearing functionality:
-  useEffect(() => {
-    if (!element.formId) {
-      // We don't need the form clear functionality if its not in a form
-      // or if selections are not activated.
-      return
-    }
+  const onFormCleared = useCallback((): void => {
+    setSelected(defaultValues)
+  }, [setSelected, defaultValues])
 
-    const formClearHelper = new FormClearHelper()
-    // On form clear, reset the selections (in chart & widget state)
-    formClearHelper.manageFormClearListener(widgetMgr, element.formId, () => {
-      setSelected(defaultValues)
-    })
-
-    return () => {
-      formClearHelper.disconnect()
-    }
-  }, [element.formId, widgetMgr, defaultValues])
+  useFormClearHelper({ element, widgetMgr, onFormCleared })
 
   const valueString = useMemo(() => JSON.stringify(value), [value])
   useEffect(() => {
