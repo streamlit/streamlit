@@ -24,19 +24,21 @@ import { StyledMessage } from "./styled-components"
 export interface Props {
   dirty: boolean
   value: string
+  inForm: boolean
   maxLength?: number
   className?: string
   type?: "multiline" | "single" | "chat"
-  inForm: boolean
+  allowSubmitOnEnter?: boolean
 }
 
 const InputInstructions = ({
   dirty,
   value,
+  inForm,
   maxLength,
   className,
   type = "single",
-  inForm,
+  allowSubmitOnEnter = false,
 }: Props): ReactElement => {
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
@@ -51,7 +53,10 @@ const InputInstructions = ({
     )
   }
 
-  if (dirty) {
+  // Show enter instruction if not a form or form allows submit on Enter
+  const showEnterInstruction = allowSubmitOnEnter || !inForm
+
+  if (dirty && showEnterInstruction) {
     const toSubmitFormOrApplyText = inForm ? "submit form" : "apply"
     if (type === "multiline") {
       const commandKey = isFromMac() ? "⌘" : "Ctrl"
