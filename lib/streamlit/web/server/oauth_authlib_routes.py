@@ -38,11 +38,7 @@ class AuthCache:
         self.cache.pop(key, None)
 
 
-my_cache = AuthCache()
-
-
-# Todo [kajarenc] initialize Auth clients lazily
-# todo [kajarenc] use create_oauth_client function that initialize and return client
+auth_cache = AuthCache()
 
 
 def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
@@ -50,7 +46,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
         auth_section = secrets_singleton.get("auth")
         if auth_section:
             redirect_uri = auth_section.get("redirect_uri", None)
-            config = dict(auth_section)
+            config = dict(auth_section.to_dict())
         else:
             config = {}
             redirect_uri = "/"
@@ -58,32 +54,15 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
         config = {}
         redirect_uri = "/"
 
-    oauth = TornadoOAuth(config, cache=my_cache)
+    provider_section = config.setdefault(provider, {})
+    provider_client_kwargs = provider_section.setdefault("client_kwargs", {})
+    if "scope" not in provider_client_kwargs:
+        provider_client_kwargs["scope"] = "openid email profile"
+    if "prompt" not in provider_client_kwargs:
+        provider_client_kwargs["prompt"] = "consent"
 
-    if secrets_singleton.load_if_toml_exists():
-        auth_section = secrets_singleton.get("auth", None)
-
-        if auth_section is not None:
-            # TODO[kajarenc] rewrite config parsing better way
-            for key in auth_section.keys():
-                if key == "redirect_uri":
-                    continue
-
-                if auth_section.get(key, {}).get("client_kwargs", {}).get(
-                    "scope", None
-                ) or auth_section.get(key, {}).get("client_kwargs", {}).get(
-                    "code_challenge_method", None
-                ):
-                    oauth.register(key)
-                else:
-                    oauth.register(
-                        key,
-                        client_kwargs={
-                            "scope": "openid email profile",
-                            "prompt": "select_account",  # force to select account
-                        },
-                    )
-
+    oauth = TornadoOAuth(config, cache=auth_cache)
+    oauth.register(provider)
     return oauth.create_client(provider), redirect_uri
 
 
@@ -104,7 +83,7 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
     async def get(self):
         state_code_from_url = self.get_argument("state")
 
-        current_cache_keys = list(my_cache.get_dict().keys())
+        current_cache_keys = list(auth_cache.get_dict().keys())
         state_provider_mapping = {}
         for key in current_cache_keys:
             _, _, provider, code = key.split("_")
