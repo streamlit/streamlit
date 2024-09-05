@@ -379,12 +379,25 @@ class StreamlitMissingPageLabelError(LocalizableStreamlitException):
 class StreamlitPageNotFoundError(LocalizableStreamlitException):
     """Exception raised the linked page can not be found."""
 
-    def __init__(self, page: str, main_script_directory: str):
+    def __init__(self, page: str, main_script_directory: str, is_mpa_v2: bool):
         directory = os.path.basename(main_script_directory)
+        message = None
+        if is_mpa_v2:
+            message = (
+                "Could not find page: `{page}`. You must provide a `StreamlitPage` "
+                "object or file path relative to the entrypoint file. Only pages "
+                "previously defined by [st.Page](http://st.page/) and passed to "
+                "`st.navigation` are allowed."
+            )
+        else:
+            message = (
+                "Could not find page: `{page}`. You must provide a file path "
+                "relative to the entrypoint file (from the directory `{directory}`). "
+                "Only the entrypoint file and files in the `pages/` directory are supported.",
+            )
+
         super().__init__(
-            "Could not find page: `{page}`. You must provide a file path "
-            "relative to the entrypoint file (from the directory `{directory}`). "
-            "Only the entrypoint file and files in the `pages/` directory are supported.",
+            message,
             page=page,
             directory=directory,
         )
