@@ -93,13 +93,16 @@ const AudioInput: React.FC<Props> = ({
     useState(false)
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
 
+  const widgetId = element.id
+  const widgetFormId = element.formId
+
   const uploadTheFile = useCallback(
     (file: File) => {
       uploadFiles({
         files: [file],
         uploadClient,
         widgetMgr,
-        widgetInfo: element,
+        widgetInfo: { id: widgetId, formId: widgetFormId },
       }).then(({ successfulUploads }) => {
         const upload = successfulUploads[0]
         if (upload && upload.fileUrl.deleteUrl) {
@@ -107,8 +110,7 @@ const AudioInput: React.FC<Props> = ({
         }
       })
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uploadClient, widgetMgr]
+    [uploadClient, widgetMgr, widgetId, widgetFormId]
   )
 
   useEffect(() => {
