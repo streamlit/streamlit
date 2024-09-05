@@ -32,6 +32,7 @@ interface ActionButtonProps {
   recordingUrl: string | null
   wavesurfer: WaveSurfer | null
   hasNoMicPermissions: boolean
+  disabled: boolean
   startRecording(): void
   stopRecording(): void
   onClickPlayPause(): void
@@ -42,6 +43,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   recordingUrl,
   wavesurfer,
   hasNoMicPermissions,
+  disabled,
   startRecording,
   stopRecording,
   onClickPlayPause,
@@ -54,6 +56,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       <BaseButton
         kind={BaseButtonKind.BORDERLESS_ICON}
         onClick={stopRecording}
+        disabled={disabled}
         data-testid="stAudioInputStopRecordingButton"
       >
         <Icon content={StopCircle} size="lg" color={theme.colors.primary} />
@@ -66,6 +69,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         <BaseButton
           kind={BaseButtonKind.BORDERLESS_ICON}
           onClick={onClickPlayPause}
+          disabled={disabled}
           data-testid="stAudioInputPauseButton"
         >
           <Icon content={Pause} size="lg" color={theme.colors.fadedText60} />
@@ -77,6 +81,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       <BaseButton
         kind={BaseButtonKind.BORDERLESS_ICON}
         onClick={onClickPlayPause}
+        disabled={disabled}
         data-testid="stAudioInputPlayButton"
       >
         <Icon content={PlayArrow} size="lg" color={theme.colors.fadedText60} />
@@ -88,7 +93,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     <BaseButton
       kind={BaseButtonKind.BORDERLESS_ICON}
       onClick={startRecording}
-      disabled={hasNoMicPermissions}
+      disabled={hasNoMicPermissions || disabled}
       data-testid="stAudioInputRecordButton"
     >
       <Icon

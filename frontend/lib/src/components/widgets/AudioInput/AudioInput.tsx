@@ -315,6 +315,7 @@ const AudioInput: React.FC<Props> = ({
           startRecording={startRecording}
           stopRecording={stopRecording}
           onClickPlayPause={onClickPlayPause}
+          disabled={element.disabled}
         />
         <StyledWaveformInnerDiv>
           {showPlaceholder && <Placeholder />}
