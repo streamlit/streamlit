@@ -276,9 +276,8 @@ const AudioInput: React.FC<Props> = ({
       !hasNoMicPermissions
   )
 
-  const showNoMicPermissionsOrPlaceholder = useMemo(
-    () => Boolean(hasNoMicPermissions || showPlaceholder),
-    [hasNoMicPermissions, showPlaceholder]
+  const showNoMicPermissionsOrPlaceholder = Boolean(
+    hasNoMicPermissions || showPlaceholder
   )
 
   return (
