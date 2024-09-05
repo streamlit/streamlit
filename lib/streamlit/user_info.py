@@ -22,9 +22,46 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx as _get_script_run_ctx,
 )
+from streamlit.runtime.secrets import secrets_singleton
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
+
+
+def validate_auth_credentials(provider: str) -> None:
+    if not secrets_singleton.load_if_toml_exists():
+        raise StreamlitAPIException(
+            "To use Auth you need to configure auth credentials in secrets.toml."
+        )
+
+    auth_section = secrets_singleton.get("auth")
+    if auth_section is None:
+        raise StreamlitAPIException(
+            "Auth credentials are missing. Please check your configuration."
+        )
+    if "redirect_uri" not in auth_section:
+        raise StreamlitAPIException(
+            "Auth credentials are missing 'redirect_uri'. Please check your configuration."
+        )
+
+    provider_section = auth_section.get(provider)
+    if provider_section is None:
+        raise StreamlitAPIException(
+            f"Auth credentials are missing *'{provider}'*. Please check your configuration."
+        )
+
+    if not isinstance(provider_section, Mapping):
+        raise StreamlitAPIException(
+            f"Auth credentials for '{provider}' must be a toml section."
+            f" Please check your configuration."
+        )
+
+    required_keys = ["client_id", "client_secret", "server_metadata_url"]
+    missing_keys = [key for key in required_keys if key not in provider_section]
+    if missing_keys:
+        raise StreamlitAPIException(
+            f"Auth credentials for '{provider}' are missing the following keys: {missing_keys}. Please check your configuration."
+        )
 
 
 def generate_login_redirect_url(provider: str | None = None) -> str:
@@ -76,8 +113,9 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
     ) -> None:
         context = _get_script_run_ctx()
         if context is not None:
+            validate_auth_credentials(provider)
             fwd_msg = ForwardMsg()
-            fwd_msg.auth_redirect.url = generate_login_redirect_url(provider=provider)
+            fwd_msg.auth_redirect.url = generate_login_redirect_url(provider)
             fwd_msg.auth_redirect.action_type = "login"
             if send_redirect_to_host:
                 fwd_msg.auth_redirect.send_redirect_to_host = True
