@@ -188,9 +188,9 @@ const AudioInput: React.FC<Props> = ({
     setRecordPlugin(recordPlugin)
 
     return () => {
-      if (wavesurfer) wavesurfer.destroy()
+      if (ws) ws.destroy()
     }
-  }, [theme, wavesurfer, uploadTheFile])
+  }, [theme, uploadTheFile])
 
   useEffect(() => {
     initializeWaveSurfer()
