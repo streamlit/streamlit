@@ -25,8 +25,7 @@ def test_audio_input_renders(app: Page):
 
 
 def test_audio_input_basic_flow(app: Page):
-    # Check browser type and grant microphone permission only if supported
-    if app.context.browser_name == "chromium" or app.context.browser_name == "firefox":
+    if app.context.browser in ["chromium", "firefox"]:
         app.context.grant_permissions(["microphone"])
 
     app.wait_for_timeout(2000)
