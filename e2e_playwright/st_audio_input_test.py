@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import time
 
+import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -24,9 +24,9 @@ def test_audio_input_renders(app: Page):
     expect(audio_input_elements.nth(0)).to_be_visible()
 
 
+@pytest.mark.skip_browser("webkit")
 def test_audio_input_basic_flow(app: Page):
-    if app.context.browser in ["chromium", "firefox"]:
-        app.context.grant_permissions("microphone")
+    app.context.grant_permissions(["microphone"])
 
     app.wait_for_timeout(2000)
 
