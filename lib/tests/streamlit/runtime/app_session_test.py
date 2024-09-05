@@ -827,6 +827,27 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         session._clear_queue.assert_called_once()
 
+    async def test_updates_page_script_hash_in_client_state_on_script_start(self):
+        session = _create_test_session(asyncio.get_running_loop())
+        session._client_state.page_script_hash = "some_page_script_hash"
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="some_other_page_script_hash",
+            fragment_ids_this_run=None,
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        assert session._client_state.page_script_hash == "some_other_page_script_hash"
+
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
         session = _create_test_session(asyncio.get_running_loop())
