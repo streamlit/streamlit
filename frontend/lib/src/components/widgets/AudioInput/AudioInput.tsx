@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import React, { ReactElement, useCallback, useEffect, useState } from "react"
 
 import { withTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
