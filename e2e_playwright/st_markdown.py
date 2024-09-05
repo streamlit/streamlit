@@ -171,6 +171,22 @@ with st.container():
 
 "---"
 
+with st.container():
+    st.text("Headers with bold syntax")
+
+    strings = [
+        "# Bold **header1**",
+        "## Bold **header2**",
+        "### Bold **header3**",
+        "#### Bold **header4**",
+        "##### Bold **header5**",
+        "###### Bold **header6**",
+    ]
+    for string in strings:
+        st.markdown(string)
+
+"---"
+
 st.latex(r"\LaTeX")
 
 st.latex(
