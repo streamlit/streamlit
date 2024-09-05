@@ -30,29 +30,31 @@ def test_audio_input_basic_flow(app: Page):
 
     app.wait_for_timeout(2000)
 
-    expect(app.get_by_test_id("StyledNoMicInputContainerDiv").first).not_to_be_visible()
+    expect(
+        app.get_by_text("This app would like to use your microphone.").first
+    ).not_to_be_visible()
 
-    record_button = app.get_by_test_id("stAudioInputRecordButton").first
+    record_button = app.get_by_role("button", name="Record").first
     clock = app.get_by_test_id("StyledWaveformTimeCode").first
 
     expect(clock).to_have_text("00:00")
 
     record_button.click()
 
-    stop_button = app.get_by_test_id("stAudioInputStopRecordingButton").first
+    stop_button = app.get_by_role("button", name="Stop recording").first
     expect(stop_button).to_be_visible()
 
     time.sleep(2)
 
     stop_button.click()
 
-    play_button = app.get_by_test_id("stAudioInputPlayButton").first
+    play_button = app.get_by_role("button", name="Play").first
 
     expect(clock).not_to_have_text("00:00")
 
     play_button.click()
 
-    pause_button = app.get_by_test_id("stAudioInputPauseButton").first
+    pause_button = app.get_by_role("button", name="Pause").first
     expect(pause_button).to_be_visible()
 
     pause_button.click()
@@ -61,10 +63,10 @@ def test_audio_input_basic_flow(app: Page):
 
     app.get_by_test_id("stAudioInput").first.hover()
 
-    clear_button = app.get_by_test_id("stAudioInputClearRecordingButton").first
+    clear_button = app.get_by_role("button", name="Clear recording").first
     expect(clear_button).to_be_visible()
 
     clear_button.click()
 
-    expect(app.get_by_test_id("stAudioInputRecordButton").first).to_be_visible()
+    expect(app.get_by_role("button", name="Record").first).to_be_visible()
     expect(clock).to_have_text("00:00")

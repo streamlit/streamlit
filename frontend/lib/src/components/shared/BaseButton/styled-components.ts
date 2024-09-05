@@ -57,6 +57,7 @@ export interface BaseButtonProps {
   children: ReactNode
   autoFocus?: boolean
   "data-testid"?: string
+  "aria-label"?: string
 }
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
