@@ -38,7 +38,6 @@ export interface ToolbarActionProps {
   icon?: EmotionIcon
   show_label?: boolean
   onClick: () => void
-  "data-testid"?: string
 }
 
 export function ToolbarAction(props: ToolbarActionProps): ReactElement {
@@ -49,7 +48,7 @@ export function ToolbarAction(props: ToolbarActionProps): ReactElement {
 
   const displayLabel = show_label ? label : ""
   return (
-    <div data-testid={props["data-testid"] ?? "stElementToolbarButton"}>
+    <div data-testid={"stElementToolbarButton"}>
       <Tooltip
         content={
           <StreamlitMarkdown
@@ -72,6 +71,7 @@ export function ToolbarAction(props: ToolbarActionProps): ReactElement {
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
+          aria-label={label}
         >
           {icon && (
             <Icon

@@ -57,7 +57,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         kind={BaseButtonKind.BORDERLESS_ICON}
         onClick={stopRecording}
         disabled={disabled}
-        data-testid="stAudioInputStopRecordingButton"
+        aria-label="Stop recording"
       >
         <Icon content={StopCircle} size="lg" color={theme.colors.primary} />
       </BaseButton>
@@ -70,7 +70,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
           kind={BaseButtonKind.BORDERLESS_ICON}
           onClick={onClickPlayPause}
           disabled={disabled}
-          data-testid="stAudioInputPauseButton"
+          aria-label="Pause"
         >
           <Icon content={Pause} size="lg" color={theme.colors.fadedText60} />
         </BaseButton>
@@ -82,7 +82,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         kind={BaseButtonKind.BORDERLESS_ICON}
         onClick={onClickPlayPause}
         disabled={disabled}
-        data-testid="stAudioInputPlayButton"
+        aria-label="Play"
       >
         <Icon content={PlayArrow} size="lg" color={theme.colors.fadedText60} />
       </BaseButton>
@@ -94,7 +94,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       kind={BaseButtonKind.BORDERLESS_ICON}
       onClick={startRecording}
       disabled={hasNoMicPermissions || disabled}
-      data-testid="stAudioInputRecordButton"
+      aria-label="Record"
     >
       <Icon
         content={Mic}
