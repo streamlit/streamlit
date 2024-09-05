@@ -15,14 +15,12 @@
  */
 
 const formatTime = (timeMs: number): string => {
-  const formattedTime = [
-    Math.floor((timeMs % 3600000) / 60000), // minutes
-    Math.floor((timeMs % 60000) / 1000), // seconds
-  ]
-    .map(v => (v < 10 ? "0" + v : v))
-    .join(":")
+  const date = new Date(timeMs)
 
-  return formattedTime
+  return date.toLocaleTimeString(undefined, {
+    minute: "2-digit",
+    second: "2-digit",
+  })
 }
 
 export default formatTime
