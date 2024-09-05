@@ -4,7 +4,7 @@ blinker==1.8.2
 bokeh==2.4.3
 cachetools==5.5.0
 certifi==2024.8.30
-cffi==1.17.0
+cffi==1.17.1
 cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
@@ -35,7 +35,7 @@ Jinja2==3.1.4
 jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
 keyring==25.3.0
-kiwisolver==1.4.6
+kiwisolver==1.4.7
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.9.2
@@ -110,7 +110,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.4.4
+uv==0.4.5
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==5.0.2
