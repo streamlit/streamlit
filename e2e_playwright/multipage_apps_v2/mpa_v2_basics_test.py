@@ -193,7 +193,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
 
     # Collapse the nav
     view_button.click(force=True)
-    expect(view_button).to_have_text("View more")
+    expect(view_button).to_have_text("View 3 more")
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
