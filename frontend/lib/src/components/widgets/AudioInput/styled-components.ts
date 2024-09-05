@@ -24,13 +24,13 @@ export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
   height: WAVEFORM_HEIGHT,
   width: "100%",
   background: theme.genericColors.secondaryBg,
-  borderRadius: 8,
-  marginBottom: 2,
+  borderRadius: theme.radii.default,
+  marginBottom: theme.spacing.twoXS,
   display: "flex",
   alignItems: "center",
   position: "relative",
-  paddingLeft: 4,
-  paddingRight: 8,
+  paddingLeft: theme.spacing.xs,
+  paddingRight: theme.spacing.sm,
 }))
 
 export const StyledWaveformInnerDiv = styled.div({
@@ -46,13 +46,13 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
 export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
 }>(({ theme, isPlayingOrRecording }) => ({
-  margin: 8,
+  margin: theme.spacing.sm,
   fontFamily: theme.fonts.monospace,
   color: isPlayingOrRecording
     ? theme.genericColors.bodyText
     : theme.colors.fadedText60,
   backgroundColor: theme.genericColors.secondaryBg,
-  fontSize: 14,
+  fontSize: theme.fontSizes.sm,
 }))
 
 // NoMicPermissions
