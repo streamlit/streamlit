@@ -294,16 +294,21 @@ export const StyledPillsButton = styled(
     color: theme.colors.text,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: theme.radii.xxxl,
-    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-    fontSize: theme.fontSizes.md,
+    padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
+    fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
     fontWeight: 400,
-    maxHeight: theme.sizes.minElementHeight,
+    maxHeight: theme.sizes.largeLogoHeight,
+    minHeight: theme.sizes.largeLogoHeight,
     gap: theme.spacing.xs,
 
     "&:hover": {
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
+    },
+
+    "& p": {
+      fontSize: theme.fontSizes.sm,
     },
   }
 })
@@ -312,9 +317,9 @@ export const StyledPillsButtonActive = styled(
   StyledPillsButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
-    color: theme.colors.white,
+    color: theme.colors.primary,
     "&:hover": {
       backgroundColor: theme.colors.transparent,
       borderColor: theme.colors.primary,
