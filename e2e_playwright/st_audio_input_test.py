@@ -25,6 +25,10 @@ def test_audio_input_renders(app: Page):
 
 
 def test_audio_input_basic_flow(app: Page):
+    # Grant microphone permission only for this test
+    context = app.context
+    context.grant_permissions(["microphone"])
+
     app.wait_for_timeout(2000)
 
     record_button = app.get_by_test_id("stAudioInputRecordButton").first
