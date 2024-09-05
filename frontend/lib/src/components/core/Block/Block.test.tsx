@@ -90,10 +90,22 @@ describe("Vertical Block Component", () => {
     const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
     render(makeVerticalBlockComponent(block))
 
-    expect(screen.getAllByTestId("column")).toHaveLength(4)
+    expect(screen.getAllByTestId("stColumn")).toHaveLength(4)
     expect(
       screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
     ).not.toHaveStyle("overflow: auto")
+  })
+
+  it("should add the user-specified key as class", () => {
+    const block: BlockNode = makeVerticalBlock([], {
+      id: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
+    })
+    render(makeVerticalBlockComponent(block))
+
+    expect(screen.getByTestId("stVerticalBlock")).toBeVisible()
+    expect(screen.getByTestId("stVerticalBlock")).toHaveClass(
+      "st-key-first-container"
+    )
   })
 
   it("should activate scrolling when height is set", () => {

@@ -116,8 +116,10 @@ def get_form_submit_button(
     Locator
         The element.
     """
-    element = locator.get_by_test_id("baseButton-secondaryFormSubmit").filter(
-        has_text=label
+    element = (
+        locator.get_by_test_id("stFormSubmitButton")
+        .filter(has_text=label)
+        .locator("button")
     )
     expect(element).to_be_visible()
     return element
@@ -250,7 +252,7 @@ def expect_markdown(
 
 def expect_exception(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | Pattern[str] | None = None,
 ) -> None:
     """Expect an exception to be displayed in the app.
 
@@ -260,13 +262,22 @@ def expect_exception(
     locator : Locator
         The locator to search for the exception element.
 
-    expected_message : str or Pattern[str]
+    expected_message : str or Pattern[str] or None
         The expected message to be displayed in the exception.
     """
-    exception_el = locator.get_by_test_id("stException").filter(
-        has_text=expected_message
-    )
+
+    if expected_message is None:
+        exception_el = locator.get_by_test_id("stException")
+    else:
+        exception_el = locator.get_by_test_id("stException").filter(
+            has_text=expected_message
+        )
     expect(exception_el).to_be_visible()
+
+
+def expect_no_exception(locator: Locator | Page):
+    exception_el = locator.get_by_test_id("stException")
+    expect(exception_el).not_to_be_attached()
 
 
 def expect_warning(
@@ -438,3 +449,57 @@ def expect_script_state(
         timeout=10000,
         state="attached",
     )
+
+
+def get_element_by_key(locator: Locator | Page, key: str) -> Locator:
+    """Get an element with the given user-defined key.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    key : str
+        The user-defined key of the element
+
+    Returns
+    -------
+    Locator
+        The element.
+
+    """
+    class_name = re.sub(r"[^a-zA-Z0-9_-]", "-", key.strip())
+    class_name = f"st-key-{class_name}"
+    return locator.locator(f".{class_name}")
+
+
+def expand_sidebar(app: Page) -> Locator:
+    """Expands the sidebar.
+
+    Returns
+    -------
+    Locator
+        The sidebar element.
+    """
+    app.get_by_test_id("stSidebarCollapsedControl").click()
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    return sidebar
+
+
+def check_top_level_class(app: Page, test_id: str) -> None:
+    """Check that the top level class is correctly set.
+
+    It should be the same as the test id of the element
+    and set on the same component.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the element.
+
+    test_id : str
+        The test id of the element to check.
+    """
+    expect(app.get_by_test_id(test_id).first).to_have_class(re.compile(test_id))

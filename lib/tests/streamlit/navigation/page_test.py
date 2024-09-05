@@ -51,8 +51,8 @@ class StPagesTest(DeltaGeneratorTestCase):
 
         try:
             st.Page(Foo(), title="Hello")
-        except Exception:
-            pytest.fail("Should not raise exception")
+        except Exception as e:
+            pytest.fail("Should not raise exception: " + str(e))
 
     def test_invalid_icon_raises_exception(self):
         """Test that passing an invalid icon raises an exception."""
@@ -116,6 +116,18 @@ class StPagesTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException):
             st.Page(page_9, url_path="")
+
+    def test_page_with_no_title_raises_api_exception(self):
+        """Tests that an error is raised if the title is empty or inferred to be empty"""
+
+        with pytest.raises(StreamlitAPIException):
+            st.Page("_.py")
+
+        def page_9():
+            pass
+
+        with pytest.raises(StreamlitAPIException):
+            st.Page(page_9, title="    ")
 
     def test_page_run_cannot_run_standalone(self):
         """Test that a page cannot run standalone."""

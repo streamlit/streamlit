@@ -35,9 +35,9 @@ export const StyledThumb = styled.div<StyledSliderProps>(
     borderLeftStyle: "none",
     boxShadow: "none",
     display: "flex",
-    height: theme.radii.xl,
     justifyContent: "center",
-    width: theme.radii.xl,
+    height: theme.sizes.sliderThumb,
+    width: theme.sizes.sliderThumb,
     ":focus": {
       outline: "none",
     },

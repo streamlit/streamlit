@@ -16,25 +16,24 @@
 
 import React, { PureComponent, ReactNode } from "react"
 
-import { DeckGL } from "deck.gl"
+import { DeckGL } from "@deck.gl/react/typed"
 import JSON5 from "json5"
 import isEqual from "lodash/isEqual"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-// We don't have Typescript defs for these imports, which makes ESLint unhappy
-/* eslint-disable import/no-extraneous-dependencies */
 import {
   CartoLayer,
   colorBins,
   colorCategories,
   colorContinuous,
-} from "@deck.gl/carto"
-import * as layers from "@deck.gl/layers"
-import { JSONConverter } from "@deck.gl/json"
-import * as geoLayers from "@deck.gl/geo-layers"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
-import * as meshLayers from "@deck.gl/mesh-layers"
-/* eslint-enable */
+} from "@deck.gl/carto/typed"
+import * as layers from "@deck.gl/layers/typed"
+import { JSONConverter } from "@deck.gl/json/typed"
+import * as geoLayers from "@deck.gl/geo-layers/typed"
+import * as aggregationLayers from "@deck.gl/aggregation-layers/typed"
+import * as meshLayers from "@deck.gl/mesh-layers/typed"
+import { DeckProps, PickingInfo } from "@deck.gl/core/typed"
+import { TooltipContent } from "@deck.gl/core/typed/lib/tooltip"
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
@@ -54,18 +53,12 @@ import {
 
 import "mapbox-gl/dist/mapbox-gl.css"
 
-interface PickingInfo {
-  object: {
-    [key: string]: any
-  }
-}
-
 interface DeckObject {
   initialViewState: {
     height: number
     width: number
   }
-  layers: Record<string, unknown>[]
+  layers: DeckProps["layers"]
   mapStyle?: string | Array<string>
 }
 
@@ -215,11 +208,11 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return jsonConverter.convert(state.pydeckJson)
   }
 
-  createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
+  createTooltip = (info: PickingInfo): TooltipContent => {
     const { element } = this.props
 
     if (!info || !info.object || !element.tooltip) {
-      return false
+      return null
     }
 
     const tooltip = JSON5.parse(element.tooltip)
@@ -253,7 +246,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return body
   }
 
-  onViewStateChange = ({ viewState }: State): void => {
+  onViewStateChange: DeckProps["onViewStateChange"] = ({ viewState }) => {
     this.setState({ viewState })
   }
 
@@ -265,9 +258,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
+        data-testid="stDeckGlJsonChart"
         width={width}
         height={deck.initialViewState.height}
-        data-testid="stDeckGlJsonChart"
       >
         <DeckGL
           viewState={viewState}
@@ -276,6 +269,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           width={width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
+          // @ts-expect-error There is a type mismatch due to our versions of the libraries
           ContextProvider={MapContext.Provider}
           controller
         >
@@ -293,7 +287,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
             }
           />
           <StyledNavigationControlContainer>
-            <NavigationControl className="zoomButton" showCompass={false} />
+            <NavigationControl
+              data-testid="stDeckGlJsonChartZoomButton"
+              showCompass={false}
+            />
           </StyledNavigationControlContainer>
         </DeckGL>
       </StyledDeckGlChart>

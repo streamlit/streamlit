@@ -70,9 +70,9 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     # and additional timeout
     expect(app.get_by_test_id("stText")).to_contain_text("100% Complete", timeout=15000)
     expect(app.get_by_test_id("stProgress")).not_to_be_visible()
-    expect(
-        app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
-    ).to_have_attribute("height", "350")
+    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_attribute(
+        "height", "350"
+    )
 
     assert_snapshot(app, name="hello_app-plotting_demo_page")
 
@@ -101,9 +101,9 @@ def _load_dataframe_demo_page(app: Page):
     check_page_icon(app, "table", 4)
     expect(app.get_by_test_id("stMultiSelect")).to_be_visible()
     expect(app.get_by_test_id("stDataFrame")).to_be_visible()
-    expect(
-        app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
-    ).to_have_attribute("height", "350")
+    expect(app.get_by_test_id("stVegaLiteChart").locator("canvas")).to_have_attribute(
+        "height", "350"
+    )
 
 
 def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
@@ -161,7 +161,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-headerNoPadding").click()
+    sidebar_element.get_by_test_id("stBaseButton-headerNoPadding").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
@@ -196,7 +196,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
     app.get_by_test_id("stSidebar").hover()
     sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-headerNoPadding").click()
+    sidebar_element.get_by_test_id("stBaseButton-headerNoPadding").click()
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")

@@ -15,19 +15,26 @@
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_help_tooltip, get_markdown
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expand_sidebar,
+    expect_help_tooltip,
+    get_markdown,
+)
 
 
 def test_different_markdown_elements_in_one_block_displayed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the block containing a mixture of different markdown elements is displayed correctly."""
+    """Test that the block containing a mixture of different markdown elements is
+    displayed correctly."""
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
     expect(markdown_elements).to_have_count(52)
 
-    # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
+    # Snapshot one big markdown block containing a variety of elements to reduce number
+    # of snapshots
     multi_markdown_format_container = markdown_elements.nth(12)
     multi_markdown_format_container.scroll_into_view_if_needed()
     assert_snapshot(
@@ -40,9 +47,7 @@ def test_displays_individual_markdowns(app: Page):
     """Verifies the correct text content of markdown elements."""
 
     # get markdown elements in main app view, not sidebar
-    markdown_elements = app.get_by_test_id("stAppViewBlockContainer").get_by_test_id(
-        "stMarkdown"
-    )
+    markdown_elements = app.get_by_test_id("stMain").get_by_test_id("stMarkdown")
 
     # Assert the text content of each markdown element
     text = [
@@ -131,17 +136,15 @@ def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that headers in sidebar are rendered correctly."""
-    # expand the sidebar
-    app.get_by_test_id("collapsedControl").click()
-    sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    sidebar = expand_sidebar(app)
     assert_snapshot(sidebar, name="st_markdown-headers_in_sidebar")
 
 
 def test_match_snapshot_for_headers_in_single_markdown_command(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that snapshot of headers joined in a single string and written in a single st.markdown command is correct."""
+    """Test that snapshot of headers joined in a single string and written in a single
+    st.markdown command is correct."""
     container = _get_container_of_text(app, "Headers in single st.markdown command")
     assert_snapshot(container, name="st_markdown-headers_joined_in_single_command")
 
@@ -182,9 +185,7 @@ def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
     # Get the first element in the main view:
     markdown_with_help = (
-        app.get_by_test_id("stAppViewBlockContainer")
-        .get_by_test_id("stMarkdown")
-        .nth(0)
+        app.get_by_test_id("stMain").get_by_test_id("stMarkdown").nth(0)
     )
     expect_help_tooltip(app, markdown_with_help, "This is a help tooltip!")
 
@@ -216,3 +217,8 @@ def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunctio
     #  since sometimes the image is not rendered yet
     app.wait_for_timeout(2000)
     assert_snapshot(markdown_element, name="st_markdown-with_large_image")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stMarkdown")

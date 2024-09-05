@@ -63,7 +63,7 @@ describe("Host communication", () => {
       // Open the Main Menu
       cy.get("#MainMenu > button").click();
       // Open the Settings Modal
-      cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click({
+      cy.getIndexed('[data-testid="stMainMenuList"] > ul', 1).click({
         force: true,
       });
       cy.get("div[role='dialog']").should("exist");
@@ -83,12 +83,12 @@ describe("Host communication", () => {
       // Open the Main Menu
       cy.get("#MainMenu > button").click();
       // Check that new menu item exists
-      cy.getIndexed('[data-testid="main-menu-list"] > ul', 4).should(
+      cy.getIndexed('[data-testid="stMainMenuList"] > ul', 4).should(
         "have.text",
-        "Adopt a Corgi",
+        "Adopt a Corgi"
       );
       // Exit main menu
-      cy.get(".main").type("{esc}");
+      cy.get('[data-testid="stMain"]').type("{esc}");
     });
   });
 
@@ -97,14 +97,14 @@ describe("Host communication", () => {
     cy.get("#toolbar").contains("Add Toolbar Item").click();
     cy.get("iframe").iframe(() => {
       // Check toolbar contents
-      cy.get(".stActionButton").should("exist");
-      cy.getIndexed('[data-testid="stActionButton"]', 0).should(
+      cy.get(".stToolbarActionButton").should("exist");
+      cy.getIndexed('[data-testid="stToolbarActionButton"]', 0).should(
         "have.text",
-        "Favorite",
+        "Favorite"
       );
-      cy.getIndexed('[data-testid="stActionButton"]', 1).should(
+      cy.getIndexed('[data-testid="stToolbarActionButton"]', 1).should(
         "have.text",
-        "Share",
+        "Share"
       );
     });
   });
@@ -135,10 +135,10 @@ describe("Host communication", () => {
       // Close sidebar
       cy.get("[data-testid='stSidebar'] button").click();
       // Check chevron positioning
-      cy.get("[data-testid='collapsedControl']").should(
+      cy.get("[data-testid='stSidebarCollapsedControl']").should(
         "have.css",
         "top",
-        "50px",
+        "50px"
       );
     });
   });

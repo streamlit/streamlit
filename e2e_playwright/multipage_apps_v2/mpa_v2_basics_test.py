@@ -20,7 +20,7 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import click_checkbox
+from e2e_playwright.shared.app_utils import click_button, click_checkbox
 
 
 def main_heading(app: Page):
@@ -209,8 +209,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
 def test_switch_page_by_path(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with a path."""
 
-    app.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
-    wait_for_app_run(app)
+    click_button(app, "page 5")
 
     expect(page_heading(app)).to_contain_text("Page 5")
 
@@ -218,8 +217,7 @@ def test_switch_page_by_path(app: Page):
 def test_switch_page_by_st_page(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with st.Page."""
 
-    app.get_by_test_id("baseButton-secondary").filter(has_text="page 9").click()
-    wait_for_app_run(app)
+    click_button(app, "page 9")
 
     expect(page_heading(app)).to_contain_text("Page 9")
 
@@ -233,8 +231,8 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
     expect(app).to_have_url(f"http://localhost:{app_port}/?foo=bar")
 
     # Trigger st.switch_page
-    app.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
-    wait_for_app_loaded(app)
+    click_button(app, "page 5")
+
     # Check that query params don't persist
     expect(app).to_have_url(f"http://localhost:{app_port}/page_5")
 
@@ -289,10 +287,12 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")
 
 
 def test_page_link_with_path(app: Page):

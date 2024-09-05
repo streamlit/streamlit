@@ -34,6 +34,13 @@ export const StyledPre = styled.pre(({ theme }) => ({
     color: theme.colors.fadedText40,
     fontSize: theme.fontSizes.twoSm,
 
+    // Center-align number vertically, or they'll be positioned differently when
+    // wrapLinst=true. Even with this change, though, the position is still ~2px
+    // off.
+    // NOTE: The alignSelf below only apply applies when wrapLines=true, because
+    // that option wraps this element in a flex container.
+    alignSelf: "center",
+
     // Override the default token's min-width, to ensure it fits 3-digit lines
     minWidth: `${theme.spacing.threeXL} !important`,
   },

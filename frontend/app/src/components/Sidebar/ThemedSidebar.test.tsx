@@ -56,8 +56,16 @@ describe("ThemedSidebar Component", () => {
 
   it("plumbs appPages to main Sidebar component", () => {
     const appPages = [
-      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      { pageName: "other_app_page", scriptPath: "other_app_page.py" },
+      {
+        pageName: "streamlit app",
+        scriptPath: "streamlit_app.py",
+        urlPathname: "streamlit_app",
+      },
+      {
+        pageName: "other app page",
+        scriptPath: "other_app_page.py",
+        urlPathname: "other_app_page",
+      },
     ]
     render(<ThemedSidebar {...getProps({ appPages })} />)
 

@@ -55,7 +55,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -66,7 +66,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import is_type
 from streamlit.util import calc_md5
 
@@ -377,11 +376,13 @@ def _apply_dataframe_edits(
     if data_editor_state.get("edited_rows"):
         _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
-    if data_editor_state.get("added_rows"):
-        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
-
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
+
+    if data_editor_state.get("added_rows"):
+        # The addition of new rows needs to happen after the deletion to not have
+        # unexpected side-effects, like https://github.com/streamlit/streamlit/issues/8854
+        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
 
 def _is_supported_index(df_index: pd.Index) -> bool:
@@ -599,18 +600,21 @@ class DataEditorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
+        data : Anything supported by st.dataframe
             The data to edit in the data editor.
 
             .. note::
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
-                  complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
-                  fractions.Fraction, pandas.Interval, and pandas.Period.
-                - To prevent overflow in JavaScript, columns containing datetime.timedelta
-                  and pandas.Timedelta values will default to uneditable but this can be
-                  changed through column configuration.
+                  ``complex``, ``list``, ``tuple``, ``bytes``, ``bytearray``,
+                  ``memoryview``, ``dict``, ``set``, ``frozenset``,
+                  ``fractions.Fraction``, ``pandas.Interval``, and
+                  ``pandas.Period``.
+                - To prevent overflow in JavaScript, columns containing
+                  ``datetime.timedelta`` and ``pandas.Timedelta`` values will
+                  default to uneditable, but this can be changed through column
+                  configuration.
 
         width : int or None
             Desired width of the data editor expressed in pixels. If ``width``
@@ -880,7 +884,7 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
             data=arrow_bytes,
@@ -896,7 +900,7 @@ class DataEditorMixin:
         )
 
         proto = ArrowProto()
-        proto.id = id
+        proto.id = element_id
 
         proto.use_container_width = use_container_width
 
@@ -943,7 +947,6 @@ class DataEditorMixin:
         widget_state = register_widget(
             "data_editor",
             proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

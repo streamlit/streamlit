@@ -19,6 +19,7 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import click_button
 
 
 def test_loads_main_script_on_initial_page_load(app: Page):
@@ -147,13 +148,11 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
     # st.switch_page using relative path & leading /
-    app.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(app)
+    click_button(app, "pages/06_page_6.py")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 6")
 
     # st.switch_page using relative path & leading ./
-    app.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(app)
+    click_button(app, "./mpa_basics.py")
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
@@ -284,7 +283,63 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
+    )
+
+
+def test_renders_small_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that small logos display properly in sidebar and main sections"""
+
+    # Go to small logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(9).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
         "href", "https://www.example.com"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="small-sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="small-collapsed-logo"
+    )
+
+
+def test_renders_large_logos(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that large logos display properly in sidebar and main sections"""
+
+    # Go to large logo page & wait short moment for logo to appear
+    app.get_by_test_id("stSidebarNav").locator("a").nth(10).click()
+    wait_for_app_loaded(app)
+
+    # Sidebar logo
+    expect(app.get_by_test_id("stSidebarHeader").locator("a")).to_have_attribute(
+        "href", "https://www.example.com"
+    )
+    assert_snapshot(app.get_by_test_id("stSidebar"), name="large-sidebar-logo")
+
+    # Collapse the sidebar
+    app.get_by_test_id("stSidebarContent").hover()
+    app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    app.wait_for_timeout(500)
+
+    # Collapsed logo
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="large-collapsed-logo"
+    )

@@ -21,9 +21,9 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 export interface Props {
   disabled: boolean
@@ -47,7 +47,7 @@ function Button(props: Props): ReactElement {
   const fluidWidth = element.help ? width : true
 
   return (
-    <div className="row-widget stButton" data-testid="stButton" style={style}>
+    <div className="stButton" data-testid="stButton" style={style}>
       <BaseButtonTooltip help={element.help}>
         <BaseButton
           kind={kind}
@@ -58,13 +58,7 @@ function Button(props: Props): ReactElement {
             widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
           }
         >
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
+          <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
       </BaseButtonTooltip>
     </div>

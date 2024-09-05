@@ -269,29 +269,28 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     return <Element key={`${option.content}-${index}`} />
   })
   return (
-    <BasewebButtonGroup
-      disabled={disabled}
-      mode={mode}
-      onClick={onClick}
-      selected={
-        clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-          ? selected
-          : getSingleSelection(selected)
-      }
-      overrides={{
-        Root: {
-          style: {
-            flexWrap: "wrap",
-            gap: theme.spacing.threeXS,
+    <div className="stButtonGroup" data-testid="stButtonGroup">
+      <BasewebButtonGroup
+        disabled={disabled}
+        mode={mode}
+        onClick={onClick}
+        selected={
+          clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
+            ? selected
+            : getSingleSelection(selected)
+        }
+        overrides={{
+          Root: {
+            style: {
+              flexWrap: "wrap",
+              gap: theme.spacing.threeXS,
+            },
           },
-          props: {
-            "data-testid": "stButtonGroup",
-          },
-        },
-      }}
-    >
-      {optionElements}
-    </BasewebButtonGroup>
+        }}
+      >
+        {optionElements}
+      </BasewebButtonGroup>
+    </div>
   )
 }
 

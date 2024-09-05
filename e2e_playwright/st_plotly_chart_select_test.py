@@ -16,10 +16,15 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_button,
+    get_element_by_key,
+)
 
 
 def test_box_select_on_scatter_chart_displays_a_df(app: Page):
-    chart = app.locator(".stPlotlyChart").nth(0)
+    chart = app.get_by_test_id("stPlotlyChart").nth(0)
     expect(chart).to_be_visible()
     chart.hover()
     app.mouse.down()
@@ -33,7 +38,7 @@ def test_box_select_on_scatter_chart_displays_a_df(app: Page):
 
 
 def test_lasso_select_on_line_chart_displays_a_df(app: Page):
-    chart = app.locator(".stPlotlyChart").nth(1)
+    chart = app.get_by_test_id("stPlotlyChart").nth(1)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -52,7 +57,7 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
 def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(2)
+    chart = app.get_by_test_id("stPlotlyChart").nth(2)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -89,7 +94,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
 
 
 def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
-    chart = app.locator(".stPlotlyChart").nth(3)
+    chart = app.get_by_test_id("stPlotlyChart").nth(3)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -106,7 +111,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(4)
+    chart = app.get_by_test_id("stPlotlyChart").nth(4)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -140,7 +145,7 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
 def test_double_click_select_mode_doesnt_reset_zoom(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(0)
+    chart = app.get_by_test_id("stPlotlyChart").nth(0)
     expect(chart).to_be_visible()
     chart.hover()
     app.mouse.down()
@@ -164,7 +169,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
 def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(0)
+    chart = app.get_by_test_id("stPlotlyChart").nth(0)
     expect(chart).to_be_visible()
     chart.hover()
     app.mouse.down()
@@ -198,7 +203,7 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
 def test_selection_state_remains_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(5)
+    chart = app.get_by_test_id("stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
     chart.hover()
@@ -208,8 +213,7 @@ def test_selection_state_remains_after_unmounting(
     app.mouse.up()
     wait_for_app_run(app)
 
-    app.get_by_test_id("stButton").locator("button").click()
-    wait_for_app_run(app, 4000)
+    click_button(app, "Create some elements to unmount component")
 
     expect(chart).to_be_visible()
     # Hover chart to show toolbar:
@@ -218,7 +222,7 @@ def test_selection_state_remains_after_unmounting(
 
 
 def test_supports_points_and_box_if_activated(app: Page):
-    chart = app.locator(".stPlotlyChart").nth(6)
+    chart = app.get_by_test_id("stPlotlyChart").nth(6)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -236,3 +240,13 @@ def test_supports_points_and_box_if_activated(app: Page):
     app.mouse.up()
     wait_for_app_run(app)
     expect(app.get_by_text("Selected points: 25")).to_be_attached()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stPlotlyChart")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "line_chart")).to_be_visible()

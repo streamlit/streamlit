@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, click_toggle
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_checkbox,
+    click_toggle,
+)
 
 
 def change_widget_values(app: Page):
@@ -130,8 +134,29 @@ def test_form_with_stretched_button(
     )
 
 
+def test_form_submit_with_emoji_icon(app: Page, assert_snapshot: ImageCompareFunction):
+    """Tests if the form submit button with emoji icon renders correctly."""
+    form_2 = app.get_by_test_id("stForm").nth(3)
+
+    assert_snapshot(form_2, name="st_form_submit-emoji_icon")
+
+
+def test_form_submit_with_material_icon(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Tests if the form submit button with material icon renders correctly."""
+    form_2 = app.get_by_test_id("stForm").nth(4)
+
+    assert_snapshot(form_2, name="st_form_submit-material_icon")
+
+
 def test_borderless_form(app: Page, assert_snapshot: ImageCompareFunction):
     """Tests if the borderless form (border=False) renders correctly."""
     form_3 = app.get_by_test_id("stForm").nth(2)
 
     assert_snapshot(form_3, name="st_form-borderless")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stForm")

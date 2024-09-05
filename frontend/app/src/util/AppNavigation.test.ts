@@ -82,7 +82,11 @@ function generateNewSession(changes = {}): NewSession {
       isHello: false,
     },
     appPages: [
-      { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+      {
+        pageScriptHash: "page_script_hash",
+        pageName: "streamlit app",
+        urlPathname: "streamlit_app",
+      },
     ],
     pageScriptHash: "page_script_hash",
     mainScriptHash: "main_script_hash",
@@ -139,7 +143,11 @@ describe("AppNavigation", () => {
 
       const [newState] = maybeState!
       expect(newState.appPages).toEqual([
-        { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+        {
+          pageScriptHash: "page_script_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+        },
       ])
     })
 
@@ -161,7 +169,11 @@ describe("AppNavigation", () => {
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages: [
-          { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
         ],
       })
 
@@ -185,7 +197,11 @@ describe("AppNavigation", () => {
       const maybeState = appNavigation.handlePagesChanged(
         new PagesChanged({
           appPages: [
-            { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+            {
+              pageScriptHash: "other_page_script_hash",
+              pageName: "foo bar",
+              urlPathname: "foo_bar",
+            },
           ],
         })
       )
@@ -193,7 +209,11 @@ describe("AppNavigation", () => {
 
       const [newState] = maybeState!
       expect(newState.appPages).toEqual([
-        { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+        {
+          pageScriptHash: "other_page_script_hash",
+          pageName: "foo bar",
+          urlPathname: "foo_bar",
+        },
       ])
     })
 
@@ -201,7 +221,11 @@ describe("AppNavigation", () => {
       const maybeState = appNavigation.handlePagesChanged(
         new PagesChanged({
           appPages: [
-            { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+            {
+              pageScriptHash: "other_page_script_hash",
+              pageName: "foo bar",
+              urlPathname: "foo_bar",
+            },
           ],
         })
       )
@@ -213,7 +237,11 @@ describe("AppNavigation", () => {
       expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
         type: "SET_APP_PAGES",
         appPages: [
-          { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+          {
+            pageScriptHash: "other_page_script_hash",
+            pageName: "foo bar",
+            urlPathname: "foo_bar",
+          },
         ],
       })
     })
@@ -261,7 +289,7 @@ describe("AppNavigation", () => {
       const page = appNavigation.findPageByUrlPath("/streamlit_app")
 
       expect(page.pageScriptHash).toEqual("page_script_hash")
-      expect(page.pageName).toEqual("streamlit_app")
+      expect(page.pageName).toEqual("streamlit app")
     })
 
     it("returns default url by path when path is invalid", () => {
@@ -270,7 +298,7 @@ describe("AppNavigation", () => {
       const page = appNavigation.findPageByUrlPath("foo")
 
       expect(page.pageScriptHash).toEqual("page_script_hash")
-      expect(page.pageName).toEqual("streamlit_app")
+      expect(page.pageName).toEqual("streamlit app")
     })
   })
 
@@ -313,7 +341,11 @@ describe("AppNavigation", () => {
       const maybeState = appNavigation.handlePagesChanged(
         new PagesChanged({
           appPages: [
-            { pageScriptHash: "other_page_script_hash", pageName: "foo_bar" },
+            {
+              pageScriptHash: "other_page_script_hash",
+              pageName: "foo bar",
+              urlPathname: "foo_bar",
+            },
           ],
         })
       )

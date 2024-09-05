@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.form_utils import current_form_id
@@ -27,6 +27,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
     to_key,
@@ -42,7 +43,9 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.state.common import (
+    save_for_app_testing,
+)
 from streamlit.type_util import (
     T,
     check_python_comparable,
@@ -81,6 +84,44 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T | None: ...
+
     @gather_metrics("radio")
     def radio(
         self,
@@ -125,9 +166,10 @@ class RadioMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
 
             Labels can include markdown as described in the ``label`` parameter
             and will be cast to str internally by default.
@@ -273,7 +315,7 @@ class RadioMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
             label=label,
@@ -312,7 +354,7 @@ class RadioMixin:
             index = None
 
         radio_proto = RadioProto()
-        radio_proto.id = id
+        radio_proto.id = element_id
         radio_proto.label = label
         if index is not None:
             radio_proto.default = index
@@ -335,7 +377,6 @@ class RadioMixin:
         widget_state = register_widget(
             "radio",
             radio_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -353,7 +394,7 @@ class RadioMixin:
             radio_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("radio", radio_proto)
         return widget_state.value
 

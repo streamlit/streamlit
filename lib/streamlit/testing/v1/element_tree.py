@@ -51,7 +51,7 @@ from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.state.common import TESTING_KEY, user_key_from_widget_id
+from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -188,7 +188,7 @@ class Widget(Element, ABC):
     def __init__(self, proto: Any, root: ElementTree):
         self.proto = proto
         self.root = root
-        self.key = user_key_from_widget_id(self.id)
+        self.key = user_key_from_element_id(self.id)
         self._value = None
 
     def set_value(self, v: Any):

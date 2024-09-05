@@ -240,7 +240,11 @@ const NEW_SESSION_JSON: INewSession = {
     isHello: false,
   },
   appPages: [
-    { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+    {
+      pageScriptHash: "page_script_hash",
+      pageName: "streamlit app",
+      urlPathname: "streamlit_app",
+    },
   ],
   pageScriptHash: "page_script_hash",
   mainScriptPath: "path/to/file.py",
@@ -864,8 +868,8 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
 
       const appPages = [
-        { pageScriptHash: "hash1", pageName: "page1" },
-        { pageScriptHash: "hash2", pageName: "page2" },
+        { pageScriptHash: "hash1", pageName: "page1", urlPathname: "page1" },
+        { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
       sendForwardMessage("newSession", {
@@ -988,8 +992,16 @@ describe("App", () => {
         sendForwardMessage("newSession", {
           ...NEW_SESSION_JSON,
           appPages: [
-            { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-            { pageScriptHash: "hash2", pageName: "page2" },
+            {
+              pageScriptHash: "page_script_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+            },
+            {
+              pageScriptHash: "hash2",
+              pageName: "page2",
+              urlPathname: "page2",
+            },
           ],
           pageScriptHash: "hash2",
         })
@@ -1026,8 +1038,16 @@ describe("App", () => {
         )
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1069,8 +1089,16 @@ describe("App", () => {
         sendForwardMessage("newSession", {
           ...NEW_SESSION_JSON,
           appPages: [
-            { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-            { pageScriptHash: "hash2", pageName: "page2" },
+            {
+              pageScriptHash: "page_script_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+            },
+            {
+              pageScriptHash: "hash2",
+              pageName: "page2",
+              urlPathname: "page2",
+            },
           ],
           pageScriptHash: "hash2",
         })
@@ -1087,8 +1115,16 @@ describe("App", () => {
         history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1122,8 +1158,16 @@ describe("App", () => {
         history.replaceState({}, "", "/page2") // Starting from a not main page.
 
         const appPages = [
-          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-          { pageScriptHash: "subpage_hash", pageName: "page2" },
+          {
+            pageScriptHash: "toppage_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+          {
+            pageScriptHash: "subpage_hash",
+            pageName: "page2",
+            urlPathname: "page2",
+          },
         ]
 
         // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1195,7 +1239,7 @@ describe("App", () => {
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("button should be visible in development mode", () => {
@@ -1209,7 +1253,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.getByTestId("stDeployButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
 
     it("button should be hidden in viewer mode", () => {
@@ -1223,7 +1267,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("button should be hidden for hello app", () => {
@@ -1241,7 +1285,7 @@ describe("App", () => {
         },
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
   })
 
@@ -1275,8 +1319,16 @@ describe("App", () => {
         isHello: false,
       },
       appPages: [
-        { pageScriptHash: "top_hash", pageName: "streamlit_app" },
-        { pageScriptHash: "sub_hash", pageName: "page2" },
+        {
+          pageScriptHash: "top_hash",
+          pageName: "streamlit app",
+          urlPathname: "",
+        },
+        {
+          pageScriptHash: "sub_hash",
+          pageName: "page2",
+          urlPathname: "page2",
+        },
       ],
       pageScriptHash: "top_hash",
       fragmentIdsThisRun: [],
@@ -1574,8 +1626,16 @@ describe("App", () => {
       )
 
       const appPages = [
-        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
-        { pageScriptHash: "subpage_hash", pageName: "page2" },
+        {
+          pageScriptHash: "toppage_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+        },
+        {
+          pageScriptHash: "subpage_hash",
+          pageName: "page2",
+          urlPathname: "page2",
+        },
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
@@ -1663,13 +1723,141 @@ describe("App", () => {
     })
   })
 
+  describe("Logo handling", () => {
+    it("adds logo on receipt of logo ForwardMsg", () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+    })
+
+    it("MPA V1 - won't remove logo on page change (based on activeScriptHash)", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new session with a different pageScriptHash
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "different_page_script_hash",
+      })
+
+      // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
+      await waitFor(() => {
+        expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+      })
+    })
+
+    it("MPA V2 - will remove logo if activeScriptHash does not match", async () => {
+      renderApp(getProps())
+
+      // Trigger handleNavigation (MPA V2)
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "page_script_hash",
+            pageName: "streamlit_app",
+            isDefault: true,
+          },
+          { pageScriptHash: "other_page_script_hash", pageName: "Page 1" },
+        ],
+        pageScriptHash: "other_page_script_hash",
+        position: 0,
+      })
+
+      // Logo outside common script
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "other_page_script_hash",
+        }
+      )
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new session with a different pageScriptHash
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "page_script_hash",
+      })
+
+      // Specifically did not send the scriptFinished here as that would handle cleanup based on scriptRunId
+      // Cleanup for MPA V2 in filterMainScriptElements
+      await waitFor(() => {
+        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      })
+    })
+
+    it("will remove logo if scriptRunId does not match", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage(
+        "logo",
+        {
+          image:
+            "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+        },
+        {
+          activeScriptHash: "page_script_hash",
+        }
+      )
+
+      expect(screen.getByTestId("stLogo")).toBeInTheDocument()
+
+      // Trigger a new scriptRunId via new session
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // Trigger cleanup in script finished handler
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      // Since no logo is sent in this script run, logo must not be present in the script anymore
+      // Stale logo should be removed
+      await waitFor(() => {
+        expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+      })
+    })
+  })
+
   //   * handlePageNotFound has branching error messages depending on pageName
   describe("App.handlePageNotFound", () => {
     it("includes the missing page name in error modal message if available", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+        appPages: [
+          {
+            pageScriptHash: "page_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+        ],
         pageScriptHash: "page_hash",
       })
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -1695,7 +1883,13 @@ describe("App", () => {
       renderApp(getProps())
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+        appPages: [
+          {
+            pageScriptHash: "page_hash",
+            pageName: "streamlit app",
+            urlPathname: "streamlit_app",
+          },
+        ],
         pageScriptHash: "page_hash",
       })
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -2421,8 +2615,18 @@ describe("App", () => {
       const hostCommunicationMgr = prepareHostCommunicationManager()
 
       const appPages = [
-        { icon: "", pageName: "bob", scriptPath: "bob.py" },
-        { icon: "", pageName: "carl", scriptPath: "carl.py" },
+        {
+          icon: "",
+          pageName: "bob",
+          scriptPath: "bob.py",
+          urlPathname: "bob",
+        },
+        {
+          icon: "",
+          pageName: "carl",
+          scriptPath: "carl.py",
+          urlPathname: "carl",
+        },
       ]
 
       sendForwardMessage("pagesChanged", {
@@ -2550,7 +2754,9 @@ describe("App", () => {
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      expect(screen.queryByTestId("stActionButton")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stToolbarActionButton")
+      ).not.toBeInTheDocument()
 
       fireWindowPostMessage({
         type: "SET_TOOLBAR_ITEMS",
@@ -2562,7 +2768,7 @@ describe("App", () => {
         ],
       })
 
-      expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stToolbarActionButton")).toBeInTheDocument()
     })
 
     it("sets hideSidebarNav based on the server config option and host setting", () => {
@@ -2571,8 +2777,8 @@ describe("App", () => {
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
 
       const appPages = [
-        { pageScriptHash: "hash1", pageName: "page1" },
-        { pageScriptHash: "hash2", pageName: "page2" },
+        { pageScriptHash: "hash1", pageName: "page1", urlPathname: "page1" },
+        { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
       sendForwardMessage("newSession", {
@@ -2602,14 +2808,14 @@ describe("App", () => {
         },
       })
 
-      expect(screen.getByTestId("stDeployButton")).toBeInTheDocument()
+      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
 
       fireWindowPostMessage({
         type: "SET_MENU_ITEMS",
         items: [{ label: "Host menu item", key: "host-item", type: "text" }],
       })
 
-      expect(screen.queryByTestId("stDeployButton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("does not relay custom parent messages by default", () => {

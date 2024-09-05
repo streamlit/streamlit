@@ -18,7 +18,12 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_form_button,
+    expect_help_tooltip,
+    get_element_by_key,
+)
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -140,8 +145,7 @@ def test_slider_works_in_forms(app: Page):
 
     # need to wait for the actual component value to update and then submit
     app.wait_for_timeout(200)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expect(app.get_by_text("slider-in-form selection: 50")).to_be_visible()
 
@@ -170,3 +174,13 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     wait_for_app_run(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
     assert_snapshot(slider, name="st_slider-float_formatting")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stSlider")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "slider8")).to_be_visible()

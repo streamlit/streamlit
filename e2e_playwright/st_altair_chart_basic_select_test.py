@@ -21,8 +21,15 @@ from dataclasses import dataclass
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_prefixed_markdown
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+)
+from e2e_playwright.shared.app_utils import (
+    click_form_button,
+    expect_prefixed_markdown,
+    get_element_by_key,
+)
 
 
 @dataclass
@@ -62,47 +69,47 @@ def _click(app: Page, chart: Locator, click_position: _MousePosition) -> None:
 
 
 def _get_selection_point_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(0)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(0)
 
 
 def _get_selection_interval_scatter_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(1)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(1)
 
 
 def _get_selection_point_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(2)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(2)
 
 
 def _get_selection_interval_bar_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(3)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(3)
 
 
 def _get_selection_point_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(4)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(4)
 
 
 def _get_selection_interval_area_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(5)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(5)
 
 
 def _get_selection_point_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(6)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(6)
 
 
 def _get_selection_interval_histogram(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(7)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(7)
 
 
 def _get_in_form_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(8)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(8)
 
 
 def _get_callback_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(9)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(9)
 
 
 def _get_in_fragment_chart(app: Page) -> Locator:
-    return app.get_by_test_id("stArrowVegaLiteChart").locator("canvas").nth(10)
+    return app.get_by_test_id("stVegaLiteChart").locator("canvas").nth(10)
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
@@ -286,8 +293,7 @@ def test_in_form_selection_and_session_state(app: Page):
 
     # submit the form. The selection uses a debounce of 200ms; if we click too early, the state is not updated correctly and we submit the old, unselected values
     # app.wait_for_timeout(210)
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expected_selection = re.compile(
         "{'selection': {'param_1': \\[{'IMDB_Rating': 4.6}\\]}}"
@@ -357,3 +363,8 @@ def test_selection_state_remains_after_unmounting_snapshot(
         name="st_altair_chart-scatter_shift_selection",
         image_threshold=0.041,
     )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "scatter_point")).to_be_visible()

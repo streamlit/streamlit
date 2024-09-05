@@ -116,7 +116,9 @@ describe("AppView element", () => {
 
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
-    expect(screen.getByTestId("stAppViewContainer")).toBeInTheDocument()
+    const appViewContainer = screen.getByTestId("stAppViewContainer")
+    expect(appViewContainer).toBeInTheDocument()
+    expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -293,7 +295,7 @@ describe("AppView element", () => {
     render(<AppView {...props} />)
 
     const style = window.getComputedStyle(
-      screen.getByTestId("stAppViewBlockContainer")
+      screen.getByTestId("stMainBlockContainer")
     )
     expect(style.maxWidth).not.toEqual("initial")
   })
@@ -309,7 +311,7 @@ describe("AppView element", () => {
     })
     render(<AppView {...getProps()} />)
     const style = window.getComputedStyle(
-      screen.getByTestId("stAppViewBlockContainer")
+      screen.getByTestId("stMainBlockContainer")
     )
     expect(style.maxWidth).toEqual("initial")
   })
@@ -324,6 +326,12 @@ describe("AppView element", () => {
       image:
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
       link: "www.example.com",
+    })
+
+    const imageWithSize = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+      size: "large",
     })
 
     const fullAppLogo = LogoProto.create({
@@ -341,19 +349,24 @@ describe("AppView element", () => {
     it("uses iconImage if provided", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       render(<AppView {...getProps({ appLogo: fullAppLogo })} />)
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://docs.streamlit.io/logo.svg"
       )
+      expect(collapsedLogo).toHaveClass("stLogo")
     })
 
     it("defaults to image if no iconImage", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       render(<AppView {...getProps({ appLogo: imageOnly })} />)
-      const openSidebarContainer = screen.getByTestId("collapsedControl")
+      const openSidebarContainer = screen.getByTestId(
+        "stSidebarCollapsedControl"
+      )
       expect(openSidebarContainer).toBeInTheDocument()
       const collapsedLogo = within(openSidebarContainer).getByTestId("stLogo")
       expect(collapsedLogo).toBeInTheDocument()
@@ -362,9 +375,10 @@ describe("AppView element", () => {
       )
     })
 
-    it("default no link with image", () => {
+    it("default no link with image size medium", () => {
       render(<AppView {...getProps({ appLogo: imageOnly })} />)
       expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "1.5rem" })
     })
 
     it("link with image if provided", () => {
@@ -373,6 +387,11 @@ describe("AppView element", () => {
         "href",
         "www.example.com"
       )
+    })
+
+    it("renders logo - large size when specified", () => {
+      render(<AppView {...getProps({ appLogo: imageWithSize })} />)
+      expect(screen.getByTestId("stLogo")).toHaveStyle({ height: "2rem" })
     })
   })
 
@@ -398,7 +417,7 @@ describe("AppView element", () => {
     const props = getProps()
     render(<AppView {...props} />)
 
-    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
     expect(stbContainer).not.toBeInTheDocument()
   })
 
@@ -447,7 +466,7 @@ describe("AppView element", () => {
 
     render(<AppView {...props} />)
 
-    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
     expect(stbContainer).toBeInTheDocument()
   })
 })
