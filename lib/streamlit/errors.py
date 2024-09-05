@@ -173,8 +173,117 @@ class LocalizableStreamlitException(StreamlitAPIException):
         return self._exec_kwargs
 
 
+# st.set_page_config
+class StreamlitSetPageConfigMustBeFirstCommandError(LocalizableStreamlitException):
+    """Exception raised when the set_page_config command is not the first executed streamlit command."""
+
+    def __init__(self):
+        super().__init__(
+            "`set_page_config()` can only be called once per app page, "
+            "and must be called as the first Streamlit command in your script.\n\n"
+            "For more information refer to the [docs]"
+            "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
+        )
+
+
+class StreamlitInvalidPageLayoutError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for layout."""
+
+    def __init__(self, layout: str):
+        super().__init__(
+            'layout must be "centered" or "wide" (got "{layout}")', layout=layout
+        )
+
+
+class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
+
+    def __init__(self, initial_sidebar_state: str):
+        super().__init__(
+            'initial_sidebar_state must be "auto" or "expanded" or "collapsed" (got "{initial_sidebar_state}")',
+            initial_sidebar_state=initial_sidebar_state,
+        )
+
+
+class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
+    """Exception raised when an invalid key is specified."""
+
+    def __init__(self, key: str):
+        super().__init__(
+            'We only accept the keys: "Get help", "Report a bug", and "About" ("{key}" is not a valid key.)',
+            key=key,
+        )
+
+
+class StreamlitInvalidURLError(LocalizableStreamlitException):
+    """Exception raised when an invalid URL is specified for any of the menu items except for “About”."""
+
+    def __init__(self, url: str):
+        super().__init__(
+            '"{url}" is a not a valid URL. '
+            "You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`.",
+            url=url,
+        )
+
+
+# st.columns
+class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
+    """Exception raised when no weights are specified, or a negative weight is specified."""
+
+    def __init__(self):
+        super().__init__(
+            "The spec argument to `st.columns` must be either a "
+            "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
+            "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
+            "for more information."
+        )
+
+
+class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for vertical_alignment."""
+
+    def __init__(self, vertical_alignment: str):
+        super().__init__(
+            'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
+            "The argument passed was {vertical_alignment}.",
+            vertical_alignment=vertical_alignment,
+        )
+
+
+class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for gap."""
+
+    def __init__(self, gap: str):
+        super().__init__(
+            'The gap argument to st.columns must be "small", "medium", or "large". \n'
+            "The argument passed was {gap}.",
+            gap=gap,
+        )
+
+
+# st.multiselect
+class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
+    """Exception raised when there are more default selections specified than the max allowable selections."""
+
+    def __init__(self, current_selections_count: int, max_selections_count: int):
+        super().__init__(
+            "Multiselect has {current_selections_count} {current_selections_noun} "
+            "selected but `max_selections` is set to {max_selections_count}. "
+            "This happened because you either gave too many options to `default` "
+            "or you manipulated the widget's state through `st.session_state`. "
+            "Note that the latter can happen before the line indicated in the traceback. "
+            "Please select at most {max_selections_count} {options_noun}.",
+            current_selections_count=current_selections_count,
+            current_selections_noun="option"
+            if current_selections_count == 1
+            else "options",
+            max_selections_count=max_selections_count,
+            options_noun="option" if max_selections_count == 1 else "options",
+        )
+
+
 # st.number_input
-class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
+class StreamlitMixedNumericTypesError(LocalizableStreamlitException):
     """Exception raised mixing floats and ints in st.number_input."""
 
     def __init__(
@@ -216,8 +325,8 @@ class StreamlitNumberInputDifferentTypesError(LocalizableStreamlitException):
         )
 
 
-class StreamlitNumberInputInvalidMinValueError(LocalizableStreamlitException):
-    """Exception raised when the `min_value` is greater than the `value` in `st.number_input`."""
+class StreamlitValueBelowMinError(LocalizableStreamlitException):
+    """Exception raised when the `min_value` is greater than the `value`."""
 
     def __init__(self, value: int | float, min_value: int | float):
         super().__init__(
@@ -227,8 +336,8 @@ class StreamlitNumberInputInvalidMinValueError(LocalizableStreamlitException):
         )
 
 
-class StreamlitNumberInputInvalidMaxValueError(LocalizableStreamlitException):
-    """Exception raised when the `max_value` is less than the `value` in `st.number_input`."""
+class StreamlitValueAboveMaxError(LocalizableStreamlitException):
+    """Exception raised when the `max_value` is less than the `value`."""
 
     def __init__(self, value: int | float, max_value: int | float):
         super().__init__(
@@ -245,7 +354,7 @@ class StreamlitJSNumberBoundsError(LocalizableStreamlitException):
         super().__init__(message)
 
 
-class StreamlitNumberInputInvalidFormatError(LocalizableStreamlitException):
+class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
     """Exception raised when the format string for `st.number_input` contains
     invalid characters.
     """
@@ -319,91 +428,4 @@ class StreamlitWidgetValueAssignmentNotAllowedError(LocalizableStreamlitExceptio
         super().__init__(
             "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
             key=key,
-        )
-
-
-# st.multiselect
-class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
-    """Exception raised when there are more default selections specified than the max allowable selections."""
-
-    def __init__(self, current_selections_count: int, max_selections_count: int):
-        super().__init__(
-            "Multiselect has {current_selections_count} {current_selections_noun} "
-            "selected but `max_selections` is set to {max_selections_count}. "
-            "This happened because you either gave too many options to `default` "
-            "or you manipulated the widget's state through `st.session_state`. "
-            "Note that the latter can happen before the line indicated in the traceback. "
-            "Please select at most {max_selections_count} {options_noun}.",
-            current_selections_count=current_selections_count,
-            current_selections_noun="option"
-            if current_selections_count == 1
-            else "options",
-            max_selections_count=max_selections_count,
-            options_noun="option" if max_selections_count == 1 else "options",
-        )
-
-
-# st.columns
-class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
-    """Exception raised when no weights are specified, or a negative weight is specified."""
-
-    def __init__(self):
-        super().__init__(
-            "The spec argument to `st.columns` must be either a "
-            "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
-            "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
-            "for more information."
-        )
-
-
-# st.set_page_config
-class StreamlitSetPageConfigMustBeFirstCommandError(LocalizableStreamlitException):
-    """Exception raised when the set_page_config command is not the first executed streamlit command."""
-
-    def __init__(self):
-        super().__init__(
-            "`set_page_config()` can only be called once per app page, "
-            "and must be called as the first Streamlit command in your script.\n\n"
-            "For more information refer to the [docs]"
-            "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
-        )
-
-
-class StreamlitInvalidLayoutError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for layout."""
-
-    def __init__(self, layout: str):
-        super().__init__(
-            'layout must be "centered" or "wide" (got "{layout}")', layout=layout
-        )
-
-
-class StreamlitInvalidSidebarStateError(LocalizableStreamlitException):
-    """Exception raised when an invalid value is specified for `initial_sidebar_state`."""
-
-    def __init__(self, initial_sidebar_state: str):
-        super().__init__(
-            'initial_sidebar_state must be "auto" or "expanded" or "collapsed" (got "{initial_sidebar_state}")',
-            initial_sidebar_state=initial_sidebar_state,
-        )
-
-
-class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
-    """Exception raised when an invalid key is specified."""
-
-    def __init__(self, key: str):
-        super().__init__(
-            'We only accept the keys: "Get help", "Report a bug", and "About" ("{key}" is not a valid key.)',
-            key=key,
-        )
-
-
-class StreamlitInvalidURLError(LocalizableStreamlitException):
-    """Exception raised when an invalid URL is specified for any of the menu items except for “About”."""
-
-    def __init__(self, url: str):
-        super().__init__(
-            '"{url}" is a not a valid URL. '
-            "You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`.",
-            url=url,
         )

@@ -34,11 +34,11 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitInvalidNumberFormatError,
     StreamlitJSNumberBoundsError,
-    StreamlitNumberInputDifferentTypesError,
-    StreamlitNumberInputInvalidFormatError,
-    StreamlitNumberInputInvalidMaxValueError,
-    StreamlitNumberInputInvalidMinValueError,
+    StreamlitMixedNumericTypesError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
 )
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -385,7 +385,7 @@ class NumberInputMixin:
         )
 
         if not all_int_args and not all_float_args:
-            raise StreamlitNumberInputDifferentTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
+            raise StreamlitMixedNumericTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -437,18 +437,18 @@ class NumberInputMixin:
         try:
             float(format % 2)
         except (TypeError, ValueError):
-            raise StreamlitNumberInputInvalidFormatError(format)
+            raise StreamlitInvalidNumberFormatError(format)
 
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and all_int_args
 
         if min_value is not None and value is not None and min_value > value:
-            raise StreamlitNumberInputInvalidMinValueError(value=value, min_value=min_value)
+            raise StreamlitValueBelowMinError(value=value, min_value=min_value)
 
 
         if max_value is not None and value is not None and max_value < value:
-            raise StreamlitNumberInputInvalidMaxValueError(value=value, max_value=max_value)
+            raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.

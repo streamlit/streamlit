@@ -22,8 +22,8 @@ from typing_extensions import TypeAlias
 
 from streamlit.elements import image
 from streamlit.errors import (
-    StreamlitInvalidLayoutError,
     StreamlitInvalidMenuItemKeyError,
+    StreamlitInvalidPageLayoutError,
     StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
 )
@@ -232,7 +232,7 @@ def set_page_config(
     elif layout == "wide":
         pb_layout = PageConfigProto.WIDE
     else:
-        raise StreamlitInvalidLayoutError(layout=layout)
+        raise StreamlitInvalidPageLayoutError(layout=layout)
 
     msg.page_config_changed.layout = pb_layout
 
