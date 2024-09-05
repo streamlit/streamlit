@@ -19,7 +19,6 @@ import React, {
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useState,
 } from "react"
 
@@ -114,7 +113,6 @@ const SidebarNav = ({
       page => page.sectionHeader || ""
     )
     // For MPAv2: renders each NavSection with its respective header
-    contents = []
     let currentPageCount = 0
     navSections.forEach(header => {
       const sectionPages = pagesBySectionHeader[header] ?? []
