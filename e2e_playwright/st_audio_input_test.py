@@ -29,7 +29,7 @@ def test_audio_input_renders(app: Page):
 def test_snapshots(app: Page, assert_snapshot: ImageCompareFunction):
     audio_input_element = app.get_by_test_id("stAudioInput").first
 
-    assert_snapshot(audio_input_element, "st_audio_input_default")
+    assert_snapshot(audio_input_element, name="st_audio_input_default")
 
 
 @pytest.mark.only_browser("chromium")
