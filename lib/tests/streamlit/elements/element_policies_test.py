@@ -31,7 +31,7 @@ from streamlit.elements.lib.policies import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitWidgetValueAssignmentNotAllowedError,
+    StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
 
@@ -122,7 +122,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        with self.assertRaises(StreamlitWidgetValueAssignmentNotAllowedError):
+        with self.assertRaises(StreamlitValueAssignmentNotAllowedError):
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
 
 

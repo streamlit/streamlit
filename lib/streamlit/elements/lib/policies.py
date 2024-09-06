@@ -22,7 +22,7 @@ from streamlit.errors import (
     StreamlitAPIWarning,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
     StreamlitInvalidFormCallbackError,
-    StreamlitWidgetValueAssignmentNotAllowedError,
+    StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
@@ -78,7 +78,7 @@ def check_session_state_rules(
         return
 
     if not writes_allowed:
-        raise StreamlitWidgetValueAssignmentNotAllowedError(key=key)
+        raise StreamlitValueAssignmentNotAllowedError(key=key)
 
     if (
         default_value is not None

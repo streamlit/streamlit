@@ -20,7 +20,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitWidgetValueAssignmentNotAllowedError,
+    StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
@@ -232,7 +232,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_session_state_rules(self):
         """Test that it disallows being called in containers (using with syntax)."""
-        with self.assertRaises(StreamlitWidgetValueAssignmentNotAllowedError):
+        with self.assertRaises(StreamlitValueAssignmentNotAllowedError):
             st.session_state.my_key = "Foo"
             st.chat_input("Placeholder", key="my_key")
 
