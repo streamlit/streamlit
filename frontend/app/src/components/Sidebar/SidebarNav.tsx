@@ -15,6 +15,7 @@
  */
 
 import React, {
+  MouseEvent,
   ReactElement,
   ReactNode,
   useCallback,
@@ -49,8 +50,82 @@ export interface Props {
   onPageChange: (pageName: string) => void
 }
 
-const COLLAPSE_THRESHOLD = 13
+// We make the sidebar nav collapsible when there are more than 12 pages.
+const COLLAPSE_THRESHOLD = 12
+// However, we show the first 10 pages when the sidebar is collapsed.
 const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
+
+interface NavLinkProps {
+  pageUrl: string
+  page: IAppPage
+  isActive: boolean
+  onClick: (e: MouseEvent) => void
+}
+
+function NavLink({
+  pageUrl,
+  page,
+  isActive,
+  onClick,
+}: NavLinkProps): ReactElement {
+  const pageName = page.pageName as string
+
+  return (
+    <li>
+      <SidebarNavLink
+        isActive={isActive}
+        pageUrl={pageUrl}
+        icon={page.icon}
+        onClick={onClick}
+      >
+        {pageName}
+      </SidebarNavLink>
+    </li>
+  )
+}
+
+function generateNavSections(
+  navSections: string[],
+  appPages: IAppPage[],
+  needsCollapse: boolean,
+  generateNavLink: (page: IAppPage, index: number) => ReactElement
+): ReactNode[] {
+  const contents: ReactNode[] = []
+  const pagesBySectionHeader = groupBy(
+    appPages,
+    page => page.sectionHeader || ""
+  )
+  let currentPageCount = 0
+  navSections.forEach(header => {
+    const sectionPages = pagesBySectionHeader[header] ?? []
+    let viewablePages = sectionPages
+
+    if (needsCollapse) {
+      if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
+        // We cannot even show the section
+        return
+      } else if (
+        currentPageCount + sectionPages.length >
+        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+      ) {
+        // We can partially show the section
+        viewablePages = sectionPages.slice(
+          0,
+          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+        )
+      }
+    }
+    currentPageCount += viewablePages.length
+
+    contents.push(
+      <NavSection key={header} header={header}>
+        {viewablePages.map(generateNavLink)}
+      </NavSection>
+    )
+  })
+
+  return contents
+}
 
 /** Displays a list of navigable app page links for multi-page apps. */
 const SidebarNav = ({
@@ -69,29 +144,25 @@ const SidebarNav = ({
     setExpanded(!expanded)
   }, [expanded])
 
-  const generateNavLinks = useCallback(
+  const generateNavLink = useCallback(
     (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
-      const pageName = page.pageName as string
       const isActive = page.pageScriptHash === currentPageScriptHash
 
       return (
-        <li key={`${pageName}-${index}`}>
-          <SidebarNavLink
-            isActive={isActive}
-            pageUrl={pageUrl}
-            icon={page.icon}
-            onClick={e => {
-              e.preventDefault()
-              onPageChange(page.pageScriptHash as string)
-              if (reactDeviceDetect.isMobile) {
-                collapseSidebar()
-              }
-            }}
-          >
-            {pageName}
-          </SidebarNavLink>
-        </li>
+        <NavLink
+          key={`${page.pageName}-${index}`}
+          pageUrl={pageUrl}
+          page={page}
+          isActive={isActive}
+          onClick={e => {
+            e.preventDefault()
+            onPageChange(page.pageScriptHash as string)
+            if (reactDeviceDetect.isMobile) {
+              collapseSidebar()
+            }
+          }}
+        />
       )
     },
     [
@@ -106,48 +177,22 @@ const SidebarNav = ({
   let contents: ReactNode[] = []
   const totalPages = appPages.length
   const shouldShowViewButton =
-    hasSidebarElements && totalPages >= COLLAPSE_THRESHOLD
+    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD
+  const needsCollapse = shouldShowViewButton && !expanded
   if (navSections.length > 0) {
-    const pagesBySectionHeader = groupBy(
+    // For MPAv2 with headers: renders a NavSection for each header with its respective pages
+    contents = generateNavSections(
+      navSections,
       appPages,
-      page => page.sectionHeader || ""
+      needsCollapse,
+      generateNavLink
     )
-    // For MPAv2: renders each NavSection with its respective header
-    let currentPageCount = 0
-    navSections.forEach(header => {
-      const sectionPages = pagesBySectionHeader[header] ?? []
-      let viewablePages = sectionPages
-
-      if (shouldShowViewButton && !expanded) {
-        if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
-          // We cannot even show the section
-          return
-        } else if (
-          currentPageCount + sectionPages.length >
-          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
-        ) {
-          // We can partially show the section
-          viewablePages = sectionPages.slice(
-            0,
-            NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
-          )
-        }
-      }
-      currentPageCount += viewablePages.length
-
-      contents.push(
-        <NavSection key={header} header={header}>
-          {viewablePages.map(generateNavLinks)}
-        </NavSection>
-      )
-    })
   } else {
-    let viewablePages = appPages
-    if (shouldShowViewButton && !expanded) {
-      viewablePages = appPages.slice(0, NUM_PAGES_TO_SHOW_WHEN_COLLAPSED)
-    }
-    // For MPAv1: single NavSection with all pages displayed
-    contents = viewablePages.map(generateNavLinks)
+    const viewablePages = needsCollapse
+      ? appPages.slice(0, NUM_PAGES_TO_SHOW_WHEN_COLLAPSED)
+      : appPages
+    // For MPAv1 / MPAv2 with no section headers, single NavSection with all pages
+    contents = viewablePages.map(generateNavLink)
   }
 
   return (

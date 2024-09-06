@@ -117,17 +117,6 @@ describe("SidebarNav", () => {
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
   })
 
-  it("does not render an icon when not expanded and not overflowing", () => {
-    render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
-
-    const separator = screen.getByTestId("stSidebarNavSeparator")
-    expect(separator).toBeInTheDocument()
-
-    const viewButton = screen.queryByTestId("stSidebarNavViewButton")
-
-    expect(viewButton).not.toBeInTheDocument()
-  })
-
   it("renders View more button when there are 13 elements", () => {
     render(
       <SidebarNav
@@ -215,6 +204,7 @@ describe("SidebarNav", () => {
     expect(
       screen.queryByTestId("stSidebarNavViewButton")
     ).not.toBeInTheDocument()
+    expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(12)
   })
 
   it("renders View less button when visible and expanded", async () => {
@@ -248,7 +238,7 @@ describe("SidebarNav", () => {
     expect(viewLessButton).toBeInTheDocument()
   })
 
-  it("is unexpanded by default with 10 links", () => {
+  it("is unexpanded by default, displaying 10 links when > 12 pages", () => {
     render(
       <SidebarNav
         {...getProps({
@@ -340,17 +330,17 @@ describe("SidebarNav", () => {
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
-    expect(screen.getAllByTestId("stNavSection")).toHaveLength(2)
+    expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
 
     // Expand the pages menu
     fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
 
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(14)
-    expect(screen.getAllByTestId("stNavSection")).toHaveLength(2)
+    expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
     // Collapse the pages menu
     fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
-    expect(screen.getAllByTestId("stNavSection")).toHaveLength(2)
+    expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
   })
 
   it("will not display a section if no pages in it are visible", () => {
@@ -384,17 +374,17 @@ describe("SidebarNav", () => {
 
     expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
-    expect(screen.getAllByTestId("stNavSection")).toHaveLength(2)
+    expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
 
     // Expand the pages menu
     fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
 
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(14)
-    expect(screen.getAllByTestId("stNavSection")).toHaveLength(3)
+    expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(3)
     // Collapse the pages menu
     fireEvent.click(screen.getByTestId("stSidebarNavViewButton"))
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(10)
-    expect(screen.getAllByTestId("stNavSection")).toHaveLength(2)
+    expect(screen.getAllByTestId("stNavSectionHeader")).toHaveLength(2)
   })
 
   it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
