@@ -230,6 +230,7 @@ export const StyledIconButton = styled(
   return {
     backgroundColor: theme.colors.transparent,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    borderRadius: theme.radii.none,
     flex: "1 1 0",
     padding: 0,
 
@@ -249,6 +250,14 @@ export const StyledIconButton = styled(
       backgroundColor: theme.colors.lightGray,
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
+    },
+    "&:first-child": {
+      borderTopLeftRadius: theme.radii.default,
+      borderBottomLeftRadius: theme.radii.default,
+    },
+    "&:last-child": {
+      borderTopRightRadius: theme.radii.default,
+      borderBottomRightRadius: theme.radii.default,
     },
   }
 })
