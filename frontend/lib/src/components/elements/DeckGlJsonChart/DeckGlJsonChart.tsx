@@ -32,7 +32,7 @@ import { JSONConverter } from "@deck.gl/json/typed"
 import * as geoLayers from "@deck.gl/geo-layers/typed"
 import * as aggregationLayers from "@deck.gl/aggregation-layers/typed"
 import * as meshLayers from "@deck.gl/mesh-layers/typed"
-import { DeckProps, PickingInfo } from "@deck.gl/core/typed"
+import { DeckProps, LayersList, PickingInfo } from "@deck.gl/core/typed"
 import { TooltipContent } from "@deck.gl/core/typed/lib/tooltip"
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
@@ -50,6 +50,8 @@ import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,
 } from "./styled-components"
+import type { StreamlitDeckProps } from "./types"
+import { parseElementJson } from "./utils"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 
@@ -97,13 +99,16 @@ export interface State {
   viewState: Record<string, unknown>
   initialized: boolean
   initialViewState: Record<string, unknown>
+  hash: string | undefined
   id: string | undefined
-  pydeckJson: any
+  pydeckJson: StreamlitDeckProps | undefined
   isFullScreen: boolean
   isLightTheme: boolean
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
+
+const EMPTY_LAYERS: LayersList = []
 
 export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   readonly state = {
@@ -112,6 +117,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       pitch: 0,
       zoom: 11,
     },
+    hash: undefined,
     initialized: false,
     initialViewState: {},
     id: undefined,
@@ -170,14 +176,18 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
     const currFullScreen = isFullScreen ?? false
 
-    // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
+    // Only parse JSON when not transitioning to/from fullscreen, the element hash changes, or theme changes
     if (
-      element.id !== state.id ||
+      element.hash !== state.hash ||
       state.isFullScreen !== currFullScreen ||
       state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {
-      state.pydeckJson = JSON5.parse(element.json)
+      state.pydeckJson = parseElementJson(element.json)
       state.id = element.id
+    }
+
+    if (!state.pydeckJson) {
+      state.pydeckJson = {}
     }
 
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
@@ -267,7 +277,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           onViewStateChange={this.onViewStateChange}
           height={deck.initialViewState.height}
           width={width}
-          layers={this.state.initialized ? deck.layers : []}
+          layers={this.state.initialized ? deck.layers : EMPTY_LAYERS}
           getTooltip={this.createTooltip}
           // @ts-expect-error There is a type mismatch due to our versions of the libraries
           ContextProvider={MapContext.Provider}

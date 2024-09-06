@@ -28,9 +28,12 @@ message DeckGlJsonChart {
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 4;
 
-  // the hash of the json so the the frontend doesn't always have to parse the pydeck json object
+  // ID
   string id = 5;
 
   // The user-configured Mapbox token. If empty, the token id fetched from https://data.streamlit.io/tokens.json
   string mapbox_token = 6;
+
+  // The hash of the data json so the the frontend doesn't always have to parse the pydeck json object.
+  string hash = 7;
 }

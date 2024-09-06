@@ -16,7 +16,6 @@
 
 import React from "react"
 
-import JSON5 from "json5"
 import { screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -24,7 +23,9 @@ import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/prot
 import "@testing-library/jest-dom"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import { DeckGlJsonChart, PropsWithHeight, State } from "./DeckGlJsonChart"
+import { DeckGlJsonChart } from "./DeckGlJsonChart"
+import type { PropsWithHeight, State } from "./DeckGlJsonChart"
+import * as utils from "./utils"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -38,6 +39,7 @@ const mockInitialViewState = {
 }
 
 const mockId = "testId"
+const mockHash = "testHash"
 jest.mock("@streamlit/lib/src/theme", () => ({
   hasLightBackgroundColor: jest.fn(() => false),
 }))
@@ -73,6 +75,7 @@ const getProps = (
 
   return {
     element: DeckGlJsonChartProto.create({
+      hash: mockHash,
       id: mockId,
       json: JSON.stringify(json),
       ...elementProps,
@@ -183,7 +186,7 @@ describe("DeckGlJsonChart element", () => {
   })
 
   describe("getDeckObject", () => {
-    const newId = "newTestId"
+    const newHash = "newTestHash"
     const newJson = {
       initialViewState: mockInitialViewState,
       mapStyle: "mapbox://styles/mapbox/light-v9",
@@ -195,51 +198,50 @@ describe("DeckGlJsonChart element", () => {
       viewState: {},
       initialized: false,
       initialViewState: mockInitialViewState,
+      hash: mockHash,
       id: mockId,
       isLightTheme: false,
     }
 
-    const mockJsonParse = jest.fn().mockReturnValue(newJson)
+    let parseElementJsonSpy: jest.SpyInstance
 
     beforeEach(() => {
-      JSON5.parse = mockJsonParse
+      parseElementJsonSpy = jest.spyOn(utils, "parseElementJson")
     })
 
     afterEach(() => {
-      mockJsonParse.mockClear()
+      parseElementJsonSpy.mockRestore()
     })
 
-    const testJsonParsing = (
-      description: string,
-      stateOverride: Partial<State>
-    ): void => {
-      // the description will be passed in
-      // eslint-disable-next-line jest/valid-title
-      it(description, () => {
-        DeckGlJsonChart.getDeckObject(getProps(), originalState)
+    const testCases: { description: string; stateOverride: Partial<State> }[] =
+      [
+        {
+          description:
+            "should call parseElementJson when the element hash is different",
+          stateOverride: { hash: newHash },
+        },
+        {
+          description:
+            "should call parseElementJson when FullScreen state changes",
+          stateOverride: { isFullScreen: true },
+        },
+        {
+          description: "should call parseElementJson when theme state changes",
+          stateOverride: { isLightTheme: true },
+        },
+      ]
 
-        expect(JSON5.parse).not.toHaveBeenCalled()
+    it.each(testCases)("$description", ({ stateOverride }) => {
+      DeckGlJsonChart.getDeckObject(getProps(), originalState)
 
-        DeckGlJsonChart.getDeckObject(getProps(), {
-          ...originalState,
-          ...stateOverride,
-        })
+      expect(parseElementJsonSpy).toHaveBeenCalledTimes(0)
 
-        expect(JSON5.parse).toHaveBeenCalledTimes(1)
+      DeckGlJsonChart.getDeckObject(getProps(), {
+        ...originalState,
+        ...stateOverride,
       })
-    }
 
-    testJsonParsing(
-      "should call JSON5.parse when the element id is different",
-      { id: newId }
-    )
-    testJsonParsing("should call JSON5.parse when FullScreen state changes", {
-      id: mockId,
-      isFullScreen: true,
-    })
-    testJsonParsing("should call JSON5.parse when theme state changes", {
-      id: mockId,
-      isLightTheme: true,
+      expect(parseElementJsonSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

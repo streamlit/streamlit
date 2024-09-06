@@ -17,17 +17,16 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 from typing import TYPE_CHECKING, Any, Collection, Final, cast
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit import config, dataframe_util
 from streamlit.color_util import Color, IntColorTuple, is_color_like, to_int_color_tuple
+from streamlit.elements.lib.map_utils import get_hash_of_json_data
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from pandas import DataFrame
@@ -469,10 +468,8 @@ def marshall(
     pydeck_json: str,
     use_container_width: bool,
 ) -> None:
-    json_bytes = pydeck_json.encode("utf-8")
-    id = hashlib.md5(json_bytes, **HASHLIB_KWARGS).hexdigest()
-
     pydeck_proto.json = pydeck_json
     pydeck_proto.use_container_width = use_container_width
 
-    pydeck_proto.id = id
+    pydeck_proto.id = ""
+    pydeck_proto.hash = get_hash_of_json_data(pydeck_json)
