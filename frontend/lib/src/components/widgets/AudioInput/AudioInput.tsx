@@ -253,21 +253,14 @@ const AudioInput: React.FC<Props> = ({
     widgetMgr,
   ])
 
-  // Note: these can't be memoized due to the reliance on calling .isRecording() & .isPlaying()
-  const isPlayingOrRecording = Boolean(
-    (recordPlugin && recordPlugin.isRecording()) ||
-      (wavesurfer && wavesurfer.isPlaying())
-  )
+  const isRecording = Boolean(recordPlugin?.isRecording())
+  const isPlaying = Boolean(wavesurfer?.isPlaying())
 
-  const showPlaceholder = Boolean(
-    !(recordPlugin && recordPlugin.isRecording()) &&
-      !recordingUrl &&
-      !hasNoMicPermissions
-  )
+  const isPlayingOrRecording = isRecording || isPlaying
+  const showPlaceholder = !isRecording && !recordingUrl && !hasNoMicPermissions
 
-  const showNoMicPermissionsOrPlaceholder = Boolean(
+  const showNoMicPermissionsOrPlaceholder =
     hasNoMicPermissions || showPlaceholder
-  )
 
   return (
     <StyledAudioInputContainerDiv>
