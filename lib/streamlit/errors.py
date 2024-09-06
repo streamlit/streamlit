@@ -361,7 +361,7 @@ class StreamlitInvalidNumberFormatError(LocalizableStreamlitException):
 
     def __init__(self, format: str):
         super().__init__(
-            "Format string for st.number_input contains invalid characters: {format}",
+            "Format string for `st.number_input` contains invalid characters: {format}",
             format=format,
         )
 
