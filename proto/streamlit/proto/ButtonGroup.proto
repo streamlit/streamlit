@@ -28,7 +28,7 @@ message ButtonGroup {
   }
 
   message Option {
-    string content = 1;
+    optional string content = 1;
     optional string selected_content = 2;
     optional string content_icon = 3;
     optional string selected_content_icon = 4;

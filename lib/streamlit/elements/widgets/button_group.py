@@ -358,7 +358,10 @@ class ButtonGroupMixin:
             option: V, icon: str | None = None
         ) -> ButtonGroupProto.Option:
             if format_func is None:
-                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
+                return ButtonGroupProto.Option(
+                    content=str(option) if option is not None else None,
+                    content_icon=icon,
+                )
 
             transformed = format_func(option)
             return ButtonGroupProto.Option(
@@ -416,7 +419,7 @@ class ButtonGroupMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-    ) -> list[V] | V | None:
+    ) -> list[V | str] | V | str | None:
         # when selection mode is a single-value selection, the default must be a single
         # value too.
         if (
@@ -432,11 +435,13 @@ class ButtonGroupMixin:
             )
 
         def _transformed_format_func(
-            option: V, _: str | None
+            option: V, icon: str | None
         ) -> ButtonGroupProto.Option:
             if format_func is None:
-                return ButtonGroupProto.Option(content=str(option))
-
+                return ButtonGroupProto.Option(
+                    content=str(option) if option is not None else None,
+                    content_icon=icon,
+                )
             transformed = format_func(option)
             return ButtonGroupProto.Option(
                 content=transformed["content"],
@@ -444,9 +449,17 @@ class ButtonGroupMixin:
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
-        default_values = get_default_indices(indexable_options, default)
 
-        serde = MultiSelectSerde(indexable_options, default_values)
+        # if the passed option is empty but we have an icon at the same index, return
+        # the icon value as the option value
+        options_or_icons_values: list[str | V] = []
+        for index, option in enumerate(indexable_options):
+            if (option is None or option == "") and icons and len(icons) >= index:
+                options_or_icons_values.append(icons[index])
+            else:
+                options_or_icons_values.append(option)
+        default_values = get_default_indices(indexable_options, default)
+        serde = MultiSelectSerde(options_or_icons_values, default_values)
 
         res = self._button_group(
             indexable_options,
