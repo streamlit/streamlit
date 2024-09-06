@@ -208,11 +208,6 @@ const AudioInput: React.FC<Props> = ({
       return
     }
 
-    const deviceId = activeAudioDeviceId
-    if (isNullOrUndefined(deviceId)) {
-      return
-    }
-
     wavesurfer.setOptions({
       waveColor: theme.colors.primary,
     })
