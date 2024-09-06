@@ -16,12 +16,10 @@
 
 import styled from "@emotion/styled"
 
-import { WAVEFORM_HEIGHT } from "./constants"
-
 export const StyledAudioInputContainerDiv = styled.div()
 
 export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
-  height: WAVEFORM_HEIGHT,
+  height: theme.sizes.largestElementHeight,
   width: "100%",
   background: theme.genericColors.secondaryBg,
   borderRadius: theme.radii.default,
@@ -66,8 +64,8 @@ export const StyledNoMicPermissionsErrorTextSpan = styled.span()
 export const StyledNoMicInputLearnMoreLink = styled.a()
 
 // Placeholder
-export const StyledPlaceholderContainerDiv = styled.div(() => ({
-  height: WAVEFORM_HEIGHT,
+export const StyledPlaceholderContainerDiv = styled.div(({ theme }) => ({
+  height: theme.sizes.largestElementHeight,
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
