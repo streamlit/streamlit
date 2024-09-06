@@ -26,7 +26,7 @@ import BaseButton, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 
-export interface BaseActionButtonProps {
+interface BaseActionButtonProps {
   onClick: () => void
   disabled: boolean
   ariaLabel: string
@@ -34,7 +34,7 @@ export interface BaseActionButtonProps {
   color?: string
 }
 
-export const ActionButton: React.FC<BaseActionButtonProps> = ({
+const ActionButton: React.FC<BaseActionButtonProps> = ({
   onClick,
   disabled,
   ariaLabel,
@@ -51,7 +51,7 @@ export const ActionButton: React.FC<BaseActionButtonProps> = ({
   </BaseButton>
 )
 
-export interface AudioInputActionButtonProps {
+interface AudioInputActionButtonProps {
   disabled: boolean
   isRecording: boolean
   isPlaying: boolean
