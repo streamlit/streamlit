@@ -55,7 +55,7 @@ import {
   WAVEFORM_PADDING,
 } from "./constants"
 import formatTime from "./formatTime"
-import ActionButton from "./ActionButton"
+import AudioInputActionButton from "./AudioInputActionButton"
 
 interface Props {
   element: AudioInputProto
@@ -286,15 +286,14 @@ const AudioInput: React.FC<Props> = ({
             />
           )}
         </Toolbar>
-        <ActionButton
-          hasNoMicPermissions={hasNoMicPermissions}
-          recordPlugin={recordPlugin}
-          recordingUrl={recordingUrl}
-          wavesurfer={wavesurfer}
+        <AudioInputActionButton
+          isRecording={isRecording}
+          isPlaying={isPlaying}
+          recordingUrlExists={Boolean(recordingUrl)}
           startRecording={startRecording}
           stopRecording={stopRecording}
           onClickPlayPause={onClickPlayPause}
-          disabled={element.disabled}
+          disabled={element.disabled || hasNoMicPermissions}
         />
         <StyledWaveformInnerDiv>
           {showPlaceholder && <Placeholder />}

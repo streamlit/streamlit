@@ -19,8 +19,6 @@ import React from "react"
 import { useTheme } from "@emotion/react"
 import { Mic } from "@emotion-icons/material-outlined"
 import { Pause, PlayArrow, StopCircle } from "@emotion-icons/material-rounded"
-import RecordPlugin from "wavesurfer.js/dist/plugins/record"
-import WaveSurfer from "wavesurfer.js"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import BaseButton, {
@@ -28,7 +26,7 @@ import BaseButton, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 
-interface BaseActionButtonProps {
+export interface BaseActionButtonProps {
   onClick: () => void
   disabled: boolean
   ariaLabel: string
@@ -36,7 +34,7 @@ interface BaseActionButtonProps {
   color?: string
 }
 
-const BaseActionButton: React.FC<BaseActionButtonProps> = ({
+export const ActionButton: React.FC<BaseActionButtonProps> = ({
   onClick,
   disabled,
   ariaLabel,
@@ -53,33 +51,31 @@ const BaseActionButton: React.FC<BaseActionButtonProps> = ({
   </BaseButton>
 )
 
-interface ActionButtonProps {
-  recordPlugin: RecordPlugin | null
-  recordingUrl: string | null
-  wavesurfer: WaveSurfer | null
-  hasNoMicPermissions: boolean
+export interface AudioInputActionButtonProps {
   disabled: boolean
+  isRecording: boolean
+  isPlaying: boolean
+  recordingUrlExists: boolean
   startRecording(): void
   stopRecording(): void
   onClickPlayPause(): void
 }
 
-const ActionButton: React.FC<ActionButtonProps> = ({
-  recordPlugin,
-  recordingUrl,
-  wavesurfer,
-  hasNoMicPermissions,
+const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
   disabled,
+  isRecording,
+  isPlaying,
+  recordingUrlExists,
   startRecording,
   stopRecording,
   onClickPlayPause,
 }) => {
   const theme = useTheme()
 
-  if (recordPlugin?.isRecording()) {
+  if (isRecording) {
     // It's currently recording, so show the stop recording button
     return (
-      <BaseActionButton
+      <ActionButton
         onClick={stopRecording}
         disabled={disabled}
         ariaLabel="Stop recording"
@@ -87,11 +83,11 @@ const ActionButton: React.FC<ActionButtonProps> = ({
         color={theme.colors.primary}
       />
     )
-  } else if (recordingUrl) {
-    if (wavesurfer && wavesurfer.isPlaying()) {
+  } else if (recordingUrlExists) {
+    if (isPlaying) {
       // It's playing, so show the pause button
       return (
-        <BaseActionButton
+        <ActionButton
           onClick={onClickPlayPause}
           disabled={disabled}
           ariaLabel="Pause"
@@ -102,7 +98,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     }
     // It's paused, so show the play button
     return (
-      <BaseActionButton
+      <ActionButton
         onClick={onClickPlayPause}
         disabled={disabled}
         ariaLabel="Play"
@@ -113,18 +109,14 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   }
   // Press the button to record
   return (
-    <BaseActionButton
+    <ActionButton
       onClick={startRecording}
-      disabled={hasNoMicPermissions || disabled}
+      disabled={disabled}
       ariaLabel="Record"
       iconContent={Mic}
-      color={
-        hasNoMicPermissions
-          ? theme.colors.fadedText40
-          : theme.colors.fadedText60
-      }
+      color={disabled ? theme.colors.fadedText40 : theme.colors.fadedText60}
     />
   )
 }
 
-export default ActionButton
+export default AudioInputActionButton
