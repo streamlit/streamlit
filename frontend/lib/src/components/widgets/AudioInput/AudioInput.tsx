@@ -54,6 +54,7 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButton from "./AudioInputActionButton"
+import { blend } from "@streamlit/lib/src/theme/utils"
 
 interface Props {
   element: AudioInputProto
@@ -172,7 +173,10 @@ const AudioInput: React.FC<Props> = ({
         // way wavesurfer is using these colors. Specifically, the progress color "tints" the wave color
         // and the opacity of this wave color is not being respected, so to make things work for now hardcoding
         // this color that looks "okay" on both themes.
-        waveColor: "#A5A5AA",
+        waveColor: blend(
+          theme.colors.fadedText40,
+          theme.genericColors.secondaryBg
+        ),
       })
     })
 
