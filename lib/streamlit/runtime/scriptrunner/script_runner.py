@@ -467,7 +467,6 @@ class ScriptRunner:
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
             )
-            self._pages_manager.reset_active_script_hash()
 
             # We want to clear the forward_msg_queue during full script runs and
             # fragment-scoped fragment reruns. For normal fragment runs, clearing the

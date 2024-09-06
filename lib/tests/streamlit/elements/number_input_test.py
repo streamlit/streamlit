@@ -323,6 +323,8 @@ class NumberInputTest(DeltaGeneratorTestCase):
         )
 
     def test_should_keep_type_of_return_value_after_rerun(self):
+        # set the initial page script hash
+        self.script_run_ctx.reset(page_script_hash=self.script_run_ctx.page_script_hash)
         # Generate widget id and reset context
         st.number_input("a number", min_value=1, max_value=100, key="number")
         widget_id = self.script_run_ctx.session_state.get_widget_states()[0].id
