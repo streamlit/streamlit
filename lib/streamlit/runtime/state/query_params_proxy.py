@@ -189,7 +189,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         .. note::
             ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
             you are working with repeated keys. A true inverse operation is
-            ``{key: st.query_params.get_all(key) for key st.query_params}``.
+            ``{key: st.query_params.get_all(key) for key in st.query_params}``.
 
         Parameters
         ----------
