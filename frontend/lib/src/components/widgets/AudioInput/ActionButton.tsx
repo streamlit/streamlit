@@ -26,6 +26,32 @@ import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
+
+interface BaseActionButtonProps {
+  onClick: () => void
+  disabled: boolean
+  ariaLabel: string
+  iconContent: EmotionIcon
+  color?: string
+}
+
+const BaseActionButton: React.FC<BaseActionButtonProps> = ({
+  onClick,
+  disabled,
+  ariaLabel,
+  iconContent,
+  color,
+}) => (
+  <BaseButton
+    kind={BaseButtonKind.BORDERLESS_ICON}
+    onClick={onClick}
+    disabled={disabled}
+    aria-label={ariaLabel}
+  >
+    <Icon content={iconContent} size="lg" color={color} />
+  </BaseButton>
+)
 
 interface ActionButtonProps {
   recordPlugin: RecordPlugin | null
@@ -53,59 +79,51 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   if (recordPlugin?.isRecording()) {
     // It's currently recording, so show the stop recording button
     return (
-      <BaseButton
-        kind={BaseButtonKind.BORDERLESS_ICON}
+      <BaseActionButton
         onClick={stopRecording}
         disabled={disabled}
-        aria-label="Stop recording"
-      >
-        <Icon content={StopCircle} size="lg" color={theme.colors.primary} />
-      </BaseButton>
+        ariaLabel="Stop recording"
+        iconContent={StopCircle}
+        color={theme.colors.primary}
+      />
     )
   } else if (recordingUrl) {
     if (wavesurfer && wavesurfer.isPlaying()) {
       // It's playing, so show the pause button
       return (
-        <BaseButton
-          kind={BaseButtonKind.BORDERLESS_ICON}
+        <BaseActionButton
           onClick={onClickPlayPause}
           disabled={disabled}
-          aria-label="Pause"
-        >
-          <Icon content={Pause} size="lg" color={theme.colors.fadedText60} />
-        </BaseButton>
+          ariaLabel="Pause"
+          iconContent={Pause}
+          color={theme.colors.fadedText60}
+        />
       )
     }
     // It's paused, so show the play button
     return (
-      <BaseButton
-        kind={BaseButtonKind.BORDERLESS_ICON}
+      <BaseActionButton
         onClick={onClickPlayPause}
         disabled={disabled}
-        aria-label="Play"
-      >
-        <Icon content={PlayArrow} size="lg" color={theme.colors.fadedText60} />
-      </BaseButton>
+        ariaLabel="Play"
+        iconContent={PlayArrow}
+        color={theme.colors.fadedText60}
+      />
     )
   }
   // Press the button to record
   return (
-    <BaseButton
-      kind={BaseButtonKind.BORDERLESS_ICON}
+    <BaseActionButton
       onClick={startRecording}
       disabled={hasNoMicPermissions || disabled}
-      aria-label="Record"
-    >
-      <Icon
-        content={Mic}
-        size="lg"
-        color={
-          hasNoMicPermissions
-            ? theme.colors.fadedText40
-            : theme.colors.fadedText60
-        }
-      />
-    </BaseButton>
+      ariaLabel="Record"
+      iconContent={Mic}
+      color={
+        hasNoMicPermissions
+          ? theme.colors.fadedText40
+          : theme.colors.fadedText60
+      }
+    />
   )
 }
 
