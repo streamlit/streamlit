@@ -200,9 +200,6 @@ const AudioInput: React.FC<Props> = ({
       // but once they start playing it, we want it to be the current time. So, once they start playing it
       // we'll start keeping track of the playback time from that point onwards (until re-recording).
       setShouldUpdatePlaybackTime(true)
-
-      // to get the pause button to show
-      forceRerender()
     }
   }, [wavesurfer])
 
