@@ -14,8 +14,32 @@
  * limitations under the License.
  */
 
-import { DeckProps } from "@deck.gl/core/typed"
+import type { DeckProps } from "@deck.gl/core/typed"
+
+import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+import type { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export type StreamlitDeckProps = DeckProps & {
   mapStyle?: string
+}
+
+export interface DeckGLProps {
+  width: number
+  theme: EmotionTheme
+  mapboxToken: string
+  element: DeckGlJsonChartProto
+  isFullScreen?: boolean
+}
+
+export interface PropsWithHeight extends DeckGLProps {
+  height?: number
+}
+
+export interface DeckObject {
+  initialViewState: {
+    height: number
+    width: number
+  }
+  layers: DeckProps["layers"]
+  mapStyle?: string | Array<string>
 }

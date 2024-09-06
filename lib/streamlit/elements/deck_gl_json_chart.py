@@ -18,7 +18,6 @@ import json
 from typing import TYPE_CHECKING, Any, Dict, Final, Mapping, cast
 
 from streamlit import config
-from streamlit.elements.lib.map_utils import get_hash_of_json_data
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -169,18 +168,13 @@ def marshall(
 ) -> None:
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
-        hash = get_hash_of_json_data(spec)
     else:
         spec = pydeck_obj.to_json()
-        json_string = json.dumps(spec)
-        hash = get_hash_of_json_data(json_string)
 
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
 
     pydeck_proto.id = ""
-
-    pydeck_proto.hash = hash
 
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:
