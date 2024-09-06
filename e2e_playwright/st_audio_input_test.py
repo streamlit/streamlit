@@ -26,8 +26,8 @@ def test_audio_input_renders(app: Page):
     expect(audio_input_elements.nth(0)).to_be_visible()
 
 
-def test_snapshots(app: Page, assert_snapshot: ImageCompareFunction):
-    audio_input_element = app.get_by_test_id("stAudioInput").first
+def test_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    audio_input_element = themed_app.get_by_test_id("stAudioInput").first
 
     assert_snapshot(audio_input_element, name="st_audio_input_default")
 
