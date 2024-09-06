@@ -46,6 +46,7 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
+    data-testid="stAudioInputActionButton"
   >
     <Icon content={iconContent} size="lg" color={color} />
   </BaseButton>
