@@ -152,14 +152,14 @@ const AudioInput: React.FC<Props> = ({
       forceRerender()
     })
 
-    const recordPlugin = ws.registerPlugin(
+    const rp = ws.registerPlugin(
       RecordPlugin.create({
         scrollingWaveform: false,
         renderRecordedAudio: true,
       })
     )
 
-    recordPlugin.on("record-end", blob => {
+    rp.on("record-end", blob => {
       const url = URL.createObjectURL(blob)
       setRecordingUrl(url)
 
@@ -176,15 +176,16 @@ const AudioInput: React.FC<Props> = ({
       })
     })
 
-    recordPlugin.on("record-progress", time => {
+    rp.on("record-progress", time => {
       setRecordingTime(formatTime(time))
     })
 
     setWavesurfer(ws)
-    setRecordPlugin(recordPlugin)
+    setRecordPlugin(rp)
 
     return () => {
       if (ws) ws.destroy()
+      if (rp) rp.destroy()
     }
   }, [theme, uploadTheFile])
 
