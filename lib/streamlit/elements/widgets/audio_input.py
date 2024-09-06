@@ -94,7 +94,7 @@ class AudioInputMixin:
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
+        *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> UploadedFile | None:
