@@ -416,7 +416,7 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
 
     def __init__(self):
         super().__init__(
-            "Within a form, callbacks can only be defined on st.form_submit_button. "
+            "Within a form, callbacks can only be defined on `st.form_submit_button`. "
             "Defining callbacks on other widgets inside a form is not allowed."
         )
 
