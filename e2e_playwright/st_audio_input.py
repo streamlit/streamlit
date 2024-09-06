@@ -14,5 +14,14 @@
 
 import streamlit as st
 
-audio1 = st.audio_input(label="Audio Input 1")
+audio1 = st.audio_input(label="Audio Input 1", key="the_audio_input")
 st.audio(audio1)
+
+
+audio_input_from_form = None
+
+with st.form(key="my_form", clear_on_submit=True):
+    audio_input_from_form = st.audio_input(label="Audio Input in Form")
+    st.form_submit_button("Submit")
+
+st.write("Audio Input in Form:", audio_input_from_form)

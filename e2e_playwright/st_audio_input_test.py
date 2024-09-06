@@ -16,14 +16,30 @@ import time
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_form_button,
+    get_element_by_key,
+)
 
 
 def test_audio_input_renders(app: Page):
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    expect(audio_input_elements).to_have_count(1)
+    expect(audio_input_elements).to_have_count(2)
 
     expect(audio_input_elements.nth(0)).to_be_visible()
+    expect(audio_input_elements.nth(1)).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stAudioInput")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "the_audio_input")).to_be_visible()
 
 
 def test_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -33,17 +49,36 @@ def test_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
 
 
 @pytest.mark.only_browser("chromium")
+def test_audio_input_works_in_forms(app: Page):
+    app.context.grant_permissions(["microphone"])
+
+    expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
+
+    form_audio_input = app.get_by_test_id("stAudioInput").nth(1)
+    form_audio_input.get_by_role("button", name="Record").click()
+    time.sleep(1)
+    form_audio_input.get_by_role("button", name="Stop recording").click()
+
+    expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
+
+    click_form_button(app, "Submit")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Audio Input in Form: None")).not_to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
 def test_audio_input_basic_flow(app: Page):
     app.context.grant_permissions(["microphone"])
 
-    app.wait_for_timeout(2000)
+    audio_input = app.get_by_test_id("stAudioInput").first
 
     expect(
         app.get_by_text("This app would like to use your microphone.").first
     ).not_to_be_visible()
 
     record_button = app.get_by_role("button", name="Record").first
-    clock = app.get_by_test_id("stAudioInputWaveformTimeCode").first
+    clock = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
 
     expect(clock).to_have_text("00:00")
 
