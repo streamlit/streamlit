@@ -303,7 +303,7 @@ const AudioInput: React.FC<Props> = ({
         </StyledWaveformInnerDiv>
         <StyledWaveformTimeCode
           isPlayingOrRecording={isPlayingOrRecording}
-          data-testid="StyledWaveformTimeCode"
+          data-testid="stAudioInputWaveformTimeCode"
         >
           {shouldUpdatePlaybackTime ? progressTime : recordingTime}
         </StyledWaveformTimeCode>
