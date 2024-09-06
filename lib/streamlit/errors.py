@@ -191,7 +191,7 @@ class StreamlitInvalidPageLayoutError(LocalizableStreamlitException):
 
     def __init__(self, layout: str):
         super().__init__(
-            'layout must be "centered" or "wide" (got "{layout}")', layout=layout
+            '`layout` must be `"centered"` or `"wide"` (got `"{layout}"`)', layout=layout
         )
 
 
