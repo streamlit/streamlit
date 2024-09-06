@@ -26,12 +26,12 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 
-import Checkbox, { OwnProps } from "./Checkbox"
+import Checkbox, { Props } from "./Checkbox"
 
 const getProps = (
   elementProps: Partial<CheckboxProto> = {},
-  widgetProps: Partial<OwnProps> = {}
-): OwnProps => ({
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: CheckboxProto.create({
     id: "1",
     label: "Label",
