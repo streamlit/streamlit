@@ -24,7 +24,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.111.2
+hypothesis==6.112.0
 identify==2.6.0
 idna==3.8
 importlib_metadata==8.4.0
@@ -42,7 +42,7 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 matplotlib==3.9.2
 mdurl==0.1.2
-more-itertools==10.4.0
+more-itertools==10.5.0
 mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
@@ -105,14 +105,14 @@ types-cachetools==5.5.0.20240820
 types-click==7.1.8
 types-protobuf==5.27.0.20240626
 types-pytz==2024.1.0.20240417
-types-requests==2.32.0.20240712
-types-setuptools==74.0.0.20240831
+types-requests==2.32.0.20240905
+types-setuptools==74.1.0.20240906
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.4.5
+uv==0.4.6
 vega-datasets==0.9.0
 virtualenv==20.26.3
 watchdog==5.0.2
