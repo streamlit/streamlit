@@ -32,10 +32,7 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import {
-  DynamicIcon,
-  ICON_REGEXP,
-} from "@streamlit/lib/src/components/shared/Icon"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   ButtonGroup as ButtonGroupProto,
@@ -102,27 +99,27 @@ function getContentElement(
   content: string,
   icon?: string,
   style?: ButtonGroupProto.Style
-): { element: ReactElement; kind: BaseButtonKind } {
-  // if the content contains more than a single material icon (e.g. additional text)
-  if (content.match(ICON_REGEXP) === null) {
-    return {
-      element: (
-        <>
-          {icon && <DynamicIcon size="lg" iconValue={icon} />}
-          <StreamlitMarkdown source={content} allowHTML={false} />
-        </>
-      ),
-      kind:
-        style === ButtonGroupProto.Style.PILLS
-          ? BaseButtonKind.PILLS
-          : BaseButtonKind.SEGMENT,
-    }
+): { element: ReactElement; kind: BaseButtonKind; size: BaseButtonSize } {
+  let kind =
+    style === ButtonGroupProto.Style.PILLS
+      ? BaseButtonKind.PILLS
+      : BaseButtonKind.SEGMENT
+  let size = BaseButtonSize.MEDIUM
+
+  if (icon && !content) {
+    kind = BaseButtonKind.BORDERLESS_ICON
+    size = BaseButtonSize.XSMALL
   }
 
-  // used for single icons
   return {
-    element: <DynamicIcon size="lg" iconValue={content} />,
-    kind: BaseButtonKind.BORDERLESS_ICON,
+    element: (
+      <>
+        {icon && <DynamicIcon size="lg" iconValue={icon} />}
+        {content && <StreamlitMarkdown source={content} allowHTML={false} />}
+      </>
+    ),
+    kind: kind,
+    size: size,
   }
 }
 
@@ -158,33 +155,15 @@ function showAsSelected(
   return selected.length > 0 && index < selected[0]
 }
 
-function getContent(
-  isVisuallySelected: boolean,
-  fallbackContent: string,
-  selectionContent?: string | undefined | null
-): string {
-  if (isVisuallySelected && selectionContent) {
-    return selectionContent
-  }
-
-  return fallbackContent
-}
-
 function getButtonKindAndSize(
   isVisuallySelected: boolean,
-  buttonKind: BaseButtonKind,
-  type: string | React.JSXElementConstructor<any>
-): [BaseButtonKind, BaseButtonSize] {
-  let size = BaseButtonSize.MEDIUM
-  if (type === DynamicIcon) {
-    size = BaseButtonSize.XSMALL
-  }
-
+  buttonKind: BaseButtonKind
+): BaseButtonKind {
   if (isVisuallySelected) {
     buttonKind = `${buttonKind}Active` as BaseButtonKind
   }
 
-  return [buttonKind, size]
+  return buttonKind
 }
 
 function createOptionChild(
@@ -201,12 +180,13 @@ function createOptionChild(
     selected,
     index
   )
-  const content = getContent(
-    isVisuallySelected,
-    option.content ?? "",
-    option.selectedContent
-  )
-  const icon = option.contentIcon || undefined
+
+  let content = option.content
+  let icon = option.contentIcon
+  if (isVisuallySelected) {
+    content = option.selectedContent ? option.selectedContent : content
+    icon = option.selectedContentIcon ? option.selectedContentIcon : icon
+  }
 
   // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
   // and we see a console.error otherwise
@@ -214,11 +194,18 @@ function createOptionChild(
     props: any,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
-    const { element, kind } = getContentElement(content, icon, style)
-    const [buttonKind, size] = getButtonKindAndSize(
-      !!(isVisuallySelected && !option.selectedContent),
-      kind,
-      element.type
+    const { element, kind, size } = getContentElement(
+      content ?? "",
+      icon ?? undefined,
+      style
+    )
+    const buttonKind = getButtonKindAndSize(
+      !!(
+        isVisuallySelected &&
+        !option.selectedContent &&
+        !option.selectedContentIcon
+      ),
+      kind
     )
     return (
       <BaseButton {...props} size={size} kind={buttonKind}>
@@ -292,17 +279,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   useEffect(() => {
     const parsedValue = JSON.parse(valueString)
     console.log("useEffect", parsedValue, elementRef.current.setValue)
-    // if (elementRef.current.setValue) {
-    //   setSelected(parsedValue)
-    //   syncWithWidgetManager(
-    //     selected,
-    //     elementRef.current,
-    //     widgetMgr,
-    //     fragmentId,
-    //     false
-    //   )
-    //   elementRef.current.setValue = false
-    // } else {
     // only commit to the backend if the value has changed
     if (isEqual(selected, selectedRef.current)) {
       return

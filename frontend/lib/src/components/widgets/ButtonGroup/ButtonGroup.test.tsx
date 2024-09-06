@@ -22,7 +22,10 @@ import { act, fireEvent, screen, within } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
+import {
+  ButtonGroup as ButtonGroupProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
+} from "@streamlit/lib/src/proto"
 
 import ButtonGroup, { Props } from "./ButtonGroup"
 
@@ -45,32 +48,48 @@ const getButtonGroupButtons = (): HTMLElement[] => {
   return within(buttonGroupWidget).getAllByRole("button")
 }
 
+// options where content is only a material icon; used by st.feedback
+const materialIconOnlyOptions = [
+  ButtonGroupProto.Option.create({
+    contentIcon: `:material/${materialIconNames[0]}:`,
+  }),
+  ButtonGroupProto.Option.create({
+    contentIcon: `:material/${materialIconNames[1]}:`,
+    selectedContentIcon: ":material/icon2_selected:",
+  }),
+  ButtonGroupProto.Option.create({
+    contentIcon: `:material/${materialIconNames[2]}:`,
+  }),
+  ButtonGroupProto.Option.create({
+    contentIcon: `:material/${materialIconNames[3]}:`,
+  }),
+]
+
+const options = [
+  ButtonGroupProto.Option.create({
+    content: `Some text: ${materialIconNames[0]}:`,
+    contentIcon: "🔥",
+  }),
+  ButtonGroupProto.Option.create({
+    content: `Some other text: ${materialIconNames[1]}:`,
+    contentIcon: `:material/${materialIconNames[1]}:`,
+  }),
+]
+
 const getProps = (
   elementProps: Partial<ButtonGroupProto> = {},
   widgetProps: Partial<Props> = {}
 ): Props => ({
   element: ButtonGroupProto.create({
     id: "1",
-    options: [
-      ButtonGroupProto.Option.create({
-        content: `:material/${materialIconNames[0]}:`,
-      }),
-      ButtonGroupProto.Option.create({
-        content: `:material/${materialIconNames[1]}:`,
-        selectedContent: ":material/icon2_selected:",
-      }),
-      ButtonGroupProto.Option.create({
-        content: `:material/${materialIconNames[2]}:`,
-      }),
-      ButtonGroupProto.Option.create({
-        content: `:material/${materialIconNames[3]}:`,
-      }),
-    ],
+    clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
     default: [defaultSelectedIndex],
     disabled: false,
-    clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+    label: "My ButtonGroup label",
+    options: [...materialIconOnlyOptions, ...options],
     selectionVisualization:
       ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
+    style: ButtonGroupProto.Style.NORMAL,
     ...elementProps,
   }),
   disabled: false,
@@ -80,6 +99,7 @@ const getProps = (
   }),
   ...widgetProps,
 })
+const EXPECTED_BUTTONS_LENGTH = materialIconOnlyOptions.length + options.length
 
 describe("ButtonGroup widget", () => {
   it("renders without crashing", () => {
@@ -92,17 +112,39 @@ describe("ButtonGroup widget", () => {
   })
 
   it("option-children with material-icon render correctly", () => {
-    const props = getProps({ default: [] })
+    const props = getProps({ default: [], options: materialIconOnlyOptions })
     render(<ButtonGroup {...props} />)
 
-    const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-    const buttons = within(buttonGroupWidget).getAllByRole("button")
-    expect(buttons).toHaveLength(4)
+    const buttons = getButtonGroupButtons()
+    expect(buttons).toHaveLength(materialIconOnlyOptions.length)
     buttons.forEach((button, index) => {
       expect(button).toHaveAttribute("kind", "borderlessIcon")
       const icon = within(button).getByTestId("stIconMaterial")
       expect(icon.textContent).toContain(materialIconNames[index])
     })
+  })
+
+  it("option-children with contentIcon render correctly", () => {
+    const props = getProps({ default: [], options: options })
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroupWidget = screen.getByTestId("stButtonGroup")
+    const buttons = within(buttonGroupWidget).getAllByRole("button")
+    expect(buttons).toHaveLength(options.length)
+
+    let button = buttons[0]
+    expect(button).toHaveAttribute("kind", "icon")
+    let text = within(button).getByTestId("stMarkdownContainer")
+    expect(text.textContent).toContain(materialIconNames[0])
+    let icon = within(button).getByTestId("stIconEmoji")
+    expect(icon.textContent).toContain("🔥")
+
+    button = buttons[1]
+    expect(button).toHaveAttribute("kind", "icon")
+    text = within(button).getByTestId("stMarkdownContainer")
+    expect(text.textContent).toContain(materialIconNames[1])
+    icon = within(button).getByTestId("stIconMaterial")
+    expect(icon.textContent).toContain(materialIconNames[1])
   })
 
   it("sets widget value on mount", () => {
@@ -121,6 +163,16 @@ describe("ButtonGroup widget", () => {
   })
 
   describe("ButtonGroup props should work", () => {
+    it("renders with empty options", () => {
+      const props = getProps({ default: [], options: [] })
+      render(<ButtonGroup {...props} />)
+
+      const buttonGroup = screen.getByTestId("stButtonGroup")
+      expect(buttonGroup).toBeInTheDocument()
+      const buttons = within(buttonGroup).queryAllByRole("button")
+      expect(buttons).toHaveLength(0)
+    })
+
     it("onClick prop for single select", () => {
       const props = getProps()
       jest.spyOn(props.widgetMgr, "setIntArrayValue")
@@ -128,7 +180,7 @@ describe("ButtonGroup widget", () => {
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
-      expect(buttons).toHaveLength(4)
+      expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         props.element.default,
@@ -233,7 +285,7 @@ describe("ButtonGroup widget", () => {
 
       const buttonGroupWidget = screen.getByTestId("stButtonGroup")
       const buttons = within(buttonGroupWidget).getAllByRole("button")
-      expect(buttons).toHaveLength(4)
+      expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
       buttons.forEach(button => {
         expect(button).toBeDisabled()
       })
@@ -256,6 +308,64 @@ describe("ButtonGroup widget", () => {
         },
         undefined
       )
+    })
+
+    it("renders correct button style", () => {
+      const props = getProps({
+        default: [],
+        options: options,
+        style: ButtonGroupProto.Style.PILLS,
+      })
+      render(<ButtonGroup {...props} />)
+
+      const buttons = getButtonGroupButtons()
+      expect(buttons).toHaveLength(options.length)
+      buttons.forEach(button => {
+        expect(button).toHaveAttribute("kind", "pills")
+      })
+    })
+
+    it("renders a label", () => {
+      const props = getProps()
+      render(<ButtonGroup {...props} />)
+
+      const widgetLabel = screen.queryByText(`${props.element.label}`)
+      expect(widgetLabel).toBeInTheDocument()
+    })
+
+    it("passes labelVisibility prop correctly when hidden", () => {
+      const props = getProps({
+        labelVisibility: {
+          value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        },
+      })
+      render(<ButtonGroup {...props} />)
+      expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+        "visibility: hidden"
+      )
+    })
+
+    it("passes labelVisibility prop correctly when collapsed", () => {
+      const props = getProps({
+        labelVisibility: {
+          value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        },
+      })
+      render(<ButtonGroup {...props} />)
+      expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
+    })
+
+    it("renders help prop correctly", async () => {
+      const props = getProps({
+        help: "help text",
+      })
+      render(<ButtonGroup {...props} />)
+      const tooltip = screen.getByTestId("stTooltipHoverTarget")
+      expect(tooltip).toBeInTheDocument()
+
+      fireEvent.mouseOver(tooltip)
+      const helpText = await screen.findByText("help text")
+      expect(helpText).toBeInTheDocument()
     })
 
     describe("visualize selection behavior", () => {
@@ -320,7 +430,7 @@ describe("ButtonGroup widget", () => {
     })
 
     it("show selection content when selected and available", () => {
-      const props = getProps({ default: [] })
+      const props = getProps({ default: [], options: materialIconOnlyOptions })
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()

@@ -127,16 +127,16 @@ def get_mapped_options(
         # reversing the index mapping to have thumbs up first (but still with the higher
         # index (=sentiment) in the list)
         options_indices = list(reversed(range(len(_THUMB_ICONS))))
-        options = [ButtonGroupProto.Option(content=icon) for icon in _THUMB_ICONS]
+        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _THUMB_ICONS]
     elif feedback_option == "faces":
         options_indices = list(range(len(_FACES_ICONS)))
-        options = [ButtonGroupProto.Option(content=icon) for icon in _FACES_ICONS]
+        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _FACES_ICONS]
     elif feedback_option == "stars":
         options_indices = list(range(_NUMBER_STARS))
         options = [
             ButtonGroupProto.Option(
-                content=_STAR_ICON,
-                selected_content=_SELECTED_STAR_ICON,
+                content_icon=_STAR_ICON,
+                selected_content_icon=_SELECTED_STAR_ICON,
             )
         ] * _NUMBER_STARS
 
@@ -507,7 +507,7 @@ class ButtonGroupMixin:
             _default = None
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
-        if icons is not None and len(icons) != len(indexable_options):
+        if icons is not None and len(icons) < len(indexable_options):
             raise StreamlitAPIException(
                 "The number of icons must match the number of options."
             )
