@@ -261,7 +261,10 @@ const AudioInput: React.FC<Props> = ({
     hasNoMicPermissions || showPlaceholder
 
   return (
-    <StyledAudioInputContainerDiv>
+    <StyledAudioInputContainerDiv
+      className="stAudioInput"
+      data-testid="stAudioInput"
+    >
       <WidgetLabel
         label={element.label}
         disabled={hasNoMicPermissions}
@@ -269,7 +272,7 @@ const AudioInput: React.FC<Props> = ({
           element.labelVisibility?.value
         )}
       ></WidgetLabel>
-      <StyledWaveformContainerDiv data-testid="stAudioInput">
+      <StyledWaveformContainerDiv>
         <Toolbar
           isFullScreen={false}
           disableFullscreenMode={true}
