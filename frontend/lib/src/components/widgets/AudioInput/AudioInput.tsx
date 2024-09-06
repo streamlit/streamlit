@@ -50,7 +50,6 @@ import {
   BAR_WIDTH,
   CURSOR_WIDTH,
   STARTING_TIME_STRING,
-  WAVEFORM_HEIGHT,
   WAVEFORM_PADDING,
 } from "./constants"
 import formatTime from "./formatTime"
@@ -135,7 +134,10 @@ const AudioInput: React.FC<Props> = ({
       container: waveSurferRef.current,
       waveColor: theme.colors.primary,
       progressColor: theme.colors.bodyText,
-      height: WAVEFORM_HEIGHT - 2 * WAVEFORM_PADDING,
+      height:
+        parseFloat(getComputedStyle(document.documentElement).fontSize) *
+          parseFloat(theme.sizes.largestElementHeight.replace("rem", "")) -
+        2 * WAVEFORM_PADDING,
       barWidth: BAR_WIDTH,
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
