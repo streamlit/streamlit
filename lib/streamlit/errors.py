@@ -210,7 +210,7 @@ class StreamlitInvalidMenuItemKeyError(LocalizableStreamlitException):
 
     def __init__(self, key: str):
         super().__init__(
-            'We only accept the keys: "Get help", "Report a bug", and "About" ("{key}" is not a valid key.)',
+            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` (`"{key}"` is not a valid key.)',
             key=key,
         )
 
