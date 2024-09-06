@@ -377,9 +377,10 @@ _create_section("logger", "Settings to customize Streamlit log messages.")
 
 @_create_option("logger.level", type_=str)
 def _logger_log_level() -> str:
-    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+    """Level of logging for Streamlit's internal logger: "error", "warning",
+    "info", or "debug".
 
-    Default: 'info'
+    Default: "info"
     """
     if get_option("global.developmentMode"):
         return "debug"
@@ -391,8 +392,8 @@ def _logger_log_level() -> str:
 def _logger_message_format() -> str:
     """String format for logging messages. If logger.datetimeFormat is set,
     logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`. See
-    [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
-    for available attributes.
+    Python's documentation for available attributes:
+    https://docs.python.org/2.6/library/logging.html#formatter-objects
 
     Default: "%(asctime)s %(message)s"
     """
@@ -531,8 +532,9 @@ _create_option(
     "runner.enumCoercion",
     description="""
         Adjust how certain 'options' widgets like radio, selectbox, and
-        multiselect coerce Enum members when the Enum class gets
-        re-defined during a script re-run.
+        multiselect coerce Enum members when the Enum class gets re-defined
+        during a script re-run. For more information, check out the docs:
+        https://docs.streamlit.io/develop/concepts/design/custom-classes#enums
 
         Allowed values:
         * "off": Disables Enum coercion.
@@ -580,8 +582,9 @@ _create_option(
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize
 def _server_cookie_secret() -> str:
-    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
-    be set to the same value across all replicas to ensure they all share the same secret.
+    """Symmetric key used to produce signed cookies. If deploying on multiple
+    replicas, this should be set to the same value across all replicas to ensure
+    they all share the same secret.
 
     Default: randomly generated secret key.
     """
@@ -677,10 +680,12 @@ _create_option(
 _create_option(
     "server.enableCORS",
     description="""
-    Enables support for Cross-Origin Resource Sharing (CORS) protection, for added security.
+    Enables support for Cross-Origin Resource Sharing (CORS) protection, for
+    added security.
 
-    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
-    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is
+    on and `server.enableCORS` is off at the same time, we will prioritize
+    `server.enableXsrfProtection`.
     """,
     default_val=True,
     type_=bool,
@@ -690,10 +695,12 @@ _create_option(
 _create_option(
     "server.enableXsrfProtection",
     description="""
-        Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+        Enables support for Cross-Site Request Forgery (XSRF) protection, for
+        added security.
 
-        Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
-        `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+        Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is
+        on and `server.enableCORS` is off at the same time, we will prioritize
+        `server.enableXsrfProtection`.
         """,
     default_val=True,
     type_=bool,
@@ -711,7 +718,8 @@ _create_option(
 _create_option(
     "server.maxMessageSize",
     description="""
-        Max size, in megabytes, of messages that can be sent via the WebSocket connection.
+        Max size, in megabytes, of messages that can be sent via the WebSocket
+        connection.
         """,
     default_val=200,
     type_=int,
@@ -741,7 +749,8 @@ _create_option(
 _create_option(
     "server.enableStaticServing",
     description="""
-        Enable serving files from a `static` directory in the running app's directory.
+        Enable serving files from a `static` directory in the running app's
+        directory.
         """,
     default_val=False,
     type_=bool,
@@ -944,7 +953,12 @@ _create_section("secrets", "Secrets configuration.")
 
 _create_option(
     "secrets.files",
-    description="""List of locations where secrets are searched. Entries can be a path to toml file or directory path where Kubernetes style secrets will be scanned. Order is important, import is first to last, so secrets in later files will take precedence over earlier ones.""",
+    description="""
+      List of locations where secrets are searched. An entry can be a path to a
+      TOML file or directory path where Kubernetes style secrets are saved.
+      Order is important, import is first to last, so secrets in later files
+      will take precedence over earlier ones.
+    """,
     default_val=[
         # NOTE: The order here is important! Project-level secrets should overwrite global
         # secrets.
