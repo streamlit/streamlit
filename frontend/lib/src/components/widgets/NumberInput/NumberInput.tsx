@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, {
+  ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
@@ -183,26 +189,26 @@ export const NumberInput: React.FC<Props> = ({
   const min = element.hasMin ? element.min : -Infinity
   const max = element.hasMax ? element.max : +Infinity
 
-  const [step, setStep] = React.useState<number>(getStep(element))
+  const [step, setStep] = useState<number>(getStep(element))
   const initialValue = getInitialValue({ element, widgetMgr })
-  const [dirty, setDirty] = React.useState(false)
-  const [value, setValue] = React.useState<number | null>(initialValue)
-  const [formattedValue, setFormattedValue] = React.useState<string | null>(
+  const [dirty, setDirty] = useState(false)
+  const [value, setValue] = useState<number | null>(initialValue)
+  const [formattedValue, setFormattedValue] = useState<string | null>(
     formatValue({ value: initialValue, ...element, step })
   )
-  const [isFocused, setIsFocused] = React.useState(false)
-  const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const id = React.useRef(uniqueId("number_input_"))
+  const [isFocused, setIsFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const id = useRef(uniqueId("number_input_"))
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
 
-  // update the step if the props change
-  React.useEffect(() => {
+  // Update the step if the props change
+  useEffect(() => {
     setStep(getStep({ step: element.step, dataType: element.dataType }))
   }, [element.dataType, element.step])
 
-  const commitValue = React.useCallback(
+  const commitValue = useCallback(
     ({ value, source }: { value: number | null; source: Source }) => {
       if (notNullOrUndefined(value) && (min > value || value > max)) {
         inputRef.current?.reportValidity()
@@ -257,27 +263,29 @@ export const NumberInput: React.FC<Props> = ({
     ]
   )
 
-  const onBlur = (): void => {
+  const onBlur = useCallback((): void => {
     if (dirty) {
       commitValue({ value, source: { fromUi: true } })
     }
     setIsFocused(false)
-  }
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [dirty])
 
-  const onFocus = (): void => {
+  const onFocus = useCallback((): void => {
     setIsFocused(true)
-  }
+  }, [])
 
-  const updateFromProtobuf = (): void => {
+  const updateFromProtobuf = useCallback((): void => {
     const { value } = element
     element.setValue = false
     setValue(value ?? null)
     setFormattedValue(formatValue({ value: value ?? null, ...element, step }))
     commitValue({ value: value ?? null, source: { fromUi: false } })
-  }
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [element, step])
 
   // on component mount, we want to update the value from protobuf if setValue is true, otherwise commit current value
-  React.useEffect(() => {
+  useEffect(() => {
     if (element.setValue) {
       updateFromProtobuf()
     } else {
@@ -297,10 +305,11 @@ export const NumberInput: React.FC<Props> = ({
 
   const clearable = isNullOrUndefined(element.default) && !disabled
 
-  const onFormCleared = React.useCallback(() => {
-    setValue(element.default ?? null)
-    commitValue({ value, source: { fromUi: true } })
-  }, [setValue, commitValue, element, value])
+  const onFormCleared = useCallback(() => {
+    const newValue = element.default ?? null
+    setValue(newValue)
+    commitValue({ value: newValue, source: { fromUi: true } })
+  }, [element])
 
   useFormClearHelper({
     element,
@@ -332,21 +341,21 @@ export const NumberInput: React.FC<Props> = ({
     }
   }
 
-  const increment = React.useCallback(() => {
+  const increment = useCallback(() => {
     if (canInc) {
       setDirty(true)
       commitValue({ value: (value ?? min) + step, source: { fromUi: true } })
     }
   }, [value, min, step, canInc])
 
-  const decrement = React.useCallback(() => {
+  const decrement = useCallback(() => {
     if (canDec) {
       setDirty(true)
       commitValue({ value: (value ?? max) - step, source: { fromUi: true } })
     }
   }, [value, max, step, canDec])
 
-  const onKeyDown = React.useCallback(
+  const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       const { key } = e
 
@@ -365,7 +374,7 @@ export const NumberInput: React.FC<Props> = ({
     [increment, decrement]
   )
 
-  const onKeyPress = React.useCallback(
+  const onKeyPress = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       if (e.key === "Enter") {
         if (dirty) {
@@ -411,11 +420,11 @@ export const NumberInput: React.FC<Props> = ({
           inputRef={inputRef}
           value={formattedValue ?? ""}
           placeholder={element.placeholder}
-          onBlur={() => onBlur()}
-          onFocus={() => onFocus()}
-          onChange={e => onChange(e)}
-          onKeyPress={e => onKeyPress(e)}
-          onKeyDown={e => onKeyDown(e)}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          onChange={onChange}
+          onKeyPress={onKeyPress}
+          onKeyDown={onKeyDown}
           clearable={clearable}
           clearOnEscape={clearable}
           disabled={disabled}
