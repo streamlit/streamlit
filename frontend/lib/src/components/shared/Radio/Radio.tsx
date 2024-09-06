@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
-import { withTheme } from "@emotion/react"
+import { useTheme } from "@emotion/react"
 import { ALIGN, RadioGroup, Radio as UIRadio } from "baseui/radio"
 
 import {
@@ -26,13 +32,11 @@ import {
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 export interface Props {
   disabled: boolean
   horizontal: boolean
-  theme: EmotionTheme
   width?: number
   value: number | null
   onChange: (selectedIndex: number) => any
@@ -43,172 +47,167 @@ export interface Props {
   help?: string
 }
 
-interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: number | null
-}
+function Radio({
+  disabled,
+  horizontal,
+  width,
+  value,
+  onChange,
+  options,
+  captions,
+  label,
+  labelVisibility,
+  help,
+}: Readonly<Props>): ReactElement {
+  const [internalValue, setInternalValue] = useState(value ?? null)
 
-class Radio extends React.PureComponent<Props, State> {
-  public state: State = {
-    value: this.props.value ?? null,
-  }
-
-  public componentDidUpdate(prevProps: Props): void {
-    // If props.value has changed, re-initialize state.value.
-    if (
-      prevProps.value !== this.props.value &&
-      this.props.value !== this.state.value
-    ) {
-      this.setState((_, prevProps) => {
-        return { value: prevProps.value ?? null }
-      })
-    }
-  }
-
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const selectedIndex = parseInt(e.target.value, 10)
-    this.setState({ value: selectedIndex }, () =>
-      this.props.onChange(selectedIndex)
-    )
-  }
-
-  public render(): React.ReactNode {
-    const { theme, width, help, label, horizontal, labelVisibility } =
-      this.props
-    let { disabled } = this.props
-    const { colors, radii } = theme
-    const style = { width }
-    const options = [...this.props.options]
-    const captions = [...this.props.captions]
-    const hasCaptions = captions.length > 0
-
-    const spacerNeeded = (caption: string): string => {
-      // When captions are provided for only some options in horizontal
-      // layout we need to add a spacer for the options without captions
-      const spacer = caption == "" && horizontal && hasCaptions
-      return spacer ? "&nbsp;" : caption
+  useEffect(() => {
+    if (value === internalValue) {
+      return
     }
 
-    if (options.length === 0) {
-      options.push("No options to select.")
-      disabled = true
-    }
+    setInternalValue(value ?? null)
 
-    return (
-      <div className="stRadio" data-testid="stRadio" style={style}>
-        <WidgetLabel
-          label={label}
-          disabled={disabled}
-          labelVisibility={labelVisibility}
-        >
-          {help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-            </StyledWidgetLabelHelpInline>
-          )}
-        </WidgetLabel>
-        <RadioGroup
-          onChange={this.onChange}
-          value={
-            this.state.value !== null ? this.state.value.toString() : undefined
-          }
-          disabled={disabled}
-          align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
-          aria-label={label}
-          data-testid="stRadioGroup"
-          overrides={{
-            RadioGroupRoot: {
-              style: {
-                gap: hasCaptions ? theme.spacing.sm : theme.spacing.none,
-                minHeight: theme.sizes.minElementHeight,
-              },
+    // Exclude internalValue from the dependency list on purpose to avoid a loop.
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [value])
+
+  const onChangeCallback = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
+      const selectedIndex = parseInt(e.target.value, 10)
+      setInternalValue(selectedIndex)
+      onChange(selectedIndex) // Needs to happen later, no?
+    },
+    [onChange]
+  )
+
+  const theme = useTheme()
+  const { colors, radii } = theme
+  const style = { width }
+  const optionsCopy = [...options]
+  const hasCaptions = captions.length > 0
+
+  const spacerNeeded = (caption: string): string => {
+    // When captions are provided for only some options in horizontal
+    // layout we need to add a spacer for the options without captions
+    const spacer = caption == "" && horizontal && hasCaptions
+    return spacer ? "&nbsp;" : caption
+  }
+
+  if (optionsCopy.length === 0) {
+    optionsCopy.push("No options to select.")
+    disabled = true
+  }
+
+  return (
+    <div className="stRadio" data-testid="stRadio" style={style}>
+      <WidgetLabel
+        label={label}
+        disabled={disabled}
+        labelVisibility={labelVisibility}
+      >
+        {help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+          </StyledWidgetLabelHelpInline>
+        )}
+      </WidgetLabel>
+      <RadioGroup
+        onChange={onChangeCallback}
+        value={internalValue !== null ? internalValue.toString() : undefined}
+        disabled={disabled}
+        align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
+        aria-label={label}
+        data-testid="stRadioGroup"
+        overrides={{
+          RadioGroupRoot: {
+            style: {
+              gap: hasCaptions ? theme.spacing.sm : theme.spacing.none,
+              minHeight: theme.sizes.minElementHeight,
             },
-          }}
-        >
-          {options.map((option: string, index: number) => (
-            <UIRadio
-              key={index}
-              value={index.toString()}
-              overrides={{
-                Root: {
-                  style: ({
-                    $isFocusVisible,
-                  }: {
-                    $isFocusVisible: boolean
-                  }) => ({
-                    marginBottom: theme.spacing.none,
-                    marginTop: theme.spacing.none,
-                    marginRight: hasCaptions
-                      ? theme.spacing.sm
-                      : theme.spacing.lg,
-                    // Make left and right padding look the same visually.
-                    paddingLeft: theme.spacing.none,
-                    alignItems: "start",
-                    paddingRight: theme.spacing.threeXS,
-                    backgroundColor: $isFocusVisible
-                      ? colors.darkenedBgMix25
-                      : "",
-                    borderTopLeftRadius: radii.md,
-                    borderTopRightRadius: radii.md,
-                    borderBottomLeftRadius: radii.md,
-                    borderBottomRightRadius: radii.md,
-                  }),
+          },
+        }}
+      >
+        {optionsCopy.map((option: string, index: number) => (
+          <UIRadio
+            key={index}
+            value={index.toString()}
+            overrides={{
+              Root: {
+                style: ({
+                  $isFocusVisible,
+                }: {
+                  $isFocusVisible: boolean
+                }) => ({
+                  marginBottom: theme.spacing.none,
+                  marginTop: theme.spacing.none,
+                  marginRight: hasCaptions
+                    ? theme.spacing.sm
+                    : theme.spacing.lg,
+                  // Make left and right padding look the same visually.
+                  paddingLeft: theme.spacing.none,
+                  alignItems: "start",
+                  paddingRight: theme.spacing.threeXS,
+                  backgroundColor: $isFocusVisible
+                    ? colors.darkenedBgMix25
+                    : "",
+                  borderTopLeftRadius: radii.md,
+                  borderTopRightRadius: radii.md,
+                  borderBottomLeftRadius: radii.md,
+                  borderBottomRightRadius: radii.md,
+                }),
+              },
+              RadioMarkOuter: {
+                style: ({ $checked }: { $checked: boolean }) => ({
+                  width: theme.sizes.checkbox,
+                  height: theme.sizes.checkbox,
+                  marginTop: "0.35rem",
+                  marginRight: theme.spacing.none,
+                  marginLeft: theme.spacing.none,
+                  backgroundColor:
+                    $checked && !disabled
+                      ? colors.primary
+                      : colors.fadedText40,
+                }),
+              },
+              RadioMarkInner: {
+                style: ({ $checked }: { $checked: boolean }) => ({
+                  height: $checked
+                    ? "6px"
+                    : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
+                  width: $checked
+                    ? "6px"
+                    : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
+                }),
+              },
+              Label: {
+                style: {
+                  color: disabled ? colors.fadedText40 : colors.bodyText,
+                  position: "relative",
+                  top: theme.spacing.px,
                 },
-                RadioMarkOuter: {
-                  style: ({ $checked }: { $checked: boolean }) => ({
-                    width: theme.sizes.checkbox,
-                    height: theme.sizes.checkbox,
-                    marginTop: "0.35rem",
-                    marginRight: theme.spacing.none,
-                    marginLeft: theme.spacing.none,
-                    backgroundColor:
-                      $checked && !disabled
-                        ? colors.primary
-                        : colors.fadedText40,
-                  }),
-                },
-                RadioMarkInner: {
-                  style: ({ $checked }: { $checked: boolean }) => ({
-                    height: $checked
-                      ? "6px"
-                      : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
-                    width: $checked
-                      ? "6px"
-                      : `calc(${theme.sizes.checkbox} - ${theme.spacing.threeXS})`,
-                  }),
-                },
-                Label: {
-                  style: {
-                    color: disabled ? colors.fadedText40 : colors.bodyText,
-                    position: "relative",
-                    top: theme.spacing.px,
-                  },
-                },
-              }}
-            >
+              },
+            }}
+          >
+            <StreamlitMarkdown
+              source={option}
+              allowHTML={false}
+              isLabel
+              largerLabel
+            />
+            {hasCaptions && (
               <StreamlitMarkdown
-                source={option}
+                source={spacerNeeded(captions[index])}
                 allowHTML={false}
+                isCaption
                 isLabel
-                largerLabel
               />
-              {hasCaptions && (
-                <StreamlitMarkdown
-                  source={spacerNeeded(captions[index])}
-                  allowHTML={false}
-                  isCaption
-                  isLabel
-                />
-              )}
-            </UIRadio>
-          ))}
-        </RadioGroup>
-      </div>
-    )
-  }
+            )}
+          </UIRadio>
+        ))}
+      </RadioGroup>
+    </div>
+  )
 }
 
-export default withTheme(Radio)
+export default memo(Radio)
