@@ -221,7 +221,7 @@ class StreamlitInvalidURLError(LocalizableStreamlitException):
     def __init__(self, url: str):
         super().__init__(
             '"{url}" is a not a valid URL. '
-            "You must use a fully qualified domain beginning with `http://`, `https://`, or `mailto:`.",
+            'You must use a fully qualified domain beginning with "http://", "https://", or "mailto:".',
             url=url,
         )
 
