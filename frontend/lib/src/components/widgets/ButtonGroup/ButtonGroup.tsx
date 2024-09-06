@@ -334,6 +334,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     mode = MODE.checkbox
   }
 
+  let gap = undefined
+  if (style === ButtonGroupProto.Style.NORMAL) {
+    gap = theme.spacing.none
+  } else if (style === ButtonGroupProto.Style.PILLS) {
+    gap = theme.spacing.twoXS
+  }
+
   const optionElements = options.map((option, index) => {
     const Element = createOptionChild(
       option,
@@ -375,7 +382,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
             style: {
               display: "inline-flex",
               flexWrap: "wrap",
-              gap: theme.spacing.twoXS,
+              gap: `${gap}`,
             },
           },
         }}
