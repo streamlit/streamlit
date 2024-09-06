@@ -33,6 +33,7 @@ import {
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { blend } from "@streamlit/lib/src/theme/utils"
 
 import { uploadFiles } from "./uploadFiles"
 import {
@@ -54,7 +55,6 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButton from "./AudioInputActionButton"
-import { blend } from "@streamlit/lib/src/theme/utils"
 
 interface Props {
   element: AudioInputProto
