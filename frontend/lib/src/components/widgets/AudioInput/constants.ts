@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-export const WAVEFORM_HEIGHT = 68
 export const WAVEFORM_PADDING = 4
 export const BAR_WIDTH = 4
 export const BAR_GAP = 4
