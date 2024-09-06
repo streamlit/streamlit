@@ -36,6 +36,8 @@ describe("AudioInputActionButton", () => {
         onClickPlayPause={jest.fn()}
       />
     )
+
+    expect(screen.getByTestId("stAudioInputActionButton")).toBeInTheDocument()
   })
 
   it("should start recording when recording button is pressed", () => {
