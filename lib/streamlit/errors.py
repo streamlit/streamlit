@@ -403,19 +403,6 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
         )
 
 
-class StreamlitPageNotFoundMPAV2Error(LocalizableStreamlitException):
-    """Exception raised the linked page can not be found."""
-
-    def __init__(self, page: str):
-        super().__init__(
-            "Could not find page: `{page}`. You must provide a `StreamlitPage` "
-            "object or file path relative to the entrypoint file. Only pages "
-            "previously defined by [st.Page](http://st.page/) and passed to "
-            "`st.navigation` are allowed.",
-            page=page,
-        )
-
-
 # policies
 class StreamlitFragmentWidgetsNotAllowedOutsideError(LocalizableStreamlitException):
     """Exception raised when the fragment attempts to write to an element outside of its container."""
