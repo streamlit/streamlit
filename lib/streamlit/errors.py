@@ -244,7 +244,7 @@ class StreamlitInvalidVerticalAlignmentError(LocalizableStreamlitException):
 
     def __init__(self, vertical_alignment: str):
         super().__init__(
-            'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
+            'The `vertical_alignment` argument to `st.columns` must be `"top"`, `"center"`, or `"bottom"`. \n'
             "The argument passed was {vertical_alignment}.",
             vertical_alignment=vertical_alignment,
         )
