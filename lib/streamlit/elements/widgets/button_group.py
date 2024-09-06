@@ -180,6 +180,22 @@ def _build_proto(
     return proto
 
 
+def _transformed_format_func(
+    option: V,
+    icon: str | None = None,
+    format_func: Callable[[V], dict[str, str]] | None = None,
+) -> ButtonGroupProto.Option:
+    if format_func is None:
+        return ButtonGroupProto.Option(content=str(option), content_icon=icon)
+
+    transformed = format_func(option)
+    return ButtonGroupProto.Option(
+        content=transformed["content"],
+        selected_content=transformed["selected_content"],
+        content_icon=icon,
+    )
+
+
 class ButtonGroupMixin:
     # These overloads are not documented in the docstring, at least not at this time, on
     # the theory that most people won't know what it means. And the Literals here are a
@@ -353,19 +369,6 @@ class ButtonGroupMixin:
     ):
         maybe_raise_label_warnings(label, label_visibility)
 
-        def _transformed_format_func(
-            option: V, icon: str | None = None
-        ) -> ButtonGroupProto.Option:
-            if format_func is None:
-                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
-
-            transformed = format_func(option)
-            return ButtonGroupProto.Option(
-                content=transformed["content"],
-                selected_content=transformed["selected_content"],
-                content_icon=icon,
-            )
-
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
@@ -386,6 +389,60 @@ class ButtonGroupMixin:
             args=args,
             kwargs=kwargs,
             style="pills",
+            label=label,
+            label_visibility=label_visibility,
+            help=help,
+        )
+
+        if selection_mode == "multiselect" and len(res.value) > 0:
+            return res.value
+
+        return (
+            res.value[0]
+            if selection_mode == "select" and res.value and len(res.value) > 0
+            else None
+        )
+
+    @gather_metrics("segments")
+    def segments(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["select", "multiselect"] = "select",
+        icons: list[str] | None = None,
+        default: Sequence[V] | V | None = None,
+        format_func: Callable[[V], dict[str, str]] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ):
+        maybe_raise_label_warnings(label, label_visibility)
+
+        indexable_options = convert_to_sequence_and_check_comparable(options)
+        default_values = get_default_indices(indexable_options, default)
+
+        serde = MultiSelectSerde(indexable_options, default_values)
+        res = self._button_group(
+            indexable_options,
+            key=key,
+            icons=icons,
+            default=default_values,
+            selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
+            if selection_mode == "multiselect"
+            else ButtonGroupProto.SINGLE_SELECT,
+            disabled=disabled,
+            format_func=_transformed_format_func,
+            serializer=serde.serialize,
+            deserializer=serde.deserialize,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            style="normal",
             label=label,
             label_visibility=label_visibility,
             help=help,
