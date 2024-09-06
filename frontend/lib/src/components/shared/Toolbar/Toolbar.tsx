@@ -40,15 +40,17 @@ export interface ToolbarActionProps {
   onClick: () => void
 }
 
-export function ToolbarAction(props: ToolbarActionProps): ReactElement {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  const { label, show_label, icon, onClick } = props
-
+export function ToolbarAction({
+  label,
+  show_label,
+  icon,
+  onClick,
+}: ToolbarActionProps): ReactElement {
   const theme: EmotionTheme = useTheme()
 
   const displayLabel = show_label ? label : ""
   return (
-    <div data-testid={"stElementToolbarButton"}>
+    <div data-testid="stElementToolbarButton">
       <Tooltip
         content={
           <StreamlitMarkdown
