@@ -32,6 +32,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum_sequence,
     to_key,
@@ -41,7 +42,9 @@ from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
+from streamlit.runtime.state.common import (
+    save_for_app_testing,
+)
 from streamlit.type_util import (
     T,
     is_iterable,
@@ -280,7 +283,7 @@ class MultiSelectMixin:
         default_values = get_default_indices(indexable_options, default)
 
         form_id = current_form_id(self.dg)
-        widget_id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
             label=label,
@@ -295,7 +298,7 @@ class MultiSelectMixin:
         )
 
         proto = MultiSelectProto()
-        proto.id = widget_id
+        proto.id = element_id
         proto.default[:] = default_values
         proto.form_id = form_id
         proto.disabled = disabled
@@ -313,7 +316,6 @@ class MultiSelectMixin:
         widget_state = register_widget(
             "multiselect",
             proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -332,7 +334,7 @@ class MultiSelectMixin:
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, widget_id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue(widget_name, proto)
 

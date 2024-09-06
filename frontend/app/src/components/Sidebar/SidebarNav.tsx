@@ -72,7 +72,6 @@ const SidebarNav = ({
     (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
       const pageName = page.pageName as string
-      const tooltipContent = pageName.replace(/_/g, " ")
       const isActive = page.pageScriptHash === currentPageScriptHash
 
       return (
@@ -89,7 +88,7 @@ const SidebarNav = ({
               }
             }}
           >
-            {tooltipContent}
+            {pageName}
           </SidebarNavLink>
         </li>
       )

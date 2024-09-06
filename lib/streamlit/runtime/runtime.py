@@ -560,7 +560,7 @@ class Runtime:
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
         )
 
         try:

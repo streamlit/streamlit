@@ -116,7 +116,9 @@ describe("AppView element", () => {
 
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
-    expect(screen.getByTestId("stAppViewContainer")).toBeInTheDocument()
+    const appViewContainer = screen.getByTestId("stAppViewContainer")
+    expect(appViewContainer).toBeInTheDocument()
+    expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -293,7 +295,7 @@ describe("AppView element", () => {
     render(<AppView {...props} />)
 
     const style = window.getComputedStyle(
-      screen.getByTestId("stAppViewBlockContainer")
+      screen.getByTestId("stMainBlockContainer")
     )
     expect(style.maxWidth).not.toEqual("initial")
   })
@@ -309,7 +311,7 @@ describe("AppView element", () => {
     })
     render(<AppView {...getProps()} />)
     const style = window.getComputedStyle(
-      screen.getByTestId("stAppViewBlockContainer")
+      screen.getByTestId("stMainBlockContainer")
     )
     expect(style.maxWidth).toEqual("initial")
   })
@@ -356,6 +358,7 @@ describe("AppView element", () => {
       expect(sourceSpy).toHaveBeenCalledWith(
         "https://docs.streamlit.io/logo.svg"
       )
+      expect(collapsedLogo).toHaveClass("stLogo")
     })
 
     it("defaults to image if no iconImage", () => {
@@ -414,7 +417,7 @@ describe("AppView element", () => {
     const props = getProps()
     render(<AppView {...props} />)
 
-    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
     expect(stbContainer).not.toBeInTheDocument()
   })
 
@@ -463,7 +466,7 @@ describe("AppView element", () => {
 
     render(<AppView {...props} />)
 
-    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
     expect(stbContainer).toBeInTheDocument()
   })
 })

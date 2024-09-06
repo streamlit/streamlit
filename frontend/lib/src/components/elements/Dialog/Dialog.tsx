@@ -32,6 +32,7 @@ import { StyledDialogContent } from "./styled-components"
 
 export interface Props {
   element: BlockProto.Dialog
+  deltaMsgReceivedAt?: number
 }
 
 function parseWidthConfig(
@@ -52,6 +53,7 @@ function parseWidthConfig(
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
+  deltaMsgReceivedAt,
   children,
 }): ReactElement => {
   const { title, dismissible, width, isOpen: initialIsOpen } = element
@@ -62,7 +64,11 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     if (notNullOrUndefined(initialIsOpen)) {
       setIsOpen(initialIsOpen)
     }
-  }, [initialIsOpen])
+
+    // when the deltaMsgReceivedAt changes, we might want to open the dialog again.
+    // since dismissing is a UI-only action, the initialIsOpen prop might not have
+    // changed which would lead to the dialog not opening again.
+  }, [initialIsOpen, deltaMsgReceivedAt])
 
   const theme = useTheme()
   const size: string = useMemo(

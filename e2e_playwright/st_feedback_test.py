@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_form_button,
+    get_element_by_key,
     get_markdown,
 )
 
@@ -131,3 +132,8 @@ def test_feedback_remount_keep_value(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stButtonGroup")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "faces_feedback")).to_be_visible()

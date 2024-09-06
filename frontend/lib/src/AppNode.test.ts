@@ -26,6 +26,7 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
+  Logo as LogoProto,
 } from "./proto"
 import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
 import { IndexTypeName } from "./dataframes/Quiver"
@@ -896,6 +897,21 @@ describe("AppRoot.empty", () => {
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
+
+  it("passes logo to new Root if empty is called with logo", async () => {
+    const logo = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+    })
+
+    // Replicate .empty call on initial render
+    const empty = AppRoot.empty("", true)
+    expect(empty.logo).toBeNull()
+
+    // Replicate .empty call in AppNav's clearPageElements for MPA V1
+    const empty2 = AppRoot.empty(FAKE_SCRIPT_HASH, false, undefined, logo)
+    expect(empty2.logo).not.toBeNull()
+  })
 })
 
 describe("AppRoot.filterMainScriptElements", () => {
@@ -949,6 +965,7 @@ describe("AppRoot.applyDelta", () => {
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.fragmentId).toBe(undefined)
+    expect(newRoot.main.deltaMsgReceivedAt).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
@@ -971,6 +988,7 @@ describe("AppRoot.applyDelta", () => {
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.fragmentId).toBe(undefined)
+    expect(newRoot.main.deltaMsgReceivedAt).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
@@ -1132,6 +1150,22 @@ describe("AppRoot.applyDelta", () => {
     const newNode = newRoot.main.getIn([1, 1]) as BlockNode
     expect(newNode.fragmentId).toBe("myFragmentId")
   })
+
+  it("timestamp is set on BlockNode as message id", () => {
+    const timestamp = new Date(Date.UTC(2017, 1, 14)).valueOf()
+    Date.now = jest.fn(() => timestamp)
+    const delta = makeProto(DeltaProto, {
+      addBlock: {},
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode.deltaMsgReceivedAt).toBe(timestamp)
+  })
 })
 
 describe("AppRoot.clearStaleNodes", () => {
@@ -1149,6 +1183,21 @@ describe("AppRoot.clearStaleNodes", () => {
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
     expect(newRoot.getElements().size).toBe(1)
+  })
+
+  it("clears a stale logo", () => {
+    const logo = LogoProto.create({
+      image:
+        "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
+    })
+    const newRoot = ROOT.appRootWithLogo(logo, {
+      activeScriptHash: "hash",
+      scriptRunId: "script_run_id",
+    })
+    expect(newRoot.logo).not.toBeNull()
+
+    const newNewRoot = newRoot.clearStaleNodes("new_script_run_id", [])
+    expect(newNewRoot.logo).toBeNull()
   })
 
   it("handles currentFragmentId correctly", () => {

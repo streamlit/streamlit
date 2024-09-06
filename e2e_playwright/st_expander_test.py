@@ -42,7 +42,7 @@ def test_expander_displays_correctly(
 
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
-    main_container = app.get_by_test_id("stAppViewBlockContainer")
+    main_container = app.get_by_test_id("stMain")
     main_expanders = main_container.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(7)
 
@@ -73,7 +73,7 @@ def test_empty_expander_not_rendered(app: Page):
 
 def test_expander_session_state_set(app: Page):
     """Test that session state updates are propagated to expander content"""
-    main_container = app.get_by_test_id("stAppViewBlockContainer")
+    main_container = app.get_by_test_id("stMain")
     main_expanders = main_container.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(7)
 

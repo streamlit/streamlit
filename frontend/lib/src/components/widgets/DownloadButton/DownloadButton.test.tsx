@@ -170,18 +170,4 @@ describe("DownloadButton widget", () => {
       expect(downloadButton).toHaveStyle("width: 100%")
     })
   })
-
-  it("renders an emoji icon if provided", () => {
-    render(<DownloadButton {...getProps({ icon: "😀" })} />)
-
-    const icon = screen.getByTestId("stIconEmoji")
-    expect(icon).toHaveTextContent("😀")
-  })
-
-  it("renders a material icon if provided", () => {
-    render(<DownloadButton {...getProps({ icon: ":material/thumb_up:" })} />)
-
-    const icon = screen.getByTestId("stIconMaterial")
-    expect(icon).toHaveTextContent("thumb_up")
-  })
 })

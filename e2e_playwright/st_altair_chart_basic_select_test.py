@@ -21,8 +21,15 @@ from dataclasses import dataclass
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_form_button, expect_prefixed_markdown
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+)
+from e2e_playwright.shared.app_utils import (
+    click_form_button,
+    expect_prefixed_markdown,
+    get_element_by_key,
+)
 
 
 @dataclass
@@ -356,3 +363,8 @@ def test_selection_state_remains_after_unmounting_snapshot(
         name="st_altair_chart-scatter_shift_selection",
         image_threshold=0.041,
     )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "scatter_point")).to_be_visible()

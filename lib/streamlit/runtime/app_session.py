@@ -578,6 +578,13 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
+            # Update the client state with the new page_script_hash if
+            # necessary. This handles an edge case where a script is never
+            # finishes (eg. by calling st.rerun()), but the page has changed
+            # via st.navigation()
+            if page_script_hash != self._client_state.page_script_hash:
+                self._client_state.page_script_hash = page_script_hash
+
             if clear_forward_msg_queue:
                 self._clear_queue()
 
@@ -854,7 +861,8 @@ class AppSession:
             page_proto = msg.app_pages.add()
 
             page_proto.page_script_hash = page_script_hash
-            page_proto.page_name = page_info["page_name"]
+            page_proto.page_name = page_info["page_name"].replace("_", " ")
+            page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
 
 

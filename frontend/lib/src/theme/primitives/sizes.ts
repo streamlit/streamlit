@@ -30,4 +30,8 @@ export const sizes = {
   defaultLogoHeight: "1.5rem",
   largeLogoHeight: "2rem",
   sliderThumb: "0.75rem",
+  wideSidePadding: "5rem",
+  headerDecorationHeight: "0.125rem",
+  appRunningMen: "1.6rem",
+  appStatusMaxWidth: "20rem",
 }
