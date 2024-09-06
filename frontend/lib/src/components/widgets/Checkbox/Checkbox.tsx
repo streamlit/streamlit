@@ -16,7 +16,7 @@
 
 import React, { memo, ReactElement, useCallback } from "react"
 
-import { withTheme } from "@emotion/react"
+import { useTheme } from "@emotion/react"
 import {
   LABEL_PLACEMENT,
   STYLE_TYPE,
@@ -31,10 +31,7 @@ import {
   useBasicWidgetState,
   ValueWSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
-import {
-  EmotionTheme,
-  hasLightBackgroundColor,
-} from "@streamlit/lib/src/theme"
+import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
@@ -42,7 +39,7 @@ import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMar
 
 import { StyledCheckbox, StyledContent } from "./styled-components"
 
-export interface OwnProps {
+export interface Props {
   disabled: boolean
   element: CheckboxProto
   widgetMgr: WidgetStateManager
@@ -50,14 +47,7 @@ export interface OwnProps {
   fragmentId?: string
 }
 
-interface ThemeProps {
-  theme: EmotionTheme
-}
-
-export type Props = OwnProps & ThemeProps
-
 function Checkbox({
-  theme,
   width,
   element,
   disabled,
@@ -66,35 +56,13 @@ function Checkbox({
 }: Readonly<Props>): ReactElement {
   const [value, setValueWSource] = useBasicWidgetState<boolean, CheckboxProto>(
     {
-      getStateFromWidgetMgr(
-        widgetMgr: WidgetStateManager,
-        element: CheckboxProto
-      ): boolean | undefined {
-        return widgetMgr.getBoolValue(element)
-      },
-
-      getDefaultStateFromProto(element: CheckboxProto): boolean {
-        return element.default ?? null
-      },
-
-      getCurrStateFromProto(element: CheckboxProto): boolean {
-        return element.value ?? null
-      },
-
-      updateWidgetMgrState(
-        widgetMgr: WidgetStateManager,
-        vws: ValueWSource<boolean>
-      ): void {
-        widgetMgr.setBoolValue(
-          element,
-          vws.value,
-          { fromUi: vws.fromUi },
-          fragmentId
-        )
-      },
-
+      getStateFromWidgetMgr,
+      getDefaultStateFromProto,
+      getCurrStateFromProto,
+      updateWidgetMgrState,
       element,
       widgetMgr,
+      fragmentId,
     }
   )
 
@@ -105,7 +73,9 @@ function Checkbox({
     [setValueWSource]
   )
 
+  const theme = useTheme()
   const { colors, spacing, sizes } = theme
+
   const lightTheme = hasLightBackgroundColor(theme)
 
   const color = disabled ? colors.fadedText40 : colors.bodyText
@@ -264,4 +234,33 @@ function Checkbox({
   )
 }
 
-export default withTheme(memo(Checkbox))
+function getStateFromWidgetMgr(
+  widgetMgr: WidgetStateManager,
+  element: CheckboxProto
+): boolean | undefined {
+  return widgetMgr.getBoolValue(element)
+}
+
+function getDefaultStateFromProto(element: CheckboxProto): boolean {
+  return element.default ?? null
+}
+
+function getCurrStateFromProto(element: CheckboxProto): boolean {
+  return element.value ?? null
+}
+
+function updateWidgetMgrState(
+  element: CheckboxProto,
+  widgetMgr: WidgetStateManager,
+  vws: ValueWSource<boolean>,
+  fragmentId?: string
+): void {
+  widgetMgr.setBoolValue(
+    element,
+    vws.value,
+    { fromUi: vws.fromUi },
+    fragmentId
+  )
+}
+
+export default memo(Checkbox)
