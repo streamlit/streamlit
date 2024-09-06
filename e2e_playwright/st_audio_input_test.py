@@ -43,7 +43,7 @@ def test_audio_input_basic_flow(app: Page):
     ).not_to_be_visible()
 
     record_button = app.get_by_role("button", name="Record").first
-    clock = app.get_by_test_id("StyledWaveformTimeCode").first
+    clock = app.get_by_test_id("stAudioInputWaveformTimeCode").first
 
     expect(clock).to_have_text("00:00")
 
