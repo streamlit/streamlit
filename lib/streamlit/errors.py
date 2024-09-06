@@ -434,8 +434,8 @@ class StreamlitInvalidFormCallbackError(LocalizableStreamlitException):
         )
 
 
-class StreamlitWidgetValueAssignmentNotAllowedError(LocalizableStreamlitException):
-    """Exception raised when trying to set values for a widget where writes are not allowed."""
+class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
+    """Exception raised when trying to set values where writes are not allowed."""
 
     def __init__(self, key: str):
         super().__init__(
