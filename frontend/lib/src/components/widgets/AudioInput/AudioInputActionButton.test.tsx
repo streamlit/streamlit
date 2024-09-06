@@ -15,10 +15,13 @@
  */
 
 import React from "react"
+
 import "@testing-library/jest-dom"
-import { render } from "@streamlit/lib/src/test_util"
-import AudioInputActionButton from "./AudioInputActionButton"
 import { fireEvent, screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
+
+import AudioInputActionButton from "./AudioInputActionButton"
 
 describe("AudioInputActionButton", () => {
   it("should render without crashing", () => {
