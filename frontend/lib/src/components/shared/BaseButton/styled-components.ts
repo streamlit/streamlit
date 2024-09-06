@@ -238,11 +238,6 @@ export const StyledIconButton = styled(
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
     },
-    "&:active": {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-      color: theme.colors.white,
-    },
     "&:not(:active)": {
       boxShadow: "none",
     },
@@ -266,11 +261,12 @@ export const StyledIconButtonActive = styled(
   StyledIconButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
-    color: theme.colors.white,
+    color: theme.colors.primary,
+
     "&:hover": {
-      backgroundColor: theme.colors.transparent,
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
     },
