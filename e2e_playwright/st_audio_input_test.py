@@ -16,12 +16,20 @@ import time
 import pytest
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction
+
 
 def test_audio_input_renders(app: Page):
     audio_input_elements = app.get_by_test_id("stAudioInput")
     expect(audio_input_elements).to_have_count(1)
 
     expect(audio_input_elements.nth(0)).to_be_visible()
+
+
+def test_snapshots(app: Page, assert_snapshot: ImageCompareFunction):
+    audio_input_element = app.get_by_test_id("stAudioInput").first
+
+    assert_snapshot(audio_input_element, "st_audio_input_default")
 
 
 @pytest.mark.only_browser("chromium")
