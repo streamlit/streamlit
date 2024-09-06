@@ -19,6 +19,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_checkbox,
+    get_element_by_key,
 )
 
 
@@ -40,6 +41,12 @@ def test_button_widget_rendering(
     assert_snapshot(button_elements.nth(8), name="st_button-emoji_icon")
 
     # The rest is tested in one screenshot in the following test
+
+
+def test_material_icon_hover(app: Page, assert_snapshot: ImageCompareFunction):
+    material_icon_button = app.get_by_test_id("stButton").nth(7)
+    app.get_by_text("Like Button").hover()
+    assert_snapshot(material_icon_button, name="st_button-material_icon_hover")
 
 
 def test_buttons_in_columns(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -114,3 +121,8 @@ def test_show_tooltip_on_hover(app: Page, assert_snapshot: ImageCompareFunction)
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stButton")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "button")).to_be_visible()

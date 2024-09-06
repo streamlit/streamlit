@@ -46,10 +46,16 @@ import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
-interface AppLogo {
-  logo: Logo
+
+interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
+
+  // Associated scriptRunId that created the logo
+  scriptRunId: string
+}
+interface AppLogo extends LogoMetadata {
+  logo: Logo
 }
 
 /**
@@ -109,6 +115,12 @@ export interface AppNode {
    * The hash of the script that created this node.
    */
   readonly activeScriptHash?: string
+
+  // A timestamp indicating based on which delta message the node was created.
+  // If the node was created without a delta message, this field is undefined.
+  // This helps us to update React components based on a new backend message even though other
+  // props have not changed; this can happen for UI-only interactions such as dimissing a dialog.
+  readonly deltaMsgReceivedAt?: number
 
   /**
    * Return the AppNode for the given index path, or undefined if the path
@@ -386,6 +398,8 @@ export class BlockNode implements AppNode {
 
   public readonly fragmentId?: string
 
+  public readonly deltaMsgReceivedAt?: number
+
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
 
@@ -394,13 +408,15 @@ export class BlockNode implements AppNode {
     children?: AppNode[],
     deltaBlock?: BlockProto,
     scriptRunId?: string,
-    fragmentId?: string
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
+    this.deltaMsgReceivedAt = deltaMsgReceivedAt
   }
 
   /** True if this Block has no children. */
@@ -455,7 +471,8 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       scriptRunId,
-      this.fragmentId
+      this.fragmentId,
+      this.deltaMsgReceivedAt
     )
   }
 
@@ -474,7 +491,8 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       this.scriptRunId,
-      this.fragmentId
+      this.fragmentId,
+      this.deltaMsgReceivedAt
     )
   }
 
@@ -525,7 +543,8 @@ export class BlockNode implements AppNode {
       newChildren,
       this.deltaBlock,
       currentScriptRunId,
-      this.fragmentId
+      this.fragmentId,
+      this.deltaMsgReceivedAt
     )
   }
 
@@ -559,7 +578,8 @@ export class AppRoot {
   public static empty(
     mainScriptHash = "",
     isInitialRender = true,
-    sidebarElements?: BlockNode | undefined
+    sidebarElements?: BlockNode | undefined,
+    logo?: Logo | null
   ): AppRoot {
     const mainNodes: AppNode[] = []
 
@@ -623,10 +643,19 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
+    // Persist logo between pages to avoid flicker (MPA V1 - Issue #8815)
+    const appLogo = logo
+      ? {
+          logo,
+          activeScriptHash: mainScriptHash,
+          scriptRunId: NO_SCRIPT_RUN_ID,
+        }
+      : null
+
     return new AppRoot(
       mainScriptHash,
       new BlockNode(mainScriptHash, [main, sidebar, event, bottom]),
-      null
+      appLogo
     )
   }
 
@@ -676,11 +705,10 @@ export class AppRoot {
     return this.appLogo?.logo ?? null
   }
 
-  public appRootWithLogo(logo: Logo, metadata: ForwardMsgMetadata): AppRoot {
-    const { activeScriptHash } = metadata
+  public appRootWithLogo(logo: Logo, metadata: LogoMetadata): AppRoot {
     return new AppRoot(this.mainScriptHash, this.root, {
       logo,
-      activeScriptHash,
+      ...metadata,
     })
   }
 
@@ -692,7 +720,6 @@ export class AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
-
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
@@ -707,12 +734,14 @@ export class AppRoot {
       }
 
       case "addBlock": {
+        const deltaMsgReceivedAt = Date.now()
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
           scriptRunId,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          deltaMsgReceivedAt
         )
       }
 
@@ -791,6 +820,9 @@ export class AppRoot {
       this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode(this.mainScriptHash)
 
+    const appLogo =
+      this.appLogo?.scriptRunId === currentScriptRunId ? this.appLogo : null
+
     return new AppRoot(
       this.mainScriptHash,
       new BlockNode(
@@ -799,7 +831,7 @@ export class AppRoot {
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       ),
-      this.appLogo
+      appLogo
     )
   }
 
@@ -840,7 +872,8 @@ export class AppRoot {
     block: BlockProto,
     scriptRunId: string,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    deltaMsgReceivedAt?: number
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -861,7 +894,8 @@ export class AppRoot {
       children,
       block,
       scriptRunId,
-      fragmentId
+      fragmentId,
+      deltaMsgReceivedAt
     )
     return new AppRoot(
       this.mainScriptHash,

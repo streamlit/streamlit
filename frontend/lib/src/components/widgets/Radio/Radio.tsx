@@ -44,35 +44,13 @@ function Radio({
 }: Readonly<Props>): ReactElement {
   const [value, setValueWSource] = useBasicWidgetState<RadioValue, RadioProto>(
     {
-      getStateFromWidgetMgr(
-        widgetMgr: WidgetStateManager,
-        element: RadioProto
-      ): RadioValue {
-        return widgetMgr.getIntValue(element)
-      },
-
-      getDefaultStateFromProto(element: RadioProto): RadioValue {
-        return element.default ?? null
-      },
-
-      getCurrStateFromProto(element: RadioProto): RadioValue {
-        return element.value ?? null
-      },
-
-      updateWidgetMgrState(
-        WidgetMgr: WidgetStateManager,
-        vws: ValueWSource<RadioValue>
-      ): void {
-        widgetMgr.setIntValue(
-          element,
-          vws.value ?? null,
-          { fromUi: vws.fromUi },
-          fragmentId
-        )
-      },
-
+      getStateFromWidgetMgr,
+      getDefaultStateFromProto,
+      getCurrStateFromProto,
+      updateWidgetMgrState,
       element,
       widgetMgr,
+      fragmentId,
     }
   )
 
@@ -99,6 +77,35 @@ function Radio({
       value={value ?? null}
       help={help}
     />
+  )
+}
+
+function getStateFromWidgetMgr(
+  widgetMgr: WidgetStateManager,
+  element: RadioProto
+): RadioValue {
+  return widgetMgr.getIntValue(element)
+}
+
+function getDefaultStateFromProto(element: RadioProto): RadioValue {
+  return element.default ?? null
+}
+
+function getCurrStateFromProto(element: RadioProto): RadioValue {
+  return element.value ?? null
+}
+
+function updateWidgetMgrState(
+  element: RadioProto,
+  widgetMgr: WidgetStateManager,
+  vws: ValueWSource<RadioValue>,
+  fragmentId?: string
+): void {
+  widgetMgr.setIntValue(
+    element,
+    vws.value ?? null,
+    { fromUi: vws.fromUi },
+    fragmentId
   )
 }
 

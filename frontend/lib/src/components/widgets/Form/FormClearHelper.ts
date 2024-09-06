@@ -38,7 +38,8 @@ export class FormClearHelper {
    * subscription and unsubscription happen correctly.
    *
    * Hooks-based widgets can just use `useEffect` and call
-   * `widgetMgr.addFormClearedListener` directly.
+   * `widgetMgr.addFormClearedListener` directly. Or just use the convenient
+   * hook `useFormClearHelper`, below.
    */
   public manageFormClearListener(
     widgetMgr: WidgetStateManager,
@@ -97,19 +98,17 @@ export function useFormClearHelper({
   onFormCleared,
 }: FormClearHelperArgs): void {
   useEffect(() => {
-    if (!element.formId) {
+    if (!isValidFormId(element.formId)) {
       return
     }
 
-    const formClearHelper = new FormClearHelper()
-    formClearHelper.manageFormClearListener(
-      widgetMgr,
+    const formClearListener = widgetMgr.addFormClearedListener(
       element.formId,
       onFormCleared
     )
 
     return () => {
-      formClearHelper.disconnect()
+      formClearListener.disconnect()
     }
   }, [element, widgetMgr, onFormCleared])
 }

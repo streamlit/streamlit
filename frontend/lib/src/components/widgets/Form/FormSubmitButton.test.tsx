@@ -82,7 +82,7 @@ describe("FormSubmitButton", () => {
     expect(formSubmitButton).toHaveStyle(`width: ${props.width}px`)
   })
 
-  it("renders a label", () => {
+  it("renders a label within the button", () => {
     const props = getProps()
     render(<FormSubmitButton {...props} />)
 
@@ -194,23 +194,5 @@ describe("FormSubmitButton", () => {
 
     const formSubmitButton = screen.getByRole("button")
     expect(formSubmitButton).toHaveStyle("width: 100%")
-  })
-
-  it("renders an emoji icon", () => {
-    render(<FormSubmitButton {...getProps({}, { icon: "😀", help: "" })} />)
-
-    const icon = screen.getByTestId("stIconEmoji")
-    expect(icon).toHaveTextContent("😀")
-  })
-
-  it("renders a material icon", () => {
-    render(
-      <FormSubmitButton
-        {...getProps({}, { icon: ":material/thumb_up:", help: "" })}
-      />
-    )
-
-    const icon = screen.getByTestId("stIconMaterial")
-    expect(icon).toHaveTextContent("thumb_up")
   })
 })

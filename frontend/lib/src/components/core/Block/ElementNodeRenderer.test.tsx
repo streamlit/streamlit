@@ -108,8 +108,9 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
+      expect(elementNodeRenderer).toHaveClass("stElementContainer")
       // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
@@ -125,7 +126,7 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
@@ -146,7 +147,7 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
@@ -163,7 +164,7 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children

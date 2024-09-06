@@ -33,6 +33,7 @@ export type ValueWSource<T> = {
   value: T
 } & Source
 
+// Interface for a proto that has a .value, .setValue, and .formId
 interface ValueElementProtoInterface<T> {
   value?: T
   setValue: boolean
@@ -40,15 +41,23 @@ interface ValueElementProtoInterface<T> {
 }
 
 export interface UseValueWSourceArgs<
-  T,
-  P extends ValueElementProtoInterface<T>
+  T, // Type of the value stored in WidgetStateManager.
+  P extends ValueElementProtoInterface<T> // Proto for this widget.
 > {
+  // Important: these callback functions need to have stable references! So
+  // either declare them at the module level or wrap in useCallback.
   getStateFromWidgetMgr: (wm: WidgetStateManager, el: P) => T | undefined
   getDefaultStateFromProto: (el: P) => T
   getCurrStateFromProto: (el: P) => T
-  updateWidgetMgrState: (wm: WidgetStateManager, vws: ValueWSource<T>) => void
+  updateWidgetMgrState: (
+    el: P,
+    wm: WidgetStateManager,
+    vws: ValueWSource<T>,
+    fragmentId?: string
+  ) => void
   element: P
   widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 /**
@@ -56,15 +65,18 @@ export interface UseValueWSourceArgs<
  * implement.
  */
 export function useBasicWidgetState<
-  T,
-  P extends ValueElementProtoInterface<T>
+  T, // Type of the value stored in WidgetStateManager.
+  P extends ValueElementProtoInterface<T> // Proto for this widget.
 >({
+  // Important: these callback functions need to have stable references! So
+  // either declare them at the module level or wrap in useCallback.
   getStateFromWidgetMgr,
   getDefaultStateFromProto,
   getCurrStateFromProto,
   updateWidgetMgrState,
   element,
   widgetMgr,
+  fragmentId,
 }: UseValueWSourceArgs<T, P>): [
   T,
   Dispatch<SetStateAction<ValueWSource<T> | null>>
@@ -96,8 +108,8 @@ export function useBasicWidgetState<
     setNextValueWSource(null) // Clear "event".
 
     setCurrentValue(nextValueWSource.value)
-    updateWidgetMgrState(widgetMgr, nextValueWSource)
-  }, [nextValueWSource, setNextValueWSource, updateWidgetMgrState, widgetMgr])
+    updateWidgetMgrState(element, widgetMgr, nextValueWSource, fragmentId)
+  }, [nextValueWSource, updateWidgetMgrState, element, widgetMgr, fragmentId])
 
   // Respond to value changes via session_state. This is also set via an
   // "event", this time using the .setValue property of the proto.
@@ -109,7 +121,7 @@ export function useBasicWidgetState<
       value: getCurrStateFromProto(element),
       fromUi: false,
     })
-  }, [element, getCurrStateFromProto, setNextValueWSource])
+  }, [element, getCurrStateFromProto])
 
   /**
    * If we're part of a clear_on_submit form, this will be called when our

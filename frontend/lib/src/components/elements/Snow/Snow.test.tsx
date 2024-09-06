@@ -52,11 +52,11 @@ describe("Snow element", () => {
     })
   })
 
-  it("renders as hidden element", () => {
+  it("uses correct top-level class", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
     const snowElement = screen.getByTestId("stSnow")
-    expect(snowElement).toHaveClass("stHidden")
+    expect(snowElement).toHaveClass("stSnow")
   })
 })

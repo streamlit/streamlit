@@ -451,6 +451,29 @@ def expect_script_state(
     )
 
 
+def get_element_by_key(locator: Locator | Page, key: str) -> Locator:
+    """Get an element with the given user-defined key.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    key : str
+        The user-defined key of the element
+
+    Returns
+    -------
+    Locator
+        The element.
+
+    """
+    class_name = re.sub(r"[^a-zA-Z0-9_-]", "-", key.strip())
+    class_name = f"st-key-{class_name}"
+    return locator.locator(f".{class_name}")
+
+
 def expand_sidebar(app: Page) -> Locator:
     """Expands the sidebar.
 

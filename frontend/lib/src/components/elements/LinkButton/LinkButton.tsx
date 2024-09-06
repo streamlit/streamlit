@@ -21,8 +21,8 @@ import {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import BaseLinkButton from "./BaseLinkButton"
 
@@ -68,13 +68,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
           rel="noreferrer"
           aria-disabled={disabled}
         >
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
+          <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseLinkButton>
       </BaseButtonTooltip>
     </div>

@@ -14,13 +14,11 @@
 
 from __future__ import annotations
 
-import textwrap
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final, Mapping
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import DuplicateWidgetID
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -32,7 +30,7 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    user_key_from_widget_id,
+    user_key_from_element_id,
 )
 
 if TYPE_CHECKING:
@@ -92,8 +90,6 @@ def register_widget(
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
-    user_key: str | None = None,
-    widget_func_name: str | None = None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
@@ -114,14 +110,6 @@ def register_widget(
         Called to convert a widget's value to its protobuf representation.
     ctx : ScriptRunContext or None
         Used to ensure uniqueness of widget IDs, and to look up widget values.
-    user_key : str or None
-        Optional user-specified string to use as the widget ID.
-        If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
-        The widget's DeltaGenerator function name, if it's different from
-        its element_type. Custom components are a special case: they all have
-        the element_type "component_instance", but are instantiated with
-        dynamically-named functions.
     on_change_handler : WidgetCallback or None
         An optional callback invoked when the widget's value changes.
     args : WidgetArgs or None
@@ -164,14 +152,12 @@ def register_widget(
         callback_kwargs=kwargs,
         fragment_id=ctx.current_fragment_id if ctx else None,
     )
-    return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
+    return register_widget_from_metadata(metadata, ctx)
 
 
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: ScriptRunContext | None,
-    widget_func_name: str | None,
-    element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
     """Register a widget and return its value, using an already constructed
     `WidgetMetadata`.
@@ -187,59 +173,6 @@ def register_widget_from_metadata(
         return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
 
     widget_id = metadata.id
-    user_key = user_key_from_widget_id(widget_id)
+    user_key = user_key_from_element_id(widget_id)
 
-    # Ensure another widget with the same user key hasn't already been registered.
-    if user_key is not None:
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            raise DuplicateWidgetID(
-                _build_duplicate_widget_message(
-                    widget_func_name if widget_func_name is not None else element_type,
-                    user_key,
-                )
-            )
-
-    # Ensure another widget with the same id hasn't already been registered.
-    new_widget = widget_id not in ctx.widget_ids_this_run
-    if new_widget:
-        ctx.widget_ids_this_run.add(widget_id)
-    else:
-        raise DuplicateWidgetID(
-            _build_duplicate_widget_message(
-                widget_func_name if widget_func_name is not None else element_type,
-                user_key,
-            )
-        )
     return ctx.session_state.register_widget(metadata, user_key)
-
-
-def _build_duplicate_widget_message(
-    widget_func_name: str, user_key: str | None = None
-) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            """
-            There are multiple widgets with the same `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for each
-            widget you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical `st.{widget_type}` widgets with the
-            same generated key.
-
-            When a widget is created, it's assigned an internal key based on
-            its structure. Multiple widgets with an identical structure will
-            result in the same internal key, which causes this error.
-
-            To fix this error, please pass a unique `key` argument to
-            `st.{widget_type}`.
-            """
-        )
-
-    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)

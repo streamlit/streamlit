@@ -184,7 +184,7 @@ describe("Radio widget", () => {
     expect(secondOption).toBeChecked()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -207,7 +207,7 @@ describe("Radio widget", () => {
     )
 
     // "Submit" the form
-    act(() => {
+    await act(() => {
       props.widgetMgr.submitForm("form", undefined)
     })
 

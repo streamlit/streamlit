@@ -21,6 +21,7 @@ from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
     click_form_button,
     expect_prefixed_markdown,
+    get_element_by_key,
 )
 from e2e_playwright.shared.dataframe_utils import (
     calc_middle_cell_position,
@@ -424,3 +425,8 @@ def test_that_index_cannot_be_selected(app: Page):
         "{'selection': {'rows': [], 'columns': ['col_1']}}",
         exact_match=True,
     )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "df_selection")).to_be_visible()

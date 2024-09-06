@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class, expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_help_tooltip,
+    get_element_by_key,
+)
 
 
 def test_time_input_widget_rendering(
@@ -218,3 +222,8 @@ def test_handles_callback_on_change_correctly(app: Page):
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stTimeInput")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "time_input_6")).to_be_visible()
