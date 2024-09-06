@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useCallback, useEffect, useState } from "react"
 
-import { withTheme } from "@emotion/react"
+import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete } from "@emotion-icons/material-outlined"
@@ -27,7 +27,6 @@ import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
 import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -61,15 +60,14 @@ interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
-  theme: EmotionTheme
 }
 
 const AudioInput: React.FC<Props> = ({
   element,
   uploadClient,
   widgetMgr,
-  theme,
 }): ReactElement => {
+  const theme = useTheme()
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
   const waveSurferRef = React.useRef<HTMLDivElement | null>(null)
   const [deleteFileUrl, setDeleteFileUrl] = useState<string | null>(null)
@@ -314,4 +312,4 @@ const AudioInput: React.FC<Props> = ({
   )
 }
 
-export default withTheme(AudioInput)
+export default AudioInput
