@@ -18,7 +18,7 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import AudioInputActionButton from "./AudioInputActionButton"
-import { fireEvent } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 
 describe("AudioInputActionButton", () => {
   it("should render without crashing", () => {
@@ -37,7 +37,7 @@ describe("AudioInputActionButton", () => {
 
   it("should start recording when recording button is pressed", () => {
     const startRecording = jest.fn()
-    const { getByLabelText } = render(
+    render(
       <AudioInputActionButton
         disabled={false}
         isRecording={false}
@@ -49,14 +49,14 @@ describe("AudioInputActionButton", () => {
       />
     )
 
-    expect(getByLabelText("Record")).toBeInTheDocument()
-    fireEvent.click(getByLabelText("Record"))
+    expect(screen.getByLabelText("Record")).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("Record"))
     expect(startRecording).toHaveBeenCalled()
   })
 
   it("should stop recording when recording button is pressed", () => {
     const stopRecording = jest.fn()
-    const { getByLabelText } = render(
+    render(
       <AudioInputActionButton
         disabled={false}
         isRecording={true}
@@ -68,14 +68,14 @@ describe("AudioInputActionButton", () => {
       />
     )
 
-    expect(getByLabelText("Stop recording")).toBeInTheDocument()
-    fireEvent.click(getByLabelText("Stop recording"))
+    expect(screen.getByLabelText("Stop recording")).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("Stop recording"))
     expect(stopRecording).toHaveBeenCalled()
   })
 
   it("should play when play button is pressed", () => {
     const onClickPlayPause = jest.fn()
-    const { getByLabelText } = render(
+    render(
       <AudioInputActionButton
         disabled={false}
         isRecording={false}
@@ -87,14 +87,14 @@ describe("AudioInputActionButton", () => {
       />
     )
 
-    expect(getByLabelText("Play")).toBeInTheDocument()
-    fireEvent.click(getByLabelText("Play"))
+    expect(screen.getByLabelText("Play")).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("Play"))
     expect(onClickPlayPause).toHaveBeenCalled()
   })
 
   it("should pause when pause button is pressed", () => {
     const onClickPlayPause = jest.fn()
-    const { getByLabelText } = render(
+    render(
       <AudioInputActionButton
         disabled={false}
         isRecording={false}
@@ -106,15 +106,15 @@ describe("AudioInputActionButton", () => {
       />
     )
 
-    expect(getByLabelText("Pause")).toBeInTheDocument()
-    fireEvent.click(getByLabelText("Pause"))
+    expect(screen.getByLabelText("Pause")).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("Pause"))
     expect(onClickPlayPause).toHaveBeenCalled()
   })
 
   describe("when disabled", () => {
     it("should not start recording when recording button is pressed", () => {
       const startRecording = jest.fn()
-      const { getByLabelText } = render(
+      render(
         <AudioInputActionButton
           disabled={true}
           isRecording={false}
@@ -126,8 +126,8 @@ describe("AudioInputActionButton", () => {
         />
       )
 
-      expect(getByLabelText("Record")).toBeInTheDocument()
-      fireEvent.click(getByLabelText("Record"))
+      expect(screen.getByLabelText("Record")).toBeInTheDocument()
+      fireEvent.click(screen.getByLabelText("Record"))
       expect(startRecording).not.toHaveBeenCalled()
     })
   })
