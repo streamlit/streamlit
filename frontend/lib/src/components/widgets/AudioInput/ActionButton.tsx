@@ -21,12 +21,12 @@ import { Mic } from "@emotion-icons/material-outlined"
 import { Pause, PlayArrow, StopCircle } from "@emotion-icons/material-rounded"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import WaveSurfer from "wavesurfer.js"
+import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 interface BaseActionButtonProps {
   onClick: () => void
