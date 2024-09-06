@@ -140,8 +140,8 @@ class PageConfigTest(DeltaGeneratorTestCase):
             st.set_page_config(menu_items=menu_items)
         self.assertEqual(
             str(e.exception),
-            'We only accept the keys: "Get help", "Report a bug", and "About" '
-            '("invalid" is not a valid key.)',
+            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` '
+            '(`"invalid"` is not a valid key.)',
         )
 
     def test_set_page_config_menu_items_empty_dict(self):
