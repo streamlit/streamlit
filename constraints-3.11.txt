@@ -71,7 +71,7 @@ pytest==8.1.2
 pytest-base-url==2.1.0
 pytest-cov==5.0.0
 pytest-github-actions-annotate-failures==0.2.0
-pytest-playwright==0.5.1
+pytest-playwright==0.5.2
 pytest-rerunfailures==14.0
 pytest-xdist==3.6.1
 python-dateutil==2.9.0.post0
