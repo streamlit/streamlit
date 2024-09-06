@@ -157,8 +157,8 @@ class StreamlitModuleNotFoundError(StreamlitAPIWarning):
 
     def __init__(self, module_name, *args):
         message = (
-            f'This Streamlit command requires module "{module_name}" to be '
-            "installed."
+            f'This Streamlit command requires module "{module_name}" '
+            "to be installed."
         )
         super().__init__(message, *args)
 
@@ -191,7 +191,8 @@ class StreamlitInvalidPageLayoutError(LocalizableStreamlitException):
 
     def __init__(self, layout: str):
         super().__init__(
-            '`layout` must be `"centered"` or `"wide"` (got `"{layout}"`)', layout=layout
+            '`layout` must be `"centered"` or `"wide"` (got `"{layout}"`)',
+            layout=layout,
         )
 
 
