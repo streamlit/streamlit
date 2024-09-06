@@ -381,7 +381,7 @@ class StreamlitPageNotFoundError(LocalizableStreamlitException):
 
     def __init__(self, page: str, main_script_directory: str, is_mpa_v2: bool):
         directory = os.path.basename(main_script_directory)
-        message = (
+        message: str = (
             (
                 "Could not find page: `{page}`. You must provide a `StreamlitPage` "
                 "object or file path relative to the entrypoint file. Only pages "
