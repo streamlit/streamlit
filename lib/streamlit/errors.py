@@ -232,7 +232,7 @@ class StreamlitInvalidColumnSpecError(LocalizableStreamlitException):
 
     def __init__(self):
         super().__init__(
-            "The spec argument to `st.columns` must be either a "
+            "The `spec` argument to `st.columns` must be either a "
             "positive integer (number of columns) or a list of positive numbers (width ratios of the columns). "
             "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
             "for more information."
