@@ -49,9 +49,6 @@ from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
-
 SomeUploadedAudioFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
 
 
