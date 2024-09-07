@@ -264,7 +264,6 @@ export const StyledIconButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
-
     "&:hover": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
       borderColor: theme.colors.primary,
