@@ -57,10 +57,10 @@ def test_vega_lite_chart_displays_interactive_charts(
     vega_lite_charts = themed_app.get_by_test_id("stVegaLiteChart")
     # expect statement here so that snapshots are taken properly
     expect(vega_lite_charts).to_have_count(VEGA_LITE_CHART_COUNT)
-
+    expect(vega_lite_charts.nth(4)).to_be_visible()
     assert_snapshot(
         vega_lite_charts.nth(4),
-        name="st_vega_lite_chart-interactive",
+        name="st_vega_lite_chart-c",
     )
 
 

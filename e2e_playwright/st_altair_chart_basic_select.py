@@ -25,7 +25,11 @@ import streamlit as st
 st.header("Altair Chart with point and interval selection")
 
 # taken from vega_datasets cars example
-cars = data.cars()
+@st.cache_data
+def get_cars_data():
+    return data.cars()
+
+cars = get_cars_data()
 interval = alt.selection_interval()
 
 point = alt.selection_point()

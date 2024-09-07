@@ -53,7 +53,8 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-# This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
+# This test could be flaky because https://github.com/plotly/plotly.js/issues/6898
+@pytest.mark.flaky(reruns=3)
 def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -215,6 +216,7 @@ def test_selection_state_remains_after_unmounting(
 
     click_button(app, "Create some elements to unmount component")
 
+    chart = app.get_by_test_id("stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
     # Hover chart to show toolbar:
     chart.hover()

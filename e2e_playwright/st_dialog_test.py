@@ -22,7 +22,9 @@ from e2e_playwright.shared.app_utils import (
     COMMAND_KEY,
     check_top_level_class,
     click_button,
+    expect_exception,
     expect_markdown,
+    expect_no_exception,
     get_button,
     get_markdown,
 )
@@ -295,10 +297,8 @@ def test_nested_dialogs(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
     open_nested_dialogs(app)
     wait_for_app_run(app)
-    exception_message = app.get_by_test_id("stException")
-
-    expect(exception_message).to_contain_text(
-        "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
+    expect_exception(
+        app, "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
     )
 
 
@@ -318,13 +318,13 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     open_nested_dialogs(app)
     wait_for_app_run(app)
     nested_dialog_fragment_id = get_markdown(app, "Fragment Id:").text_content()
-    exception_message = app.get_by_test_id("stException")
-    expect(exception_message).to_contain_text(
-        "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
+    expect_exception(
+        app, "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
     )
+
     click_to_dismiss(app)
     # wait after dismiss so that we can open the next dialog
-    app.wait_for_timeout(200)
+    app.wait_for_timeout(1000)
     expect(app.get_by_test_id(modal_test_id)).not_to_be_attached()
     open_submit_button_dialog(app)
     wait_for_app_run(app)
@@ -334,8 +334,7 @@ def test_dialogs_have_different_fragment_ids(app: Page):
     submit_button.click()
     wait_for_app_run(app)
 
-    exception_message = app.get_by_test_id("stException")
-    expect(exception_message).not_to_be_attached()
+    expect_no_exception(app)
 
     assert large_width_dialog_fragment_id != nested_dialog_fragment_id
 

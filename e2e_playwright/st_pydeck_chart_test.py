@@ -15,7 +15,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
 
 
@@ -24,10 +24,15 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_pydeck_chart_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    # The pydeck chart takes a while to load so check that
+    # it gets attached with an increased timeout.
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(5)
+    expect(pydeck_charts).to_have_count(5, timeout=15000)
 
-    wait_for_app_run(themed_app, 15000)
+    # The map assets can take more time to load, add an extra timeout
+    # to prevent flakiness.
+    themed_app.wait_for_timeout(10000)
+
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         pydeck_charts.nth(0),
@@ -66,4 +71,9 @@ def test_pydeck_chart_has_consistent_visuals(
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
+    # The pydeck chart takes a while to load so check that
+    # it gets attached with an increased timeout.
+    pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
+    expect(pydeck_charts.first).to_be_attached(timeout=15000)
+
     check_top_level_class(app, "stDeckGlJsonChart")

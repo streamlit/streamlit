@@ -251,8 +251,11 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
     chart.click(position={"x": 264, "y": 162})
+    wait_for_app_run(app)
     chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
+    wait_for_app_run(app)
     chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
+    wait_for_app_run(app)
     chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
     wait_for_app_run(app)
 
