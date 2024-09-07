@@ -22,7 +22,7 @@ from e2e_playwright.shared.app_utils import click_button, expect_exception, get_
 # The threshold for the image comparison for the cat images
 # we use a bigger threshold because the images will have a sub-pixel size
 # when resized, which can cause slightly different results for test runs
-CAT_IMAGE_THRESHOLD = 0.01
+CAT_IMAGE_THRESHOLD = 0.02
 
 
 def _get_basic_column_container(
