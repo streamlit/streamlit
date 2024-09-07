@@ -292,12 +292,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [clickMode, options, selectionVisualization, style, value]
   )
 
-  const gap =
+  const columnGap =
     style === ButtonGroupProto.Style.BORDERLESS
       ? theme.spacing.threeXS
       : style === ButtonGroupProto.Style.PILLS
       ? theme.spacing.twoXS
       : theme.spacing.none
+
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
       <WidgetLabel
@@ -327,7 +328,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           Root: {
             style: {
               flexWrap: "wrap",
-              gap: gap,
+              columnGap: columnGap,
+              rowGap: theme.spacing.twoXS,
             },
           },
         }}
