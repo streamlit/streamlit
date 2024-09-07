@@ -19,11 +19,6 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import click_button, expect_exception, get_expander
 
-# The threshold for the image comparison for the cat images
-# we use a bigger threshold because the images will have a sub-pixel size
-# when resized, which can cause slightly different results for test runs
-CAT_IMAGE_THRESHOLD = 0.02
-
 
 def _get_basic_column_container(
     app: Page,
@@ -69,11 +64,7 @@ def test_column_gap_small_is_correctly_applied(
     # We use regex here since some browsers may resolve this to two numbers:
     expect(column_gap_small).to_have_css("gap", re.compile("16px"))
     column_gap_small.scroll_into_view_if_needed()
-    assert_snapshot(
-        column_gap_small,
-        name="st_columns-column_gap_small",
-        image_threshold=CAT_IMAGE_THRESHOLD,
-    )
+    assert_snapshot(column_gap_small, name="st_columns-column_gap_small")
 
 
 def test_column_gap_medium_is_correctly_applied(
@@ -88,11 +79,7 @@ def test_column_gap_medium_is_correctly_applied(
     # We use regex here since some browsers may resolve this to two numbers:
     expect(column_gap_medium).to_have_css("gap", re.compile("32px"))
     column_gap_medium.scroll_into_view_if_needed()
-    assert_snapshot(
-        column_gap_medium,
-        name="st_columns-column_gap_medium",
-        image_threshold=CAT_IMAGE_THRESHOLD,
-    )
+    assert_snapshot(column_gap_medium, name="st_columns-column_gap_medium")
 
 
 def test_column_gap_large_is_correctly_applied(
@@ -105,11 +92,7 @@ def test_column_gap_large_is_correctly_applied(
     # We use regex here since some browsers may resolve this to two numbers:
     expect(column_gap_large).to_have_css("gap", re.compile("64px"))
     column_gap_large.scroll_into_view_if_needed()
-    assert_snapshot(
-        column_gap_large,
-        name="st_columns-column_gap_large",
-        image_threshold=CAT_IMAGE_THRESHOLD,
-    )
+    assert_snapshot(column_gap_large, name="st_columns-column_gap_large")
 
 
 def test_one_level_nesting_works_correctly(
@@ -133,11 +116,7 @@ def test_column_variable_relative_width(
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    assert_snapshot(
-        column_gap_small,
-        name="st_columns-variable_width_relative",
-        image_threshold=CAT_IMAGE_THRESHOLD,
-    )
+    assert_snapshot(column_gap_small, name="st_columns-variable_width_relative")
 
 
 def test_column_variable_absolute_width(
@@ -149,11 +128,7 @@ def test_column_variable_absolute_width(
         .get_by_test_id("stHorizontalBlock")
         .nth(0)
     )
-    assert_snapshot(
-        column_gap_small,
-        name="st_columns-variable_width_absolute",
-        image_threshold=CAT_IMAGE_THRESHOLD,
-    )
+    assert_snapshot(column_gap_small, name="st_columns-variable_width_absolute")
 
 
 def test_column_vertical_alignment_top(
