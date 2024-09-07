@@ -20,7 +20,12 @@ from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidColumnGapError,
+    StreamlitInvalidColumnSpecError,
+    StreamlitInvalidVerticalAlignmentError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
@@ -294,12 +299,7 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise StreamlitAPIException(
-                "The input argument to st.columns must be either a "
-                "positive integer or a list of positive numeric weights. "
-                "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
-                "for more information."
-            )
+            raise StreamlitInvalidColumnSpecError()
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -310,9 +310,8 @@ class LayoutsMixin:
         }
 
         if vertical_alignment not in vertical_alignment_mapping:
-            raise StreamlitAPIException(
-                'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
-                f"The argument passed was {vertical_alignment}."
+            raise StreamlitInvalidVerticalAlignmentError(
+                vertical_alignment=vertical_alignment
             )
 
         def column_gap(gap):
@@ -323,10 +322,7 @@ class LayoutsMixin:
                 if gap_size in valid_sizes:
                     return gap_size
 
-            raise StreamlitAPIException(
-                'The gap argument to st.columns must be "small", "medium", or "large". \n'
-                f"The argument passed was {gap}."
-            )
+            raise StreamlitInvalidColumnGapError(gap=gap)
 
         gap_size = column_gap(gap)
 

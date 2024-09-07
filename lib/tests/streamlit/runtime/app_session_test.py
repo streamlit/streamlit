@@ -85,7 +85,7 @@ def _create_test_session(
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             session_id_override=session_id_override,
         )
 
@@ -313,7 +313,7 @@ class AppSessionTest(unittest.TestCase):
             uploaded_file_mgr=session._uploaded_file_mgr,
             script_cache=session._script_cache,
             initial_rerun_data=RerunData(),
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
         )
@@ -697,7 +697,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -776,7 +776,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )

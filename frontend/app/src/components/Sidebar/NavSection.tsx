@@ -30,7 +30,9 @@ const NavSection = ({
   return (
     <>
       {header && (
-        <StyledSidebarNavSectionHeader>{header}</StyledSidebarNavSectionHeader>
+        <StyledSidebarNavSectionHeader data-testid="stNavSectionHeader">
+          {header}
+        </StyledSidebarNavSectionHeader>
       )}
       {children}
     </>

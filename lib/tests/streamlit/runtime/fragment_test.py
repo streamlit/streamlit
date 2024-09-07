@@ -24,7 +24,11 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
-from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.errors import (
+    FragmentHandledException,
+    FragmentStorageKeyError,
+    StreamlitFragmentWidgetsNotAllowedOutsideError,
+)
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
     _fragment,
@@ -605,9 +609,10 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         with pytest.raises(FragmentHandledException) as ex:
             _app(_element_producer)
 
-        assert (
-            str(ex.value)
-            == "Fragments cannot write to elements outside of their container."
+        inner_exception = ex.value.__cause__ or ex.value.__context__
+
+        assert isinstance(
+            inner_exception, StreamlitFragmentWidgetsNotAllowedOutsideError
         )
 
     @parameterized.expand(
