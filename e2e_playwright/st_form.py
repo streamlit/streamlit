@@ -86,3 +86,33 @@ with st.form("form_5"):
         use_container_width=True,
         icon=":material/key:",
     )
+
+with st.form("form_6"):
+    st.write("Inside form 6 - Submit on Enter")
+    text_input = st.text_input("Form 6 - Text Input")
+    submitted_6 = st.form_submit_button(
+        "Form 6 - First Submit",
+        use_container_width=True,
+    )
+    submitted_6b = st.form_submit_button(
+        "Form 6 - Second Submit",
+        disabled=True,
+        use_container_width=True,
+    )
+    if submitted_6 or submitted_6b:
+        st.write("Form submitted")
+
+with st.form("form_7"):
+    st.write("Inside form 7")
+    text_input = st.text_input("Form 7 - Text Input")
+    submitted_7 = st.form_submit_button(
+        "Form 7 - Disables Submit on Enter",
+        use_container_width=True,
+        disabled=True,
+    )
+    submitted_7b = st.form_submit_button(
+        "Form 7 - Second Submit",
+        use_container_width=True,
+    )
+    if submitted_7 or submitted_7b:
+        st.write("Form submitted")
