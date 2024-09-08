@@ -265,6 +265,55 @@ describe("TextArea widget", () => {
     )
   })
 
+  it("shows Input Instructions on dirty state when not in form (by default)", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press ⌘+Enter to apply"
+    )
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press ⌘+Enter to submit form"
+    )
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .mockReturnValue(false)
+
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
+  })
+
   it("focuses input when clicking label", async () => {
     const props = getProps()
     render(<TextArea {...props} />)

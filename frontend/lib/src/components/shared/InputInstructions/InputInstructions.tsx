@@ -38,7 +38,7 @@ const InputInstructions = ({
   maxLength,
   className,
   type = "single",
-  allowSubmitOnEnter = false,
+  allowSubmitOnEnter = true,
 }: Props): ReactElement => {
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {

@@ -614,7 +614,7 @@ describe("Widget State Manager", () => {
       ).toThrow(`invalid formID ${MOCK_WIDGET.formId}`)
     })
 
-    it("submits the form for the first submitButton if an actualSubmitButton proto is passed", () => {
+    it("submits the form for the first submitButton if an actualSubmitButton proto is not passed", () => {
       const formId = "mockFormId"
       widgetMgr.addSubmitButton(
         formId,
@@ -636,34 +636,143 @@ describe("Widget State Manager", () => {
       )
     })
 
-    it("does not submit the form if the first submitButton is disabled", () => {
-      const formId = "mockFormId"
-      widgetMgr.addSubmitButton(
-        formId,
-        new ButtonProto({ id: "firstSubmitButton", disabled: true })
-      )
-      widgetMgr.addSubmitButton(
-        formId,
-        new ButtonProto({ id: "secondSubmitButton" })
-      )
-      widgetMgr.submitForm(formId, undefined)
-
-      expect(sendBackMsg).not.toHaveBeenCalled()
-    })
-
-    it("does not submit the form if the second submitButton is disabled", () => {
+    it("submits the form for the actualSubmitButton when passed", () => {
       const formId = "mockFormId"
       widgetMgr.addSubmitButton(
         formId,
         new ButtonProto({ id: "firstSubmitButton" })
       )
+      const actualSubmitButton = new ButtonProto({
+        id: "secondSubmitButton",
+        isFormSubmitter: true,
+      })
+      widgetMgr.addSubmitButton(formId, actualSubmitButton)
+      widgetMgr.submitForm(formId, undefined, actualSubmitButton)
+
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [{ id: "secondSubmitButton", triggerValue: true }],
+        },
+        undefined,
+        undefined,
+        undefined
+      )
+    })
+  })
+
+  describe("allowFormSubmitOnEnter", () => {
+    it("returns true for a valid formId with 1st submit button enabled", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
       widgetMgr.addSubmitButton(
         formId,
-        new ButtonProto({ id: "secondSubmitButton", disabled: true })
+        new ButtonProto({ id: "submitButton" })
       )
-      widgetMgr.submitForm(formId, undefined)
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
 
-      expect(sendBackMsg).not.toHaveBeenCalled()
+      // Form should exist & allow submission on Enter
+      // @ts-expect-error - checking that form exists via internal state
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(true)
+    })
+
+    it("returns false for an invalid formId", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      // @ts-expect-error - Created form should exist
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+
+      // @ts-expect-error - Other form should NOT exist & should not allow submit on Enter
+      expect(widgetMgr.forms.get("INVALID_FORM_ID")).toBeFalsy()
+      expect(widgetMgr.allowFormSubmitOnEnter("INVALID_FORM_ID")).toBe(false)
+    })
+
+    it("returns false for a valid formId with no submit buttons", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      // @ts-expect-error - Created form should exist, but no allow submit on Enter
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(false)
+    })
+
+    it("returns false if the 1st submit button disabled", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton", disabled: true })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      // @ts-expect-error - Created form should exist, but no allow submit on Enter
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(false)
+    })
+
+    it("returns true if the 1st submit button enabled, others disabled", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton2", disabled: true })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      // @ts-expect-error - Created form should exist and allow submit on Enter
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(true)
     })
   })
 

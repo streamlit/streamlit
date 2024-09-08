@@ -678,19 +678,20 @@ export class WidgetStateManager {
   }
 
   /**
-   * Helper function to determine whether to allow enter to submit a form
+   * Helper function to determine whether a form allows enter to submit
+   * for input elements (st.number_input, st.text_input, etc.)
+   * Must be in a form & have 1st submit button enabled to allow
    */
   public allowFormSubmitOnEnter(formId: string): boolean {
     const submitButtons = this.formsData.submitButtons.get(formId)
     const firstSubmitButton = submitButtons?.[0]
 
-    // If there are no submit buttons for the given formId,
-    // it is either an invalid form or not a form
+    // If no submit buttons for the formId, either not in form or invalid form
     if (!firstSubmitButton) {
       return false
     }
 
-    // If first submit button is disabled, disable enter to submit
+    // Allow form submit on enter as long as 1st submit button is not disabled
     return !firstSubmitButton.disabled
   }
 

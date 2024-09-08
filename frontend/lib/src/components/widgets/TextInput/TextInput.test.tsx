@@ -250,6 +250,7 @@ describe("TextInput widget", () => {
   it("does update widget value on text changes when inside of a form", async () => {
     const props = getProps({ formId: "formId" })
     const setStringValueSpy = jest.spyOn(props.widgetMgr, "setStringValue")
+    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
 
     render(<TextInput {...props} />)
 
@@ -318,6 +319,55 @@ describe("TextInput widget", () => {
       },
       undefined
     )
+  })
+
+  it("shows Input Instructions on dirty state by default", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TextInput {...props} />)
+
+    // Trigger dirty state
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to apply"
+    )
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+
+    render(<TextInput {...props} />)
+
+    // Trigger dirty state
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to submit form"
+    )
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .mockReturnValue(false)
+
+    render(<TextInput {...props} />)
+
+    // Trigger dirty state
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
   it("hides Please enter to apply text when width is smaller than 180px", () => {
