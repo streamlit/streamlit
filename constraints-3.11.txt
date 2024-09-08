@@ -17,7 +17,7 @@ distlib==0.3.8
 docutils==0.21.2
 emoji==2.12.1
 execnet==2.1.1
-filelock==3.15.4
+filelock==3.16.0
 fonttools==4.53.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -55,7 +55,7 @@ parameterized==0.9.0
 pillow==10.4.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
-platformdirs==4.2.2
+platformdirs==4.3.1
 playwright==1.44.0
 plotly==5.24.0
 pluggy==1.5.0
@@ -112,6 +112,6 @@ tzdata==2024.1
 urllib3==2.2.2
 uv==0.4.7
 vega-datasets==0.9.0
-virtualenv==20.26.3
+virtualenv==20.26.4
 watchdog==5.0.2
 zipp==3.20.1
