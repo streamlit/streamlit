@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 from parameterized import parameterized
 
-from lib.streamlit.errors import StreamlitBadTimeStringError
+from streamlit.errors import StreamlitBadTimeStringError
 from streamlit.time_util import adjust_years, time_to_seconds
 
 TIME_STRING_TO_SECONDS_PARAMS = [
