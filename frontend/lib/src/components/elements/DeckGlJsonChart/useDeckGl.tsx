@@ -65,7 +65,19 @@ const configuration = {
 
 export const jsonConverter = new JSONConverter({ configuration })
 
-export const interpolate = (info: PickingInfo, body: string): string => {
+/**
+ * Interpolates variables within a string using values from a PickingInfo object.
+ *
+ * This function searches for placeholders in the format `{variable}` within the provided
+ * string `body` and replaces them with corresponding values from the `info` object.
+ * It first checks if the variable exists directly on `info.object`, and if not, it checks
+ * within `info.object.properties`.
+ *
+ * @param {PickingInfo} info - The object containing the data to interpolate into the string.
+ * @param {string} body - The string containing placeholders in the format `{variable}`.
+ * @returns {string} - The interpolated string with placeholders replaced by actual values.
+ */
+const interpolate = (info: PickingInfo, body: string): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
     matchedVariables.forEach((match: string) => {
@@ -102,7 +114,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const parsedPydeckJson = useMemo(() => {
     return Object.freeze(JSON5.parse<StreamlitDeckProps>(element.json))
-    // Only parse JSON when not transitioning to/from fullscreen, the json changes, or theme changes
+    // Only parse JSON when transitioning to/from fullscreen, the json changes, or theme changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen, isLightTheme, element.json])
 
