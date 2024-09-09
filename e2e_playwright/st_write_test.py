@@ -90,7 +90,7 @@ def test_display_altair(app: Page):
 
 def test_display_plotly(app: Page):
     """Test that st.write displays plotly charts."""
-    plotly_elements = app.locator(".stPlotlyChart")
+    plotly_elements = app.get_by_test_id("stPlotlyChart")
     expect(plotly_elements).to_have_count(1)
 
 
@@ -103,4 +103,6 @@ def test_display_graphviz(app: Page):
 def test_display_pydeck_chart(app: Page):
     """Test that st.write displays pydeck charts."""
     pydeck_elements = app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_elements).to_have_count(1)
+    # The pydeck chart takes a while to load so check that
+    # it gets attached with an increased timeout.
+    expect(pydeck_elements).to_have_count(1, timeout=15000)

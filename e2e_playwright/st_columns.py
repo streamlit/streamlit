@@ -12,18 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+
+import numpy as np
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
-# allow its execution with different working directories.
-TEST_ASSETS_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "test_assets"
-)
-
-CAT_IMAGE = os.path.join(TEST_ASSETS_DIR, "cat.jpg")
 LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+
+BLACK_IMG = np.repeat(0, 601350).reshape(633, 950)
 
 # Basic columns:
 c1, c2, c3 = st.columns(3)
@@ -38,30 +34,30 @@ c3.write(LOREM_IPSUM)
 
 with st.expander("Variable-width columns (relative numbers)", expanded=True):
     for c in st.columns([0.6, 0.3, 0.1]):
-        c.image(CAT_IMAGE)
+        c.image(BLACK_IMG)
 
 with st.expander("Variable-width columns (absolute numbers)", expanded=True):
     for c in st.columns((1, 2, 3, 4)):
-        c.image(CAT_IMAGE)
+        c.image(BLACK_IMG)
 
 # Various column gaps
 with st.expander("Column gap small", expanded=True):
     c4, c5, c6 = st.columns(3, gap="small")
-    c4.image(CAT_IMAGE)
-    c5.image(CAT_IMAGE)
-    c6.image(CAT_IMAGE)
+    c4.image(BLACK_IMG)
+    c5.image(BLACK_IMG)
+    c6.image(BLACK_IMG)
 
 with st.expander("Column gap medium", expanded=True):
     c7, c8, c9 = st.columns(3, gap="medium")
-    c7.image(CAT_IMAGE)
-    c8.image(CAT_IMAGE)
-    c9.image(CAT_IMAGE)
+    c7.image(BLACK_IMG)
+    c8.image(BLACK_IMG)
+    c9.image(BLACK_IMG)
 
 with st.expander("Column gap large", expanded=True):
     c10, c11, c12 = st.columns(3, gap="large")
-    c10.image(CAT_IMAGE)
-    c11.image(CAT_IMAGE)
-    c12.image(CAT_IMAGE)
+    c10.image(BLACK_IMG)
+    c11.image(BLACK_IMG)
+    c12.image(BLACK_IMG)
 
 with st.expander("Nested columns - one level", expanded=True):
     col1, col2 = st.columns(2)
