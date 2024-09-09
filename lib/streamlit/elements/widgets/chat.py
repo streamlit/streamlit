@@ -18,9 +18,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, cast
 
+from lib.streamlit.elements.lib.form_utils import is_in_form
+from lib.streamlit.elements.lib.utils import (
+    save_for_app_testing,
+)
 from streamlit import runtime
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.elements.form_utils import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
@@ -36,9 +39,6 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
-)
-from streamlit.runtime.state.common import (
-    save_for_app_testing,
 )
 from streamlit.string_util import is_emoji, validate_material_icon
 

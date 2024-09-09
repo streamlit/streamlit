@@ -34,9 +34,9 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
+from lib.streamlit.elements.lib.form_utils import current_form_id
 from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
-from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (

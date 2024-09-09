@@ -32,6 +32,9 @@ from typing import (
 from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
+from lib.streamlit import config
+from lib.streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
+from lib.streamlit.runtime.state.common import TESTING_KEY
 from streamlit import config, dataframe_util, errors, logger
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -344,3 +347,11 @@ def compute_and_register_element_id(
     element_id = _compute_element_id(element_type, user_key, **kwargs)
     _register_element_id(element_type, element_id)
     return element_id
+
+
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
+    if config.get_option("global.appTest"):
+        try:
+            ctx.session_state[TESTING_KEY][k] = v
+        except KeyError:
+            ctx.session_state[TESTING_KEY] = {k: v}

@@ -30,8 +30,11 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
+from lib.streamlit.elements.lib.form_utils import current_form_id, is_in_form
+from lib.streamlit.elements.lib.utils import (
+    save_for_app_testing,
+)
 from streamlit import runtime
-from streamlit.elements.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
@@ -52,9 +55,6 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
-)
-from streamlit.runtime.state.common import (
-    save_for_app_testing,
 )
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url

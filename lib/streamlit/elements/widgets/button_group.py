@@ -26,7 +26,8 @@ from typing import (
     overload,
 )
 
-from streamlit.elements.form_utils import current_form_id
+from lib.streamlit.elements.lib.form_utils import current_form_id
+from lib.streamlit.elements.lib.utils import save_for_app_testing
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
@@ -48,7 +49,6 @@ from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     WidgetDeserializer,
     WidgetSerializer,
-    save_for_app_testing,
 )
 
 if TYPE_CHECKING:

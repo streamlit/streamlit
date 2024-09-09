@@ -17,8 +17,11 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
+from lib.streamlit.elements.lib.form_utils import current_form_id
+from lib.streamlit.elements.lib.utils import (
+    save_for_app_testing,
+)
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -41,9 +44,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     get_session_state,
     register_widget,
-)
-from streamlit.runtime.state.common import (
-    save_for_app_testing,
 )
 from streamlit.type_util import (
     T,
