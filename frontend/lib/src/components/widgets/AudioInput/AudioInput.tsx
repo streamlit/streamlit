@@ -60,12 +60,14 @@ interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 const AudioInput: React.FC<Props> = ({
   element,
   uploadClient,
   widgetMgr,
+  fragmentId,
 }): ReactElement => {
   const theme = useTheme()
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
@@ -101,6 +103,7 @@ const AudioInput: React.FC<Props> = ({
         uploadClient,
         widgetMgr,
         widgetInfo: { id: widgetId, formId: widgetFormId },
+        fragmentId,
       }).then(({ successfulUploads }) => {
         const upload = successfulUploads[0]
         if (upload && upload.fileUrl.deleteUrl) {
@@ -108,7 +111,7 @@ const AudioInput: React.FC<Props> = ({
         }
       })
     },
-    [uploadClient, widgetMgr, widgetId, widgetFormId]
+    [uploadClient, widgetMgr, widgetId, widgetFormId, fragmentId]
   )
 
   useEffect(() => {
@@ -245,7 +248,7 @@ const AudioInput: React.FC<Props> = ({
       element,
       {},
       { fromUi: true },
-      undefined
+      fragmentId
     )
     setShouldUpdatePlaybackTime(false)
     if (notNullOrUndefined(recordingUrl)) {
@@ -258,6 +261,7 @@ const AudioInput: React.FC<Props> = ({
     wavesurfer,
     element,
     widgetMgr,
+    fragmentId,
   ])
 
   const isRecording = Boolean(recordPlugin?.isRecording())

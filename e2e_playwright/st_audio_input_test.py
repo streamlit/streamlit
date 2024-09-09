@@ -26,10 +26,11 @@ from e2e_playwright.shared.app_utils import (
 
 def test_audio_input_renders(app: Page):
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    expect(audio_input_elements).to_have_count(2)
+    expect(audio_input_elements).to_have_count(3)
 
     expect(audio_input_elements.nth(0)).to_be_visible()
     expect(audio_input_elements.nth(1)).to_be_visible()
+    expect(audio_input_elements.nth(2)).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
@@ -68,6 +69,28 @@ def test_audio_input_works_in_forms(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
+def test_feedback_works_with_fragments(app: Page):
+    app.context.grant_permissions(["microphone"])
+
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+    expect(app.get_by_text("Audio Input in Fragment: None")).to_be_visible()
+
+    fragment_audio_input = app.get_by_test_id("stAudioInput").nth(2)
+    fragment_audio_input.get_by_role("button", name="Record").click()
+    time.sleep(1)
+    fragment_audio_input.get_by_role("button", name="Stop recording").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Audio Input in Fragment: None")).not_to_be_visible()
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+    fragment_audio_input.get_by_role("button", name="Clear recording").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
 def test_audio_input_basic_flow(app: Page):
     app.context.grant_permissions(["microphone"])
 
@@ -84,32 +107,32 @@ def test_audio_input_basic_flow(app: Page):
 
     record_button.click()
 
-    stop_button = app.get_by_role("button", name="Stop recording").first
+    stop_button = audio_input.get_by_role("button", name="Stop recording").first
     expect(stop_button).to_be_visible()
 
     time.sleep(2)
 
     stop_button.click()
 
-    play_button = app.get_by_role("button", name="Play").first
+    play_button = audio_input.get_by_role("button", name="Play").first
 
     expect(clock).not_to_have_text("00:00")
 
     play_button.click()
 
-    pause_button = app.get_by_role("button", name="Pause").first
+    pause_button = audio_input.get_by_role("button", name="Pause").first
     expect(pause_button).to_be_visible()
 
     pause_button.click()
 
     expect(play_button).to_be_visible()
 
-    app.get_by_test_id("stAudioInput").first.hover()
+    audio_input.hover()
 
-    clear_button = app.get_by_role("button", name="Clear recording").first
+    clear_button = audio_input.get_by_role("button", name="Clear recording").first
     expect(clear_button).to_be_visible()
 
     clear_button.click()
 
-    expect(app.get_by_role("button", name="Record").first).to_be_visible()
+    expect(audio_input.get_by_role("button", name="Record").first).to_be_visible()
     expect(clock).to_have_text("00:00")
