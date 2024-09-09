@@ -24,7 +24,6 @@ import { PickingInfo } from "@deck.gl/core/typed"
 import { render } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import "@testing-library/jest-dom"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
 import type { PropsWithHeight } from "./types"
@@ -82,7 +81,6 @@ const getProps = (
     width: 0,
     mapboxToken: "mapboxToken",
     height: undefined,
-    theme: mockTheme.emotion,
     isFullScreen: false,
   }
 }
