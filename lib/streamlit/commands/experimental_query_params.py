@@ -15,19 +15,17 @@
 from __future__ import annotations
 
 import urllib.parse as parse
-from typing import Any, Final
+from typing import Any
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-
-_EMBED_QUERY_PARAM: Final[str] = "embed"
-_EMBED_OPTIONS_QUERY_PARAM: Final[str] = "embed_options"
-_EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
-    _EMBED_QUERY_PARAM,
-    _EMBED_OPTIONS_QUERY_PARAM,
-]
+from streamlit.runtime.state.query_params import (
+    EMBED_OPTIONS_QUERY_PARAM,
+    EMBED_QUERY_PARAM,
+    EMBED_QUERY_PARAMS_KEYS,
+)
 
 
 @gather_metrics("experimental_get_query_params")
@@ -140,7 +138,7 @@ def _ensure_no_embed_params(
     """
     # Get query params dict without embed, embed_options params
     query_params_without_embed = _exclude_keys_in_dict(
-        query_params, keys_to_exclude=_EMBED_QUERY_PARAMS_KEYS
+        query_params, keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
     )
     if query_params != query_params_without_embed:
         raise StreamlitAPIException(
@@ -150,14 +148,14 @@ def _ensure_no_embed_params(
     all_current_params = parse.parse_qs(query_string, keep_blank_values=True)
     current_embed_params = parse.urlencode(
         {
-            _EMBED_QUERY_PARAM: list(
+            EMBED_QUERY_PARAM: list(
                 _extract_key_query_params(
-                    all_current_params, param_key=_EMBED_QUERY_PARAM
+                    all_current_params, param_key=EMBED_QUERY_PARAM
                 )
             ),
-            _EMBED_OPTIONS_QUERY_PARAM: list(
+            EMBED_OPTIONS_QUERY_PARAM: list(
                 _extract_key_query_params(
-                    all_current_params, param_key=_EMBED_OPTIONS_QUERY_PARAM
+                    all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
                 )
             ),
         },
