@@ -43,11 +43,13 @@ export const uploadFiles = async ({
   uploadClient,
   widgetMgr,
   widgetInfo,
+  fragmentId,
 }: {
   files: File[]
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
   widgetInfo: WidgetInfo
+  fragmentId?: string
 }): Promise<{
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
@@ -104,7 +106,7 @@ export const uploadFiles = async ({
     {
       fromUi: true,
     },
-    undefined
+    fragmentId
   )
 
   return { successfulUploads, failedUploads }
