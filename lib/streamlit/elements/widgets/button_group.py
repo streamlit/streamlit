@@ -343,7 +343,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["select", "multiselect"] = "select",
         icons: list[str] | None = None,
         default: Sequence[V] | V | None = None,
-        format_func: Callable[[V], dict[str, str]] | None = None,
+        format_func: Callable[[V], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -362,8 +362,7 @@ class ButtonGroupMixin:
 
             transformed = format_func(option)
             return ButtonGroupProto.Option(
-                content=transformed["content"],
-                selected_content=transformed["selected_content"],
+                content=transformed,
                 content_icon=icon,
             )
 
@@ -411,7 +410,7 @@ class ButtonGroupMixin:
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["select", "multiselect"] = "select",
         disabled: bool = False,
-        format_func: Callable[[V], dict[str, str]] | None = None,
+        format_func: Callable[[V], str] | None = None,
         style: Literal["normal", "pills"] = "normal",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -432,15 +431,15 @@ class ButtonGroupMixin:
             )
 
         def _transformed_format_func(
-            option: V, _: str | None
+            option: V, icon: str | None
         ) -> ButtonGroupProto.Option:
             if format_func is None:
-                return ButtonGroupProto.Option(content=str(option))
+                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
 
             transformed = format_func(option)
             return ButtonGroupProto.Option(
-                content=transformed["content"],
-                selected_content=transformed["selected_content"],
+                content=transformed,
+                content_icon=icon,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
