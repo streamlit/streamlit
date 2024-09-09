@@ -204,3 +204,16 @@ def probably_contains_html_tags(s: str) -> bool:
     Note that false positives/negatives are possible, so this function should not be
     used in contexts where complete correctness is required."""
     return bool(_RE_CONTAINS_HTML.search(s))
+
+
+def to_snake_case(camel_case_str: str) -> str:
+    """Converts UpperCamelCase and lowerCamelCase to snake_case.
+
+    Examples
+    --------
+        fooBar -> foo_bar
+        BazBang -> baz_bang
+
+    """
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()

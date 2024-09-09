@@ -21,8 +21,8 @@ import re
 import textwrap
 from typing import Any, Callable
 
+from lib.streamlit.string_util import to_snake_case
 from streamlit import util
-from streamlit.case_converters import to_snake_case
 
 
 class ConfigOption:
