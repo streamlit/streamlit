@@ -22,7 +22,7 @@ import hashlib
 import os
 import subprocess
 import sys
-from typing import Any, Callable, Final, Mapping, TypeVar
+from typing import Any, Callable, Final
 
 from streamlit import env_util
 
@@ -126,16 +126,6 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-_Value = TypeVar("_Value")
-
-
-_Key = TypeVar("_Key", bound=str)
-
-
-def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> dict[str, _Value]:
-    return {k.lower().strip(): v for k, v in dict.items()}
-
-
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass
@@ -149,12 +139,3 @@ def calc_md5(s: bytes | str) -> str:
 
     h.update(b)
     return h.hexdigest()
-
-
-def exclude_keys_in_dict(
-    d: dict[str, Any], keys_to_exclude: list[str]
-) -> dict[str, Any]:
-    """Returns new object but without keys defined in keys_to_exclude"""
-    return {
-        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
-    }
