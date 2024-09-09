@@ -26,11 +26,6 @@ if TYPE_CHECKING:
 _ALPHANUMERIC_CHAR_REGEX: Final = re.compile(r"^[a-zA-Z0-9_&\-\. ]+$")
 
 
-def decode_ascii(string: bytes) -> str:
-    """Decodes a string as ascii."""
-    return string.decode("ascii")
-
-
 def clean_text(text: SupportsStr) -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
