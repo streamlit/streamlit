@@ -87,11 +87,11 @@ class AudioInputMixin:
     def audio_input(
         self,
         label: str,
+        *,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> UploadedFile | None:
