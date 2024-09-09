@@ -110,7 +110,6 @@ def test_dont_observe_invalid_status(
     assert "timeout: did not observe status 'Connecting2'" in status
 
 
-@pytest.mark.flaky(reruns=3)  # TODO: Fix the flakiness
 def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
     app: Page,
 ):
