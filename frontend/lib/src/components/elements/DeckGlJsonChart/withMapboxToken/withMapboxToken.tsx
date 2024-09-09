@@ -33,7 +33,7 @@ interface InjectedProps {
   mapboxToken: string
 }
 
-interface State {
+export interface State {
   mapboxToken?: string
   mapboxTokenError?: Error
   isFetching: boolean

@@ -18,13 +18,16 @@ import React, { FC, useEffect, useState } from "react"
 
 import { DeckGL } from "@deck.gl/react/typed"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
-import { withTheme } from "@emotion/react"
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 import { LayersList } from "@deck.gl/core/typed"
+import { useTheme } from "@emotion/react"
 
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import {
+  EmotionTheme,
+  hasLightBackgroundColor,
+} from "@streamlit/lib/src/theme"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 
 import withMapboxToken from "./withMapboxToken"
@@ -42,7 +45,8 @@ registerLoaders([CSVLoader, GLTFLoader])
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
-  const { element, theme, height, isFullScreen, width } = props
+  const { element, height, isFullScreen, width } = props
+  const theme: EmotionTheme = useTheme()
   const { createTooltip, deck, onViewStateChange, viewState } = useDeckGl({
     element,
     isLightTheme: hasLightBackgroundColor(theme),
@@ -100,6 +104,6 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
   )
 }
 
-export default withTheme(
-  withMapboxToken("st.pydeck_chart")(withFullScreenWrapper(DeckGlJsonChart))
+export default withMapboxToken("st.pydeck_chart")(
+  withFullScreenWrapper(DeckGlJsonChart)
 )

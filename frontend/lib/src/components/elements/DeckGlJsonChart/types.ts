@@ -17,7 +17,6 @@
 import type { DeckProps } from "@deck.gl/core/typed"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import type { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export type StreamlitDeckProps = DeckProps & {
   mapStyle?: string
@@ -25,7 +24,6 @@ export type StreamlitDeckProps = DeckProps & {
 
 export interface DeckGLProps {
   width: number
-  theme: EmotionTheme
   mapboxToken: string
   element: DeckGlJsonChartProto
   isFullScreen?: boolean
