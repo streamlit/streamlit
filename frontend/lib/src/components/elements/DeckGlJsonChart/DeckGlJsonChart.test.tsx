@@ -23,10 +23,12 @@ import { PickingInfo } from "@deck.gl/core/typed"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import "@testing-library/jest-dom"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
-import type { PropsWithHeight } from "./types"
+import type { DeckGLProps } from "./types"
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
 
 const mockInitialViewState = {
@@ -47,7 +49,7 @@ jest.mock("@streamlit/lib/src/theme", () => ({
 const getProps = (
   elementProps: Partial<DeckGlJsonChartProto> = {},
   initialViewStateProps: Record<string, unknown> = {}
-): PropsWithHeight => {
+): DeckGLProps => {
   const json = {
     initialViewState: mockInitialViewState,
     layers: [
@@ -82,6 +84,11 @@ const getProps = (
     mapboxToken: "mapboxToken",
     height: undefined,
     isFullScreen: false,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    }),
+    fragmentId: "myFragmentId",
   }
 }
 
@@ -92,6 +99,7 @@ const getUseDeckGlProps = (
   return {
     ...getProps(elementProps, initialViewStateProps),
     isLightTheme: false,
+    theme: mockTheme.emotion,
   }
 }
 
