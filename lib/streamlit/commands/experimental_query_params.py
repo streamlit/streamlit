@@ -15,18 +15,20 @@
 from __future__ import annotations
 
 import urllib.parse as parse
-from typing import Any
+from typing import Any, Final
 
 from streamlit import util
-from streamlit.constants import (
-    EMBED_OPTIONS_QUERY_PARAM,
-    EMBED_QUERY_PARAM,
-    EMBED_QUERY_PARAMS_KEYS,
-)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+
+_EMBED_QUERY_PARAM: Final[str] = "embed"
+_EMBED_OPTIONS_QUERY_PARAM: Final[str] = "embed_options"
+_EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
+    _EMBED_QUERY_PARAM,
+    _EMBED_OPTIONS_QUERY_PARAM,
+]
 
 
 @gather_metrics("experimental_get_query_params")
@@ -63,7 +65,7 @@ def get_query_params() -> dict[str, list[str]]:
     # Return new query params dict, but without embed, embed_options query params
     return util.exclude_keys_in_dict(
         parse.parse_qs(ctx.query_string, keep_blank_values=True),
-        keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
+        keys_to_exclude=_EMBED_QUERY_PARAMS_KEYS,
     )
 
 
@@ -130,7 +132,7 @@ def _ensure_no_embed_params(
     """
     # Get query params dict without embed, embed_options params
     query_params_without_embed = util.exclude_keys_in_dict(
-        query_params, keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
+        query_params, keys_to_exclude=_EMBED_QUERY_PARAMS_KEYS
     )
     if query_params != query_params_without_embed:
         raise StreamlitAPIException(
@@ -140,14 +142,14 @@ def _ensure_no_embed_params(
     all_current_params = parse.parse_qs(query_string, keep_blank_values=True)
     current_embed_params = parse.urlencode(
         {
-            EMBED_QUERY_PARAM: list(
+            _EMBED_QUERY_PARAM: list(
                 _extract_key_query_params(
-                    all_current_params, param_key=EMBED_QUERY_PARAM
+                    all_current_params, param_key=_EMBED_QUERY_PARAM
                 )
             ),
-            EMBED_OPTIONS_QUERY_PARAM: list(
+            _EMBED_OPTIONS_QUERY_PARAM: list(
                 _extract_key_query_params(
-                    all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
+                    all_current_params, param_key=_EMBED_OPTIONS_QUERY_PARAM
                 )
             ),
         },
