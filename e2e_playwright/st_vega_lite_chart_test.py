@@ -60,7 +60,7 @@ def test_vega_lite_chart_displays_interactive_charts(
     expect(vega_lite_charts.nth(4)).to_be_visible()
     assert_snapshot(
         vega_lite_charts.nth(4),
-        name="st_vega_lite_chart-c",
+        name="st_vega_lite_chart-interactive",
     )
 
 
