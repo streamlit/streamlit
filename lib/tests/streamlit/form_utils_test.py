@@ -14,12 +14,12 @@
 
 import unittest
 
-from lib.streamlit.elements.lib.form_utils import FormData, is_in_form
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack_value,
 )
+from streamlit.elements.lib.form_utils import FormData, is_in_form
 from streamlit.runtime import Runtime, RuntimeConfig
 
 

@@ -20,7 +20,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from lib.streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.lib.js_number import JSNumber
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitValueAboveMaxError,

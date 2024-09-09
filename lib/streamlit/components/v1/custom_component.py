@@ -17,10 +17,10 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from lib.streamlit.elements.lib.form_utils import current_form_id
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException

@@ -18,11 +18,8 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
-from lib.streamlit.elements.lib.form_utils import current_form_id
-from lib.streamlit.elements.lib.utils import (
-    save_for_app_testing,
-)
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -33,6 +30,7 @@ from streamlit.elements.lib.utils import (
     compute_and_register_element_id,
     get_label_visibility_proto_value,
     maybe_coerce_enum,
+    save_for_app_testing,
     to_key,
 )
 from streamlit.errors import StreamlitAPIException

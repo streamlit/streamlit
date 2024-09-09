@@ -22,7 +22,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from lib.streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.lib.js_number import JSNumber
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest

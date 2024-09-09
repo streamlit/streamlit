@@ -32,17 +32,16 @@ from typing import (
 from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
-from lib.streamlit import config
-from lib.streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
-from lib.streamlit.runtime.state.common import TESTING_KEY
 from streamlit import config, dataframe_util, errors, logger
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
     get_script_run_ctx,
 )
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
+    TESTING_KEY,
     RegisterWidgetResult,
     user_key_from_element_id,
 )

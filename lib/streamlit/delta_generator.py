@@ -32,7 +32,6 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from lib.streamlit.elements.lib.form_utils import FormData, current_form_id
 from streamlit import (
     cli_util,
     config,
@@ -63,6 +62,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.lib.form_utils import FormData, current_form_id
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin

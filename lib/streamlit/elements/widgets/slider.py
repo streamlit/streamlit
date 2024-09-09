@@ -33,8 +33,8 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from lib.streamlit.elements.lib.form_utils import current_form_id
-from lib.streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
