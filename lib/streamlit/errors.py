@@ -442,3 +442,14 @@ Colors must be in one of the following formats:
 * List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`
             """
         super().__init__(message, *args)
+
+
+class BadTimeStringError(StreamlitAPIException):
+    """Raised when a bad time string argument is passed."""
+
+    def __init__(self, t: str):
+        MarkdownFormattedException.__init__(
+            self,
+            "Time string doesn't look right. It should be formatted as"
+            f"`'1d2h34m'` or `2 days`, for example. Got: {t}",
+        )
