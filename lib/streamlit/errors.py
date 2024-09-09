@@ -437,7 +437,7 @@ class StreamlitInvalidColorError(LocalizableStreamlitException):
         super().__init__(
             "This does not look like a valid color: {color}.\n\n"
             "Colors must be in one of the following formats:"
-            "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`",
+            "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`"
             "* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`",
             color=repr(color),
         )
