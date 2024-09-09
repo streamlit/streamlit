@@ -29,7 +29,7 @@ from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import NoValue, register_widget
+from streamlit.runtime.state import register_widget
 from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
@@ -143,9 +143,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 "Could not convert component args to JSON", ex
             )
 
-        def marshall_component(
-            dg: DeltaGenerator, element: Element
-        ) -> Any | type[NoValue]:
+        def marshall_component(dg: DeltaGenerator, element: Element) -> Any:
             element.component_instance.component_name = self.name
             element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:

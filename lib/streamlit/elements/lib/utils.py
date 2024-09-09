@@ -51,7 +51,6 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from builtins import ellipsis
 
-    from streamlit.runtime.state.widgets import NoValue
     from streamlit.type_util import T
 
 _LOGGER: Final = logger.get_logger(__name__)
@@ -67,7 +66,6 @@ SAFE_VALUES = Union[
     datetime,
     timedelta,
     None,
-    "NoValue",
     "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
