@@ -42,12 +42,12 @@ class TestGetMappedOptions:
         assert len(options_indices) == 2
 
         for index, option in enumerate(options):
-            assert option.content == _THUMB_ICONS[index]
+            assert option.content_icon == _THUMB_ICONS[index]
 
         # ensure order of thumbs
-        assert "down" in options[1].content
+        assert "down" in options[1].content_icon
         assert options_indices[0] == 1
-        assert "up" in options[0].content
+        assert "up" in options[0].content_icon
         assert options_indices[1] == 0
 
     def test_faces(self):
@@ -57,13 +57,13 @@ class TestGetMappedOptions:
         assert len(options_indices) == 5
 
         for index, option in enumerate(options):
-            assert option.content == _FACES_ICONS[index]
-            assert option.selected_content == ""
+            assert option.content_icon == _FACES_ICONS[index]
+            assert option.selected_content_icon == ""
             assert options_indices[index] == index
 
         # ensure order of faces
-        assert "sad" in options[0].content
-        assert "very_satisfied" in options[4].content
+        assert "sad" in options[0].content_icon
+        assert "very_satisfied" in options[4].content_icon
 
     def test_stars(self):
         options, options_indices = get_mapped_options("stars")
@@ -72,8 +72,8 @@ class TestGetMappedOptions:
         assert len(options_indices) == 5
 
         for index, option in enumerate(options):
-            assert option.content == _STAR_ICON
-            assert option.selected_content == _SELECTED_STAR_ICON
+            assert option.content_icon == _STAR_ICON
+            assert option.selected_content_icon == _SELECTED_STAR_ICON
             assert options_indices[index] == index
 
 
@@ -114,7 +114,7 @@ class ButtonGroupFeedbackTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue().new_element.button_group
         correct_thumbs_order = [":material/thumb_up:", ":material/thumb_down:"]
         self.assertEqual(
-            [option.content for option in delta.options],
+            [option.content_icon for option in delta.options],
             correct_thumbs_order,
         )
         self.assertEqual(delta.default, [])

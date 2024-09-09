@@ -506,7 +506,7 @@ class ButtonGroupMixin:
             _default = None
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
-        if icons is not None and len(icons) < len(indexable_options):
+        if icons is not None and len(icons) != len(indexable_options):
             raise StreamlitAPIException(
                 "The number of icons must match the number of options."
             )
