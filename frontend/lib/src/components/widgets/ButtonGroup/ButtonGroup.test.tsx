@@ -134,7 +134,7 @@ describe("ButtonGroup widget", () => {
     const props = getProps({
       default: [],
       options: options,
-      style: ButtonGroupProto.Style.SEGMENT,
+      style: ButtonGroupProto.Style.SEGMENTS,
     })
     render(<ButtonGroup {...props} />)
 
@@ -482,7 +482,7 @@ describe("ButtonGroup widget", () => {
       const props = getProps({
         default: [],
         options: materialIconOnlyOptions,
-        style: ButtonGroupProto.Style.SEGMENT,
+        style: ButtonGroupProto.Style.SEGMENTS,
       })
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()

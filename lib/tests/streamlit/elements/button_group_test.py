@@ -272,7 +272,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 None,
                 ["a", "b", "c"],
                 "content",
-                ButtonGroupProto.Style.SEGMENT,
+                ButtonGroupProto.Style.SEGMENTS,
                 False,
             ),
         ]
