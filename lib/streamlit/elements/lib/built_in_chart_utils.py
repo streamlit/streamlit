@@ -34,7 +34,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util, type_util
-from streamlit.color_util import (
+from streamlit.elements.lib.color_util import (
     Color,
     is_color_like,
     is_color_tuple_like,

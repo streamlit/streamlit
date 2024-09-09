@@ -430,3 +430,15 @@ class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
             "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
             key=key,
         )
+
+
+class InvalidColorException(StreamlitAPIException):
+    def __init__(self, color, *args):
+        message = f"""This does not look like a valid color: {repr(color)}.
+
+Colors must be in one of the following formats:
+
+* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`
+* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`
+            """
+        super().__init__(message, *args)

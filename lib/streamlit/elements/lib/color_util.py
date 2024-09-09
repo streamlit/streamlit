@@ -18,7 +18,7 @@ from typing import Any, Callable, Collection, Tuple, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import InvalidColorException
 
 # components go from 0.0 to 1.0
 # Supported by Pillow and pretty common.
@@ -262,15 +262,3 @@ def _float_formatter(component: float, color: MaybeColor) -> float:
         return min(1.0, max(component, 0.0))
 
     raise InvalidColorException(color)
-
-
-class InvalidColorException(StreamlitAPIException):
-    def __init__(self, color, *args):
-        message = f"""This does not look like a valid color: {repr(color)}.
-
-Colors must be in one of the following formats:
-
-* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`
-* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`
-            """
-        super().__init__(message, *args)
