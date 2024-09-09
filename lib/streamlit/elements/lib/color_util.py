@@ -18,7 +18,7 @@ from typing import Any, Callable, Collection, Tuple, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import InvalidColorException
+from streamlit.errors import StreamlitInvalidColorError
 
 # components go from 0.0 to 1.0
 # Supported by Pillow and pretty common.
@@ -86,7 +86,7 @@ def to_css_color(color: MaybeColor) -> Color:
             c4tuple = cast(MixedRGBAColorTuple, ctuple)
             return f"rgba({c4tuple[0]}, {c4tuple[1]}, {c4tuple[2]}, {c4tuple[3]})"
 
-    raise InvalidColorException(color)
+    raise StreamlitInvalidColorError(color)
 
 
 def is_css_color_like(color: MaybeColor) -> bool:
@@ -192,18 +192,18 @@ def _to_color_tuple(
             b = color_hex[5:7]
             a = color_hex[7:9]
         else:
-            raise InvalidColorException(color)
+            raise StreamlitInvalidColorError(color)
 
         try:
             color = int(r, 16), int(g, 16), int(b, 16), int(a, 16)
         except Exception as ex:
-            raise InvalidColorException(color) from ex
+            raise StreamlitInvalidColorError(color) from ex
 
     if is_color_tuple_like(color):
         color_tuple = cast(ColorTuple, color)
         return _normalize_tuple(color_tuple, rgb_formatter, alpha_formatter)
 
-    raise InvalidColorException(color)
+    raise StreamlitInvalidColorError(color)
 
 
 def _normalize_tuple(
@@ -233,7 +233,7 @@ def _normalize_tuple(
         alpha = alpha_formatter(color_4tuple[3], color_4tuple)
         return r, g, b, alpha
 
-    raise InvalidColorException(color)
+    raise StreamlitInvalidColorError(color)
 
 
 def _int_formatter(component: float, color: MaybeColor) -> int:
@@ -247,7 +247,7 @@ def _int_formatter(component: float, color: MaybeColor) -> int:
     if isinstance(component, int):
         return min(255, max(component, 0))
 
-    raise InvalidColorException(color)
+    raise StreamlitInvalidColorError(color)
 
 
 def _float_formatter(component: float, color: MaybeColor) -> float:
@@ -261,4 +261,4 @@ def _float_formatter(component: float, color: MaybeColor) -> float:
     if isinstance(component, float):
         return min(1.0, max(component, 0.0))
 
-    raise InvalidColorException(color)
+    raise StreamlitInvalidColorError(color)

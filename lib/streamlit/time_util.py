@@ -18,7 +18,7 @@ import math
 from datetime import date, timedelta
 from typing import Literal, overload
 
-from streamlit.errors import BadTimeStringError, StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitBadTimeStringError
 
 
 def adjust_years(input_date: date, years: int) -> date:
@@ -66,10 +66,10 @@ def time_to_seconds(
             seconds: float = pd.Timedelta(t).total_seconds()
 
             if np.isnan(seconds):
-                raise BadTimeStringError(t)
+                raise StreamlitBadTimeStringError(t)
 
             return seconds
         except ValueError as ex:
-            raise BadTimeStringError(t) from ex
+            raise StreamlitBadTimeStringError(t) from ex
 
     return t

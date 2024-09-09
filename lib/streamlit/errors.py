@@ -432,24 +432,23 @@ class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
         )
 
 
-class InvalidColorException(StreamlitAPIException):
-    def __init__(self, color, *args):
-        message = f"""This does not look like a valid color: {repr(color)}.
+class StreamlitInvalidColorError(StreamlitAPIException):
+    def __init__(self, color):
+        super().__init__(
+            "This does not look like a valid color: {color}.\n\n"
+            "Colors must be in one of the following formats:"
+            "* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`",
+            "* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`",
+            color=repr(color),
+        )
 
-Colors must be in one of the following formats:
 
-* Hex string with 3, 4, 6, or 8 digits. Example: `'#00ff00'`
-* List or tuple with 3 or 4 components. Example: `[1.0, 0.5, 0, 0.2]`
-            """
-        super().__init__(message, *args)
+class StreamlitBadTimeStringError(StreamlitAPIException):
+    """Exception Raised when a time string argument is passed that cannot be parsed."""
 
-
-class BadTimeStringError(StreamlitAPIException):
-    """Raised when a bad time string argument is passed."""
-
-    def __init__(self, t: str):
-        MarkdownFormattedException.__init__(
-            self,
+    def __init__(self, time_string: str):
+        super().__init__(
             "Time string doesn't look right. It should be formatted as"
-            f"`'1d2h34m'` or `2 days`, for example. Got: {t}",
+            "`'1d2h34m'` or `2 days`, for example. Got: {time_string}",
+            time_string=time_string,
         )
