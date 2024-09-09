@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from streamlit import file_util
+from streamlit import errors, file_util
 
 FILENAME = "/some/cache/file"
 mock_get_path = MagicMock(return_value=FILENAME)
@@ -68,7 +68,7 @@ class FileUtilTest(unittest.TestCase):
         dirname = os.path.dirname(file_util.get_streamlit_file_path(FILENAME))
         # patch streamlit.*.os.makedirs instead of os.makedirs for py35 compat
         with patch("streamlit.file_util.open", mock_open()) as open, patch(
-            "streamlit.util.os.makedirs"
+            "streamlit.file_util.os.makedirs"
         ) as makedirs, file_util.streamlit_write(FILENAME) as output:
             output.write("some data")
             open().write.assert_called_once_with("some data")
@@ -79,7 +79,7 @@ class FileUtilTest(unittest.TestCase):
     def test_streamlit_write_exception(self):
         """Test streamlitfile_util.streamlit_write."""
         with patch("streamlit.file_util.open", mock_open()) as p, patch(
-            "streamlit.util.os.makedirs"
+            "streamlit.file_util.os.makedirs"
         ):
             p.side_effect = OSError(errno.EINVAL, "[Errno 22] Invalid argument")
             with pytest.raises(errors.Error) as e, file_util.streamlit_write(
