@@ -79,8 +79,8 @@ ENG_EMOJIS: Final = [
 ]
 
 
-def _lower_clean_dict_keys(dict: Mapping[str, Any]) -> dict[str, Any]:
-    return {k.lower().strip(): v for k, v in dict.items()}
+def _lower_clean_dict_keys(dict: MenuItems) -> dict[str, Any]:
+    return {str(k).lower().strip(): v for k, v in dict.items()}
 
 
 def _get_favicon_string(page_icon: PageIcon) -> str:
