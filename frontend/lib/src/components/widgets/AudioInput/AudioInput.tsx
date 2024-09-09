@@ -168,11 +168,14 @@ const AudioInput: React.FC<Props> = ({
       uploadTheFile(file)
 
       ws.setOptions({
-        // This color is hardcoded because I've spent an hour trying to get it to work
-        // with the theme and I'm giving up for now. The complications arise due to the
-        // way wavesurfer is using these colors. Specifically, the progress color "tints" the wave color
-        // and the opacity of this wave color is not being respected, so to make things work for now hardcoding
-        // this color that looks "okay" on both themes.
+        // We are blending this color instead of directly using the theme color (fadedText40)
+        // because the "faded" part of fadedText40 means introducing some transparency, which
+        // causes problems with the progress waveform color because wavesurfer is choosing to
+        // tint the waveColor with the progressColor instead of directly setting the progressColor.
+        // This means that the low opacity of fadedText40 causes the progress waveform to
+        // have the same opacity which makes it impossible to darken it enough to match designs.
+        // We fix this by blending the colors to figure out what the resulting color should be at
+        // full opacity, and we usee that color to set the waveColor.
         waveColor: blend(
           theme.colors.fadedText40,
           theme.genericColors.secondaryBg
