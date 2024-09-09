@@ -85,7 +85,7 @@ def _create_test_session(
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             session_id_override=session_id_override,
         )
 
@@ -313,7 +313,7 @@ class AppSessionTest(unittest.TestCase):
             uploaded_file_mgr=session._uploaded_file_mgr,
             script_cache=session._script_cache,
             initial_rerun_data=RerunData(),
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
         )
@@ -697,7 +697,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -776,7 +776,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -826,6 +826,27 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         await asyncio.sleep(0)
 
         session._clear_queue.assert_called_once()
+
+    async def test_updates_page_script_hash_in_client_state_on_script_start(self):
+        session = _create_test_session(asyncio.get_running_loop())
+        session._client_state.page_script_hash = "some_page_script_hash"
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="some_other_page_script_hash",
+            fragment_ids_this_run=None,
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        assert session._client_state.page_script_hash == "some_other_page_script_hash"
 
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""

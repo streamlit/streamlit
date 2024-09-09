@@ -18,7 +18,10 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueAssignmentNotAllowedError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -229,14 +232,9 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_session_state_rules(self):
         """Test that it disallows being called in containers (using with syntax)."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with self.assertRaises(StreamlitValueAssignmentNotAllowedError):
             st.session_state.my_key = "Foo"
             st.chat_input("Placeholder", key="my_key")
-
-        self.assertIn(
-            "Values for the widget with key",
-            str(exception_message.value),
-        )
 
     def test_chat_input_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""

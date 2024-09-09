@@ -42,7 +42,6 @@ spec_with_width = {
 }
 
 interactive_spec = {
-    "title": "Interactive Bar Chart Example",
     "data": {
         "values": [
             {"a": "A", "b": 28},
