@@ -36,7 +36,6 @@ from typing import (
 from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
-from lib.streamlit.elements.lib.form_utils import current_form_id
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
@@ -46,6 +45,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     maybe_raise_stack_warning,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
