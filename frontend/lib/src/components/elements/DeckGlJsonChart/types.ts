@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +14,30 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import type { DeckProps } from "@deck.gl/core/typed"
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "DeckGlJsonChartProto";
+import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 
-message DeckGlJsonChart {
-  // The json of the pydeck object (https://deckgl.readthedocs.io/en/latest/deck.html)
-  string json = 1;
+export type StreamlitDeckProps = DeckProps & {
+  mapStyle?: string
+}
 
-  string tooltip = 2;
+export interface DeckGLProps {
+  width: number
+  mapboxToken: string
+  element: DeckGlJsonChartProto
+  isFullScreen?: boolean
+}
 
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 4;
+export interface PropsWithHeight extends DeckGLProps {
+  height?: number
+}
 
-  // ID
-  string id = 5;
-
-  // The user-configured Mapbox token. If empty, the token id fetched from https://data.streamlit.io/tokens.json
-  string mapbox_token = 6;
+export interface DeckObject {
+  initialViewState: {
+    height: number
+    width: number
+  }
+  layers: DeckProps["layers"]
+  mapStyle?: string | Array<string>
 }
