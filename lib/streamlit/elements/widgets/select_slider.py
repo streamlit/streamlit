@@ -31,6 +31,11 @@ from typing_extensions import TypeGuard
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.options_selector_utils import (
+    index_,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -40,8 +45,6 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     compute_and_register_element_id,
     get_label_visibility_proto_value,
-    maybe_coerce_enum,
-    maybe_coerce_enum_sequence,
     save_for_app_testing,
     to_key,
 )
@@ -59,7 +62,6 @@ from streamlit.runtime.state.common import (
     RegisterWidgetResult,
 )
 from streamlit.type_util import T, check_python_comparable
-from streamlit.util import index_
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

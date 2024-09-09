@@ -30,12 +30,12 @@ from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
     compute_and_register_element_id,
-    maybe_coerce_enum_sequence,
     save_for_app_testing,
     to_key,
 )
