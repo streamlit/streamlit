@@ -105,6 +105,7 @@ function getContentElement(
       ? BaseButtonKind.PILLS
       : BaseButtonKind.SEGMENT
   let size = BaseButtonSize.MEDIUM
+
   if (icon && !content) {
     kind = BaseButtonKind.BORDERLESS_ICON
     size = BaseButtonSize.XSMALL
