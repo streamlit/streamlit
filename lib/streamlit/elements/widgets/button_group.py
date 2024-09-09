@@ -45,11 +45,6 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.runtime.state.common import (
-    RegisterWidgetResult,
-    WidgetDeserializer,
-    WidgetSerializer,
-)
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -58,6 +53,11 @@ if TYPE_CHECKING:
         WidgetArgs,
         WidgetCallback,
         WidgetKwargs,
+    )
+    from streamlit.runtime.state.common import (
+        RegisterWidgetResult,
+        WidgetDeserializer,
+        WidgetSerializer,
     )
     from streamlit.type_util import T
 

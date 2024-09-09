@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import unittest
 
-from streamlit import color_util
+from streamlit.elements.lib import color_util
 
 valid_hex_colors = ["#123", "#1234", "#112233", "#11223344"]
 
