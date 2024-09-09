@@ -13,15 +13,19 @@
 # limitations under the License.
 
 import enum
+import unittest
 
 import numpy as np
+import pandas as pd
 import pytest
+from parameterized import parameterized
 
 from streamlit.elements.lib.options_selector_utils import (
     _coerce_enum,
     check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
     get_default_indices,
+    index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
 )
@@ -87,6 +91,72 @@ class TestTransformOptions:
             assert f"{option}" in formatted_options
 
         assert default_indices == [2]
+
+
+class TestIndexMethod(unittest.TestCase):
+    @parameterized.expand(
+        [
+            (np.array([1, 2, 3, 4, 5]), 5, 4),
+            # This one will have 0.15000000000000002 because of floating point precision
+            (np.arange(0.0, 0.25, 0.05), 0.15, 3),
+            ([0, 1, 2, 3], 3, 3),
+            ([0.1, 0.2, 0.3], 0.2, 1),
+            ([0.1, 0.2, None], None, 2),
+            ([0.1, 0.2, float("inf")], float("inf"), 2),
+            (["He", "ello w", "orld"], "He", 0),
+            (list(np.arange(0.0, 0.25, 0.05)), 0.15, 3),
+        ]
+    )
+    def test_successful_index_(self, input, find_value, expected_index):
+        actual_index = index_(input, find_value)
+        assert actual_index == expected_index
+
+    @parameterized.expand(
+        [
+            (np.array([1, 2, 3, 4, 5]), 6),
+            (np.arange(0.0, 0.25, 0.05), 0.1500002),
+            ([0, 1, 2, 3], 3.00001),
+            ([0.1, 0.2, 0.3], 0.3000004),
+            ([0.1, 0.2, 0.3], None),
+            (["He", "ello w", "orld"], "world"),
+            (list(np.arange(0.0, 0.25, 0.05)), 0.150002),
+        ]
+    )
+    def test_unsuccessful_index_(self, input, find_value):
+        with pytest.raises(ValueError):
+            index_(input, find_value)
+
+    def test_index_list(self):
+        self.assertEqual(index_([1, 2, 3, 4], 1), 0)
+        self.assertEqual(index_([1, 2, 3, 4], 4), 3)
+
+    def test_index_list_fails(self):
+        with self.assertRaises(ValueError):
+            index_([1, 2, 3, 4], 5)
+
+    def test_index_tuple(self):
+        self.assertEqual(index_((1, 2, 3, 4), 1), 0)
+        self.assertEqual(index_((1, 2, 3, 4), 4), 3)
+
+    def test_index_tuple_fails(self):
+        with self.assertRaises(ValueError):
+            index_((1, 2, 3, 4), 5)
+
+    def test_index_numpy_array(self):
+        self.assertEqual(index_(np.array([1, 2, 3, 4]), 1), 0)
+        self.assertEqual(index_(np.array([1, 2, 3, 4]), 4), 3)
+
+    def test_index_numpy_array_fails(self):
+        with self.assertRaises(ValueError):
+            index_(np.array([1, 2, 3, 4]), 5)
+
+    def test_index_pandas_series(self):
+        self.assertEqual(index_(pd.Series([1, 2, 3, 4]), 1), 0)
+        self.assertEqual(index_(pd.Series([1, 2, 3, 4]), 4), 3)
+
+    def test_index_pandas_series_fails(self):
+        with self.assertRaises(ValueError):
+            index_(pd.Series([1, 2, 3, 4]), 5)
 
 
 class TestEnumCoercion:

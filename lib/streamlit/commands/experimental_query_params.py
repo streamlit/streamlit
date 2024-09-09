@@ -62,7 +62,7 @@ def get_query_params() -> dict[str, list[str]]:
     # Return new query params dict, but without embed, embed_options query params
     return _exclude_keys_in_dict(
         parse.parse_qs(ctx.query_string, keep_blank_values=True),
-        keys_to_exclude=_EMBED_QUERY_PARAMS_KEYS,
+        keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
     )
 
 
