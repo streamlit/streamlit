@@ -432,7 +432,7 @@ class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
         )
 
 
-class StreamlitInvalidColorError(StreamlitAPIException):
+class StreamlitInvalidColorError(LocalizableStreamlitException):
     def __init__(self, color):
         super().__init__(
             "This does not look like a valid color: {color}.\n\n"
@@ -443,7 +443,7 @@ class StreamlitInvalidColorError(StreamlitAPIException):
         )
 
 
-class StreamlitBadTimeStringError(StreamlitAPIException):
+class StreamlitBadTimeStringError(LocalizableStreamlitException):
     """Exception Raised when a time string argument is passed that cannot be parsed."""
 
     def __init__(self, time_string: str):
