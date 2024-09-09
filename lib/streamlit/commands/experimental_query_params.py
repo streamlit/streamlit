@@ -107,6 +107,21 @@ def set_query_params(**query_params: Any) -> None:
     ctx.enqueue(msg)
 
 
+def _extract_key_query_params(
+    query_params: dict[str, list[str]], param_key: str
+) -> set[str]:
+    """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
+    return {
+        item.lower()
+        for sublist in [
+            [value.lower() for value in query_params[key]]
+            for key in query_params.keys()
+            if key.lower() == param_key and query_params.get(key)
+        ]
+        for item in sublist
+    }
+
+
 def _ensure_no_embed_params(
     query_params: dict[str, list[str] | str], query_string: str
 ) -> str:
@@ -126,12 +141,12 @@ def _ensure_no_embed_params(
     current_embed_params = parse.urlencode(
         {
             EMBED_QUERY_PARAM: list(
-                util.extract_key_query_params(
+                _extract_key_query_params(
                     all_current_params, param_key=EMBED_QUERY_PARAM
                 )
             ),
             EMBED_OPTIONS_QUERY_PARAM: list(
-                util.extract_key_query_params(
+                _extract_key_query_params(
                     all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
                 )
             ),
