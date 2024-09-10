@@ -14,6 +14,7 @@
 
 import streamlit as st
 
+st.header("Pills - standard")
 pills_options = [
     "🧰 General widgets",
     "📊 Charts",
@@ -42,3 +43,6 @@ selection = st.pills(
     help="This is for choosing options",
 )
 st.write(f"Multi selection: {selection}")
+
+
+st.header("Pills - with icons")

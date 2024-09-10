@@ -210,7 +210,7 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand([(None, []), ([], []), (["Tea"], [1]), ("Coffee", [0])])
-    def test_defaults_for_singleselect(self, defaults, expected):
+    def test_default_for_singleselect(self, defaults, expected):
         """Test that valid default can be passed as expected."""
         st.button_group(
             ["Coffee", "Tea", "Water"], default=defaults, selection_mode="select"
@@ -220,6 +220,21 @@ class TestButtonGroup(DeltaGeneratorTestCase):
         self.assertEqual(
             [option.content for option in c.options],
             ["Coffee", "Tea", "Water"],
+        )
+
+    def test_default_for_single_select_must_be_single_value(self):
+        """Test that passing multiple values as default for single select raises an
+        exception."""
+        with pytest.raises(StreamlitAPIException) as exception:
+            st.button_group(
+                ["Coffee", "Tea", "Water"],
+                default=["Coffee", "Tea"],
+                selection_mode="select",
+            )
+        assert (
+            str(exception.value)
+            == "The default argument to `st.button_group` must be a single value when "
+            "`selection_mode='select'`."
         )
 
     @parameterized.expand(
@@ -297,8 +312,29 @@ class TestButtonGroup(DeltaGeneratorTestCase):
     )
     def test_invalid_defaults(self, defaults, expected):
         """Test that invalid default trigger the expected exception."""
-        with self.assertRaises(expected):
+        with pytest.raises(expected):
             st.button_group(["Coffee", "Tea", "Water"], default=defaults)
+
+    def test_icon_list_too_small(self):
+        """Test that it throws an exception if the icon list is too small."""
+        with pytest.raises(StreamlitAPIException) as exception:
+            st.button_group(["Coffee", "Tea"], icons=["🍵"])
+        assert (
+            str(exception.value)
+            == "The number of icons must match the number of options."
+        )
+
+    def test_options_list_too_small_when_icons_provided(self):
+        """Test that it throws an exception if the options list is too small when icons
+        are provided."""
+        with pytest.raises(StreamlitAPIException) as exception:
+            st.button_group(
+                ["Coffee"], icons=[":material/thumbs_up:", ":material/thumbs_down:"]
+            )
+        assert (
+            str(exception.value)
+            == "The number of icons must match the number of options."
+        )
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

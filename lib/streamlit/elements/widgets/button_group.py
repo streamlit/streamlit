@@ -30,7 +30,6 @@ from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
-    maybe_coerce_enum_sequence,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
