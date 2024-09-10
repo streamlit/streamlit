@@ -29,6 +29,10 @@ TEST_ASSETS_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "test_assets"
 )
 
+# we read the iframeResizer script from the assets file and inject the content within a
+# <script>{content}</script> tag to the iframe. I wasn't able to load the script from a
+# url in the playwright, which is why we do it inline (I also didn't spend a ton of time
+# so it might easily be possible).
 with open(os.path.join(TEST_ASSETS_DIR, "iframerResizer.min.js")) as f:
     IFRAME_RESIZER_SCRIPT: Final[str] = f.read()
 
@@ -90,8 +94,9 @@ def _snapshot_expanded_iframe(
     snapshot_name: str,
 ):
     def move_slider_and_expect_markdown(slider: Locator):
+        """The app renders markdown elements basedf on the slider value."""
         slider.hover()
-        # click in middle
+        # click in middle of the slider (which should then have the value 10)
         slider.click()
         wait_for_app_run(iframe)
         expect(iframe.get_by_test_id("stMarkdown")).to_have_count(10)
@@ -107,6 +112,8 @@ def _snapshot_expanded_iframe(
 def test_render_embedded_iframe_correctly(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the iframe is rendered correctly when embedded
+    (query param '?embed=true' added to the iframe src url)."""
     frame_locator = _open_with_resize_script(iframed_app, embed=True)
     _snapshot_iframe(
         frame_locator, None, assert_snapshot, "iframe_resizer-embedded_iframe"
@@ -116,6 +123,9 @@ def test_render_embedded_iframe_correctly(
 def test_render_embedded_iframe_expanded(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the iframe is rendered correctly when embedded
+    (query param '?embed=true' added to the iframe src url) and
+    markdown elements rendered."""
     frame_locator = _open_with_resize_script(iframed_app, embed=True)
     _snapshot_expanded_iframe(
         frame_locator, assert_snapshot, "iframe_resizer-embedded_iframe_expanded"
@@ -125,6 +135,8 @@ def test_render_embedded_iframe_expanded(
 def test_render_unembedded_iframe_correctly(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the iframe is rendered correctly when not embedded (no
+    query param added to the iframe src url)."""
     frame_locator = _open_with_resize_script(iframed_app)
     _snapshot_iframe(
         frame_locator, None, assert_snapshot, "iframe_resizer-unembedded_iframe"
@@ -134,6 +146,8 @@ def test_render_unembedded_iframe_correctly(
 def test_render_unembedded_iframe_expanded(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the iframe is rendered correctly when not embedded (no
+    query param added to the iframe src url) and markdown elements rendered."""
     frame_locator = _open_with_resize_script(iframed_app)
     _snapshot_expanded_iframe(
         frame_locator,
@@ -145,6 +159,10 @@ def test_render_unembedded_iframe_expanded(
 def test_render_unembedded_iframe_with_minheight(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the iframe has a minimum height even if there are no markdown
+    elements. This means that this screenshot should have a larger height than
+    the non-expanded, unembedded iframe screenshot without a min-height."""
+
     frame_locator = _open_with_resize_script(iframed_app, with_min_height=True)
     _snapshot_iframe(
         frame_locator,
@@ -157,6 +175,7 @@ def test_render_unembedded_iframe_with_minheight(
 def test_render_unembedded_iframe_with_minheight_expanded(
     iframed_app: IframedPage, assert_snapshot: ImageCompareFunction
 ):
+    """Test that the iframe has a minimum height and expands correctly."""
     frame_locator = _open_with_resize_script(iframed_app, with_min_height=True)
     _snapshot_expanded_iframe(
         frame_locator,
