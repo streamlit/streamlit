@@ -21,7 +21,12 @@ from typing import TYPE_CHECKING, Final, Literal, Mapping, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.elements import image
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidMenuItemKeyError,
+    StreamlitInvalidPageLayoutError,
+    StreamlitInvalidSidebarStateError,
+    StreamlitInvalidURLError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -227,9 +232,8 @@ def set_page_config(
     elif layout == "wide":
         pb_layout = PageConfigProto.WIDE
     else:
-        raise StreamlitAPIException(
-            f'`layout` must be "centered" or "wide" (got "{layout}")'
-        )
+        raise StreamlitInvalidPageLayoutError(layout=layout)
+
     msg.page_config_changed.layout = pb_layout
 
     pb_sidebar_state: PageConfigProto.SidebarState.ValueType
@@ -240,10 +244,8 @@ def set_page_config(
     elif initial_sidebar_state == "collapsed":
         pb_sidebar_state = PageConfigProto.COLLAPSED
     else:
-        raise StreamlitAPIException(
-            "`initial_sidebar_state` must be "
-            '"auto" or "expanded" or "collapsed" '
-            f'(got "{initial_sidebar_state}")'
+        raise StreamlitInvalidSidebarStateError(
+            initial_sidebar_state=initial_sidebar_state
         )
 
     msg.page_config_changed.initial_sidebar_state = pb_sidebar_state
@@ -287,15 +289,11 @@ def set_menu_items_proto(lowercase_menu_items, menu_items_proto) -> None:
 def validate_menu_items(menu_items: MenuItems) -> None:
     for k, v in menu_items.items():
         if not valid_menu_item_key(k):
-            raise StreamlitAPIException(
-                "We only accept the keys: "
-                '"Get help", "Report a bug", and "About" '
-                f'("{k}" is not a valid key.)'
-            )
+            raise StreamlitInvalidMenuItemKeyError(key=k)
         if v is not None and (
             not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY
         ):
-            raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
+            raise StreamlitInvalidURLError(url=v)
 
 
 def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:

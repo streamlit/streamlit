@@ -44,8 +44,8 @@ from streamlit.runtime.state.common import (
     ValueFieldName,
     WidgetMetadata,
     is_array_value_field_name,
-    is_keyed_widget_id,
-    is_widget_id,
+    is_element_id,
+    is_keyed_element_id,
 )
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
@@ -353,9 +353,9 @@ class SessionState:
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self._keys():
-            if not is_widget_id(k) and not _is_internal_key(k):
+            if not is_element_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_widget_id(k):
+            elif is_keyed_element_id(k):
                 try:
                     key = wid_key_map[k]
                     state[key] = self[k]
@@ -586,7 +586,7 @@ class SessionState:
             k: v
             for k, v in self._old_state.items()
             if (
-                not is_widget_id(k)
+                not is_element_id(k)
                 or not _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(k),
                     active_widget_ids,

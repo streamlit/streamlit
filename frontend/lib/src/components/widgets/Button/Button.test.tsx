@@ -60,7 +60,6 @@ describe("Button widget", () => {
 
     const stButtonDiv = screen.getByTestId("stButton")
 
-    expect(stButtonDiv).toHaveClass("row-widget")
     expect(stButtonDiv).toHaveClass("stButton")
     expect(stButtonDiv).toHaveStyle(`width: ${props.width}px`)
   })

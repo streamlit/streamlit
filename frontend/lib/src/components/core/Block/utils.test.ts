@@ -17,7 +17,7 @@
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
-import { isElementStale } from "./utils"
+import { convertKeyToClassName, getKeyFromId, isElementStale } from "./utils"
 
 describe("isElementStale", () => {
   const node = new ElementNode(
@@ -86,4 +86,65 @@ describe("isElementStale", () => {
       expect(isElementStale(node, s, "someOtherScriptRunId", [])).toBe(false)
     })
   })
+})
+
+describe("convertKeyToClassName", () => {
+  const testCases = [
+    { input: undefined, expected: "" },
+    { input: null, expected: "" },
+    { input: "", expected: "" },
+    { input: "helloWorld", expected: "st-key-helloWorld" },
+    { input: "hello world!", expected: "st-key-hello-world-" },
+    { input: "123Start", expected: "st-key-123Start" },
+    { input: "My_Class-Name", expected: "st-key-My_Class-Name" },
+    {
+      input: "invalid#characters$here",
+      expected: "st-key-invalid-characters-here",
+    },
+    { input: "another$Test_case", expected: "st-key-another-Test_case" },
+  ]
+
+  test.each(testCases)(
+    "converts $input to $expected",
+    ({ input, expected }) => {
+      expect(convertKeyToClassName(input)).toBe(expected)
+    }
+  )
+})
+
+describe("getKeyFromId", () => {
+  const testCases = [
+    {
+      input: "",
+      expected: undefined,
+    },
+    {
+      input: undefined,
+      expected: undefined,
+    },
+    {
+      input: "$ID-899e9b72e1539f21f8e82565d36609d0-foo",
+      expected: undefined,
+    },
+    {
+      input: "$$ID-899e9b72e1539f21f8e82565d36609d0-None",
+      expected: undefined,
+    },
+    { input: "helloWorld", expected: undefined },
+    {
+      input: "$$ID-899e9b72e1539f21f8e82565d36609d0-first container",
+      expected: "first container",
+    },
+    {
+      input: "$$ID-foo-bar",
+      expected: "bar",
+    },
+  ]
+
+  test.each(testCases)(
+    "extracts the key from $input",
+    ({ input, expected }) => {
+      expect(getKeyFromId(input)).toBe(expected)
+    }
+  )
 })

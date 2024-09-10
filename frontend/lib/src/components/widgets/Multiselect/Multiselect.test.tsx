@@ -56,7 +56,7 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
-    const multiSelect = screen.getByRole("combobox")
+    const multiSelect = screen.getByTestId("stMultiSelect")
     expect(multiSelect).toBeInTheDocument()
   })
 
@@ -95,7 +95,6 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
     const multiSelect = screen.getByTestId("stMultiSelect")
 
-    expect(multiSelect).toHaveClass("row-widget")
     expect(multiSelect).toHaveClass("stMultiSelect")
     expect(multiSelect).toHaveStyle(`width: ${props.width}px`)
   })

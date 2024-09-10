@@ -35,10 +35,10 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
 
     def test_user_email_attr(self):
         """Test that `st.user.email` returns user info from ScriptRunContext"""
-        self.assertEqual(st.experimental_user.email, "test@test.com")
+        self.assertEqual(st.experimental_user.email, "test@example.com")
 
     def test_user_email_key(self):
-        self.assertEqual(st.experimental_user["email"], "test@test.com")
+        self.assertEqual(st.experimental_user["email"], "test@example.com")
 
     def test_user_non_existing_attr(self):
         """Test that an error is raised when called non existed attr."""

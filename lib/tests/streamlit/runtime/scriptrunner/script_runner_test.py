@@ -1212,7 +1212,7 @@ class TestScriptRunner(ScriptRunner):
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path),
         )

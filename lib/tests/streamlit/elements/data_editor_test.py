@@ -243,7 +243,7 @@ class DataEditorUtilTest(unittest.TestCase):
             {"col1": 11, "col2": "bar", "col3": True},
         ]
 
-        edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+        edited_rows: dict[int, dict[str, str | int | float | bool | None]] = {
             1: {
                 "col1": 123,
             }
@@ -265,6 +265,39 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col1": [123, 10, 11],
                 "col2": ["b", "foo", "bar"],
                 "col3": [False, False, True],
+            },
+        )
+
+    def test_apply_dataframe_edits_handles_index_changes(self):
+        """Test applying edits to a DataFrame correctly handles index changes.
+
+        See: https://github.com/streamlit/streamlit/issues/8854
+        """
+        df = pd.DataFrame(
+            {
+                "A": [1, 2, 3, 4, 5],
+                "B": [10, 20, 30, 40, 50],
+            }
+        ).set_index("A")
+
+        deleted_rows: list[int] = [4]
+        added_rows: list[dict[str, Any]] = [{"_index": 5, "B": 123}]
+        edited_rows: dict[int, Any] = {}
+
+        _apply_dataframe_edits(
+            df,
+            {
+                "deleted_rows": deleted_rows,
+                "added_rows": added_rows,
+                "edited_rows": edited_rows,
+            },
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
+        )
+
+        self.assertEqual(
+            df.to_dict(orient="list"),
+            {
+                "B": [10, 20, 30, 40, 123],
             },
         )
 

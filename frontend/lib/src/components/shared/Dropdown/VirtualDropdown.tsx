@@ -67,7 +67,7 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
       <StyledList
         $style={{ height: `${EMPTY_LIST_HEIGHT}px` }}
         ref={ref}
-        data-testid="stVirtualDropdownEmpty"
+        data-testid="stSelectboxVirtualDropdownEmpty"
       >
         <StyledEmptyState {...childrenProps} />
       </StyledList>
@@ -80,7 +80,7 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
     <StyledList
       ref={ref}
       $style={{ paddingTop: 0, paddingBottom: 0 }}
-      data-testid="stVirtualDropdown"
+      data-testid="stSelectboxVirtualDropdown"
     >
       <FixedSizeList
         width="100%"

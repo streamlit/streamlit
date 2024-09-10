@@ -68,3 +68,21 @@ with st.form("form_3", border=False):
         "Form 3 - Submit (use_container_width)",
         use_container_width=True,
     )
+
+with st.form("form_4"):
+    st.write("Inside form 4 - emoji icon")
+    text_input = st.text_input("Form 4 - Text Input")
+    st.form_submit_button(
+        "Form 4 - Submit with emoji icon",
+        use_container_width=True,
+        icon="🔍",
+    )
+
+with st.form("form_5"):
+    st.write("Inside form 5 - material icon")
+    text_input = st.text_input("Form 5 - Text Input")
+    st.form_submit_button(
+        "Form 5 - Submit with material icon",
+        use_container_width=True,
+        icon=":material/key:",
+    )

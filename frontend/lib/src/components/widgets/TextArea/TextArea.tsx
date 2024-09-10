@@ -246,7 +246,7 @@ class TextArea extends React.PureComponent<Props, State> {
             },
             Root: {
               props: {
-                "data-testid": "stTextInput-RootElement",
+                "data-testid": "stTextAreaRootElement",
               },
               style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.

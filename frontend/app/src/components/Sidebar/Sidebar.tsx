@@ -36,6 +36,7 @@ import {
 } from "@streamlit/lib"
 
 import {
+  RESIZE_HANDLE_WIDTH,
   StyledCollapseSidebarButton,
   StyledLogo,
   StyledLogoLink,
@@ -245,6 +246,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const logo = (
       <StyledLogo
         src={source}
+        size={appLogo.size}
         sidebarWidth={sidebarWidth}
         alt="Logo"
         className="stLogo"
@@ -290,24 +292,22 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <>
-        {collapsedSidebar && (
-          <StyledSidebarOpenContainer
-            chevronDownshift={chevronDownshift}
-            isCollapsed={collapsedSidebar}
-            data-testid="collapsedControl"
-          >
-            {this.renderLogo(true)}
-            <StyledOpenSidebarButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_NO_PADDING}
-                onClick={this.toggleCollapse}
-              >
-                <Icon content={ChevronRight} size="xl" />
-              </BaseButton>
-            </StyledOpenSidebarButton>
-          </StyledSidebarOpenContainer>
-        )}
+        <StyledSidebarOpenContainer
+          chevronDownshift={chevronDownshift}
+          data-testid="stSidebarCollapsedControl"
+        >
+          {this.renderLogo(true)}
+          <StyledOpenSidebarButton>
+            <BaseButton
+              kind={BaseButtonKind.HEADER_NO_PADDING}
+              onClick={this.toggleCollapse}
+            >
+              <Icon content={ChevronRight} size="xl" />
+            </BaseButton>
+          </StyledOpenSidebarButton>
+        </StyledSidebarOpenContainer>
         <Resizable
+          className="stSidebar"
           data-testid="stSidebar"
           aria-expanded={!collapsedSidebar}
           enable={{
@@ -316,7 +316,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             bottom: false,
             left: false,
           }}
-          handleStyles={{ right: { width: "8px", right: "-6px" } }}
+          handleStyles={{
+            right: {
+              width: RESIZE_HANDLE_WIDTH,
+              right: "-6px",
+            },
+          }}
           handleComponent={{
             right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}

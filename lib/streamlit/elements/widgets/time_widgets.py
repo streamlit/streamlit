@@ -40,6 +40,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -55,7 +56,6 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import adjust_years
 
 if TYPE_CHECKING:
@@ -454,7 +454,7 @@ class TimeWidgetsMixin:
                 "The type of value should be one of datetime, time or None"
             )
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
             label=label,
@@ -472,7 +472,7 @@ class TimeWidgetsMixin:
             parsed_time = None
 
         time_input_proto = TimeInputProto()
-        time_input_proto.id = id
+        time_input_proto.id = element_id
         time_input_proto.label = label
         if parsed_time is not None:
             time_input_proto.default = time.strftime(parsed_time, "%H:%M")
@@ -500,7 +500,6 @@ class TimeWidgetsMixin:
         widget_state = register_widget(
             "time_input",
             time_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -730,7 +729,7 @@ class TimeWidgetsMixin:
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
             label=label,
@@ -775,7 +774,7 @@ class TimeWidgetsMixin:
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
-        date_input_proto.id = id
+        date_input_proto.id = element_id
         date_input_proto.is_range = parsed_values.is_range
         date_input_proto.disabled = disabled
         date_input_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -804,7 +803,6 @@ class TimeWidgetsMixin:
         widget_state = register_widget(
             "date_input",
             date_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

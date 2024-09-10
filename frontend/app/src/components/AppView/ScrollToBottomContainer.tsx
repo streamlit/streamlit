@@ -39,7 +39,7 @@ export default function ScrollToBottomContainer(props: Props): ReactElement {
       isEmbedded={isEmbedded}
       disableScrolling={disableScrolling}
       ref={scrollContainerRef}
-      data-testid="ScrollToBottomContainer"
+      data-testid="stAppScrollToBottomContainer"
     >
       {children}
     </StyledAppViewMain>

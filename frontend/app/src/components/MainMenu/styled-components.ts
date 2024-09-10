@@ -38,7 +38,7 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
   right: theme.spacing.sm,
   width: theme.spacing.sm,
   height: theme.spacing.sm,
-  backgroundColor: "red",
+  backgroundColor: theme.colors.red,
   borderRadius: theme.radii.full,
   boxShadow: `0 0 ${theme.spacing.twoXS} ${theme.colors.red}`,
   animation: `${recordingIndicatorPulse(theme)} 2s linear infinite`,
@@ -175,7 +175,7 @@ export const StyledMenuItemLabel = styled.span(({ theme }) => ({
 export const StyledMenuContainer = styled.div(({ theme }) => ({
   // We start by adding border radius to all menus
   ul: {
-    borderRadius: theme.radii.lg,
+    borderRadius: theme.radii.default,
   },
 
   // This selects the standard menu only if there's another menu below.

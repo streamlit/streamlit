@@ -40,6 +40,8 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
     error message. We don't use reject because on Firefox this seem to cause an
     undefined error which is not as precise as our error message.
     Otherwise, the promise is resolved with the status.
+
+    The resolved status will be uppercased.
     """
 
     return app.evaluate(
@@ -51,47 +53,49 @@ def _get_status(app: Page, expected_status: str, callable_action: str) -> str:
                     // Define a timeoutId so that we can cancel the timeout in the
                     // callback upon success
                     let timeoutId = null
-
+                    let resolved = false
                     const callback = (mutationList, observer) => {
-                        for (const mutation of mutationList) {
-                            if (mutation.type !== "childList") {
-                                continue
-                            }
-                            if (mutation.addedNodes.length === 0) {
-                                continue
-                            }
-                            for (const node of mutation.addedNodes) {
-                                const testId = node.getAttribute('data-testid')
-                                if (testId === 'stStatusWidget') {
-                                    const status = node.textContent
-                                    if (status.indexOf(expectedStatus) > -1) {
-                                        if (timeoutId) clearTimeout(timeoutId)
-                                        if (observer) observer.disconnect()
-                                        resolve(status)
-                                        return
-                                    }
-                                }
-                            }
+                        if (!mutationList || mutationList.length === 0) {
+                            return
+                        }
+                        const target = mutationList[0].target
+                        if (!target) {
+                            return
+                        }
+                        let state = target
+                                        .getAttribute('data-test-connection-state')
+                                        .toUpperCase();
+                        if (state.indexOf(expectedStatus.toUpperCase()) > -1) {
+                            resolved = true
+                            if (timeoutId) clearTimeout(timeoutId)
+                            if (observer) observer.disconnect()
+                            resolve(state)
                         }
                     }
                     const observer = new MutationObserver(callback);
-                    // Observe toolbar for changes, which includes status widget
-                    const targetNode = document.querySelector('[data-testid=stToolbar]')
+                    // Observe app status for changes
+                    const targetNode = document.querySelector('[data-testid=stApp]')
                     if (!targetNode) {
-                        resolve("toolbar not found")
+                        resolve("stApp not found")
                         return
                     }
-                    const config = { childList: true, subtree: true };
+                    const config = {
+                        childList: false,
+                        subtree: false,
+                        attributeFilter: ['data-test-connection-state']
+                    };
                     observer.observe(targetNode, config);
 
             """
         + callable_action
         + """
-                    timeoutId = setTimeout(() => {
-                        if (observer) observer.disconnect()
-                        resolve(`timeout: did not observe status '${expectedStatus}'`)
-                        return
-                    }, 1000);
+                    if (!resolved) {
+                        timeoutId = setTimeout(() => {
+                            if (observer) observer.disconnect()
+                            resolve(`timeout: did not observe status '${expectedStatus}'`)
+                            return
+                        }, 1500);
+                    }
                 })
 
                 const status = await p
@@ -122,8 +126,8 @@ def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
             click_button(app, "click me!")
 
         # disconnect and wait for status to change
-        status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
-        assert status == "Connecting"
+        status = _get_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+        assert status == "CONNECTING"
 
         wait_for_app_run(app)
         expect_markdown(app, f"count: {expected_count}")
@@ -135,12 +139,12 @@ def test_reruns_script_when_interrupted_by_websocket_disconnect(
     # Click on the checkbox, but don't wait for the app to finish running.
     get_checkbox(app, "do something slow").locator("label").click()
 
-    # NOTE: The "Connecting" status doesn't actually show up because the "Running"
+    # NOTE: The "CONNECTING" status doesn't actually show up because the "Running"
     # status takes priority in the app's status widget, so this _get_status call ends up
     # timing out. This is fine for now as it doesn't really affect the test, and we'll
     # be moving away from using the status widget to determine app state in tests due to
     # the natural flakiness of the approach.
-    _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
+    _get_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
 
     wait_for_app_run(app)
     expect_markdown(app, "slow operations attempted: 2")
@@ -163,8 +167,8 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     wait_for_app_run(app)
 
     # Disconnect
-    status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
-    assert status == "Connecting"
+    status = _get_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+    assert status == "CONNECTING"
 
     # Wait until re-connected
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
@@ -198,8 +202,8 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
     expect(app.get_by_test_id("stImage")).to_be_visible()
 
     # Disconnect
-    status = _get_status(app, "Connecting", DISCONNECT_WEBSOCKET_ACTION)
-    assert status == "Connecting"
+    status = _get_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+    assert status == "CONNECTING"
 
     # Wait until re-connected
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()

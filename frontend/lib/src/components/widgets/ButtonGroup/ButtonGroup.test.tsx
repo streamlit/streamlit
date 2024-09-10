@@ -88,6 +88,7 @@ describe("ButtonGroup widget", () => {
 
     const buttonGroupWidget = screen.getByTestId("stButtonGroup")
     expect(buttonGroupWidget).toBeInTheDocument()
+    expect(buttonGroupWidget).toHaveClass("stButtonGroup")
   })
 
   it("option-children with material-icon render correctly", () => {

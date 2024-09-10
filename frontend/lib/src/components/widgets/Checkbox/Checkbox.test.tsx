@@ -75,7 +75,6 @@ describe("Checkbox widget", () => {
     render(<Checkbox {...props} />)
     const checkboxElement = screen.getByTestId("stCheckbox")
 
-    expect(checkboxElement).toHaveClass("row-widget")
     expect(checkboxElement).toHaveClass("stCheckbox")
     expect(checkboxElement).toHaveStyle(`width: ${props.width}px`)
   })

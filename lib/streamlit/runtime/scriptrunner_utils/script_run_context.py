@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import collections
+import contextvars
 import threading
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Counter, Dict, Final, Union
@@ -22,7 +23,11 @@ from urllib import parse
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitSetPageConfigMustBeFirstCommandError,
+)
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -37,6 +42,13 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
+
+
+# If true, it indicates that we are in a cached function that disallows the usage of
+# widgets. Using contextvars to be thread-safe.
+in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "in_cached_function", default=False
+)
 
 
 @dataclass
@@ -80,9 +92,6 @@ class ScriptRunContext:
     new_fragment_ids: set[str] = field(default_factory=set)
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
-    # If true, it indicates that we are in a cached function that disallows
-    # the usage of widgets.
-    disallow_cached_widget_usage: bool = False
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -119,7 +128,7 @@ class ScriptRunContext:
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids = set()
         self.has_dialog_opened = False
-        self.disallow_cached_widget_usage = False
+        in_cached_function.set(False)
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
@@ -138,12 +147,7 @@ class ScriptRunContext:
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
-            raise StreamlitAPIException(
-                "`set_page_config()` can only be called once per app page, "
-                "and must be called as the first Streamlit command in your script.\n\n"
-                "For more information refer to the [docs]"
-                "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
-            )
+            raise StreamlitSetPageConfigMustBeFirstCommandError()
 
         # We want to disallow set_page config if one of the following occurs:
         # - set_page_config was called on this message

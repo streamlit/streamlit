@@ -21,9 +21,9 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
@@ -83,7 +83,7 @@ function DownloadButton(props: Props): ReactElement {
 
   return (
     <div
-      className="row-widget stDownloadButton"
+      className="stDownloadButton"
       data-testid="stDownloadButton"
       style={style}
     >
@@ -95,13 +95,7 @@ function DownloadButton(props: Props): ReactElement {
           onClick={handleDownloadClick}
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
         >
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
+          <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseButton>
       </BaseButtonTooltip>
     </div>

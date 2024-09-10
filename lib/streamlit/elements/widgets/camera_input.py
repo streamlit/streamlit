@@ -28,6 +28,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -43,7 +44,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 if TYPE_CHECKING:
@@ -203,7 +203,7 @@ class CameraInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "camera_input",
             user_key=key,
             label=label,
@@ -214,7 +214,7 @@ class CameraInputMixin:
         )
 
         camera_input_proto = CameraInputProto()
-        camera_input_proto.id = id
+        camera_input_proto.id = element_id
         camera_input_proto.label = label
         camera_input_proto.form_id = current_form_id(self.dg)
         camera_input_proto.disabled = disabled
@@ -230,7 +230,6 @@ class CameraInputMixin:
         camera_input_state = register_widget(
             "camera_input",
             camera_input_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

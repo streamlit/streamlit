@@ -448,7 +448,7 @@ export const NumberInput: React.FC<Props> = ({
             },
             Input: {
               props: {
-                "data-testid": "stNumberInput-Input",
+                "data-testid": "stNumberInputField",
                 step: step,
                 min: min,
                 max: max,
@@ -485,8 +485,7 @@ export const NumberInput: React.FC<Props> = ({
         {width > theme.breakpoints.hideNumberInputControls && (
           <StyledInputControls>
             <StyledInputControl
-              className="step-down"
-              data-testid="stNumberInput-StepDown"
+              data-testid="stNumberInputStepDown"
               onClick={decrement}
               disabled={!canDec || disabled}
               tabIndex={-1}
@@ -498,8 +497,7 @@ export const NumberInput: React.FC<Props> = ({
               />
             </StyledInputControl>
             <StyledInputControl
-              className="step-up"
-              data-testid="stNumberInput-StepUp"
+              data-testid="stNumberInputStepUp"
               onClick={increment}
               disabled={!canInc || disabled}
               tabIndex={-1}

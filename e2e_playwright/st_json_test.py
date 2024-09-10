@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
@@ -37,3 +38,8 @@ def test_st_json_displays_correctly_when_themed(
     """Test st.json uses renders the data correctly with different themes."""
     json_elements = themed_app.get_by_test_id("stJson")
     assert_snapshot(json_elements.nth(3), name="st_json-complex_dict")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stJson")

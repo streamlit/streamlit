@@ -16,6 +16,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
@@ -56,3 +57,8 @@ def test_st_map_has_consistent_visuals(
         name="st_map-map_with_color_and_size_layers",
         pixel_threshold=1.0,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stDeckGlJsonChart")

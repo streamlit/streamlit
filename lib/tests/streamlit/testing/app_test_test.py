@@ -94,46 +94,6 @@ def test_7636_regression():
     repr(at)
 
 
-def test_cached_widget_replay_rerun():
-    def script():
-        import streamlit as st
-
-        @st.cache_data(experimental_allow_widgets=True, show_spinner=False)
-        def foo(i):
-            options = ["foo", "bar", "baz", "qux"]
-            r = st.radio("radio", options, index=i)
-            return r
-
-        foo(1)
-
-    at = AppTest.from_function(script).run()
-
-    assert at.radio.len == 1
-    at.run()
-    assert at.radio.len == 1
-
-
-def test_cached_widget_replay_interaction():
-    def script():
-        import streamlit as st
-
-        @st.cache_data(experimental_allow_widgets=True, show_spinner=False)
-        def foo(i):
-            options = ["foo", "bar", "baz", "qux"]
-            r = st.radio("radio", options, index=i)
-            return r
-
-        foo(1)
-
-    at = AppTest.from_function(script).run()
-
-    assert at.radio.len == 1
-    assert at.radio[0].value == "bar"
-
-    at.radio[0].set_value("qux").run()
-    assert at.radio[0].value == "qux"
-
-
 def test_widget_added_removed():
     """
     Test that the value of a widget persists, disappears, and resets

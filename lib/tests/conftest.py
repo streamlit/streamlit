@@ -24,8 +24,6 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
-
 # Do not import any Streamlit modules here! See below for details.
 
 os.environ["HOME"] = "/mock/home/folder"
@@ -91,10 +89,6 @@ def pytest_configure(config: pytest.Config):
         except ImportError:
             raise pytest.UsageError(
                 "The snowflake-snowpark-python package is not installed."
-            )
-        if not SNOWFLAKE_CREDENTIAL_FILE.exists():
-            raise pytest.UsageError(
-                f"Missing credential file: {SNOWFLAKE_CREDENTIAL_FILE}"
             )
 
 

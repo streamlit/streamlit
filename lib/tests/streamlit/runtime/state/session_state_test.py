@@ -36,7 +36,7 @@ from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
-from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
+from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX
 from streamlit.runtime.state.session_state import (
     Serialized,
     Value,
@@ -564,7 +564,7 @@ class SessionStateMethodTests(unittest.TestCase):
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
-                f"{GENERATED_WIDGET_ID_PREFIX}-foo-None": Value("bar"),
+                f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": Value("bar"),
             },
         )
         self.session_state = SessionState(
@@ -577,7 +577,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "foo": "bar2",
             "baz": "qux2",
             "corge": "grault",
-            f"{GENERATED_WIDGET_ID_PREFIX}-foo-None": "bar",
+            f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None": "bar",
         }
         assert self.session_state._new_session_state == {}
         assert self.session_state._new_widget_state == WStates()
@@ -599,7 +599,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_clear_state(self):
         # Sanity test
-        keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_ID_PREFIX}-foo-None"}
+        keys = {"foo", "baz", "corge", f"{GENERATED_ELEMENT_ID_PREFIX}-foo-None"}
         self.assertEqual(keys, self.session_state._keys())
 
         # Clear state
@@ -619,7 +619,7 @@ class SessionStateMethodTests(unittest.TestCase):
         old_state = {"foo": "bar", "corge": "grault"}
         new_session_state = {}
         new_widget_state = WStates(
-            {f"{GENERATED_WIDGET_ID_PREFIX}-baz": Serialized(WidgetStateProto())},
+            {f"{GENERATED_ELEMENT_ID_PREFIX}-baz": Serialized(WidgetStateProto())},
         )
         self.session_state = SessionState(
             old_state, new_session_state, new_widget_state
@@ -690,8 +690,8 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not self.session_state._widget_changed("foo")
 
     def test_remove_stale_widgets(self):
-        existing_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-existing_widget"
-        generated_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-removed_widget"
+        existing_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-existing_widget"
+        generated_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-removed_widget"
 
         self.session_state._old_state = {
             existing_widget_key: True,
@@ -733,7 +733,7 @@ class SessionStateMethodTests(unittest.TestCase):
         WIDGET_VALUE = 123
 
         metadata = WidgetMetadata(
-            id=f"{GENERATED_WIDGET_ID_PREFIX}-0-widget_id_1",
+            id=f"{GENERATED_ELEMENT_ID_PREFIX}-0-widget_id_1",
             deserializer=lambda _, __: WIDGET_VALUE,
             serializer=identity,
             value_type="int_value",

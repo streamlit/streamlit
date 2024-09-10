@@ -48,7 +48,7 @@ describe("Button element", () => {
     it(`renders ${kind} buttons correctly`, () => {
       render(<BaseButton {...getProps({ kind })}>Hello</BaseButton>)
 
-      const buttonWidget = screen.getByTestId(`baseButton-${kind}`)
+      const buttonWidget = screen.getByTestId(`stBaseButton-${kind}`)
 
       expect(buttonWidget).toBeInTheDocument()
     })
@@ -58,7 +58,7 @@ describe("Button element", () => {
         <BaseButton {...getProps({ kind, disabled: true })}>Hello</BaseButton>
       )
 
-      const buttonWidget = screen.getByTestId(`baseButton-${kind}`)
+      const buttonWidget = screen.getByTestId(`stBaseButton-${kind}`)
       expect(buttonWidget).toBeDisabled()
     })
   })

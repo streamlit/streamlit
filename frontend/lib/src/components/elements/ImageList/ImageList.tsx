@@ -79,7 +79,7 @@ export function ImageList({
 
   if (height && isFullScreen) {
     imgStyle.maxHeight = height
-    imgStyle["object-fit"] = "contain"
+    imgStyle.objectFit = "contain"
   } else {
     imgStyle.width = containerWidth
 

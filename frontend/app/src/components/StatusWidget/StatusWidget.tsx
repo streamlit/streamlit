@@ -259,7 +259,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         unmountOnExit={true}
         classNames="StatusWidget"
       >
-        <StyledStatusWidget key="StatusWidget" data-testid="stStatusWidget">
+        <StyledStatusWidget
+          key="StatusWidget"
+          className="stStatusWidget"
+          data-testid="stStatusWidget"
+        >
           {renderView}
         </StyledStatusWidget>
       </CSSTransition>
@@ -296,7 +300,10 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     return (
       <Tooltip content={ui.tooltip} placement={Placement.BOTTOM}>
-        <StyledConnectionStatus data-testid="stConnectionStatus">
+        <StyledConnectionStatus
+          className="stConnectionStatus"
+          data-testid="stConnectionStatus"
+        >
           <Icon size="sm" content={ui.icon} />
           <StyledConnectionStatusLabel
             isMinimized={this.state.statusMinimized}

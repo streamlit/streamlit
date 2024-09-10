@@ -17,10 +17,21 @@
 export const sizes = {
   full: "100%",
   headerHeight: "3.75rem",
+  // Old header height to avoid addtl cascading visual/snapshot changes
+  fullScreenHeaderHeight: "2.875rem",
   sidebarTopSpace: "6rem",
   toastWidth: "21rem",
   contentMaxWidth: "46rem",
+  // Used for checkboxes, radio, and toggles:
+  checkbox: "1rem",
   borderWidth: "1px",
   minElementHeight: "2.5rem",
-  logoHeight: "1.5rem",
+  smallLogoHeight: "1.25rem",
+  defaultLogoHeight: "1.5rem",
+  largeLogoHeight: "2rem",
+  sliderThumb: "0.75rem",
+  wideSidePadding: "5rem",
+  headerDecorationHeight: "0.125rem",
+  appRunningMen: "1.6rem",
+  appStatusMaxWidth: "20rem",
 }

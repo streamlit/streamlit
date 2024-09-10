@@ -18,7 +18,7 @@ import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_prefixed_markdown
+from e2e_playwright.shared.app_utils import expect_prefixed_markdown, get_element_by_key
 from e2e_playwright.shared.dataframe_utils import click_on_cell, get_open_cell_overlay
 
 # This test suite covers all interactions of dataframe & data_editor
@@ -438,6 +438,11 @@ def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFuncti
     expect_prefixed_markdown(
         themed_app, "Edited DF:", "edited value", exact_match=False
     )
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "data_editor")).to_be_visible()
 
 
 # TODO(lukasmasuch): Add additional interactive tests:

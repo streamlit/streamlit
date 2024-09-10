@@ -33,6 +33,7 @@ from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.web.cache_storage_manager_config import (
@@ -246,6 +247,9 @@ class Server:
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
                 is_hello=is_hello,
+                session_storage=MemorySessionStorage(
+                    ttl_seconds=config.get_option("server.disconnectedSessionTTL")
+                ),
             ),
         )
 

@@ -29,14 +29,10 @@ export interface StyledActionButtonIconProps {
 }
 
 export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
-  ({ icon }) => ({
+  ({ theme, icon }) => ({
     background: `url("${icon}") no-repeat center / contain`,
-
-    // NOTE: We intentionally don't use any of the preset theme iconSizes here
-    // so that icon scaling is unchanged from what we receive from the
-    // withHostCommunication hoc.
-    width: "1rem",
-    height: "1rem",
+    width: theme.iconSizes.base,
+    height: theme.iconSizes.base,
   })
 )
 
