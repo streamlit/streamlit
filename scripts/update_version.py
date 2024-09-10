@@ -96,7 +96,7 @@ def verify_semver(version):
     """
 
     try:
-        return str(semver.VersionInfo.parse(version))
+        return str(semver.Version.parse(version))
     except ValueError as e:
         raise (e)
 
