@@ -21,9 +21,7 @@
     "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src",
     "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
     "testLib": "yarn workspace @streamlit/lib testWatch",
-    "testApp": "yarn workspace @streamlit/app testWatch",
-    "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
-    "cy:run": "unset NODE_OPTIONS && cypress run"
+    "testApp": "yarn workspace @streamlit/app testWatch"
   },
   "browserslist": [
     ">0.2%",
