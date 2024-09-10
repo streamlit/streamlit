@@ -138,7 +138,6 @@ pytest:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
@@ -148,7 +147,6 @@ pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
@@ -340,7 +338,7 @@ custom_components_test_folder = ./custom_components
 playwright:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pytest --ignore ${custom_components_test_folder} --cov=streamlit --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
+	pytest --ignore ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --cov=streamlit --cov-report=html --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 .PHONY: playwright-custom-components
 # Run playwright custom component E2E tests.
 playwright-custom-components:
