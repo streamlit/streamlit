@@ -352,7 +352,7 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
                         allow="clipboard-write;"
                         sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
                         width="100%"
-                        >
+                    >
                     </iframe>
                 </body>
             </html>

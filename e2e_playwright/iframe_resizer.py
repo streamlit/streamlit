@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+The test injects a resizer-script into an iframe. When the app is
+interacted with and the markdown elements are added, the iframe is resized automatically
+to wrap the content.
+"""
+
 import streamlit as st
 
 x = st.slider("Enter a number", 0, 20, 0)
