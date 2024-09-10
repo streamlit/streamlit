@@ -55,7 +55,8 @@ def _open_with_resize_script(
         resize_args["minHeight"] = 500
 
     # call the iFrameResize function with the resize arguments
-    # this will make the iframe resize itself to the content
+    # this will make the iframe resize itself to the content.
+    # The function is exposed by the injected iframerResizer script.
     frame_locator.owner.evaluate(
         f"""
         () => {{
@@ -80,7 +81,7 @@ def _snapshot_iframe(
     if action:
         action(slider)
 
-    assert_snapshot(iframe.locator("[data-testid='stApp']"), name=snapshot_name)
+    assert_snapshot(iframe.get_by_test_id("stApp"), name=snapshot_name)
 
 
 def _snapshot_expanded_iframe(
@@ -92,7 +93,6 @@ def _snapshot_expanded_iframe(
         slider.hover()
         # click in middle
         slider.click()
-        iframe.locator("[data-testid='stApp']").wait_for()
         wait_for_app_run(iframe)
         expect(iframe.get_by_test_id("stMarkdown")).to_have_count(10)
 
