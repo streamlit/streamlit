@@ -37,7 +37,6 @@ from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import dataframe_util, type_util
-from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartStackType,
@@ -46,6 +45,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     maybe_raise_stack_warning,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
@@ -60,9 +60,9 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     import altair as alt
 
-    from streamlit.color_util import Color
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.color_util import Color
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {

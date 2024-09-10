@@ -19,16 +19,8 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-import os
-import subprocess
 import sys
-from typing import Any, Callable, Final, Iterable, Mapping, TypeVar
-
-from streamlit import env_util
-
-# URL of Streamlit's help page.
-HELP_DOC: Final = "https://docs.streamlit.io/"
-FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
+from typing import Any, Callable
 
 # Due to security issue in md5 and sha1, usedforsecurity
 # argument is added to hashlib for python versions higher than 3.8
@@ -48,60 +40,6 @@ def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
         return result[0]
 
     return wrapped_func
-
-
-def open_browser(url: str) -> None:
-    """Open a web browser pointing to a given URL.
-
-    We use this function instead of Python's `webbrowser` module because this
-    way we can capture stdout/stderr to avoid polluting the terminal with the
-    browser's messages. For example, Chrome always prints things like "Created
-    new window in existing browser session", and those get on the user's way.
-
-    url : str
-        The URL. Must include the protocol.
-
-    """
-    # Treat Windows separately because:
-    # 1. /dev/null doesn't exist.
-    # 2. subprocess.Popen(['start', url]) doesn't actually pop up the
-    #    browser even though 'start url' works from the command prompt.
-    # Fun!
-    # Also, use webbrowser if we are on Linux and xdg-open is not installed.
-    #
-    # We don't use the webbrowser module on Linux and Mac because some browsers
-    # (ahem... Chrome) always print "Opening in existing browser session" to
-    # the terminal, which is spammy and annoying. So instead we start the
-    # browser ourselves and send all its output to /dev/null.
-
-    if env_util.IS_WINDOWS:
-        _open_browser_with_webbrowser(url)
-        return
-    if env_util.IS_LINUX_OR_BSD:
-        if env_util.is_executable_in_path("xdg-open"):
-            _open_browser_with_command("xdg-open", url)
-            return
-        _open_browser_with_webbrowser(url)
-        return
-    if env_util.IS_DARWIN:
-        _open_browser_with_command("open", url)
-        return
-
-    import platform
-
-    raise Error('Cannot open browser in platform "%s"' % platform.system())
-
-
-def _open_browser_with_webbrowser(url: str) -> None:
-    import webbrowser
-
-    webbrowser.open(url)
-
-
-def _open_browser_with_command(command: str, url: str) -> None:
-    cmd_line = [command, url]
-    with open(os.devnull, "w") as devnull:
-        subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
 
 
 def repr_(self: Any) -> str:
@@ -127,46 +65,6 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-_Value = TypeVar("_Value")
-
-
-def index_(iterable: Iterable[_Value], x: _Value) -> int:
-    """Return zero-based index of the first item whose value is equal to x.
-    Raises a ValueError if there is no such item.
-
-    We need a custom implementation instead of the built-in list .index() to
-    be compatible with NumPy array and Pandas Series.
-
-    Parameters
-    ----------
-    iterable : list, tuple, numpy.ndarray, pandas.Series
-    x : Any
-
-    Returns
-    -------
-    int
-    """
-    for i, value in enumerate(iterable):
-        if x == value:
-            return i
-        elif isinstance(value, float) and isinstance(x, float):
-            if abs(x - value) < FLOAT_EQUALITY_EPSILON:
-                return i
-    raise ValueError(f"{str(x)} is not in iterable")
-
-
-_Key = TypeVar("_Key", bound=str)
-
-
-def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> dict[str, _Value]:
-    return {k.lower().strip(): v for k, v in dict.items()}
-
-
-# TODO: Move this into errors.py? Replace with StreamlitAPIException?
-class Error(Exception):
-    pass
-
-
 def calc_md5(s: bytes | str) -> str:
     """Return the md5 hash of the given string."""
     h = hashlib.new("md5", **HASHLIB_KWARGS)
@@ -175,27 +73,3 @@ def calc_md5(s: bytes | str) -> str:
 
     h.update(b)
     return h.hexdigest()
-
-
-def exclude_keys_in_dict(
-    d: dict[str, Any], keys_to_exclude: list[str]
-) -> dict[str, Any]:
-    """Returns new object but without keys defined in keys_to_exclude"""
-    return {
-        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
-    }
-
-
-def extract_key_query_params(
-    query_params: dict[str, list[str]], param_key: str
-) -> set[str]:
-    """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
-    return {
-        item.lower()
-        for sublist in [
-            [value.lower() for value in query_params[key]]
-            for key in query_params.keys()
-            if key.lower() == param_key and query_params.get(key)
-        ]
-        for item in sublist
-    }

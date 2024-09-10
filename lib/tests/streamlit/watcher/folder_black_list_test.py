@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import unittest
 
-from streamlit.folder_black_list import FolderBlackList
+from streamlit.watcher.folder_black_list import FolderBlackList
 
 
 class FileIsInFolderTest(unittest.TestCase):

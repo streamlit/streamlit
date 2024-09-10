@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import random
 from textwrap import dedent
-from typing import TYPE_CHECKING, Final, Literal, Mapping, Union, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Mapping, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -33,7 +33,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.url_util import is_url
-from streamlit.util import lower_clean_dict_keys
 
 if TYPE_CHECKING:
     from typing_extensions import TypeGuard
@@ -78,6 +77,10 @@ ENG_EMOJIS: Final = [
     "🎎",  # James
     # TODO: Solicit emojis from the rest of Streamlit
 ]
+
+
+def _lower_clean_dict_keys(dict: MenuItems) -> dict[str, Any]:
+    return {str(k).lower().strip(): v for k, v in dict.items()}
 
 
 def _get_favicon_string(page_icon: PageIcon) -> str:
@@ -251,7 +254,7 @@ def set_page_config(
     msg.page_config_changed.initial_sidebar_state = pb_sidebar_state
 
     if menu_items is not None:
-        lowercase_menu_items = cast(MenuItems, lower_clean_dict_keys(menu_items))
+        lowercase_menu_items = cast(MenuItems, _lower_clean_dict_keys(menu_items))
         validate_menu_items(lowercase_menu_items)
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)

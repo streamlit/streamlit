@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
-from streamlit.elements.form_utils import is_in_form
+from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.errors import (
     StreamlitAPIWarning,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
