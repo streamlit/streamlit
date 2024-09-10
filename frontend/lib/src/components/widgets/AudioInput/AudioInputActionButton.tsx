@@ -16,7 +16,6 @@
 
 import React from "react"
 
-import { useTheme } from "@emotion/react"
 import { Mic } from "@emotion-icons/material-outlined"
 import { Pause, PlayArrow, StopCircle } from "@emotion-icons/material-rounded"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -25,6 +24,7 @@ import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
+
 import {
   StyledActionButtonPauseDiv,
   StyledActionButtonPlayDiv,
@@ -75,8 +75,6 @@ const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
   stopRecording,
   onClickPlayPause,
 }) => {
-  const theme = useTheme()
-
   if (isRecording) {
     // It's currently recording, so show the stop recording button
     return (
