@@ -79,3 +79,44 @@ export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => ({
   backgroundSize: "10px 10px",
   backgroundRepeat: "repeat",
 }))
+
+export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
+  "& > button": {
+    color: theme.colors.primary,
+  },
+  "&:hover > button, &:focus > button": {
+    color: theme.colors.red,
+  },
+}))
+
+export const StyledActionButtonStartRecordingDiv = styled.span(
+  ({ theme }) => ({
+    "& > button": {
+      color: theme.colors.fadedText40,
+    },
+    "&:hover > button, &:focus > button": {
+      color: theme.colors.primary,
+    },
+    "&:disabled > button": {
+      color: theme.colors.fadedText40,
+    },
+  })
+)
+
+export const StyledActionButtonPlayDiv = styled.span(({ theme }) => ({
+  "& > button": {
+    color: theme.colors.fadedText60,
+  },
+  "&:hover > button, &:focus > button": {
+    color: theme.colors.bodyText,
+  },
+}))
+
+export const StyledActionButtonPauseDiv = styled.span(({ theme }) => ({
+  "& > button": {
+    color: theme.colors.fadedText60,
+  },
+  "&:hover > button, &:focus > button": {
+    color: theme.colors.bodyText,
+  },
+}))
