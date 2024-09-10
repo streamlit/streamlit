@@ -281,6 +281,9 @@ class IframedPageAttrs:
     src_query_params: dict[str, str] | None = None
     # additional HTML body
     additional_html_head: str | None = None
+    # html content to load. Following placeholders are replaced during the test:
+    # - $APP_URL: the URL of the Streamlit app
+    html_content: str | None = None
 
 
 @dataclass
@@ -334,7 +337,8 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
             if _iframe_element_attrs.additional_html_head
             else ""
         )
-        _iframed_body = f"""
+        _iframed_body = (
+            f"""
             <!DOCTYPE html>
             <html style="height: 100%;">
                 <head>
@@ -357,6 +361,9 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
                 </body>
             </html>
             """
+            if _iframe_element_attrs.html_content is None
+            else _iframe_element_attrs.html_content.replace("$APP_URL", app_url)
+        )
 
         def fulfill_iframe_request(route: Route) -> None:
             """Return as response an iframe that loads the actual Streamlit app."""
