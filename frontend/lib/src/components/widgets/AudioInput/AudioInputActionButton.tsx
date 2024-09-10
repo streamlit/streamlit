@@ -25,13 +25,18 @@ import BaseButton, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
+import {
+  StyledActionButtonPauseDiv,
+  StyledActionButtonPlayDiv,
+  StyledActionButtonStartRecordingDiv,
+  StyledActionButtonStopRecordingDiv,
+} from "./styled-components"
 
 interface BaseActionButtonProps {
   onClick: () => void
   disabled: boolean
   ariaLabel: string
   iconContent: EmotionIcon
-  color?: string
 }
 
 const ActionButton: React.FC<BaseActionButtonProps> = ({
@@ -39,7 +44,6 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
   disabled,
   ariaLabel,
   iconContent,
-  color,
 }) => (
   <BaseButton
     kind={BaseButtonKind.BORDERLESS_ICON}
@@ -48,7 +52,7 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
     aria-label={ariaLabel}
     data-testid="stAudioInputActionButton"
   >
-    <Icon content={iconContent} size="lg" color={color} />
+    <Icon content={iconContent} size="lg" color="inherit" />
   </BaseButton>
 )
 
@@ -76,47 +80,51 @@ const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
   if (isRecording) {
     // It's currently recording, so show the stop recording button
     return (
-      <ActionButton
-        onClick={stopRecording}
-        disabled={disabled}
-        ariaLabel="Stop recording"
-        iconContent={StopCircle}
-        color={theme.colors.primary}
-      />
+      <StyledActionButtonStopRecordingDiv>
+        <ActionButton
+          onClick={stopRecording}
+          disabled={disabled}
+          ariaLabel="Stop recording"
+          iconContent={StopCircle}
+        />
+      </StyledActionButtonStopRecordingDiv>
     )
   } else if (recordingUrlExists) {
     if (isPlaying) {
       // It's playing, so show the pause button
       return (
-        <ActionButton
-          onClick={onClickPlayPause}
-          disabled={disabled}
-          ariaLabel="Pause"
-          iconContent={Pause}
-          color={theme.colors.fadedText60}
-        />
+        <StyledActionButtonPauseDiv>
+          <ActionButton
+            onClick={onClickPlayPause}
+            disabled={disabled}
+            ariaLabel="Pause"
+            iconContent={Pause}
+          />
+        </StyledActionButtonPauseDiv>
       )
     }
     // It's paused, so show the play button
     return (
-      <ActionButton
-        onClick={onClickPlayPause}
-        disabled={disabled}
-        ariaLabel="Play"
-        iconContent={PlayArrow}
-        color={theme.colors.fadedText60}
-      />
+      <StyledActionButtonPlayDiv>
+        <ActionButton
+          onClick={onClickPlayPause}
+          disabled={disabled}
+          ariaLabel="Play"
+          iconContent={PlayArrow}
+        />
+      </StyledActionButtonPlayDiv>
     )
   }
   // Press the button to record
   return (
-    <ActionButton
-      onClick={startRecording}
-      disabled={disabled}
-      ariaLabel="Record"
-      iconContent={Mic}
-      color={disabled ? theme.colors.fadedText40 : theme.colors.fadedText60}
-    />
+    <StyledActionButtonStartRecordingDiv>
+      <ActionButton
+        onClick={startRecording}
+        disabled={disabled}
+        ariaLabel="Record"
+        iconContent={Mic}
+      />
+    </StyledActionButtonStartRecordingDiv>
   )
 }
 
