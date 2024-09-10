@@ -83,7 +83,6 @@ jobs:
           path: e2e_playwright/test-results
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: playwright_coverage_report
+          name: coverage_report_e2e
           path: e2e_playwright/htmlcov

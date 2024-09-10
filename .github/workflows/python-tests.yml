@@ -138,11 +138,9 @@ jobs:
           if-no-files-found: error
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-            name: coverage_report
-            path: lib/htmlcov
-
+          name: coverage_report_${{ matrix.python_version }}
+          path: lib/htmlcov
 
   py-updated-constraints:
     needs:
@@ -249,7 +247,6 @@ jobs:
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: coverage_report
+          name: coverage_report_integration
           path: lib/htmlcov
