@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import React, { forwardRef, memo, ReactElement, Ref, useMemo } from "react"
+import React, {
+  forwardRef,
+  memo,
+  ReactElement,
+  Ref,
+  useEffect,
+  useMemo,
+} from "react"
 
 import { useTheme } from "@emotion/react"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
@@ -235,6 +242,27 @@ function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
   return element.value ?? null
 }
 
+function findSegmentsEdges(buttonGroup: Element): void {
+  buttonGroup.querySelectorAll("button").forEach(button => {
+    button.classList.remove("starting-child")
+    button.classList.remove("ending-child")
+    if (
+      button.previousElementSibling === null ||
+      button.offsetLeft <=
+        (button.previousElementSibling as HTMLButtonElement).offsetLeft
+    ) {
+      button.classList.add("starting-child")
+    }
+    if (
+      !button.nextElementSibling ||
+      button.offsetLeft >=
+        (button.nextElementSibling as HTMLButtonElement).offsetLeft
+    ) {
+      button.classList.add("ending-child")
+    }
+  })
+}
+
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
   const {
@@ -260,6 +288,20 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     widgetMgr,
     fragmentId,
   })
+
+  const buttonGroupRef = React.useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const buttonGroup = buttonGroupRef.current
+    if (style === ButtonGroupProto.Style.SEGMENTS && buttonGroup !== null) {
+      new ResizeObserver(elements =>
+        elements.forEach(el => {
+          findSegmentsEdges(el.target)
+        })
+      ).observe(buttonGroup)
+      findSegmentsEdges(buttonGroup)
+    }
+  }, [buttonGroupRef, style])
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
@@ -300,7 +342,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       : theme.spacing.none
 
   return (
-    <div className="stButtonGroup" data-testid="stButtonGroup">
+    <div
+      className="stButtonGroup"
+      data-testid="stButtonGroup"
+      ref={buttonGroupRef}
+    >
       <WidgetLabel
         label={label}
         disabled={disabled}
