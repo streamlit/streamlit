@@ -19,9 +19,9 @@ from playwright.sync_api import FilePayload, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     click_button,
+    expect_connection_status,
     expect_markdown,
     get_checkbox,
-    get_connection_status,
     wait_for_app_run,
 )
 
@@ -35,8 +35,9 @@ def test_dont_observe_invalid_status(
     app: Page,
 ):
     """Test that unknown status is not observed and raises an error."""
-    status = get_connection_status(app, "Connecting2", DISCONNECT_WEBSOCKET_ACTION)
-    assert "timeout: did not observe status 'Connecting2'" in status
+    with pytest.raises(AssertionError) as e:
+        expect_connection_status(app, "Connecting2", DISCONNECT_WEBSOCKET_ACTION)
+    assert "timeout: did not observe status 'Connecting2'" in e.value.args
 
 
 def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
@@ -51,8 +52,7 @@ def test_retain_session_state_when_websocket_connection_drops_and_reconnects(
             click_button(app, "click me!")
 
         # disconnect and wait for status to change
-        status = get_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
-        assert status == "CONNECTING"
+        expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
 
         wait_for_app_run(app)
         expect_markdown(app, f"count: {expected_count}")
@@ -64,12 +64,7 @@ def test_reruns_script_when_interrupted_by_websocket_disconnect(
     # Click on the checkbox, but don't wait for the app to finish running.
     get_checkbox(app, "do something slow").locator("label").click()
 
-    # NOTE: The "CONNECTING" status doesn't actually show up because the "Running"
-    # status takes priority in the app's status widget, so this _get_status call ends up
-    # timing out. This is fine for now as it doesn't really affect the test, and we'll
-    # be moving away from using the status widget to determine app state in tests due to
-    # the natural flakiness of the approach.
-    get_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
+    expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
 
     wait_for_app_run(app)
     expect_markdown(app, "slow operations attempted: 2")
@@ -92,8 +87,7 @@ def test_retain_uploaded_files_when_websocket_connection_drops_and_reconnects(
     wait_for_app_run(app)
 
     # Disconnect
-    status = get_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
-    assert status == "CONNECTING"
+    expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
 
     # Wait until re-connected
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
@@ -127,8 +121,7 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
     expect(app.get_by_test_id("stImage")).to_be_visible()
 
     # Disconnect
-    status = get_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
-    assert status == "CONNECTING"
+    expect_connection_status(app, "CONNECTING", DISCONNECT_WEBSOCKET_ACTION)
 
     # Wait until re-connected
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()

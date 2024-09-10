@@ -82,7 +82,9 @@ def test_handles_host_theme_message(
 def test_handles_host_rerun_script_message(iframed_app: IframedPage):
     frame_locator, toolbar_buttons = _load_html_and_get_locators(iframed_app)
     toolbar_buttons.get_by_text("Rerun Script").click()
-    expect(frame_locator.get_by_test_id("stStatusWidget")).to_be_attached()
+    expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
 
 
 def test_handles_host_stop_script_message(iframed_app: IframedPage):
@@ -90,10 +92,14 @@ def test_handles_host_stop_script_message(iframed_app: IframedPage):
     # Make sure script is running
     toolbar_buttons.get_by_text("Rerun Script").click()
     # Check that status widget is running
-    expect(frame_locator.get_by_test_id("stStatusWidget")).to_be_attached()
+    expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
     toolbar_buttons.get_by_text("Stop Script").click()
     # Check that status widget is no longer running
-    expect(frame_locator.get_by_test_id("stStatusWidget")).not_to_be_attached()
+    expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "notRunning"
+    )
 
 
 def test_handles_host_close_modal_message(iframed_app: IframedPage):
@@ -164,8 +170,9 @@ def test_handles_host_terminate_and_restart_websocket_connection_messages(
     # Kill the websocket connection and verify that the app moves into an
     # error state.
     toolbar_buttons.get_by_text("Terminate Websocket").click()
-    expect(frame_locator.get_by_test_id("stStatusWidget")).to_have_text("Error")
-
+    expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-connection-state", "DISCONNECTED_FOREVER"
+    )
     frame = frame_locator.owner.page.frame("guest")
     assert frame is not None
     # start observing our connection statuses before we click on restart websocket
@@ -183,5 +190,7 @@ def test_handles_host_terminate_and_restart_websocket_connection_messages(
     assert statuses[1] == "CONNECTING"
     assert statuses[2] == "CONNECTED"
 
-    # Check that the status widget disappeared again as the app reruns and completes.
-    expect(frame_locator.get_by_test_id("stStatusWidget")).not_to_be_attached()
+    # Check that the script state of the app indicates not running.
+    expect(frame_locator.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "notRunning"
+    )

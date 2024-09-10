@@ -549,10 +549,10 @@ def get_observed_connection_statuses(page_or_frame: Page | Frame | None) -> list
     )
 
 
-def get_connection_status(
+def expect_connection_status(
     page_or_frame: Page | Frame | None, expected_status: str, callable_action: str
-) -> str:
-    """Wait for the expected_status to appear in the status widget.
+) -> None:
+    """Wait for the expected_status to appear in the app's connection-state attribute.
 
     Uses the browser's MutationObserver API to observe changes to the DOM. This way,
     we will never have a race condition between calling disconnect and checking the
@@ -566,9 +566,9 @@ def get_connection_status(
     """
 
     if page_or_frame is None:
-        return ""
+        return None
 
-    return page_or_frame.evaluate(
+    status = page_or_frame.evaluate(
         """async ([expectedStatus]) => {
                 // the first call to resolve will be the one returned to the caller
                 // so its either the observed status or the timeout. Subsequent
@@ -627,3 +627,4 @@ def get_connection_status(
             """,
         [expected_status],
     )
+    assert status == expected_status, status
