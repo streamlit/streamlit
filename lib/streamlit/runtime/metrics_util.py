@@ -29,6 +29,8 @@ from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
+from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -364,10 +366,6 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
         from timeit import default_timer as timer
 
         exec_start = timer()
-        # Local imports to prevent circular dependencies
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-        from streamlit.runtime.scriptrunner.exceptions import RerunException
-
         ctx = get_script_run_ctx(suppress_warning=True)
 
         tracking_activated = (
@@ -444,9 +442,6 @@ def create_page_profile_message(
     uncaught_exception: str | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
-    # Local import to prevent circular dependencies
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-
     msg = ForwardMsg()
     page_profile = msg.page_profile
 

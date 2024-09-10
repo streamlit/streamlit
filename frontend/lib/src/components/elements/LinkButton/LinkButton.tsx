@@ -21,8 +21,8 @@ import {
   BaseButtonKind,
   BaseButtonSize,
   BaseButtonTooltip,
+  DynamicButtonLabel,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import BaseLinkButton from "./BaseLinkButton"
 
@@ -32,7 +32,7 @@ export interface Props {
   width: number
 }
 
-function LinkButton(props: Props): ReactElement {
+function LinkButton(props: Readonly<Props>): ReactElement {
   const { disabled, element, width } = props
   const style = { width }
 
@@ -53,11 +53,7 @@ function LinkButton(props: Props): ReactElement {
   }
 
   return (
-    <div
-      className="row-widget stLinkButton"
-      data-testid="stLinkButton"
-      style={style}
-    >
+    <div className="stLinkButton" data-testid="stLinkButton" style={style}>
       <BaseButtonTooltip help={element.help}>
         {/* We use separate BaseLinkButton instead of BaseButton here, because
         link behavior requires tag <a> instead of <button>.*/}
@@ -72,13 +68,7 @@ function LinkButton(props: Props): ReactElement {
           rel="noreferrer"
           aria-disabled={disabled}
         >
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
+          <DynamicButtonLabel icon={element.icon} label={element.label} />
         </BaseLinkButton>
       </BaseButtonTooltip>
     </div>

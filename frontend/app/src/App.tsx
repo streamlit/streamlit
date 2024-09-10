@@ -46,7 +46,7 @@ import {
   ForwardMsgMetadata,
   generateUID,
   getCachedTheme,
-  getElementWidgetID,
+  getElementId,
   getEmbeddingIdClassName,
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
@@ -89,7 +89,6 @@ import {
   SessionEvent,
   SessionInfo,
   SessionStatus,
-  setCookie,
   StreamlitEndpoints,
   ThemeConfig,
   toExportedTheme,
@@ -654,8 +653,6 @@ export class App extends PureComponent<Props, State> {
         })
       }
 
-      setCookie("_streamlit_xsrf", "")
-
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
       }
@@ -742,9 +739,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    // Pass the current page & run ID for cleanup
+    const logoMetadata = {
+      activeScriptHash: metadata.activeScriptHash,
+      scriptRunId: this.state.scriptRunId,
+    }
+
     this.setState(
       {
-        elements: this.pendingElementsBuffer.appRootWithLogo(logo, metadata),
+        elements: this.pendingElementsBuffer.appRootWithLogo(
+          logo,
+          logoMetadata
+        ),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1220,7 +1226,7 @@ export class App extends PureComponent<Props, State> {
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1274,7 +1280,7 @@ export class App extends PureComponent<Props, State> {
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1449,7 +1455,7 @@ export class App extends PureComponent<Props, State> {
     )
     const activeWidgetIds = new Set(
       Array.from(nextPageElements.getElements())
-        .map(element => getElementWidgetID(element))
+        .map(element => getElementId(element))
         .filter(notUndefined)
     )
 
@@ -1908,11 +1914,12 @@ export class App extends PureComponent<Props, State> {
             <StyledApp
               className={outerDivClass}
               data-testid="stApp"
-              data-teststate={
+              data-test-script-state={
                 scriptRunId == INITIAL_SCRIPT_RUN_ID
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>

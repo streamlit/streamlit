@@ -27,7 +27,8 @@ describe("EventContainer Component", () => {
   test("renders Toast Container", () => {
     render(<EventContainer scriptRunId="123" />)
 
-    const toastContainer = screen.getByTestId("toastContainer")
+    const toastContainer = screen.getByTestId("stToastContainer")
     expect(toastContainer).toBeInTheDocument()
+    expect(toastContainer).toHaveClass("stToastContainer")
   })
 })

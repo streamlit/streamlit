@@ -44,13 +44,15 @@ describe("JSON element", () => {
   it("renders json as expected", () => {
     const props = getProps()
     render(<Json {...props} />)
-    expect(screen.getByTestId("stJson")).toBeInTheDocument()
+    const jsonElement = screen.getByTestId("stJson")
+    expect(jsonElement).toBeInTheDocument()
+    expect(jsonElement).toHaveClass("stJson")
   })
 
   it("should show an error with invalid JSON", () => {
     const props = getProps({ body: "invalid JSON" })
     render(<Json {...props} />)
-    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContainer")).toBeInTheDocument()
   })
 
   it("renders json with NaN and infinity values", () => {

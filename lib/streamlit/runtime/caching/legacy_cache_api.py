@@ -67,11 +67,11 @@ def cache(
         This is not used.
 
     hash_funcs : dict or None
-        Mapping of types or fully qualified names to hash functions. This is used to override
-        the behavior of the hasher inside Streamlit's caching mechanism: when the hasher
-        encounters an object, it will first check to see if its type matches a key in this
-        dict and, if so, will use the provided function to generate a hash for it. See below
-        for an example of how this can be used.
+        Mapping of types or fully qualified names to hash functions. This is used to
+        override the behavior of the hasher inside Streamlit's caching mechanism: when
+        the hasher encounters an object, it will first check to see if its type matches
+        a key in this dict and, if so, will use the provided function to generate a hash
+        for it. See below for an example of how this can be used.
 
     max_entries : int or None
         The maximum number of entries to keep in the cache, or ``None``
@@ -109,7 +109,8 @@ def cache(
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
 
-    To disable hashing return values, set the ``allow_output_mutation`` parameter to ``True``:
+    To disable hashing return values, set the ``allow_output_mutation`` parameter to
+    ``True``:
 
     >>> @st.cache(allow_output_mutation=True)
     ... def fetch_and_clean_data(url):
@@ -118,7 +119,8 @@ def cache(
 
 
     To override the default hashing behavior, pass a custom hash function.
-    You can do that by mapping a type (e.g. ``MongoClient``) to a hash function (``id``) like this:
+    You can do that by mapping a type (e.g. ``MongoClient``) to a hash function (``id``)
+    like this:
 
     >>> @st.cache(hash_funcs={MongoClient: id})
     ... def connect_to_database(url):
@@ -136,11 +138,13 @@ def cache(
 
     deprecation_util.show_deprecation_warning(
         f"""
-`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new caching commands, `st.cache_data` or `st.cache_resource`.
-More information [in our docs]({CACHE_DOCS_URL}).
+`st.cache` is deprecated and will be removed soon. Please use one of Streamlit's new
+caching commands, `st.cache_data` or `st.cache_resource`. More information
+[in our docs]({CACHE_DOCS_URL}).
 
-**Note**: The behavior of `st.cache` was updated in Streamlit 1.36 to the new caching logic used by `st.cache_data` and `st.cache_resource`.
-This might lead to some problems or unexpected behavior in certain edge cases.
+**Note**: The behavior of `st.cache` was updated in Streamlit 1.36 to the new caching
+logic used by `st.cache_data` and `st.cache_resource`. This might lead to some problems
+or unexpected behavior in certain edge cases.
 """
     )
 

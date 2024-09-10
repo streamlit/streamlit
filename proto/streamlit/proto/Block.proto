@@ -34,6 +34,7 @@ message Block {
   }
 
   bool allow_empty = 8;
+  optional string id = 12;
 
   message Vertical {
     bool border = 1;
@@ -93,6 +94,7 @@ message Block {
     bool use_container_width = 2;
     string help = 3;
     bool disabled = 4;
+    string icon = 5;
   }
 
 
@@ -108,5 +110,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 12
+  // Next ID: 13
 }

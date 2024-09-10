@@ -72,7 +72,10 @@ describe("GraphVizChart Element", () => {
     const props = getProps()
     render(<GraphVizChart {...props} />)
 
-    expect(screen.getByTestId("stGraphVizChart")).toBeInTheDocument()
+    const graphvizElement = screen.getByTestId("stGraphVizChart")
+    expect(graphvizElement).toBeInTheDocument()
+    expect(graphvizElement).toHaveClass("stGraphVizChart")
+
     expect(logError).not.toHaveBeenCalled()
     expect(graphviz).toHaveBeenCalled()
   })

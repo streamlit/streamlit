@@ -26,7 +26,7 @@ export interface ProgressProps {
   element: ProgressProto
 }
 
-function Progress({ element, width }: ProgressProps): ReactElement {
+function Progress({ element, width }: Readonly<ProgressProps>): ReactElement {
   return (
     <div className="stProgress" data-testid="stProgress">
       <StyledCaptionText>

@@ -210,7 +210,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         script_finished_msg = ForwardMsg()
         script_finished_msg.script_finished = (
-            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
         )
 
         session_status_changed_msg = ForwardMsg()
@@ -225,13 +225,22 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.enqueue(session_status_changed_msg)
         fmq.enqueue(parent_msg)
 
+        expected_new_finished_message = ForwardMsg()
+        expected_new_finished_message.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+
         fmq.clear(retain_lifecycle_msgs=True)
-        assert fmq._queue == [
+        expected_retained_messages = [
             NEW_SESSION_MSG,
-            script_finished_msg,
+            expected_new_finished_message,
             session_status_changed_msg,
             parent_msg,
         ]
+        assert fmq._queue == expected_retained_messages
+
+        fmq.clear(retain_lifecycle_msgs=True)
+        assert fmq._queue == expected_retained_messages
 
         fmq.clear()
         assert fmq._queue == []

@@ -20,7 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_that_no_new_elements_are_created(themed_app: Page):
     expect(themed_app.get_by_test_id("stTable")).to_have_count(1)
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
-    expect(themed_app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(7)
+    expect(themed_app.get_by_test_id("stVegaLiteChart")).to_have_count(7)
 
 
 def test_correctly_adds_rows_to_table(themed_app: Page):
@@ -30,7 +30,7 @@ def test_correctly_adds_rows_to_table(themed_app: Page):
 def test_correctly_adds_rows_to_charts(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    charts = themed_app.get_by_test_id("stVegaLiteChart")
     for index in range(charts.count()):
         assert_snapshot(
             charts.nth(index), name=f"st_vega_lite_chart-added_rows-{index}"

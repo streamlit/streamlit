@@ -32,7 +32,7 @@ describe("UnsupportedBrowserDialog", () => {
       </BaseProvider>
     )
 
-    expect(screen.getByTestId("stModal")).toBeInTheDocument()
+    expect(screen.getByTestId("stDialog")).toBeInTheDocument()
     expect(
       screen.getByTestId("stUnsupportedBrowserDialog")
     ).toBeInTheDocument()

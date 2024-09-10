@@ -53,7 +53,6 @@ describe("LinkButton widget", () => {
 
     const linkButton = screen.getByTestId("stLinkButton")
 
-    expect(linkButton).toHaveClass("row-widget")
     expect(linkButton).toHaveClass("stLinkButton")
     expect(linkButton).toHaveStyle(`width: ${props.width}px`)
   })

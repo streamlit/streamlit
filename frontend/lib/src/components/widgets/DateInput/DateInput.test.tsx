@@ -142,7 +142,7 @@ describe("DateInput widget", () => {
     const props = getProps()
     render(<DateInput {...props} />)
 
-    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(
+    expect(screen.getByTestId("stDateInputField")).toHaveValue(
       fullOriginalDate
     )
   })
@@ -150,7 +150,7 @@ describe("DateInput widget", () => {
   it("can be disabled", () => {
     const props = getProps()
     render(<DateInput {...props} disabled={true} />)
-    expect(screen.getByTestId("stDateInput-Input")).toBeDisabled()
+    expect(screen.getByTestId("stDateInputField")).toBeDisabled()
   })
 
   it("updates the widget value when it's changed", () => {
@@ -158,10 +158,10 @@ describe("DateInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
-    const datePicker = screen.getByTestId("stDateInput-Input")
+    const datePicker = screen.getByTestId("stDateInputField")
     fireEvent.change(datePicker, { target: { value: newDate } })
 
-    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(newDate)
+    expect(screen.getByTestId("stDateInputField")).toHaveValue(newDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       [newDate],
@@ -177,7 +177,7 @@ describe("DateInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
-    const dateInput = screen.getByTestId("stDateInput-Input")
+    const dateInput = screen.getByTestId("stDateInputField")
 
     fireEvent.change(dateInput, {
       target: { value: newDate },
@@ -240,7 +240,7 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
 
-    const dateInput = screen.getByTestId("stDateInput-Input")
+    const dateInput = screen.getByTestId("stDateInputField")
     fireEvent.change(dateInput, {
       target: { value: newDate },
     })

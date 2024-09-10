@@ -34,6 +34,13 @@ export const StyledPre = styled.pre(({ theme }) => ({
     color: theme.colors.fadedText40,
     fontSize: theme.fontSizes.twoSm,
 
+    // Center-align number vertically, or they'll be positioned differently when
+    // wrapLinst=true. Even with this change, though, the position is still ~2px
+    // off.
+    // NOTE: The alignSelf below only apply applies when wrapLines=true, because
+    // that option wraps this element in a flex container.
+    alignSelf: "center",
+
     // Override the default token's min-width, to ensure it fits 3-digit lines
     minWidth: `${theme.spacing.threeXL} !important`,
   },
@@ -152,13 +159,12 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
 
 export const StyledCopyButton = styled.button(({ theme }) => ({
   pointerEvents: "auto",
-  height: "2.5rem",
-  padding: 0,
-  width: "2.5rem",
+  height: theme.iconSizes.threeXL,
+  width: theme.iconSizes.threeXL,
+  padding: theme.spacing.none,
   border: "none",
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText60,
-  borderRadius: theme.radii.xl,
   transform: "scale(0)",
 
   [`${StyledCodeBlock}:hover &, &:active, &:focus, &:hover`]: {

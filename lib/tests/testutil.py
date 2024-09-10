@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import json
+import os
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
@@ -34,19 +34,9 @@ from streamlit.testing.v1.util import (
 from streamlit.testing.v1.util import (
     patch_config_options as patch_config_options,  # noqa: PLC0414
 )
-from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
 
 if TYPE_CHECKING:
     from snowflake.snowpark import Session
-
-
-def should_skip_pydantic_tests() -> bool:
-    try:
-        import pydantic
-
-        return not pydantic.__version__.startswith("1.")
-    except ImportError:
-        return True
 
 
 def create_mock_script_run_ctx() -> ScriptRunContext:
@@ -58,7 +48,7 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         session_state=SafeSessionState(SessionState(), lambda: None),
         uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
         main_script_path="",
-        user_info={"email": "mock@test.com"},
+        user_info={"email": "mock@example.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=PagesManager(""),
     )
@@ -113,8 +103,17 @@ def normalize_md(txt: str) -> str:
 def create_snowpark_session() -> Session:
     from snowflake.snowpark import Session
 
-    credential = json.loads(SNOWFLAKE_CREDENTIAL_FILE.read_text())
-    session = Session.builder.configs(credential).create()
+    session = Session.builder.configs(
+        {
+            "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+            "user": "test_streamlit",
+            "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+            "role": "testrole_streamlit",
+            "warehouse": "testwh_streamlit",
+            "database": "testdb_streamlit",
+            "schema": "testschema_streamlit",
+        }
+    ).create()
     try:
         yield session
     finally:

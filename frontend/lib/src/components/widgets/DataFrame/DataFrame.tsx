@@ -616,8 +616,8 @@ function DataFrame({
 
   return (
     <StyledResizableContainer
-      data-testid="stDataFrame"
       className="stDataFrame"
+      data-testid="stDataFrame"
       hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
       onMouseDown={e => {
@@ -684,7 +684,7 @@ function DataFrame({
           // are not relevant since they are not synced to the backend
           // at the moment.
           <ToolbarAction
-            label={"Clear selection"}
+            label="Clear selection"
             icon={Close}
             onClick={() => {
               clearSelection()
@@ -694,7 +694,7 @@ function DataFrame({
         )}
         {isDynamicAndEditable && isRowSelected && (
           <ToolbarAction
-            label={"Delete row(s)"}
+            label="Delete row(s)"
             icon={Delete}
             onClick={() => {
               if (onDelete) {
@@ -706,7 +706,7 @@ function DataFrame({
         )}
         {isDynamicAndEditable && !isRowSelected && (
           <ToolbarAction
-            label={"Add row"}
+            label="Add row"
             icon={Add}
             onClick={() => {
               if (onRowAppended) {
@@ -719,14 +719,14 @@ function DataFrame({
         )}
         {!isLargeTable && !isEmptyTable && (
           <ToolbarAction
-            label={"Download as CSV"}
+            label="Download as CSV"
             icon={FileDownload}
             onClick={() => exportToCsv()}
           />
         )}
         {!isEmptyTable && (
           <ToolbarAction
-            label={"Search"}
+            label="Search"
             icon={Search}
             onClick={() => {
               if (!showSearch) {
@@ -781,7 +781,9 @@ function DataFrame({
         }}
       >
         <GlideDataEditor
-          className="glideDataEditor"
+          // The className is used in styled components:
+          className="stDataFrameGlideDataEditor"
+          data-testid="stDataFrameGlideDataEditor"
           ref={dataEditorRef}
           columns={glideColumns}
           rows={isEmptyTable ? 1 : numRows}

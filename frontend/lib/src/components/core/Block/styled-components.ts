@@ -18,9 +18,9 @@ import React from "react"
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { StyledCheckbox } from "@streamlit/lib/src/components/widgets/Checkbox/styled-components"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 function translateGapWidth(gap: string, theme: EmotionTheme): string {
   let gapWidth = theme.spacing.lg
@@ -73,21 +73,21 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
-    ":is(.empty-html)": {
+    ":is(.stHtml-empty)": {
       display: "none",
     },
 
-    ":has(> .cacheSpinner)": {
-      height: 0,
+    ":has(> .stCacheSpinner)": {
+      height: theme.spacing.none,
       overflow: "visible",
       visibility: "visible",
-      marginBottom: "-1rem",
-      zIndex: 1000,
+      marginBottom: `-${theme.spacing.lg}`,
+      zIndex: theme.zIndices.cacheSpinner,
     },
 
-    ":has(> .stPageLink)": {
-      marginTop: "-0.375rem",
-      marginBottom: "-0.375rem",
+    [`:has(> .stPageLink))`]: {
+      marginTop: `-${theme.spacing.xs}`,
+      marginBottom: `-${theme.spacing.xs}`,
     },
     // Lower the min height of stacked/grouped checkboxes to have them appear visually
     // closer together to each other.
@@ -104,7 +104,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // <text-input><checkbox><checkbox><number-input><checkbox><selectbox>
     [`&:has(+ & > ${StyledCheckbox}) > ${StyledCheckbox}, &:has(> ${StyledCheckbox}):has(+ & > ${StyledCheckbox}) + & > ${StyledCheckbox}`]:
       {
-        minHeight: "1.5rem",
+        minHeight: theme.spacing.twoXL,
       },
 
     ...(isStale && elementType !== "skeleton"
@@ -197,9 +197,9 @@ export const StyledVerticalBlockBorderWrapper =
   styled.div<StyledVerticalBlockBorderWrapperProps>(
     ({ theme, border, height }) => ({
       ...(border && {
-        border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         borderRadius: theme.radii.default,
-        padding: `calc(${theme.spacing.lg} - 1px)`, // 1px to account for border.
+        padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
       ...(height && {
         height: `${height}px`,

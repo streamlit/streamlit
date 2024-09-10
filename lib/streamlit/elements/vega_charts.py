@@ -45,24 +45,24 @@ from streamlit.elements.lib.built_in_chart_utils import (
     maybe_raise_stack_warning,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     import altair as alt
 
-    from streamlit.color_util import Color
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.color_util import Color
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
@@ -121,7 +121,7 @@ class VegaLiteState(TypedDict, total=False):
     --------
     The following two examples have equivalent definitions. Each one has a
     point and interval selection parameter include in the chart definition.
-    The point seleciton parameter is named ``"point_selection"``. The interval
+    The point selection parameter is named ``"point_selection"``. The interval
     or box selection parameter is named ``"interval_selection"``.
 
     The follow example uses ``st.altair_chart``:
@@ -573,9 +573,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, dict or None
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -772,9 +770,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, or dict
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -1011,9 +1007,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, or dict
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -1277,9 +1271,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, \
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, dict or None
+        data : Anything supported by st.dataframe
             Data to be plotted.
 
         x : str or None
@@ -1660,7 +1652,7 @@ class VegaChartsMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+        data : Anything supported by st.dataframe
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
 
@@ -1882,9 +1874,6 @@ class VegaChartsMixin:
         vega_lite_proto.theme = theme or ""
 
         if is_selection_activated:
-            # Import here to avoid circular imports
-            from streamlit.elements.form import current_form_id
-
             # Load the stabilized spec again as a dict:
             final_spec = json.loads(vega_lite_proto.spec)
             # Temporary limitation to disallow multi-view charts (compositions) with selections.
@@ -1897,7 +1886,7 @@ class VegaChartsMixin:
             vega_lite_proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
-            vega_lite_proto.id = compute_widget_id(
+            vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
                 key=key,
@@ -1920,7 +1909,6 @@ class VegaChartsMixin:
             widget_state = register_widget(
                 "vega_lite_chart",
                 vega_lite_proto,
-                user_key=key,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

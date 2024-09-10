@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from types import FrameType
@@ -63,7 +63,7 @@ def declare_component(
 
     .. warning::
         Using ``st.components.v1.declare_component`` directly (instead of
-        importing its module) is deprecated and will be disallowd in a later
+        importing its module) is deprecated and will be disallowed in a later
         version.
 
     Parameters

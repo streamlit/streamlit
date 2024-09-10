@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_progress_renders_properly(
@@ -28,3 +29,8 @@ def test_progress_renders_properly(
         assert_snapshot(
             themed_app.get_by_test_id("stProgress").nth(i), name=f"st_progress-{i}"
         )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stProgress")

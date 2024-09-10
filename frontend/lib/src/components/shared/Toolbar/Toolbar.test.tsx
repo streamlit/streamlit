@@ -66,6 +66,7 @@ describe("Toolbar element", () => {
     const toolbar = screen.getByTestId("stElementToolbar")
     expect(toolbar).toBeInTheDocument()
     expect(toolbar).toBeVisible()
+    expect(toolbar).toHaveClass("stElementToolbar")
 
     // Check if toolbar buttons are rendered:
     const toolbarButton = screen.getAllByTestId("stElementToolbarButton")

@@ -37,7 +37,7 @@ function BaseLinkButton({
   rel,
   target,
   onClick,
-}: BaseLinkButtonPropsT): ReactElement {
+}: Readonly<BaseLinkButtonPropsT>): ReactElement {
   let ComponentType = StyledPrimaryLinkButton
 
   if (kind === BaseButtonKind.SECONDARY) {
@@ -51,7 +51,6 @@ function BaseLinkButton({
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       autoFocus={autoFocus || false}
-      data-testid={`baseLinkButton-${kind}`}
       href={href}
       target={target}
       rel={rel}

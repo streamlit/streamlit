@@ -494,6 +494,14 @@ def apply_data_specific_configs(
         DataFormat.LIST_OF_RECORDS,
         DataFormat.LIST_OF_ROWS,
         DataFormat.COLUMN_VALUE_MAPPING,
+        # Dataframe-like objects that don't have an index:
+        DataFormat.PANDAS_ARRAY,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.POLARS_DATAFRAME,
+        DataFormat.POLARS_SERIES,
+        DataFormat.POLARS_LAZYFRAME,
+        DataFormat.PYARROW_ARRAY,
+        DataFormat.RAY_DATASET,
     ]:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 

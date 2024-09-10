@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime
-from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
@@ -41,6 +40,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
@@ -578,6 +578,13 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
+            # Update the client state with the new page_script_hash if
+            # necessary. This handles an edge case where a script is never
+            # finishes (eg. by calling st.rerun()), but the page has changed
+            # via st.navigation()
+            if page_script_hash != self._client_state.page_script_hash:
+                self._client_state.page_script_hash = page_script_hash
+
             if clear_forward_msg_queue:
                 self._clear_queue()
 
@@ -854,7 +861,8 @@ class AppSession:
             page_proto = msg.app_pages.add()
 
             page_proto.page_script_hash = page_script_hash
-            page_proto.page_name = page_info["page_name"]
+            page_proto.page_name = page_info["page_name"].replace("_", " ")
+            page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
 
 

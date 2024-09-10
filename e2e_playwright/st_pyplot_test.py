@@ -17,20 +17,21 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_warning
+from e2e_playwright.shared.app_utils import check_top_level_class, expect_warning
 
 
 def test_displays_a_pyplot_figures(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that all pyplot figures are displayed correctly via screenshot matching."""
-    pyplot_elements = themed_app.get_by_test_id("stImage")
-    expect(pyplot_elements).to_have_count(8)
 
     # pyplot graph assertion
     expect(themed_app.get_by_test_id("stImage").last.locator("img")).to_have_attribute(
         "src", re.compile("localhost*")
     )
+
+    pyplot_elements = themed_app.get_by_test_id("stImage").locator("img")
+    expect(pyplot_elements).to_have_count(8)
 
     assert_snapshot(pyplot_elements.nth(0), name="st_pyplot-normal_figure")
     assert_snapshot(pyplot_elements.nth(1), name="st_pyplot-resized_figure")
@@ -47,3 +48,8 @@ def test_displays_a_pyplot_figures(
 def test_shows_deprecation_warning(app: Page):
     """Test that the deprecation warning is displayed correctly."""
     expect_warning(app, "without providing a figure argument has been deprecated")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stImage")

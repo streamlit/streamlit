@@ -747,6 +747,17 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.disconnectedSessionTTL",
+    description="""
+        TTL in seconds for sessions whose websockets have been disconnected. The server
+        may choose to clean up session state, uploaded files, etc for a given session
+        with no active websocket connection at any point after this time has passed.
+        """,
+    default_val=120,
+    type_=int,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")

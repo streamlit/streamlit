@@ -15,6 +15,7 @@
 """link_button unit tests."""
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -64,3 +65,26 @@ class LinkButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.link_button
         self.assertEqual(c.use_container_width, False)
+
+    def test_emoji_icon(self):
+        """Test that it can be called with an emoji icon."""
+        st.link_button("the label", url="https://streamlit.io", icon="🎈")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        self.assertEqual(c.icon, "🎈")
+
+    def test_material_icon(self):
+        """Test that it can be called with a material icon."""
+        st.link_button("the label", url="https://streamlit.io", icon=":material/bolt:")
+
+        c = self.get_delta_from_queue().new_element.link_button
+        self.assertEqual(c.icon, ":material/bolt:")
+
+    def test_invalid_icon(self):
+        """Test that an error is raised if an invalid icon is provided."""
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.link_button("the label", url="https://streamlit.io", icon="invalid")
+        self.assertEqual(
+            str(e.exception),
+            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.',
+        )

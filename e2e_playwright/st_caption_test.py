@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import expand_sidebar, expect_help_tooltip
 
 
 def test_correct_number_of_elements(app: Page):
@@ -24,7 +24,8 @@ def test_correct_number_of_elements(app: Page):
 
 
 def test_correct_content_in_caption(app: Page):
-    """Check that the captions have the correct content and also use the correct markdown formatting."""
+    """Check that the captions have the correct content and also use the correct
+    markdown formatting."""
     caption_containers = app.get_by_test_id("stCaptionContainer")
     expect(caption_containers.nth(1)).to_have_text("This is a caption!")
     expect(caption_containers.nth(2)).to_have_text(
@@ -37,7 +38,8 @@ def test_correct_content_in_caption(app: Page):
 
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
-    # The stMarkdown div is the outermost container that holds the caption and the help tooltip:
+    # The stMarkdown div is the outermost container that holds the caption and the
+    # help tooltip:
     caption_with_help = app.get_by_test_id("stMarkdown").nth(3)
     expect_help_tooltip(app, caption_with_help, "This is some help tooltip!")
 
@@ -46,9 +48,10 @@ def test_match_snapshot_for_caption_with_html_and_unsafe_html_true(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the unsafe_html caption matches the snapshot."""
-    # fetching the element-container so that when we capture a snapshot, it contains the tooltip
+    # fetching the stMarkdown so that when we capture a snapshot, it contains
+    # the tooltip
     caption_container = (
-        app.get_by_test_id("element-container")
+        app.get_by_test_id("stMarkdown")
         .filter(has=app.get_by_test_id("stCaptionContainer"))
         .nth(2)
     )
@@ -58,9 +61,10 @@ def test_match_snapshot_for_caption_with_html_and_unsafe_html_true(
 def test_match_snapshot_for_caption_with_tooltip(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the caption with matches the snapshot. Also test dark-theme to make sure icon is visible."""
+    """Test that the caption with matches the snapshot. Also test dark-theme to make
+    sure icon is visible."""
     caption_container = (
-        themed_app.get_by_test_id("element-container")
+        themed_app.get_by_test_id("stElementContainer")
         .filter(has=themed_app.get_by_test_id("stCaptionContainer"))
         .nth(3)
     )
@@ -72,7 +76,7 @@ def test_match_snapshot_for_mixed_markdown_content(
 ):
     """Test that the big markdown caption with the mixed content matches the snapshot."""
     caption_container = (
-        app.get_by_test_id("element-container")
+        app.get_by_test_id("stElementContainer")
         .filter(has=app.get_by_test_id("stCaptionContainer"))
         .nth(4)
     )
@@ -84,9 +88,6 @@ def test_match_snapshot_for_mixed_markdown_content(
 def test_match_snapshot_in_sidebar(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    # expand the sidebar
-    themed_app.get_by_test_id("collapsedControl").click()
-    sidebar = themed_app.get_by_test_id("stSidebar")
-    expect(sidebar).to_be_visible()
+    sidebar = expand_sidebar(themed_app)
     caption_in_sidebar = sidebar.get_by_test_id("stCaptionContainer")
     assert_snapshot(caption_in_sidebar, name="st_caption-sidebar_caption")

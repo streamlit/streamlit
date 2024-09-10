@@ -17,8 +17,9 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { KIND, Notification } from "baseui/notification"
+import { useTheme } from "@emotion/react"
 
-import { radii } from "@streamlit/lib/src/theme/primitives"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledAlertContent } from "./styled-components"
 
@@ -71,6 +72,8 @@ export default function AlertContainer({
   width,
   children,
 }: AlertContainerProps): ReactElement {
+  const theme: EmotionTheme = useTheme()
+
   const testid = kind.charAt(0).toUpperCase() + kind.slice(1)
   return (
     <Notification
@@ -78,30 +81,31 @@ export default function AlertContainer({
       overrides={{
         Body: {
           style: {
-            marginTop: 0,
-            marginBottom: 0,
-            marginLeft: 0,
-            marginRight: 0,
+            marginTop: theme.spacing.none,
+            marginBottom: theme.spacing.none,
+            marginLeft: theme.spacing.none,
+            marginRight: theme.spacing.none,
             width: width ? width.toString() : undefined,
             border: 0,
-            borderTopRightRadius: radii.default,
-            borderBottomRightRadius: radii.default,
-            borderTopLeftRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
+            borderTopRightRadius: theme.radii.default,
+            borderBottomRightRadius: theme.radii.default,
+            borderTopLeftRadius: theme.radii.default,
+            borderBottomLeftRadius: theme.radii.default,
           },
           props: {
-            "data-testid": "stNotification",
+            "data-testid": "stAlertContainer",
+            className: `stAlertContainer`,
           },
         },
         InnerContainer: {
           style: {
             width: "100%",
-            lineHeight: "1.5",
+            lineHeight: theme.lineHeights.alert,
           },
         },
       }}
     >
-      <StyledAlertContent data-testid={`stNotificationContent${testid}`}>
+      <StyledAlertContent data-testid={`stAlertContent${testid}`}>
         {children}
       </StyledAlertContent>
     </Notification>

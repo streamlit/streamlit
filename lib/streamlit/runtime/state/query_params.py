@@ -15,15 +15,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterable, Iterator, MutableMapping
+from typing import TYPE_CHECKING, Final, Iterable, Iterator, MutableMapping
 from urllib import parse
 
-from streamlit.constants import EMBED_QUERY_PARAMS_KEYS
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
+
+
+EMBED_QUERY_PARAM: Final[str] = "embed"
+EMBED_OPTIONS_QUERY_PARAM: Final[str] = "embed_options"
+EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
+    EMBED_QUERY_PARAM,
+    EMBED_OPTIONS_QUERY_PARAM,
+]
 
 
 @dataclass
@@ -134,9 +142,6 @@ class QueryParams(MutableMapping[str, str]):
         return str(self._query_params)
 
     def _send_query_param_msg(self) -> None:
-        # Avoid circular imports
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
         if ctx is None:
             return
@@ -189,9 +194,6 @@ class QueryParams(MutableMapping[str, str]):
         }
 
     def _ensure_single_query_api_used(self):
-        # Avoid circular imports
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
         if ctx is None:
             return

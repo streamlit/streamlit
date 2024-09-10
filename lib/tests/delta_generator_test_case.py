@@ -36,7 +36,7 @@ from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
+from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
 
@@ -60,7 +60,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             script_requests=ScriptRequests(),
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),

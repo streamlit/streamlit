@@ -41,3 +41,16 @@ st.json(["a", "b"])
 
 st.subheader("Empty dict:")
 st.json({})
+
+st.subheader("Expand to depth of 2:")
+st.json(
+    {
+        "level1": {
+            "level2": {"level3": {"a": "b"}},
+            "c": "d",
+            "list": [{"list_item": "value"}],
+        },
+        "string": "Hello World",
+    },
+    expanded=2,
+)

@@ -23,13 +23,14 @@ import React, {
   useRef,
 } from "react"
 
+import classNames from "classnames"
 import { useTheme } from "@emotion/react"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
-  getElementWidgetID,
+  getElementId,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
@@ -43,6 +44,8 @@ import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 import {
   assignDividerColor,
   BaseBlockProps,
+  convertKeyToClassName,
+  getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -99,7 +102,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.dialog) {
     return (
-      <Dialog element={node.deltaBlock.dialog as BlockProto.Dialog}>
+      <Dialog
+        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        deltaMsgReceivedAt={node.deltaMsgReceivedAt}
+      >
         {child}
       </Dialog>
     )
@@ -169,7 +175,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
-        data-testid="column"
+        className="stColumn"
+        data-testid="stColumn"
       >
         {child}
       </StyledColumn>
@@ -215,7 +222,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
                 node: node as ElementNode,
               }
 
-              const key = getElementWidgetID(node.element) || index
+              const key = getElementId(node.element) || index
               return <ElementNodeRenderer key={key} {...childProps} />
             }
 
@@ -324,6 +331,9 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ...props,
     ...{ width },
   }
+  // Extract the user-specified key from the block ID (if provided):
+  const userKey = getKeyFromId(props.node.deltaBlock.id)
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -338,7 +348,14 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       data-test-scroll-behavior="normal"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
-        <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+        <StyledVerticalBlock
+          width={width}
+          className={classNames(
+            "stVerticalBlock",
+            convertKeyToClassName(userKey)
+          )}
+          data-testid="stVerticalBlock"
+        >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
       </StyledVerticalBlockWrapper>
@@ -353,7 +370,11 @@ const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {
   const gap = props.node.deltaBlock.horizontal?.gap ?? ""
 
   return (
-    <StyledHorizontalBlock gap={gap} data-testid="stHorizontalBlock">
+    <StyledHorizontalBlock
+      gap={gap}
+      className="stHorizontalBlock"
+      data-testid="stHorizontalBlock"
+    >
       <ChildRenderer {...props} />
     </StyledHorizontalBlock>
   )

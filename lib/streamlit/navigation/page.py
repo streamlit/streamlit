@@ -20,7 +20,7 @@ from typing import Callable
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.util import calc_md5
@@ -206,6 +206,12 @@ class StreamlitPage:
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
         self._icon: str = icon or inferred_icon
+
+        if self._title.strip() == "":
+            raise StreamlitAPIException(
+                "The title of the page cannot be empty or consist of underscores/spaces only"
+            )
+
         if url_path is not None and url_path.strip() == "" and not default:
             raise StreamlitAPIException(
                 "The URL path cannot be an empty string unless the page is the default page."

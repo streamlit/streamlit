@@ -734,46 +734,47 @@ export function PlotlyChart({
   }, [plotlyFigure.layout?.dragmode])
 
   return (
-    <Plot
-      key={isFullScreen ? "fullscreen" : "original"}
-      className="stPlotlyChart"
-      data={plotlyFigure.data}
-      layout={plotlyFigure.layout}
-      config={plotlyConfig}
-      frames={plotlyFigure.frames ?? undefined}
-      style={{
-        // Hide the plotly chart if the width is not defined yet
-        // to prevent flickering issues.
-        visibility:
-          plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
-      }}
-      onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
-      // Double click is needed to make it easier to the user to
-      // reset the selection. The default handling can be a bit annoying
-      // sometimes.
-      onDoubleClick={
-        isSelectionActivated ? () => resetSelectionsCallback() : undefined
-      }
-      onDeselect={
-        isSelectionActivated
-          ? () => {
-              // Plotly is also resetting the UI state already for
-              // deselect events. So, we don't need to do it on our side.
-              // Thats why the flag is false.
-              resetSelectionsCallback(false)
-            }
-          : undefined
-      }
-      onInitialized={figure => {
-        widgetMgr.setElementState(element.id, "figure", figure)
-      }}
-      // Update the figure state on every change to the figure itself:
-      onUpdate={figure => {
-        // Save the updated figure state to allow it to be recovered
-        widgetMgr.setElementState(element.id, "figure", figure)
-        setPlotlyFigure(figure)
-      }}
-    />
+    <div className="stPlotlyChart" data-testid="stPlotlyChart">
+      <Plot
+        key={isFullScreen ? "fullscreen" : "original"}
+        data={plotlyFigure.data}
+        layout={plotlyFigure.layout}
+        config={plotlyConfig}
+        frames={plotlyFigure.frames ?? undefined}
+        style={{
+          // Hide the plotly chart if the width is not defined yet
+          // to prevent flickering issues.
+          visibility:
+            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+        }}
+        onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
+        // Double click is needed to make it easier to the user to
+        // reset the selection. The default handling can be a bit annoying
+        // sometimes.
+        onDoubleClick={
+          isSelectionActivated ? () => resetSelectionsCallback() : undefined
+        }
+        onDeselect={
+          isSelectionActivated
+            ? () => {
+                // Plotly is also resetting the UI state already for
+                // deselect events. So, we don't need to do it on our side.
+                // Thats why the flag is false.
+                resetSelectionsCallback(false)
+              }
+            : undefined
+        }
+        onInitialized={figure => {
+          widgetMgr.setElementState(element.id, "figure", figure)
+        }}
+        // Update the figure state on every change to the figure itself:
+        onUpdate={figure => {
+          // Save the updated figure state to allow it to be recovered
+          widgetMgr.setElementState(element.id, "figure", figure)
+          setPlotlyFigure(figure)
+        }}
+      />
+    </div>
   )
 }
 

@@ -37,14 +37,15 @@ from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
     ValueFieldName,
     WidgetMetadata,
     is_array_value_field_name,
-    is_keyed_widget_id,
-    is_widget_id,
+    is_element_id,
+    is_keyed_element_id,
 )
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
@@ -352,9 +353,9 @@ class SessionState:
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self._keys():
-            if not is_widget_id(k) and not _is_internal_key(k):
+            if not is_element_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_widget_id(k):
+            elif is_keyed_element_id(k):
                 try:
                     key = wid_key_map[k]
                     state[key] = self[k]
@@ -459,8 +460,6 @@ class SessionState:
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise a StreamlitAPIException instead.
         """
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
 
         if ctx is not None:
@@ -572,9 +571,6 @@ class SessionState:
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
-        # Avoid circular imports.
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-
         ctx = get_script_run_ctx()
         if ctx is None:
             return
@@ -590,7 +586,7 @@ class SessionState:
             k: v
             for k, v in self._old_state.items()
             if (
-                not is_widget_id(k)
+                not is_element_id(k)
                 or not _is_stale_widget(
                     self._new_widget_state.widget_metadata.get(k),
                     active_widget_ids,

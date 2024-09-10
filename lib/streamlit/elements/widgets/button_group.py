@@ -23,35 +23,28 @@ from typing import (
     Sequence,
     TypeVar,
     cast,
-    get_args,
+    overload,
 )
 
-from typing_extensions import TypeAlias
-
-from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
-    maybe_coerce_enum_sequence,
+    compute_and_register_element_id,
+    save_for_app_testing,
     to_key,
 )
 from streamlit.elements.widgets.multiselect import MultiSelectSerde
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.runtime.state.common import (
-    RegisterWidgetResult,
-    WidgetDeserializer,
-    WidgetSerializer,
-    compute_widget_id,
-    save_for_app_testing,
-)
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -60,6 +53,11 @@ if TYPE_CHECKING:
         WidgetArgs,
         WidgetCallback,
         WidgetKwargs,
+    )
+    from streamlit.runtime.state.common import (
+        RegisterWidgetResult,
+        WidgetDeserializer,
+        WidgetSerializer,
     )
     from streamlit.type_util import T
 
@@ -79,8 +77,6 @@ _STAR_ICON: Final = ":material/star:"
 # we don't have the filled-material icon library as a dependency. Hence, we have it here
 # in base64 format and send it over the wire as an image.
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
-
-_FeedbackOptions: TypeAlias = Literal["thumbs", "faces", "stars"]
 
 
 class FeedbackSerde:
@@ -114,7 +110,7 @@ class FeedbackSerde:
 
 
 def get_mapped_options(
-    feedback_option: _FeedbackOptions,
+    feedback_option: Literal["thumbs", "faces", "stars"],
 ) -> tuple[list[ButtonGroupProto.Option], list[int]]:
     # options object understandable by the web app
     options: list[ButtonGroupProto.Option] = []
@@ -168,10 +164,33 @@ def _build_proto(
 
 
 class ButtonGroupMixin:
+    @overload  # These overloads are not documented in the docstring, at least not at this time, on the theory that most people won't know what it means. And the Literals here are a subclass of int anyway.
+    # Usually, we would make a type alias for Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too many other places, and it's a more helpful autocomplete if we just enumerate the values explicitly, so a decision has been made to keep it as not an alias.
+    def feedback(
+        self,
+        options: Literal["thumbs"] = ...,
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> Literal[0, 1] | None: ...
+    @overload
+    def feedback(
+        self,
+        options: Literal["faces", "stars"] = ...,
+        *,
+        key: str | None = None,
+        disabled: bool = False,
+        on_change: WidgetCallback | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+    ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
         self,
-        options: _FeedbackOptions = "thumbs",
+        options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
         key: str | None = None,
         disabled: bool = False,
@@ -245,7 +264,7 @@ class ButtonGroupMixin:
 
         .. output ::
             https://doc-feedback-stars.streamlit.app/
-            height: 350px
+            height: 200px
 
         Display a feedback widget with thumbs, and show the selected sentiment:
 
@@ -258,11 +277,11 @@ class ButtonGroupMixin:
 
         .. output ::
             https://doc-feedback-thumbs.streamlit.app/
-            height: 350px
+            height: 200px
 
         """
 
-        if not isinstance(options, list) and options not in get_args(_FeedbackOptions):
+        if options not in ["thumbs", "faces", "stars"]:
             raise StreamlitAPIException(
                 "The options argument to st.feedback must be one of "
                 "['thumbs', 'faces', 'stars']. "
@@ -377,7 +396,7 @@ class ButtonGroupMixin:
             if format_func is None
             else [format_func(option) for option in indexable_options]
         )
-        widget_id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
             key=key,
@@ -389,7 +408,7 @@ class ButtonGroupMixin:
         )
 
         proto = _build_proto(
-            widget_id,
+            element_id,
             formatted_options,
             default or [],
             disabled,
@@ -401,7 +420,6 @@ class ButtonGroupMixin:
         widget_state = register_widget(
             widget_name,
             proto,
-            # user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -418,7 +436,7 @@ class ButtonGroupMixin:
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, widget_id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue(widget_name, proto)
 

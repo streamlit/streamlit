@@ -37,7 +37,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
@@ -247,7 +246,7 @@ class TextArea extends React.PureComponent<Props, State> {
             },
             Root: {
               props: {
-                "data-testid": "stTextInput-RootElement",
+                "data-testid": "stTextAreaRootElement",
               },
               style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
@@ -260,7 +259,7 @@ class TextArea extends React.PureComponent<Props, State> {
           }}
         />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}

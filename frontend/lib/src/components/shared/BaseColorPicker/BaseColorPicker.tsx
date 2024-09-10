@@ -112,6 +112,7 @@ class BaseColorPicker extends React.PureComponent<
 
     return (
       <StyledColorPicker
+        className="stColorPicker"
         data-testid="stColorPicker"
         width={width}
         disabled={disabled}
@@ -141,7 +142,7 @@ class BaseColorPicker extends React.PureComponent<
         >
           <StyledColorPreview disabled={disabled}>
             <StyledColorBlock
-              data-testid="stColorBlock"
+              data-testid="stColorPickerBlock"
               backgroundColor={value}
               disabled={disabled}
             />

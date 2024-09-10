@@ -37,7 +37,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledTextInput } from "./styled-components"
@@ -218,7 +217,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput
-        className="row-widget stTextInput"
+        className="stTextInput"
         data-testid="stTextInput"
         width={width}
       >
@@ -271,7 +270,7 @@ class TextInput extends React.PureComponent<Props, State> {
             },
             Root: {
               props: {
-                "data-testid": "stTextInput-RootElement",
+                "data-testid": "stTextInputRootElement",
               },
               style: {
                 height: theme.sizes.minElementHeight,
@@ -285,7 +284,7 @@ class TextInput extends React.PureComponent<Props, State> {
           }}
         />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}

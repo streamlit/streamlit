@@ -105,7 +105,7 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     expect(textInput).toHaveAttribute("type", "text")
     // Check that no show/hide button renders
-    const textInputContainer = screen.getByTestId("stTextInput-RootElement")
+    const textInputContainer = screen.getByTestId("stTextInputRootElement")
     const showButton = within(textInputContainer).queryByRole("button")
     expect(showButton).not.toBeInTheDocument()
   })
@@ -116,7 +116,7 @@ describe("TextInput widget", () => {
     const passwordTextInput = screen.getByPlaceholderText("Placeholder")
     expect(passwordTextInput).toHaveAttribute("type", "password")
     // Check for the show/hide button
-    const textInputContainer = screen.getByTestId("stTextInput-RootElement")
+    const textInputContainer = screen.getByTestId("stTextInputRootElement")
     const showButton = within(textInputContainer).getByRole("button")
     expect(showButton).toBeInTheDocument()
   })
@@ -169,7 +169,6 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByTestId("stTextInput")
 
-    expect(textInput).toHaveClass("row-widget")
     expect(textInput).toHaveClass("stTextInput")
     expect(textInput).toHaveStyle(`width: ${props.width}px`)
   })

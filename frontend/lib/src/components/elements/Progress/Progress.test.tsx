@@ -38,7 +38,9 @@ describe("Progress component", () => {
   it("renders without crashing", () => {
     render(<Progress {...getProps()} />)
 
-    expect(screen.getByTestId("stProgress")).toBeInTheDocument()
+    const progressElement = screen.getByTestId("stProgress")
+    expect(progressElement).toBeInTheDocument()
+    expect(progressElement).toHaveClass("stProgress")
   })
 
   it("sets the value correctly", () => {

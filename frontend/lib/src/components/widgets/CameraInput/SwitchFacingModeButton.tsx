@@ -42,8 +42,8 @@ const SwitchFacingModeButton = ({
   switchFacingMode,
 }: SwitchFacingModeButtonProps): ReactElement => {
   return (
-    <StyledSwitchFacingModeButton data-testid="stCameraSwitchButton">
-      <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
+    <StyledSwitchFacingModeButton data-testid="stCameraInputSwitchButton">
+      <Tooltip content="Switch camera" placement={Placement.TOP_RIGHT}>
         <BaseButton kind={BaseButtonKind.MINIMAL} onClick={switchFacingMode}>
           <Icon
             content={SwitchCamera}

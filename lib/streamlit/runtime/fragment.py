@@ -30,8 +30,11 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -156,14 +159,14 @@ def _fragment(
 
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
-        from streamlit.delta_generator import dg_stack
+        from streamlit.delta_generator_singletons import context_dg_stack
 
         ctx = get_script_run_ctx()
         if ctx is None:
-            return
+            return None
 
         cursors_snapshot = deepcopy(ctx.cursors)
-        dg_stack_snapshot = deepcopy(dg_stack.get())
+        dg_stack_snapshot = deepcopy(context_dg_stack.get())
         h = hashlib.new("md5")
         h.update(
             f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}".encode()
@@ -198,7 +201,7 @@ def _fragment(
                 # state of ctx.cursors and dg_stack to the snapshots we took when this
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)
-                dg_stack.set(deepcopy(dg_stack_snapshot))
+                context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
             # Always add the fragment id to new_fragment_ids. For full app runs
             # we need to add them anyways and for fragment runs we add them
@@ -236,7 +239,7 @@ def _fragment(
                             # because thats the prefix of the fragment,
                             # e.g. [0, 3, 0] -> [0, 3].
                             # All fragment elements start with [0, 3].
-                            active_dg = dg_stack.get()[-1]
+                            active_dg = context_dg_stack.get()[-1]
                             ctx.current_fragment_delta_path = (
                                 active_dg._cursor.delta_path
                                 if active_dg._cursor
@@ -265,8 +268,7 @@ def _fragment(
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        if not ctx.fragment_storage.contains(fragment_id):
-            ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()

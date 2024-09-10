@@ -45,7 +45,7 @@ export const StyledConnectionStatusLabel =
     marginBottom: theme.spacing.none,
     marginLeft: theme.spacing.sm,
     whiteSpace: "nowrap",
-    maxWidth: isMinimized ? "0" : "20rem",
+    maxWidth: isMinimized ? "0" : theme.sizes.appStatusMaxWidth,
     transition:
       "opacity 500ms 0ms, clip 500ms 0ms, max-width 500ms 0ms, margin 500ms 0ms, visibility 0ms 500ms",
     opacity: isMinimized ? 0 : 1,
@@ -66,7 +66,7 @@ export const StyledAppStatus = styled.div(({ theme }) => ({
   borderRadius: theme.radii.md,
   margin: `0 ${theme.spacing.sm} 0 0`,
   paddingLeft: theme.spacing.sm,
-  height: "1.6rem",
+  height: theme.sizes.appRunningMen,
 }))
 
 const minimizedStyles = (theme: EmotionTheme): CSSObject => ({
@@ -90,7 +90,7 @@ export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
     textTransform: isPrompt ? "none" : "uppercase",
     margin: `0 0 0 ${theme.spacing.lg}`,
     whiteSpace: "nowrap",
-    maxWidth: "20rem",
+    maxWidth: theme.sizes.appStatusMaxWidth,
     borderRadius: isPrompt ? theme.radii.md : undefined,
     transition: `opacity 200ms ease-out 0s,
   clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
@@ -125,8 +125,8 @@ export const StyledAppRunningIcon = styled.img<StyledAppRunningIconProps>(
     // New years gif has unique styling - regular running man unchanged
     return {
       opacity: isNewYears ? 1 : 0.4,
-      width: isNewYears ? "2.2rem" : "1.6rem",
-      height: isNewYears ? "2.2rem" : "1.6rem",
+      width: isNewYears ? "2.2rem" : theme.sizes.appRunningMen,
+      height: isNewYears ? "2.2rem" : theme.sizes.appRunningMen,
       marginRight: `-${theme.spacing.sm}`,
       filter: isNewYears ? "" : filter,
     }

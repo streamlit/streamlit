@@ -19,10 +19,11 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
 
-from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -150,7 +151,7 @@ class StatusContainer(DeltaGenerator):
             self._current_state = state
 
         self._current_proto = msg.delta.add_block
-        _enqueue_message(msg)
+        enqueue_message(msg)
 
     def __enter__(self) -> Self:  # type: ignore[override]
         # This is a little dubious: we're returning a different type than

@@ -14,7 +14,10 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import check_top_level_class
+
 
 def test_spinner_execution(app: Page):
     app.get_by_test_id("stButton").locator("button").click()
     expect(app.get_by_test_id("stSpinner")).to_have_text("Loading...")
+    check_top_level_class(app, "stSpinner")

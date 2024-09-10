@@ -16,7 +16,12 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_help_tooltip
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_form_button,
+    expect_help_tooltip,
+    get_element_by_key,
+)
 
 
 def test_color_picker_widget_display(
@@ -41,7 +46,7 @@ def test_clicking_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     app.get_by_test_id("stColorPickerPopover").click(position={"x": 0, "y": 0})
 
@@ -57,7 +62,7 @@ def test_typing_new_hex_color_on_color_picker_works_with_callback(
 ):
     expect(app.get_by_text("Hello world")).to_have_count(0)
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
@@ -76,7 +81,7 @@ def test_typing_new_RGB_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     color_picker_popover = app.get_by_test_id("stColorPickerPopover")
 
@@ -99,7 +104,7 @@ def test_typing_new_HSL_color_on_color_picker_works(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     color_pickers = app.get_by_test_id("stColorPicker")
-    color_pickers.nth(0).get_by_test_id("stColorBlock").click()
+    color_pickers.nth(0).get_by_test_id("stColorPickerBlock").click()
 
     color_picker_popover = app.get_by_test_id("stColorPickerPopover")
 
@@ -126,7 +131,9 @@ def test_in_form_selection_and_session_state(app: Page):
         app.get_by_text("color_picker-in-form selection in session state: #000000")
     ).to_be_visible()
 
-    app.get_by_test_id("stColorPicker").nth(5).get_by_test_id("stColorBlock").click()
+    app.get_by_test_id("stColorPicker").nth(5).get_by_test_id(
+        "stColorPickerBlock"
+    ).click()
 
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
@@ -135,8 +142,7 @@ def test_in_form_selection_and_session_state(app: Page):
     app.get_by_text("Default Color").click()
     wait_for_app_run(app)
 
-    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
-    wait_for_app_run(app)
+    click_form_button(app, "Submit")
 
     expect(app.get_by_text("color_picker-in-form selection: #ffffff")).to_be_visible()
     expect(
@@ -149,7 +155,9 @@ def test_color_picker_in_fragment(app: Page):
         app.get_by_text("color_picker-in-fragment selection: #000000")
     ).to_be_visible()
 
-    app.get_by_test_id("stColorPicker").nth(6).get_by_test_id("stColorBlock").click()
+    app.get_by_test_id("stColorPicker").nth(6).get_by_test_id(
+        "stColorPickerBlock"
+    ).click()
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ffffff")
 
@@ -162,3 +170,13 @@ def test_color_picker_in_fragment(app: Page):
         app.get_by_text("color_picker-in-fragment selection: #ffffff")
     ).to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stColorPicker")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "color_picker_1")).to_be_visible()

@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_dataframe_supports_various_configurations(
@@ -50,3 +51,8 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-area_chart_column")
     assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-image_column")
     assert_snapshot(dataframe_elements.nth(22), name="st_dataframe-auto_sized_columns")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stDataFrame")

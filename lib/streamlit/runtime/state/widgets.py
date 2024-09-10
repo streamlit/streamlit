@@ -14,15 +14,11 @@
 
 from __future__ import annotations
 
-import textwrap
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final, Mapping
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import DuplicateWidgetID
-from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
-from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -34,7 +30,7 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    user_key_from_widget_id,
+    user_key_from_element_id,
 )
 
 if TYPE_CHECKING:
@@ -79,23 +75,12 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
 )
 
 
-class NoValue:
-    """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
-    call to return None. This is needed because `DeltaGenerator._enqueue`
-    replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
-    """
-
-    pass
-
-
 def register_widget(
     element_type: ElementType,
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
-    user_key: str | None = None,
-    widget_func_name: str | None = None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
@@ -116,14 +101,6 @@ def register_widget(
         Called to convert a widget's value to its protobuf representation.
     ctx : ScriptRunContext or None
         Used to ensure uniqueness of widget IDs, and to look up widget values.
-    user_key : str or None
-        Optional user-specified string to use as the widget ID.
-        If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
-        The widget's DeltaGenerator function name, if it's different from
-        its element_type. Custom components are a special case: they all have
-        the element_type "component_instance", but are instantiated with
-        dynamically-named functions.
     on_change_handler : WidgetCallback or None
         An optional callback invoked when the widget's value changes.
     args : WidgetArgs or None
@@ -166,14 +143,12 @@ def register_widget(
         callback_kwargs=kwargs,
         fragment_id=ctx.current_fragment_id if ctx else None,
     )
-    return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
+    return register_widget_from_metadata(metadata, ctx)
 
 
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
     ctx: ScriptRunContext | None,
-    widget_func_name: str | None,
-    element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
     """Register a widget and return its value, using an already constructed
     `WidgetMetadata`.
@@ -183,127 +158,12 @@ def register_widget_from_metadata(
 
     See `register_widget` for details on what this returns.
     """
-    # Local import to avoid import cycle
-    import streamlit.runtime.caching as caching
-
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
         return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
 
     widget_id = metadata.id
-    user_key = user_key_from_widget_id(widget_id)
+    user_key = user_key_from_element_id(widget_id)
 
-    # Ensure another widget with the same user key hasn't already been registered.
-    if user_key is not None:
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            raise DuplicateWidgetID(
-                _build_duplicate_widget_message(
-                    widget_func_name if widget_func_name is not None else element_type,
-                    user_key,
-                )
-            )
-
-    # Ensure another widget with the same id hasn't already been registered.
-    new_widget = widget_id not in ctx.widget_ids_this_run
-    if new_widget:
-        ctx.widget_ids_this_run.add(widget_id)
-    else:
-        raise DuplicateWidgetID(
-            _build_duplicate_widget_message(
-                widget_func_name if widget_func_name is not None else element_type,
-                user_key,
-            )
-        )
-    # Save the widget metadata for cached result replay
-    caching.save_widget_metadata(metadata)
     return ctx.session_state.register_widget(metadata, user_key)
-
-
-def coalesce_widget_states(
-    old_states: WidgetStates | None, new_states: WidgetStates | None
-) -> WidgetStates | None:
-    """Coalesce an older WidgetStates into a newer one, and return a new
-    WidgetStates containing the result.
-
-    For most widget values, we just take the latest version.
-
-    However, any trigger_values (which are set by buttons) that are True in
-    `old_states` will be set to True in the coalesced result, so that button
-    presses don't go missing.
-    """
-    if not old_states and not new_states:
-        return None
-    elif not old_states:
-        return new_states
-    elif not new_states:
-        return old_states
-
-    states_by_id: dict[str, WidgetState] = {
-        wstate.id: wstate for wstate in new_states.widgets
-    }
-
-    trigger_value_types = [
-        ("trigger_value", False),
-        ("string_trigger_value", StringTriggerValueProto(data=None)),
-    ]
-    for old_state in old_states.widgets:
-        for trigger_value_type, unset_value in trigger_value_types:
-            if (
-                old_state.WhichOneof("value") == trigger_value_type
-                and getattr(old_state, trigger_value_type) != unset_value
-            ):
-                new_trigger_val = states_by_id.get(old_state.id)
-                # It should nearly always be the case that new_trigger_val is None
-                # here as trigger values are deleted from the client's WidgetStateManager
-                # as soon as a rerun_script BackMsg is sent to the server. Since it's
-                # impossible to test that the client sends us state in the expected
-                # format in a unit test, we test for this behavior in
-                # e2e_playwright/test_fragment_queue_test.py
-                if not new_trigger_val or (
-                    # Ensure the corresponding new_state is also a trigger;
-                    # otherwise, a widget that was previously a button/chat_input but no
-                    # longer is could get a bad value.
-                    new_trigger_val.WhichOneof("value") == trigger_value_type
-                    # We only want to take the value of old_state if new_trigger_val is
-                    # unset as the old value may be stale if a newer one was entered.
-                    and getattr(new_trigger_val, trigger_value_type) == unset_value
-                ):
-                    states_by_id[old_state.id] = old_state
-
-    coalesced = WidgetStates()
-    coalesced.widgets.extend(states_by_id.values())
-
-    return coalesced
-
-
-def _build_duplicate_widget_message(
-    widget_func_name: str, user_key: str | None = None
-) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            """
-            There are multiple widgets with the same `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for each
-            widget you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical `st.{widget_type}` widgets with the
-            same generated key.
-
-            When a widget is created, it's assigned an internal key based on
-            its structure. Multiple widgets with an identical structure will
-            result in the same internal key, which causes this error.
-
-            To fix this error, please pass a unique `key` argument to
-            `st.{widget_type}`.
-            """
-        )
-
-    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)

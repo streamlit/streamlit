@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
     from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 
@@ -63,7 +63,7 @@ class LocalScriptRunner(ScriptRunner):
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=pages_manager,
         )

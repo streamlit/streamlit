@@ -346,14 +346,3 @@ class StMapTest(DeltaGeneratorTestCase):
             st.map(df)
 
         self.assertIn("not allowed to contain null values", str(ctx.exception))
-
-    def test_id_changes_when_data_changes(self):
-        st.map()
-
-        orig_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-        np.random.seed(0)
-
-        df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
-        st.map(df)
-        new_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-        self.assertNotEqual(orig_id, new_id)

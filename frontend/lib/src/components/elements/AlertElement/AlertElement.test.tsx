@@ -44,10 +44,11 @@ describe("Alert element", () => {
       body: "#what in the world?",
     })
     render(<AlertElement {...props} />)
-    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(
-      screen.getByTestId("stNotificationContentError")
-    ).toBeInTheDocument()
+    const alertElement = screen.getByTestId("stAlert")
+    expect(alertElement).toBeInTheDocument()
+    expect(alertElement).toHaveClass("stAlert")
+
+    expect(screen.getByTestId("stAlertContentError")).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertDynamicIcon")).not.toBeInTheDocument()
     expect(screen.getByText("#what in the world?")).toBeInTheDocument()
   })
@@ -59,9 +60,7 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(
-      screen.getByTestId("stNotificationContentWarning")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContentWarning")).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertDynamicIcon")).not.toBeInTheDocument()
     expect(screen.getByText("test")).toBeInTheDocument()
   })
@@ -73,9 +72,7 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(
-      screen.getByTestId("stNotificationContentSuccess")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContentSuccess")).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertDynamicIcon")).not.toBeInTheDocument()
     expect(
       screen.getByText("But our princess was in another castle!")
@@ -89,7 +86,7 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByTestId("stNotificationContentInfo")).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContentInfo")).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertDynamicIcon")).not.toBeInTheDocument()
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
@@ -102,7 +99,7 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByTestId("stNotificationContentInfo")).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContentInfo")).toBeInTheDocument()
     expect(screen.getByTestId("stAlertDynamicIcon")).toHaveTextContent("👉🏻")
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })

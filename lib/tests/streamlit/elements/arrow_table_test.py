@@ -14,12 +14,11 @@
 
 """Arrow marshalling unit tests."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
 from streamlit.dataframe_util import (
@@ -128,16 +127,3 @@ class ArrowTest(DeltaGeneratorTestCase):
 
             st.table(df)
             convert_anything_to_df.assert_called_once()
-
-    @patch(
-        "streamlit.type_util.is_pandas_version_less_than",
-        MagicMock(return_value=False),
-    )
-    @patch.object(Styler, "_translate")
-    def test_pandas_version_1_3_0_and_above(self, mock_styler_translate):
-        """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
-        df = mock_data_frame()
-        styler = df.style.set_uuid("FAKE_UUID")
-
-        st.table(styler)
-        mock_styler_translate.assert_called_once_with(False, False)

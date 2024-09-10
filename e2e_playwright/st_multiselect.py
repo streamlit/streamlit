@@ -81,3 +81,9 @@ if runtime.exists():
     st.multiselect("multiselect 11", options, key="multiselect11", on_change=on_change)
     st.text(f"value 11: {st.session_state.multiselect11}")
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
+
+multiple_cols = st.columns(5)
+i12 = multiple_cols[0].multiselect(
+    "multiselect 12", ["A long option"], default="A long option"
+)
+st.text(f"value 12: {i12}")

@@ -20,7 +20,7 @@ import signal
 import sys
 from typing import Any, Final
 
-from streamlit import cli_util, config, env_util, file_util, net_util, secrets, util
+from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
@@ -130,7 +130,7 @@ def _on_server_start(server: Server) -> None:
         else:
             addr = "localhost"
 
-        util.open_browser(server_util.get_url(addr))
+        cli_util.open_browser(server_util.get_url(addr))
 
     # Schedule the browser to open on the main thread.
     asyncio.get_running_loop().call_soon(maybe_open_browser)
@@ -140,31 +140,6 @@ def _fix_pydeck_mapbox_api_warning() -> None:
     """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it will throw an exception"""
 
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
-
-
-def _fix_pydantic_duplicate_validators_error():
-    """Pydantic by default disallows to reuse of validators with the same name,
-    this combined with the Streamlit execution model leads to an error on the second
-    Streamlit script rerun if the Pydantic validator is registered
-    in the streamlit script.
-
-    It is important to note that the same issue exists for Pydantic validators inside
-    Jupyter notebooks, https://github.com/pydantic/pydantic/issues/312 and in order
-    to fix that in Pydantic they use the `in_ipython` function that checks that
-    Pydantic runs not in `ipython` environment.
-
-    Inside this function we patch `in_ipython` function to always return `True`.
-
-    This change will relax rules for writing Pydantic validators inside
-    Streamlit script a little bit, similar to how it works in jupyter,
-    which should not be critical.
-    """
-    try:
-        from pydantic import class_validators
-
-        class_validators.in_ipython = lambda: True  # type: ignore[attr-defined]
-    except ImportError:
-        pass
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
@@ -329,7 +304,6 @@ def run(
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
-    _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
 
     # Create the server. It won't start running yet.

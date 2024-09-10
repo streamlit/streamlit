@@ -49,17 +49,10 @@ describe("Particles element", () => {
 
     const particleElement = screen.getByTestId("particles")
     expect(particleElement).toBeInTheDocument()
+    expect(particleElement).toHaveClass("particles")
 
     // eslint-disable-next-line testing-library/no-node-access
     const particleComponents = particleElement.children
     expect(particleComponents.length).toBe(10)
-  })
-
-  it("renders as hidden element", () => {
-    const props = getProps()
-    render(<Particles {...props} />)
-
-    const particleElement = screen.getByTestId("particles")
-    expect(particleElement).toHaveClass("stHidden")
   })
 })

@@ -92,7 +92,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
       borderRadius: theme.radii.default,
       minHeight: theme.sizes.minElementHeight,
-      margin: 0,
+      margin: theme.spacing.none,
       lineHeight: theme.lineHeights.base,
       color: "inherit",
       width: fluidWidth ? buttonWidth : "auto",
@@ -122,7 +122,7 @@ export const StyledPrimaryButton = styled(
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
@@ -133,7 +133,7 @@ export const StyledSecondaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   "&:hover": {
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
@@ -148,7 +148,7 @@ export const StyledSecondaryButton = styled(
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
@@ -184,7 +184,7 @@ export const StyledLinkButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
-  padding: 0,
+  padding: theme.spacing.none,
   border: "none",
   color: theme.colors.primary,
   "&:hover": {
@@ -208,7 +208,7 @@ export const StyledMinimalButton = styled(
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
-  padding: 0,
+  padding: theme.spacing.none,
   "&:hover, &:active, &:focus-visible": {
     color: theme.colors.primary,
   },
