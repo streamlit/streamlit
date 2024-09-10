@@ -111,7 +111,7 @@ export function getContentElement(
       ? BaseButtonKind.PILLS
       : style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonKind.BORDERLESS_ICON
-      : BaseButtonKind.SEGMENT
+      : BaseButtonKind.SEGMENTS
   const size =
     style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonSize.XSMALL

@@ -26,7 +26,6 @@ import {
   StyledHeaderButton,
   StyledHeaderNoPaddingButton,
   StyledIconButton,
-  StyledIconButtonActive,
   StyledLinkButton,
   StyledMinimalButton,
   StyledPillsButton,
@@ -35,6 +34,8 @@ import {
   StyledPrimaryFormSubmitButton,
   StyledSecondaryButton,
   StyledSecondaryFormSubmitButton,
+  StyledSegmentsButton,
+  StyledSegmentsButtonActive,
   StyledTertiaryButton,
 } from "./styled-components"
 
@@ -55,14 +56,16 @@ function BaseButton({
     ComponentType = StyledTertiaryButton
   } else if (kind === BaseButtonKind.LINK) {
     ComponentType = StyledLinkButton
-  } else if (kind === BaseButtonKind.SEGMENT) {
+  } else if (kind === BaseButtonKind.ICON) {
     ComponentType = StyledIconButton
-  } else if (kind === BaseButtonKind.SEGMENT_ACTIVE) {
-    ComponentType = StyledIconButtonActive
   } else if (kind === BaseButtonKind.PILLS) {
     ComponentType = StyledPillsButton
   } else if (kind === BaseButtonKind.PILLS_ACTIVE) {
     ComponentType = StyledPillsButtonActive
+  } else if (kind === BaseButtonKind.SEGMENTS) {
+    ComponentType = StyledSegmentsButton
+  } else if (kind === BaseButtonKind.SEGMENTS_ACTIVE) {
+    ComponentType = StyledSegmentsButtonActive
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {
