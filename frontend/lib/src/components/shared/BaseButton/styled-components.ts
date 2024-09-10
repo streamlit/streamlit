@@ -229,10 +229,13 @@ export const StyledIconButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.transparent,
+    padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: theme.radii.none,
-    flex: "1 1 0",
-    padding: 0,
+    fontSize: theme.fontSizes.sm,
+    lineHeight: theme.lineHeights.base,
+    maxHeight: theme.sizes.largeLogoHeight,
+    minHeight: theme.sizes.largeLogoHeight,
 
     "&:hover": {
       borderColor: theme.colors.primary,
