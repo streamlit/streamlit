@@ -337,7 +337,7 @@ def test_csv_download_button_in_iframe(iframed_app: IframedPage):
     """
 
     page: Page = iframed_app.page
-    frame_locator: FrameLocator = iframed_app.open_app()
+    frame_locator: FrameLocator = iframed_app.open_app(None)
 
     _test_csv_download(page, frame_locator)
 
@@ -368,7 +368,7 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
         and response.json()["enforceDownloadInNewTab"] is True,
         timeout=10000,
     ):
-        frame_locator: FrameLocator = iframed_app.open_app()
+        frame_locator: FrameLocator = iframed_app.open_app(None)
         _test_csv_download(page, frame_locator)
 
 
