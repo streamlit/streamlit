@@ -21,7 +21,8 @@ from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast, overload
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -40,7 +41,6 @@ from streamlit.errors import (
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
 )
-from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx

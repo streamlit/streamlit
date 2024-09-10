@@ -19,7 +19,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from streamlit.util import index_
+from streamlit.elements.lib.options_selector_utils import index_
 
 
 class Index_Test(unittest.TestCase):

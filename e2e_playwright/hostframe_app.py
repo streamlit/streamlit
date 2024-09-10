@@ -16,6 +16,24 @@ import time
 
 import streamlit as st
 
+
+def page2():
+    st.header("Page 2")
+
+
+def page3():
+    st.header("Page 3")
+
+
+# the multi-pages are added to populate the sidebar. In the test, we are not actually
+# use them.
+st.navigation(
+    [
+        st.Page(page2, title="02_App_Page_2", default=True),
+        st.Page(page3, title="03_App_Page_3"),
+    ]
+)
+
 st.slider("Enter a number", 0, 20, 0)
 st.checkbox("Check me out", value=True)
 st.radio("Radio Widget", ["Option 1", "Option 2", "Option 3"])

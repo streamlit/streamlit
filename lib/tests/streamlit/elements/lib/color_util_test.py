@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import unittest
 
-from streamlit import color_util
+from streamlit import errors
+from streamlit.elements.lib import color_util
 
 valid_hex_colors = ["#123", "#1234", "#112233", "#11223344"]
 
@@ -92,7 +93,7 @@ class ColorUtilTest(unittest.TestCase):
     def test_to_int_color_tuple_fails(self):
         """Test to_int_color_tuple with bad inputs"""
         for test_arg in invalid_colors:
-            with self.assertRaises(color_util.InvalidColorException):
+            with self.assertRaises(errors.StreamlitInvalidColorError):
                 color_util.to_int_color_tuple(test_arg)
 
     def test_to_css_color(self):
@@ -137,7 +138,7 @@ class ColorUtilTest(unittest.TestCase):
         test_args.remove("rgb(1, 2, 3)")
 
         for test_arg in test_args:
-            with self.assertRaises(color_util.InvalidColorException):
+            with self.assertRaises(errors.StreamlitInvalidColorError):
                 color_util.to_css_color(test_arg)
 
     def test_is_hex_color_like_true(self):

@@ -75,15 +75,6 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
 )
 
 
-class NoValue:
-    """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
-    call to return None. This is needed because `DeltaGenerator._enqueue`
-    replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
-    """
-
-    pass
-
-
 def register_widget(
     element_type: ElementType,
     element_proto: WidgetProto,

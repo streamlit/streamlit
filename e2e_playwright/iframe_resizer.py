@@ -12,8 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
+"""
+The test injects a resizer-script into an iframe. When the app is
+interacted with and the markdown elements are added, the iframe is resized automatically
+to wrap the content.
+"""
 
-EMBED_QUERY_PARAM = "embed"
-EMBED_OPTIONS_QUERY_PARAM = "embed_options"
-EMBED_QUERY_PARAMS_KEYS = [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
+import streamlit as st
+
+x = st.slider("Enter a number", 0, 20, 0)
+
+for _ in range(x):
+    st.write("Hello example")

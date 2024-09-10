@@ -131,7 +131,7 @@ import streamlit.column_config as _column_config
 # disables implicit_reexport, where you use the respective command in the example_app.py
 # Streamlit app.
 
-from streamlit.echo import echo as echo
+from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
 from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page

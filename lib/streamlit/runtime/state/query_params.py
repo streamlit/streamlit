@@ -15,16 +15,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterable, Iterator, MutableMapping
+from typing import TYPE_CHECKING, Final, Iterable, Iterator, MutableMapping
 from urllib import parse
 
-from streamlit.constants import EMBED_QUERY_PARAMS_KEYS
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
+
+
+EMBED_QUERY_PARAM: Final[str] = "embed"
+EMBED_OPTIONS_QUERY_PARAM: Final[str] = "embed_options"
+EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
+    EMBED_QUERY_PARAM,
+    EMBED_OPTIONS_QUERY_PARAM,
+]
 
 
 @dataclass

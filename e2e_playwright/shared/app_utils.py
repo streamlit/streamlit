@@ -18,7 +18,7 @@ import platform
 import re
 from typing import Literal, Pattern
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Frame, Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 
@@ -503,3 +503,128 @@ def check_top_level_class(app: Page, test_id: str) -> None:
         The test id of the element to check.
     """
     expect(app.get_by_test_id(test_id).first).to_have_class(re.compile(test_id))
+
+
+def register_connection_status_observer(page_or_frame: Page | Frame | None) -> None:
+    if page_or_frame is None:
+        return None
+
+    return page_or_frame.evaluate("""async () => {
+        window.streamlitPlaywrightDebugConnectionStatuses = [];
+        const callback = (mutationList, observer) => {
+            if (!mutationList || mutationList.length === 0) {
+                return
+            }
+            const target = mutationList[0].target
+            if (!target) {
+                return
+            }
+            let state = target
+                            .getAttribute('data-test-connection-state')
+                            .toUpperCase();
+            window.streamlitPlaywrightDebugConnectionStatuses.push(state);
+        }
+        const observer = new MutationObserver(callback);
+        // Observe app status for changes
+        const targetNode = document.querySelector('[data-testid=stApp]')
+        if (!targetNode) {
+            console.log("stApp not found")
+            return
+        }
+        const config = {
+            childList: false,
+            subtree: false,
+            attributeFilter: ['data-test-connection-state']
+        };
+        observer.observe(targetNode, config);
+    }""")
+
+
+def get_observed_connection_statuses(page_or_frame: Page | Frame | None) -> list[str]:
+    if page_or_frame is None:
+        return []
+
+    return page_or_frame.evaluate(
+        "() => window.streamlitPlaywrightDebugConnectionStatuses"
+    )
+
+
+def expect_connection_status(
+    page_or_frame: Page | Frame | None, expected_status: str, callable_action: str
+) -> None:
+    """Wait for the expected_status to appear in the app's connection-state attribute.
+
+    Uses the browser's MutationObserver API to observe changes to the DOM. This way,
+    we will never have a race condition between calling disconnect and checking the
+    status.
+    If the status is not observed within 1 second, the promise will resolved with an
+    error message. We don't use reject because on Firefox this seem to cause an
+    undefined error which is not as precise as our error message.
+    Otherwise, the promise is resolved with the status.
+
+    The resolved status will be uppercased.
+    """
+
+    if page_or_frame is None:
+        return None
+
+    status = page_or_frame.evaluate(
+        """async ([expectedStatus]) => {
+                // the first call to resolve will be the one returned to the caller
+                // so its either the observed status or the timeout. Subsequent
+                // calls are no-ops.
+                const p = new Promise((resolve) => {
+                    // Define a timeoutId so that we can cancel the timeout in the
+                    // callback upon success
+                    let timeoutId = null
+                    let resolved = false
+                    const callback = (mutationList, observer) => {
+                        if (!mutationList || mutationList.length === 0) {
+                            return
+                        }
+                        const target = mutationList[0].target
+                        if (!target) {
+                            return
+                        }
+                        let state = target
+                                        .getAttribute('data-test-connection-state')
+                                        .toUpperCase();
+                        if (state.indexOf(expectedStatus.toUpperCase()) > -1) {
+                            resolved = true
+                            if (timeoutId) clearTimeout(timeoutId)
+                            if (observer) observer.disconnect()
+                            resolve(state)
+                        }
+                    }
+                    const observer = new MutationObserver(callback);
+                    // Observe app status for changes
+                    const targetNode = document.querySelector('[data-testid=stApp]')
+                    if (!targetNode) {
+                        resolve("stApp not found")
+                        return
+                    }
+                    const config = {
+                        childList: false,
+                        subtree: false,
+                        attributeFilter: ['data-test-connection-state']
+                    };
+                    observer.observe(targetNode, config);
+            """
+        + callable_action
+        + """
+                    if (!resolved) {
+                        timeoutId = setTimeout(() => {
+                            if (observer) observer.disconnect()
+                            resolve(`timeout: did not observe status '${expectedStatus}'`)
+                            return
+                        }, 1500);
+                    }
+                })
+
+                const status = await p
+                return status
+            }
+            """,
+        [expected_status],
+    )
+    assert status == expected_status, status

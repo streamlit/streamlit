@@ -176,9 +176,9 @@ def main_version():
 def main_docs():
     """Show help in browser."""
     click.echo("Showing help page in browser...")
-    from streamlit import util
+    from streamlit import cli_util
 
-    util.open_browser("https://docs.streamlit.io")
+    cli_util.open_browser("https://docs.streamlit.io")
 
 
 @main.command("hello")

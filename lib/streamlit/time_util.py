@@ -18,7 +18,7 @@ import math
 from datetime import date, timedelta
 from typing import Literal, overload
 
-from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitBadTimeStringError
 
 
 def adjust_years(input_date: date, years: int) -> date:
@@ -36,17 +36,6 @@ def adjust_years(input_date: date, years: int) -> date:
             f"Date {input_date} does not exist in the target year {input_date.year + years}. "
             "This should never happen. Please report this bug."
         ) from err
-
-
-class BadTimeStringError(StreamlitAPIException):
-    """Raised when a bad time string argument is passed."""
-
-    def __init__(self, t: str):
-        MarkdownFormattedException.__init__(
-            self,
-            "Time string doesn't look right. It should be formatted as"
-            f"`'1d2h34m'` or `2 days`, for example. Got: {t}",
-        )
 
 
 @overload
@@ -77,10 +66,10 @@ def time_to_seconds(
             seconds: float = pd.Timedelta(t).total_seconds()
 
             if np.isnan(seconds):
-                raise BadTimeStringError(t)
+                raise StreamlitBadTimeStringError(t)
 
             return seconds
         except ValueError as ex:
-            raise BadTimeStringError(t) from ex
+            raise StreamlitBadTimeStringError(t) from ex
 
     return t

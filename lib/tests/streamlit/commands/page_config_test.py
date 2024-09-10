@@ -17,7 +17,12 @@ from unittest import mock
 from parameterized import param, parameterized
 
 import streamlit as st
-from streamlit.commands.page_config import ENG_EMOJIS, RANDOM_EMOJIS, PageIcon
+from streamlit.commands.page_config import (
+    ENG_EMOJIS,
+    RANDOM_EMOJIS,
+    PageIcon,
+    _lower_clean_dict_keys,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidSidebarStateError,
@@ -148,3 +153,21 @@ class PageConfigTest(DeltaGeneratorTestCase):
         st.set_page_config(menu_items={})
         c = self.get_message_from_queue().page_config_changed.menu_items
         self.assertEqual(c.about_section_md, "")
+
+    @parameterized.expand(
+        [
+            ({}, {}),
+            (
+                {
+                    "HELLO_1": 4,
+                    "Hello_2": "world",
+                    "hElLo_3": 5.5,
+                    "": "",
+                },
+                {"hello_1": 4, "hello_2": "world", "hello_3": 5.5, "": ""},
+            ),
+        ]
+    )
+    def test_lower_clean_dict_keys(self, input_dict, answer_dict):
+        return_dict = _lower_clean_dict_keys(input_dict)
+        assert return_dict == answer_dict

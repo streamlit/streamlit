@@ -33,7 +33,8 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -46,7 +47,6 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
