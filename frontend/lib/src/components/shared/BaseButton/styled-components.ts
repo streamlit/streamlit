@@ -246,11 +246,11 @@ export const StyledIconButton = styled(
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
     },
-    "&.starting-child": {
+    "&:first-child": {
       borderTopLeftRadius: theme.radii.default,
       borderBottomLeftRadius: theme.radii.default,
     },
-    "&.ending-child": {
+    "&:last-child": {
       borderTopRightRadius: theme.radii.default,
       borderBottomRightRadius: theme.radii.default,
     },
