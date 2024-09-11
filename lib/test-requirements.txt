@@ -15,13 +15,10 @@ vega_datasets
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
-# Pinned for now because AsyncTest doesn't work with pytest 8.2.0
-# https://github.com/pytest-dev/pytest/issues/12263
-pytest<8.2.0
+pytest>=8.3.0
 pytest-cov
 requests-mock
 testfixtures
-requests-mock
 # We pin playwright to a minor version to avoid new browser versions
 # breaking our CI. But this version should be updated regularly as soon as
 # new playwright versions are released.
