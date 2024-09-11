@@ -123,7 +123,6 @@ class StreamlitTest(unittest.TestCase):
                 "bar_chart",
                 "bokeh_chart",
                 "button",
-                "button_group",
                 "caption",
                 "camera_input",
                 "chat_input",
