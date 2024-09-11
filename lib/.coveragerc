@@ -11,3 +11,5 @@ omit =
     streamlit/static/*
 exclude_also =
     if TYPE_CHECKING:
+    def dg\(self\)
+    raise NotImplementedError
