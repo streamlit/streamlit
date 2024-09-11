@@ -417,20 +417,6 @@ class ButtonGroupMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> list[V] | V | None:
-        # when selection mode is a single-value selection, the default must be a single
-        # value too.
-        if (
-            default is not None
-            and not isinstance(default, str)
-            and isinstance(default, Sequence)
-            and selection_mode == "select"
-            and len(default) > 1
-        ):
-            raise StreamlitAPIException(
-                "The default argument to `st.button_group` must be a single value when "
-                "`selection_mode='select'`."
-            )
-
         def _transformed_format_func(
             option: V, icon: str | None
         ) -> ButtonGroupProto.Option:
@@ -500,6 +486,20 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
     ) -> RegisterWidgetResult[T]:
+        # when selection mode is a single-value selection, the default must be a single
+        # value too.
+        if (
+            selection_mode == ButtonGroupProto.SINGLE_SELECT
+            and default is not None
+            and not isinstance(default, str)
+            and isinstance(default, Sequence)
+            and len(default) > 1
+        ):
+            raise StreamlitAPIException(
+                "The default argument to `st.button_group` must be a single value when "
+                "`selection_mode='select'`."
+            )
+
         key = to_key(key)
 
         _default = default
