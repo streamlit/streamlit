@@ -9,3 +9,5 @@ omit =
     streamlit/proto/*
     streamlit/hello/*
     streamlit/static/*
+exclude_also =
+    if TYPE_CHECKING:
