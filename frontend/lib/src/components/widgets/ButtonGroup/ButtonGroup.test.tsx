@@ -26,8 +26,14 @@ import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
+import {
+  BaseButtonKind,
+  BaseButtonSize,
+} from "@streamlit/lib/src/components/shared/BaseButton"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
-import ButtonGroup, { Props } from "./ButtonGroup"
+import ButtonGroup, { getContentElement, Props } from "./ButtonGroup"
 
 const materialIconNames = ["icon", "icon_2", "icon_3", "icon_4"]
 const defaultSelectedIndex = 2
@@ -516,5 +522,55 @@ describe("ButtonGroup widget", () => {
       { fromUi: true },
       undefined
     )
+  })
+})
+
+describe("ButtonGroup getContentElement", () => {
+  it("tests element with content, icon and borderless-style", () => {
+    const { element, kind, size } = getContentElement(
+      "foo",
+      "bar",
+      ButtonGroupProto.Style.BORDERLESS
+    )
+
+    expect(element.type).toBe(React.Fragment)
+    const { children } = element.props
+    expect(children).toHaveLength(2)
+    expect(children[0].type).toBe(DynamicIcon)
+    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
+    expect(size).toBe(BaseButtonSize.XSMALL)
+  })
+
+  it("tests element with content and no icon and borderless-style", () => {
+    const { element, kind, size } = getContentElement(
+      "foo",
+      undefined,
+      ButtonGroupProto.Style.BORDERLESS
+    )
+
+    expect(element.type).toBe(React.Fragment)
+    const { children } = element.props
+    expect(children).toHaveLength(2)
+    expect(children[0]).toBe(undefined)
+    expect(children[1].type).toBe(StreamlitMarkdown)
+    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
+    expect(size).toBe(BaseButtonSize.XSMALL)
+  })
+
+  it("tests element with no content, an icon and borderless-style", () => {
+    const { element, kind, size } = getContentElement(
+      "",
+      "foo",
+      ButtonGroupProto.Style.BORDERLESS
+    )
+
+    expect(element.type).toBe(React.Fragment)
+    const { children } = element.props
+    expect(children).toHaveLength(2)
+    expect(children[0].type).toBe(DynamicIcon)
+    expect(children[1]).toBe("")
+    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
+    expect(size).toBe(BaseButtonSize.XSMALL)
   })
 })
