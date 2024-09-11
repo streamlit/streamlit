@@ -372,7 +372,7 @@ describe("ButtonGroup widget", () => {
       expect(helpText).toBeInTheDocument()
     })
 
-    describe("visualize selection behavior", () => {
+    describe("visualizes selection behavior", () => {
       it("visualize only selected option", () => {
         const props = getProps({
           selectionVisualization:
@@ -387,7 +387,7 @@ describe("ButtonGroup widget", () => {
         expectHighlightStyle(buttons[2], false)
       })
 
-      it("visualize all up to the selected option", () => {
+      it("visualizes all up to the selected option", () => {
         const props = getProps({
           selectionVisualization:
             ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED,
@@ -405,7 +405,7 @@ describe("ButtonGroup widget", () => {
         expectHighlightStyle(buttons[3], false)
       })
 
-      it("no default visualization when selected content present", () => {
+      it("has no default visualization when selected content present", () => {
         // used for example by feedback stars
         const disabledVisualizationOption = [
           ButtonGroupProto.Option.create({
@@ -433,7 +433,7 @@ describe("ButtonGroup widget", () => {
       })
     })
 
-    it("show selection content when selected and available", () => {
+    it("shows selection content when selected and available", () => {
       const props = getProps({ default: [], options: materialIconOnlyOptions })
       render(<ButtonGroup {...props} />)
 
@@ -448,6 +448,34 @@ describe("ButtonGroup widget", () => {
       expect(getButtonGroupButtons()[1].textContent).toContain(
         "icon_2_selected"
       )
+    })
+
+    it("shows bigger icons for borderless ButtonGroup", () => {
+      const props = getProps({ default: [], options: materialIconOnlyOptions })
+      render(<ButtonGroup {...props} />)
+      const buttons = getButtonGroupButtons()
+      buttons.forEach((button, index) => {
+        expect(button).toHaveAttribute("kind", "borderlessIcon")
+        const icon = within(button).getByTestId("stIconMaterial")
+        expect(icon.textContent).toContain(materialIconNames[index])
+        expect(icon).toHaveStyle("width: 1.25rem")
+      })
+    })
+
+    it("shows smaller icons for non-borderless ButtonGroup", () => {
+      const props = getProps({
+        default: [],
+        options: materialIconOnlyOptions,
+        style: ButtonGroupProto.Style.SEGMENT,
+      })
+      render(<ButtonGroup {...props} />)
+      const buttons = getButtonGroupButtons()
+      buttons.forEach((button, index) => {
+        expect(button).toHaveAttribute("kind", "icon")
+        const icon = within(button).getByTestId("stIconMaterial")
+        expect(icon.textContent).toContain(materialIconNames[index])
+        expect(icon).toHaveStyle("width: 1rem")
+      })
     })
   })
 

@@ -95,7 +95,7 @@ function syncWithWidgetManager(
   widgetMgr.setIntArrayValue(element, selected, { fromUi: fromUi }, fragmentId)
 }
 
-function getContentElement(
+export function getContentElement(
   content: string,
   icon?: string,
   style?: ButtonGroupProto.Style
@@ -111,10 +111,12 @@ function getContentElement(
       ? BaseButtonSize.XSMALL
       : BaseButtonSize.MEDIUM
 
+  const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
+
   return {
     element: (
       <>
-        {icon && <DynamicIcon size="lg" iconValue={icon} />}
+        {icon && <DynamicIcon size={iconSize} iconValue={icon} />}
         {content && <StreamlitMarkdown source={content} allowHTML={false} />}
       </>
     ),
