@@ -100,16 +100,16 @@ function getContentElement(
   icon?: string,
   style?: ButtonGroupProto.Style
 ): { element: ReactElement; kind: BaseButtonKind; size: BaseButtonSize } {
-  let kind =
+  const kind =
     style === ButtonGroupProto.Style.PILLS
       ? BaseButtonKind.PILLS
+      : style === ButtonGroupProto.Style.BORDERLESS
+      ? BaseButtonKind.BORDERLESS_ICON
       : BaseButtonKind.SEGMENT
-  let size = BaseButtonSize.MEDIUM
-
-  if (icon && !content) {
-    kind = BaseButtonKind.BORDERLESS_ICON
-    size = BaseButtonSize.XSMALL
-  }
+  const size =
+    style === ButtonGroupProto.Style.BORDERLESS
+      ? BaseButtonSize.XSMALL
+      : BaseButtonSize.MEDIUM
 
   return {
     element: (
@@ -236,7 +236,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     labelVisibility,
     help,
   } = element
-  console.log("element", element)
   const theme: EmotionTheme = useTheme()
 
   const [selected, setSelected] = useState<number[]>(
@@ -277,8 +276,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   }, [element])
 
   useEffect(() => {
-    const parsedValue = JSON.parse(valueString)
-    console.log("useEffect", parsedValue, elementRef.current.setValue)
     // only commit to the backend if the value has changed
     if (isEqual(selected, selectedRef.current)) {
       return
@@ -291,7 +288,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       fragmentId,
       fromUi
     )
-    // }
     selectedRef.current = selected
   }, [selected, widgetMgr, fragmentId, valueString])
 

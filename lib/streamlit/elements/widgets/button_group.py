@@ -152,7 +152,7 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
-    style: Literal["normal", "pills"] = "normal",
+    style: Literal["segment", "pills", "borderless"] = "segment",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -330,6 +330,7 @@ class ButtonGroupMixin:
             args=args,
             kwargs=kwargs,
             selection_visualization=selection_visualization,
+            style="borderless",
         )
         return sentiment.value
 
@@ -412,7 +413,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["select", "multiselect"] = "select",
         disabled: bool = False,
         format_func: Callable[[V], str] | None = None,
-        style: Literal["normal", "pills"] = "normal",
+        style: Literal["segment", "pills"] = "segment",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -472,7 +473,7 @@ class ButtonGroupMixin:
             ButtonGroupProto.SINGLE_SELECT
         ),
         disabled: bool = False,
-        style: Literal["normal", "pills"] = "normal",
+        style: Literal["segment", "pills", "borderless"] = "segment",
         format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
@@ -498,6 +499,12 @@ class ButtonGroupMixin:
             raise StreamlitAPIException(
                 "The default argument to `st.button_group` must be a single value when "
                 "`selection_mode='select'`."
+            )
+
+        if style not in ["segment", "pills", "borderless"]:
+            raise StreamlitAPIException(
+                "The style argument must be one of ['segment', 'pills', 'borderless']. "
+                f"The argument passed was '{style}'."
             )
 
         key = to_key(key)

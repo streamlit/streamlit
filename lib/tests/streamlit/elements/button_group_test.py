@@ -169,7 +169,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 ("thumbs",),
                 [":material/thumb_up:", ":material/thumb_down:"],
                 "content_icon",
-                ButtonGroupProto.Style.NORMAL,
+                ButtonGroupProto.Style.BORDERLESS,
                 False,
             ),
             (
@@ -187,7 +187,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 (["a", "b", "c"],),
                 ["a", "b", "c"],
                 "content",
-                ButtonGroupProto.Style.NORMAL,
+                ButtonGroupProto.Style.SEGMENT,
                 False,
             ),
         ]
@@ -590,8 +590,17 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         )
 
         c = self.get_delta_from_queue().new_element.button_group
-        self.assertListEqual(c.default[:], [0])
-        self.assertEqual(
-            [option.content for option in c.options],
-            proto_options,
+        assert c.default[:] == [0]
+        assert [option.content for option in c.options] == proto_options
+
+    def test_invalid_style(self):
+        """Test internal button_group command does not accept invalid style."""
+
+        with pytest.raises(StreamlitAPIException) as exception:
+            ButtonGroupMixin._internal_button_group(
+                st._main, ["a", "b", "c"], style="foo"
+            )
+        assert (
+            "The style argument must be one of ['segment', 'pills', 'borderless']. "
+            "The argument passed was 'foo'." == str(exception.value)
         )

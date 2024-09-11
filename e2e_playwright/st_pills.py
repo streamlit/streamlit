@@ -46,3 +46,17 @@ st.write(f"Multi selection: {selection}")
 
 
 st.header("Pills - with icons")
+selection = st.pills(
+    "Select a single option",
+    options=[0, 1, 2, 3],
+    icons=[
+        ":material/add:",
+        ":material/zoom_in:",
+        ":material/zoom_out:",
+        ":material/zoom_out_map:",
+    ],
+    format_func=lambda x: "",
+    key="icon_only_pills",
+    selection_mode="select",
+)
+st.write(f"Single selection: {selection}")

@@ -53,8 +53,9 @@ message ButtonGroup {
   SelectionVisualization selection_visualization = 9;
 
   enum Style {
-    NORMAL = 0;
+    SEGMENT = 0;
     PILLS = 1;
+    BORDERLESS = 2;
   }
   Style style = 10;
 

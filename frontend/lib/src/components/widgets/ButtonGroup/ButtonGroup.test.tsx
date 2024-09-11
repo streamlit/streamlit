@@ -89,7 +89,7 @@ const getProps = (
     options: [...materialIconOnlyOptions, ...options],
     selectionVisualization:
       ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
-    style: ButtonGroupProto.Style.NORMAL,
+    style: ButtonGroupProto.Style.BORDERLESS,
     ...elementProps,
   }),
   disabled: false,
@@ -125,7 +125,11 @@ describe("ButtonGroup widget", () => {
   })
 
   it("option-children with contentIcon render correctly", () => {
-    const props = getProps({ default: [], options: options })
+    const props = getProps({
+      default: [],
+      options: options,
+      style: ButtonGroupProto.Style.SEGMENT,
+    })
     render(<ButtonGroup {...props} />)
 
     const buttonGroupWidget = screen.getByTestId("stButtonGroup")

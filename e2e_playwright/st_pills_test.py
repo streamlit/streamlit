@@ -32,9 +32,11 @@ def get_pill_button(locator: Locator, text: str) -> Locator:
     )
 
 
-def test_click_pills_and_take_snapshot(
+def test_click_multiple_pills_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    """Test multiselect pills and take a screenshot."""
+
     pills = get_button_group(themed_app, 0)
     get_pill_button(pills, "📝 Text").click()
     wait_for_app_run(themed_app)
@@ -44,3 +46,19 @@ def test_click_pills_and_take_snapshot(
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     assert_snapshot(pills, name="st_pills-multiselect")
+
+
+def test_click_single_icon_pill_and_take_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test icon only pills (via format_func) and take a screenshot."""
+
+    pills = get_button_group(themed_app, 1)
+    # the icon's span element has the respective text
+    # (e.g. :material/zoom_in: -> zoom_in)
+    get_pill_button(pills, "zoom_in").click()
+    text = get_markdown(themed_app, "Single selection: 1")
+    expect(text).to_be_attached()
+    # take away hover focus of button
+    themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    assert_snapshot(pills, name="st_pills-singleselect_icon_only")
