@@ -27,7 +27,7 @@ greenlet==3.0.3
 hypothesis==6.112.0
 identify==2.6.0
 idna==3.8
-importlib_metadata==8.4.0
+importlib_metadata==8.5.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
 jaraco.context==6.0.1
@@ -46,7 +46,7 @@ more-itertools==10.5.0
 mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
-narwhals==1.6.4
+narwhals==1.7.0
 nh3==0.2.18
 nodeenv==1.9.1
 numpy==1.26.4
@@ -87,10 +87,10 @@ requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.8.1
 rpds-py==0.20.0
-ruff==0.5.0
+ruff==0.5.7
 seaborn==0.13.2
 SecretStorage==3.3.3
-semver==2.13.0
+semver==3.0.2
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
