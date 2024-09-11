@@ -579,7 +579,9 @@ class DataframeUtilTest(unittest.TestCase):
             )
 
             snowpandas_series = snowpandas_df["col1"]
-            assert dataframe_util.is_snowpandas_data_object(snowpandas_series) is True
+            assert (
+                dataframe_util.is_snowpandas_data_object(snowpandas_series) is True
+            ), f"unable to detect snowpandas series {type(snowpandas_series)}"
             assert isinstance(
                 dataframe_util.convert_anything_to_pandas_df(snowpandas_series),
                 pd.DataFrame,
