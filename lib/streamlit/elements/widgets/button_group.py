@@ -399,8 +399,10 @@ class ButtonGroupMixin:
             else None
         )
 
+    # Disable this more generic widget for now
+    # @gather_metrics("button_group")
     @gather_metrics("button_group")
-    def button_group(
+    def _internal_button_group(
         self,
         options: OptionSequence[V],
         *,

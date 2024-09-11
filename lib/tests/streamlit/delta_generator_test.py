@@ -102,7 +102,6 @@ class RunWarningTest(unittest.TestCase):
                 "bar_chart",
                 "bokeh_chart",
                 "button",
-                "button_group",
                 "camera_input",
                 "caption",
                 "chat_input",
