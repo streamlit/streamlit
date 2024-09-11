@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal
+from typing import TYPE_CHECKING, Any, Callable, Final
 
 from streamlit import source_util
 from streamlit.logger import get_logger
@@ -309,7 +309,3 @@ class PagesManager:
             return ""
 
         return self._script_cache.get_bytecode(script_path)
-
-    @property
-    def mpa_version(self) -> Literal["v1", "v2"]:
-        return "v1" if isinstance(self.pages_strategy, PagesStrategyV1) else "v2"
