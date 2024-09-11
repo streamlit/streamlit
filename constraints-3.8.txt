@@ -79,7 +79,7 @@ pytest-rerunfailures==14.0
 pytest-xdist==3.6.1
 python-dateutil==2.9.0.post0
 python-slugify==8.0.4
-pytz==2024.1
+pytz==2024.2
 PyYAML==6.0.2
 readme_renderer==43.0
 referencing==0.35.1
@@ -114,7 +114,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-uv==0.4.8
+uv==0.4.9
 vega-datasets==0.9.0
 virtualenv==20.26.4
 watchdog==4.0.2
