@@ -503,7 +503,6 @@ class ButtonGroupMixin:
         if (
             parsed_selection_mode == ButtonGroupProto.SINGLE_SELECT
             and default is not None
-            and not isinstance(default, str)
             and isinstance(default, Sequence)
             and len(default) > 1
         ):
