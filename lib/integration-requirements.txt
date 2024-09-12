@@ -9,7 +9,7 @@ langchain-community>=0.2.0
 # Additional dataframe formats for testing:
 polars
 xarray
-dask
+dask[dataframe]
 ray
 duckdb
 
