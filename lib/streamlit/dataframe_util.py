@@ -1261,10 +1261,8 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     which is the only missing value type that is supported by all data
     """
     import numpy as np
-    import pandas as pd
 
-    with pd.option_context("future.no_silent_downcasting", True):
-        return df.fillna(np.nan).replace([np.nan], [None]).infer_objects()
+    return df.fillna(np.nan).replace([np.nan], [None]).infer_objects(copy=False)
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:
