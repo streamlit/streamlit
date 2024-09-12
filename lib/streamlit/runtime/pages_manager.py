@@ -59,7 +59,7 @@ class PagesStrategyV1:
                 source_util.invalidate_pages_cache()
 
             main_script_path = Path(pages_manager.main_script_path)
-            pages_dir = main_script_path.parent / "pages"
+            pages_dir = main_script_path.parent / "pages" / ""
             watch_dir(
                 str(pages_dir),
                 _handle_page_changed,
