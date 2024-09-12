@@ -402,9 +402,7 @@ class ButtonGroupMixin:
             return res.value
 
         return (
-            res.value[0]
-            if selection_mode == "single" and res.value and len(res.value) > 0
-            else None
+            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
         )
 
     # Disable this more generic widget for now

@@ -33,32 +33,66 @@ def get_pill_button(locator: Locator, text: str) -> Locator:
 def test_click_multiple_pills_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test multiselect pills and take a screenshot."""
+    """Test multiselect pills and take a screenshot.
+
+    Click on same pill multiple times to test unselect.
+    """
 
     pills = get_button_group(themed_app, 0)
     get_pill_button(pills, "📝 Text").click()
     wait_for_app_run(themed_app)
+    # click on second element to test multiselect
+    get_pill_button(pills, "🪢 Graphs").click()
+    wait_for_app_run(themed_app)
+    text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
+    expect(text).to_be_visible()
+
+    # click on same element to test unselect
+    get_pill_button(pills, "🪢 Graphs").click()
+    wait_for_app_run(themed_app)
+    text = get_markdown(themed_app, "Multi selection: \\['📝 Text'\\]")
+    expect(text).to_be_visible()
+
+    # click on same element and take screenshot of multiple selected pills
     get_pill_button(pills, "🪢 Graphs").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
     expect(text).to_be_visible()
+
     assert_snapshot(pills, name="st_pills-multiselect")
 
 
 def test_click_single_icon_pill_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test icon only pills (via format_func) and take a screenshot."""
+    """Test icon only pills (via format_func) and take a screenshot.
+
+    Click on same element to test unselect.
+    Click on two different elements to validate single select.
+    """
 
     pills = get_button_group(themed_app, 1)
+
     # the icon's span element has the respective text
-    # (e.g. :material/zoom_in: -> zoom_in)
+    # (e.g. :material/zoom_out_map: -> zoom_out_map)
+    get_pill_button(pills, "zoom_out_map").click()
+    text = get_markdown(themed_app, "Single selection: 3")
+    expect(text).to_be_visible()
+
+    # test unselect in single-select mode
+    get_pill_button(pills, "zoom_out_map").click()
+    text = get_markdown(themed_app, "Single selection: None")
+    expect(text).to_be_visible()
+
     get_pill_button(pills, "zoom_in").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Single selection: 1")
     expect(text).to_be_visible()
+
     assert_snapshot(pills, name="st_pills-singleselect_icon_only")
 
 
