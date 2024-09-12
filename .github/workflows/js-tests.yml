@@ -80,7 +80,7 @@ jobs:
           path: |
             frontend/lib/coverage
             frontend/app/coverage
-          retention-days: 3
+          retention-days: 7
 
   components-lib-tests:
     runs-on: ubuntu-latest
