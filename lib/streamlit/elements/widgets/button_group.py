@@ -180,6 +180,15 @@ def _build_proto(
     return proto
 
 
+def _maybe_raise_selection_mode_warning(selection_mode: str):
+    """Check if the selection_mode value is valid or raise exception otherwise."""
+    if selection_mode not in ["single", "multi"]:
+        raise StreamlitAPIException(
+            "The selection_mode argument must be one of ['single', 'multi']. "
+            f"The argument passed was '{selection_mode}'."
+        )
+
+
 class ButtonGroupMixin:
     # These overloads are not documented in the docstring, at least not at this time, on
     # the theory that most people won't know what it means. And the Literals here are a
@@ -214,7 +223,7 @@ class ButtonGroupMixin:
         self,
         options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
-        key: str | None = None,
+        key: str | int | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
         args: Any | None = None,
@@ -322,7 +331,7 @@ class ButtonGroupMixin:
             transformed_options,
             default=None,
             key=key,
-            selection_mode=ButtonGroupProto.SINGLE_SELECT,
+            selection_mode="single",
             disabled=disabled,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
@@ -340,11 +349,11 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["select", "multiselect"] = "select",
-        icons: list[str] | None = None,
+        selection_mode: Literal["single", "multi"] = "single",
+        icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
         format_func: Callable[[V], str] | None = None,
-        key: Key | None = None,
+        key: str | int | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -375,9 +384,7 @@ class ButtonGroupMixin:
             key=key,
             icons=icons,
             default=default_values,
-            selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
-            if selection_mode == "multiselect"
-            else ButtonGroupProto.SINGLE_SELECT,
+            selection_mode=selection_mode,
             disabled=disabled,
             format_func=_transformed_format_func,
             serializer=serde.serialize,
@@ -391,12 +398,12 @@ class ButtonGroupMixin:
             help=help,
         )
 
-        if selection_mode == "multiselect" and len(res.value) > 0:
+        if selection_mode == "multi" and len(res.value) > 0:
             return res.value
 
         return (
             res.value[0]
-            if selection_mode == "select" and res.value and len(res.value) > 0
+            if selection_mode == "single" and res.value and len(res.value) > 0
             else None
         )
 
@@ -410,7 +417,7 @@ class ButtonGroupMixin:
         key: Key | None = None,
         icons: list[str] | None = None,
         default: Sequence[V] | V | None = None,
-        selection_mode: Literal["select", "multiselect"] = "select",
+        selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
         format_func: Callable[[V], str] | None = None,
         style: Literal["segment", "pills"] = "segment",
@@ -440,9 +447,7 @@ class ButtonGroupMixin:
             key=key,
             icons=icons,
             default=default_values,
-            selection_mode=ButtonGroupProto.ClickMode.MULTI_SELECT
-            if selection_mode == "multiselect"
-            else ButtonGroupProto.SINGLE_SELECT,
+            selection_mode=selection_mode,
             disabled=disabled,
             format_func=_transformed_format_func,
             style=style,
@@ -453,12 +458,12 @@ class ButtonGroupMixin:
             kwargs=kwargs,
         )
 
-        if selection_mode == "multiselect" and len(res.value) > 0:
+        if selection_mode == "multi" and len(res.value) > 0:
             return res.value
 
         return (
             res.value[0]
-            if selection_mode == "select" and res.value and len(res.value) > 0
+            if selection_mode == "single" and res.value and len(res.value) > 0
             else None
         )
 
@@ -467,11 +472,9 @@ class ButtonGroupMixin:
         indexable_options: Sequence[Any],
         *,
         key: Key | None = None,
-        icons: list[str] | None = None,
+        icons: list[str | None] | None = None,
         default: list[int] | None = None,
-        selection_mode: ButtonGroupProto.ClickMode.ValueType = (
-            ButtonGroupProto.SINGLE_SELECT
-        ),
+        selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
         style: Literal["segment", "pills", "borderless"] = "segment",
         format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
@@ -487,10 +490,18 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
     ) -> RegisterWidgetResult[T]:
+        _maybe_raise_selection_mode_warning(selection_mode)
+
+        parsed_selection_mode: ButtonGroupProto.ClickMode.ValueType = (
+            ButtonGroupProto.SINGLE_SELECT
+            if selection_mode == "single"
+            else ButtonGroupProto.MULTI_SELECT
+        )
+
         # when selection mode is a single-value selection, the default must be a single
         # value too.
         if (
-            selection_mode == ButtonGroupProto.SINGLE_SELECT
+            parsed_selection_mode == ButtonGroupProto.SINGLE_SELECT
             and default is not None
             and not isinstance(default, str)
             and isinstance(default, Sequence)
@@ -498,7 +509,7 @@ class ButtonGroupMixin:
         ):
             raise StreamlitAPIException(
                 "The default argument to `st.button_group` must be a single value when "
-                "`selection_mode='select'`."
+                "`selection_mode='single'`."
             )
 
         if style not in ["segment", "pills", "borderless"]:
@@ -536,7 +547,7 @@ class ButtonGroupMixin:
             form_id=form_id,
             options=formatted_options,
             default=default,
-            click_mode=selection_mode,
+            click_mode=parsed_selection_mode,
             style=style,
         )
 
@@ -546,7 +557,7 @@ class ButtonGroupMixin:
             default or [],
             disabled,
             form_id,
-            click_mode=selection_mode,
+            click_mode=parsed_selection_mode,
             selection_visualization=selection_visualization,
             style=style,
             label=label,

@@ -160,7 +160,7 @@ def get_command_matrix(
     return matrix
 
 
-# TODO: Some tests are very similar to the ones in multiselect_test.py -> maybe we can refactor them and share even more
+# TODO: Some tests are very similar to the ones in multi_test.py -> maybe we can refactor them and share even more
 class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
@@ -225,10 +225,44 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(
+        get_command_matrix([("string_key",), (0,), (None,)], with_st_feedback=True)
+    )
+    def test_key_types(self, comand: Callable[..., None], key: str | int | None):
+        """Test that the key argument can be passed as expected."""
+
+        # use options that is compatible with all commands including st.feedback
+        comand("thumbs", key=key)
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.id.endswith(f"-{str(key)}")
+
+    @parameterized.expand(
         [
             (st.feedback, ("thumbs",)),
             (st.pills, ("label", ["a", "b", "c"])),
             (st.pills, ("label", ["a", "b", "c"]), {"default": "b"}, "b"),
+            (
+                lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
+                    st._main, *args, **kwargs
+                ),
+                (["a", "b", "c"],),
+                {"default": "b"},
+                "b",
+            ),
+            (
+                st.pills,
+                ("label", ["a", "b", "c"]),
+                {"default": "b", "selection_mode": "multi"},
+                ["b"],
+            ),
+            (
+                lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
+                    st._main, *args, **kwargs
+                ),
+                (["a", "b", "c"],),
+                {"default": "b", "selection_mode": "multi"},
+                ["b"],
+            ),
         ]
     )
     def test_default_return_value(
@@ -241,7 +275,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         if command_kwargs is None:
             command_kwargs = {}
         res = command(*command_args, **command_kwargs)
-        assert res is expected_default
+        assert res == expected_default
 
     @parameterized.expand(
         [
@@ -349,7 +383,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         expected_defaults: list[int],
     ):
         """Test that it supports different types of options and works with defaults."""
-        command(options, default=defaults, selection_mode="multiselect")
+        command(options, default=defaults, selection_mode="multi")
 
         c = self.get_delta_from_queue().new_element.button_group
         assert [option.content for option in c.options] == proto_options
@@ -374,9 +408,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         if callable(defaults):
             defaults = defaults()
 
-        command(
-            ["Coffee", "Tea", "Water"], default=defaults, selection_mode="multiselect"
-        )
+        command(["Coffee", "Tea", "Water"], default=defaults, selection_mode="multi")
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default[:] == expected
@@ -385,14 +417,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         get_command_matrix([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     )
-    def test_defaults_for_multiselect(
+    def test_defaults_for_multi(
         self, command: Callable[..., None], defaults: Any, expected: list[Any]
     ):
         """Test that valid default can be passed as expected."""
         command(
             ["Coffee", "Tea", "Water"],
             default=defaults,
-            selection_mode="multiselect",
+            selection_mode="multi",
         )
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default[:] == expected
@@ -408,7 +440,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         command(
             ["Coffee", "Tea", "Water"],
             default=defaults,
-            selection_mode="select",
+            selection_mode="single",
         )
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default[:] == expected
@@ -424,12 +456,12 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             command(
                 ["Coffee", "Tea", "Water"],
                 default=["Coffee", "Tea"],
-                selection_mode="select",
+                selection_mode="single",
             )
         assert (
             str(exception.value)
             == "The default argument to `st.button_group` must be a single value when "
-            "`selection_mode='select'`."
+            "`selection_mode='single'`."
         )
 
     @parameterized.expand(
@@ -592,6 +624,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default[:] == [0]
         assert [option.content for option in c.options] == proto_options
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_invalid_selection_mode(self, command: Callable[..., None]):
+        """Test that passing an invalid selection_mode raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exception:
+            command(["a", "b"], selection_mode="foo")
+        assert (
+            "The selection_mode argument must be one of ['single', 'multi']. "
+            "The argument passed was 'foo'." == str(exception.value)
+        )
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""

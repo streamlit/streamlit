@@ -331,7 +331,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       >
         {help && (
           <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.LEFT} />
+            <TooltipIcon content={help} placement={Placement.TOP} />
           </StyledWidgetLabelHelpInline>
         )}
       </WidgetLabel>
