@@ -14,17 +14,9 @@
  * limitations under the License.
  */
 
-import React, {
-  forwardRef,
-  ReactElement,
-  Ref,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import React, { forwardRef, memo, ReactElement, Ref, useMemo } from "react"
 
 import { useTheme } from "@emotion/react"
-import isEqual from "lodash/isEqual"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -39,7 +31,6 @@ import {
   LabelVisibilityMessage,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
 import {
   StyledWidgetLabelHelpInline,
   WidgetLabel,
@@ -47,6 +38,10 @@ import {
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import {
+  useBasicWidgetState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
   disabled: boolean
@@ -86,13 +81,17 @@ function getSingleSelection(currentSelection: number[]): number {
 }
 
 function syncWithWidgetManager(
-  selected: number[],
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
-  fragmentId?: string,
-  fromUi = true
+  valueWithSource: ValueWSource<ButtonGroupValue>,
+  fragmentId?: string
 ): void {
-  widgetMgr.setIntArrayValue(element, selected, { fromUi: fromUi }, fragmentId)
+  widgetMgr.setIntArrayValue(
+    element,
+    valueWithSource.value,
+    { fromUi: valueWithSource.fromUi },
+    fragmentId
+  )
 }
 
 export function getContentElement(
@@ -217,21 +216,30 @@ function createOptionChild(
   })
 }
 
+type ButtonGroupValue = number[]
+
 function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
-): number[] {
-  const storedValue = widgetMgr.getIntArrayValue(element)
-  return storedValue ?? element.default
+): ButtonGroupValue | undefined {
+  return widgetMgr.getIntArrayValue(element)
+}
+
+function getDefaultStateFromProto(
+  element: ButtonGroupProto
+): ButtonGroupValue {
+  return element.default ?? null
+}
+
+function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
+  return element.value ?? null
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
   const {
     clickMode,
-    default: defaultValues,
     options,
-    value,
     selectionVisualization,
     style,
     label,
@@ -240,65 +248,25 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   } = element
   const theme: EmotionTheme = useTheme()
 
-  const [selected, setSelected] = useState<number[]>(
-    getInitialValue(widgetMgr, element) || []
-  )
-
-  const elementRef = React.useRef(element)
-  // set to undefined for the first render so we know when its mounted
-  const selectedRef = React.useRef<number[] | undefined>(undefined)
-
-  // This is required for the form clearing functionality:
-  useEffect(() => {
-    if (!element.formId) {
-      // We don't need the form clear functionality if its not in a form
-      // or if selections are not activated.
-      return
-    }
-
-    const formClearHelper = new FormClearHelper()
-    // On form clear, reset the selections (in chart & widget state)
-    formClearHelper.manageFormClearListener(widgetMgr, element.formId, () => {
-      setSelected(defaultValues)
-    })
-
-    return () => {
-      formClearHelper.disconnect()
-    }
-  }, [element.formId, widgetMgr, defaultValues])
-
-  const valueString = useMemo(() => JSON.stringify(value), [value])
-  useEffect(() => {
-    if (element.setValue) {
-      // We are intentionally setting this to avoid regularly calling this effect.
-      element.setValue = false
-      const val = element.value || []
-      setSelected(val)
-    }
-  }, [element])
-
-  useEffect(() => {
-    // only commit to the backend if the value has changed
-    if (isEqual(selected, selectedRef.current)) {
-      return
-    }
-    const fromUi = selectedRef.current !== undefined
-    syncWithWidgetManager(
-      selected,
-      elementRef.current,
-      widgetMgr,
-      fragmentId,
-      fromUi
-    )
-    selectedRef.current = selected
-  }, [selected, widgetMgr, fragmentId, valueString])
+  const [value, setValueWSource] = useBasicWidgetState<
+    ButtonGroupValue,
+    ButtonGroupProto
+  >({
+    getStateFromWidgetMgr: getInitialValue,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState: syncWithWidgetManager,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
     index: number
   ): void => {
-    const newSelected = handleSelection(clickMode, index, selected)
-    setSelected(newSelected)
+    const newSelected = handleSelection(clickMode, index, value)
+    setValueWSource({ value: newSelected, fromUi: true })
   }
 
   let mode = undefined
@@ -308,17 +276,22 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     mode = MODE.checkbox
   }
 
-  const optionElements = options.map((option, index) => {
-    const Element = createOptionChild(
-      option,
-      index,
-      selectionVisualization,
-      clickMode,
-      selected,
-      style
-    )
-    return <Element key={`${option.content}-${index}`} />
-  })
+  const optionElements = useMemo(
+    () =>
+      options.map((option, index) => {
+        const Element = createOptionChild(
+          option,
+          index,
+          selectionVisualization,
+          clickMode,
+          value,
+          style
+        )
+        return <Element key={`${option.content}-${index}`} />
+      }),
+    [clickMode, options, selectionVisualization, style, value]
+  )
+
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
       <WidgetLabel
@@ -341,8 +314,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         onClick={onClick}
         selected={
           clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-            ? selected
-            : getSingleSelection(selected)
+            ? value
+            : getSingleSelection(value)
         }
         overrides={{
           Root: {
@@ -360,4 +333,4 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   )
 }
 
-export default ButtonGroup
+export default memo(ButtonGroup)
