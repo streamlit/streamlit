@@ -39,19 +39,18 @@ from urllib import parse
 import pytest
 import requests
 from PIL import Image
+from playwright.sync_api import (
+    ElementHandle,
+    FrameLocator,
+    Locator,
+    Page,
+    Response,
+    Route,
+)
 from pytest import FixtureRequest
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-    from playwright.sync_api import (
-        ElementHandle,
-        FrameLocator,
-        Locator,
-        Page,
-        Response,
-        Route,
-    )
 
 
 def reorder_early_fixtures(metafunc: pytest.Metafunc):
@@ -275,79 +274,142 @@ def app_with_query_params(
 
 
 @dataclass
+class IframedPageAttrs:
+    # id attribute added to the iframe html tag
+    element_id: str | None = None
+    # query params to be appended to the iframe src URL
+    src_query_params: dict[str, str] | None = None
+    # additional HTML body
+    additional_html_head: str | None = None
+    # html content to load. Following placeholders are replaced during the test:
+    # - $APP_URL: the URL of the Streamlit app
+    html_content: str | None = None
+
+
+@dataclass
 class IframedPage:
     # the page to configure
     page: Page
-    # opens the configured page via the iframe URL and returns the frame_locator pointing to the iframe
-    open_app: Callable[[], FrameLocator]
+    # opens the configured page via the iframe URL and returns the frame_locator
+    # pointing to the iframe
+    open_app: Callable[[IframedPageAttrs | None], FrameLocator]
 
 
 @pytest.fixture(scope="function")
 def iframed_app(page: Page, app_port: int) -> IframedPage:
     """Fixture that returns an IframedPage.
 
-    The page object can be used to configure additional routes, for example to override the host-config.
-    The open_app function triggers the opening of the app in an iframe.
+    The page object can be used to configure additional routes, for example to override
+    the host-config. The open_app function triggers the opening of the app in an iframe.
     """
-    # we are going to intercept the request, so the address is arbitrarily chose and does not have to exist
+    # we are going to intercept the request, so the address and html-file is arbitrarily
+    # chosen and does not even exist
     fake_iframe_server_origin = "http://localhost:1345"
     fake_iframe_server_route = f"{fake_iframe_server_origin}/iframed_app.html"
     # the url where the Streamlit server is reachable
     app_url = f"http://localhost:{app_port}"
-    # the CSP header returned for the Streamlit index.html loaded in the iframe. This is similar to a common CSP we have seen in the wild.
-    app_csp_header = f"default-src 'none'; worker-src blob:; form-action 'none'; connect-src ws://localhost:{app_port}/_stcore/stream http://localhost:{app_port}/_stcore/allowed-message-origins http://localhost:{app_port}/_stcore/host-config http://localhost:{app_port}/_stcore/health; script-src 'unsafe-inline' 'unsafe-eval' {app_url}/static/js/; style-src 'unsafe-inline' {app_url}/static/css/; img-src data: {app_url}/favicon.png {app_url}/favicon.ico; font-src {app_url}/static/fonts/ {app_url}/static/media/; frame-ancestors {fake_iframe_server_origin};"
+    # the CSP header returned for the Streamlit index.html loaded in the iframe. This is
+    # similar to a common CSP we have seen in the wild.
+    app_csp_header = (
+        f"default-src 'none'; worker-src blob:; form-action 'none'; "
+        f"connect-src ws://localhost:{app_port}/_stcore/stream "
+        f"http://localhost:{app_port}/_stcore/allowed-message-origins "
+        f"http://localhost:{app_port}/_stcore/host-config "
+        f"http://localhost:{app_port}/_stcore/health; script-src 'unsafe-inline' "
+        f"'unsafe-eval' {app_url}/static/js/; style-src 'unsafe-inline' "
+        f"{app_url}/static/css/; img-src data: {app_url}/favicon.png "
+        f"{app_url}/favicon.ico; font-src {app_url}/static/fonts/ "
+        f"{app_url}/static/media/; frame-ancestors {fake_iframe_server_origin};"
+    )
 
-    def fulfill_iframe_request(route: Route) -> None:
-        """Return as response an iframe that loads the actual Streamlit app."""
+    def _open_app(iframe_element_attrs: IframedPageAttrs | None = None) -> FrameLocator:
+        _iframe_element_attrs = iframe_element_attrs
+        if _iframe_element_attrs is None:
+            _iframe_element_attrs = IframedPageAttrs()
 
-        browser = page.context.browser
-        # webkit requires the iframe's parent to have "blob:" set, for example if we want to download a CSV via the blob: url
-        # chrome seems to be more lax
-        frame_src_blob = ""
-        if browser is not None and (
-            browser.browser_type.name == "webkit"
-            or browser.browser_type.name == "firefox"
-        ):
-            frame_src_blob = "blob:"
+        query_params = ""
+        if _iframe_element_attrs.src_query_params:
+            query_params = "?" + parse.urlencode(_iframe_element_attrs.src_query_params)
 
-        route.fulfill(
-            status=200,
-            body=f"""
-            <iframe
-                src="{app_url}"
-                title="Iframed Streamlit App"
-                allow="clipboard-write;"
-                sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
-                width="100%"
-                height="100%">
-            </iframe>
-            """,
-            headers={
-                "Content-Type": "text/html",
-                "Content-Security-Policy": f"frame-src {frame_src_blob} {app_url};",
-            },
+        src = f"{app_url}/{query_params}"
+        additional_html_head = (
+            _iframe_element_attrs.additional_html_head
+            if _iframe_element_attrs.additional_html_head
+            else ""
+        )
+        _iframed_body = (
+            f"""
+            <!DOCTYPE html>
+            <html style="height: 100%;">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Iframed Streamlit App</title>
+                    {additional_html_head}
+                </head>
+                <body style="height: 100%;">
+                    <iframe
+                        src={src}
+                        id={_iframe_element_attrs.element_id
+                            if _iframe_element_attrs.element_id
+                            else ""}
+                        title="Iframed Streamlit App"
+                        allow="clipboard-write;"
+                        sandbox="allow-popups allow-same-origin allow-scripts allow-downloads"
+                        width="100%"
+                    >
+                    </iframe>
+                </body>
+            </html>
+            """
+            if _iframe_element_attrs.html_content is None
+            else _iframe_element_attrs.html_content.replace("$APP_URL", app_url)
         )
 
-    # intercept all requests to the fake iframe server and fullfil the request in playwright
-    page.route(fake_iframe_server_route, fulfill_iframe_request)
+        def fulfill_iframe_request(route: Route) -> None:
+            """Return as response an iframe that loads the actual Streamlit app."""
 
-    def fullfill_streamlit_app_request(route: Route) -> None:
-        response = route.fetch()
-        route.fulfill(
-            body=response.body(),
-            headers={**response.headers, "Content-Security-Policy": app_csp_header},
-        )
+            browser = page.context.browser
+            # webkit requires the iframe's parent to have "blob:" set, for example if we
+            # want to download a CSV via the blob: url; Chrome seems to be more lax
+            frame_src_blob = ""
+            if browser is not None and (
+                browser.browser_type.name == "webkit"
+                or browser.browser_type.name == "firefox"
+            ):
+                frame_src_blob = "blob:"
 
-    page.route(f"{app_url}/", fullfill_streamlit_app_request)
+            route.fulfill(
+                status=200,
+                body=_iframed_body,
+                headers={
+                    "Content-Type": "text/html",
+                    "Content-Security-Policy": f"frame-src {frame_src_blob} {app_url};",
+                },
+            )
 
-    def _open_app() -> FrameLocator:
+        # intercept all requests to the fake iframe server and fullfil the request in
+        # playwright
+        page.route(fake_iframe_server_route, fulfill_iframe_request)
+
+        def fullfill_streamlit_app_request(route: Route) -> None:
+            """Get the actual Streamlit app and return it's content."""
+            response = route.fetch()
+            route.fulfill(
+                body=response.body(),
+                headers={**response.headers, "Content-Security-Policy": app_csp_header},
+            )
+
+        # this will route the request to the actual Streamlit app
+        page.route(src, fullfill_streamlit_app_request)
+
         def _expect_streamlit_app_loaded_in_iframe_with_added_header(
             response: Response,
         ) -> bool:
-            """Ensure that the routing-interception worked and that Streamlit app is indeed loaded with the CSP header we expect"""
+            """Ensure that the routing-interception worked and that Streamlit app is
+            indeed loaded with the CSP header we expect"""
 
             return (
-                response.url == f"{app_url}/"
+                response.url == src
                 and response.headers["content-security-policy"] == app_csp_header
             )
 
@@ -444,7 +506,7 @@ class ImageCompareFunction(Protocol):
 
 @pytest.fixture(scope="session")
 def output_folder(pytestconfig: Any) -> Path:
-    """Fixture that returns the directory that is used for all test failures information.
+    """Fixture returning the directory that is used for all test failures information.
 
     This includes:
     - snapshot-tests-failures: This directory contains all the snapshots that did not
@@ -596,7 +658,8 @@ def assert_snapshot(
         img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
 
         pytest.fail(
-            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference; {mismatch/total_pixels * 100:.2f}%)"
+            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference;"
+            f" {mismatch/total_pixels * 100:.2f}%)"
         )
 
     yield compare
@@ -608,21 +671,35 @@ def assert_snapshot(
 # Public utility methods:
 
 
-def wait_for_app_run(page: Page, wait_delay: int = 100):
+def wait_for_app_run(
+    page_or_locator: Page | Locator | FrameLocator, wait_delay: int = 100
+):
     """Wait for the given page to finish running."""
     # Add a little timeout to wait for eventual debounce timeouts used in some widgets.
+
+    page = None
+    if isinstance(page_or_locator, Page):
+        page = page_or_locator
+    elif isinstance(page_or_locator, Locator):
+        page = page_or_locator.page
+    elif isinstance(page_or_locator, FrameLocator):
+        page = page_or_locator.owner.page
+
+    # if isinstance(page, Page):
     page.wait_for_timeout(155)
     # Make sure that the websocket connection is established.
-    page.wait_for_selector(
-        "[data-testid='stApp'][data-test-connection-state='CONNECTED']",
+    page_or_locator.locator(
+        "[data-testid='stApp'][data-test-connection-state='CONNECTED']"
+    ).wait_for(
         timeout=20000,
         state="attached",
     )
     # Wait until we know the script has started. We determine this by checking
     # whether the app is in notRunning state. (The data-test-connection-state attribute
     # goes through the sequence "initial" -> "running" -> "notRunning").
-    page.wait_for_selector(
-        "[data-testid='stApp'][data-test-script-state='notRunning']",
+    page_or_locator.locator(
+        "[data-testid='stApp'][data-test-script-state='notRunning']"
+    ).wait_for(
         timeout=20000,
         state="attached",
     )
@@ -657,7 +734,7 @@ def rerun_app(page: Page):
     wait_for_app_run(page)
 
 
-def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 100):
+def wait_until(page: Page, fn: Callable, timeout: int = 5000, interval: int = 100):
     """Run a test function in a loop until it evaluates to True
     or times out.
 
@@ -668,7 +745,7 @@ def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 10
     ----------
     page : playwright.sync_api.Page
         Playwright page
-    fn : callable
+    fn : Callable
         Callback
     timeout : int, optional
         Total timeout in milliseconds, by default 5000

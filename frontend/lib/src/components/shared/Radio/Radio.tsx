@@ -51,7 +51,7 @@ function Radio({
   disabled,
   horizontal,
   width,
-  value,
+  value: defaultValue,
   onChange,
   options,
   captions,
@@ -59,23 +59,23 @@ function Radio({
   labelVisibility,
   help,
 }: Readonly<Props>): ReactElement {
-  const [internalValue, setInternalValue] = useState(value ?? null)
+  const [value, setValue] = useState(defaultValue ?? null)
 
   useEffect(() => {
-    if (value === internalValue) {
+    if (defaultValue === value) {
       return
     }
 
-    setInternalValue(value ?? null)
+    setValue(defaultValue ?? null)
 
-    // Exclude internalValue from the dependency list on purpose to avoid a loop.
+    // Exclude value from the dependency list on purpose to avoid a loop.
     /* eslint-disable react-hooks/exhaustive-deps */
-  }, [value])
+  }, [defaultValue])
 
   const onChangeCallback = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>): void => {
       const selectedIndex = parseInt(e.target.value, 10)
-      setInternalValue(selectedIndex)
+      setValue(selectedIndex)
       onChange(selectedIndex) // Needs to happen later, no?
     },
     [onChange]
@@ -84,8 +84,12 @@ function Radio({
   const theme = useTheme()
   const { colors, radii } = theme
   const style = { width }
-  const optionsCopy = [...options]
   const hasCaptions = captions.length > 0
+  const hasOptions = options.length > 0
+  const cleanedOptions = hasOptions ? options : ["No options to select."]
+
+  // Either the user specified it as disabled or it's disabled because we don't have any options
+  const shouldDisable = disabled || !hasOptions
 
   const spacerNeeded = (caption: string): string => {
     // When captions are provided for only some options in horizontal
@@ -94,16 +98,11 @@ function Radio({
     return spacer ? "&nbsp;" : caption
   }
 
-  if (optionsCopy.length === 0) {
-    optionsCopy.push("No options to select.")
-    disabled = true
-  }
-
   return (
     <div className="stRadio" data-testid="stRadio" style={style}>
       <WidgetLabel
         label={label}
-        disabled={disabled}
+        disabled={shouldDisable}
         labelVisibility={labelVisibility}
       >
         {help && (
@@ -114,8 +113,8 @@ function Radio({
       </WidgetLabel>
       <RadioGroup
         onChange={onChangeCallback}
-        value={internalValue !== null ? internalValue.toString() : undefined}
-        disabled={disabled}
+        value={value !== null ? value.toString() : undefined}
+        disabled={shouldDisable}
         align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
         aria-label={label}
         data-testid="stRadioGroup"
@@ -128,7 +127,7 @@ function Radio({
           },
         }}
       >
-        {optionsCopy.map((option: string, index: number) => (
+        {cleanedOptions.map((option: string, index: number) => (
           <UIRadio
             key={index}
             value={index.toString()}
@@ -165,7 +164,7 @@ function Radio({
                   marginRight: theme.spacing.none,
                   marginLeft: theme.spacing.none,
                   backgroundColor:
-                    $checked && !disabled
+                    $checked && !shouldDisable
                       ? colors.primary
                       : colors.fadedText40,
                 }),
@@ -182,7 +181,7 @@ function Radio({
               },
               Label: {
                 style: {
-                  color: disabled ? colors.fadedText40 : colors.bodyText,
+                  color: shouldDisable ? colors.fadedText40 : colors.bodyText,
                   position: "relative",
                   top: theme.spacing.px,
                 },

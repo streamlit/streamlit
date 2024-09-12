@@ -187,13 +187,17 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # Expand the nav
     view_button.click(force=True)
     expect(view_button).to_have_text("View less")
+    # move the mouse out of the way to avoid hover effects
+    themed_app.mouse.move(0, 0)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
     # Collapse the nav
     view_button.click(force=True)
-    expect(view_button).to_have_text("View more")
+    expect(view_button).to_have_text("View 3 more")
+    # move the mouse out of the way to avoid hover effects
+    themed_app.mouse.move(0, 0)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
@@ -201,6 +205,8 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # Expand the nav again
     view_button.click(force=True)
     expect(view_button).to_have_text("View less")
+    # move the mouse out of the way to avoid hover effects
+    themed_app.mouse.move(0, 0)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )

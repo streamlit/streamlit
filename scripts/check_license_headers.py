@@ -35,10 +35,8 @@ IGNORE_PATTERN = re.compile(
     r"^\.(github)/"
     # Exclude images.
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
-    # Exclude videos we use for testing st.video.
-    r"|e2e_playwright/test_assets/.*\.(mp4|webm)$"
-    # Exclude subtitle files we use for testing st.video.
-    r"|e2e_playwright/test_assets/.*\.(vtt|srt)$"
+    # Exclude playwright test assets folder.
+    r"|e2e_playwright/test_assets/.*$"
     # Exclude js file we use for testing st.html.
     r"|^lib/tests/streamlit/elements/test_html\.js"
     # Exclude files, because they make it obvious which product they relate to.
@@ -61,7 +59,7 @@ IGNORE_PATTERN = re.compile(
     r"|\.isort\.cfg$"
     r"|\.credentials/\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
-    r"|/(fixtures|__snapshots__|test_data|data)/"
+    r"|/(fixtures|__snapshots__|test_data|data|test)/"
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto",

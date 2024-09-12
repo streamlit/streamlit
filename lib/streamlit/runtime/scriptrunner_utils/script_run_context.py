@@ -23,7 +23,11 @@ from urllib import parse
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitSetPageConfigMustBeFirstCommandError,
+)
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -143,12 +147,7 @@ class ScriptRunContext:
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
-            raise StreamlitAPIException(
-                "`set_page_config()` can only be called once per app page, "
-                "and must be called as the first Streamlit command in your script.\n\n"
-                "For more information refer to the [docs]"
-                "(https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config)."
-            )
+            raise StreamlitSetPageConfigMustBeFirstCommandError()
 
         # We want to disallow set_page config if one of the following occurs:
         # - set_page_config was called on this message

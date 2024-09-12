@@ -60,7 +60,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             script_requests=ScriptRequests(),
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),

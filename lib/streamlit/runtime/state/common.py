@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -34,7 +33,7 @@ from typing import (
 
 from typing_extensions import TypeAlias, TypeGuard
 
-from streamlit import config, util
+from streamlit import util
 from streamlit.errors import (
     StreamlitAPIException,
 )
@@ -59,10 +58,6 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
-
-if TYPE_CHECKING:
-    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
-
 
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
@@ -242,11 +237,3 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
-
-
-def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
-    if config.get_option("global.appTest"):
-        try:
-            ctx.session_state[TESTING_KEY][k] = v
-        except KeyError:
-            ctx.session_state[TESTING_KEY] = {k: v}

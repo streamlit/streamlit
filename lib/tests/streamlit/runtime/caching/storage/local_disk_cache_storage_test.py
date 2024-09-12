@@ -25,7 +25,7 @@ from unittest.mock import MagicMock, patch
 
 from testfixtures import TempDirectory
 
-from streamlit import util
+from streamlit import errors
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.storage import (
     CacheStorageContext,
@@ -203,7 +203,7 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
 
     @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write",
-        MagicMock(side_effect=util.Error("mock exception")),
+        MagicMock(side_effect=errors.Error("mock exception")),
     )
     def test_storage_set_error(self):
         """Test that storage.set() raises an exception when it fails to write to disk."""

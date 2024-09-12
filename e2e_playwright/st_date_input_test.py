@@ -99,7 +99,7 @@ def test_handle_value_changes(app: Page):
     """Test that st.date_input has the correct value after typing in a date."""
 
     first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
-    first_date_input_field.type("1970/01/02")
+    first_date_input_field.fill("1970/01/02")
     first_date_input_field.blur()
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(

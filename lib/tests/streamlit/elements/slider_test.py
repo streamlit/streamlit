@@ -22,8 +22,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib.js_number import JSNumber
 from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase

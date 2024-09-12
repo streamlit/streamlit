@@ -54,7 +54,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -80,7 +80,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -110,7 +110,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -139,7 +139,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -173,7 +173,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=pg_mgr,
         )
@@ -217,7 +217,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -241,7 +241,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -259,7 +259,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -286,7 +286,7 @@ class ScriptRunContextTest(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             main_script_path="",
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(""),
         )
@@ -313,7 +313,7 @@ class ScriptRunContextTest(unittest.TestCase):
                 session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 main_script_path="",
-                user_info={"email": "test@test.com"},
+                user_info={"email": "test@example.com"},
                 fragment_storage=MemoryFragmentStorage(),
                 pages_manager=PagesManager(""),
                 current_fragment_id="my_fragment_id",

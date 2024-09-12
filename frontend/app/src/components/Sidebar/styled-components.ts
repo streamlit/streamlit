@@ -88,23 +88,13 @@ export const StyledSidebarNavContainer = styled.div(() => ({
   position: "relative",
 }))
 
-export interface StyledSidebarNavItemsProps {
-  isExpanded: boolean
-  hasSidebarElements: boolean
-}
-
-export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ theme, isExpanded, hasSidebarElements }) => {
-    return {
-      maxHeight: isExpanded ? "none" : "30vh",
-      listStyle: "none",
-      overflow:
-        isExpanded && hasSidebarElements ? ["auto", "overlay"] : "hidden",
-      margin: theme.spacing.none,
-      paddingBottom: theme.spacing.threeXS,
-    }
+export const StyledSidebarNavItems = styled.ul(({ theme }) => {
+  return {
+    listStyle: "none",
+    margin: theme.spacing.none,
+    paddingBottom: theme.spacing.threeXS,
   }
-)
+})
 
 export const StyledSidebarNavLinkContainer = styled.div(() => ({
   display: "flex",

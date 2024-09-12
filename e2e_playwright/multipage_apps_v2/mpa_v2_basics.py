@@ -71,6 +71,8 @@ page9 = st.Page(page_9)
 page10 = st.Page(page_10)
 page11 = st.Page(page_8, title="page 11", url_path="page_11")
 page12 = st.Page(page_9, title="page 12", url_path="page_12")
+page13 = st.Page(page_8, title="page 13", url_path="page_13")
+page14 = st.Page(page_9, title="page 14", url_path="page_14")
 
 hide_sidebar = st.checkbox("Hide sidebar")
 dynamic_nav = st.checkbox("Change navigation dynamically")
@@ -84,6 +86,7 @@ pg = st.navigation(
             "Section 3": [page6],
             "Section 4": [page7, page8, page9],
             "Section 5": [page10, page11, page12],
+            "Section 6": [page13, page14],
         }
     ),
     position="hidden" if hide_sidebar else "sidebar",

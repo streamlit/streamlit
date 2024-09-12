@@ -269,6 +269,10 @@ class PagesManager:
     def intended_page_script_hash(self) -> PageHash | None:
         return self._intended_page_script_hash
 
+    @property
+    def mpa_version(self) -> int:
+        return 2 if isinstance(self.pages_strategy, PagesStrategyV2) else 1
+
     def get_main_page(self) -> PageInfo:
         return {
             "script_path": self._main_script_path,

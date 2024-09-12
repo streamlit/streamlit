@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime
-from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
@@ -41,6 +40,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 

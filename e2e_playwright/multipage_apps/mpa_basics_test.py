@@ -118,6 +118,8 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # We apply a quick timeout here so that the UI has some time to
     # adjust for the screenshot after the click
     page.wait_for_timeout(250)
+    # move the mouse out of the way to avoid hover effects
+    page.mouse.move(0, 0)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
@@ -125,6 +127,8 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # Collapse the nav
     view_button.click(force=True)
     page.wait_for_timeout(250)
+    # move the mouse out of the way to avoid hover effects
+    page.mouse.move(0, 0)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
@@ -132,6 +136,8 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # Expand the nav again
     view_button.click(force=True)
     page.wait_for_timeout(250)
+    # move the mouse out of the way to avoid hover effects
+    page.mouse.move(0, 0)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )

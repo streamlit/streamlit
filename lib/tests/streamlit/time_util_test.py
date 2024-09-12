@@ -21,7 +21,8 @@ from typing import Any
 import pytest
 from parameterized import parameterized
 
-from streamlit.time_util import BadTimeStringError, adjust_years, time_to_seconds
+from streamlit.errors import StreamlitBadTimeStringError
+from streamlit.time_util import adjust_years, time_to_seconds
 
 TIME_STRING_TO_SECONDS_PARAMS = [
     ("float", 3.5, 3.5),
@@ -86,8 +87,8 @@ def test_time_to_seconds_not_coerced(_, input_value: Any, expected_seconds: floa
 
 def test_time_str_exception():
     """Test that a badly-formatted time string raises an exception."""
-    with pytest.raises(BadTimeStringError):
+    with pytest.raises(StreamlitBadTimeStringError):
         time_to_seconds("")
 
-    with pytest.raises(BadTimeStringError):
+    with pytest.raises(StreamlitBadTimeStringError):
         time_to_seconds("1 flecond")

@@ -17,8 +17,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
-from streamlit.elements.form_utils import is_in_form
-from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
+from streamlit.elements.lib.form_utils import is_in_form
+from streamlit.errors import (
+    StreamlitAPIWarning,
+    StreamlitFragmentWidgetsNotAllowedOutsideError,
+    StreamlitInvalidFormCallbackError,
+    StreamlitValueAssignmentNotAllowedError,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
     in_cached_function,
@@ -38,15 +43,12 @@ def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -
 
     Raises
     ------
-    StreamlitAPIException:
+    StreamlitInvalidFormCallbackError:
         Raised when the described rule is violated.
     """
 
     if runtime.exists() and is_in_form(dg) and on_change is not None:
-        raise StreamlitAPIException(
-            "With forms, callbacks can only be defined on the `st.form_submit_button`."
-            " Defining callbacks on other widgets inside a form is not allowed."
-        )
+        raise StreamlitInvalidFormCallbackError()
 
 
 _shown_default_value_warning: bool = False
@@ -76,10 +78,7 @@ def check_session_state_rules(
         return
 
     if not writes_allowed:
-        raise StreamlitAPIException(
-            f"Values for the widget with key '{key}' cannot be set using"
-            " `st.session_state`."
-        )
+        raise StreamlitValueAssignmentNotAllowedError(key=key)
 
     if (
         default_value is not None
@@ -125,11 +124,6 @@ def check_cache_replay_rules() -> None:
         exception(CachedWidgetWarning())
 
 
-_fragment_writes_widget_to_outside_error = (
-    "Fragments cannot write to elements outside of their container."
-)
-
-
 def check_fragment_path_policy(dg: DeltaGenerator):
     """Ensures that the current widget is not written outside of the
     fragment's delta path.
@@ -155,13 +149,13 @@ def check_fragment_path_policy(dg: DeltaGenerator):
     # the elements delta path cannot be smaller than the fragment's delta path if it is
     # inside of the fragment
     if len(current_cursor_delta_path) < len(current_fragment_delta_path):
-        raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)
+        raise StreamlitFragmentWidgetsNotAllowedOutsideError()
 
     # all path indices of the fragment-path must occur in the inner-elements delta path,
     # otherwise it is outside of the fragment container
     for index, path_index in enumerate(current_fragment_delta_path):
         if current_cursor_delta_path[index] != path_index:
-            raise StreamlitAPIException(_fragment_writes_widget_to_outside_error)
+            raise StreamlitFragmentWidgetsNotAllowedOutsideError()
 
 
 def check_widget_policies(
