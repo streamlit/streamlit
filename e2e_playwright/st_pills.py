@@ -15,6 +15,14 @@
 import streamlit as st
 
 st.header("Pills - standard")
+
+if st.checkbox("Set default values", value=False):
+    st.session_state.default_pills = ["🧰 General widgets", "📊 Charts", "🧊 3D"]
+else:
+    st.session_state.default_pills = []
+
+default = st.session_state.default_pills
+
 pills_options = [
     "🧰 General widgets",
     "📊 Charts",
@@ -40,6 +48,7 @@ selection = st.pills(
     pills_options,
     key="pills",
     selection_mode="multi",
+    default=default,
     help="This is for choosing options",
 )
 st.write(f"Multi selection: {selection}")

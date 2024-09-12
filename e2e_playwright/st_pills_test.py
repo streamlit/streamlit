@@ -17,9 +17,7 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import (
-    get_markdown,
-)
+from e2e_playwright.shared.app_utils import click_checkbox, get_markdown
 
 
 def get_button_group(app: Page, index: int) -> Locator:
@@ -41,10 +39,10 @@ def test_click_multiple_pills_and_take_snapshot(
     get_pill_button(pills, "📝 Text").click()
     wait_for_app_run(themed_app)
     get_pill_button(pills, "🪢 Graphs").click()
-    text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
-    expect(text).to_be_attached()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
+    expect(text).to_be_visible()
     assert_snapshot(pills, name="st_pills-multiselect")
 
 
@@ -57,8 +55,26 @@ def test_click_single_icon_pill_and_take_snapshot(
     # the icon's span element has the respective text
     # (e.g. :material/zoom_in: -> zoom_in)
     get_pill_button(pills, "zoom_in").click()
-    text = get_markdown(themed_app, "Single selection: 1")
-    expect(text).to_be_attached()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    text = get_markdown(themed_app, "Single selection: 1")
+    expect(text).to_be_visible()
     assert_snapshot(pills, name="st_pills-singleselect_icon_only")
+
+
+def test_pass_default_selections(app: Page):
+    """Test that passed defaults are rendered correctly."""
+    text = get_markdown(app, "Multi selection: None")
+    expect(text).to_be_visible()
+
+    click_checkbox(app, "Set default values")
+    wait_for_app_run(app)
+    text = get_markdown(
+        app, "Multi selection: \\['🧰 General widgets', '📊 Charts', '🧊 3D'\\]"
+    )
+    expect(text).to_be_visible()
+
+    click_checkbox(app, "Set default values")
+    wait_for_app_run(app)
+    text = get_markdown(app, "Multi selection: None")
+    expect(text).to_be_visible()
