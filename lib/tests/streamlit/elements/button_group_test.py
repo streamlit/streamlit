@@ -479,17 +479,26 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         with pytest.raises(expected):
             command(["Coffee", "Tea", "Water"], default=defaults)
 
-    @parameterized.expand(get_command_matrix([]))
+    @parameterized.expand(get_command_matrix([(None,), (["icon1", "icon2", None],)]))
     def test_format_func_is_applied(
         self,
         command: Callable[..., None],
+        icon_list: list[str | None] | None,
     ):
         """Test that format_func is applied to the options."""
         options = [1, 2, 3]
-        command(options, format_func=lambda x: f"{x}!")
+        command(options, icons=icon_list, format_func=lambda x: f"{x}!")
         c = self.get_delta_from_queue().new_element.button_group
         for index, option in enumerate(options):
             assert c.options[index].content == f"{option}!"
+
+            if icon_list is not None:
+                icon = icon_list[index]
+                if icon is not None:
+                    assert c.options[index].content_icon == icon_list[index]
+                else:
+                    # None gets converted to an empty string in the protobuf message
+                    assert c.options[index].content_icon == ""
 
     @parameterized.expand(
         [
@@ -514,12 +523,12 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(get_command_matrix([]))
     def test_pass_icons(self, command: Callable[..., None]):
-        command(["Coffee", "Tea"], icons=["☕", "🍵"])
+        command(["Coffee", "Tea", "Water"], icons=["☕", "🍵", None])
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default == []
-        assert [option.content for option in c.options] == ["Coffee", "Tea"]
-        assert [option.content_icon for option in c.options] == ["☕", "🍵"]
+        assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
+        assert [option.content_icon for option in c.options] == ["☕", "🍵", ""]
 
     @parameterized.expand(get_command_matrix([]))
     def test_icon_list_too_small(self, command: Callable[..., None]):

@@ -39,7 +39,7 @@ selection = st.pills(
     "Select some options",
     pills_options,
     key="pills",
-    selection_mode="multiselect",
+    selection_mode="multi",
     help="This is for choosing options",
 )
 st.write(f"Multi selection: {selection}")
@@ -57,6 +57,6 @@ selection = st.pills(
     ],
     format_func=lambda x: "",
     key="icon_only_pills",
-    selection_mode="select",
+    selection_mode="single",
 )
 st.write(f"Single selection: {selection}")

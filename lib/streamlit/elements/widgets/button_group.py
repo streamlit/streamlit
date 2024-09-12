@@ -415,7 +415,7 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         key: Key | None = None,
-        icons: list[str] | None = None,
+        icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
