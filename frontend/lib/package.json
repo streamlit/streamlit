@@ -108,7 +108,7 @@
     "vega": "^5.30.0",
     "vega-embed": "^6.26.0",
     "vega-interpreter": "^1.0.5",
-    "vega-lite": "5.14.0",
+    "vega-lite": "5.21.0",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {

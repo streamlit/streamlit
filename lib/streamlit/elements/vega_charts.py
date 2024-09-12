@@ -951,9 +951,14 @@ class VegaChartsMixin:
             "https://docs.streamlit.io/develop/api-reference/charts/st.area_chart",
         )
 
-        # st.area_chart's stack=False option translates to a "layered" area chart for vega. We reserve stack=False for
-        # grouped/non-stacked bar charts, so we need to translate False to "layered" here.
-        if stack is False:
+        # st.area_chart's stack=False option translates to a "layered" area chart for
+        # vega. We reserve stack=False for
+        # grouped/non-stacked bar charts, so we need to translate False to "layered"
+        # here. The default stack type was changed in vega-lite 5.14.1:
+        # https://github.com/vega/vega-lite/issues/9337
+        # To get the old behavior, we also need to set stack to layered as the
+        # default (if stack is None)
+        if stack is False or stack is None:
             stack = "layered"
 
         chart, add_rows_metadata = generate_chart(
