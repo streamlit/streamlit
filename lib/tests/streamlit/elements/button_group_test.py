@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -115,6 +115,22 @@ class TestFeedbackSerde:
 class TestFeedbackCommand(DeltaGeneratorTestCase):
     """Tests that are specific for the feedback command."""
 
+    @parameterized.expand(
+        [
+            ("thumbs", list(_THUMB_ICONS)),
+            ("faces", list(_FACES_ICONS)),
+            ("stars", list([_STAR_ICON] * 5)),
+        ]
+    )
+    def test_call_feedback_with_all_options(
+        self, option: Literal["thumbs", "faces", "stars"], expected_icons: list[str]
+    ):
+        st.feedback(option)
+
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.default == []
+        assert [option.content_icon for option in delta.options] == expected_icons
+
     def test_invalid_option_literal(self):
         with pytest.raises(StreamlitAPIException) as e:
             st.feedback("foo")
@@ -122,6 +138,12 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
             "The options argument to st.feedback must be one of "
             "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
         ) == str(e.value)
+
+    @parameterized.expand([(0,), (1,)])
+    def test_widget_state_changed_via_session_state(self, session_state_index: int):
+        st.session_state.feedback_command_key = session_state_index
+        val = st.feedback("thumbs", key="feedback_command_key")
+        assert val == session_state_index
 
 
 def get_command_matrix(
@@ -167,6 +189,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.feedback,
                 ("thumbs",),
+                None,
                 [":material/thumb_up:", ":material/thumb_down:"],
                 "content_icon",
                 ButtonGroupProto.Style.BORDERLESS,
@@ -175,6 +198,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.pills,
                 ("label", ["a", "b", "c"]),
+                {"help": "Test help param"},
                 ["a", "b", "c"],
                 "content",
                 ButtonGroupProto.Style.PILLS,
@@ -185,6 +209,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                     st._main, *args, **kwargs
                 ),
                 (["a", "b", "c"],),
+                None,
                 ["a", "b", "c"],
                 "content",
                 ButtonGroupProto.Style.SEGMENT,
@@ -196,12 +221,15 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         self,
         command: Callable[..., None],
         command_args: tuple[Any, ...],
+        command_kwargs: dict[str, Any] | None,
         expected_options: list[str],
         option_field: str,
         style: ButtonGroupProto.Style,
         test_label: bool,
     ):
-        command(*command_args)
+        if command_kwargs is None:
+            command_kwargs = {}
+        command(*command_args, **command_kwargs)
 
         delta = self.get_delta_from_queue().new_element.button_group
         assert [
@@ -643,6 +671,12 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             "The selection_mode argument must be one of ['single', 'multi']. "
             "The argument passed was 'foo'." == str(exception.value)
         )
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_widget_state_changed_via_session_state(self, command: Callable[..., None]):
+        st.session_state.command_key = ["stars"]
+        val = command(["thumbs", "stars"], key="command_key")
+        assert val == "stars"
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""
