@@ -320,7 +320,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         overrides={{
           Root: {
             style: {
-              display: "inline-flex",
               flexWrap: "wrap",
               gap: theme.spacing.twoXS,
             },
