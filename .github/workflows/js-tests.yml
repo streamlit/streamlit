@@ -73,6 +73,13 @@ jobs:
           fi
       - name: Run frontend tests
         run: make jstest
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_report_jest
+          path: |
+            frontend/lib/coverage
+            frontend/app/coverage
 
   components-lib-tests:
     runs-on: ubuntu-latest
