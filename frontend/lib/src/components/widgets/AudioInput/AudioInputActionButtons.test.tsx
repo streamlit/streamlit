@@ -21,7 +21,7 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 
-import AudioInputActionButton from "./AudioInputActionButton"
+import AudioInputActionButton from "./AudioInputActionButtons"
 
 describe("AudioInputActionButton", () => {
   it("should render without crashing", () => {

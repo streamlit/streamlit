@@ -83,6 +83,7 @@ export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => ({
 export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
   "& > button": {
     color: theme.colors.primary,
+    padding: theme.spacing.threeXS,
   },
   "&:hover > button, &:focus > button": {
     color: theme.colors.red,
@@ -92,6 +93,7 @@ export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
 export const StyledActionButtonStartRecordingDiv = styled.span(
   ({ theme }) => ({
     "& > button": {
+      padding: theme.spacing.threeXS,
       color: theme.colors.fadedText40,
     },
     "&:hover > button, &:focus > button": {
@@ -103,8 +105,9 @@ export const StyledActionButtonStartRecordingDiv = styled.span(
   })
 )
 
-export const StyledActionButtonPlayDiv = styled.span(({ theme }) => ({
+export const StyledActionButtonPlayPauseDiv = styled.span(({ theme }) => ({
   "& > button": {
+    padding: theme.spacing.threeXS,
     color: theme.colors.fadedText60,
   },
   "&:hover > button, &:focus > button": {
@@ -112,11 +115,13 @@ export const StyledActionButtonPlayDiv = styled.span(({ theme }) => ({
   },
 }))
 
-export const StyledActionButtonPauseDiv = styled.span(({ theme }) => ({
-  "& > button": {
-    color: theme.colors.fadedText60,
-  },
-  "&:hover > button, &:focus > button": {
-    color: theme.colors.bodyText,
-  },
+export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  flexGrow: 0,
+  flexShrink: 1,
+  padding: theme.spacing.xs,
+  gap: theme.spacing.twoXS,
+  marginRight: theme.spacing.twoXS,
 }))
