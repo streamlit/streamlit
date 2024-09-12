@@ -375,7 +375,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             df = pd.DataFrame(
                 [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
             ).T
-            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
             st.altair_chart(chart, on_select="rerun")
 
@@ -400,7 +400,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
             df = pd.DataFrame(
                 [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
             ).T
-            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
             st.altair_chart(chart, on_select="ignore")
 
@@ -465,7 +465,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         inside a cached function."""
         point = alt.selection_point(name="point")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
 
         st.cache_data(lambda: st.altair_chart(chart, on_select="rerun"))()
 
