@@ -59,10 +59,10 @@ _LOGGER: Final = get_logger(__name__)
 def _get_abs_folder_path(path: str) -> str:
     """Get the absolute folder path for a given path.
 
-    If the path is a file, return the file directory.
-    Otherwise, return the absolute path of the path.
+    If the path is a directory, return the absolute path.
+    Otherwise, return the absolute path of the parent directory.
     """
-    return os.path.abspath(os.path.dirname(path) if os.path.isfile(path) else path)
+    return os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path))
 
 
 class EventBasedPathWatcher:

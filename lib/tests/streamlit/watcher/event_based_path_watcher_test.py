@@ -132,9 +132,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
-    @mock.patch("os.path.isfile")
-    def test_correctly_resolves_watched_folder_path(self, mock_is_file):
-        mock_is_file.return_value = True
+    @mock.patch("os.path.isdir")
+    def test_correctly_resolves_watched_folder_path(self, mock_is_dir):
+        mock_is_dir.return_value = True
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
@@ -150,9 +150,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
-    @mock.patch("os.path.isfile")
-    def test_correctly_resolves_watched_file_path(self, mock_is_file):
-        mock_is_file.return_value = False
+    @mock.patch("os.path.isdir")
+    def test_correctly_resolves_watched_file_path(self, mock_is_dir):
+        mock_is_dir.return_value = False
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
