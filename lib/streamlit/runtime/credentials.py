@@ -20,7 +20,7 @@ import json
 import os
 import sys
 import textwrap
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Final, NamedTuple, NoReturn
 from uuid import uuid4
 
@@ -82,7 +82,7 @@ def _send_email(email: str) -> None:
         "referer": "localhost:8501/",
     }
 
-    dt = datetime.utcnow().isoformat() + "+00:00"
+    dt = f"{datetime.now(timezone.utc).isoformat()}+00:00"
 
     data = {
         "anonymous_id": None,
