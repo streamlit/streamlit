@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -26,12 +26,12 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 
-import Checkbox, { OwnProps } from "./Checkbox"
+import Checkbox, { Props } from "./Checkbox"
 
 const getProps = (
   elementProps: Partial<CheckboxProto> = {},
-  widgetProps: Partial<OwnProps> = {}
-): OwnProps => ({
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: CheckboxProto.create({
     id: "1",
     label: "Label",
@@ -157,7 +157,7 @@ describe("Checkbox widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -178,7 +178,9 @@ describe("Checkbox widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    await act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByRole("checkbox")).not.toBeChecked()

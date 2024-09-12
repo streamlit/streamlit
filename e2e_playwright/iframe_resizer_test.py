@@ -25,7 +25,7 @@ from e2e_playwright.shared.app_utils import wait_for_app_run
 if TYPE_CHECKING:
     from e2e_playwright.conftest import IframedPage, ImageCompareFunction
 
-TEST_ASSETS_DIR = os.path.join(
+TEST_ASSETS_DIR: Final[str] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "test_assets"
 )
 

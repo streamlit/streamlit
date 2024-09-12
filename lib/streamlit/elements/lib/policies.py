@@ -124,11 +124,6 @@ def check_cache_replay_rules() -> None:
         exception(CachedWidgetWarning())
 
 
-_fragment_writes_widget_to_outside_error = (
-    "Fragments cannot write to elements outside of their container."
-)
-
-
 def check_fragment_path_policy(dg: DeltaGenerator):
     """Ensures that the current widget is not written outside of the
     fragment's delta path.
