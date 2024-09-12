@@ -54,7 +54,7 @@ import {
   WAVEFORM_PADDING,
 } from "./constants"
 import formatTime from "./formatTime"
-import AudioInputActionButton from "./AudioInputActionButton"
+import AudioInputActionButton from "./AudioInputActionButtons"
 
 interface Props {
   element: AudioInputProto
@@ -213,27 +213,6 @@ const AudioInput: React.FC<Props> = ({
     }
   }, [wavesurfer])
 
-  const startRecording = useCallback(() => {
-    if (!recordPlugin || !activeAudioDeviceId || !wavesurfer) {
-      return
-    }
-
-    wavesurfer.setOptions({
-      waveColor: theme.colors.primary,
-    })
-
-    recordPlugin.startRecording({ deviceId: activeAudioDeviceId }).then(() => {
-      // Update the record button to show the user that they can stop recording
-      forceRerender()
-    })
-  }, [activeAudioDeviceId, recordPlugin, theme, wavesurfer])
-
-  const stopRecording = useCallback(() => {
-    if (!recordPlugin) return
-
-    recordPlugin.stopRecording()
-  }, [recordPlugin])
-
   const handleClear = useCallback(() => {
     if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
       return
@@ -263,6 +242,31 @@ const AudioInput: React.FC<Props> = ({
     widgetMgr,
     fragmentId,
   ])
+
+  const startRecording = useCallback(() => {
+    if (!recordPlugin || !activeAudioDeviceId || !wavesurfer) {
+      return
+    }
+
+    wavesurfer.setOptions({
+      waveColor: theme.colors.primary,
+    })
+
+    if (recordingUrl) {
+      handleClear()
+    }
+
+    recordPlugin.startRecording({ deviceId: activeAudioDeviceId }).then(() => {
+      // Update the record button to show the user that they can stop recording
+      forceRerender()
+    })
+  }, [activeAudioDeviceId, recordPlugin, theme, wavesurfer, handleClear])
+
+  const stopRecording = useCallback(() => {
+    if (!recordPlugin) return
+
+    recordPlugin.stopRecording()
+  }, [recordPlugin])
 
   const isRecording = Boolean(recordPlugin?.isRecording())
   const isPlaying = Boolean(wavesurfer?.isPlaying())
