@@ -198,8 +198,10 @@ export const NumberInput: React.FC<Props> = ({
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
 
+  const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions
-  const allowSubmitOnEnter = widgetMgr.allowFormSubmitOnEnter(elementFormId)
+  const allowFormSubmitOnEnter =
+    widgetMgr.allowFormSubmitOnEnter(elementFormId)
 
   // update the step if the props change
   React.useEffect(() => {
@@ -378,7 +380,7 @@ export const NumberInput: React.FC<Props> = ({
         if (dirty) {
           commitValue({ value, source: { fromUi: true } })
         }
-        if (allowSubmitOnEnter) {
+        if (allowFormSubmitOnEnter) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
@@ -390,7 +392,7 @@ export const NumberInput: React.FC<Props> = ({
       widgetMgr,
       elementFormId,
       fragmentId,
-      allowSubmitOnEnter,
+      allowFormSubmitOnEnter,
     ]
   )
 
@@ -528,8 +530,8 @@ export const NumberInput: React.FC<Props> = ({
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}
-            inForm={isInForm({ formId: elementFormId })}
-            allowSubmitOnEnter={allowSubmitOnEnter}
+            inForm={inForm}
+            allowSubmitOnEnter={allowFormSubmitOnEnter || !inForm}
           />
         </StyledInstructionsContainer>
       )}

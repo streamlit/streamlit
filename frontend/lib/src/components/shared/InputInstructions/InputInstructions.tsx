@@ -54,9 +54,7 @@ const InputInstructions = ({
   }
 
   // Show enter instruction if not a form or form allows submit on Enter
-  const showEnterInstruction = allowSubmitOnEnter || !inForm
-
-  if (dirty && showEnterInstruction) {
+  if (dirty && allowSubmitOnEnter) {
     const toSubmitFormOrApplyText = inForm ? "submit form" : "apply"
     if (type === "multiline") {
       const commandKey = isFromMac() ? "⌘" : "Ctrl"

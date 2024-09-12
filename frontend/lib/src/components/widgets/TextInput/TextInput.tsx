@@ -186,13 +186,13 @@ class TextInput extends React.PureComponent<Props, State> {
   ): void => {
     const { element, widgetMgr, fragmentId } = this.props
     const { formId } = element
-    const allowSubmitOnEnter = widgetMgr.allowFormSubmitOnEnter(formId)
+    const allowFormSubmitOnEnter = widgetMgr.allowFormSubmitOnEnter(formId)
 
     if (e.key === "Enter") {
       if (this.state.dirty) {
         this.commitWidgetValue({ fromUi: true })
       }
-      if (allowSubmitOnEnter) {
+      if (allowFormSubmitOnEnter) {
         widgetMgr.submitForm(formId, fragmentId)
       }
     }
@@ -208,8 +208,9 @@ class TextInput extends React.PureComponent<Props, State> {
     const { dirty, value } = this.state
     const { element, width, disabled, widgetMgr, theme } = this.props
     const { placeholder, formId } = element
-    // Show "Please enter" instructions only if in a form & allowed
-    const allowSubmitOnEnter = widgetMgr.allowFormSubmitOnEnter(formId)
+    // Show "Please enter" instructions if in a form & allowed, or not in form
+    const allowSubmitOnEnter =
+      widgetMgr.allowFormSubmitOnEnter(formId) || !isInForm({ formId })
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
