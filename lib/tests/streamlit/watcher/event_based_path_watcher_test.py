@@ -132,6 +132,44 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
+    @mock.patch("os.path.isdir")
+    def test_correctly_resolves_watched_folder_path(self, mock_is_dir):
+        mock_is_dir.return_value = True
+        cb = mock.Mock()
+
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_path = fo._observer.schedule.call_args[0][1]
+        assert folder_path == "/this/is/my/dir"
+
+        ro.close()
+
+    @mock.patch("os.path.isdir")
+    def test_correctly_resolves_watched_file_path(self, mock_is_dir):
+        mock_is_dir.return_value = False
+        cb = mock.Mock()
+
+        self.mock_util.path_modification_time = lambda *args: 101.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+
+        ro = event_based_path_watcher.EventBasedPathWatcher(
+            "/this/is/my/dir/file.txt", cb
+        )
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_path = fo._observer.schedule.call_args[0][1]
+        assert folder_path == "/this/is/my/dir"
+
+        ro.close()
+
     def test_changed_modification_time_0_0(self):
         """Test that when a directory is modified, but modification time is 0.0,
         the callback is called anyway."""
