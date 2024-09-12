@@ -141,6 +141,7 @@ jobs:
         with:
           name: coverage_report_${{ matrix.python_version }}
           path: lib/htmlcov
+          retention-days: 7
 
   py-updated-constraints:
     needs:
@@ -250,3 +251,4 @@ jobs:
         with:
           name: coverage_report_integration
           path: lib/htmlcov
+          retention-days: 7

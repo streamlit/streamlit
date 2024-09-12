@@ -86,3 +86,4 @@ jobs:
         with:
           name: coverage_report_e2e
           path: e2e_playwright/htmlcov
+          retention-days: 7
