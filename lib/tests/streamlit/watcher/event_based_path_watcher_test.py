@@ -148,6 +148,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_path = fo._observer.schedule.call_args[0][1]
         assert folder_path == "/this/is/my/dir"
 
+        ro.close()
+
     @mock.patch("os.path.isdir")
     def test_correctly_resolves_watched_file_path(self, mock_is_dir):
         mock_is_dir.return_value = False
@@ -165,6 +167,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         folder_path = fo._observer.schedule.call_args[0][1]
         assert folder_path == "/this/is/my/dir"
+
+        ro.close()
 
     def test_changed_modification_time_0_0(self):
         """Test that when a directory is modified, but modification time is 0.0,
