@@ -248,6 +248,7 @@ describe("ButtonGroup widget", () => {
       fireEvent.click(buttons[1])
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
+        // the 2 is default value
         [2, 1],
         { fromUi: true },
         undefined
@@ -257,6 +258,15 @@ describe("ButtonGroup widget", () => {
       expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
         props.element,
         [2, 1, 0],
+        { fromUi: true },
+        undefined
+      )
+
+      // unselect the second button
+      fireEvent.click(getButtonGroupButtons()[1])
+      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+        props.element,
+        [2, 0],
         { fromUi: true },
         undefined
       )
