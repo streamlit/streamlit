@@ -229,6 +229,7 @@ class PagesManager:
         self._script_cache = script_cache
         self._intended_page_script_hash: PageHash | None = None
         self._intended_page_name: PageName | None = None
+        self._current_page_script_hash: PageHash = ""
 
     @property
     def main_script_path(self) -> ScriptPath:
@@ -237,6 +238,10 @@ class PagesManager:
     @property
     def main_script_hash(self) -> PageHash:
         return self._main_script_hash
+
+    @property
+    def current_page_script_hash(self) -> PageHash | None:
+        return self._current_page_script_hash
 
     @property
     def intended_page_name(self) -> PageName | None:
@@ -249,6 +254,9 @@ class PagesManager:
     @property
     def mpa_version(self) -> int:
         return 2 if isinstance(self.pages_strategy, PagesStrategyV2) else 1
+
+    def set_current_page_script_hash(self, page_script_hash: PageHash) -> None:
+        self._current_page_script_hash = page_script_hash
 
     def get_main_page(self) -> PageInfo:
         return {

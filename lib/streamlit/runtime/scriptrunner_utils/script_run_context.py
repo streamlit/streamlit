@@ -99,7 +99,6 @@ class ScriptRunContext:
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
     _active_script_hash: str = ""
-    _page_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
 
@@ -109,12 +108,12 @@ class ScriptRunContext:
 
     @property
     def page_script_hash(self):
-        return self._page_script_hash
+        return self.pages_manager.current_page_script_hash
 
     @property
     def active_script_hash(self):
         if self.pages_manager.mpa_version == 1:
-            return self._page_script_hash
+            return self.page_script_hash
 
         return self._active_script_hash
 
@@ -130,7 +129,7 @@ class ScriptRunContext:
 
     def set_mpa_v2_page(self, page_script_hash: str):
         self._active_script_hash = self.pages_manager.main_script_hash
-        self._page_script_hash = page_script_hash
+        self.pages_manager.set_current_page_script_hash(page_script_hash)
 
     def reset(
         self,
@@ -143,7 +142,7 @@ class ScriptRunContext:
         self.widget_user_keys_this_run = set()
         self.form_ids_this_run = set()
         self.query_string = query_string
-        self._page_script_hash = page_script_hash
+        self.pages_manager.set_current_page_script_hash(page_script_hash)
         if self.pages_manager.mpa_version == 2:
             self._active_script_hash = self.pages_manager.main_script_hash
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
