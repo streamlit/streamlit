@@ -578,7 +578,7 @@ class ArrowMixin:
                 selection_mode=selection_mode,
                 is_selection_activated=is_selection_activated,
                 form_id=proto.form_id,
-                page=ctx.page_script_hash if ctx else None,
+                page=ctx.active_script_hash if ctx else None,
             )
 
             serde = DataframeSelectionSerde()
