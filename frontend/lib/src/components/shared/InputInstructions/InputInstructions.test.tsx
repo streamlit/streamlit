@@ -39,7 +39,7 @@ describe("InputInstructions", () => {
     expect(screen.getByTestId("InputInstructions").textContent).toBeDefined()
   })
 
-  it("should show Enter instructions", () => {
+  it("should show Enter instructions by default", () => {
     render(<InputInstructions {...props} />)
 
     expect(screen.getByTestId("InputInstructions").textContent).toBe(
@@ -132,17 +132,27 @@ describe("InputInstructions", () => {
         "Press Enter to submit form"
       )
     })
-  })
 
-  it("should show correct instructions to submit form with multiline input", () => {
-    const props = getProps({
-      inForm: true,
-      type: "multiline",
+    it("should show correct instructions to submit form with multiline input", () => {
+      const props = getProps({
+        inForm: true,
+        type: "multiline",
+      })
+      render(<InputInstructions {...props} />)
+
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
+        "Press ⌘+Enter to submit form"
+      )
     })
-    render(<InputInstructions {...props} />)
 
-    expect(screen.getByTestId("InputInstructions").textContent).toBe(
-      "Press ⌘+Enter to submit form"
-    )
+    it("should not show enter instructions if allowSubmitOnEnter is false", () => {
+      const props = getProps({
+        inForm: true,
+        allowSubmitOnEnter: false,
+      })
+      render(<InputInstructions {...props} />)
+
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
+    })
   })
 })

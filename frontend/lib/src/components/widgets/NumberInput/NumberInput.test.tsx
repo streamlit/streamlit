@@ -16,7 +16,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -188,7 +188,9 @@ describe("NumberInput widget", () => {
     })
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)
@@ -200,6 +202,55 @@ describe("NumberInput widget", () => {
       },
       undefined
     )
+  })
+
+  it("shows Input Instructions on dirty state when not in form (by default)", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps()
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to apply"
+    )
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to submit form"
+    )
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .mockReturnValue(false)
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
   describe("FloatData", () => {
