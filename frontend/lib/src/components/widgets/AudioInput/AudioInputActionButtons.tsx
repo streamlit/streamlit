@@ -26,8 +26,8 @@ import BaseButton, {
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 
 import {
-  StyledActionButtonPauseDiv,
-  StyledActionButtonPlayDiv,
+  StyledActionButtonContainerDiv,
+  StyledActionButtonPlayPauseDiv,
   StyledActionButtonStartRecordingDiv,
   StyledActionButtonStopRecordingDiv,
 } from "./styled-components"
@@ -50,6 +50,7 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
+    fluidWidth
     data-testid="stAudioInputActionButton"
   >
     <Icon content={iconContent} size="lg" color="inherit" />
@@ -66,6 +67,72 @@ interface AudioInputActionButtonProps {
   onClickPlayPause(): void
 }
 
+interface AudioInputStopRecordingButtonProps {
+  disabled: boolean
+  stopRecording(): void
+}
+
+interface AudioInputPlayPauseButtonProps {
+  disabled: boolean
+  isPlaying: boolean
+  onClickPlayPause(): void
+}
+
+interface AudioInputStartRecordingButtonProps {
+  disabled: boolean
+  startRecording(): void
+}
+
+export const AudioInputStopRecordingButton: React.FC<
+  AudioInputStopRecordingButtonProps
+> = ({ disabled, stopRecording }) => (
+  <StyledActionButtonStopRecordingDiv>
+    <ActionButton
+      onClick={stopRecording}
+      disabled={disabled}
+      ariaLabel="Stop recording"
+      iconContent={StopCircle}
+    />
+  </StyledActionButtonStopRecordingDiv>
+)
+
+export const AudioInputPlayPauseButton: React.FC<
+  AudioInputPlayPauseButtonProps
+> = ({ disabled, isPlaying, onClickPlayPause }) => {
+  return (
+    <StyledActionButtonPlayPauseDiv>
+      {isPlaying ? (
+        <ActionButton
+          onClick={onClickPlayPause}
+          disabled={disabled}
+          ariaLabel="Pause"
+          iconContent={Pause}
+        />
+      ) : (
+        <ActionButton
+          onClick={onClickPlayPause}
+          disabled={disabled}
+          ariaLabel="Play"
+          iconContent={PlayArrow}
+        />
+      )}
+    </StyledActionButtonPlayPauseDiv>
+  )
+}
+
+export const AudioInputStartRecordingButton: React.FC<
+  AudioInputStartRecordingButtonProps
+> = ({ disabled, startRecording }) => (
+  <StyledActionButtonStartRecordingDiv>
+    <ActionButton
+      onClick={startRecording}
+      disabled={disabled}
+      ariaLabel="Record"
+      iconContent={Mic}
+    />
+  </StyledActionButtonStartRecordingDiv>
+)
+
 const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
   disabled,
   isRecording,
@@ -75,54 +142,27 @@ const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
   stopRecording,
   onClickPlayPause,
 }) => {
-  if (isRecording) {
-    // It's currently recording, so show the stop recording button
-    return (
-      <StyledActionButtonStopRecordingDiv>
-        <ActionButton
-          onClick={stopRecording}
-          disabled={disabled}
-          ariaLabel="Stop recording"
-          iconContent={StopCircle}
-        />
-      </StyledActionButtonStopRecordingDiv>
-    )
-  } else if (recordingUrlExists) {
-    if (isPlaying) {
-      // It's playing, so show the pause button
-      return (
-        <StyledActionButtonPauseDiv>
-          <ActionButton
-            onClick={onClickPlayPause}
-            disabled={disabled}
-            ariaLabel="Pause"
-            iconContent={Pause}
-          />
-        </StyledActionButtonPauseDiv>
-      )
-    }
-    // It's paused, so show the play button
-    return (
-      <StyledActionButtonPlayDiv>
-        <ActionButton
-          onClick={onClickPlayPause}
-          disabled={disabled}
-          ariaLabel="Play"
-          iconContent={PlayArrow}
-        />
-      </StyledActionButtonPlayDiv>
-    )
-  }
-  // Press the button to record
   return (
-    <StyledActionButtonStartRecordingDiv>
-      <ActionButton
-        onClick={startRecording}
-        disabled={disabled}
-        ariaLabel="Record"
-        iconContent={Mic}
-      />
-    </StyledActionButtonStartRecordingDiv>
+    <StyledActionButtonContainerDiv>
+      {isRecording ? (
+        <AudioInputStopRecordingButton
+          disabled={disabled}
+          stopRecording={stopRecording}
+        />
+      ) : (
+        <AudioInputStartRecordingButton
+          disabled={disabled}
+          startRecording={startRecording}
+        />
+      )}
+      {recordingUrlExists && (
+        <AudioInputPlayPauseButton
+          disabled={disabled}
+          isPlaying={isPlaying}
+          onClickPlayPause={onClickPlayPause}
+        />
+      )}
+    </StyledActionButtonContainerDiv>
   )
 }
 
