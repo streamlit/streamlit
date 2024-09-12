@@ -219,26 +219,8 @@ def _get_st_write_from_expr(
     # If tuple, call st.write(*the_tuple). This allows us to add a comma at the end of a
     # statement to turn it into an expression that should be st-written. Ex:
     # "np.random.randn(1000, 2),"
-    if type(node.value) is ast.Tuple:
-        args = node.value.elts
-        st_write = _build_st_write_call(args)
-
-    # st.write all strings.
-    elif type(node.value) is ast.Str:
-        args = [node.value]
-        st_write = _build_st_write_call(args)
-
-    # st.write all variables.
-    elif type(node.value) is ast.Name:
-        args = [node.value]
-        st_write = _build_st_write_call(args)
-
-    # st.write everything else
-    else:
-        args = [node.value]
-        st_write = _build_st_write_call(args)
-
-    return st_write
+    args = node.value.elts if type(node.value) is ast.Tuple else [node.value]
+    return _build_st_write_call(args)
 
 
 def _is_string_constant_node(node) -> bool:
