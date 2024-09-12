@@ -164,7 +164,9 @@ class _MultiPathWatcher:
         allow_nonexistent: bool = False,
     ) -> None:
         """Start watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        folder_path = os.path.abspath(
+            path if os.path.isdir(path) else os.path.dirname(path)
+        )
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -186,7 +188,9 @@ class _MultiPathWatcher:
 
     def stop_watching_path(self, path: str, callback: Callable[[str], None]) -> None:
         """Stop watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        folder_path = os.path.abspath(
+            path if os.path.isdir(path) else os.path.dirname(path)
+        )
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
