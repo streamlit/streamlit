@@ -515,13 +515,11 @@ class ButtonGroupMixin:
             help=help,
         )
 
-        if selection_mode == "multiselect" and len(res.value) > 0:
+        if selection_mode == "multi" and len(res.value) > 0:
             return res.value
 
         return (
-            res.value[0]
-            if selection_mode == "select" and res.value and len(res.value) > 0
-            else None
+            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
         )
 
     # Disable this more generic widget for now

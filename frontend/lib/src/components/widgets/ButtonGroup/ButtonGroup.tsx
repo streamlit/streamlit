@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  forwardRef,
-  memo,
-  ReactElement,
-  Ref,
-  useEffect,
-  useMemo,
-} from "react"
+import React, { forwardRef, memo, ReactElement, Ref, useMemo } from "react"
 
 import { useTheme } from "@emotion/react"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
