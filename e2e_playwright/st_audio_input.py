@@ -33,14 +33,7 @@ def test_fragment():
     st.write("Audio Input in Fragment:", audio_input_from_fragment)
 
 
-@st.experimental_fragment()
-def test_file_fragment():
-    file_uploader_in_fragment = st.file_uploader(label="file uploader")
-    st.write("File uploader in Fragment:", file_uploader_in_fragment)
-
-
 test_fragment()
-test_file_fragment()
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0
