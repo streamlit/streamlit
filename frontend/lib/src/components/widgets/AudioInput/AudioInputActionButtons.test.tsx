@@ -92,6 +92,7 @@ describe("AudioInputActionButton", () => {
       />
     )
 
+    expect(screen.getByLabelText("Record")).toBeInTheDocument()
     expect(screen.getByLabelText("Play")).toBeInTheDocument()
     fireEvent.click(screen.getByLabelText("Play"))
     expect(onClickPlayPause).toHaveBeenCalled()
@@ -111,6 +112,7 @@ describe("AudioInputActionButton", () => {
       />
     )
 
+    expect(screen.getByLabelText("Record")).toBeInTheDocument()
     expect(screen.getByLabelText("Pause")).toBeInTheDocument()
     fireEvent.click(screen.getByLabelText("Pause"))
     expect(onClickPlayPause).toHaveBeenCalled()
