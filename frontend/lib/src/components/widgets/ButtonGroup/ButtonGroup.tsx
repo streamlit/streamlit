@@ -332,7 +332,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           Root: {
             style: {
               flexWrap: "wrap",
-              columnGap: getButtonGroupColumnGap(theme, style),
+              columnGap: getButtonGroupColumnGap(style, theme),
               rowGap: theme.spacing.twoXS,
             },
           },

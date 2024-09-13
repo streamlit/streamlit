@@ -348,6 +348,19 @@ export const StyledSegmentsButton = styled(
     maxHeight: theme.sizes.largeLogoHeight,
     minHeight: theme.sizes.largeLogoHeight,
 
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+
+    "& div": {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+    "& p": {
+      fontSize: theme.fontSizes.sm,
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
     "&:hover": {
       borderColor: theme.colors.primary,
       color: theme.colors.primary,

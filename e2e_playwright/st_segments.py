@@ -41,6 +41,7 @@ with st.echo(code_location="below"):
             "🌇 Images",
             "🎥 Video",
             "📝 Text",
+            "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝",
         ],
         key="segments",
         selection_mode="multi",
