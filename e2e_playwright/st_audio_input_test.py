@@ -137,5 +137,8 @@ def test_audio_input_basic_flow(app: Page):
 
     clear_button.click()
 
+    wait_for_app_run(app)
+    app.get_by_text("Audio Input 1: False").to_be_visible()
+
     expect(audio_input.get_by_role("button", name="Record").first).to_be_visible()
     expect(clock).to_have_text("00:00")
