@@ -274,22 +274,19 @@ export const StyledIconButtonActive = styled(
   }
 })
 
-export const StyledPillsButton = styled(
+const StyledButtonGroupBaseButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     background: theme.colors.bgColor,
     color: theme.colors.text,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    borderRadius: theme.radii.xxxl,
-    padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
     fontWeight: theme.fontWeights.normal,
     height: theme.sizes.largeLogoHeight,
     minHeight: theme.sizes.largeLogoHeight,
     maxWidth: theme.sizes.contentMaxWidth,
-    gap: theme.spacing.xs,
 
     // show pills with long text in single line and use ellipsis for overflow
     whiteSpace: "nowrap",
@@ -300,7 +297,6 @@ export const StyledPillsButton = styled(
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
     },
-
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText20,
       borderColor: theme.colors.fadedText20,
@@ -310,12 +306,21 @@ export const StyledPillsButton = styled(
       textOverflow: "ellipsis",
       overflow: "hidden",
     },
-
     "& p": {
       fontSize: theme.fontSizes.sm,
       textOverflow: "ellipsis",
       overflow: "hidden",
     },
+  }
+})
+
+export const StyledPillsButton = styled(
+  StyledButtonGroupBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => {
+  return {
+    borderRadius: theme.radii.xxxl,
+    padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
+    gap: theme.spacing.xs,
   }
 })
 
@@ -335,43 +340,12 @@ export const StyledPillsButtonActive = styled(
 })
 
 export const StyledSegmentsButton = styled(
-  StyledBaseButton
+  StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    backgroundColor: theme.colors.transparent,
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: theme.radii.none,
-    fontSize: theme.fontSizes.sm,
-    lineHeight: theme.lineHeights.base,
-    maxHeight: theme.sizes.largeLogoHeight,
-    minHeight: theme.sizes.largeLogoHeight,
 
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-
-    "& div": {
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-    "& p": {
-      fontSize: theme.fontSizes.sm,
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-    "&:hover": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-    "&:not(:active)": {
-      boxShadow: "none",
-    },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
-    },
     "&:first-child": {
       borderTopLeftRadius: theme.radii.default,
       borderBottomLeftRadius: theme.radii.default,
