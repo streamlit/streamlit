@@ -228,6 +228,8 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             // Avoid rendering the same element twice. We assume the first one is the one we want
             // because the page is rendered top to bottom, so a valid widget would be rendered
             // correctly and we assume the second one is therefore stale (or throw an error).
+            // Also, our setIn logic pushes stale widgets down in the list of elements, so the
+            // most recent one should always come first.
             if (elementKeySet.has(key)) {
               return null
             }
