@@ -29,8 +29,11 @@ message ButtonGroup {
 
   message Option {
     string content = 1;
+    // when set, this is the content that will be displayed when the option is selected
     optional string selected_content = 2;
+    // when set, this is the icon that will be displayed next to the option
     optional string content_icon = 3;
+    // when set, this is the icon that will be displayed next to the option when then option is selected
     optional string selected_content_icon = 4;
   }
 

@@ -49,6 +49,7 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
+from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -201,33 +202,33 @@ class ButtonGroupMixin:
         self,
         options: Literal["thumbs"] = ...,
         *,
-        key: str | None = None,
+        key: Key | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> Literal[0, 1] | None: ...
     @overload
     def feedback(
         self,
         options: Literal["faces", "stars"] = ...,
         *,
-        key: str | None = None,
+        key: Key | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
     @gather_metrics("feedback")
     def feedback(
         self,
         options: Literal["thumbs", "faces", "stars"] = "thumbs",
         *,
-        key: str | int | None = None,
+        key: Key | None = None,
         disabled: bool = False,
         on_change: WidgetCallback | None = None,
-        args: Any | None = None,
-        kwargs: Any | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
     ) -> int | None:
         """Display a feedback widget.
 
@@ -353,7 +354,7 @@ class ButtonGroupMixin:
         icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
         format_func: Callable[[V], str] | None = None,
-        key: str | int | None = None,
+        key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -366,6 +367,7 @@ class ButtonGroupMixin:
         def _transformed_format_func(
             option: V, icon: str | None = None
         ) -> ButtonGroupProto.Option:
+            validate_icon_or_emoji(icon)
             if format_func is None:
                 return ButtonGroupProto.Option(content=str(option), content_icon=icon)
 
@@ -426,6 +428,7 @@ class ButtonGroupMixin:
         def _transformed_format_func(
             option: V, icon: str | None
         ) -> ButtonGroupProto.Option:
+            validate_icon_or_emoji(icon)
             if format_func is None:
                 return ButtonGroupProto.Option(content=str(option), content_icon=icon)
 

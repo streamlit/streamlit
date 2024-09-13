@@ -226,21 +226,12 @@ export const StyledSecondaryFormSubmitButton = styled(
 
 export const StyledIconButton = styled(
   StyledBaseButton
-)<RequiredBaseButtonProps>(({ size, theme }) => {
-  let minWidth = "12rem"
-  if (size === BaseButtonSize.SMALL) {
-    minWidth = "8rem"
-  } else if (size === BaseButtonSize.LARGE) {
-    minWidth = "20rem"
-  }
-
+)<RequiredBaseButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.transparent,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     flex: "1 1 0",
     padding: 0,
-    maxWidth: minWidth,
-    minWidth: minWidth,
 
     "&:hover": {
       borderColor: theme.colors.primary,
@@ -288,18 +279,36 @@ export const StyledPillsButton = styled(
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
-    fontWeight: 400,
-    maxHeight: theme.sizes.largeLogoHeight,
+    fontWeight: theme.fontWeights.normal,
+    height: theme.sizes.largeLogoHeight,
     minHeight: theme.sizes.largeLogoHeight,
+    maxWidth: theme.sizes.contentMaxWidth,
     gap: theme.spacing.xs,
+
+    // show pills with long text in single line and use ellipsis for overflow
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
 
     "&:hover": {
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
     },
 
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      color: theme.colors.fadedText20,
+      borderColor: theme.colors.fadedText20,
+    },
+
+    "& div": {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+
     "& p": {
       fontSize: theme.fontSizes.sm,
+      textOverflow: "ellipsis",
+      overflow: "hidden",
     },
   }
 })

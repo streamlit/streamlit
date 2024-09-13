@@ -154,7 +154,12 @@ def get_command_matrix(
 
     If the test args is a list like [("foo", ("a", "b")), ("bar", ("c", "d"))],
     this function returns following test matrix:
-    [(st.pills, "foo", ("a", "b")), (_interal_button_group, "bar", ("c", "d"))]
+    [
+        (st.pills, "foo", ("a", "b")),
+        (st.pills, "bar", ("c", "d")),
+        (st._interal_button_group, "foo", ("a", "b")),
+        (st._interal_button_group, "bar", ("c", "d"))
+    ]
 
     The pills and _internal_button_group are wrapped in a lambda to pass default
     arguments that are not shared between them.
@@ -507,7 +512,11 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         with pytest.raises(expected):
             command(["Coffee", "Tea", "Water"], default=defaults)
 
-    @parameterized.expand(get_command_matrix([(None,), (["icon1", "icon2", None],)]))
+    @parameterized.expand(
+        get_command_matrix(
+            [(None,), ([":material/thumb_up:", ":material/thumb_down:", None],)]
+        )
+    )
     def test_format_func_is_applied(
         self,
         command: Callable[..., None],
@@ -557,6 +566,15 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert c.default == []
         assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
         assert [option.content_icon for option in c.options] == ["☕", "🍵", ""]
+
+    @parameterized.expand(
+        get_command_matrix(
+            [("no-icon",), ("",), (":material/foo:",), (":material/thumb_up",)]
+        )
+    )
+    def test_pass_invalid_icons(self, command: Callable[..., None], icon: str | None):
+        with pytest.raises(StreamlitAPIException):
+            command(["Coffee"], icons=[icon])
 
     @parameterized.expand(get_command_matrix([]))
     def test_icon_list_too_small(self, command: Callable[..., None]):
