@@ -196,7 +196,7 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
-    style: Literal["segment", "pills", "borderless"] = "segment",
+    style: Literal["segments", "pills", "borderless"] = "segments",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -509,7 +509,7 @@ class ButtonGroupMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
-            style="segment",
+            style="segments",
             label=label,
             label_visibility=label_visibility,
             help=help,
@@ -535,8 +535,8 @@ class ButtonGroupMixin:
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multiple"] = "single",
         disabled: bool = False,
-        format_func: Callable[[Any], str] | None = None,
-        style: Literal["segment", "pills"] = "segment",
+        format_func: Callable[[V], str] | None = None,
+        style: Literal["segments", "pills"] = "segments",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -600,8 +600,8 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
-        style: Literal["segment", "pills", "borderless"] = "segment",
-        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
+        style: Literal["segments", "pills", "borderless"] = "segments",
+        format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
@@ -636,9 +636,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in ["segment", "pills", "borderless"]:
+        if style not in ["segments", "pills", "borderless"]:
             raise StreamlitAPIException(
-                "The style argument must be one of ['segment', 'pills', 'borderless']. "
+                "The style argument must be one of ['segments', 'pills', 'borderless']. "
                 f"The argument passed was '{style}'."
             )
 

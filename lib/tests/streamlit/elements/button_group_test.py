@@ -772,6 +772,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 st._main, ["a", "b", "c"], style="foo"
             )
         assert (
-            "The style argument must be one of ['segment', 'pills', 'borderless']. "
+            "The style argument must be one of ['segments', 'pills', 'borderless']. "
             "The argument passed was 'foo'." == str(exception.value)
         )
