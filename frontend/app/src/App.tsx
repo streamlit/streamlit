@@ -900,15 +900,6 @@ export class App extends PureComponent<Props, State> {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
-
-        const customComponentCounter =
-          this.metricsMgr.getAndResetCustomComponentCounter()
-        Object.entries(customComponentCounter).forEach(([name, count]) => {
-          this.metricsMgr.enqueue("customComponentStats", {
-            name,
-            count,
-          })
-        })
       }
 
       return {
@@ -1337,9 +1328,6 @@ export class App extends PureComponent<Props, State> {
       metadataMsg
     )
 
-    // Update metrics
-    this.metricsMgr.handleDeltaMessage(deltaMsg)
-
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
 
@@ -1416,8 +1404,6 @@ export class App extends PureComponent<Props, State> {
       // Don't queue up multiple rerunScript requests
       return
     }
-
-    this.metricsMgr.enqueue("rerunScript")
 
     this.setState({ scriptRunState: ScriptRunState.RERUN_REQUESTED })
 
@@ -1617,7 +1603,6 @@ export class App extends PureComponent<Props, State> {
   clearCache = (): void => {
     this.closeDialog()
     if (this.isServerConnected()) {
-      this.metricsMgr.enqueue("clearCache")
       const backMsg = new BackMsg({ clearCache: true })
       backMsg.type = "clearCache"
       this.sendBackMsg(backMsg)
