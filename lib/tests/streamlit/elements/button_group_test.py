@@ -208,8 +208,10 @@ def get_command_matrix(
     [
         (st.pills, "foo", ("a", "b")),
         (st.pills, "bar", ("c", "d")),
-        (st._interal_button_group, "foo", ("a", "b")),
-        (st._interal_button_group, "bar", ("c", "d"))
+        (st.segments, "foo", ("a", "b")),
+        (st.segments, "bar", ("c", "d")),
+        (_interal_button_group, "foo", ("a", "b")),
+        (_interal_button_group, "bar", ("c", "d")),
     ]
 
     The pills and _internal_button_group are wrapped in a lambda to pass default
@@ -221,6 +223,7 @@ def get_command_matrix(
         lambda *args, **kwargs: ButtonGroupMixin._pills(
             st._main, "label", *args, **kwargs
         ),
+        lambda *args, **kwargs: st.segments("label", *args, **kwargs),
         lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
             st._main, *args, **kwargs
         ),
