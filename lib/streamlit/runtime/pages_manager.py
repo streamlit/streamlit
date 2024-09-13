@@ -73,6 +73,10 @@ class PagesStrategyV1:
         if setup_watcher:
             PagesStrategyV1.watch_pages_dir(pages_manager)
 
+    @property
+    def initial_active_script_hash(self) -> PageHash:
+        return self.pages_manager.current_page_script_hash
+
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> PageInfo | None:
@@ -147,6 +151,10 @@ class PagesStrategyV2:
             "page_script_hash": page_script_hash
             or self.pages_manager.main_script_hash,  # Default Hash
         }
+
+    @property
+    def initial_active_script_hash(self) -> PageHash:
+        return self.pages_manager.main_script_hash
 
     def get_page_script(self, fallback_page_hash: PageHash) -> PageInfo | None:
         if self._pages is None:
@@ -250,6 +258,10 @@ class PagesManager:
     @property
     def intended_page_script_hash(self) -> PageHash | None:
         return self._intended_page_script_hash
+
+    @property
+    def initial_active_script_hash(self) -> PageHash:
+        return self.pages_strategy.initial_active_script_hash
 
     @property
     def mpa_version(self) -> int:
