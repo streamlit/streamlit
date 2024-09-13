@@ -260,7 +260,14 @@ const AudioInput: React.FC<Props> = ({
       // Update the record button to show the user that they can stop recording
       forceRerender()
     })
-  }, [activeAudioDeviceId, recordPlugin, theme, wavesurfer, handleClear])
+  }, [
+    activeAudioDeviceId,
+    recordPlugin,
+    theme,
+    wavesurfer,
+    handleClear,
+    recordingUrl,
+  ])
 
   const stopRecording = useCallback(() => {
     if (!recordPlugin) return
