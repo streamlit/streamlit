@@ -248,7 +248,7 @@ class PagesManager:
         return self._main_script_hash
 
     @property
-    def current_page_script_hash(self) -> PageHash | None:
+    def current_page_script_hash(self) -> PageHash:
         return self._current_page_script_hash
 
     @property
