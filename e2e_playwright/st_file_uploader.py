@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit import runtime
 
 single_file = st.file_uploader("Drop a file:", type=["txt"], key="single")
 if single_file is None:
@@ -21,12 +20,7 @@ if single_file is None:
 else:
     st.text(single_file.read())
 
-# Here and throughout this file, we use `if runtime.is_running():`
-# since we also run e2e python files in "bare Python mode" as part of our
-# Python tests, and this doesn't work in that circumstance
-# st.session_state can only be accessed while running with streamlit
-if runtime.exists():
-    st.write(repr(st.session_state.single) == repr(single_file))
+st.write(repr(st.session_state.single) == repr(single_file))
 
 disabled = st.file_uploader(
     "Can't drop a file:", type=["txt"], key="disabled", disabled=True
@@ -36,8 +30,7 @@ if disabled is None:
 else:
     st.text(disabled.read())
 
-if runtime.exists():
-    st.write(repr(st.session_state.disabled) == repr(disabled))
+st.write(repr(st.session_state.disabled) == repr(disabled))
 
 multiple_files = st.file_uploader(
     "Drop multiple files:",
@@ -51,8 +44,7 @@ else:
     files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))
 
-if runtime.exists():
-    st.write(repr(st.session_state.multiple) == repr(multiple_files))
+st.write(repr(st.session_state.multiple) == repr(multiple_files))
 
 with st.form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])
@@ -74,8 +66,7 @@ if hidden_label is None:
 else:
     st.text(hidden_label.read())
 
-if runtime.exists():
-    st.write(repr(st.session_state.hidden_label) == repr(hidden_label))
+st.write(repr(st.session_state.hidden_label) == repr(hidden_label))
 
 collapsed_label = st.file_uploader(
     "Collapsed label:",
@@ -88,21 +79,35 @@ if collapsed_label is None:
 else:
     st.text(collapsed_label.read())
 
-if runtime.exists():
-    st.write(repr(st.session_state.collapsed_label) == repr(collapsed_label))
+st.write(repr(st.session_state.collapsed_label) == repr(collapsed_label))
 
-if runtime.exists():
-    if not st.session_state.get("counter"):
-        st.session_state["counter"] = 0
+if not st.session_state.get("counter"):
+    st.session_state["counter"] = 0
 
-    def file_uploader_on_change():
-        st.session_state.counter += 1
 
-    st.file_uploader(
-        "Drop a file:",
-        type=["txt"],
-        key="on_change_file_uploader_key",
-        on_change=file_uploader_on_change,
-    )
+def file_uploader_on_change():
+    st.session_state.counter += 1
 
-    st.text(st.session_state.counter)
+
+st.file_uploader(
+    "Drop a file:",
+    type=["txt"],
+    key="on_change_file_uploader_key",
+    on_change=file_uploader_on_change,
+)
+
+st.text(st.session_state.counter)
+
+
+@st.experimental_fragment()
+def test_file_fragment():
+    file_uploader_in_fragment = st.file_uploader(label="file uploader")
+    st.write("File uploader in Fragment:", bool(file_uploader_in_fragment))
+
+
+test_file_fragment()
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
