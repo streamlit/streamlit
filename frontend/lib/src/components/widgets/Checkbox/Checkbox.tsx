@@ -82,7 +82,7 @@ function Checkbox({
 
   return (
     <StyledCheckbox
-      className="row-widget stCheckbox"
+      className="stCheckbox"
       data-testid="stCheckbox"
       width={width}
     >
