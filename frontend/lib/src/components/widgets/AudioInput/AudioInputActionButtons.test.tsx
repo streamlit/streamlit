@@ -21,12 +21,12 @@ import { fireEvent, screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 
-import AudioInputActionButton from "./AudioInputActionButtons"
+import AudioInputActionButtons from "./AudioInputActionButtons"
 
 describe("AudioInputActionButton", () => {
   it("should render without crashing", () => {
     render(
-      <AudioInputActionButton
+      <AudioInputActionButtons
         disabled={false}
         isRecording={false}
         isPlaying={false}
@@ -43,7 +43,7 @@ describe("AudioInputActionButton", () => {
   it("should start recording when recording button is pressed", () => {
     const startRecording = jest.fn()
     render(
-      <AudioInputActionButton
+      <AudioInputActionButtons
         disabled={false}
         isRecording={false}
         isPlaying={false}
@@ -62,7 +62,7 @@ describe("AudioInputActionButton", () => {
   it("should stop recording when recording button is pressed", () => {
     const stopRecording = jest.fn()
     render(
-      <AudioInputActionButton
+      <AudioInputActionButtons
         disabled={false}
         isRecording={true}
         isPlaying={false}
@@ -81,7 +81,7 @@ describe("AudioInputActionButton", () => {
   it("should play when play button is pressed", () => {
     const onClickPlayPause = jest.fn()
     render(
-      <AudioInputActionButton
+      <AudioInputActionButtons
         disabled={false}
         isRecording={false}
         isPlaying={false}
@@ -101,7 +101,7 @@ describe("AudioInputActionButton", () => {
   it("should pause when pause button is pressed", () => {
     const onClickPlayPause = jest.fn()
     render(
-      <AudioInputActionButton
+      <AudioInputActionButtons
         disabled={false}
         isRecording={false}
         isPlaying={true}
@@ -122,7 +122,7 @@ describe("AudioInputActionButton", () => {
     it("should not start recording when recording button is pressed", () => {
       const startRecording = jest.fn()
       render(
-        <AudioInputActionButton
+        <AudioInputActionButtons
           disabled={true}
           isRecording={false}
           isPlaying={false}

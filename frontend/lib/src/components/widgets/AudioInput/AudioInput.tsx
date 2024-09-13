@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useEffect, useState } from "react"
+import React, {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
@@ -54,7 +60,7 @@ import {
   WAVEFORM_PADDING,
 } from "./constants"
 import formatTime from "./formatTime"
-import AudioInputActionButton from "./AudioInputActionButtons"
+import AudioInputActionButtons from "./AudioInputActionButtons"
 
 interface Props {
   element: AudioInputProto
@@ -311,7 +317,7 @@ const AudioInput: React.FC<Props> = ({
             />
           )}
         </Toolbar>
-        <AudioInputActionButton
+        <AudioInputActionButtons
           isRecording={isRecording}
           isPlaying={isPlaying}
           recordingUrlExists={Boolean(recordingUrl)}
@@ -339,4 +345,4 @@ const AudioInput: React.FC<Props> = ({
   )
 }
 
-export default AudioInput
+export default memo(AudioInput)
