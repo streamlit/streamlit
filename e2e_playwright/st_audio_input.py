@@ -16,6 +16,7 @@ import streamlit as st
 
 audio1 = st.audio_input(label="Audio Input 1", key="the_audio_input")
 st.audio(audio1)
+st.write("Audio Input 1:", bool(audio1))
 
 
 audio_input_from_form = None
