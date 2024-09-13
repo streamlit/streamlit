@@ -167,6 +167,17 @@ function getButtonKindAndSize(
   return buttonKind
 }
 
+function getButtonGroupColumnGap(
+  style: ButtonGroupProto.Style,
+  theme: EmotionTheme
+): string {
+  return style === ButtonGroupProto.Style.BORDERLESS
+    ? theme.spacing.threeXS
+    : style === ButtonGroupProto.Style.PILLS
+    ? theme.spacing.twoXS
+    : theme.spacing.none
+}
+
 function createOptionChild(
   option: ButtonGroupProto.IOption,
   index: number,
@@ -292,13 +303,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [clickMode, options, selectionVisualization, style, value]
   )
 
-  const columnGap =
-    style === ButtonGroupProto.Style.BORDERLESS
-      ? theme.spacing.threeXS
-      : style === ButtonGroupProto.Style.PILLS
-      ? theme.spacing.twoXS
-      : theme.spacing.none
-
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
       <WidgetLabel
@@ -328,7 +332,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           Root: {
             style: {
               flexWrap: "wrap",
-              columnGap: columnGap,
+              columnGap: getButtonGroupColumnGap(theme, style),
               rowGap: theme.spacing.twoXS,
             },
           },
