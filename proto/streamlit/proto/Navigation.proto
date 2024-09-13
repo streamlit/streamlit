@@ -37,4 +37,6 @@ message Navigation {
     // display navigation in the sidebar
     SIDEBAR = 1;
   }
+
+  bool expanded = 5;
 }

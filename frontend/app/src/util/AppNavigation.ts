@@ -27,6 +27,7 @@ import {
 } from "@streamlit/lib"
 
 interface AppNavigationState {
+  expandSidebarNav: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
@@ -263,6 +264,7 @@ export class StrategyV2 {
         appPages,
         navSections: sections,
         hideSidebarNav: this.hideSidebarNav,
+        expandSidebarNav: navigationMsg.expanded,
         currentPageScriptHash,
       },
       () => {

@@ -155,6 +155,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  expandSidebarNav: boolean
   appPages: IAppPage[]
   navSections: string[]
   // The hash of the current page executing
@@ -293,6 +294,7 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
@@ -1836,6 +1838,7 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       hideTopBar,
       hideSidebarNav,
+      expandSidebarNav,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -1989,6 +1992,7 @@ export class App extends PureComponent<Props, State> {
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                expandSidebarNav={expandSidebarNav}
               />
               {renderedDialog}
             </StyledApp>
