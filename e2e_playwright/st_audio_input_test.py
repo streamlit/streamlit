@@ -93,6 +93,7 @@ def test_audio_input_works_with_fragments(app: Page):
 def test_audio_input_basic_flow(app: Page):
     app.context.grant_permissions(["microphone"])
 
+    app.get_by_text("Audio Input 1: False").to_be_visible()
     audio_input = app.get_by_test_id("stAudioInput").first
 
     expect(
@@ -112,6 +113,9 @@ def test_audio_input_basic_flow(app: Page):
     app.wait_for_timeout(1000)
 
     stop_button.click()
+
+    wait_for_app_run(app)
+    app.get_by_text("Audio Input 1: True").to_be_visible()
 
     play_button = audio_input.get_by_role("button", name="Play").first
 
