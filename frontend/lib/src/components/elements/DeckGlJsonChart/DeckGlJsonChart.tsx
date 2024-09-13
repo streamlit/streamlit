@@ -45,15 +45,17 @@ registerLoaders([CSVLoader, GLTFLoader])
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
-  const { element, height, isFullScreen, width } = props
+  const { element, isFullScreen } = props
   const theme: EmotionTheme = useTheme()
-  const { createTooltip, deck, onViewStateChange, viewState } = useDeckGl({
-    element,
-    isLightTheme: hasLightBackgroundColor(theme),
-    width,
-    height,
-    isFullScreen,
-  })
+
+  const { createTooltip, deck, onViewStateChange, viewState, width, height } =
+    useDeckGl({
+      element,
+      isLightTheme: hasLightBackgroundColor(theme),
+      width: props.width,
+      height: props.height,
+      isFullScreen,
+    })
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -69,12 +71,12 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
       width={width}
-      height={deck.initialViewState.height}
+      height={height}
     >
       <DeckGL
         viewState={viewState}
         onViewStateChange={onViewStateChange}
-        height={deck.initialViewState.height}
+        height={height}
         width={width}
         layers={isInitialized ? deck.layers : EMPTY_LAYERS}
         getTooltip={createTooltip}
@@ -83,7 +85,7 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
         controller
       >
         <StaticMap
-          height={deck.initialViewState.height}
+          height={height}
           width={width}
           mapStyle={
             deck.mapStyle &&

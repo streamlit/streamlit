@@ -27,7 +27,7 @@ def test_pydeck_chart_has_consistent_visuals(
     # The pydeck chart takes a while to load so check that
     # it gets attached with an increased timeout.
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(5, timeout=15000)
+    expect(pydeck_charts).to_have_count(6, timeout=15000)
 
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
@@ -65,6 +65,13 @@ def test_pydeck_chart_has_consistent_visuals(
     assert_snapshot(
         pydeck_charts.nth(4).locator("canvas").nth(1),
         name="st_pydeck_chart-no_overridden_theme",
+        pixel_threshold=1.0,
+    )
+
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+    assert_snapshot(
+        pydeck_charts.nth(5).locator("canvas").nth(1),
+        name="st_pydeck_chart-custom_width_height",
         pixel_threshold=1.0,
     )
 

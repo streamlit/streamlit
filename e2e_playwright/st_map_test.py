@@ -25,7 +25,7 @@ def test_st_map_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     maps = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(maps).to_have_count(4)
+    expect(maps).to_have_count(5)
 
     # wait for mapbox to load
     wait_for_app_run(themed_app, 15000)
@@ -55,6 +55,13 @@ def test_st_map_has_consistent_visuals(
     assert_snapshot(
         maps.nth(3).locator("canvas").nth(1),
         name="st_map-map_with_color_and_size_layers",
+        pixel_threshold=1.0,
+    )
+
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+    assert_snapshot(
+        maps.nth(4),
+        name="st_map-width_and_height",
         pixel_threshold=1.0,
     )
 

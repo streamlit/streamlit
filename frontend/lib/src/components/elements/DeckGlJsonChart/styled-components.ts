@@ -19,8 +19,8 @@ import styled from "@emotion/styled"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 export interface StyledDeckGlChartProps {
-  width: number
-  height: number
+  width: number | string
+  height: number | string
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
