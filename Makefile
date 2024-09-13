@@ -138,7 +138,6 @@ pytest:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
@@ -148,7 +147,6 @@ pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)

@@ -33,6 +33,7 @@ DEFAULT_FOLDER_BLACKLIST = [
     "**/site-packages",
     "**/venv",
     "**/virtualenv",
+    "**/htmlcov",
 ]
 
 

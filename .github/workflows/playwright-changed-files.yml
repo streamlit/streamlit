@@ -74,10 +74,16 @@ jobs:
         run: |
           cd e2e_playwright;
           rm -rf ./test-results;
-          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --full-page-screenshot --tracing retain-on-failure --output ./test-results/ -n auto --durations=5 -r aR -v
+          pytest ${{ steps.changed-files.outputs.all_changed_files }} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --full-page-screenshot --tracing retain-on-failure --output ./test-results/ --cov=streamlit --cov-report=html -n auto --durations=5 -r aR -v
       - name: Upload failed test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright_test_results
           path: e2e_playwright/test-results
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_report_e2e
+          path: e2e_playwright/htmlcov
+          retention-days: 7
