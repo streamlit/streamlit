@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import time
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -57,7 +56,7 @@ def test_audio_input_works_in_forms(app: Page):
 
     form_audio_input = app.get_by_test_id("stAudioInput").nth(1)
     form_audio_input.get_by_role("button", name="Record").click()
-    time.sleep(1)
+    app.wait_for_timeout(1000)
     form_audio_input.get_by_role("button", name="Stop recording").click()
 
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
@@ -77,7 +76,7 @@ def test_audio_input_works_with_fragments(app: Page):
 
     fragment_audio_input = app.get_by_test_id("stAudioInput").nth(2)
     fragment_audio_input.get_by_role("button", name="Record").click()
-    time.sleep(1)
+    app.wait_for_timeout(1000)
     fragment_audio_input.get_by_role("button", name="Stop recording").click()
     wait_for_app_run(app)
 
@@ -110,7 +109,7 @@ def test_audio_input_basic_flow(app: Page):
     stop_button = audio_input.get_by_role("button", name="Stop recording").first
     expect(stop_button).to_be_visible()
 
-    time.sleep(2)
+    app.wait_for_timeout(1000)
 
     stop_button.click()
 
