@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo } from "react"
 
 import { Mic } from "@emotion-icons/material-outlined"
 import { Pause, PlayArrow, StopCircle } from "@emotion-icons/material-rounded"
@@ -133,7 +133,7 @@ export const AudioInputStartRecordingButton: React.FC<
   </StyledActionButtonStartRecordingDiv>
 )
 
-const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
+const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({
   disabled,
   isRecording,
   isPlaying,
@@ -166,4 +166,4 @@ const AudioInputActionButton: React.FC<AudioInputActionButtonProps> = ({
   )
 }
 
-export default AudioInputActionButton
+export default memo(AudioInputActionButtons)
