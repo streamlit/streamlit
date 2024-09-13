@@ -35,7 +35,7 @@ import {
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { blend } from "@streamlit/lib/src/theme/utils"
 
-import { uploadFiles } from "./uploadFiles"
+import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
 import {
   StyledAudioInputContainerDiv,
   StyledWaveformContainerDiv,
