@@ -69,7 +69,7 @@ def test_audio_input_works_in_forms(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
-def test_feedback_works_with_fragments(app: Page):
+def test_audio_input_works_with_fragments(app: Page):
     app.context.grant_permissions(["microphone"])
 
     expect(app.get_by_text("Runs: 1")).to_be_visible()
