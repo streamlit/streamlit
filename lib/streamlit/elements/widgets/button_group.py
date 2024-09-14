@@ -234,36 +234,6 @@ def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode):
         )
 
 
-def _transformed_format_func(
-    option: V,
-    icon: str | None = None,
-    format_func: Callable[[V], str] | None = None,
-) -> Callable[[V, str | None], ButtonGroupProto.Option]:
-    if format_func is None:
-        return ButtonGroupProto.Option(content=str(option), content_icon=icon)
-
-    transformed = format_func(option)
-    return ButtonGroupProto.Option(
-        content=transformed,
-        content_icon=icon,
-    )
-
-
-def _transformed_format_func(
-    option: V,
-    icon: str | None = None,
-    format_func: Callable[[V], str] | None = None,
-) -> Callable[[V, str | None], ButtonGroupProto.Option]:
-    if format_func is None:
-        return ButtonGroupProto.Option(content=str(option), content_icon=icon)
-
-    transformed = format_func(option)
-    return ButtonGroupProto.Option(
-        content=transformed,
-        content_icon=icon,
-    )
-
-
 class ButtonGroupMixin:
     # These overloads are not documented in the docstring, at least not at this time, on
     # the theory that most people won't know what it means. And the Literals here are a
@@ -436,8 +406,8 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
     ):
         return self._internal_button_group(
-            label,
             options,
+            label=label,
             selection_mode=selection_mode,
             default=default,
             format_func=format_func,
@@ -470,8 +440,8 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
     ):
         return self._internal_button_group(
-            label,
             options,
+            label=label,
             selection_mode=selection_mode,
             icons=icons,
             default=default,
@@ -490,9 +460,9 @@ class ButtonGroupMixin:
     # @gather_metrics("button_group")
     def _internal_button_group(
         self,
-        label: str,
         options: OptionSequence[V],
         *,
+        label: str | None = None,
         selection_mode: Literal["single", "multi"] = "single",
         icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
@@ -544,9 +514,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default_values,
-            format_func=lambda option, icon: _transformed_format_func(
-                option, icon, format_func
-            ),
+            format_func=_transformed_format_func,
             key=key,
             help=help,
             style=style,

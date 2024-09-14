@@ -151,6 +151,7 @@ class RunWarningTest(unittest.TestCase):
                 "scatter_chart",
                 "select_slider",
                 "selectbox",
+                "segments",
                 "slider",
                 "snow",
                 "subheader",
