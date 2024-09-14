@@ -398,7 +398,7 @@ def _logger_message_format() -> str:
     """String format for logging messages. If logger.datetimeFormat is set,
     logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`. See
     Python's documentation for available attributes:
-    https://docs.python.org/2.6/library/logging.html#formatter-objects
+    https://docs.python.org/3/library/logging.html#formatter-objects
 
     Default: "%(asctime)s %(message)s"
     """
