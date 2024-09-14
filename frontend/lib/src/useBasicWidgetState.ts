@@ -33,16 +33,15 @@ export type ValueWSource<T> = {
   value: T
 } & Source
 
-// Interface for a proto that has a .value, .setValue, and .formId
-interface ValueElementProtoInterface<T> {
-  value?: T
+// Interface for a proto that has a .setValue, and .formId
+interface ValueElementProtoInterface {
   setValue: boolean
   formId: string
 }
 
-export interface UseValueWSourceArgs<
+export interface UseBasicWidgetStateArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface<T> // Proto for this widget.
+  P extends ValueElementProtoInterface // Proto for this widget.
 > {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -66,7 +65,7 @@ export interface UseValueWSourceArgs<
  */
 export function useBasicWidgetState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface<T> // Proto for this widget.
+  P extends ValueElementProtoInterface // Proto for this widget.
 >({
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
@@ -77,7 +76,7 @@ export function useBasicWidgetState<
   element,
   widgetMgr,
   fragmentId,
-}: UseValueWSourceArgs<T, P>): [
+}: UseBasicWidgetStateArgs<T, P>): [
   T,
   Dispatch<SetStateAction<ValueWSource<T> | null>>
 ] {
