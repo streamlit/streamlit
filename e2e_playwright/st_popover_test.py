@@ -41,6 +41,7 @@ def test_popover_container_rendering(
     """Test that the popover container is correctly rendered via screenshot matching."""
     # Get the widgets popover container:
     popover_element = themed_app.get_by_test_id("stPopover").nth(3)
+
     # Click the button to open it:
     popover_element.locator("button").click()
 
