@@ -24,7 +24,7 @@ graphviz==0.20.3
 greenlet==3.0.3
 hypothesis==6.112.1
 identify==2.6.0
-idna==3.8
+idna==3.9
 importlib_metadata==8.5.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
@@ -44,7 +44,7 @@ more-itertools==10.5.0
 mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
-narwhals==1.7.0
+narwhals==1.8.0
 nh3==0.2.18
 nodeenv==1.9.1
 numpy==1.26.4
@@ -54,7 +54,7 @@ parameterized==0.9.0
 pillow==10.4.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
-platformdirs==4.3.2
+platformdirs==4.3.3
 playwright==1.44.0
 plotly==5.24.1
 pluggy==1.5.0
@@ -103,16 +103,16 @@ types-cachetools==5.5.0.20240820
 types-click==7.1.8
 types-protobuf==5.27.0.20240907
 types-pytz==2024.2.0.20240913
-types-requests==2.32.0.20240907
+types-requests==2.32.0.20240914
 types-setuptools==74.1.0.20240907
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.3
-uv==0.4.9
+uv==0.4.10
 vega-datasets==0.9.0
 virtualenv==20.26.4
 watchdog==5.0.2
 wheel==0.44.0
-zipp==3.20.1
+zipp==3.20.2
