@@ -234,6 +234,36 @@ def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode):
         )
 
 
+def _transformed_format_func(
+    option: V,
+    icon: str | None = None,
+    format_func: Callable[[V], str] | None = None,
+) -> Callable[[V, str | None], ButtonGroupProto.Option]:
+    if format_func is None:
+        return ButtonGroupProto.Option(content=str(option), content_icon=icon)
+
+    transformed = format_func(option)
+    return ButtonGroupProto.Option(
+        content=transformed,
+        content_icon=icon,
+    )
+
+
+def _transformed_format_func(
+    option: V,
+    icon: str | None = None,
+    format_func: Callable[[V], str] | None = None,
+) -> Callable[[V, str | None], ButtonGroupProto.Option]:
+    if format_func is None:
+        return ButtonGroupProto.Option(content=str(option), content_icon=icon)
+
+    transformed = format_func(option)
+    return ButtonGroupProto.Option(
+        content=transformed,
+        content_icon=icon,
+    )
+
+
 class ButtonGroupMixin:
     # These overloads are not documented in the docstring, at least not at this time, on
     # the theory that most people won't know what it means. And the Literals here are a
@@ -407,30 +437,6 @@ class ButtonGroupMixin:
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
-        def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
-            """If option starts with a material icon or an emoji, we extract it to send
-            it parsed to the frontend."""
-            transformed = format_func(option) if format_func else str(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    # we only want to extract material icons because we treat them
-                    # differently than emojis visually
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
-            return ButtonGroupProto.Option(
-                content=transformed,
-                content_icon=icon,
-            )
-
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
@@ -443,7 +449,9 @@ class ButtonGroupMixin:
             default=default_values,
             selection_mode=selection_mode,
             disabled=disabled,
-            format_func=_transformed_format_func,
+            format_func=lambda option, icon: _transformed_format_func(
+                option, icon, format_func
+            ),
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
@@ -480,18 +488,6 @@ class ButtonGroupMixin:
     ):
         maybe_raise_label_warnings(label, label_visibility)
 
-        def _transformed_format_func(
-            option: V, icon: str | None = None
-        ) -> ButtonGroupProto.Option:
-            if format_func is None:
-                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
-
-            transformed = format_func(option)
-            return ButtonGroupProto.Option(
-                content=transformed,
-                content_icon=icon,
-            )
-
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
@@ -503,7 +499,9 @@ class ButtonGroupMixin:
             default=default_values,
             selection_mode=selection_mode,
             disabled=disabled,
-            format_func=_transformed_format_func,
+            format_func=lambda option, icon: _transformed_format_func(
+                option, icon, format_func
+            ),
             serializer=serde.serialize,
             deserializer=serde.deserialize,
             on_change=on_change,
