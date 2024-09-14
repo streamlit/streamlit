@@ -434,39 +434,22 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> list[V] | V | None:
-        maybe_raise_label_warnings(label, label_visibility)
-
-        indexable_options = convert_to_sequence_and_check_comparable(options)
-        default_values = get_default_indices(indexable_options, default)
-
-        serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
-            indexable_options, default_values, selection_mode
-        )
-        res = self._button_group(
-            indexable_options,
-            key=key,
-            default=default_values,
+    ):
+        return self._internal_button_group(
+            label,
+            options,
             selection_mode=selection_mode,
-            disabled=disabled,
-            format_func=lambda option, icon: _transformed_format_func(
-                option, icon, format_func
-            ),
-            serializer=serde.serialize,
-            deserializer=serde.deserialize,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="pills",
             on_change=on_change,
             args=args,
             kwargs=kwargs,
-            style="pills",
-            label=label,
+            disabled=disabled,
             label_visibility=label_visibility,
-            help=help,
         )
-
-        if selection_mode == "multiple":
-            return res.value
-
-        return res.value
 
     @gather_metrics("segments")
     def segments(
@@ -486,57 +469,45 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ):
-        maybe_raise_label_warnings(label, label_visibility)
-
-        indexable_options = convert_to_sequence_and_check_comparable(options)
-        default_values = get_default_indices(indexable_options, default)
-
-        serde = MultiSelectSerde(indexable_options, default_values)
-        res = self._button_group(
-            indexable_options,
-            key=key,
-            icons=icons,
-            default=default_values,
+        return self._internal_button_group(
+            label,
+            options,
             selection_mode=selection_mode,
-            disabled=disabled,
-            format_func=lambda option, icon: _transformed_format_func(
-                option, icon, format_func
-            ),
-            serializer=serde.serialize,
-            deserializer=serde.deserialize,
+            icons=icons,
+            default=default,
+            format_func=format_func,
+            key=key,
+            help=help,
+            style="segments",
             on_change=on_change,
             args=args,
             kwargs=kwargs,
-            style="segments",
-            label=label,
+            disabled=disabled,
             label_visibility=label_visibility,
-            help=help,
         )
 
-        if selection_mode == "multi" and len(res.value) > 0:
-            return res.value
-
-        return (
-            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
-        )
-
-    # Disable this more generic widget for now
+    # Disable this more generic widget for now and use as base function for pills and segments wrapper
     # @gather_metrics("button_group")
-    @gather_metrics("button_group")
     def _internal_button_group(
         self,
+        label: str,
         options: OptionSequence[V],
         *,
-        key: Key | None = None,
+        selection_mode: Literal["single", "multi"] = "single",
+        icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
-        selection_mode: Literal["single", "multiple"] = "single",
-        disabled: bool = False,
         format_func: Callable[[V], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
         style: Literal["segments", "pills"] = "segments",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> list[V] | V | None:
+        maybe_raise_label_warnings(label, label_visibility)
+
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
             it parsed to the frontend."""
@@ -570,23 +541,30 @@ class ButtonGroupMixin:
 
         res = self._button_group(
             indexable_options,
-            key=key,
-            default=default_values,
+            label=label,
             selection_mode=selection_mode,
-            disabled=disabled,
-            format_func=_transformed_format_func,
+            default=default_values,
+            format_func=lambda option, icon: _transformed_format_func(
+                option, icon, format_func
+            ),
+            key=key,
+            help=help,
             style=style,
+            on_change=on_change,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
-            on_change=on_change,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
         )
 
         if selection_mode == "multiple":
             return res.value
 
-        return res.value
+        return (
+            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
+        )
 
     def _button_group(
         self,
