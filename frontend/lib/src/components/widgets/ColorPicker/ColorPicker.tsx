@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { memo, ReactElement, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
-  Source,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
+  useBasicWidgetState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 import BaseColorPicker from "@streamlit/lib/src/components/shared/BaseColorPicker"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
@@ -33,109 +33,75 @@ export interface Props {
   fragmentId?: string
 }
 
-interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: string
+function ColorPicker({
+  disabled,
+  element,
+  widgetMgr,
+  width,
+  fragmentId,
+}: Props): ReactElement {
+  const [value, setValueWSource] = useBasicWidgetState<
+    string,
+    ColorPickerProto
+  >({
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
+
+  const onColorClose = useCallback(
+    (color: string): void => {
+      setValueWSource({ value: color, fromUi: true })
+    },
+    [setValueWSource]
+  )
+
+  return (
+    <BaseColorPicker
+      label={element.label}
+      labelVisibility={labelVisibilityProtoValueToEnum(
+        element.labelVisibility?.value
+      )}
+      help={element.help}
+      onChange={onColorClose}
+      disabled={disabled}
+      width={width}
+      value={value}
+    />
+  )
 }
 
-class ColorPicker extends React.PureComponent<Props, State> {
-  private readonly formClearHelper = new FormClearHelper()
-
-  public state: State = {
-    value: this.initialValue,
-  }
-
-  get initialValue(): string {
-    // If WidgetStateManager knew a value for this widget, initialize to that.
-    // Otherwise, use the default value from the widget protobuf.
-    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
-  }
-
-  public componentDidMount(): void {
-    if (this.props.element.setValue) {
-      this.updateFromProtobuf()
-    } else {
-      this.commitWidgetValue({ fromUi: false })
-    }
-  }
-
-  public componentDidUpdate(): void {
-    this.maybeUpdateFromProtobuf()
-  }
-
-  public componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
-  }
-
-  private maybeUpdateFromProtobuf(): void {
-    const { setValue } = this.props.element
-    if (setValue) {
-      this.updateFromProtobuf()
-    }
-  }
-
-  private updateFromProtobuf(): void {
-    const { value } = this.props.element
-    this.props.element.setValue = false
-    this.setState({ value }, () => {
-      this.commitWidgetValue({ fromUi: false })
-    })
-  }
-
-  /** Commit state.value to the WidgetStateManager. */
-  private commitWidgetValue = (source: Source): void => {
-    const { widgetMgr, element, fragmentId } = this.props
-    widgetMgr.setStringValue(element, this.state.value, source, fragmentId)
-  }
-
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  private onFormCleared = (): void => {
-    this.setState(
-      (_, prevProps) => {
-        return { value: prevProps.element.default }
-      },
-      () => this.commitWidgetValue({ fromUi: true })
-    )
-  }
-
-  private onColorClose = (color: string): void => {
-    this.setState({ value: color }, () =>
-      this.commitWidgetValue({ fromUi: true })
-    )
-  }
-
-  public render(): React.ReactNode {
-    const { element, width, disabled, widgetMgr } = this.props
-    const { value } = this.state
-
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      this.onFormCleared
-    )
-
-    return (
-      <BaseColorPicker
-        label={element.label}
-        labelVisibility={labelVisibilityProtoValueToEnum(
-          element.labelVisibility?.value
-        )}
-        help={element.help}
-        onChange={this.onColorClose}
-        disabled={disabled}
-        width={width}
-        value={value}
-      />
-    )
-  }
+function getStateFromWidgetMgr(
+  widgetMgr: WidgetStateManager,
+  element: ColorPickerProto
+): string | undefined {
+  return widgetMgr.getStringValue(element)
 }
 
-export default ColorPicker
+function getDefaultStateFromProto(element: ColorPickerProto): string {
+  return element.default
+}
+
+function getCurrStateFromProto(element: ColorPickerProto): string {
+  return element.value
+}
+
+function updateWidgetMgrState(
+  element: ColorPickerProto,
+  widgetMgr: WidgetStateManager,
+  vws: ValueWSource<string>,
+  fragmentId?: string
+): void {
+  widgetMgr.setStringValue(
+    element,
+    vws.value,
+    { fromUi: vws.fromUi },
+    fragmentId
+  )
+}
+
+export default memo(ColorPicker)
