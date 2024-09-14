@@ -80,7 +80,11 @@ function useTableSizer(
       (element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0) // Trailing row
   )
   // The available width should be at least the minimum table width
-  // to prevent "maximum update depth exceeded" error.
+  // to prevent "maximum update depth exceeded" error. The reason
+  // is that the container width can be -1 in some edge cases
+  // caused by the resize observer in the Block component.
+  // This can trigger the "maximum update depth exceeded" error
+  // within the grid component.
   const availableWidth = Math.max(containerWidth, MIN_TABLE_WIDTH)
 
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
