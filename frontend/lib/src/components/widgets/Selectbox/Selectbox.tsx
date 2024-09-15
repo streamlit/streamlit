@@ -36,7 +36,7 @@ export interface Props {
   fragmentId?: string
 }
 
-function Selectbox({
+export function Selectbox({
   disabled,
   element,
   widgetMgr,
