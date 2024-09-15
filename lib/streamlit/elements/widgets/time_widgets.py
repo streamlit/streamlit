@@ -457,13 +457,13 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
+            page=ctx.active_script_hash if ctx else None,
+            form_id=current_form_id(self.dg),
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
             key=key,
             help=help,
             step=step,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
         del value
 
@@ -732,6 +732,8 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
+            page=ctx.active_script_hash if ctx else None,
+            form_id=current_form_id(self.dg),
             label=label,
             value=parsed,
             min_value=parsed_min_date,
@@ -739,8 +741,6 @@ class TimeWidgetsMixin:
             key=key,
             help=help,
             format=format,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(

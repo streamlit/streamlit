@@ -158,6 +158,8 @@ def _compute_element_id(
 
 def compute_and_register_element_id(
     element_type: str,
+    *,
+    page: str | None,
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
@@ -176,7 +178,7 @@ def compute_and_register_element_id(
     key exists at the same time. If there are duplicated IDs or keys, an error
     is raised.
     """
-    element_id = _compute_element_id(element_type, user_key, **kwargs)
+    element_id = _compute_element_id(element_type, user_key, **{"page": page, **kwargs})
     _register_element_id(element_type, element_id)
     return element_id
 

@@ -274,6 +274,8 @@ class MultiSelectMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
+            page=ctx.active_script_hash if ctx else None,
+            form_id=form_id,
             label=label,
             options=formatted_options,
             default=default_values,
@@ -281,8 +283,6 @@ class MultiSelectMixin:
             help=help,
             max_selections=max_selections,
             placeholder=placeholder,
-            form_id=form_id,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         proto = MultiSelectProto()

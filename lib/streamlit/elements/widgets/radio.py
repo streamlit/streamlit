@@ -315,6 +315,8 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
+            page=ctx.active_script_hash if ctx else None,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
@@ -322,8 +324,6 @@ class RadioMixin:
             help=help,
             horizontal=horizontal,
             captions=captions,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:

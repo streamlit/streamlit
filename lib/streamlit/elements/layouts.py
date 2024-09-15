@@ -28,6 +28,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -162,8 +163,13 @@ class LayoutsMixin:
                 block_proto.vertical.border = True
 
         if key:
+            ctx = get_script_run_ctx()
             block_proto.id = compute_and_register_element_id(
-                "container", user_key=key, height=height, border=border
+                "container",
+                user_key=key,
+                page=ctx.active_script_hash if ctx else None,
+                height=height,
+                border=border,
             )
 
         return self.dg._block(block_proto)

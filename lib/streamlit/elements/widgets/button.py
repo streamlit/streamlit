@@ -673,15 +673,14 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
+            page=ctx.active_script_hash if ctx else None,
             label=label,
             icon=icon,
             file_name=file_name,
             mime=mime,
-            key=key,
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -856,14 +855,13 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "button",
             user_key=key,
+            page=ctx.active_script_hash if ctx else None,
             label=label,
             icon=icon,
-            key=key,
             help=help,
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except
