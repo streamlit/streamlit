@@ -56,19 +56,6 @@ export interface Props {
   fragmentId?: string
 }
 
-interface State {
-  /**
-   * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
-   */
-  dirty: boolean
-
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: string | null
-}
-
 export function TextInput({
   disabled,
   element,
