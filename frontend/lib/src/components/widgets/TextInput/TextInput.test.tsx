@@ -17,7 +17,7 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { fireEvent, screen, within, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -293,7 +293,7 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -305,8 +305,10 @@ describe("TextInput widget", () => {
     // Change the widget value
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
-    // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    await act(() => {
+      // "Submit" the form
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)
