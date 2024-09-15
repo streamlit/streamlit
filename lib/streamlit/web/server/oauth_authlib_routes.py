@@ -82,13 +82,28 @@ class LogoutHandler(tornado.web.RequestHandler):
 class AuthlibCallbackHandler(tornado.web.RequestHandler):
     async def get(self):
         state_code_from_url = self.get_argument("state")
-
         current_cache_keys = list(auth_cache.get_dict().keys())
         state_provider_mapping = {}
         for key in current_cache_keys:
             _, _, provider, code = key.split("_")
             state_provider_mapping[code] = provider
         provider = state_provider_mapping.get(state_code_from_url, None)
+
+        error = self.get_argument("error", None)
+
+        if error:
+            dict_for_cookie = {
+                "provider": provider,
+                "error": error,
+                "email": None,
+            }
+            self.set_signed_cookie(
+                "_streamlit_uzer",
+                json.dumps(dict_for_cookie),
+            )
+
+            self.redirect("/")
+            return
 
         client, _ = create_oauth_client(provider)
         token = client.authorize_access_token(self)
