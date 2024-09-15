@@ -168,7 +168,7 @@ class FileWatcherTest(unittest.TestCase):
 
         self.assertTrue(watching_dir)
         mock_event_watcher.assert_called_with(
-            "some/dir/path",
+            "some/dir/path/",
             on_file_changed,
             glob_pattern="*.py",
             allow_nonexistent=True,

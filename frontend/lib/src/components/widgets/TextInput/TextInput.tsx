@@ -111,7 +111,11 @@ export function TextInput({
 
   const theme = useTheme()
   const [id] = useState(() => uniqueId("text_input_"))
-  const { placeholder } = element
+  const { placeholder, formId } = element
+
+  // Show "Please enter" instructions if in a form & allowed, or not in form
+  const allowSubmitOnEnter =
+    widgetMgr.allowFormSubmitOnEnter(formId) || !isInForm({ formId })
 
   const onBlur = useCallback((): void => {
     if (dirty) {
@@ -156,7 +160,7 @@ export function TextInput({
         setValueWSource({ value: uiValue, fromUi: true })
       }
 
-      if (isInForm(element)) {
+      if (widgetMgr.allowFormSubmitOnEnter(element.formId)) {
         widgetMgr.submitForm(element.formId, fragmentId)
       }
     },
@@ -238,6 +242,7 @@ export function TextInput({
           value={uiValue ?? ""}
           maxLength={element.maxChars}
           inForm={isInForm({ formId: element.formId })}
+          allowSubmitOnEnter={allowSubmitOnEnter}
         />
       )}
     </StyledTextInput>

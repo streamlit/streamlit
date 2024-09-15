@@ -792,7 +792,6 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
             fragment_ids_this_run=["my_fragment_id"],
-            clear_forward_msg_queue=False,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -800,32 +799,12 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         assert len(sent_messages) == 2  # NewApp and SessionState messages
-        session._clear_queue.assert_not_called()
+        session._clear_queue.assert_called_once()
 
         new_session_msg = sent_messages[0].new_session
         assert new_session_msg.fragment_ids_this_run == ["my_fragment_id"]
 
         add_script_run_ctx(ctx=orig_ctx)
-
-    async def test_clears_forward_msg_queue_by_default(self):
-        session = _create_test_session(asyncio.get_running_loop())
-
-        mock_scriptrunner = MagicMock(spec=ScriptRunner)
-        session._scriptrunner = mock_scriptrunner
-        session._clear_queue = MagicMock()
-
-        # Send a mock SCRIPT_STARTED event.
-        session._on_scriptrunner_event(
-            sender=mock_scriptrunner,
-            event=ScriptRunnerEvent.SCRIPT_STARTED,
-            page_script_hash="",
-            fragment_ids_this_run=["my_fragment_id"],
-        )
-
-        # Yield to let the AppSession's callbacks run.
-        await asyncio.sleep(0)
-
-        session._clear_queue.assert_called_once()
 
     async def test_updates_page_script_hash_in_client_state_on_script_start(self):
         session = _create_test_session(asyncio.get_running_loop())
@@ -923,9 +902,8 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda retain_lifecycle_msgs: forward_msg_queue_events.append(
-                CLEAR_QUEUE
-            )
+            side_effect=lambda retain_lifecycle_msgs,
+            fragment_ids_this_run: forward_msg_queue_events.append(CLEAR_QUEUE)
         )
 
         session._browser_queue = mock_queue

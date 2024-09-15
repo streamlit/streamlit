@@ -136,6 +136,12 @@ jobs:
           name: constraints-${{ matrix.python_version }}
           path: ${{ env.CONSTRAINTS_FILE }}
           if-no-files-found: error
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_report_${{ matrix.python_version }}
+          path: lib/htmlcov
+          retention-days: 7
 
   py-updated-constraints:
     needs:
@@ -240,3 +246,9 @@ jobs:
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_report_integration
+          path: lib/htmlcov
+          retention-days: 7

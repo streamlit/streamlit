@@ -204,6 +204,55 @@ describe("NumberInput widget", () => {
     )
   })
 
+  it("shows Input Instructions on dirty state when not in form (by default)", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps()
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to apply"
+    )
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to submit form"
+    )
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .mockReturnValue(false)
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
+  })
+
   describe("FloatData", () => {
     it("changes state on ArrowDown", () => {
       const props = getFloatProps({

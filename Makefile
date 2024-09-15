@@ -138,7 +138,6 @@ pytest:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
@@ -148,7 +147,6 @@ pytest-integration:
 	cd lib; \
 		PYTHONPATH=. \
 		pytest -v \
-			--junitxml=test-reports/pytest/junit.xml \
 			--require-integration \
 			-l tests/ \
 			$(PYTHON_MODULES)
@@ -324,10 +322,10 @@ jsformat:
 jstest:
 	cd frontend; TESTPATH=$(TESTPATH) yarn run test
 
-.PHONY: jscoverage
+.PHONY: jstestcoverage
 # Run JS unit tests and generate a coverage report.
-jscoverage:
-	cd frontend; yarn run test --coverage --watchAll=false
+jstestcoverage:
+	cd frontend; TESTPATH=$(TESTPATH) yarn run testcoverage
 
 .PHONY: playwright
 # Run playwright E2E tests (without custom component tests).

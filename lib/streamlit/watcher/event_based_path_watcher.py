@@ -56,6 +56,15 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 
+def _get_abs_folder_path(path: str) -> str:
+    """Get the absolute folder path for a given path.
+
+    If the path is a directory, return the absolute path.
+    Otherwise, return the absolute path of the parent directory.
+    """
+    return os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path))
+
+
 class EventBasedPathWatcher:
     """Watches a single path on disk using watchdog"""
 
@@ -164,7 +173,7 @@ class _MultiPathWatcher:
         allow_nonexistent: bool = False,
     ) -> None:
         """Start watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        folder_path = _get_abs_folder_path(path)
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -186,7 +195,7 @@ class _MultiPathWatcher:
 
     def stop_watching_path(self, path: str, callback: Callable[[str], None]) -> None:
         """Stop watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        folder_path = _get_abs_folder_path(path)
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
