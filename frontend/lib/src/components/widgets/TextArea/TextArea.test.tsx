@@ -17,7 +17,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -236,7 +236,7 @@ describe("TextArea widget", () => {
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -250,8 +250,10 @@ describe("TextArea widget", () => {
     fireEvent.change(textArea, { target: { value: "TEST" } })
     expect(textArea).toHaveValue("TEST")
 
-    // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    await act(() => {
+      // "Submit" the form
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textArea).toHaveValue(props.element.default)
