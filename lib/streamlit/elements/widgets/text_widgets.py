@@ -283,7 +283,6 @@ class TextWidgetsMixin:
             label=label,
             value=value,
             max_chars=max_chars,
-            key=key,
             type=type,
             help=help,
             autocomplete=autocomplete,
@@ -556,7 +555,6 @@ class TextWidgetsMixin:
             value=value,
             height=height,
             max_chars=max_chars,
-            key=key,
             help=help,
             placeholder=str(placeholder),
         )

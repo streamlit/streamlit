@@ -375,7 +375,6 @@ class SelectSliderMixin:
             label=label,
             options=[str(format_func(option)) for option in opt],
             value=slider_value,
-            key=key,
             help=help,
         )
 

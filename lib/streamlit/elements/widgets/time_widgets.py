@@ -461,7 +461,6 @@ class TimeWidgetsMixin:
             form_id=current_form_id(self.dg),
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
-            key=key,
             help=help,
             step=step,
         )
@@ -738,7 +737,6 @@ class TimeWidgetsMixin:
             value=parsed,
             min_value=parsed_min_date,
             max_value=parsed_max_date,
-            key=key,
             help=help,
             format=format,
         )

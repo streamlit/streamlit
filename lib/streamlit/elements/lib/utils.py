@@ -148,6 +148,8 @@ def _compute_element_id(
     """
     h = hashlib.new("md5", **HASHLIB_KWARGS)
     h.update(element_type.encode("utf-8"))
+    if user_key:
+        h.update(user_key.encode("utf-8"))
     # This will iterate in a consistent order when the provided arguments have
     # consistent order; dicts are always in insertion order.
     for k, v in kwargs.items():

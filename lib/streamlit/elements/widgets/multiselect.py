@@ -279,7 +279,6 @@ class MultiSelectMixin:
             label=label,
             options=formatted_options,
             default=default_values,
-            key=key,
             help=help,
             max_selections=max_selections,
             placeholder=placeholder,

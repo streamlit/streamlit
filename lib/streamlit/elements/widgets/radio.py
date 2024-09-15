@@ -320,7 +320,6 @@ class RadioMixin:
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
-            key=key,
             help=help,
             horizontal=horizontal,
             captions=captions,

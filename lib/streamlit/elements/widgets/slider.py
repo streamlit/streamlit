@@ -553,7 +553,6 @@ class SliderMixin:
             value=value,
             step=step,
             format=format,
-            key=key,
             help=help,
         )
 

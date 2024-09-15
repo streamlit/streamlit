@@ -413,7 +413,6 @@ class FileUploaderMixin:
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
-            key=key,
             help=help,
         )
 

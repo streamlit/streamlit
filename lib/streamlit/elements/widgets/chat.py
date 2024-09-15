@@ -331,7 +331,6 @@ class ChatMixin:
             "chat_input",
             user_key=key,
             page=ctx.active_script_hash if ctx else None,
-            key=key,
             placeholder=placeholder,
             max_chars=max_chars,
         )

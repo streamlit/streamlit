@@ -367,7 +367,6 @@ class NumberInputMixin:
             value=value,
             step=step,
             format=format,
-            key=key,
             help=help,
             placeholder=None if placeholder is None else str(placeholder),
         )
