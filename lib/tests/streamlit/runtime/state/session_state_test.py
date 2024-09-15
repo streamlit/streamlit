@@ -38,6 +38,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX
 from streamlit.runtime.state.session_state import (
+    KeyIdMapper,
     Serialized,
     Value,
     WidgetMetadata,
@@ -656,7 +657,9 @@ class SessionStateMethodTests(unittest.TestCase):
             return_value=mock_ctx,
         ):
             with pytest.raises(StreamlitAPIException) as e:
-                self.session_state._key_id_mapping = {"widget_id": "widget_id"}
+                self.session_state._key_id_mapper.set_key_id_mapping(
+                    {"widget_id": "widget_id"}
+                )
                 self.session_state["widget_id"] = "blah"
             assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
 
@@ -800,8 +803,8 @@ def test_map_set_del(m, key, value1):
 
 
 @given(state=stst.session_state())
-def test_key_wid_lookup_equiv(state):
-    k_wid_map = state._key_id_mapping
+def test_key_wid_lookup_equiv(state: SessionState):
+    k_wid_map = state._key_id_mapper._key_id_mapping
     for k, wid in k_wid_map.items():
         assert state[k] == state[wid]
 
@@ -905,3 +908,69 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length
         assert new_size_4 <= new_size_3
+
+
+class KeyIdMapperTest(unittest.TestCase):
+    def test_key_id_mapping(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+
+    def test_key_id_mapping_errors(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("nonexistent") is None
+        with pytest.raises(KeyError):
+            key_id_mapper.get_key_from_id("nonexistent")
+
+    def test_key_id_mapping_clear(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+        key_id_mapper.clear()
+        assert key_id_mapper.get_id_from_key("key") is None
+        with pytest.raises(KeyError):
+            key_id_mapper.get_key_from_id("wid")
+
+    def test_key_id_mapping_delete(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+        del key_id_mapper["key"]
+        assert key_id_mapper.get_id_from_key("key") is None
+        with pytest.raises(KeyError):
+            key_id_mapper.get_key_from_id("wid")
+
+    def test_key_id_mapping_set_key_id_mapping(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        key_id_mapper["key2"] = "wid2"
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+        assert key_id_mapper.get_id_from_key("key2") == "wid2"
+        assert key_id_mapper.get_key_from_id("wid2") == "key2"
+
+    def test_key_id_mapping_update(self):
+        key_id_mapper = KeyIdMapper()
+        key_id_mapper.set_key_id_mapping({"key": "wid"})
+        assert key_id_mapper.get_id_from_key("key") == "wid"
+        assert key_id_mapper.get_key_from_id("wid") == "key"
+
+        key_id_mapper2 = KeyIdMapper()
+        key_id_mapper2.set_key_id_mapping({"key2": "wid2"})
+        key_id_mapper.update(key_id_mapper2)
+        assert key_id_mapper.get_id_from_key("key2") == "wid2"
+        assert key_id_mapper.get_key_from_id("wid2") == "key2"
+
+        key_id_mapper3 = KeyIdMapper()
+        key_id_mapper3.set_key_id_mapping({"key": "wid3"})
+        key_id_mapper.update(key_id_mapper3)
+        assert key_id_mapper.get_id_from_key("key") == "wid3"
+        assert key_id_mapper.get_key_from_id("wid3") == "key"
+        assert key_id_mapper.get_id_from_key("key2") == "wid2"
+        assert key_id_mapper.get_key_from_id("wid2") == "key2"
+        assert key_id_mapper.get_id_from_key("key") == "wid3"
+        assert key_id_mapper.get_key_from_id("wid") == "key"

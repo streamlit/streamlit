@@ -281,6 +281,50 @@ def _missing_key_error_message(key: str) -> str:
 
 
 @dataclass
+class KeyIdMapper:
+    """A mapping of user-provided keys to widget IDs.
+    It also maps widget IDs to user-provided keys so that this reverse mapping
+    does not have to be computed ad-hoc. All operations should happen via the key.
+    """
+
+    _key_id_mapping: dict[str, str] = field(default_factory=dict)
+    _id_key_mapping: dict[str, str] = field(default_factory=dict)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._key_id_mapping
+
+    def __setitem__(self, key: str, widget_id: Any) -> None:
+        self._key_id_mapping[key] = widget_id
+        self._id_key_mapping[widget_id] = key
+
+    def __delitem__(self, key: str) -> None:
+        self.delete(key)
+
+    def set_key_id_mapping(self, key_id_mapping: dict[str, str]) -> None:
+        self._key_id_mapping = key_id_mapping
+        self._id_key_mapping = {v: k for k, v in key_id_mapping.items()}
+
+    def get_id_from_key(self, key: str, default: Any = None) -> str:
+        return self._key_id_mapping.get(key, default)
+
+    def get_key_from_id(self, widget_id: str) -> str:
+        return self._id_key_mapping[widget_id]
+
+    def update(self, other: KeyIdMapper) -> None:
+        self._key_id_mapping.update(other._key_id_mapping)
+        self._id_key_mapping.update(other._id_key_mapping)
+
+    def clear(self):
+        self._key_id_mapping.clear()
+        self._id_key_mapping.clear()
+
+    def delete(self, key: str):
+        widget_id = self._key_id_mapping[key]
+        del self._key_id_mapping[key]
+        del self._id_key_mapping[widget_id]
+
+
+@dataclass
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -309,9 +353,10 @@ class SessionState:
     _new_widget_state: WStates = field(default_factory=WStates)
 
     # Keys used for widgets will be eagerly converted to the matching widget id
-    _key_id_mapping: dict[str, str] = field(default_factory=dict)
+    _key_id_mapper: KeyIdMapper = field(default_factory=KeyIdMapper)
 
-    # query params are stored in session state because query params will be tied with widget state at one point.
+    # query params are stored in session state because query params will be tied with
+    # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
     def __repr__(self):
@@ -338,7 +383,7 @@ class SessionState:
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
-        self._key_id_mapping.clear()
+        self._key_id_mapper.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -369,8 +414,7 @@ class SessionState:
     @property
     def _reverse_key_wid_map(self) -> dict[str, str]:
         """Return a mapping of widget_id : widget_key."""
-        wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
-        return wid_key_map
+        return self._key_id_mapper._id_key_mapping
 
     def _keys(self) -> set[str]:
         """All keys active in Session State, with widget keys converted
@@ -463,7 +507,7 @@ class SessionState:
         ctx = get_script_run_ctx()
 
         if ctx is not None:
-            widget_id = self._key_id_mapping.get(user_key, None)
+            widget_id = self._key_id_mapper.get_id_from_key(user_key, None)
             widget_ids = ctx.widget_ids_this_run
             form_ids = ctx.form_ids_this_run
 
@@ -487,8 +531,8 @@ class SessionState:
         if key in self._old_state:
             del self._old_state[key]
 
-        if key in self._key_id_mapping:
-            del self._key_id_mapping[key]
+        if key in self._key_id_mapper:
+            self._key_id_mapper.delete(key)
 
         if widget_id in self._new_widget_state:
             del self._new_widget_state[widget_id]
@@ -608,10 +652,10 @@ class SessionState:
         """Turns a value that might be a widget id or a user provided key into
         an appropriate widget id.
         """
-        return self._key_id_mapping.get(k, k)
+        return self._key_id_mapper.get_id_from_key(k, k)
 
     def _set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
-        self._key_id_mapping[user_key] = widget_id
+        self._key_id_mapper[user_key] = widget_id
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: str | None
