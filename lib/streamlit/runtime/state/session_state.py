@@ -282,9 +282,11 @@ def _missing_key_error_message(key: str) -> str:
 
 @dataclass
 class KeyIdMapper:
-    """A mapping of user-provided keys to widget IDs.
-    It also maps widget IDs to user-provided keys so that this reverse mapping
-    does not have to be computed ad-hoc. All operations should happen via the key.
+    """A mapping of user-provided keys to element IDs.
+    It also maps element IDs to user-provided keys so that this reverse mapping
+    does not have to be computed ad-hoc.
+    All built-in dict-operations such as setting and deleting expect the key as the
+    argument, not the element ID.
     """
 
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
@@ -299,6 +301,10 @@ class KeyIdMapper:
 
     def __delitem__(self, key: str) -> None:
         self.delete(key)
+
+    @property
+    def id_key_mapping(self) -> dict[str, str]:
+        return self._id_key_mapping
 
     def set_key_id_mapping(self, key_id_mapping: dict[str, str]) -> None:
         self._key_id_mapping = key_id_mapping
@@ -352,7 +358,7 @@ class SessionState:
     # Widget values from the frontend, usually one changing prompted the script rerun
     _new_widget_state: WStates = field(default_factory=WStates)
 
-    # Keys used for widgets will be eagerly converted to the matching widget id
+    # Keys used for widgets will be eagerly converted to the matching element id
     _key_id_mapper: KeyIdMapper = field(default_factory=KeyIdMapper)
 
     # query params are stored in session state because query params will be tied with
@@ -389,7 +395,7 @@ class SessionState:
     def filtered_state(self) -> dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
 
-        wid_key_map = self._reverse_key_wid_map
+        wid_key_map = self._key_id_mapper.id_key_mapping
 
         state: dict[str, Any] = {}
 
@@ -410,11 +416,6 @@ class SessionState:
                     pass
 
         return state
-
-    @property
-    def _reverse_key_wid_map(self) -> dict[str, str]:
-        """Return a mapping of widget_id : widget_key."""
-        return self._key_id_mapper._id_key_mapping
 
     def _keys(self) -> set[str]:
         """All keys active in Session State, with widget keys converted
@@ -444,7 +445,7 @@ class SessionState:
         return len(self._keys())
 
     def __getitem__(self, key: str) -> Any:
-        wid_key_map = self._reverse_key_wid_map
+        wid_key_map = self._key_id_mapper.id_key_mapping
         widget_id = self._get_widget_id(key)
 
         if widget_id in wid_key_map and widget_id == key:
