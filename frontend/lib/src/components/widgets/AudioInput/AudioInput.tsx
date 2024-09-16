@@ -67,6 +67,7 @@ export interface Props {
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  disabled: boolean
 }
 
 const AudioInput: React.FC<Props> = ({
@@ -74,6 +75,7 @@ const AudioInput: React.FC<Props> = ({
   uploadClient,
   widgetMgr,
   fragmentId,
+  disabled,
 }): ReactElement => {
   const theme = useTheme()
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
@@ -317,7 +319,7 @@ const AudioInput: React.FC<Props> = ({
           startRecording={startRecording}
           stopRecording={stopRecording}
           onClickPlayPause={onClickPlayPause}
-          disabled={element.disabled || hasNoMicPermissions}
+          disabled={disabled || hasNoMicPermissions}
         />
         <StyledWaveformInnerDiv>
           {showPlaceholder && <Placeholder />}
