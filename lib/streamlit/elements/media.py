@@ -567,6 +567,7 @@ def marshall_video(
         proto.autoplay = autoplay
         proto.id = compute_and_register_element_id(
             "video",
+            user_key=None,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -739,6 +740,7 @@ def marshall_audio(
         proto.autoplay = autoplay
         proto.id = compute_and_register_element_id(
             "audio",
+            user_key=None,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,

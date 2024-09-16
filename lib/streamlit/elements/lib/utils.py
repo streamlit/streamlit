@@ -163,8 +163,7 @@ def _compute_element_id(
 def compute_and_register_element_id(
     element_type: str,
     *,
-    user_key: str | None = None,
-    ignore_parameters: bool = False,
+    user_key: str | None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -181,6 +180,19 @@ def compute_and_register_element_id(
     The element ID gets registered to make sure that only one ID and user-specified
     key exists at the same time. If there are duplicated IDs or keys, an error
     is raised.
+
+    Parameters
+    ----------
+    element_type : str
+        The type (command name) of the element to register.
+
+    user_key : str | None
+        The user-specified key for the element. `None` if no key is provided
+        or if the element doesn't support a specifying a key.
+
+    kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
+        The arguments to use to compute the element ID.
+        The arguments must be stable, deterministic values.
     """
     ctx = get_script_run_ctx()
 
