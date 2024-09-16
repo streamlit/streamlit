@@ -691,6 +691,7 @@ export class App extends PureComponent<Props, State> {
     // the dispatchOneOf helper
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
       const whichOne = obj[name]
+      console.log("whichOne", whichOne)
       if (whichOne in funcs) {
         return funcs[whichOne](obj[whichOne])
       }
@@ -782,14 +783,19 @@ export class App extends PureComponent<Props, State> {
 
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice, and prevents extra re-renders.
+    console.log("layout", layout)
+    console.log("this.state.layout", this.state.layout)
     if (layout !== this.state.layout) {
-      this.setState((prevState: State) => ({
-        layout,
-        userSettings: {
-          ...prevState.userSettings,
-          wideMode: layout === PageConfig.Layout.WIDE,
-        },
-      }))
+      this.setState((prevState: State) => {
+        console.log("userSettings", prevState.userSettings)
+        return {
+          layout,
+          userSettings: {
+            ...prevState.userSettings,
+            wideMode: layout === PageConfig.Layout.WIDE,
+          },
+        }
+      })
     }
     if (initialSidebarState !== this.state.initialSidebarState) {
       this.setState(() => ({

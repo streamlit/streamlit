@@ -234,11 +234,12 @@ def navigation(
         for page in nav_sections[section_header]:
             p = msg.navigation.app_pages.add()
             p.page_script_hash = page._script_hash
-            p.page_name = page.title
+            p.page_name = page.title + "blabla"
             p.icon = page.icon
             p.is_default = page._default
             p.section_header = section_header
             p.url_pathname = page.url_path
+            # print(page.url_path)
 
     ctx = get_script_run_ctx()
     if not ctx:
@@ -265,6 +266,9 @@ def navigation(
     if not page_to_return:
         send_page_not_found(ctx)
         page_to_return = default_page
+
+    # msg.page_config_changed.layout = PageConfigProto.CENTERED
+    # print("page layout ", msg.page_config_changed.layout)
 
     # Ordain the page that can be called
     page_to_return._can_be_called = True
