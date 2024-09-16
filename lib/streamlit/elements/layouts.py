@@ -163,10 +163,7 @@ class LayoutsMixin:
 
         if key:
             block_proto.id = compute_and_register_element_id(
-                "container",
-                user_key=key,
-                height=height,
-                border=border,
+                "container", user_key=key, height=height, border=border
             )
 
         return self.dg._block(block_proto)
