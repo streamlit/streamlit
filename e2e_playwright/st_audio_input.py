@@ -38,7 +38,7 @@ test_fragment()
 
 st.audio_input(label="Disabled Audio Input", disabled=True)
 
-st.audio_input(label="Hidden Label Audio Input", label_visibility=False)
+st.audio_input(label="Hidden Label Audio Input", label_visibility="hidden")
 
 
 def on_change():
