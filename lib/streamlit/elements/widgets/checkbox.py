@@ -297,7 +297,6 @@ class CheckboxMixin:
             form_id=current_form_id(self.dg),
             label=label,
             value=bool(value),
-            key=key,
             help=help,
         )
 

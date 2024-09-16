@@ -332,8 +332,10 @@ class WidgetManagerTests(unittest.TestCase):
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
-        id = compute_and_register_element_id("button", label="the label")
-        assert id.startswith(GENERATED_ELEMENT_ID_PREFIX)
+        element_id = compute_and_register_element_id(
+            "button", label="the label", user_key="my_key"
+        )
+        assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
 class ComputeWidgetIdTests(DeltaGeneratorTestCase):
@@ -357,6 +359,8 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
             "on_change",
             "on_click",
             "on_submit",
+            # Key should be provided via `user_key` instead.
+            "key",
         }
 
         kwargs = {
@@ -367,7 +371,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute_and_register_element_id but don't appear in widget
         # signatures.
-        for kwarg in ["form_id", "user_key", "page"]:
+        for kwarg in ["form_id", "user_key"]:
             kwargs[kwarg] = ANY
 
         return kwargs
