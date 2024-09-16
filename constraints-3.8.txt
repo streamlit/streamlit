@@ -26,7 +26,7 @@ graphviz==0.20.3
 greenlet==3.0.3
 hypothesis==6.112.1
 identify==2.6.1
-idna==3.9
+idna==3.10
 importlib_metadata==8.5.0
 importlib_resources==6.4.5
 iniconfig==2.0.0
@@ -47,7 +47,7 @@ more-itertools==10.5.0
 mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
-narwhals==1.8.0
+narwhals==1.8.1
 nh3==0.2.18
 nodeenv==1.9.1
 numpy==1.24.4
