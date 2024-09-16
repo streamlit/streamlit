@@ -673,6 +673,8 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
+            # download_button is allowed to be used in a form.
+            form_id=None,
             label=label,
             icon=icon,
             file_name=file_name,
@@ -851,9 +853,11 @@ class ButtonMixin:
             enable_check_callback_rules=not is_form_submitter,
         )
 
+        form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
             "button",
             user_key=key,
+            form_id=form_id,
             label=label,
             icon=icon,
             help=help,
@@ -882,7 +886,7 @@ class ButtonMixin:
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
-        button_proto.form_id = current_form_id(self.dg)
+        button_proto.form_id = form_id
         button_proto.type = type
         button_proto.use_container_width = use_container_width
         button_proto.disabled = disabled

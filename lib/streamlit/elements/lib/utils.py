@@ -164,7 +164,7 @@ def compute_and_register_element_id(
     element_type: str,
     *,
     user_key: str | None,
-    form_id: str | None = None,
+    form_id: str | None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -193,7 +193,7 @@ def compute_and_register_element_id(
 
     form_id : str | None
         The ID of the form that the element belongs to. `None` or empty string
-        if the element doesn't belong to a form.
+        if the element doesn't belong to a form or doesn't support forms.
 
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.

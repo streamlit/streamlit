@@ -333,7 +333,7 @@ class WidgetManagerTests(unittest.TestCase):
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
         element_id = compute_and_register_element_id(
-            "button", label="the label", user_key="my_key"
+            "button", label="the label", user_key="my_key", form_id=None
         )
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
