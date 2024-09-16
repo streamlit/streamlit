@@ -62,7 +62,7 @@ import {
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
 
-interface Props {
+export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
   widgetMgr: WidgetStateManager
@@ -170,6 +170,10 @@ const AudioInput: React.FC<Props> = ({
     )
 
     rp.on("record-end", blob => {
+      if (recordingUrl) {
+        handleClear()
+      }
+
       const url = URL.createObjectURL(blob)
       setRecordingUrl(url)
 
@@ -257,10 +261,6 @@ const AudioInput: React.FC<Props> = ({
     wavesurfer.setOptions({
       waveColor: theme.colors.primary,
     })
-
-    if (recordingUrl) {
-      handleClear()
-    }
 
     recordPlugin.startRecording({ deviceId: activeAudioDeviceId }).then(() => {
       // Update the record button to show the user that they can stop recording
