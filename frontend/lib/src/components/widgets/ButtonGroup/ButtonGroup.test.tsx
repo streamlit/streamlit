@@ -335,7 +335,7 @@ describe("ButtonGroup widget", () => {
       formId: "form",
       clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
     })
-    props.widgetMgr.setFormClearAndEnterSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntArrayValue")
 

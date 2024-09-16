@@ -178,8 +178,8 @@ def test_form_disabled_submit_on_enter(app: Page):
     expect(form_7.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
 
 
-def test_submit_on_enter_false(app: Page):
-    """Tests that submit on enter does not work when enter_to_submit=False."""
+def test_enter_to_submit_false(app: Page):
+    """Tests that pressing Enter does not submit form when enter_to_submit=False."""
     form_8 = app.get_by_test_id("stForm").nth(7)
     number_input = form_8.get_by_test_id("stNumberInput").locator("input")
     number_input.fill("42")

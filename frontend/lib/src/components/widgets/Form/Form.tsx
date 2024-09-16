@@ -56,10 +56,9 @@ export function Form(props: Props): ReactElement {
     border,
   } = props
 
-  // Tell WidgetStateManager if this form is `clearOnSubmit` so that it can
-  // do the right thing when the form is submitted.
+  // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
-    widgetMgr.setFormClearAndEnterSubmit(formId, clearOnSubmit, enterToSubmit)
+    widgetMgr.setFormSubmitBehaviors(formId, clearOnSubmit, enterToSubmit)
   }, [widgetMgr, formId, clearOnSubmit, enterToSubmit])
 
   // Determine if we need to show the "missing submit button" warning.

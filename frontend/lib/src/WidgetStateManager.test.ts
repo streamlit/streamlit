@@ -780,7 +780,7 @@ describe("Widget State Manager", () => {
       const formId = "mockFormId"
 
       // Create form with enter_to_submit=False
-      widgetMgr.setFormClearAndEnterSubmit(formId, false, false)
+      widgetMgr.setFormSubmitBehaviors(formId, false, false)
 
       widgetMgr.addSubmitButton(
         formId,

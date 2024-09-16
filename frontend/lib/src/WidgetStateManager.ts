@@ -215,10 +215,10 @@ export class WidgetStateManager {
    * Register a Form, and assign its clearOnSubmit & enterToSubmit values.
    * The `Form` element calls this when it's first mounted.
    */
-  public setFormClearAndEnterSubmit(
+  public setFormSubmitBehaviors(
     formId: string,
     clearOnSubmit: boolean,
-    enterToSubmit = true
+    enterToSubmit: boolean = true
   ): void {
     const form = this.getOrCreateFormState(formId)
     form.clearOnSubmit = clearOnSubmit
