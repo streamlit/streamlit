@@ -673,7 +673,6 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             label=label,
             icon=icon,
             file_name=file_name,
@@ -855,7 +854,6 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "button",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             label=label,
             icon=icon,
             help=help,

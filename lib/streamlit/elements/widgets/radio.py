@@ -315,7 +315,6 @@ class RadioMixin:
         element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],

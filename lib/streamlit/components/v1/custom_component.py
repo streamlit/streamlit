@@ -173,7 +173,6 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
-                    page=ctx.active_script_hash if ctx else None,
                     form_id=current_form_id(dg),
                     name=self.name,
                     url=self.url,
@@ -184,7 +183,6 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
-                    page=ctx.active_script_hash if ctx else None,
                     form_id=current_form_id(dg),
                     name=self.name,
                     url=self.url,

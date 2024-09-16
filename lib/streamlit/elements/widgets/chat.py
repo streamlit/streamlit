@@ -330,7 +330,6 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             placeholder=placeholder,
             max_chars=max_chars,
         )

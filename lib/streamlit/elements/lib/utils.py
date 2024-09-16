@@ -90,7 +90,9 @@ def to_key(key: Key | None) -> str | None:
     return None if key is None else str(key)
 
 
-def _register_element_id(element_type: str, element_id: str) -> None:
+def _register_element_id(
+    ctx: ScriptRunContext, element_type: str, element_id: str
+) -> None:
     """Register the element ID and key for the given element.
 
     If the element ID or key is not unique, an error is raised.
@@ -114,8 +116,8 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         If the element ID is not unique.
 
     """
-    ctx = get_script_run_ctx()
-    if ctx is None or not element_id:
+
+    if not element_id:
         return
 
     if user_key := user_key_from_element_id(element_id):
@@ -161,8 +163,8 @@ def _compute_element_id(
 def compute_and_register_element_id(
     element_type: str,
     *,
-    page: str | None,
     user_key: str | None = None,
+    ignore_parameters: bool = False,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -180,8 +182,22 @@ def compute_and_register_element_id(
     key exists at the same time. If there are duplicated IDs or keys, an error
     is raised.
     """
-    element_id = _compute_element_id(element_type, user_key, **{"page": page, **kwargs})
-    _register_element_id(element_type, element_id)
+    ctx = get_script_run_ctx()
+
+    kwargs_to_use = kwargs
+
+    if ctx:
+        active_script_hash = ctx.active_script_hash
+        kwargs_to_use["active_script_hash"] = active_script_hash
+
+    element_id = _compute_element_id(
+        element_type,
+        user_key,
+        **kwargs_to_use,
+    )
+
+    if ctx:
+        _register_element_id(ctx, element_type, element_id)
     return element_id
 
 

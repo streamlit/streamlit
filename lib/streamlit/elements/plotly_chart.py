@@ -506,7 +506,6 @@ class PlotlyMixin:
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             form_id=plotly_chart_proto.form_id,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,

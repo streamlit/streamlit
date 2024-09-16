@@ -399,7 +399,6 @@ class ButtonGroupMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             form_id=form_id,
             options=formatted_options,
             default=default,

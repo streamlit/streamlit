@@ -887,7 +887,6 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             form_id=current_form_id(self.dg),
             data=arrow_bytes,
             width=width,

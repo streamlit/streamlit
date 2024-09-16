@@ -568,7 +568,6 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
-                page=ctx.active_script_hash if ctx else None,
                 form_id=proto.form_id,
                 data=proto.data,
                 width=width,

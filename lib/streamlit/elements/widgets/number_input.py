@@ -359,7 +359,6 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            page=ctx.active_script_hash if ctx else None,
             form_id=current_form_id(self.dg),
             label=label,
             min_value=min_value,
