@@ -69,6 +69,17 @@ def test_audio_input_label_visibility_snapshot(
     )
 
 
+def test_audio_input_callback(app: Page):
+    app.get_by_text("Audio Input Changed: False").to_be_visible()
+
+    audio_input = app.get_by_test_id("stAudioInput").nth(5)
+    audio_input.get_by_role("button", name="Record").click()
+    app.wait_for_timeout(500)
+    audio_input.get_by_role("button", name="Stop recording").click()
+
+    app.get_by_text("Audio Input Changed: True").to_be_visible()
+
+
 @pytest.mark.only_browser("chromium")
 def test_audio_input_works_in_forms(app: Page):
     app.context.grant_permissions(["microphone"])

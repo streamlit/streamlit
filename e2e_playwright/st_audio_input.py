@@ -41,6 +41,17 @@ st.audio_input(label="Disabled Audio Input", disabled=True)
 st.audio_input(label="Hidden Label Audio Input", label_visibility=False)
 
 
+def on_change():
+    st.session_state.audio_input_changed = True
+
+
+st.audio_input(
+    "Testing Callback",
+    on_change=on_change,
+)
+st.write("Audio Input Changed:", "audio_input_changed" in st.session_state)
+
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
