@@ -774,6 +774,31 @@ describe("Widget State Manager", () => {
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
       expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(true)
     })
+
+    it("returns false if form created with enter_to_submit=False", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
+      // Create form with enter_to_submit=False
+      widgetMgr.setFormClearAndEnterSubmit(formId, false, false)
+
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      // @ts-expect-error - Created form should exist, but no allow submit on Enter
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(false)
+    })
   })
 
   describe("Forms don't interfere with each other", () => {

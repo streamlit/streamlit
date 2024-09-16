@@ -147,6 +147,9 @@ class FormState {
   /** True if the form was created with the clear_on_submit flag. */
   public clearOnSubmit = false
 
+  /** True if the form was created with the enter_to_submit flag. */
+  public enterToSubmit = true
+
   /** Signal emitted when the form is cleared. */
   public readonly formCleared = new Signal()
 
@@ -209,11 +212,17 @@ export class WidgetStateManager {
   }
 
   /**
-   * Register a Form, and assign its clearOnSubmit value.
+   * Register a Form, and assign its clearOnSubmit & enterToSubmit values.
    * The `Form` element calls this when it's first mounted.
    */
-  public setFormClearOnSubmit(formId: string, clearOnSubmit: boolean): void {
-    this.getOrCreateFormState(formId).clearOnSubmit = clearOnSubmit
+  public setFormClearAndEnterSubmit(
+    formId: string,
+    clearOnSubmit: boolean,
+    enterToSubmit = true
+  ): void {
+    const form = this.getOrCreateFormState(formId)
+    form.clearOnSubmit = clearOnSubmit
+    form.enterToSubmit = enterToSubmit
   }
 
   /**
@@ -680,9 +689,18 @@ export class WidgetStateManager {
   /**
    * Helper function to determine whether a form allows enter to submit
    * for input elements (st.number_input, st.text_input, etc.)
+   * First checks form's enterToSubmit param, otherwise default behavior:
    * Must be in a form & have 1st submit button enabled to allow
    */
   public allowFormSubmitOnEnter(formId: string): boolean {
+    // Check user-set enterToSubmit param first (in FormState)
+    // Don't allow if false
+    const form = this.forms.get(formId)
+    if (notNullOrUndefined(form) && !form.enterToSubmit) {
+      return false
+    }
+
+    // Otherwise, use default behavior
     const submitButtons = this.formsData.submitButtons.get(formId)
     const firstSubmitButton = submitButtons?.[0]
 

@@ -176,7 +176,7 @@ describe("NumberInput widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getIntProps({ formId: "form", default: 10 })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormClearAndEnterSubmit("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
     render(<NumberInput {...props} />)
