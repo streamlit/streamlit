@@ -36,6 +36,11 @@ def test_fragment():
 
 test_fragment()
 
+st.audio_input(label="Disabled Audio Input", disabled=True)
+
+st.audio_input(label="Hidden Label Audio Input", label_visibility=False)
+
+
 if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1

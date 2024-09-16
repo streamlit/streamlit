@@ -25,7 +25,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_audio_input_renders(app: Page):
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    expect(audio_input_elements).to_have_count(3)
+    expect(audio_input_elements).to_have_count(5)
 
     expect(audio_input_elements.nth(0)).to_be_visible()
     expect(audio_input_elements.nth(1)).to_be_visible()
@@ -42,10 +42,31 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "the_audio_input")).to_be_visible()
 
 
-def test_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
+def test_audio_input_default_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     audio_input_element = themed_app.get_by_test_id("stAudioInput").first
+    assert_snapshot(audio_input_element, name="st_audio_input-default")
 
-    assert_snapshot(audio_input_element, name="st_audio_input_default")
+
+def test_audio_input_disabled_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    disabled_audio_input_element = themed_app.get_by_label("Disabled Audio Input").first
+
+    expect(disabled_audio_input_element).to_be_disabled()
+    assert_snapshot(disabled_audio_input_element, name="st_audio_input-disabled")
+
+
+def test_audio_input_label_visibility_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    audio_input_no_label_visibility = themed_app.get_by_test_id("stAudioInput").nth(4)
+
+    expect(themed_app.get_by_text("Hidden Label Audio Input")).not_to_be_visible()
+    assert_snapshot(
+        audio_input_no_label_visibility, name="st_audio_input-label_visibility_disabled"
+    )
 
 
 @pytest.mark.only_browser("chromium")
