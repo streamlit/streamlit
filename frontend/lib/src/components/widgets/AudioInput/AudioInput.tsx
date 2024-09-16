@@ -40,8 +40,8 @@ import {
 } from "@streamlit/lib/src/util/utils"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { blend } from "@streamlit/lib/src/theme/utils"
-
 import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
+
 import {
   StyledAudioInputContainerDiv,
   StyledWaveformContainerDiv,
@@ -137,6 +137,36 @@ const AudioInput: React.FC<Props> = ({
       })
   }, [])
 
+  const handleClear = useCallback(() => {
+    if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
+      return
+    }
+    setRecordingUrl(null)
+    wavesurfer.empty()
+    uploadClient.deleteFile(deleteFileUrl)
+    setProgressTime(STARTING_TIME_STRING)
+    setRecordingTime(STARTING_TIME_STRING)
+    setDeleteFileUrl(null)
+    widgetMgr.setFileUploaderStateValue(
+      element,
+      {},
+      { fromUi: true },
+      fragmentId
+    )
+    setShouldUpdatePlaybackTime(false)
+    if (notNullOrUndefined(recordingUrl)) {
+      URL.revokeObjectURL(recordingUrl)
+    }
+  }, [
+    deleteFileUrl,
+    recordingUrl,
+    uploadClient,
+    wavesurfer,
+    element,
+    widgetMgr,
+    fragmentId,
+  ])
+
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
 
@@ -207,7 +237,7 @@ const AudioInput: React.FC<Props> = ({
       if (ws) ws.destroy()
       if (rp) rp.destroy()
     }
-  }, [theme, uploadTheFile])
+  }, [theme, uploadTheFile, handleClear, recordingUrl])
 
   useEffect(() => {
     initializeWaveSurfer()
@@ -223,36 +253,6 @@ const AudioInput: React.FC<Props> = ({
     }
   }, [wavesurfer])
 
-  const handleClear = useCallback(() => {
-    if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
-      return
-    }
-    setRecordingUrl(null)
-    wavesurfer.empty()
-    uploadClient.deleteFile(deleteFileUrl)
-    setProgressTime(STARTING_TIME_STRING)
-    setRecordingTime(STARTING_TIME_STRING)
-    setDeleteFileUrl(null)
-    widgetMgr.setFileUploaderStateValue(
-      element,
-      {},
-      { fromUi: true },
-      fragmentId
-    )
-    setShouldUpdatePlaybackTime(false)
-    if (notNullOrUndefined(recordingUrl)) {
-      URL.revokeObjectURL(recordingUrl)
-    }
-  }, [
-    deleteFileUrl,
-    recordingUrl,
-    uploadClient,
-    wavesurfer,
-    element,
-    widgetMgr,
-    fragmentId,
-  ])
-
   const startRecording = useCallback(() => {
     if (!recordPlugin || !activeAudioDeviceId || !wavesurfer) {
       return
@@ -266,14 +266,7 @@ const AudioInput: React.FC<Props> = ({
       // Update the record button to show the user that they can stop recording
       forceRerender()
     })
-  }, [
-    activeAudioDeviceId,
-    recordPlugin,
-    theme,
-    wavesurfer,
-    handleClear,
-    recordingUrl,
-  ])
+  }, [activeAudioDeviceId, recordPlugin, theme, wavesurfer])
 
   const stopRecording = useCallback(() => {
     if (!recordPlugin) return

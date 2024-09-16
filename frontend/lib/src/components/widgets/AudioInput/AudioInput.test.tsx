@@ -18,12 +18,15 @@ import React from "react"
 
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import AudioInput, { Props } from "./AudioInput"
+
+import { render } from "@streamlit/lib/src/test_util"
+
 import {
   AudioInput as AudioInputProto,
   FileURLs as FileURLsProto,
 } from "src/proto"
-import { render } from "@streamlit/lib/src/test_util"
+
+import AudioInput, { Props } from "./AudioInput"
 
 const getProps = (
   elementProps: Partial<AudioInputProto> = {},
