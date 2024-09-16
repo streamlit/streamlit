@@ -427,10 +427,6 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
-        # button and chat widgets don't include a form_id param in their calls to
-        # compute_and_register_element_id because having either in forms (aside from the form's
-        # submit button) is illegal.
-        del expected_sig["form_id"]
         if widget_func == st.button:
             expected_sig["is_form_submitter"] = ANY
         # we exclude `data` for `st.download_button` here and not
