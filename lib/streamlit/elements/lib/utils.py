@@ -164,6 +164,7 @@ def compute_and_register_element_id(
     element_type: str,
     *,
     user_key: str | None,
+    form_id: str | None = None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -190,17 +191,23 @@ def compute_and_register_element_id(
         The user-specified key for the element. `None` if no key is provided
         or if the element doesn't support a specifying a key.
 
+    form_id : str | None
+        The ID of the form that the element belongs to. `None` or empty string
+        if the element doesn't belong to a form.
+
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.
         The arguments must be stable, deterministic values.
     """
     ctx = get_script_run_ctx()
 
-    kwargs_to_use = kwargs
+    # If form_id is provided, add it to the kwargs.
+    kwargs_to_use = {"form_id": form_id, **kwargs} if form_id else kwargs
 
     if ctx:
-        active_script_hash = ctx.active_script_hash
-        kwargs_to_use["active_script_hash"] = active_script_hash
+        # Add the active script hash to give elements on different
+        # pages unique IDs.
+        kwargs_to_use["active_script_hash"] = ctx.active_script_hash
 
     element_id = _compute_element_id(
         element_type,
