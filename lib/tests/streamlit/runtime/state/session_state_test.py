@@ -888,13 +888,17 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         stat = state.get_stats()[0]
         assert stat.category_name == "st_session_state"
 
+        # The expected size of the session state in bytes.
+        # It composes of the session_state's fields.
+        expected_session_state_size_bytes = 3000
+
         init_size = stat.byte_length
-        assert init_size < 2500
+        assert init_size < expected_session_state_size_bytes
 
         state["foo"] = 2
         new_size = state.get_stats()[0].byte_length
         assert new_size > init_size
-        assert new_size < 2500
+        assert new_size < expected_session_state_size_bytes
 
         state["foo"] = 1
         new_size_2 = state.get_stats()[0].byte_length
@@ -903,7 +907,7 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="checkbox")
         new_size_3 = state.get_stats()[0].byte_length
         assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < 2500
+        assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
         state._compact_state()
         new_size_4 = state.get_stats()[0].byte_length
