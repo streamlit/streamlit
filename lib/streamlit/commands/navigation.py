@@ -234,7 +234,7 @@ def navigation(
         for page in nav_sections[section_header]:
             p = msg.navigation.app_pages.add()
             p.page_script_hash = page._script_hash
-            p.page_name = page.title + "blabla"
+            p.page_name = page.title
             p.icon = page.icon
             p.is_default = page._default
             p.section_header = section_header

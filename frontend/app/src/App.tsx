@@ -691,7 +691,7 @@ export class App extends PureComponent<Props, State> {
     // the dispatchOneOf helper
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
       const whichOne = obj[name]
-      console.log("whichOne", whichOne)
+
       if (whichOne in funcs) {
         return funcs[whichOne](obj[whichOne])
       }
@@ -1460,6 +1460,19 @@ export class App extends PureComponent<Props, State> {
         .map(element => getElementId(element))
         .filter(notUndefined)
     )
+
+    // Reset page layout to centered
+    // 1. This forces pages without set_page_config(layout=...) to be centered (default)
+    // 2. Pages using set_page_config(layout=...) will override these values
+    this.setState((prevState: State) => {
+      return {
+        layout: PageConfig.Layout.CENTERED,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: false,
+        },
+      }
+    })
 
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
