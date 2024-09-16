@@ -89,6 +89,7 @@ class AudioInputMixin:
         label: str,
         *,
         key: Key | None = None,
+        help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -125,6 +126,9 @@ class AudioInputMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
+        help : str
+            A tooltip that gets displayed next to the audio input.
 
         on_change : callable
             An optional callback invoked when this audio_input's value
@@ -166,6 +170,7 @@ class AudioInputMixin:
         return self._audio_input(
             label=label,
             key=key,
+            help=help,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
@@ -217,7 +222,7 @@ class AudioInputMixin:
             label_visibility
         )
 
-        if help is not None:
+        if label and help is not None:
             audio_input_proto.help = dedent(help)
 
         serde = AudioInputSerde()
