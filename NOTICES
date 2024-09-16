@@ -9387,7 +9387,7 @@ SOFTWARE.
 The following software may be included in this product: dompurify. A copy of the source code may be downloaded from git://github.com/cure53/DOMPurify.git. This software contains the following license and notice below:
 
 DOMPurify
-Copyright 2023 Dr.-Ing. Mario Heiderich, Cure53
+Copyright 2024 Dr.-Ing. Mario Heiderich, Cure53
 
 DOMPurify is free software; you can redistribute it and/or modify it under the
 terms of either:
