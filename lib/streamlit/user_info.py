@@ -138,6 +138,14 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
             fwd_msg.auth_redirect.action_type = "logout"
             context.enqueue(fwd_msg)
 
+    def is_logged_in(self) -> bool:
+        if (
+            _get_user_info().get("email") is not None
+            and _get_user_info().get("email") != "test@example.com"
+        ):
+            return True
+        return False
+
     def __getitem__(self, key: str) -> str | None:
         return _get_user_info()[key]
 

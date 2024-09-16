@@ -119,5 +119,6 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
             self.set_signed_cookie(
                 "_streamlit_uzer",
                 json.dumps(dict_for_cookie),
+                httpOnly=True,
             )
         self.redirect("/")
