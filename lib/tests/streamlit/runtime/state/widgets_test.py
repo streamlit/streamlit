@@ -22,7 +22,10 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
-from streamlit.elements.lib.utils import compute_and_register_element_id
+from streamlit.elements.lib.utils import (
+    _compute_element_id,
+    compute_and_register_element_id,
+)
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
@@ -33,6 +36,9 @@ from streamlit.runtime.state.common import (
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 from streamlit.runtime.state.widgets import user_key_from_element_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.element_mocks import (
+    WIDGET_ELEMENTS,
+)
 
 
 def _create_widget(id, states):
@@ -338,43 +344,71 @@ class WidgetHelperTests(unittest.TestCase):
         assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
-class ComputeWidgetIdTests(DeltaGeneratorTestCase):
+# These kwargs are not supposed to be used for element ID calculation:
+EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
+    # Internal stuff
+    "ctx",
+    # Formatting/display stuff: can be changed without resetting an element.
+    "disabled",
+    "format_func",
+    "label_visibility",
+    # on_change callbacks and similar/related parameters.
+    "args",
+    "kwargs",
+    "on_change",
+    "on_click",
+    "on_submit",
+    # Key should be provided via `user_key` instead.
+    "key",
+}
+
+
+class ComputeElementIdTests(DeltaGeneratorTestCase):
     """Enforce that new arguments added to the signature of a widget function are taken
-    into account when computing widget IDs unless explicitly excluded.
+    into account when computing element IDs unless explicitly excluded.
     """
 
     def signature_to_expected_kwargs(self, sig):
-        # These widget kwargs aren't used for widget ID calculation, meaning that they
-        # can be changed without resetting the widget.
-        excluded_kwargs = {
-            # Internal stuff
-            "ctx",
-            # Formatting/display stuff
-            "disabled",
-            "format_func",
-            "label_visibility",
-            # on_change callbacks and similar/related parameters.
-            "args",
-            "kwargs",
-            "on_change",
-            "on_click",
-            "on_submit",
-            # Key should be provided via `user_key` instead.
-            "key",
-        }
-
         kwargs = {
             kwarg: ANY
             for kwarg in sig.parameters.keys()
-            if kwarg not in excluded_kwargs
+            if kwarg not in EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION
         }
 
-        # Add some kwargs that are passed to compute_and_register_element_id but don't appear in widget
-        # signatures.
+        # Add some kwargs that are passed to compute element ID
+        # but don't appear in widget signatures.
         for kwarg in ["form_id", "user_key"]:
             kwargs[kwarg] = ANY
 
         return kwargs
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_no_usage_of_excluded_kwargs(self, _element_name: str, widget_func):
+        with patch(
+            "streamlit.elements.lib.utils._compute_element_id",
+            wraps=_compute_element_id,
+        ) as patched_compute_element_id:
+            widget_func()
+
+        # Get call kwargs from patched_compute_element_id
+        call_kwargs = patched_compute_element_id.call_args[1]
+
+        kwargs_intersection = set(call_kwargs.keys()) & set(
+            EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION
+        )
+        assert not kwargs_intersection, (
+            "These kwargs are not supposed to be used for element ID calculation: "
+            + str(kwargs_intersection)
+        )
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_triggers_duplicate_id_error(self, _element_name: str, widget_func):
+        """
+        Test that duplicate ID error is raised if the same widget is called twice.
+        """
+        widget_func()
+        with self.assertRaises(errors.DuplicateWidgetID):
+            widget_func()
 
     @parameterized.expand(
         [
