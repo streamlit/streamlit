@@ -17,11 +17,20 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import altair as alt
+import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
+import pydeck as pdk
 
 import streamlit as st
 from streamlit.type_util import is_altair_version_less_than
+
+_CHART_DATA = pd.DataFrame(
+    {
+        "col1": [1, 2, 3],
+        "col2": [3, 2, 1],
+    }
+)
 
 ELEMENT_PRODUCER = Callable[[], Any]
 
@@ -34,12 +43,11 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     ("toggle", lambda: st.toggle("Toggle me")),
-    # end checkboxes
-    ("color_picker", lambda: st.color_picker("Pick a color")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
     ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
-    # media manager
+    # other widgets
+    ("color_picker", lambda: st.color_picker("Pick a color")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
@@ -48,6 +56,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("slider", lambda: st.slider("Slide me")),
     ("selectbox", lambda: st.selectbox("Select me", ["a", "b", "c"])),
     ("select_slider", lambda: st.select_slider("Select me", ["a", "b", "c"])),
+    ("feedback", lambda: st.feedback()),
     # text_widgets
     ("text_area", lambda: st.text_area("Write me")),
     ("text_input", lambda: st.text_input("Write me")),
@@ -97,36 +106,52 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
 ]
 
 NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
-    # alerts
-    ("error", lambda: st.error("Hello")),
-    ("info", lambda: st.info("Hello")),
-    ("success", lambda: st.success("Hello")),
-    ("warning", lambda: st.warning("Hello")),
-    # arrows
-    ("dataframe", lambda: st.dataframe(None)),
-    # balloons
-    ("balloons", lambda: st.balloons()),
-    ("snow", lambda: st.snow()),
-    # docstrings
-    ("help", lambda: st.help("Hello")),
-    # headings
+    # text elements
     ("header", lambda: st.header("Header")),
     ("title", lambda: st.title("Title")),
     ("subheader", lambda: st.subheader("Subheader")),
-    # html, markdown
+    ("caption", lambda: st.caption("Caption")),
+    ("divider", lambda: st.divider()),
+    ("text", lambda: st.text("Hello")),
     ("code", lambda: st.code("Hello")),
     ("html", lambda: st.html("Hello")),
     ("latex", lambda: st.latex("Hello")),
     ("markdown", lambda: st.markdown("Hello")),
     ("write", lambda: st.write("Hello")),
-    ("toast", lambda: st.toast("Hello")),
+    ("write_stream", lambda: st.write_stream([])),
+    # alerts
+    ("error", lambda: st.error("Hello")),
+    ("info", lambda: st.info("Hello")),
+    ("success", lambda: st.success("Hello")),
+    ("warning", lambda: st.warning("Hello")),
+    ("exception", lambda: st.exception(Exception("Hello"))),
     # progress
     ("spinner", lambda: st.spinner("Hello")),
+    ("toast", lambda: st.toast("Hello")),
     ("progress", lambda: st.progress(0.5)),
+    ("balloons", lambda: st.balloons()),
+    ("snow", lambda: st.snow()),
     # media
     ("audio", lambda: st.audio(b"")),
     ("video", lambda: st.video(b"")),
-    # hybrid-widgets
+    (
+        "image",
+        lambda: st.image("https://streamlit.io/images/brand/streamlit-mark-color.png"),
+    ),
+    (
+        "logo",
+        lambda: st.logo("https://streamlit.io/images/brand/streamlit-mark-color.png"),
+    ),
+    # data elements
+    ("json", lambda: st.json({})),
+    ("metric", lambda: st.metric("Metric", 100)),
+    ("dataframe", lambda: st.dataframe(pd.DataFrame())),
+    ("table", lambda: st.table(pd.DataFrame())),
+    # charts:
+    ("line_chart", lambda: st.line_chart(_CHART_DATA)),
+    ("area_chart", lambda: st.area_chart(_CHART_DATA)),
+    ("bar_chart", lambda: st.bar_chart(_CHART_DATA)),
+    ("scatter_chart", lambda: st.scatter_chart(_CHART_DATA)),
     (
         "altair_chart",
         lambda: (
@@ -147,6 +172,47 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ),
     (
         "plotly_chart",
-        lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="ignore"),
+        lambda: st.plotly_chart(px.line(_CHART_DATA), on_select="ignore"),
     ),
+    ("pydeck_chart", lambda: st.pydeck_chart(pdk.Deck())),
+    (
+        "map",
+        lambda: st.map(pd.DataFrame({"lat": [1, 2, 3], "lon": [3, 2, 1]})),
+    ),
+    (
+        "graphviz_chart",
+        lambda: st.graphviz_chart("""
+    digraph {
+        run -> intr
+    }
+    """),
+    ),
+    ("pyplot", lambda: st.pyplot(plt.figure())),
+    (
+        "bokeh_chart",
+        lambda: (
+            # Ignore bokeh chart since it requires outdated dependencies:
+            st.write("")
+        ),
+    ),
+    # utilities
+    ("help", lambda: st.help("Hello")),
+    ("echo", lambda: st.echo()),
+    # other elements
+    ("link_button", lambda: st.link_button("Link", "https://streamlit.io")),
+    ("page_link", lambda: st.page_link("https://streamlit.io", label="Streamlit")),
+]
+
+CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
+    ("container", lambda: st.container()),
+    ("expander", lambda: st.expander("Expand me")),
+    ("tabs", lambda: st.tabs(["Tab 1", "Tab 2"])),
+    ("chat_message", lambda: st.chat_message("user")),
+    ("popover", lambda: st.popover("Popover")),
+    ("columns", lambda: st.columns(2)),
+    ("status", lambda: st.status("Status")),
+    ("form", lambda: st.form("Form")),
+    ("empty", lambda: st.empty()),
+    ("dialog", lambda: st.dialog("Dialog")),
+    ("experimental_dialog", lambda: st.experimental_dialog("Dialog")),
 ]
