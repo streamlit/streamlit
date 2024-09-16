@@ -81,7 +81,11 @@ class ForwardMsgQueue:
         self._delta_index_map[delta_key] = len(self._queue)
         self._queue.append(msg)
 
-    def clear(self, retain_lifecycle_msgs: bool = False) -> None:
+    def clear(
+        self,
+        retain_lifecycle_msgs: bool = False,
+        fragment_ids_this_run: list[str] | None = None,
+    ) -> None:
         """Clear the queue, potentially retaining lifecycle messages.
 
         The retain_lifecycle_msgs argument exists because in some cases (in particular
@@ -89,7 +93,12 @@ class ForwardMsgQueue:
         to remove certain messages from the queue as doing so may cause the client to
         not hear about important script lifecycle events (such as the script being
         stopped early in order to be rerun).
+
+        If fragment_ids_this_run is provided, delta messages not belonging to any
+        fragment or belonging to a fragment not in fragment_ids_this_run will be
+        preserved to prevent clearing messages unrelated to the running fragments.
         """
+
         if not retain_lifecycle_msgs:
             self._queue = []
         else:
@@ -103,6 +112,24 @@ class ForwardMsgQueue:
                     "session_status_changed",
                     "parent_message",
                 }
+                or (
+                    # preserve all messages if this is a fragment rerun and...
+                    fragment_ids_this_run is not None
+                    and (
+                        # the message is not a delta message
+                        # (not associated with a fragment) or...
+                        msg.delta is None
+                        or (
+                            # it is a delta but not associated with any of the passed
+                            # fragments
+                            msg.delta is not None
+                            and (
+                                msg.delta.fragment_id is None
+                                or msg.delta.fragment_id not in fragment_ids_this_run
+                            )
+                        )
+                    )
+                )
             ]
 
         self._delta_index_map = {}

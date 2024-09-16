@@ -16,7 +16,7 @@ from __future__ import annotations
 import textwrap
 from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit.elements.form_utils import FormData, current_form_id, is_in_form
+from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_session_state_rules,

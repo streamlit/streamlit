@@ -276,10 +276,14 @@ class CachedFunc:
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.
-            with contextlib.suppress(CacheKeyNotFoundError):
+            try:
                 cached_result = cache.read_result(value_key)
                 # Another thread computed the value before us. Early exit!
                 return self._handle_cache_hit(cached_result)
+            except CacheKeyNotFoundError:
+                # No cache hit -> we will call the cached function
+                # below.
+                pass
 
             # We acquired the lock before any other thread. Compute the value!
             with self._info.cached_message_replay_ctx.calling_cached_function(

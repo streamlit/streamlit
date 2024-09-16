@@ -204,46 +204,58 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useTheme())
 
+  // Capture all the element ids to avoid rendering the same element twice
+  const elementKeySet = new Set<string>()
+
   return (
     <>
       {props.node.children &&
-        props.node.children.map(
-          (node: AppNode, index: number): ReactElement => {
-            const disableFullscreenMode =
-              libConfig.disableFullscreenMode || props.disableFullscreenMode
+        props.node.children.map((node: AppNode, index: number): ReactNode => {
+          const disableFullscreenMode =
+            libConfig.disableFullscreenMode || props.disableFullscreenMode
 
-            // Base case: render a leaf node.
-            if (node instanceof ElementNode) {
-              // Put node in childProps instead of passing as a node={node} prop in React to
-              // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = {
-                ...props,
-                disableFullscreenMode,
-                node: node as ElementNode,
-              }
-
-              const key = getElementId(node.element) || index
-              return <ElementNodeRenderer key={key} {...childProps} />
+          // Base case: render a leaf node.
+          if (node instanceof ElementNode) {
+            // Put node in childProps instead of passing as a node={node} prop in React to
+            // guarantee it doesn't get overwritten by {...childProps}.
+            const childProps = {
+              ...props,
+              disableFullscreenMode,
+              node: node as ElementNode,
             }
 
-            // Recursive case: render a block, which can contain other blocks
-            // and elements.
-            if (node instanceof BlockNode) {
-              // Put node in childProps instead of passing as a node={node} prop in React to
-              // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = {
-                ...props,
-                disableFullscreenMode,
-                node: node as BlockNode,
-              }
-
-              return <BlockNodeRenderer key={index} {...childProps} />
+            const key = getElementId(node.element) || index.toString()
+            // Avoid rendering the same element twice. We assume the first one is the one we want
+            // because the page is rendered top to bottom, so a valid widget would be rendered
+            // correctly and we assume the second one is therefore stale (or throw an error).
+            // Also, our setIn logic pushes stale widgets down in the list of elements, so the
+            // most recent one should always come first.
+            if (elementKeySet.has(key)) {
+              return null
             }
 
-            // We don't have any other node types!
-            throw new Error(`Unrecognized AppNode: ${node}`)
+            elementKeySet.add(key)
+
+            return <ElementNodeRenderer key={key} {...childProps} />
           }
-        )}
+
+          // Recursive case: render a block, which can contain other blocks
+          // and elements.
+          if (node instanceof BlockNode) {
+            // Put node in childProps instead of passing as a node={node} prop in React to
+            // guarantee it doesn't get overwritten by {...childProps}.
+            const childProps = {
+              ...props,
+              disableFullscreenMode,
+              node: node as BlockNode,
+            }
+
+            return <BlockNodeRenderer key={index} {...childProps} />
+          }
+
+          // We don't have any other node types!
+          throw new Error(`Unrecognized AppNode: ${node}`)
+        })}
     </>
   )
 }

@@ -1262,7 +1262,7 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     """
     import numpy as np
 
-    return df.fillna(np.nan).replace([np.nan], [None])
+    return df.fillna(np.nan).replace([np.nan], [None]).infer_objects()
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:

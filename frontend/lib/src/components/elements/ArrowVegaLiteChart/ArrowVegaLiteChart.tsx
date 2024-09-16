@@ -57,7 +57,6 @@ const DEFAULT_DATA_NAME = "source"
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
- * For example, in e2e/scripts/add_rows.py
  */
 const BOTTOM_PADDING = 20
 

@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Final, NamedTuple
 
 from streamlit import config, file_util
-from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
+from streamlit.watcher.folder_black_list import FolderBlackList
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
     get_default_path_watcher_class,

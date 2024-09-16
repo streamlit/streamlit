@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final, Sequence
 
 from streamlit import config, errors, logger, runtime
-from streamlit.elements.form_utils import is_in_form
+from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.errors import (
     StreamlitAPIWarning,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
@@ -122,11 +122,6 @@ def check_cache_replay_rules() -> None:
         # We use an exception here to show a proper stack trace
         # that indicates to the user where the issue is.
         exception(CachedWidgetWarning())
-
-
-_fragment_writes_widget_to_outside_error = (
-    "Fragments cannot write to elements outside of their container."
-)
 
 
 def check_fragment_path_policy(dg: DeltaGenerator):

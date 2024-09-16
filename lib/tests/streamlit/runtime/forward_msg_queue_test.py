@@ -239,7 +239,78 @@ class ForwardMsgQueueTest(unittest.TestCase):
         ]
         assert fmq._queue == expected_retained_messages
 
-        fmq.clear(retain_lifecycle_msgs=True)
+        fmq.clear()
+        assert fmq._queue == []
+
+    def test_clear_with_fragmentid_preserve_unrelated_delta_messages(self):
+        """When we pass fragment_ids_this_run to the clear function, only delta
+        messages belonging to those fragment_ids should be cleared or in other words,
+        all other delta messages not belonging to one of the passed fragment ids, should
+        be preserved.
+        """
+        fmq = ForwardMsgQueue()
+
+        script_finished_msg = ForwardMsg()
+        script_finished_msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        session_status_changed_msg = ForwardMsg()
+        session_status_changed_msg.session_status_changed.script_is_running = True
+
+        parent_msg = ForwardMsg()
+        parent_msg.parent_message.message = "hello"
+
+        current_fragment_delta1 = ForwardMsg()
+        current_fragment_delta1.delta.new_element.text.body = "text1"
+        current_fragment_delta1.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 1
+        )
+        current_fragment_delta1.delta.fragment_id = "current_fragment_id1"
+
+        current_fragment_delta2 = ForwardMsg()
+        current_fragment_delta2.delta.new_element.text.body = "text1"
+        current_fragment_delta2.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 2
+        )
+        current_fragment_delta2.delta.fragment_id = "current_fragment_delta2"
+
+        unrelated_fragment_delta = ForwardMsg()
+        unrelated_fragment_delta.delta.new_element.text.body = "text1"
+        unrelated_fragment_delta.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 3
+        )
+        unrelated_fragment_delta.delta.fragment_id = "unrelated_fragment_id"
+
+        fmq.enqueue(NEW_SESSION_MSG)
+        fmq.enqueue(current_fragment_delta1)
+        fmq.enqueue(current_fragment_delta2)
+        fmq.enqueue(unrelated_fragment_delta)
+        fmq.enqueue(TEXT_DELTA_MSG1)  # no fragment id
+        fmq.enqueue(script_finished_msg)
+        fmq.enqueue(session_status_changed_msg)
+        fmq.enqueue(parent_msg)
+
+        expected_new_finished_message = ForwardMsg()
+        expected_new_finished_message.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+
+        fmq.clear(
+            retain_lifecycle_msgs=True,
+            fragment_ids_this_run=[
+                current_fragment_delta1.delta.fragment_id,
+                current_fragment_delta2.delta.fragment_id,
+            ],
+        )
+        expected_retained_messages = [
+            NEW_SESSION_MSG,
+            unrelated_fragment_delta,
+            TEXT_DELTA_MSG1,
+            expected_new_finished_message,
+            session_status_changed_msg,
+            parent_msg,
+        ]
         assert fmq._queue == expected_retained_messages
 
         fmq.clear()

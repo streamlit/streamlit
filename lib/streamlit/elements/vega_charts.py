@@ -37,7 +37,6 @@ from typing_extensions import TypeAlias
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import dataframe_util, type_util
-from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartStackType,
@@ -46,6 +45,7 @@ from streamlit.elements.lib.built_in_chart_utils import (
     maybe_raise_stack_warning,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
@@ -60,9 +60,9 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     import altair as alt
 
-    from streamlit.color_util import Color
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.color_util import Color
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
@@ -951,9 +951,14 @@ class VegaChartsMixin:
             "https://docs.streamlit.io/develop/api-reference/charts/st.area_chart",
         )
 
-        # st.area_chart's stack=False option translates to a "layered" area chart for vega. We reserve stack=False for
-        # grouped/non-stacked bar charts, so we need to translate False to "layered" here.
-        if stack is False:
+        # st.area_chart's stack=False option translates to a "layered" area chart for
+        # vega. We reserve stack=False for
+        # grouped/non-stacked bar charts, so we need to translate False to "layered"
+        # here. The default stack type was changed in vega-lite 5.14.1:
+        # https://github.com/vega/vega-lite/issues/9337
+        # To get the old behavior, we also need to set stack to layered as the
+        # default (if stack is None)
+        if stack is False or stack is None:
             stack = "layered"
 
         chart, add_rows_metadata = generate_chart(
