@@ -27,6 +27,11 @@ import matplotlib
 
 import streamlit as st
 from streamlit import __version__
+from tests.streamlit.element_mocks import (
+    CONTAINER_ELEMENTS,
+    NON_WIDGET_ELEMENTS,
+    WIDGET_ELEMENTS,
+)
 
 
 def get_version():
@@ -38,6 +43,33 @@ def get_version():
         m = pattern.match(line)
         if m:
             return m.group("version")
+
+
+NON_ELEMENT_COMMANDS = {
+    "Page",
+    "cache",
+    "cache_data",
+    "cache_resource",
+    "connection",
+    "context",
+    "experimental_fragment",
+    "experimental_get_query_params",
+    "experimental_set_query_params",
+    "experimental_user",
+    "form_submit_button",
+    "fragment",
+    "get_option",
+    "navigation",
+    "query_params",
+    "rerun",
+    "secrets",
+    "session_state",
+    "set_option",
+    "set_page_config",
+    "sidebar",
+    "stop",
+    "switch_page",
+}
 
 
 class StreamlitTest(unittest.TestCase):
@@ -188,6 +220,28 @@ class StreamlitTest(unittest.TestCase):
                 "connection",
             },
         )
+
+    def test_ensure_completeness_element_mocks(self):
+        """Test that we have mocked all elements in the public API.
+
+        The full public API should be covered by:
+        - element_mocks.WIDGET_ELEMENTS
+        - element_mocks.NON_WIDGET_ELEMENTS
+        - element_mocks.CONTAINER_ELEMENTS
+        - NON_ELEMENT_COMMANDS
+        """
+        api = {
+            k
+            for k, v in st.__dict__.items()
+            if not k.startswith("_") and not isinstance(v, type(st))
+        }
+
+        mocked_elements = {
+            element
+            for element, _ in WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS + CONTAINER_ELEMENTS
+        }
+        mocked_elements.update(NON_ELEMENT_COMMANDS)
+        assert api == mocked_elements
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""
