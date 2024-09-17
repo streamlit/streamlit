@@ -20,7 +20,7 @@ import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
 import {
@@ -43,7 +43,7 @@ export function Selectbox({
   width,
   fragmentId,
 }: Props): ReactElement {
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     number | null,
     SelectboxProto
   >({
@@ -61,9 +61,9 @@ export function Selectbox({
 
   const onChange = useCallback(
     (value: number | null): void => {
-      setValueWSource({ value, fromUi: true })
+      setValueWithSource({ value, fromUi: true })
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   return (
@@ -100,7 +100,7 @@ function getCurrStateFromProto(element: SelectboxProto): number | null {
 function updateWidgetMgrState(
   element: SelectboxProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<number | null>,
+  vws: ValueWithSource<number | null>,
   fragmentId?: string
 ): void {
   widgetMgr.setIntValue(element, vws.value, { fromUi: vws.fromUi }, fragmentId)

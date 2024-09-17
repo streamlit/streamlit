@@ -31,7 +31,7 @@ import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
@@ -61,7 +61,7 @@ export function TextArea({
   width,
   fragmentId,
 }: Props): ReactElement {
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     TextAreaProto
   >({
@@ -105,7 +105,7 @@ export function TextArea({
 
   const onBlur = useCallback((): void => {
     if (dirty) {
-      setValueWSource({ value: uiValue, fromUi: true })
+      setValueWithSource({ value: uiValue, fromUi: true })
     }
   }, [dirty, uiValue])
 
@@ -127,7 +127,7 @@ export function TextArea({
       // is submitted, so this won't cause the script to re-run.
       if (isInForm(element)) {
         // Make sure dirty is true so that enter to submit form text shows
-        setValueWSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUi: true })
       }
       // If the TextInput is *not* part of a form, we mark it dirty but don't
       // update its value in the WidgetMgr. This means that individual keypresses
@@ -144,7 +144,7 @@ export function TextArea({
         e.preventDefault()
 
         if (dirty) {
-          setValueWSource({ value: uiValue, fromUi: true })
+          setValueWithSource({ value: uiValue, fromUi: true })
         }
 
         if (widgetMgr.allowFormSubmitOnEnter(element.formId)) {
@@ -247,7 +247,7 @@ function getCurrStateFromProto(element: TextAreaProto): string | null {
 function updateWidgetMgrState(
   element: TextAreaProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<string | null>,
+  vws: ValueWithSource<string | null>,
   fragmentId?: string
 ): void {
   widgetMgr.setStringValue(

@@ -34,7 +34,7 @@ import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import { Slider as SliderProto } from "@streamlit/lib/src/proto"
 import {
@@ -73,7 +73,10 @@ function Slider({
   width,
   fragmentId,
 }: Props): ReactElement {
-  const [value, setValueWSource] = useBasicWidgetState<number[], SliderProto>({
+  const [value, setValueWithSource] = useBasicWidgetState<
+    number[],
+    SliderProto
+  >({
     getStateFromWidgetMgr,
     getDefaultStateFromProto,
     getCurrStateFromProto,
@@ -180,19 +183,19 @@ function Slider({
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [value])
 
-  const debouncedSetValueWSource = useCallback(
+  const debouncedSetValueWithSource = useCallback(
     debounce(DEBOUNCE_TIME_MS, (value: number[]): void => {
-      setValueWSource({ value, fromUi: true })
+      setValueWithSource({ value, fromUi: true })
     }),
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   const handleChange = useCallback(
     ({ value }: { value: number[] }): void => {
       setUiValue(value)
-      debouncedSetValueWSource(value)
+      debouncedSetValueWithSource(value)
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   const renderTickBar = useCallback((): ReactElement => {
@@ -352,7 +355,7 @@ function getCurrStateFromProto(element: SliderProto): number[] {
 function updateWidgetMgrState(
   element: SliderProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<number[]>,
+  vws: ValueWithSource<number[]>,
   fragmentId?: string
 ): void {
   widgetMgr.setDoubleArrayValue(

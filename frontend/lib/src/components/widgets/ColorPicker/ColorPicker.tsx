@@ -20,7 +20,7 @@ import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import BaseColorPicker from "@streamlit/lib/src/components/shared/BaseColorPicker"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
@@ -40,7 +40,7 @@ function ColorPicker({
   width,
   fragmentId,
 }: Props): ReactElement {
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     string,
     ColorPickerProto
   >({
@@ -55,9 +55,9 @@ function ColorPicker({
 
   const onColorClose = useCallback(
     (color: string): void => {
-      setValueWSource({ value: color, fromUi: true })
+      setValueWithSource({ value: color, fromUi: true })
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   return (
@@ -93,7 +93,7 @@ function getCurrStateFromProto(element: ColorPickerProto): string {
 function updateWidgetMgrState(
   element: ColorPickerProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<string>,
+  vws: ValueWithSource<string>,
   fragmentId?: string
 ): void {
   widgetMgr.setStringValue(

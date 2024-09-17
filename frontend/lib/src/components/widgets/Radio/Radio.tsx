@@ -21,7 +21,7 @@ import { Radio as RadioProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
@@ -42,23 +42,24 @@ function Radio({
   width,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const [value, setValueWSource] = useBasicWidgetState<RadioValue, RadioProto>(
-    {
-      getStateFromWidgetMgr,
-      getDefaultStateFromProto,
-      getCurrStateFromProto,
-      updateWidgetMgrState,
-      element,
-      widgetMgr,
-      fragmentId,
-    }
-  )
+  const [value, setValueWithSource] = useBasicWidgetState<
+    RadioValue,
+    RadioProto
+  >({
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
 
   const onChange = useCallback(
     (selectedIndex: number): void => {
-      setValueWSource({ value: selectedIndex, fromUi: true })
+      setValueWithSource({ value: selectedIndex, fromUi: true })
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   const { horizontal, options, captions, label, labelVisibility, help } =
@@ -98,7 +99,7 @@ function getCurrStateFromProto(element: RadioProto): RadioValue {
 function updateWidgetMgrState(
   element: RadioProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<RadioValue>,
+  vws: ValueWithSource<RadioValue>,
   fragmentId?: string
 ): void {
   widgetMgr.setIntValue(

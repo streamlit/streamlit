@@ -25,7 +25,7 @@ import { DateInput as DateInputProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import {
   StyledWidgetLabelHelp,
@@ -70,17 +70,18 @@ function DateInput({
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    */
-  const [value, setValueWSource] = useBasicWidgetState<Date[], DateInputProto>(
-    {
-      getStateFromWidgetMgr,
-      getDefaultStateFromProto,
-      getCurrStateFromProto,
-      updateWidgetMgrState,
-      element,
-      widgetMgr,
-      fragmentId,
-    }
-  )
+  const [value, setValueWithSource] = useBasicWidgetState<
+    Date[],
+    DateInputProto
+  >({
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
 
   const [isEmpty, setIsEmpty] = useState(false)
 
@@ -111,7 +112,7 @@ function DateInput({
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
       if (date === null || date === undefined) {
-        setValueWSource({ value: [], fromUi: true })
+        setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
         return
       }
@@ -127,19 +128,19 @@ function DateInput({
         newValue.push(date)
       }
 
-      setValueWSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUi: true })
       setIsEmpty(!newValue)
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   const handleClose = useCallback((): void => {
     if (!isEmpty) return
 
     const newValue = stringsToDates(element.default)
-    setValueWSource({ value: newValue, fromUi: true })
+    setValueWithSource({ value: newValue, fromUi: true })
     setIsEmpty(!newValue)
-  }, [isEmpty, element, setValueWSource])
+  }, [isEmpty, element, setValueWithSource])
 
   return (
     <div className="stDateInput" data-testid="stDateInput" style={style}>
@@ -347,7 +348,7 @@ function getCurrStateFromProto(element: DateInputProto): Date[] {
 function updateWidgetMgrState(
   element: DateInputProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<Date[]>,
+  vws: ValueWithSource<Date[]>,
   fragmentId?: string
 ): void {
   widgetMgr.setStringArrayValue(

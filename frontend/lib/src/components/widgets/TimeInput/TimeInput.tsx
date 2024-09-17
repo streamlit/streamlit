@@ -25,7 +25,7 @@ import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 import {
   StyledWidgetLabelHelp,
@@ -55,7 +55,7 @@ function TimeInput({
   width,
   fragmentId,
 }: Props): ReactElement {
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     TimeInputProto
   >({
@@ -155,9 +155,9 @@ function TimeInput({
       const newValue: string | null =
         newDate === null ? null : dateToString(newDate)
 
-      setValueWSource({ value: newValue, fromUi: true })
+      setValueWithSource({ value: newValue, fromUi: true })
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   const handleClear = useCallback((): void => {
@@ -242,7 +242,7 @@ function getCurrStateFromProto(element: TimeInputProto): string | null {
 function updateWidgetMgrState(
   element: TimeInputProto,
   widgetMgr: WidgetStateManager,
-  vws: ValueWSource<string | null>,
+  vws: ValueWithSource<string | null>,
   fragmentId?: string
 ): void {
   widgetMgr.setStringValue(
