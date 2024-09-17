@@ -18,7 +18,7 @@ docutils==0.21.2
 emoji==2.12.1
 exceptiongroup==1.2.2
 execnet==2.1.1
-filelock==3.16.0
+filelock==3.16.1
 fonttools==4.53.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -36,7 +36,7 @@ jeepney==0.8.0
 Jinja2==3.1.4
 jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
-keyring==25.3.0
+keyring==25.4.0
 kiwisolver==1.4.7
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
@@ -56,7 +56,7 @@ parameterized==0.9.0
 pillow==10.4.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
-platformdirs==4.3.3
+platformdirs==4.3.6
 playwright==1.44.0
 plotly==5.24.1
 pluggy==1.5.0
@@ -114,6 +114,6 @@ tzdata==2024.1
 urllib3==2.2.3
 uv==0.4.10
 vega-datasets==0.9.0
-virtualenv==20.26.4
+virtualenv==20.26.5
 watchdog==5.0.2
 zipp==3.20.2
