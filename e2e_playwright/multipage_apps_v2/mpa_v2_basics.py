@@ -70,6 +70,12 @@ def page_14():
     time.sleep(0.5)
     st.number_input("mynum", value=1, key="mynum")
 
+    @st.fragment
+    def fragment_number_input():
+        st.number_input("mynum 2", value=1, key="mynum2")
+
+    fragment_number_input()
+
 
 page7 = st.Page(page_7, default=set_default)
 page8 = st.Page(page_8, url_path="my_url_path")

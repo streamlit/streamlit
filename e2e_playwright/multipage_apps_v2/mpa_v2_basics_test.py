@@ -413,3 +413,19 @@ def test_rapid_fire_interaction(app: Page):
     wait_for_app_run(app)
 
     expect(number_input.locator("input")).to_have_value("31")
+
+
+def test_rapid_fire_interaction_in_fragment(app: Page):
+    """Check that the number input in a fragment can handle rapid fire clicks in an Multipage app."""
+    get_page_link(app, "page 14").click()
+
+    number_input = get_element_by_key(app, "mynum2")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # we need to have the clicking last a long enough time
+    for _ in range(30):
+        step_up_btn.click()
+
+    wait_for_app_run(app)
+
+    expect(number_input.locator("input")).to_have_value("31")
