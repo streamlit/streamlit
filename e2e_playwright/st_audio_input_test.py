@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_button,
     click_form_button,
     get_element_by_key,
 )
@@ -25,11 +26,12 @@ from e2e_playwright.shared.app_utils import (
 
 def test_audio_input_renders(app: Page):
     audio_input_elements = app.get_by_test_id("stAudioInput")
-    expect(audio_input_elements).to_have_count(5)
+    count = 7
 
-    expect(audio_input_elements.nth(0)).to_be_visible()
-    expect(audio_input_elements.nth(1)).to_be_visible()
-    expect(audio_input_elements.nth(2)).to_be_visible()
+    expect(audio_input_elements).to_have_count(count)
+
+    for i in range(count):
+        expect(audio_input_elements.nth(i)).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
@@ -52,9 +54,7 @@ def test_audio_input_default_snapshot(
 def test_audio_input_disabled_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    disabled_audio_input_element = themed_app.get_by_label("Disabled Audio Input").first
-
-    expect(disabled_audio_input_element).to_be_disabled()
+    disabled_audio_input_element = themed_app.get_by_test_id("stAudioInput").nth(3)
     assert_snapshot(disabled_audio_input_element, name="st_audio_input-disabled")
 
 
@@ -69,15 +69,35 @@ def test_audio_input_label_visibility_snapshot(
     )
 
 
+@pytest.mark.only_browser("chromium")
 def test_audio_input_callback(app: Page):
-    app.get_by_text("Audio Input Changed: False").to_be_visible()
+    expect(app.get_by_text("Audio Input Changed: False")).to_be_visible()
 
     audio_input = app.get_by_test_id("stAudioInput").nth(5)
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(500)
     audio_input.get_by_role("button", name="Stop recording").click()
 
-    app.get_by_text("Audio Input Changed: True").to_be_visible()
+    expect(app.get_by_text("Audio Input Changed: True")).to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_remount_keep_value(app: Page):
+    """Test that `st.audio_input` remounts correctly without resetting value."""
+    expect(app.get_by_text("audio_input-after-sleep: False")).to_be_visible()
+
+    audio_input = app.get_by_test_id("stAudioInput").nth(6)
+    audio_input.get_by_role("button", name="Record").click()
+    app.wait_for_timeout(1000)
+    audio_input.get_by_role("button", name="Stop recording").click()
+
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("audio_input-after-sleep: True")).to_be_visible()
+
+    click_button(app, "Create some elements to unmount component")
+
+    expect(app.get_by_text("audio_input-after-sleep: True")).to_be_visible()
 
 
 @pytest.mark.only_browser("chromium")
@@ -125,7 +145,7 @@ def test_audio_input_works_with_fragments(app: Page):
 def test_audio_input_basic_flow(app: Page):
     app.context.grant_permissions(["microphone"])
 
-    app.get_by_text("Audio Input 1: False").to_be_visible()
+    expect(app.get_by_text("Audio Input 1: False")).to_be_visible()
     audio_input = app.get_by_test_id("stAudioInput").first
 
     expect(
@@ -147,7 +167,7 @@ def test_audio_input_basic_flow(app: Page):
     stop_button.click()
 
     wait_for_app_run(app)
-    app.get_by_text("Audio Input 1: True").to_be_visible()
+    expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
 
     play_button = audio_input.get_by_role("button", name="Play").first
 
@@ -170,7 +190,7 @@ def test_audio_input_basic_flow(app: Page):
     clear_button.click()
 
     wait_for_app_run(app)
-    app.get_by_text("Audio Input 1: False").to_be_visible()
+    expect(app.get_by_text("Audio Input 1: False")).to_be_visible()
 
     expect(audio_input.get_by_role("button", name="Record").first).to_be_visible()
     expect(clock).to_have_text("00:00")

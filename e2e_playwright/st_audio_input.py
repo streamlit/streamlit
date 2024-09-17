@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
 
 audio1 = st.audio_input(label="Audio Input 1", key="the_audio_input")
@@ -51,6 +53,18 @@ st.audio_input(
 )
 st.write("Audio Input Changed:", "audio_input_changed" in st.session_state)
 
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+audio_input_after_sleep = st.audio_input(
+    label="After sleep audio input", key="after_sleep_audio_input"
+)
+st.write("audio_input-after-sleep:", bool(audio_input_after_sleep))
 
 if "runs" not in st.session_state:
     st.session_state.runs = 0
