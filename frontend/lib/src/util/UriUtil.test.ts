@@ -251,27 +251,52 @@ describe("getPossibleBaseUris", () => {
     {
       description: "pathnames with a single part",
       pathname: "foo",
-      expectedBasePaths: ["foo", ""],
+      expectedBasePaths: ["", "foo"],
     },
     {
       description: "pathnames with two parts",
       pathname: "foo/bar",
-      expectedBasePaths: ["foo/bar", "foo"],
+      expectedBasePaths: ["", "foo/bar", "foo"],
     },
     {
       description: "pathnames with more than two parts",
       pathname: "foo/bar/baz/qux",
-      expectedBasePaths: ["foo/bar/baz/qux", "foo/bar/baz"],
+      expectedBasePaths: [
+        "",
+        "foo/bar/baz/qux",
+        "foo/bar/baz",
+        "foo/bar",
+        "foo",
+      ],
+    },
+    {
+      description: "pathnames with preference defined",
+      baseHref: "/foo/bar/",
+      pathname: "foo/bar/baz/qux",
+      expectedBasePaths: [
+        "foo/bar",
+        "foo/bar/baz/qux",
+        "foo/bar/baz",
+        "foo",
+        "",
+      ],
     },
   ]
 
-  testCases.forEach(({ description, pathname, expectedBasePaths }) => {
-    it(`handles ${description}`, () => {
-      window.location.pathname = pathname
+  testCases.forEach(
+    ({ description, pathname, expectedBasePaths, baseHref }) => {
+      it(`handles ${description}`, () => {
+        window.location.pathname = pathname
+        if (baseHref) {
+          const baseElement = document.createElement("base")
+          baseElement.href = baseHref
+          document.head.appendChild(baseElement)
+        }
 
-      expect(getPossibleBaseUris().map(b => b.basePath)).toEqual(
-        expectedBasePaths
-      )
-    })
-  })
+        expect(getPossibleBaseUris().map(b => b.basePath)).toEqual(
+          expectedBasePaths
+        )
+      })
+    }
+  )
 })

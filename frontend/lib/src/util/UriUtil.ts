@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import take from "lodash/take"
-
 import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "@streamlit/lib/src/baseconsts"
 
 /**
@@ -55,6 +53,10 @@ export function getWindowBaseUriParts(): BaseUriParts {
   return { host, port, basePath }
 }
 
+export function getBaseUrlPath(): string {
+  return document.getElementsByTagName("base")[0]?.getAttribute("href") || ""
+}
+
 // NOTE: In the multipage apps world, there is some ambiguity around whether a
 // path like "foo/bar" means
 //   * the page "/" at baseUrlPath "foo/bar", or
@@ -69,29 +71,52 @@ export function getWindowBaseUriParts(): BaseUriParts {
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<BaseUriParts> {
   const baseUriParts = getWindowBaseUriParts()
+  const configBasePath: string | undefined = getBaseUrlPath()
+  const possibleBaseUris: Array<BaseUriParts> = []
+  const possibleBasePaths: Set<string> = new Set()
+
+  if (configBasePath !== undefined) {
+    const cleanedConfigBasePath = configBasePath
+      .replace(FINAL_SLASH_RE, "")
+      .replace(INITIAL_SLASH_RE, "")
+    possibleBaseUris.push({
+      ...baseUriParts,
+      basePath: cleanedConfigBasePath,
+    })
+
+    possibleBasePaths.add(cleanedConfigBasePath)
+  }
+
   const { basePath } = baseUriParts
 
-  if (!basePath) {
-    return [baseUriParts]
+  if (!basePath && !possibleBasePaths.has(basePath)) {
+    return possibleBaseUris.concat([baseUriParts])
   }
 
   const parts = basePath.split("/")
-  const possibleBaseUris: Array<BaseUriParts> = []
 
   while (parts.length > 0) {
+    const partialBasePath = parts.join("/")
+    parts.pop()
+
+    if (possibleBasePaths.has(partialBasePath)) {
+      continue
+    }
+
     possibleBaseUris.push({
       ...baseUriParts,
-      basePath: parts.join("/"),
+      basePath: partialBasePath,
     })
-    parts.pop()
   }
 
-  possibleBaseUris.push({
-    ...baseUriParts,
-    basePath: "",
-  })
+  if (!possibleBasePaths.has("")) {
+    possibleBaseUris.push({
+      ...baseUriParts,
+      basePath: "",
+    })
+  }
 
-  return take(possibleBaseUris, 2)
+  return possibleBaseUris
 }
 
 /**

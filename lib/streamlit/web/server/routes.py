@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-import os
-from typing import Final, Sequence
+from typing import Final
 
+import tornado.httputil as httputil
+import tornado.iostream as iostream
 import tornado.web
 
-from streamlit import config, file_util
+from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
@@ -41,16 +42,6 @@ def allow_cross_origin_requests() -> bool:
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(
-        self,
-        path: str,
-        default_filename: str | None = None,
-        reserved_paths: Sequence[str] = (),
-    ):
-        self._reserved_paths = reserved_paths
-
-        super().initialize(path, default_filename)
-
     def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
@@ -64,33 +55,119 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         else:
             self.set_header("Cache-Control", "public")
 
-    def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
+    async def get(self, path, include_body=True) -> None:
+        # Set up our path instance variables.
+        self.path = self.parse_url_path(path)
+        del path  # make sure we don't refer to path instead of self.path again
+        absolute_path = self.get_absolute_path(self.root, self.path)
+
+        ################## BEGIN OVERRIDDEN SECTION OF TORNADO CODE ##################
         try:
-            return super().validate_absolute_path(root, absolute_path)
+            self.absolute_path = self.validate_absolute_path(self.root, absolute_path)
         except tornado.web.HTTPError as e:
-            # If the file is not found, and there are no reserved paths,
-            # we try to serve the default file and allow the frontend to handle the issue.
-            if e.status_code == 404:
-                url_path = self.path
-                # self.path is OS specific file path, we convert it to a URL path
-                # for checking it against reserved paths.
-                if os.path.sep != "/":
-                    url_path = url_path.replace(os.path.sep, "/")
-                if any(url_path.endswith(x) for x in self._reserved_paths):
-                    raise e
-
-                self.path = self.parse_url_path(self.default_filename or "index.html")
+            # If the file is not found, and it's clear we are not searching for a file
+            # (by checking if there's an extension) try to serve index.html instead.
+            if e.status_code == 404 and "." not in self.path:
+                self.path = self.parse_url_path(self.default_filename)
                 absolute_path = self.get_absolute_path(self.root, self.path)
-                return super().validate_absolute_path(root, absolute_path)
+                self.absolute_path = self.validate_absolute_path(
+                    self.root, absolute_path
+                )
+            else:
+                raise
+        ################## END OVERRIDDEN SECTION OF TORNADO CODE ##################
 
-            raise e
+        if self.absolute_path is None:
+            return
 
-    def write_error(self, status_code: int, **kwargs) -> None:
-        if status_code == 404:
-            index_file = os.path.join(file_util.get_static_dir(), "index.html")
-            self.render(index_file)
+        self.modified = self.get_modified_time()
+        self.set_headers()
+
+        if self.should_return_304():
+            self.set_status(304)
+            return
+
+        request_range = None
+        range_header = self.request.headers.get("Range")
+        if range_header:
+            # As per RFC 2616 14.16, if an invalid Range header is specified,
+            # the request will be treated as if the header didn't exist.
+            request_range = httputil._parse_request_range(range_header)
+
+        size = self.get_content_size()
+        if request_range:
+            start, end = request_range
+            if start is not None and start < 0:
+                start += size
+                if start < 0:
+                    start = 0
+            if (
+                start is not None
+                and (start >= size or (end is not None and start >= end))
+            ) or end == 0:
+                # As per RFC 2616 14.35.1, a range is not satisfiable only: if
+                # the first requested byte is equal to or greater than the
+                # content, or when a suffix with length 0 is specified.
+                # https://tools.ietf.org/html/rfc7233#section-2.1
+                # A byte-range-spec is invalid if the last-byte-pos value is present
+                # and less than the first-byte-pos.
+                self.set_status(416)  # Range Not Satisfiable
+                self.set_header("Content-Type", "text/plain")
+                self.set_header("Content-Range", "bytes */%s" % (size,))
+                return
+            if end is not None and end > size:
+                # Clients sometimes blindly use a large range to limit their
+                # download size; cap the endpoint at the actual file size.
+                end = size
+            # Note: only return HTTP 206 if less than the entire range has been
+            # requested. Not only is this semantically correct, but Chrome
+            # refuses to play audio if it gets an HTTP 206 in response to
+            # ``Range: bytes=0-``.
+            if size != (end or size) - (start or 0):
+                self.set_status(206)  # Partial Content
+                self.set_header(
+                    "Content-Range", httputil._get_content_range(start, end, size)
+                )
         else:
-            super().write_error(status_code, **kwargs)
+            start = end = None
+
+        if start is not None and end is not None:
+            content_length = end - start
+        elif end is not None:
+            content_length = end
+        elif start is not None:
+            content_length = size - start
+        else:
+            content_length = size
+
+        ################## BEGIN OVERRIDDEN SECTION OF TORNADO CODE ##################
+
+        if include_body and self.absolute_path.endswith(self.default_filename):
+            self.render_index_template()
+        else:
+            self.set_header("Content-Length", content_length)
+            if include_body:
+                content = self.get_content(self.absolute_path, start, end)
+                if isinstance(content, bytes):
+                    content = [content]
+                for chunk in content:
+                    try:
+                        self.write(chunk)
+                        await self.flush()
+                    except iostream.StreamClosedError:
+                        return
+            else:
+                assert self.request.method == "HEAD"
+        ################## END OVERRIDDEN SECTION OF TORNADO CODE ##################
+
+    def render_index_template(self):
+        """This method renders the Tornado template when static file is not found or the request is for index.html."""
+        base_path = config.get_option("server.baseUrlPath").strip("/")
+        if base_path:
+            base_path = f"/{base_path}/"
+        else:
+            base_path = "/"
+        self.render("index.html", ROOT_PATH=base_path)
 
 
 class AddSlashHandler(tornado.web.RequestHandler):

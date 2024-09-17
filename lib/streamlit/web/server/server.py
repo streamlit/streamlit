@@ -72,6 +72,7 @@ TORNADO_SETTINGS = {
     # is timed out.
     "websocket_ping_timeout": 30,
     "xsrf_cookie_name": "_streamlit_xsrf",
+    "template_path": file_util.get_static_dir(),
 }
 
 # When server.port is not available it will look for the next available port
@@ -373,12 +374,6 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "reserved_paths": [
-                                # These paths are required for identifying
-                                # the base url path.
-                                NEW_HEALTH_ENDPOINT,
-                                HOST_CONFIG_ENDPOINT,
-                            ],
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
