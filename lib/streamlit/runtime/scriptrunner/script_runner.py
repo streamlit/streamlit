@@ -467,7 +467,6 @@ class ScriptRunner:
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
             )
-            self._pages_manager.reset_active_script_hash()
 
             self.on_event.send(
                 self,
