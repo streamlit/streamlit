@@ -99,6 +99,11 @@ function Slider({
   const { colors, fonts, fontSizes, spacing } = useTheme()
   const style = { width }
 
+  const formattedValueArr = uiValue.map(v => formatValue(v, element))
+  const formattedMinValue = formatValue(element.min, element)
+  const formattedMaxValue = formatValue(element.max, element)
+  const thumbAriaLabel = element.label
+
   // Check the thumb value's alignment vs. slider container
   useEffect((): void => {
     const sliderDiv = sliderRef.current ?? null
@@ -146,6 +151,24 @@ function Slider({
     }
   })
 
+  // Update the thumb numbers via DOM manipulation to avoid a redraw, which
+  // drops the widget's focus state.
+  useEffect(() => {
+    thumbValueRefs.map((ref, i) => {
+      if (!ref.current) {
+        return
+      }
+      ref.current.innerText = formattedValueArr[i]
+    })
+
+    thumbRefs.map((ref, i) => {
+      if (!ref.current) {
+        return
+      }
+      ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
+    })
+  })
+
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
   useEffect(() => {
@@ -173,37 +196,34 @@ function Slider({
   )
 
   const renderTickBar = useCallback((): ReactElement => {
-    const { max, min } = element
-
     return (
       <StyledTickBar data-testid="stSliderTickBar">
         <StyledTickBarItem
           disabled={disabled}
           data-testid="stSliderTickBarMin"
         >
-          {formatValue(min, element)}
+          {formattedMinValue}
         </StyledTickBarItem>
         <StyledTickBarItem
           disabled={disabled}
           data-testid="stSliderTickBarMax"
         >
-          {formatValue(max, element)}
+          {formattedMaxValue}
         </StyledTickBarItem>
       </StyledTickBar>
     )
-  }, [element, disabled])
+    // Only run this on first render. No real reason, just nicer.
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [])
 
   const renderThumb = useCallback(
     React.forwardRef<HTMLDivElement, StyleProps>(
       (props: StyleProps, ref): ReactElement => {
-        const { $value, $thumbIndex } = props
+        const { $thumbIndex } = props
         const thumbIndex = $thumbIndex || 0
         thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
         thumbValueRefs[thumbIndex] ||= React.createRef<HTMLDivElement>()
 
-        const formattedValue = $value
-          ? formatValue($value[$thumbIndex as number], element)
-          : ""
         const passThrough = pick(props, [
           "role",
           "style",
@@ -217,11 +237,8 @@ function Slider({
           "onMouseLeave",
           "draggable",
         ])
-        const ariaValueText: Record<string, string> = {}
 
-        if (element.options.length > 0 || isDateTimeType(element)) {
-          ariaValueText["aria-valuetext"] = formattedValue
-        }
+        const formattedValue = formattedValueArr[thumbIndex]
 
         return (
           <StyledThumb
@@ -229,7 +246,7 @@ function Slider({
             disabled={props.$disabled === true}
             ref={thumbRefs[thumbIndex]}
             aria-valuetext={formattedValue}
-            aria-label={element.label}
+            aria-label={thumbAriaLabel}
           >
             <StyledThumbValue
               data-testid="stSliderThumbValue"
@@ -242,7 +259,17 @@ function Slider({
         )
       }
     ),
-    [element]
+    // Only run this on first render, to avoid losing the focus state.
+    /* eslint-disable react-hooks/exhaustive-deps */
+    []
+  )
+
+  const innerTrackStyle = useCallback(
+    ({ $disabled }: StyleProps) => ({
+      height: "4px",
+      ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
+    }),
+    []
   )
 
   return (
@@ -298,10 +325,7 @@ function Slider({
             },
           },
           InnerTrack: {
-            style: ({ $disabled }: StyleProps) => ({
-              height: "4px",
-              ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
-            }),
+            style: innerTrackStyle,
           },
           TickBar: renderTickBar,
         }}
