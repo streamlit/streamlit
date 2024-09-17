@@ -222,7 +222,7 @@ describe("NumberInput widget", () => {
   it("shows Input Instructions if in form that allows submit on enter", async () => {
     const user = userEvent.setup()
     const props = getIntProps({ formId: "form" })
-    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
 
     render(<NumberInput {...props} />)
     const numberInput = screen.getByTestId("stNumberInputField")
@@ -240,7 +240,7 @@ describe("NumberInput widget", () => {
     const user = userEvent.setup()
     const props = getIntProps({ formId: "form" })
     jest
-      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .spyOn(props.widgetMgr, "allowFormEnterToSubmit")
       .mockReturnValue(false)
 
     render(<NumberInput {...props} />)

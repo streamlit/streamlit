@@ -218,7 +218,7 @@ export class WidgetStateManager {
   public setFormSubmitBehaviors(
     formId: string,
     clearOnSubmit: boolean,
-    enterToSubmit: boolean = true
+    enterToSubmit = true
   ): void {
     const form = this.getOrCreateFormState(formId)
     form.clearOnSubmit = clearOnSubmit
@@ -692,7 +692,7 @@ export class WidgetStateManager {
    * First checks form's enterToSubmit param, otherwise default behavior:
    * Must be in a form & have 1st submit button enabled to allow
    */
-  public allowFormSubmitOnEnter(formId: string): boolean {
+  public allowFormEnterToSubmit(formId: string): boolean {
     // Check user-set enterToSubmit param first (in FormState)
     // Don't allow if false
     const form = this.forms.get(formId)

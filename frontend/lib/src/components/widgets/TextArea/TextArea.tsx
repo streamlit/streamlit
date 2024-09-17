@@ -173,13 +173,13 @@ class TextArea extends React.PureComponent<Props, State> {
     const { dirty } = this.state
     const { element, widgetMgr, fragmentId } = this.props
     const { formId } = element
-    const allowFormSubmitOnEnter = widgetMgr.allowFormSubmitOnEnter(formId)
+    const allowFormEnterToSubmit = widgetMgr.allowFormEnterToSubmit(formId)
 
     if (this.isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
       e.preventDefault()
 
       this.commitWidgetValue({ fromUi: true })
-      if (allowFormSubmitOnEnter) {
+      if (allowFormEnterToSubmit) {
         widgetMgr.submitForm(formId, fragmentId)
       }
     }
@@ -191,8 +191,8 @@ class TextArea extends React.PureComponent<Props, State> {
     const style = { width }
     const { height, placeholder, formId } = element
     // Show "Please enter" instructions if in a form & allowed, or not in form
-    const allowSubmitOnEnter =
-      widgetMgr.allowFormSubmitOnEnter(formId) || !isInForm({ formId })
+    const allowEnterToSubmit =
+      widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -268,7 +268,7 @@ class TextArea extends React.PureComponent<Props, State> {
             maxLength={element.maxChars}
             type={"multiline"}
             inForm={isInForm({ formId })}
-            allowSubmitOnEnter={allowSubmitOnEnter}
+            allowEnterToSubmit={allowEnterToSubmit}
           />
         )}
       </div>
