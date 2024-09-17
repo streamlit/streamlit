@@ -17,7 +17,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen, act } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -193,24 +193,26 @@ describe("DateInput widget", () => {
     expect(dateInput).toHaveValue(fullOriginalDate)
   })
 
-  it("has a minDate", async () => {
+  it("has a minDate", () => {
     const props = getProps({})
 
     render(<DateInput {...props} />)
 
     const dateInput = screen.getByTestId("stDateInputField")
 
-    await act(() => {
-      fireEvent.focus(dateInput)
-    })
+    fireEvent.focus(dateInput)
 
-    screen.getByLabelText("Not available. Monday, January 19th 1970.")
-    screen.getByLabelText(
-      "Selected. Tuesday, January 20th 1970. It's available."
-    )
+    expect(
+      screen.getByLabelText("Not available. Monday, January 19th 1970.")
+    ).toBeTruthy()
+    expect(
+      screen.getByLabelText(
+        "Selected. Tuesday, January 20th 1970. It's available."
+      )
+    ).toBeTruthy()
   })
 
-  it("has a minDate if passed", async () => {
+  it("has a minDate if passed", () => {
     const props = getProps({
       min: "2020/01/05",
       // Choose default so min is in the default page when the widget is opened.
@@ -221,15 +223,18 @@ describe("DateInput widget", () => {
 
     const dateInput = screen.getByTestId("stDateInputField")
 
-    await act(() => {
-      fireEvent.focus(dateInput)
-    })
+    fireEvent.focus(dateInput)
 
-    screen.getByLabelText("Not available. Saturday, January 4th 2020.")
-    screen.getByLabelText("Choose Sunday, January 5th 2020. It's available.")
+    expect(
+      screen.getByLabelText("Not available. Saturday, January 4th 2020.")
+    ).toBeTruthy()
+
+    expect(
+      screen.getByLabelText("Choose Sunday, January 5th 2020. It's available.")
+    ).toBeTruthy()
   })
 
-  it("has a maxDate if it is passed", async () => {
+  it("has a maxDate if it is passed", () => {
     const props = getProps({
       max: "2020/01/25",
       // Choose default so min is in the default page when the widget is opened.
@@ -240,17 +245,20 @@ describe("DateInput widget", () => {
 
     const dateInput = screen.getByTestId("stDateInputField")
 
-    await act(() => {
-      fireEvent.focus(dateInput)
-    })
+    fireEvent.focus(dateInput)
 
-    screen.getByLabelText(
-      "Choose Saturday, January 25th 2020. It's available."
-    )
-    screen.getByLabelText("Not available. Sunday, January 26th 2020.")
+    expect(
+      screen.getByLabelText(
+        "Choose Saturday, January 25th 2020. It's available."
+      )
+    ).toBeTruthy()
+
+    expect(
+      screen.getByLabelText("Not available. Sunday, January 26th 2020.")
+    ).toBeTruthy()
   })
 
-  it("resets its value when form is cleared", async () => {
+  it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
@@ -274,7 +282,7 @@ describe("DateInput widget", () => {
       undefined
     )
 
-    await act(() => {
+    act(() => {
       // "Submit" the form
       props.widgetMgr.submitForm("form", undefined)
     })

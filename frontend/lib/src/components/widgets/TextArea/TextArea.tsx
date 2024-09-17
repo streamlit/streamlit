@@ -18,8 +18,8 @@ import React, {
   memo,
   ReactElement,
   useCallback,
-  useState,
   useEffect,
+  useState,
 } from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -27,7 +27,6 @@ import { useTheme } from "@emotion/react"
 import uniqueId from "lodash/uniqueId"
 
 import { TextArea as TextAreaProto } from "@streamlit/lib/src/proto"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
@@ -44,7 +43,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
   disabled: boolean
@@ -54,7 +52,7 @@ export interface Props {
   fragmentId?: string
 }
 
-export function TextArea({
+function TextArea({
   disabled,
   element,
   widgetMgr,

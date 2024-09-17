@@ -17,11 +17,10 @@
 import React, {
   memo,
   ReactElement,
-  useState,
   useCallback,
   useEffect,
   useRef,
-  useMemo,
+  useState,
 } from "react"
 
 import pick from "lodash/pick"
@@ -30,7 +29,6 @@ import { useTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
 import moment from "moment"
 
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
@@ -47,7 +45,6 @@ import {
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import {
   StyledThumb,
@@ -220,6 +217,7 @@ function Slider({
   }, [])
 
   const renderThumb = useCallback(
+    /* eslint-disable react/display-name */
     React.forwardRef<HTMLDivElement, StyleProps>(
       (props: StyleProps, ref): ReactElement => {
         const { $thumbIndex } = props

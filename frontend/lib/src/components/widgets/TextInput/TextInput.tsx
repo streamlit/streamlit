@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  ReactElement,
-  useCallback,
-  useState,
-  useEffect,
-} from "react"
+import React, { ReactElement, useCallback, useEffect, useState } from "react"
 
 import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
 import { useTheme } from "@emotion/react"
 
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   useBasicWidgetState,
@@ -44,7 +37,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledTextInput } from "./styled-components"
 
@@ -56,7 +48,7 @@ export interface Props {
   fragmentId?: string
 }
 
-export function TextInput({
+function TextInput({
   disabled,
   element,
   widgetMgr,
