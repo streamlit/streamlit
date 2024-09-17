@@ -296,7 +296,7 @@ const AudioInput: React.FC<Props> = ({
         theme.genericColors.secondaryBg
       ),
     })
-  }, [recordPlugin, wavesurfer])
+  }, [recordPlugin, wavesurfer, theme])
 
   const isRecording = Boolean(recordPlugin?.isRecording())
   const isPlaying = Boolean(wavesurfer?.isPlaying())
