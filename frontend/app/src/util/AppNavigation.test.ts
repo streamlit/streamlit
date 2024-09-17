@@ -323,6 +323,7 @@ describe("AppNavigation", () => {
         ],
         position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
+        expanded: false,
       })
       appNavigation.handleNavigation(navigation)
     })
@@ -406,8 +407,9 @@ describe("AppNavigation", () => {
             urlPathname: "streamlit_app2",
           }),
         ],
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash2",
+        expanded: false,
       })
       appNavigation.handleNavigation(navigation)
       expect(onUpdatePageUrl).toHaveBeenCalledWith(
@@ -434,8 +436,9 @@ describe("AppNavigation", () => {
             urlPathname: "streamlit_app2",
           }),
         ],
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
+        expanded: false,
       })
       appNavigation.handleNavigation(navigation)
       const page = appNavigation.findPageByUrlPath("/streamlit_app2")
@@ -463,8 +466,9 @@ describe("AppNavigation", () => {
             urlPathname: "streamlit_app2",
           }),
         ],
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
+        expanded: false,
       })
       appNavigation.handleNavigation(navigation)
       const page = appNavigation.findPageByUrlPath("foo")
@@ -493,6 +497,7 @@ describe("AppNavigation", () => {
         appPages,
         position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
+        expanded: false,
       })
       const maybeState = appNavigation.handleNavigation(navigation)
       expect(maybeState).not.toBeUndefined()
@@ -501,6 +506,7 @@ describe("AppNavigation", () => {
       expect(newState).toEqual({
         appPages,
         hideSidebarNav: true,
+        expandSidebarNav: false,
         currentPageScriptHash: "page_script_hash",
         navSections: ["section1", "section2"],
       })
@@ -526,8 +532,9 @@ describe("AppNavigation", () => {
       const navigation = new Navigation({
         sections: ["section1", "section2"],
         appPages,
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
+        expanded: false,
       })
       const maybeState = appNavigation.handleNavigation(navigation)
       expect(maybeState).not.toBeUndefined()
@@ -586,6 +593,7 @@ describe("AppNavigation", () => {
         ],
         position: "hidden",
         pageScriptHash: "page_script_hash",
+        expanded: false,
       })
       appNavigation.handleNavigation(navigation)
       const hostCommCalls = hostCommunicationMgr.sendMessageToHost.mock.calls

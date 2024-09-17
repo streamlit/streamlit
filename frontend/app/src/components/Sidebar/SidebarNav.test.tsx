@@ -58,6 +58,7 @@ describe("SidebarNav", () => {
   afterEach(() => {
     // @ts-expect-error
     reactDeviceDetect.isMobile = false
+    window.localStorage.clear()
   })
 
   it("replaces underscores with spaces in pageName", () => {
