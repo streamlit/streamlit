@@ -198,6 +198,9 @@ def compute_and_register_element_id(
     kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
         The arguments to use to compute the element ID.
         The arguments must be stable, deterministic values.
+        Some common parameters like key, disabled,
+        format_func, label_visibility, args, kwars, on_change, and
+        the active_script_hash are not supposed to be added here
     """
     ctx = get_script_run_ctx()
 
