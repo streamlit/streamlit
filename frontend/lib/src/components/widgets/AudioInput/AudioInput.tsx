@@ -139,35 +139,40 @@ const AudioInput: React.FC<Props> = ({
       })
   }, [])
 
-  const handleClear = useCallback(() => {
-    if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
-      return
-    }
-    setRecordingUrl(null)
-    wavesurfer.empty()
-    uploadClient.deleteFile(deleteFileUrl)
-    setProgressTime(STARTING_TIME_STRING)
-    setRecordingTime(STARTING_TIME_STRING)
-    setDeleteFileUrl(null)
-    widgetMgr.setFileUploaderStateValue(
+  const handleClear = useCallback(
+    ({ updateWidgetManager }: { updateWidgetManager?: boolean }) => {
+      if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
+        return
+      }
+      setRecordingUrl(null)
+      wavesurfer.empty()
+      uploadClient.deleteFile(deleteFileUrl)
+      setProgressTime(STARTING_TIME_STRING)
+      setRecordingTime(STARTING_TIME_STRING)
+      setDeleteFileUrl(null)
+      if (updateWidgetManager) {
+        widgetMgr.setFileUploaderStateValue(
+          element,
+          {},
+          { fromUi: true },
+          fragmentId
+        )
+      }
+      setShouldUpdatePlaybackTime(false)
+      if (notNullOrUndefined(recordingUrl)) {
+        URL.revokeObjectURL(recordingUrl)
+      }
+    },
+    [
+      deleteFileUrl,
+      recordingUrl,
+      uploadClient,
+      wavesurfer,
       element,
-      {},
-      { fromUi: true },
-      fragmentId
-    )
-    setShouldUpdatePlaybackTime(false)
-    if (notNullOrUndefined(recordingUrl)) {
-      URL.revokeObjectURL(recordingUrl)
-    }
-  }, [
-    deleteFileUrl,
-    recordingUrl,
-    uploadClient,
-    wavesurfer,
-    element,
-    widgetMgr,
-    fragmentId,
-  ])
+      widgetMgr,
+      fragmentId,
+    ]
+  )
 
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
@@ -202,30 +207,11 @@ const AudioInput: React.FC<Props> = ({
     )
 
     rp.on("record-end", blob => {
-      if (recordingUrl) {
-        handleClear()
-      }
-
       const url = URL.createObjectURL(blob)
       setRecordingUrl(url)
 
       const file = new File([blob], "audio.wav", { type: blob.type })
       uploadTheFile(file)
-
-      ws.setOptions({
-        // We are blending this color instead of directly using the theme color (fadedText40)
-        // because the "faded" part of fadedText40 means introducing some transparency, which
-        // causes problems with the progress waveform color because wavesurfer is choosing to
-        // tint the waveColor with the progressColor instead of directly setting the progressColor.
-        // This means that the low opacity of fadedText40 causes the progress waveform to
-        // have the same opacity which makes it impossible to darken it enough to match designs.
-        // We fix this by blending the colors to figure out what the resulting color should be at
-        // full opacity, and we usee that color to set the waveColor.
-        waveColor: blend(
-          theme.colors.fadedText40,
-          theme.genericColors.secondaryBg
-        ),
-      })
     })
 
     rp.on("record-progress", time => {
@@ -239,11 +225,21 @@ const AudioInput: React.FC<Props> = ({
       if (ws) ws.destroy()
       if (rp) rp.destroy()
     }
-  }, [theme, uploadTheFile, handleClear, recordingUrl])
+    // note: intentionally excluding theme so that we don't have to recreate the wavesurfer instance
+    // and colors will be updated separately
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadTheFile])
+
+  useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
 
   useEffect(() => {
-    initializeWaveSurfer()
-  }, [initializeWaveSurfer])
+    wavesurfer?.setOptions({
+      waveColor: recordingUrl
+        ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
+        : theme.colors.primary,
+      progressColor: theme.colors.bodyText,
+    })
+  }, [theme, recordingUrl, wavesurfer])
 
   const onClickPlayPause = useCallback(() => {
     if (wavesurfer) {
@@ -264,17 +260,43 @@ const AudioInput: React.FC<Props> = ({
       waveColor: theme.colors.primary,
     })
 
+    if (recordingUrl) {
+      handleClear({ updateWidgetManager: false })
+    }
+
     recordPlugin.startRecording({ deviceId: activeAudioDeviceId }).then(() => {
       // Update the record button to show the user that they can stop recording
       forceRerender()
     })
-  }, [activeAudioDeviceId, recordPlugin, theme, wavesurfer])
+  }, [
+    activeAudioDeviceId,
+    recordPlugin,
+    theme,
+    wavesurfer,
+    recordingUrl,
+    handleClear,
+  ])
 
   const stopRecording = useCallback(() => {
     if (!recordPlugin) return
 
     recordPlugin.stopRecording()
-  }, [recordPlugin])
+
+    wavesurfer?.setOptions({
+      // We are blending this color instead of directly using the theme color (fadedText40)
+      // because the "faded" part of fadedText40 means introducing some transparency, which
+      // causes problems with the progress waveform color because wavesurfer is choosing to
+      // tint the waveColor with the progressColor instead of directly setting the progressColor.
+      // This means that the low opacity of fadedText40 causes the progress waveform to
+      // have the same opacity which makes it impossible to darken it enough to match designs.
+      // We fix this by blending the colors to figure out what the resulting color should be at
+      // full opacity, and we usee that color to set the waveColor.
+      waveColor: blend(
+        theme.colors.fadedText40,
+        theme.genericColors.secondaryBg
+      ),
+    })
+  }, [recordPlugin, wavesurfer])
 
   const isRecording = Boolean(recordPlugin?.isRecording())
   const isPlaying = Boolean(wavesurfer?.isPlaying())
@@ -307,7 +329,7 @@ const AudioInput: React.FC<Props> = ({
             <ToolbarAction
               label="Clear recording"
               icon={Delete}
-              onClick={handleClear}
+              onClick={() => handleClear({ updateWidgetManager: true })}
               data-testid="stAudioInputClearRecordingButton"
             />
           )}
