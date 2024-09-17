@@ -148,6 +148,10 @@ def test_audio_input_basic_flow(app: Page):
     expect(app.get_by_text("Audio Input 1: False")).to_be_visible()
     audio_input = app.get_by_test_id("stAudioInput").first
 
+    expect(app.get_by_text("This is the help text")).not_to_be_visible()
+    audio_input.get_by_test_id("stTooltipIcon").hover()
+    expect(app.get_by_text("This is the help text")).to_be_visible()
+
     expect(
         app.get_by_text("This app would like to use your microphone.").first
     ).not_to_be_visible()

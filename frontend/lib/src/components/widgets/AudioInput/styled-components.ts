@@ -29,7 +29,6 @@ export const StyledWaveformContainerDiv = styled.div(({ theme }) => ({
   position: "relative",
   paddingLeft: theme.spacing.xs,
   paddingRight: theme.spacing.sm,
-  overflow: "hidden",
 }))
 
 export const StyledWaveformInnerDiv = styled.div({
@@ -58,6 +57,7 @@ export const StyledWaveformTimeCode = styled.span<{
 export const StyledNoMicInputContainerDiv = styled.div(() => ({
   width: "100%",
   textAlign: "center",
+  overflow: "hidden",
 }))
 
 export const StyledNoMicPermissionsErrorTextSpan = styled.span()
@@ -125,4 +125,8 @@ export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
   padding: theme.spacing.xs,
   gap: theme.spacing.twoXS,
   marginRight: theme.spacing.twoXS,
+}))
+
+export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
+  marginLeft: theme.spacing.sm,
 }))
