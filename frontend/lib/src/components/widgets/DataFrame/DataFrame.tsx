@@ -19,6 +19,7 @@ import React, { ReactElement } from "react"
 import {
   CompactSelection,
   DataEditorRef,
+  GetRowThemeCallback,
   DataEditor as GlideDataEditor,
   GridCell,
   Item as GridCellPosition,
@@ -145,7 +146,8 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius, bgRowHovered } =
+    useCustomTheme()
 
   const {
     libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
@@ -513,6 +515,21 @@ function DataFrame({
     getCellContent
   )
 
+  const [hoverRow, setHoverRow] = React.useState<number | undefined>(undefined)
+
+  const getRowThemeOverride = React.useCallback<GetRowThemeCallback>(
+    row => {
+      if (row !== hoverRow) {
+        return undefined
+      }
+      return {
+        bgCell: bgRowHovered,
+        bgCellMedium: bgRowHovered,
+      }
+    },
+    [bgRowHovered, hoverRow]
+  )
+
   const { drawCell, customRenderers } = useCustomRenderer(columns)
 
   const transformedColumns = React.useMemo(
@@ -811,7 +828,11 @@ function DataFrame({
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable tooltips on hover of a cell or column header:
-          onItemHovered={onItemHovered}
+          onItemHovered={(args: GridMouseEventArgs) => {
+            const [, row] = args.location
+            setHoverRow(args.kind !== "cell" ? undefined : row)
+            onItemHovered?.(args)
+          }}
           // Activate keybindings:
           keybindings={{ downFill: true }}
           // Search needs to be activated manually, to support search
@@ -823,6 +844,7 @@ function DataFrame({
               event.preventDefault()
             }
           }}
+          getRowThemeOverride={getRowThemeOverride}
           showSearch={showSearch}
           onSearchClose={() => {
             setShowSearch(false)
