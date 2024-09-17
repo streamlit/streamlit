@@ -146,6 +146,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   layout: PageConfig.Layout
+  pageLayouts: Record<string, PageConfig.Layout>
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
@@ -276,6 +277,7 @@ export class App extends PureComponent<Props, State> {
         runOnSave: false,
       },
       layout: PageConfig.Layout.CENTERED,
+      pageLayouts: {},
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
@@ -783,11 +785,8 @@ export class App extends PureComponent<Props, State> {
 
     // Only change layout/sidebar when the page config has changed.
     // This preserves the user's previous choice, and prevents extra re-renders.
-    console.log("layout", layout)
-    console.log("this.state.layout", this.state.layout)
     if (layout !== this.state.layout) {
       this.setState((prevState: State) => {
-        console.log("userSettings", prevState.userSettings)
         return {
           layout,
           userSettings: {
@@ -1461,15 +1460,21 @@ export class App extends PureComponent<Props, State> {
         .filter(notUndefined)
     )
 
-    // Reset page layout to centered
-    // 1. This forces pages without set_page_config(layout=...) to be centered (default)
-    // 2. Pages using set_page_config(layout=...) will override these values
+    // Set new page layout before rerun
+    // 1. Use previously saved layout if exists, otherwise default to CENTERED
+    // 2. This forces pages without set_page_config(layout=...) to correctly reset to default
+    // 3. Pages using set_page_config(layout=...) will be overriding these values
     this.setState((prevState: State) => {
+      const pageLayouts = prevState.pageLayouts
+      pageLayouts[prevState.currentPageScriptHash] = prevState.layout
+      const newLayout =
+        pageLayouts[pageScriptHash] ?? PageConfig.Layout.CENTERED
       return {
-        layout: PageConfig.Layout.CENTERED,
+        layout: newLayout,
+        pageLayouts: pageLayouts,
         userSettings: {
           ...prevState.userSettings,
-          wideMode: false,
+          wideMode: newLayout === PageConfig.Layout.WIDE,
         },
       }
     })
