@@ -222,9 +222,7 @@ def _fragment(
                 # This ensures that elements (especially widgets) are tied
                 # to a consistent active script hash
                 active_hash_context = (
-                    ctx.pages_manager.run_with_active_hash(
-                        initialized_active_script_hash
-                    )
+                    ctx.run_with_active_hash(initialized_active_script_hash)
                     if initialized_active_script_hash != ctx.active_script_hash
                     else contextlib.nullcontext()
                 )

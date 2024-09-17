@@ -20,7 +20,11 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import click_button, click_checkbox
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    click_checkbox,
+    get_element_by_key,
+)
 
 
 def main_heading(app: Page):
@@ -56,6 +60,8 @@ expected_page_order = [
     "page 10",
     "page 11",
     "page 12",
+    "page 13",
+    "page 14",
 ]
 
 
@@ -391,3 +397,35 @@ def test_widget_state_reset_on_page_switch(app: Page):
 
     # Slider reset
     expect(app.get_by_text("x is 1")).to_be_attached()
+
+
+def test_rapid_fire_interaction(app: Page):
+    """Check that the number input can handle rapid fire clicks in an Multipage app."""
+    get_page_link(app, "page 14").click()
+
+    number_input = get_element_by_key(app, "mynum")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # we need to have the clicking last a long enough time
+    for _ in range(30):
+        step_up_btn.click()
+
+    wait_for_app_run(app)
+
+    expect(number_input.locator("input")).to_have_value("31")
+
+
+def test_rapid_fire_interaction_in_fragment(app: Page):
+    """Check that the number input in a fragment can handle rapid fire clicks in an Multipage app."""
+    get_page_link(app, "page 14").click()
+
+    number_input = get_element_by_key(app, "mynum2")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # we need to have the clicking last a long enough time
+    for _ in range(30):
+        step_up_btn.click()
+
+    wait_for_app_run(app)
+
+    expect(number_input.locator("input")).to_have_value("31")

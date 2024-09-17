@@ -282,7 +282,7 @@ class StreamlitPage:
         if not ctx:
             return
 
-        with ctx.pages_manager.run_with_active_hash(self._script_hash):
+        with ctx.run_with_active_hash(self._script_hash):
             if callable(self._page):
                 self._page()
                 return
