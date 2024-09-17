@@ -15,10 +15,18 @@
 from __future__ import annotations
 
 import collections
+import contextlib
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Counter, Dict, Final, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Counter,
+    Dict,
+    Final,
+    Union,
+)
 from urllib import parse
 
 from typing_extensions import TypeAlias
@@ -90,6 +98,7 @@ class ScriptRunContext:
     current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
+    _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
 
@@ -99,11 +108,25 @@ class ScriptRunContext:
 
     @property
     def page_script_hash(self):
-        return self.pages_manager.get_current_page_script_hash()
+        return self.pages_manager.current_page_script_hash
 
     @property
     def active_script_hash(self):
-        return self.pages_manager.get_active_script_hash()
+        return self._active_script_hash
+
+    @contextlib.contextmanager
+    def run_with_active_hash(self, page_hash: str):
+        original_page_hash = self._active_script_hash
+        self._active_script_hash = page_hash
+        try:
+            yield
+        finally:
+            # in the event of any exception, ensure we set the active hash back
+            self._active_script_hash = original_page_hash
+
+    def set_mpa_v2_page(self, page_script_hash: str):
+        self._active_script_hash = self.pages_manager.main_script_hash
+        self.pages_manager.set_current_page_script_hash(page_script_hash)
 
     def reset(
         self,
@@ -117,6 +140,7 @@ class ScriptRunContext:
         self.form_ids_this_run = set()
         self.query_string = query_string
         self.pages_manager.set_current_page_script_hash(page_script_hash)
+        self._active_script_hash = self.pages_manager.initial_active_script_hash
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False

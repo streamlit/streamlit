@@ -1906,7 +1906,7 @@ class VegaChartsMixin:
                 use_container_width=use_container_width,
                 selection_mode=parsed_selection_modes,
                 form_id=vega_lite_proto.form_id,
-                page=ctx.page_script_hash if ctx else None,
+                page=ctx.active_script_hash if ctx else None,
             )
 
             serde = VegaLiteStateSerde(parsed_selection_modes)
