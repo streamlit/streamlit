@@ -37,7 +37,7 @@ export const BORDER_THRESHOLD = 2
 export const ROW_HEIGHT = 35
 // Min width for the resizable table container:
 // Based on one column at minimum width + borders
-const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + BORDER_THRESHOLD
+export const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + BORDER_THRESHOLD
 // Min height for the resizable table container:
 // Based on header + one column, and border threshold
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + BORDER_THRESHOLD
@@ -81,6 +81,13 @@ function useTableSizer(
   )
 
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
+  // The available width should be at least the minimum table width
+  // to prevent "maximum update depth exceeded" error. The reason
+  // is that the container width can be -1 in some edge cases
+  // caused by the resize observer in the Block component.
+  // This can trigger the "maximum update depth exceeded" error
+  // within the grid component.
+  const availableWidth = Math.max(containerWidth, MIN_TABLE_WIDTH)
 
   if (element.height) {
     // User has explicitly configured a height
@@ -100,19 +107,20 @@ function useTableSizer(
     }
   }
 
-  let initialWidth: number | undefined // If container width is undefined, auto set based on column widths
-  let maxWidth = containerWidth
+  let initialWidth: number | undefined
+  let maxWidth = availableWidth
 
   if (element.useContainerWidth) {
-    // Always use the full container width
-    initialWidth = containerWidth
+    // If user has set use_container_width,
+    // use the full container width.
+    initialWidth = availableWidth
   } else if (element.width) {
     // User has explicitly configured a width
     initialWidth = Math.min(
       Math.max(element.width, MIN_TABLE_WIDTH),
-      containerWidth
+      availableWidth
     )
-    maxWidth = Math.min(Math.max(element.width, maxWidth), containerWidth)
+    maxWidth = Math.min(Math.max(element.width, maxWidth), availableWidth)
   }
 
   const [resizableSize, setResizableSize] = React.useState<ResizableSize>({
@@ -125,11 +133,11 @@ function useTableSizer(
     // changes and the table uses the full container width.
     if (element.useContainerWidth && resizableSize.width === "100%") {
       setResizableSize({
-        width: containerWidth,
+        width: availableWidth,
         height: resizableSize.height,
       })
     }
-  }, [containerWidth])
+  }, [availableWidth])
 
   // Reset the height if the number of rows changes (e.g. via add_rows):
   React.useLayoutEffect(() => {
