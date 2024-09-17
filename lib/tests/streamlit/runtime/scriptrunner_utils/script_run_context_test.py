@@ -177,6 +177,7 @@ class ScriptRunContextTest(unittest.TestCase):
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=pg_mgr,
         )
+        ctx.reset(page_script_hash="main_script_hash")
 
         ctx.on_script_start()
 
@@ -184,17 +185,16 @@ class ScriptRunContextTest(unittest.TestCase):
         msg.delta.new_element.markdown.body = "foo"
 
         ctx.enqueue(msg)
-        self.assertEqual(
-            msg.metadata.active_script_hash, pg_mgr.get_active_script_hash()
-        )
+        self.assertEqual(msg.metadata.active_script_hash, ctx.active_script_hash)
 
-        pg_mgr.set_current_page_script_hash("new_hash")
+        ctx.set_mpa_v2_page("new_hash")
 
-        new_msg = ForwardMsg()
-        new_msg.delta.new_element.markdown.body = "bar"
+        with ctx.run_with_active_hash("new_hash"):
+            new_msg = ForwardMsg()
+            new_msg.delta.new_element.markdown.body = "bar"
 
-        ctx.enqueue(new_msg)
-        self.assertEqual(new_msg.metadata.active_script_hash, "new_hash")
+            ctx.enqueue(new_msg)
+            assert new_msg.metadata.active_script_hash == "new_hash"
 
     @parameterized.expand(
         [
@@ -330,3 +330,30 @@ class ScriptRunContextTest(unittest.TestCase):
             self.assertEqual(
                 fake_enqueue_result["msg"].delta.fragment_id, "my_fragment_id"
             )
+
+    def test_run_with_active_hash(self):
+        """Ensure the active script is set correctly"""
+        pages_manager = PagesManager("")
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=lambda msg: None,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+            pages_manager=pages_manager,
+            current_fragment_id="my_fragment_id",
+        )
+        ctx.reset(page_script_hash=pages_manager.main_script_hash)
+        assert ctx.active_script_hash == pages_manager.main_script_hash
+
+        pages_manager.set_pages({})
+        ctx.set_mpa_v2_page("new_hash")
+        assert ctx.active_script_hash == pages_manager.main_script_hash
+
+        with ctx.run_with_active_hash("new_hash"):
+            assert ctx.active_script_hash == "new_hash"
+
+        assert ctx.active_script_hash == pages_manager.main_script_hash
