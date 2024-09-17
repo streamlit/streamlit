@@ -150,7 +150,7 @@ const SidebarNav = ({
   useEffect(() => {
     const cachedSidebarNavExpanded =
       localStorageAvailable() &&
-      localStorage.getItem("sidebarNavState") === "expanded"
+      window.localStorage.getItem("sidebarNavState") === "expanded"
 
     if (!expanded && (expandSidebarNav || cachedSidebarNavExpanded)) {
       setExpanded(true)

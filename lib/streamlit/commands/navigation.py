@@ -104,9 +104,10 @@ def navigation(
         for any value of ``position``.
 
     expanded: bool
-        Whether the navigation menu should be expanded by default. If ``True``,
-        the navigation menu will be expanded by default. If ``False``, the
-        navigation menu will be collapsed
+        Whether the navigation menu should be expanded. If ``True``,
+        the navigation menu will always be expanded. If ``False``, the
+        navigation menu will be collapsed and will include a button
+        to view more options.
 
     Returns
     -------

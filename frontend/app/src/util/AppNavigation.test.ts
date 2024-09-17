@@ -124,6 +124,8 @@ describe("AppNavigation", () => {
       pageLinkBaseUrlChanged: () => {},
       queryParamsChanged: () => {},
       deployedAppMetadataChanged: () => {},
+      restartWebsocketConnection: () => {},
+      terminateWebsocketConnection: () => {},
     })
     onUpdatePageUrl = jest.fn()
     onPageNotFound = jest.fn()
@@ -288,8 +290,8 @@ describe("AppNavigation", () => {
       appNavigation.handleNewSession(generateNewSession())
       const page = appNavigation.findPageByUrlPath("/streamlit_app")
 
-      expect(page.pageScriptHash).toEqual("page_script_hash")
-      expect(page.pageName).toEqual("streamlit app")
+      expect(page!.pageScriptHash).toEqual("page_script_hash")
+      expect(page!.pageName).toEqual("streamlit app")
     })
 
     it("returns default url by path when path is invalid", () => {
@@ -297,8 +299,8 @@ describe("AppNavigation", () => {
       appNavigation.handleNewSession(generateNewSession())
       const page = appNavigation.findPageByUrlPath("foo")
 
-      expect(page.pageScriptHash).toEqual("page_script_hash")
-      expect(page.pageName).toEqual("streamlit app")
+      expect(page!.pageScriptHash).toEqual("page_script_hash")
+      expect(page!.pageName).toEqual("streamlit app")
     })
   })
 
@@ -321,7 +323,7 @@ describe("AppNavigation", () => {
             sectionHeader: "section2",
           }),
         ],
-        position: Navigation.Position.HIDDEN,
+        position: Navigation.Position.SIDEBAR,
         pageScriptHash: "page_script_hash",
         expanded: false,
       })
@@ -329,7 +331,39 @@ describe("AppNavigation", () => {
     })
 
     it("continues to set hideSidebarNav on new session", () => {
-      const maybeState = appNavigation.handleNewSession(generateNewSession())
+      const cleanAppNavigation = new AppNavigation(
+        hostCommunicationMgr,
+        onUpdatePageUrl,
+        onPageNotFound,
+        onPageIconChange
+      )
+
+      cleanAppNavigation.handleNavigation(
+        new Navigation({
+          sections: ["section1", "section2"],
+          appPages: [
+            new AppPage({
+              pageName: "streamlit_app",
+              pageScriptHash: "page_script_hash",
+              isDefault: true,
+              sectionHeader: "section1",
+            }),
+            new AppPage({
+              pageName: "streamlit_app2",
+              pageScriptHash: "page_script_hash2",
+              isDefault: false,
+              sectionHeader: "section2",
+            }),
+          ],
+          position: Navigation.Position.HIDDEN,
+          pageScriptHash: "page_script_hash",
+          expanded: false,
+        })
+      )
+
+      const maybeState = cleanAppNavigation.handleNewSession(
+        generateNewSession()
+      )
       expect(maybeState).not.toBeUndefined()
 
       const [newState] = maybeState!
@@ -443,8 +477,8 @@ describe("AppNavigation", () => {
       appNavigation.handleNavigation(navigation)
       const page = appNavigation.findPageByUrlPath("/streamlit_app2")
 
-      expect(page.pageScriptHash).toEqual("page_script_hash2")
-      expect(page.pageName).toEqual("streamlit app2")
+      expect(page!.pageScriptHash).toEqual("page_script_hash2")
+      expect(page!.pageName).toEqual("streamlit app2")
     })
 
     it("returns default url by path when path is invalid", () => {
@@ -473,8 +507,8 @@ describe("AppNavigation", () => {
       appNavigation.handleNavigation(navigation)
       const page = appNavigation.findPageByUrlPath("foo")
 
-      expect(page.pageScriptHash).toEqual("page_script_hash")
-      expect(page.pageName).toEqual("streamlit app")
+      expect(page!.pageScriptHash).toEqual("page_script_hash")
+      expect(page!.pageName).toEqual("streamlit app")
     })
 
     it("sets navigation state to hidden on navigation", () => {
@@ -507,6 +541,41 @@ describe("AppNavigation", () => {
         appPages,
         hideSidebarNav: true,
         expandSidebarNav: false,
+        currentPageScriptHash: "page_script_hash",
+        navSections: ["section1", "section2"],
+      })
+    })
+
+    it("sets navigation state to expanded on navigation", () => {
+      const appPages = [
+        new AppPage({
+          pageName: "streamlit_app",
+          pageScriptHash: "page_script_hash",
+          isDefault: true,
+          sectionHeader: "section1",
+        }),
+        new AppPage({
+          pageName: "streamlit_app2",
+          pageScriptHash: "page_script_hash2",
+          isDefault: false,
+          sectionHeader: "section2",
+        }),
+      ]
+      const navigation = new Navigation({
+        sections: ["section1", "section2"],
+        appPages,
+        position: Navigation.Position.SIDEBAR,
+        pageScriptHash: "page_script_hash",
+        expanded: true,
+      })
+      const maybeState = appNavigation.handleNavigation(navigation)
+      expect(maybeState).not.toBeUndefined()
+
+      const [newState] = maybeState!
+      expect(newState).toEqual({
+        appPages,
+        hideSidebarNav: false,
+        expandSidebarNav: true,
         currentPageScriptHash: "page_script_hash",
         navSections: ["section1", "section2"],
       })
@@ -591,7 +660,7 @@ describe("AppNavigation", () => {
             icon: "icon2",
           }),
         ],
-        position: "hidden",
+        position: Navigation.Position.HIDDEN,
         pageScriptHash: "page_script_hash",
         expanded: false,
       })
