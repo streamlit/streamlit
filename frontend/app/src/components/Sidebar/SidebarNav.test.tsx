@@ -48,6 +48,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   collapseSidebar: jest.fn(),
   currentPageScriptHash: "",
   hasSidebarElements: false,
+  expandSidebarNav: false,
   onPageChange: jest.fn(),
   endpoints: mockEndpoints(),
   ...props,
