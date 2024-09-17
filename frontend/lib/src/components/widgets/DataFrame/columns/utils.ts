@@ -23,19 +23,19 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
-import toString from "lodash/toString"
 import merge from "lodash/merge"
-import numbro from "numbro"
-import { sprintf } from "sprintf-js"
+import toString from "lodash/toString"
 import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
+import numbro from "numbro"
+import { sprintf } from "sprintf-js"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   Type as ArrowType,
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -80,6 +80,8 @@ export interface BaseColumnProps {
   readonly themeOverride?: Partial<GlideTheme>
   // A custom icon to be displayed in the column header:
   readonly icon?: string
+  // The group that this column belongs to.
+  readonly group?: string
 }
 
 /**
@@ -232,6 +234,7 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
     hasMenu: false,
     themeOverride: column.themeOverride,
     icon: column.icon,
+    group: column.group,
     ...(column.isStretched && {
       grow: column.isIndex ? 1 : 3,
     }),

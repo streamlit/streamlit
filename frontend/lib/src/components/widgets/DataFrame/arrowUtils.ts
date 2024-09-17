@@ -240,7 +240,16 @@ export function getColumnFromArrow(
   data: Quiver,
   columnPosition: number
 ): BaseColumnProps {
-  const title = data.columns[0][columnPosition]
+  const columnHeaders = data.columns.map(column => column[columnPosition])
+  const title = columnHeaders[columnHeaders.length - 1]
+
+  // If there are multiple header columns, join these names with a "/"
+  // and use it as group name.
+  const group =
+    columnHeaders.length > 1
+      ? columnHeaders.slice(0, -1).join(" / ")
+      : undefined
+
   let arrowType = data.types.data[columnPosition]
 
   if (isNullOrUndefined(arrowType)) {
@@ -272,6 +281,7 @@ export function getColumnFromArrow(
     columnTypeOptions,
     isIndex: false,
     isHidden: false,
+    group,
   } as BaseColumnProps
 }
 
