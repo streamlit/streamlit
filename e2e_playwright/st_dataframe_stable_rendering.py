@@ -28,10 +28,8 @@ df = pd.DataFrame(np.random.randn(20, 5), columns=["a", "b", "c", "d", "e"])
 
 use_container_width = st.toggle("use_container_width", True)
 
-with st.popover("popover 4 (with dataframe)", help="help text"):
-    st.markdown("Popover with dataframe")
+with st.popover("popover"):
     st.dataframe(df, use_container_width=True)
-    st.image(np.repeat(0, 100).reshape(10, 10))
 
 with st.sidebar:
     st.dataframe(df, use_container_width=use_container_width)

@@ -15,19 +15,27 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import wait_for_app_loaded
 from e2e_playwright.shared.app_utils import click_toggle
 
 
-def test_dataframe_renders_without_crashing_with_use_container_width_false(app: Page):
-    """Test that st.dataframe renders without crashing if use_container_width is False."""
-    click_toggle(app, "use_container_width")
-    dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(7)
-    expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
+def test_dataframe_renders_without_crashing(app: Page):
+    """Test that st.dataframe renders without crashing."""
 
+    # Reload the page a couple of times to make sure that the dataframe
+    # crash doesn't appear.
+    # More info here: https://github.com/streamlit/streamlit/issues/7949
+    for _ in range(5):
+        dataframe_elements = app.get_by_test_id("stDataFrame")
+        expect(dataframe_elements).to_have_count(7)
+        expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
 
-def test_dataframe_renders_without_crashing_with_use_container_width_true(app: Page):
-    """Test that st.dataframe renders without crashing if use_container_width is True."""
-    dataframe_elements = app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(7)
-    expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
+        # Set use_container_width to False:
+        click_toggle(app, "use_container_width")
+        dataframe_elements = app.get_by_test_id("stDataFrame")
+        expect(dataframe_elements).to_have_count(7)
+        expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
+
+        # Reload the page:
+        app.reload()
+        wait_for_app_loaded(app)
