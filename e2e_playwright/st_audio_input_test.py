@@ -20,6 +20,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
     click_form_button,
+    expect_help_tooltip,
     get_element_by_key,
 )
 
@@ -148,9 +149,7 @@ def test_audio_input_basic_flow(app: Page):
     expect(app.get_by_text("Audio Input 1: False")).to_be_visible()
     audio_input = app.get_by_test_id("stAudioInput").first
 
-    expect(app.get_by_text("This is the help text")).not_to_be_visible()
-    audio_input.get_by_test_id("stTooltipIcon").hover()
-    expect(app.get_by_text("This is the help text")).to_be_visible()
+    expect_help_tooltip(app, audio_input, "This is the help text")
 
     expect(
         app.get_by_text("This app would like to use your microphone.").first
