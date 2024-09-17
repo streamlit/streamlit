@@ -68,7 +68,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             # If the file is not found, and it's clear we are not searching for a file
             # (by checking if there's an extension) try to serve index.html instead.
             if e.status_code == 404 and "." not in self.path:
-                self.path = self.parse_url_path(self.default_filename)
+                self.path = self.parse_url_path(self.default_filename or "")
                 absolute_path = self.get_absolute_path(self.root, self.path)
                 self.absolute_path = self.validate_absolute_path(
                     self.root, absolute_path
@@ -142,14 +142,18 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
         ################## BEGIN OVERRIDDEN SECTION OF TORNADO CODE ##################
 
-        if include_body and self.absolute_path.endswith(self.default_filename):
+        if (
+            include_body
+            and self.default_filename
+            and self.absolute_path.endswith(self.default_filename)
+        ):
             self.render_index_template()
         else:
             self.set_header("Content-Length", content_length)
             if include_body:
                 content = self.get_content(self.absolute_path, start, end)
-                if isinstance(content, bytes):
-                    content = [content]
+                if isinstance(content, bytes):  # type:ignore[unreachable]
+                    content = [content]  # type:ignore[unreachable]
                 for chunk in content:
                     try:
                         self.write(chunk)
