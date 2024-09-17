@@ -38,7 +38,6 @@ import {
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { blend } from "@streamlit/lib/src/theme/utils"
 import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
 
@@ -48,6 +47,7 @@ import {
   StyledWaveformInnerDiv,
   StyledWaveformTimeCode,
   StyledWaveSurferDiv,
+  StyledWidgetLabelHelp,
 } from "./styled-components"
 import NoMicPermissions from "./NoMicPermissions"
 import Placeholder from "./Placeholder"
@@ -61,7 +61,10 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
-
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
@@ -78,6 +81,7 @@ const AudioInput: React.FC<Props> = ({
   disabled,
 }): ReactElement => {
   const theme = useTheme()
+  const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
   const waveSurferRef = React.useRef<HTMLDivElement | null>(null)
   const [deleteFileUrl, setDeleteFileUrl] = useState<string | null>(null)
@@ -106,6 +110,7 @@ const AudioInput: React.FC<Props> = ({
 
   const uploadTheFile = useCallback(
     (file: File) => {
+      console.log("uploadTheFile")
       uploadFiles({
         files: [file],
         uploadClient,
@@ -115,6 +120,10 @@ const AudioInput: React.FC<Props> = ({
       }).then(({ successfulUploads }) => {
         const upload = successfulUploads[0]
         if (upload && upload.fileUrl.deleteUrl) {
+          console.log(
+            "uploadTheFile setting delete url to ",
+            upload.fileUrl.deleteUrl
+          )
           setDeleteFileUrl(upload.fileUrl.deleteUrl)
         }
       })
@@ -141,6 +150,7 @@ const AudioInput: React.FC<Props> = ({
 
   const handleClear = useCallback(
     ({ updateWidgetManager }: { updateWidgetManager?: boolean }) => {
+      console.log("handleClear")
       if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
         return
       }
@@ -175,6 +185,7 @@ const AudioInput: React.FC<Props> = ({
   )
 
   const initializeWaveSurfer = useCallback(() => {
+    console.log("initializeWaveSurfer")
     if (waveSurferRef.current === null) return
 
     const ws = WaveSurfer.create({
@@ -233,25 +244,33 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
 
   useEffect(() => {
-    wavesurfer?.setOptions({
-      waveColor: recordingUrl
-        ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
-        : theme.colors.primary,
-      progressColor: theme.colors.bodyText,
-    })
-  }, [theme, recordingUrl, wavesurfer])
+    console.log("theme changed useEffect")
+    if (previousTheme !== theme) {
+      console.log("theme changed")
+      wavesurfer?.setOptions({
+        waveColor: recordingUrl
+          ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
+          : theme.colors.primary,
+        progressColor: theme.colors.bodyText,
+      })
+    }
+  }, [theme, previousTheme, recordingUrl, wavesurfer])
 
   const onClickPlayPause = useCallback(() => {
+    console.log("onClickPlayPause")
     if (wavesurfer) {
       wavesurfer.playPause()
       // This is because we want the time to be the duration of the audio when they stop recording,
       // but once they start playing it, we want it to be the current time. So, once they start playing it
       // we'll start keeping track of the playback time from that point onwards (until re-recording).
       setShouldUpdatePlaybackTime(true)
+      // despite the state change above, this is still needed to force a rerender and make the time styling work
+      forceRerender()
     }
   }, [wavesurfer])
 
   const startRecording = useCallback(() => {
+    console.log("startRecording")
     if (!recordPlugin || !activeAudioDeviceId || !wavesurfer) {
       return
     }
@@ -278,6 +297,7 @@ const AudioInput: React.FC<Props> = ({
   ])
 
   const stopRecording = useCallback(() => {
+    console.log("stopRecording")
     if (!recordPlugin) return
 
     recordPlugin.stopRecording()
@@ -307,6 +327,8 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholder =
     hasNoMicPermissions || showPlaceholder
 
+  console.log({ deleteFileUrl })
+
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -318,7 +340,13 @@ const AudioInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
-      ></WidgetLabel>
+      >
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon content={element.help} placement={Placement.TOP} />
+          </StyledWidgetLabelHelp>
+        )}
+      </WidgetLabel>
       <StyledWaveformContainerDiv>
         <Toolbar
           isFullScreen={false}

@@ -16,7 +16,9 @@ import time
 
 import streamlit as st
 
-audio1 = st.audio_input(label="Audio Input 1", key="the_audio_input")
+audio1 = st.audio_input(
+    label="Audio Input 1", key="the_audio_input", help="This is the help text"
+)
 st.audio(audio1)
 st.write("Audio Input 1:", bool(audio1))
 
