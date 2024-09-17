@@ -29,7 +29,6 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # buttons
     ("button", lambda: st.button("Click me")),
     ("download_button", lambda: st.download_button("Download me", b"")),
-    ("camera_input", lambda: st.camera_input("Take a picture")),
     ("chat_input", lambda: st.chat_input("Chat with me")),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
@@ -40,6 +39,8 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
     ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
     # media manager
+    ("audio_input", lambda: st.audio_input("Record me")),
+    ("camera_input", lambda: st.camera_input("Take a picture")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
