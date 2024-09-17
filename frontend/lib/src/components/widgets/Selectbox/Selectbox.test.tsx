@@ -22,7 +22,6 @@ import { fireEvent, screen, act } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import { Props, Selectbox } from "./Selectbox"
 
@@ -39,7 +38,6 @@ const getProps = (
   }),
   width: 0,
   disabled: false,
-  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
