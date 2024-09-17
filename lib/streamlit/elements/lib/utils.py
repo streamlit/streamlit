@@ -151,6 +151,10 @@ def _compute_element_id(
     h = hashlib.new("md5", **HASHLIB_KWARGS)
     h.update(element_type.encode("utf-8"))
     if user_key:
+        # Adding this to the hash isn't necessary for uniqueness since the
+        # key is also appended to the ID as raw text. But since the hash and
+        # the appending of the key are two slightly different aspects, it
+        # still gets put into the hash.
         h.update(user_key.encode("utf-8"))
     # This will iterate in a consistent order when the provided arguments have
     # consistent order; dicts are always in insertion order.
@@ -199,7 +203,7 @@ def compute_and_register_element_id(
         The arguments to use to compute the element ID.
         The arguments must be stable, deterministic values.
         Some common parameters like key, disabled,
-        format_func, label_visibility, args, kwars, on_change, and
+        format_func, label_visibility, args, kwargs, on_change, and
         the active_script_hash are not supposed to be added here
     """
     ctx = get_script_run_ctx()
