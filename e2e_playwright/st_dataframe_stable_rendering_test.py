@@ -18,16 +18,16 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.shared.app_utils import click_toggle
 
 
-def test_dataframe_renders_without_crashing_with_use_container_width_true(app: Page):
-    """Test that st.dataframe renders without crashing if use_container_width is True."""
+def test_dataframe_renders_without_crashing_with_use_container_width_false(app: Page):
+    """Test that st.dataframe renders without crashing if use_container_width is False."""
+    click_toggle(app, "use_container_width")
     dataframe_elements = app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(7)
     expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
 
 
-def test_dataframe_renders_without_crashing_with_use_container_width_false(app: Page):
-    """Test that st.dataframe renders without crashing if use_container_width is False."""
-    click_toggle(app, "use_container_width")
+def test_dataframe_renders_without_crashing_with_use_container_width_true(app: Page):
+    """Test that st.dataframe renders without crashing if use_container_width is True."""
     dataframe_elements = app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(7)
     expect(app.get_by_test_id("stAlertContainer")).not_to_be_attached()
