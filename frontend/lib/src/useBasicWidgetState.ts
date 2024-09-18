@@ -60,7 +60,7 @@ export interface UseValueWSourceArgs<
 /**
  * A React hook that makes the simplest kinds of widgets very easy to implement.
  * Use the clientState version when the widget does not have a .setValue on its
- * proto.
+ * proto, otherwise utilize `useBasicWidgetState`.
  */
 export function useBasicWidgetClientState<
   T, // Type of the value stored in WidgetStateManager.
