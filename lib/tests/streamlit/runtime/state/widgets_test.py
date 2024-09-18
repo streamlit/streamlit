@@ -16,6 +16,7 @@
 
 import inspect
 import unittest
+from dataclasses import dataclass
 from unittest.mock import ANY, MagicMock, call, patch
 
 from parameterized import parameterized
@@ -400,6 +401,44 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             "These kwargs are not supposed to be used for element ID calculation: "
             + str(kwargs_intersection)
         )
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_includes_essential_kwargs(self, element_name: str, widget_func):
+        """Test that active_script_hash and form ID are always included in
+        element ID calculation."""
+
+        expected_form_id: str | None = "form_id"
+
+        @dataclass
+        class MockForm:
+            form_id = expected_form_id
+
+        with patch(
+            "streamlit.elements.lib.utils._compute_element_id",
+            wraps=_compute_element_id,
+        ) as patched_compute_element_id:
+            # Some elements cannot be used in a form:
+            if element_name not in ["button", "chat_input", "download_button"]:
+                with patch(
+                    "streamlit.elements.lib.form_utils._current_form",
+                    return_value=MockForm(),
+                ):
+                    widget_func()
+            else:
+                widget_func()
+                expected_form_id = None
+
+        # Get call kwargs from patched_compute_element_id
+        call_kwargs = patched_compute_element_id.call_args[1]
+        assert (
+            "active_script_hash" in call_kwargs
+        ), "active_script_hash is expected to always be included "
+        "in element ID calculation."
+
+        # Elements that don't set a form ID
+        assert (
+            call_kwargs.get("form_id") == expected_form_id
+        ), "form_id is expected to be included in element ID calculation."
 
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_triggers_duplicate_id_error(self, _element_name: str, widget_func):
