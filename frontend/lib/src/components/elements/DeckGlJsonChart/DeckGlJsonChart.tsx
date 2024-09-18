@@ -150,34 +150,37 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           case DeckGlJsonChartProto.SelectionMode.MULTI: {
             const wasShiftClick = event.srcEvent.shiftKey
 
-            const indices: number[] = wasShiftClick
-              ? currState?.selection?.[layerId]?.indices || []
-              : []
+            const selectionMap: Map<number, unknown> = new Map(
+              ((): [number, unknown][] => {
+                if (!wasShiftClick) {
+                  return []
+                }
 
-            const objects: unknown[] = wasShiftClick
-              ? currState?.selection?.[layerId]?.objects || []
-              : []
+                const indices = currState?.selection?.[layerId]?.indices || []
 
-            const existingIndex = indices.indexOf(index)
+                return indices.map((index, i) => [
+                  index,
+                  currState.selection?.[layerId].objects[i],
+                ])
+              })()
+            )
 
-            if (wasShiftClick && existingIndex !== -1) {
+            if (wasShiftClick && selectionMap.has(index)) {
               // Unselect an existing index
-              indices.splice(existingIndex, 1)
-              objects.splice(existingIndex, 1)
+              selectionMap.delete(index)
             }
 
             if (index !== -1) {
               // Add the newly selected index
-              indices.push(index)
-              objects.push(object)
+              selectionMap.set(index, object)
             }
 
             return {
               ...(wasShiftClick ? currState?.selection : {}),
               [`${layerId}`]: {
                 last_selection: lastSelection,
-                indices,
-                objects,
+                indices: Array.from(selectionMap.keys()),
+                objects: Array.from(selectionMap.values()),
               },
             }
           }
