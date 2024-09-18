@@ -240,7 +240,7 @@ describe("SidebarNav", () => {
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(12)
   })
 
-  it("renders View less button when visible and expanded", async () => {
+  it("renders View less button when expanded", async () => {
     render(
       <SidebarNav
         {...getProps({
@@ -271,7 +271,7 @@ describe("SidebarNav", () => {
     expect(viewLessButton).toBeInTheDocument()
   })
 
-  it("renders View less button when visible and user preferred expansion", () => {
+  it("renders View less button when user prefers expansion", () => {
     window.localStorage.setItem("sidebarNavState", "expanded")
 
     render(
