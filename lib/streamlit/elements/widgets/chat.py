@@ -43,8 +43,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-
-# from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.string_util import is_emoji, validate_material_icon
 
@@ -406,15 +404,6 @@ class ChatMixin:
 
         ctx = get_script_run_ctx()
         # TODO[kajarenc] Maybe add accept_file and file_type to compute_widget_id
-        # id = compute_widget_id(
-        #     "chat_input",
-        #     user_key=key,
-        #     key=key,
-        #     placeholder=placeholder,
-        #     max_chars=max_chars,
-        #     page=ctx.active_script_hash if ctx else None,
-        # )
-        # TODO[kajarenc] fix after merge
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
