@@ -467,6 +467,8 @@ const RawElementNodeRenderer = (
     case "arrowDataFrame": {
       const arrowProto = node.element.arrowDataFrame as ArrowProto
       widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+      const userKey = getKeyFromId(arrowProto.id)
+      console.log("userKey", userKey)
       return (
         <ArrowDataFrame
           element={arrowProto}
@@ -475,9 +477,7 @@ const RawElementNodeRenderer = (
           // an element (dataframe). We only want to set the key in case of
           // it being used as a widget. For the non-widget usage, the id will
           // be undefined.
-          {...(arrowProto.id && {
-            key: arrowProto.id,
-          })}
+          key={userKey || arrowProto.id || undefined}
           {...widgetProps}
         />
       )

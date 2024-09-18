@@ -224,7 +224,9 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               node: node as ElementNode,
             }
 
-            const key = getElementId(node.element) || index.toString()
+            const elementId = getElementId(node.element)
+            const userKey = getKeyFromId(elementId)
+            const key = userKey || elementId || index.toString()
             // Avoid rendering the same element twice. We assume the first one is the one we want
             // because the page is rendered top to bottom, so a valid widget would be rendered
             // correctly and we assume the second one is therefore stale (or throw an error).

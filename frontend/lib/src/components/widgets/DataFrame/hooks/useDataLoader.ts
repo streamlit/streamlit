@@ -18,14 +18,14 @@ import React from "react"
 
 import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { getCellFromArrow } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
-import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
   getErrorCell,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 type DataLoaderReturn = Pick<DataEditorProps, "getCellContent">
 
@@ -43,7 +43,8 @@ function useDataLoader(
   data: Quiver,
   columns: BaseColumn[],
   numRows: number,
-  editingState: React.MutableRefObject<EditingState>
+  editingState: React.MutableRefObject<EditingState>,
+  elementId: string
 ): DataLoaderReturn {
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
@@ -95,7 +96,7 @@ function useDataLoader(
         )
       }
     },
-    [columns, numRows, data, editingState]
+    [columns, numRows, data, editingState, elementId]
   )
 
   return {

@@ -671,12 +671,21 @@ class SessionState:
         """
         widget_id = metadata.id
 
+        id_has_updated = False
+        if user_key is not None:
+            previous_widget_id = self._key_id_mapper.get_id_from_key(user_key)
+            if previous_widget_id != widget_id:
+                id_has_updated = True
+                print("has_updated", id_has_updated)
+
         self._set_widget_metadata(metadata)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
 
-        if widget_id not in self and (user_key is None or user_key not in self):
+        if widget_id not in self and (
+            user_key is None or user_key not in self or id_has_updated
+        ):
             # This is the first time the widget is registered, so we save its
             # value in widget state.
             deserializer = metadata.deserializer
@@ -688,6 +697,7 @@ class SessionState:
         # mutated by user code.
         widget_value = cast(T, self[widget_id])
         widget_value = deepcopy(widget_value)
+        print("widget_value", widget_value, id_has_updated)
 
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.

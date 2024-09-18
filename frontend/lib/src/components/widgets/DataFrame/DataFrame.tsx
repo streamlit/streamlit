@@ -208,9 +208,10 @@ function DataFrame({
   )
 
   React.useEffect(() => {
+    console.log("originalNumRows", originalNumRows, element.id)
     editingState.current = new EditingState(originalNumRows)
     setNumRows(editingState.current.getNumRows())
-  }, [originalNumRows])
+  }, [originalNumRows, element.id])
 
   const resetEditingState = React.useCallback(() => {
     editingState.current = new EditingState(originalNumRows)
@@ -259,7 +260,8 @@ function DataFrame({
     data,
     originalColumns,
     numRows,
-    editingState
+    editingState,
+    element.id
   )
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
