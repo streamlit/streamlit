@@ -29,6 +29,8 @@ message Navigation {
   // The script hash for the page identified by st.navigation
   string page_script_hash = 4;
 
+  bool expanded = 5;
+
   // Position of the Navigation
   enum Position {
     // do not display the navigation
