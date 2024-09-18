@@ -13,14 +13,31 @@
 # limitations under the License.
 
 
+from typing import Literal
+
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     click_button,
 )
-from e2e_playwright.shared.pydeck_utils import get_click_handling_div, wait_for_chart
+from e2e_playwright.shared.pydeck_utils import (
+    get_click_handling_div,
+    wait_for_chart,
+)
+
+
+def _set_selection_mode(app: Page, mode: Literal["single", "multi"]):
+    app.get_by_test_id("stSelectbox").nth(0).locator("input").click()
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown.locator("li").nth(1 if mode == "multi" else 0).click()
+
+    wait_for_app_run(app, wait_delay=5000)
+
 
 # A note on browser testing strategy. We are only testing on Chromium because:
 #   - Firefox seems to be failing but can't reproduce locally and video from CI
@@ -42,6 +59,7 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     properly and return the expected values in both session_state and as a
     return of st.pydeck.
     """
+    _set_selection_mode(app, "multi")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app)
@@ -94,13 +112,7 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
     Test single selection and deselection all function properly and return the
     expected values in both session_state and as a return of st.pydeck.
     """
-    wait_for_chart(app)
-
-    app.get_by_test_id("stSelectbox").nth(0).locator("input").click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1).click()
-
-    wait_for_app_run(app, wait_delay=5000)
+    _set_selection_mode(app, "single")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app)
@@ -161,6 +173,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     Test that no selection, single selection, multi selection, and deselection
     all look visually correct.
     """
+    _set_selection_mode(app, "multi")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app)
@@ -222,6 +235,7 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
     Test that no selection, single selection, multi selection, and deselection
     all look visually correct.
     """
+    _set_selection_mode(app, "multi")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app)

@@ -28,7 +28,7 @@ df = pd.DataFrame(H3_HEX_DATA)
 
 
 def get_pydeck_chart(
-    key: str, selection_mode: Literal["single", "multi"] = "multi", on_select="rerun"
+    key: str, selection_mode: Literal["single", "multi"], on_select="rerun"
 ):
     return st.pydeck_chart(
         pdk.Deck(

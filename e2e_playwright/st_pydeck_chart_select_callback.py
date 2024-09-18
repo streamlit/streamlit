@@ -24,4 +24,6 @@ def on_selection():
     )
 
 
-selection = get_pydeck_chart("selection_callback", on_select=on_selection)
+selection = get_pydeck_chart(
+    "selection_callback", selection_mode="single", on_select=on_selection
+)

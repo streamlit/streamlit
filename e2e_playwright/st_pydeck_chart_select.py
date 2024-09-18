@@ -29,7 +29,7 @@ if st.button("Create some elements to unmount component"):
 
 selection_mode: Literal["single", "multi"] = st.selectbox(
     "Map Selection Mode",
-    ["multi", "single"],
+    ["single", "multi"],
 )
 
 event_data = get_pydeck_chart("managed_multiselect_map", selection_mode)

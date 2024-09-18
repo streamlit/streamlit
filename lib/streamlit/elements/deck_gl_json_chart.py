@@ -321,7 +321,7 @@ class PydeckMixin:
             pydeck_proto.mapbox_token = mapbox_token
 
         key = to_key(key)
-        is_selection_activated = on_select != "ignore" and selection_mode != "ignore"
+        is_selection_activated = on_select != "ignore"
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
@@ -330,6 +330,10 @@ class PydeckMixin:
 
         if is_selection_activated:
             # Selections are activated, treat Pydeck as a widget:
+            # Ensure we are defaulting to single selection mode if the user
+            # hasn't defined it, but has activating selections.
+            selection_mode = "single" if selection_mode == "ignore" else selection_mode
+
             # Run some checks that are only relevant when selections are activated
             is_callback = callable(on_select)
             check_widget_policies(

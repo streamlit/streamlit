@@ -22,7 +22,7 @@ st.header("Selections in fragment:")
 
 @st.fragment
 def test_fragment():
-    selection = get_pydeck_chart("selection_in_fragment")
+    selection = get_pydeck_chart("selection_in_fragment", "single")
     st.write("PyDeck-in-fragment selection:", str(selection))
 
 

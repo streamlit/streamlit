@@ -19,7 +19,7 @@ from shared.pydeck_utils import get_pydeck_chart
 with st.form(key="my_form", clear_on_submit=True):
     text_value = st.text_input("Text input 1")
 
-    selection = get_pydeck_chart("selection_in_form")
+    selection = get_pydeck_chart("selection_in_form", selection_mode="single")
     st.form_submit_button("Submit")
 
 st.write("text_value:", text_value)
