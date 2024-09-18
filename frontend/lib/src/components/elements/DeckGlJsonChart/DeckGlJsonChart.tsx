@@ -93,10 +93,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   }, [])
 
   const handleClick = useCallback(
-    (
-      info: PickingInfo,
-      event: { srcEvent: MouseEvent | TouchEvent | PointerEvent }
-    ) => {
+    (info: PickingInfo) => {
       if (disabled) {
         return
       }
@@ -148,11 +145,12 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             }
           }
           case DeckGlJsonChartProto.SelectionMode.MULTI: {
-            const wasShiftClick = event.srcEvent.shiftKey
+            // If a user doesn't click on an object in a layer, reset the selection
+            const isResetClick = index === -1
 
             const selectionMap: Map<number, unknown> = new Map(
               ((): [number, unknown][] => {
-                if (!wasShiftClick) {
+                if (isResetClick) {
                   return []
                 }
 
@@ -165,7 +163,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               })()
             )
 
-            if (wasShiftClick && selectionMap.has(index)) {
+            if (selectionMap.has(index)) {
               // Unselect an existing index
               selectionMap.delete(index)
             }
@@ -176,7 +174,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             }
 
             return {
-              ...(wasShiftClick ? currState?.selection : {}),
+              ...(isResetClick ? {} : currState?.selection),
               [`${layerId}`]: {
                 last_selection: lastSelection,
                 indices: Array.from(selectionMap.keys()),

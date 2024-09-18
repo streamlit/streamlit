@@ -80,7 +80,7 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     expect(app.get_by_text('"indices":[0:0]')).to_have_count(2)
 
     # Multiselect and click the hex that has count: 100
-    click_handling_div.click(position={"x": 417, "y": 229}, modifiers=["Shift"])
+    click_handling_div.click(position={"x": 417, "y": 229})
 
     # Same assert as above, we should be only rendering the same top-level
     # `objects` field
@@ -133,7 +133,7 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
     expect(app.get_by_text('"indices":[0:0]')).to_have_count(2)
 
     # Click the hex that has count: 100
-    click_handling_div.click(position={"x": 417, "y": 229}, modifiers=["Shift"])
+    click_handling_div.click(position={"x": 417, "y": 229})
 
     # Same assert as above, we should be only rendering the same top-level
     # `objects` field
@@ -200,7 +200,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     )
 
     # Multiselect and click the hex that has count: 100
-    click_handling_div.click(position={"x": 417, "y": 229}, modifiers=["Shift"])
+    click_handling_div.click(position={"x": 417, "y": 229})
 
     wait_for_app_run(app, wait_delay=5000)
 
@@ -246,7 +246,7 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
     wait_for_app_run(app, wait_delay=5000)
 
     # Multiselect and click the hex that has count: 100
-    click_handling_div.click(position={"x": 417, "y": 229}, modifiers=["Shift"])
+    click_handling_div.click(position={"x": 417, "y": 229})
 
     wait_for_app_run(app, wait_delay=5000)
 
