@@ -40,6 +40,10 @@ import {
 } from "@streamlit/lib/src/util/utils"
 import { blend } from "@streamlit/lib/src/theme/utils"
 import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 
 import {
   StyledAudioInputContainerDiv,
@@ -61,10 +65,6 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
-import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
