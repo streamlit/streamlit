@@ -604,7 +604,15 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(get_command_matrix([]))
     def test_option_starting_with_icon(self, command: Callable[..., None]):
-        command(["☕ Coffee", "🍵 Tea", ":material/zoom_in: Water", "Earth"])
+        command(
+            [
+                "☕ Coffee",
+                "🍵 Tea",
+                ":material/zoom_in: Water",
+                "Earth",
+                ":material/zoom_out:",
+            ]
+        )
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default == []
@@ -613,12 +621,14 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             "Tea",
             "Water",
             "Earth",
+            "",
         ]
         assert [option.content_icon for option in c.options] == [
             "☕",
             "🍵",
             ":material/zoom_in:",
             "",
+            ":material/zoom_out:",
         ]
 
     @parameterized.expand(

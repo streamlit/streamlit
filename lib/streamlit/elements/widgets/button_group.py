@@ -22,11 +22,12 @@ from typing import (
     Generic,
     Literal,
     Sequence,
-    TypeAlias,
     TypeVar,
     cast,
     overload,
 )
+
+from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.options_selector_utils import (
@@ -415,11 +416,12 @@ class ButtonGroupMixin:
             transformed = format_func(option) if format_func else str(option)
             transformed_parts = transformed.split(" ")
             icon: str | None = None
-            if len(transformed_parts) > 1:
+            if len(transformed_parts) > 0:
                 maybe_icon = transformed_parts[0].strip()
                 try:
                     icon = validate_icon_or_emoji(maybe_icon)
-                    # reassamble the option string without the icon
+                    # reassamble the option string without the icon - also
+                    # works if len(transformed_parts) == 1
                     transformed = " ".join(transformed_parts[1:])
                 except StreamlitAPIException:
                     # we don't have a valid icon or emoji, so we just pass
@@ -432,7 +434,7 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde: SingleOrMultiSelectSerde = SingleOrMultiSelectSerde[V](
+        serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
             indexable_options, default_values, selection_mode
         )
         res = self._button_group(
@@ -481,11 +483,12 @@ class ButtonGroupMixin:
             transformed = format_func(option) if format_func else str(option)
             transformed_parts = transformed.split(" ")
             icon: str | None = None
-            if len(transformed_parts) > 1:
+            if len(transformed_parts) > 0:
                 maybe_icon = transformed_parts[0].strip()
                 try:
                     icon = validate_icon_or_emoji(maybe_icon)
-                    # reassamble the option string without the icon
+                    # reassamble the option string without the icon - also
+                    # works if len(transformed_parts) == 1
                     transformed = " ".join(transformed_parts[1:])
                 except StreamlitAPIException:
                     # we don't have a valid icon or emoji, so we just pass
@@ -498,7 +501,7 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde: SingleOrMultiSelectSerde = SingleOrMultiSelectSerde[V](
+        serde: SingleOrMultiSelectSerde[V] = SingleOrMultiSelectSerde[V](
             indexable_options, default_values, selection_mode
         )
 
