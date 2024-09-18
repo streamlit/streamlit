@@ -172,7 +172,7 @@ class PydeckMixin:
         pydeck_obj: Deck | None = None,
         use_container_width: bool = False,
         *,
-        selection_mode: Literal["single", "multi"] = "multi",
+        selection_mode: Literal["single", "multi"] = "single",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
     ) -> PydeckState: ...
