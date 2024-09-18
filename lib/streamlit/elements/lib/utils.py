@@ -90,7 +90,9 @@ def to_key(key: Key | None) -> str | None:
     return None if key is None else str(key)
 
 
-def _register_element_id(element_type: str, element_id: str) -> None:
+def _register_element_id(
+    ctx: ScriptRunContext, element_type: str, element_id: str
+) -> None:
     """Register the element ID and key for the given element.
 
     If the element ID or key is not unique, an error is raised.
@@ -114,8 +116,8 @@ def _register_element_id(element_type: str, element_id: str) -> None:
         If the element ID is not unique.
 
     """
-    ctx = get_script_run_ctx()
-    if ctx is None or not element_id:
+
+    if not element_id:
         return
 
     if user_key := user_key_from_element_id(element_id):
@@ -148,6 +150,12 @@ def _compute_element_id(
     """
     h = hashlib.new("md5", **HASHLIB_KWARGS)
     h.update(element_type.encode("utf-8"))
+    if user_key:
+        # Adding this to the hash isn't necessary for uniqueness since the
+        # key is also appended to the ID as raw text. But since the hash and
+        # the appending of the key are two slightly different aspects, it
+        # still gets put into the hash.
+        h.update(user_key.encode("utf-8"))
     # This will iterate in a consistent order when the provided arguments have
     # consistent order; dicts are always in insertion order.
     for k, v in kwargs.items():
@@ -158,7 +166,9 @@ def _compute_element_id(
 
 def compute_and_register_element_id(
     element_type: str,
-    user_key: str | None = None,
+    *,
+    user_key: str | None,
+    form_id: str | None,
     **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute and register the ID for the given element.
@@ -175,9 +185,45 @@ def compute_and_register_element_id(
     The element ID gets registered to make sure that only one ID and user-specified
     key exists at the same time. If there are duplicated IDs or keys, an error
     is raised.
+
+    Parameters
+    ----------
+    element_type : str
+        The type (command name) of the element to register.
+
+    user_key : str | None
+        The user-specified key for the element. `None` if no key is provided
+        or if the element doesn't support a specifying a key.
+
+    form_id : str | None
+        The ID of the form that the element belongs to. `None` or empty string
+        if the element doesn't belong to a form or doesn't support forms.
+
+    kwargs : SAFE_VALUES | Iterable[SAFE_VALUES]
+        The arguments to use to compute the element ID.
+        The arguments must be stable, deterministic values.
+        Some common parameters like key, disabled,
+        format_func, label_visibility, args, kwargs, on_change, and
+        the active_script_hash are not supposed to be added here
     """
-    element_id = _compute_element_id(element_type, user_key, **kwargs)
-    _register_element_id(element_type, element_id)
+    ctx = get_script_run_ctx()
+
+    # If form_id is provided, add it to the kwargs.
+    kwargs_to_use = {"form_id": form_id, **kwargs} if form_id else kwargs
+
+    if ctx:
+        # Add the active script hash to give elements on different
+        # pages unique IDs.
+        kwargs_to_use["active_script_hash"] = ctx.active_script_hash
+
+    element_id = _compute_element_id(
+        element_type,
+        user_key,
+        **kwargs_to_use,
+    )
+
+    if ctx:
+        _register_element_id(ctx, element_type, element_id)
     return element_id
 
 

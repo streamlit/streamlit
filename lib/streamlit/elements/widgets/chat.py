@@ -407,10 +407,10 @@ class ChatMixin:
         element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
-            key=key,
+            # chat_input is not allowed to be used in a form.
+            form_id=None,
             placeholder=placeholder,
             max_chars=max_chars,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if file_type:

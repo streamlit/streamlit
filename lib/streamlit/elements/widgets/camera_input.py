@@ -206,11 +206,9 @@ class CameraInputMixin:
         element_id = compute_and_register_element_id(
             "camera_input",
             user_key=key,
-            label=label,
-            key=key,
-            help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
+            label=label,
+            help=help,
         )
 
         camera_input_proto = CameraInputProto()

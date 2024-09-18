@@ -16,19 +16,13 @@
 
 import pick from "lodash/pick"
 
+import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
-import {
-  Delta,
   DeployedAppMetadata,
-  Element,
   IS_DEV_ENV,
   logAlways,
   SessionInfo,
 } from "@streamlit/lib"
-import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -63,12 +57,6 @@ export class SegmentMetricsManager {
    * initialized.
    */
   private pendingEvents: Event[] = []
-
-  /**
-   * Object used to count the number of custom instance names seen in a given
-   * script run. Maps type of custom instance name (string) to count (number).
-   */
-  private pendingCustomComponentCounter: CustomComponentCounter = {}
 
   /**
    * App hash uniquely identifies "projects" so we can tell
@@ -115,46 +103,6 @@ export class SegmentMetricsManager {
       this.sendPendingEvents()
     }
     this.send(evName, evData)
-  }
-
-  public handleDeltaMessage(delta: Delta): void {
-    if (delta.type === "newElement") {
-      const element = delta.newElement as Element
-      // Track component instance name.
-      if (element.type === "componentInstance") {
-        const componentName = element.componentInstance?.componentName
-        if (notNullOrUndefined(componentName)) {
-          this.incrementCustomComponentCounter(componentName)
-        }
-      }
-    }
-  }
-
-  /**
-   * Increment a counter that tracks the number of times a CustomComponent
-   * of the given type has been used by the frontend.
-   *
-   * No event is recorded for this. Instead, call `getAndResetCustomComponentCounter`
-   * periodically, and enqueue an event with the result.
-   */
-  private incrementCustomComponentCounter(customInstanceName: string): void {
-    if (
-      isNullOrUndefined(this.pendingCustomComponentCounter[customInstanceName])
-    ) {
-      this.pendingCustomComponentCounter[customInstanceName] = 1
-    } else {
-      this.pendingCustomComponentCounter[customInstanceName]++
-    }
-  }
-
-  public getAndResetCustomComponentCounter(): CustomComponentCounter {
-    const customComponentCounter = this.pendingCustomComponentCounter
-    this.clearCustomComponentCounter()
-    return customComponentCounter
-  }
-
-  private clearCustomComponentCounter(): void {
-    this.pendingCustomComponentCounter = {}
   }
 
   // App hash gets set when updateReport happens.
