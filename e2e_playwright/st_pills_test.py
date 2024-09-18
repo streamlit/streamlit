@@ -48,22 +48,22 @@ def test_click_multiple_pills_and_take_snapshot(
     """
 
     pills = get_button_group(themed_app, 0)
-    get_pill_button(pills, "📝 Text").click()
+    get_pill_button(pills, "📝").click()
     wait_for_app_run(themed_app)
     # click on second element to test multiselect
-    get_pill_button(pills, "🪢 Graphs").click()
+    get_pill_button(pills, "🪢").click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
     expect(text).to_be_visible()
 
     # click on same element to test unselect
-    get_pill_button(pills, "🪢 Graphs").click()
+    get_pill_button(pills, "🪢").click()
     wait_for_app_run(themed_app)
     text = get_markdown(themed_app, "Multi selection: \\['📝 Text'\\]")
     expect(text).to_be_visible()
 
     # click on same element and take screenshot of multiple selected pills
-    get_pill_button(pills, "🪢 Graphs").click()
+    get_pill_button(pills, "🪢").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)

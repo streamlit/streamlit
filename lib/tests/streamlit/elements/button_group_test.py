@@ -514,28 +514,20 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         get_command_matrix(
-            [(None,), ([":material/thumb_up:", ":material/thumb_down:", None],)]
+            [([":material/thumb_up:", ":material/thumb_down:", "foo", 0],)]
         )
     )
     def test_format_func_is_applied(
         self,
         command: Callable[..., None],
-        icon_list: list[str | None] | None,
+        options: list[str],
     ):
-        """Test that format_func is applied to the options."""
-        options = [1, 2, 3]
-        command(options, icons=icon_list, format_func=lambda x: f"{x}!")
+        """Test that format_func is applied to the options; since we add '!' its not a
+        valid icon anymore."""
+        command(options, format_func=lambda x: f"{x}!")
         c = self.get_delta_from_queue().new_element.button_group
         for index, option in enumerate(options):
             assert c.options[index].content == f"{option}!"
-
-            if icon_list is not None:
-                icon = icon_list[index]
-                if icon is not None:
-                    assert c.options[index].content_icon == icon_list[index]
-                else:
-                    # None gets converted to an empty string in the protobuf message
-                    assert c.options[index].content_icon == ""
 
     @parameterized.expand(
         [
@@ -559,48 +551,43 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert metadata.callback is not None
 
     @parameterized.expand(get_command_matrix([]))
-    def test_pass_icons(self, command: Callable[..., None]):
-        command(["Coffee", "Tea", "Water"], icons=["☕", "🍵", None])
+    def test_option_starting_with_icon(self, command: Callable[..., None]):
+        command(["☕ Coffee", "🍵 Tea", ":material/zoom_in: Water", "Earth"])
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default == []
-        assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
-        assert [option.content_icon for option in c.options] == ["☕", "🍵", ""]
+        assert [option.content for option in c.options] == [
+            "Coffee",
+            "Tea",
+            "Water",
+            "Earth",
+        ]
+        assert [option.content_icon for option in c.options] == [
+            "☕",
+            "🍵",
+            ":material/zoom_in:",
+            "",
+        ]
 
     @parameterized.expand(
         get_command_matrix(
-            [("no-icon",), ("",), (":material/foo:",), (":material/thumb_up",)]
+            [
+                ("no-icon Coffee",),
+                ("",),
+                (":material/foo: Water",),
+                (":material/thumb_up Tea",),
+            ]
         )
     )
-    def test_pass_invalid_icons(self, command: Callable[..., None], icon: str | None):
-        with pytest.raises(StreamlitAPIException):
-            command(["Coffee"], icons=[icon])
-
-    @parameterized.expand(get_command_matrix([]))
-    def test_icon_list_too_small(self, command: Callable[..., None]):
-        """Test that it throws an exception if the icon list is too small."""
-        with pytest.raises(StreamlitAPIException) as exception:
-            command(["Coffee", "Tea"], icons=["🍵"])
-        assert (
-            str(exception.value)
-            == "The number of icons must match the number of options."
-        )
-
-    @parameterized.expand(get_command_matrix([]))
-    def test_options_list_too_small_when_icons_provided(
-        self, command: Callable[..., None]
+    def test_invalid_icons_are_not_set_to_content_icon_field(
+        self, command: Callable[..., None], option: str
     ):
-        """Test that it throws an exception if the options list is too small when icons
-        are provided."""
-        with pytest.raises(StreamlitAPIException) as exception:
-            command(
-                ["Coffee"],
-                icons=[":material/thumb_up:", ":material/thumb_down:"],
-            )
-        assert (
-            str(exception.value)
-            == "The number of icons must match the number of options."
-        )
+        command([option])
+
+        proto = self.get_delta_from_queue().new_element.button_group
+        for proto_option in proto.options:
+            assert proto_option.content_icon == ""
+            assert proto_option.content == option
 
     @parameterized.expand(get_command_matrix([], with_st_feedback=True))
     def test_outside_form(self, command: Callable[..., None]):

@@ -351,7 +351,6 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["single", "multi"] = "single",
-        icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
         format_func: Callable[[V], str] | None = None,
         key: Key | None = None,
@@ -364,14 +363,21 @@ class ButtonGroupMixin:
     ):
         maybe_raise_label_warnings(label, label_visibility)
 
-        def _transformed_format_func(
-            option: V, icon: str | None = None
-        ) -> ButtonGroupProto.Option:
-            validate_icon_or_emoji(icon)
-            if format_func is None:
-                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
-
-            transformed = format_func(option)
+        def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
+            """If option starts with a material icon or an emoji, we extract it to send
+            it parsed to the frontend."""
+            transformed = format_func(option) if format_func else str(option)
+            transformed_parts = transformed.split(" ")
+            icon: str | None = None
+            if len(transformed_parts) > 1:
+                maybe_icon = transformed_parts[0].strip()
+                try:
+                    icon = validate_icon_or_emoji(maybe_icon)
+                    # reassamble the option string without the icon
+                    transformed = " ".join(transformed_parts[1:])
+                except StreamlitAPIException:
+                    # we don't have a valid icon or emoji, so we just pass
+                    pass
             return ButtonGroupProto.Option(
                 content=transformed,
                 content_icon=icon,
@@ -384,7 +390,6 @@ class ButtonGroupMixin:
         res = self._button_group(
             indexable_options,
             key=key,
-            icons=icons,
             default=default_values,
             selection_mode=selection_mode,
             disabled=disabled,
@@ -415,7 +420,6 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         key: Key | None = None,
-        icons: list[str | None] | None = None,
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
@@ -425,14 +429,21 @@ class ButtonGroupMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> list[V] | V | None:
-        def _transformed_format_func(
-            option: V, icon: str | None
-        ) -> ButtonGroupProto.Option:
-            validate_icon_or_emoji(icon)
-            if format_func is None:
-                return ButtonGroupProto.Option(content=str(option), content_icon=icon)
-
-            transformed = format_func(option)
+        def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
+            """If option starts with a material icon or an emoji, we extract it to send
+            it parsed to the frontend."""
+            transformed = format_func(option) if format_func else str(option)
+            transformed_parts = transformed.split(" ")
+            icon: str | None = None
+            if len(transformed_parts) > 1:
+                maybe_icon = transformed_parts[0].strip()
+                try:
+                    icon = validate_icon_or_emoji(maybe_icon)
+                    # reassamble the option string without the icon
+                    transformed = " ".join(transformed_parts[1:])
+                except StreamlitAPIException:
+                    # we don't have a valid icon or emoji, so we just pass
+                    pass
             return ButtonGroupProto.Option(
                 content=transformed,
                 content_icon=icon,
@@ -446,7 +457,6 @@ class ButtonGroupMixin:
         res = self._button_group(
             indexable_options,
             key=key,
-            icons=icons,
             default=default_values,
             selection_mode=selection_mode,
             disabled=disabled,
@@ -473,12 +483,11 @@ class ButtonGroupMixin:
         indexable_options: Sequence[Any],
         *,
         key: Key | None = None,
-        icons: list[str | None] | None = None,
         default: list[int] | None = None,
         selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
         style: Literal["segment", "pills", "borderless"] = "segment",
-        format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
+        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
@@ -525,10 +534,6 @@ class ButtonGroupMixin:
             _default = None
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
-        if icons is not None and len(icons) != len(indexable_options):
-            raise StreamlitAPIException(
-                "The number of icons must match the number of options."
-            )
 
         widget_name = "button_group"
         ctx = get_script_run_ctx()
@@ -537,7 +542,7 @@ class ButtonGroupMixin:
             indexable_options
             if format_func is None
             else [
-                format_func(indexable_options[index], icons[index] if icons else None)
+                format_func(indexable_options[index])
                 for index, _ in enumerate(indexable_options)
             ]
         )

@@ -57,17 +57,17 @@ selection = st.pills(
 st.write(f"Multi selection: {selection}")
 
 
-st.header("Pills - with icons")
+st.header("Pills - starting with icons")
+option_to_icon_map = {
+    0: ":material/add:",
+    1: ":material/zoom_in:",
+    2: ":material/zoom_out:",
+    3: ":material/zoom_out_map:",
+}
 selection = st.pills(
     "Select a single option",
     options=[0, 1, 2, 3],
-    icons=[
-        ":material/add:",
-        ":material/zoom_in:",
-        ":material/zoom_out:",
-        ":material/zoom_out_map:",
-    ],
-    format_func=lambda x: "",
+    format_func=lambda option: option_to_icon_map[option],
     key="icon_only_pills",
     selection_mode="single",
 )
