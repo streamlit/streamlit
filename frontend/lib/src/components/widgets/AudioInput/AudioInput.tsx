@@ -26,6 +26,7 @@ import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete } from "@emotion-icons/material-outlined"
+import isEqual from "lodash/isEqual"
 
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -65,6 +66,7 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
+
 export interface Props {
   element: AudioInputProto
   uploadClient: FileUploadClient
@@ -110,7 +112,6 @@ const AudioInput: React.FC<Props> = ({
 
   const uploadTheFile = useCallback(
     (file: File) => {
-      console.log("uploadTheFile")
       uploadFiles({
         files: [file],
         uploadClient,
@@ -120,10 +121,6 @@ const AudioInput: React.FC<Props> = ({
       }).then(({ successfulUploads }) => {
         const upload = successfulUploads[0]
         if (upload && upload.fileUrl.deleteUrl) {
-          console.log(
-            "uploadTheFile setting delete url to ",
-            upload.fileUrl.deleteUrl
-          )
           setDeleteFileUrl(upload.fileUrl.deleteUrl)
         }
       })
@@ -150,7 +147,6 @@ const AudioInput: React.FC<Props> = ({
 
   const handleClear = useCallback(
     ({ updateWidgetManager }: { updateWidgetManager?: boolean }) => {
-      console.log("handleClear")
       if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
         return
       }
@@ -185,7 +181,6 @@ const AudioInput: React.FC<Props> = ({
   )
 
   const initializeWaveSurfer = useCallback(() => {
-    console.log("initializeWaveSurfer")
     if (waveSurferRef.current === null) return
 
     const ws = WaveSurfer.create({
@@ -244,9 +239,7 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
 
   useEffect(() => {
-    console.log("theme changed useEffect")
-    if (previousTheme !== theme) {
-      console.log("theme changed")
+    if (!isEqual(previousTheme, theme)) {
       wavesurfer?.setOptions({
         waveColor: recordingUrl
           ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
@@ -257,7 +250,6 @@ const AudioInput: React.FC<Props> = ({
   }, [theme, previousTheme, recordingUrl, wavesurfer])
 
   const onClickPlayPause = useCallback(() => {
-    console.log("onClickPlayPause")
     if (wavesurfer) {
       wavesurfer.playPause()
       // This is because we want the time to be the duration of the audio when they stop recording,
