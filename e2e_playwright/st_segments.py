@@ -109,56 +109,60 @@ with st.echo(code_location="below"):
 
 
 st.header("Disabled - Segments", anchor="disabled-segments")
-selection = st.segments(
-    "Emotions",
-    ["Joy", "Sadness", "Anger", "Disgust"],
-    key="segments_disabled",
-    disabled=True,
-)
-st.write("segments-disabled:", str(selection))
-
-
-st.header("Segments in form", anchor="segments-in-form")
-with st.form(key="my_form", clear_on_submit=True):
+with st.echo(code_location="below"):
     selection = st.segments(
         "Emotions",
         ["Joy", "Sadness", "Anger", "Disgust"],
-        key="segments_in_form",
-        selection_mode="multi",
+        key="segments_disabled",
+        disabled=True,
     )
-    st.form_submit_button("Submit")
+    st.write("segments-disabled:", str(selection))
 
-st.write(
-    "segments-in-form:",
-    str(st.session_state.segments_in_form),
-)
+
+st.header("Segments in form", anchor="segments-in-form")
+with st.echo(code_location="below"):
+    with st.form(key="my_form", clear_on_submit=True):
+        selection = st.segments(
+            "Emotions",
+            ["Joy", "Sadness", "Anger", "Disgust"],
+            key="segments_in_form",
+            selection_mode="multi",
+        )
+        st.form_submit_button("Submit")
+    st.write(
+        "segments-in-form:",
+        str(st.session_state.segments_in_form),
+    )
+
 
 st.header("Segments in fragment", anchor="segments-in-fragment")
+with st.echo(code_location="below"):
 
+    @st.experimental_fragment()
+    def test_fragment():
+        selection = st.segments(
+            "Emotions",
+            ["Joy", "Sadness", "Anger", "Disgust"],
+            key="segments_in_fragment",
+        )
+        st.write("segments-in-fragment:", str(selection))
 
-@st.experimental_fragment()
-def test_fragment():
-    selection = st.segments(
-        "Emotions", ["Joy", "Sadness", "Anger", "Disgust"], key="segments_in_fragment"
-    )
-    st.write("segments-in-fragment:", str(selection))
-
-
-test_fragment()
+    test_fragment()
 
 
 st.header("Unmounted - Segments", anchor="unmounted-segments")
-if st.button("Create some elements to unmount component"):
-    for _ in range(2):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
-        time.sleep(1)
-        st.write("Another element")
+with st.echo(code_location="below"):
+    if st.button("Create some elements to unmount component"):
+        for _ in range(2):
+            # The sleep here is needed, because it won't unmount the
+            # component if this is too fast.
+            time.sleep(1)
+            st.write("Another element")
 
-selection = st.segments(
-    "Emotions", ["Joy", "Sadness", "Anger", "Disgust"], key="segments_after_sleep"
-)
-st.write("segments-after-sleep:", str(selection))
+    selection = st.segments(
+        "Emotions", ["Joy", "Sadness", "Anger", "Disgust"], key="segments_after_sleep"
+    )
+    st.write("segments-after-sleep:", str(selection))
 
 
 if "runs" not in st.session_state:
