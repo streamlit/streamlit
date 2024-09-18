@@ -96,13 +96,28 @@ const AudioInput: React.FC<Props> = ({
   const [activeAudioDeviceId, setActiveAudioDeviceId] = useState<
     string | null
   >(null)
-  const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
+  const [recordingUrl, _setRecordingUrl] = useState<string | null>(
+    widgetMgr.getElementState(element.id, "recordingUrl")
+  )
+  const setRecordingUrl = (url: string | null) => {
+    _setRecordingUrl(url)
+    widgetMgr.setElementState(element.id, "recordingUrl", url)
+  }
   const [, setRerender] = useState(0)
   const forceRerender = (): void => {
     setRerender(prev => prev + 1)
   }
   const [progressTime, setProgressTime] = useState(STARTING_TIME_STRING)
-  const [recordingTime, setRecordingTime] = useState(STARTING_TIME_STRING)
+  const [recordingTime, _setRecordingTime] = useState(
+    recordingUrl
+      ? widgetMgr.getElementState(element.id, "recordingTime")
+      : STARTING_TIME_STRING
+  )
+  const setRecordingTime = (time: string) => {
+    _setRecordingTime(time)
+    widgetMgr.setElementState(element.id, "recordingTime", time)
+  }
+
   const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
     useState(false)
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
@@ -185,7 +200,9 @@ const AudioInput: React.FC<Props> = ({
 
     const ws = WaveSurfer.create({
       container: waveSurferRef.current,
-      waveColor: theme.colors.primary,
+      waveColor: recordingUrl
+        ? blend(theme.colors.fadedText40, theme.genericColors.secondaryBg)
+        : theme.colors.primary,
       progressColor: theme.colors.bodyText,
       height:
         parseFloat(getComputedStyle(document.documentElement).fontSize) *
@@ -195,6 +212,7 @@ const AudioInput: React.FC<Props> = ({
       barGap: BAR_GAP,
       barRadius: BAR_RADIUS,
       cursorWidth: CURSOR_WIDTH,
+      url: recordingUrl ?? undefined,
     })
 
     ws.on("timeupdate", time => {
