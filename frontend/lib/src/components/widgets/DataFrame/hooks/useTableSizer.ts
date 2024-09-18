@@ -120,7 +120,13 @@ function useTableSizer(
   // within the grid component.
   const availableWidth = Math.max(containerWidth, MIN_TABLE_WIDTH)
 
+  // The initial width of the data grid.
+  // If not set, the data grid will be auto adapted to its content.
+  // The reason why we have initial width is that the data grid itself
+  // is resizable by the user. It starts with initial width but can be
+  // resized between min and max width.
   let initialWidth: number | undefined
+  // The maximum width of the data grid can be resized to.
   let maxWidth = availableWidth
 
   if (element.useContainerWidth) {
