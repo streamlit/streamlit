@@ -203,18 +203,16 @@ class AudioInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_and_register_element_id(
+        element_id = compute_and_register_element_id(
             "audio_input",
             user_key=key,
-            label=label,
-            key=key,
-            help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
+            label=label,
+            help=help,
         )
 
         audio_input_proto = AudioInputProto()
-        audio_input_proto.id = id
+        audio_input_proto.id = element_id
         audio_input_proto.label = label
         audio_input_proto.form_id = current_form_id(self.dg)
         audio_input_proto.disabled = disabled
