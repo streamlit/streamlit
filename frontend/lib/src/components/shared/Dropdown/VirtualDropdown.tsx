@@ -18,6 +18,7 @@ import React, { ReactElement } from "react"
 
 import { OptionListProps, StyledEmptyState, StyledList } from "baseui/menu"
 import { FixedSizeList } from "react-window"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
   OverflowTooltip,
@@ -52,7 +53,12 @@ function FixedSizeListItem(props: FixedSizeListItemProps): ReactElement {
       {...restChildProps}
     >
       <OverflowTooltip content={item.label} placement={Placement.AUTO}>
-        {item.label}
+        <StreamlitMarkdown
+          source={item.label}
+          allowHTML={false}
+          isLabel
+          largerLabel
+        />
       </OverflowTooltip>
     </ThemedStyledDropdownListItem>
   )

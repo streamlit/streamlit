@@ -23,6 +23,7 @@ import { withTheme } from "@emotion/react"
 import { hasMatch, score } from "fzy.js"
 import sortBy from "lodash/sortBy"
 
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import {
   isNullOrUndefined,
