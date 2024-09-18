@@ -31,7 +31,9 @@ from streamlit.elements.widgets.button_group import (
     _STAR_ICON,
     _THUMB_ICONS,
     ButtonGroupMixin,
-    FeedbackSerde,
+    SelectionMode,
+    SingleOrMultiSelectSerde,
+    SingleSelectSerde,
     get_mapped_options,
 )
 from streamlit.errors import StreamlitAPIException
@@ -84,29 +86,78 @@ class TestGetMappedOptions:
             assert options_indices[index] == index
 
 
-class TestFeedbackSerde:
+class TestSingleSelectSerde:
     def test_serialize(self):
         option_indices = [5, 6, 7]
-        serde = FeedbackSerde(option_indices)
+        serde = SingleSelectSerde[int](option_indices)
         res = serde.serialize(6)
         assert res == [1]
 
     def test_serialize_raise_option_does_not_exist(self):
         option_indices = [5, 6, 7]
-        serde = FeedbackSerde(option_indices)
+        serde = SingleSelectSerde[int](option_indices)
 
         with pytest.raises(StreamlitAPIException):
             serde.serialize(8)
 
     def test_deserialize(self):
         option_indices = [5, 6, 7]
-        serde = FeedbackSerde(option_indices)
+        serde = SingleSelectSerde[int](option_indices)
         res = serde.deserialize([1], "")
         assert res == 6
 
+    def test_deserialize_with_default_value(self):
+        option_indices = [5, 6, 7]
+        serde = SingleSelectSerde[int](option_indices, default_value=[2])
+        res = serde.deserialize(None, "")
+        assert res == 7
+
     def test_deserialize_raise_indexerror(self):
         option_indices = [5, 6, 7]
-        serde = FeedbackSerde(option_indices)
+        serde = SingleSelectSerde[int](option_indices)
+
+        with pytest.raises(IndexError):
+            serde.deserialize([3], "")
+
+
+class TestSingleOrMultiSelectSerde:
+    @parameterized.expand([("single",), ("multi",)])
+    def test_serialize(self, selection_mode: SelectionMode):
+        option_indices = [5, 6, 7]
+        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
+        res = serde.serialize(6)
+        assert res == [1]
+
+    @parameterized.expand([("single",), ("multi",)])
+    def test_serialize_raise_option_does_not_exist(self, selection_mode: SelectionMode):
+        option_indices = [5, 6, 7]
+        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
+
+        with pytest.raises(StreamlitAPIException):
+            serde.serialize(8)
+
+    @parameterized.expand([("single", 6), ("multi", [6])])
+    def test_deserialize(
+        self, selection_mode: SelectionMode, expected: int | list[int]
+    ):
+        option_indices = [5, 6, 7]
+        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
+        res = serde.deserialize([1], "")
+        assert res == expected
+
+    @parameterized.expand([("single", 7), ("multi", [7])])
+    def test_deserialize_with_default_value(
+        self, selection_mode: SelectionMode, expected: list[int] | int
+    ):
+        option_indices = [5, 6, 7]
+        serde = SingleOrMultiSelectSerde[int](option_indices, [2], selection_mode)
+        res = serde.deserialize(None, "")
+        assert res == expected
+
+    @parameterized.expand([("single",), ("multi",)])
+    def test_deserialize_raise_indexerror(self, selection_mode: SelectionMode):
+        option_indices = [5, 6, 7]
+        serde = SingleOrMultiSelectSerde[int](option_indices, [], selection_mode)
 
         with pytest.raises(IndexError):
             serde.deserialize([3], "")
@@ -166,7 +217,7 @@ def get_command_matrix(
     """
     matrix = []
 
-    commands = [
+    commands: list[Callable[..., Any]] = [
         lambda *args, **kwargs: st.pills("label", *args, **kwargs),
         lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
             st._main, *args, **kwargs
@@ -469,7 +520,8 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     def test_default_for_singleselect(
         self, command: Callable[..., None], defaults: Any, expected: list[Any]
     ):
-        """Test that valid default can be passed as expected."""
+        """Test that valid default can be passed as expected and that the default can be
+        a list or single value."""
         command(
             ["Coffee", "Tea", "Water"],
             default=defaults,
@@ -678,10 +730,20 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(get_command_matrix([]))
-    def test_widget_state_changed_via_session_state(self, command: Callable[..., None]):
-        st.session_state.command_key = ["stars"]
+    def test_widget_state_changed_via_session_state_for_single_select(
+        self, command: Callable[..., None]
+    ):
+        st.session_state.command_key = "stars"
         val = command(["thumbs", "stars"], key="command_key")
         assert val == "stars"
+
+    @parameterized.expand(get_command_matrix([]))
+    def test_widget_state_changed_via_session_state_for_multi_select(
+        self, command: Callable[..., None]
+    ):
+        st.session_state.command_key = ["stars"]
+        val = command(["thumbs", "stars"], key="command_key", selection_mode="multi")
+        assert val == ["stars"]
 
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""

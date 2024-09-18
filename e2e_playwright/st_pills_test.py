@@ -107,7 +107,7 @@ def test_click_single_icon_pill_and_take_snapshot(
 
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
-    text = get_markdown(app, "Multi selection: None")
+    text = get_markdown(app, "Multi selection: \\[\\]")
     expect(text).to_be_visible()
 
     click_checkbox(app, "Set default values")
@@ -117,7 +117,7 @@ def test_pass_default_selections(app: Page):
     expect(text).to_be_visible()
 
     click_checkbox(app, "Set default values")
-    text = get_markdown(app, "Multi selection: None")
+    text = get_markdown(app, "Multi selection: \\[\\]")
     expect(text).to_be_visible()
 
 
@@ -126,7 +126,7 @@ def test_selection_via_on_change_callback(app: Page):
     pills = get_button_group(app, 2)
     get_pill_button(pills, "Air").click()
     wait_for_app_run(app)
-    expect_markdown(app, "on_change selection: ['Air']")
+    expect_markdown(app, "on_change selection: Air")
 
 
 def test_pills_are_disabled(app: Page):
@@ -143,12 +143,12 @@ def test_pills_are_disabled(app: Page):
 
 
 def test_pills_work_in_forms(app: Page):
-    expect_markdown(app, "pills-in-form: []")
+    expect_markdown(app, "pills-in-form: None")
     pills = get_button_group(app, 4)
     get_pill_button(pills, "Air").click()
     click_form_button(app, "Submit")
     wait_for_app_run(app)
-    expect_markdown(app, "pills-in-form: ['Air']")
+    expect_markdown(app, "pills-in-form: Air")
 
 
 def test_pills_work_with_fragments(app: Page):

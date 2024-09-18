@@ -19,8 +19,10 @@ from typing import (
     Any,
     Callable,
     Final,
+    Generic,
     Literal,
     Sequence,
+    TypeAlias,
     TypeVar,
     cast,
     overload,
@@ -50,6 +52,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.string_util import validate_icon_or_emoji
+from streamlit.type_util import T
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -64,7 +67,6 @@ if TYPE_CHECKING:
         WidgetDeserializer,
         WidgetSerializer,
     )
-    from streamlit.type_util import T
 
 
 V = TypeVar("V")
@@ -83,28 +85,38 @@ _STAR_ICON: Final = ":material/star:"
 # in base64 format and send it over the wire as an image.
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
+SelectionMode: TypeAlias = Literal["single", "multi"]
 
-class FeedbackSerde:
+
+class SingleSelectSerde(Generic[T]):
     """Uses the MultiSelectSerde under-the-hood, but accepts a single index value
-    and deserializes to a single index value. This is because for feedback, we always
-    allow just a single selection.
+    and deserializes to a single index value.
+    This is because button_group can be single and multi select, but we use the same
+    proto for both and, thus, map single values to a list of values and a receiving
+    value wrapped in a list to a single value.
 
-    When a sentiment_mapping is provided, the sentiment corresponding to the index is
-    serialized/deserialized. Otherwise, the index is used as the sentiment.
+    When a default_value is provided is provided, the option corresponding to the
+    index is serialized/deserialized.
     """
 
-    def __init__(self, option_indices: list[int]) -> None:
+    def __init__(
+        self,
+        option_indices: Sequence[T],
+        default_value: list[int] | None = None,
+    ) -> None:
         """Initialize the FeedbackSerde with a list of sentimets."""
-        self.multiselect_serde: MultiSelectSerde[int] = MultiSelectSerde(option_indices)
+        self.multiselect_serde: MultiSelectSerde[T] = MultiSelectSerde(
+            option_indices, default_value if default_value is not None else []
+        )
 
-    def serialize(self, value: int | None) -> list[int]:
+    def serialize(self, value: T | None) -> list[int]:
         """Serialize the passed sentiment option into its corresponding index
         (wrapped in a list).
         """
         _value = [value] if value is not None else []
         return self.multiselect_serde.serialize(_value)
 
-    def deserialize(self, ui_value: list[int], widget_id: str = "") -> int | None:
+    def deserialize(self, ui_value: list[int] | None, widget_id: str = "") -> T | None:
         """Receive a list of indices and return the corresponding sentiments."""
         deserialized = self.multiselect_serde.deserialize(ui_value, widget_id)
 
@@ -112,6 +124,40 @@ class FeedbackSerde:
             return None
 
         return deserialized[0]
+
+
+class SingleOrMultiSelectSerde(Generic[T]):
+    """A serde that can handle both single and multi select options.
+
+    It uses the same proto to wire the data, so that we can send and receive
+    single values via a list. We have different serdes for both cases though so
+    that when setting / getting the value via session_state, it is mapped correctly.
+    So for single select, the value will be a single value and for multi select, it will
+    be a list of values.
+    """
+
+    def __init__(
+        self,
+        options: Sequence[T],
+        default_values: list[int],
+        type: Literal["single", "multi"],
+    ):
+        self.options = options
+        self.default_values = default_values
+        self.type = type
+        self.serde: SingleSelectSerde[T] | MultiSelectSerde[T] = (
+            SingleSelectSerde(options, default_value=default_values)
+            if type == "single"
+            else MultiSelectSerde(options, default_values)
+        )
+
+    def serialize(self, value: T | list[T] | None) -> list[int]:
+        return self.serde.serialize(cast(Any, value))
+
+    def deserialize(
+        self, ui_value: list[int] | None, widget_id: str = ""
+    ) -> list[T] | T | None:
+        return self.serde.deserialize(ui_value, widget_id)
 
 
 def get_mapped_options(
@@ -320,7 +366,7 @@ class ButtonGroupMixin:
                 f"The argument passed was '{options}'."
             )
         transformed_options, options_indices = get_mapped_options(options)
-        serde = FeedbackSerde(options_indices)
+        serde = SingleSelectSerde[int](options_indices)
 
         selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
         if options == "stars":
@@ -352,7 +398,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
-        format_func: Callable[[V], str] | None = None,
+        format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -360,7 +406,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ):
+    ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
@@ -386,7 +432,9 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde = MultiSelectSerde(indexable_options, default_values)
+        serde: SingleOrMultiSelectSerde = SingleOrMultiSelectSerde[V](
+            indexable_options, default_values, selection_mode
+        )
         res = self._button_group(
             indexable_options,
             key=key,
@@ -405,12 +453,10 @@ class ButtonGroupMixin:
             help=help,
         )
 
-        if selection_mode == "multi" and len(res.value) > 0:
+        if selection_mode == "multi":
             return res.value
 
-        return (
-            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
-        )
+        return res.value if selection_mode == "single" else None
 
     # Disable this more generic widget for now
     # @gather_metrics("button_group")
@@ -423,7 +469,7 @@ class ButtonGroupMixin:
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multi"] = "single",
         disabled: bool = False,
-        format_func: Callable[[V], str] | None = None,
+        format_func: Callable[[Any], str] | None = None,
         style: Literal["segment", "pills"] = "segment",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -452,7 +498,9 @@ class ButtonGroupMixin:
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde = MultiSelectSerde(indexable_options, default_values)
+        serde: SingleOrMultiSelectSerde = SingleOrMultiSelectSerde[V](
+            indexable_options, default_values, selection_mode
+        )
 
         res = self._button_group(
             indexable_options,
@@ -469,14 +517,10 @@ class ButtonGroupMixin:
             kwargs=kwargs,
         )
 
-        if selection_mode == "multi" and len(res.value) > 0:
+        if selection_mode == "multi":
             return res.value
 
-        return (
-            res.value[0]
-            if selection_mode == "single" and res.value and len(res.value) > 0
-            else None
-        )
+        return res.value if selection_mode == "single" else None
 
     def _button_group(
         self,
@@ -484,7 +528,7 @@ class ButtonGroupMixin:
         *,
         key: Key | None = None,
         default: list[int] | None = None,
-        selection_mode: Literal["single", "multi"] = "single",
+        selection_mode: SelectionMode = "single",
         disabled: bool = False,
         style: Literal["segment", "pills", "borderless"] = "segment",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
