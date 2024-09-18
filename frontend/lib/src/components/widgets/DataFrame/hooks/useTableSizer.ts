@@ -74,20 +74,19 @@ function useTableSizer(
   containerHeight?: number,
   isFullScreen?: boolean
 ): AutoSizerReturn {
+  // Calculate the maximum height of the table based on the number of rows:
   let maxHeight = calculateMaxHeight(
     numRows +
       1 + // Column header row
       (element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0) // Trailing row
   )
 
+  // The initial height is either the default table height or the maximum
+  // (full) height based if its smaller than the default table height.
+  // The reason why we have initial height is that the table itself is
+  // resizable by the user. So, it starts with initial height but can be
+  // resized between min and max height.
   let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
-  // The available width should be at least the minimum table width
-  // to prevent "maximum update depth exceeded" error. The reason
-  // is that the container width can be -1 in some edge cases
-  // caused by the resize observer in the Block component.
-  // This can trigger the "maximum update depth exceeded" error
-  // within the grid component.
-  const availableWidth = Math.max(containerWidth, MIN_TABLE_WIDTH)
 
   if (element.height) {
     // User has explicitly configured a height
@@ -107,23 +106,38 @@ function useTableSizer(
     }
   }
 
+  // The available width should be at least the minimum table width
+  // to prevent "maximum update depth exceeded" error. The reason
+  // is that the container width can be -1 in some edge cases
+  // caused by the resize observer in the Block component.
+  // This can trigger the "maximum update depth exceeded" error
+  // within the grid component.
+  const availableWidth = Math.max(containerWidth, MIN_TABLE_WIDTH)
+
   let initialWidth: number | undefined
   let maxWidth = availableWidth
 
   if (element.useContainerWidth) {
     // If user has set use_container_width,
-    // use the full container width.
+    // use the full container (available) width.
     initialWidth = availableWidth
   } else if (element.width) {
-    // User has explicitly configured a width
+    // The user has explicitly configured a width
+    // use it but keep between the MIN_TABLE_WIDTH
+    // and the available width.
     initialWidth = Math.min(
       Math.max(element.width, MIN_TABLE_WIDTH),
       availableWidth
     )
+    // Make sure that the max width we configure is between the user
+    // configured width and the available (container) width.
     maxWidth = Math.min(Math.max(element.width, maxWidth), availableWidth)
   }
 
   const [resizableSize, setResizableSize] = React.useState<ResizableSize>({
+    // If user hasn't specified a width via `width` or `use_container_width`,
+    // we configure the table to 100%. Which will cause the data grid to
+    // calculate the best size on the content and use that.
     width: initialWidth || "100%",
     height: initialHeight,
   })
