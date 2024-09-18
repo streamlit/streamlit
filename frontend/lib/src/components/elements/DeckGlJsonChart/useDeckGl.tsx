@@ -101,9 +101,15 @@ const interpolate = (info: PickingInfo, body: string): string => {
 }
 
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
-  const { element, isLightTheme } = props
+  const {
+    element,
+    height: propsHeight,
+    isFullScreen: propsIsFullScreen,
+    isLightTheme,
+    width: propsWidth,
+  } = props
   const { tooltip, useContainerWidth: shouldUseContainerWidth } = element
-  const isFullScreen = props.isFullScreen ?? false
+  const isFullScreen = propsIsFullScreen ?? false
 
   const [viewState, setViewState] = useState<Record<string, unknown>>({
     bearing: 0,
@@ -115,7 +121,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     element,
     isFullScreen,
     shouldUseContainerWidth,
-    container: { height: props.height, width: props.width },
+    container: { height: propsHeight, width: propsWidth },
     heightFallback:
       (viewState.initialViewState as { height: number } | undefined)?.height ||
       DEFAULT_DECK_GL_HEIGHT,

@@ -14,7 +14,27 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { CSSProperties, useMemo } from "react"
+
+type StWidthHeightArgs = {
+  container: {
+    height?: CSSProperties["height"]
+    width?: CSSProperties["width"]
+  }
+  element: {
+    height?: CSSProperties["height"]
+    width?: CSSProperties["width"]
+  }
+  heightFallback?: CSSProperties["height"]
+  isFullScreen: boolean
+  shouldUseContainerWidth: boolean
+  widthFallback?: CSSProperties["width"]
+}
+
+type StWidthHeightShape = {
+  height: number | string
+  width: number | string
+}
 
 /**
  * Determines the width and height to use for a given element based on the
@@ -29,20 +49,7 @@ export const useStWidthHeight = ({
   isFullScreen,
   shouldUseContainerWidth,
   widthFallback = "auto",
-}: {
-  container: {
-    height?: number | string
-    width?: number | string
-  }
-  element: {
-    height?: number | string
-    width?: number | string
-  }
-  heightFallback?: number | string
-  isFullScreen: boolean
-  shouldUseContainerWidth: boolean
-  widthFallback?: number | string
-}): { height: number | string; width: number | string } => {
+}: StWidthHeightArgs): StWidthHeightShape => {
   const width = useMemo(() => {
     if (shouldUseContainerWidth || isFullScreen) {
       return "100%"

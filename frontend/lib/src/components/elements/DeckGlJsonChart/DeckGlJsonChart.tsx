@@ -45,15 +45,20 @@ registerLoaders([CSVLoader, GLTFLoader])
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
-  const { element, isFullScreen } = props
+  const {
+    element,
+    isFullScreen,
+    width: propsWidth,
+    height: propsHeight,
+  } = props
   const theme: EmotionTheme = useTheme()
 
   const { createTooltip, deck, onViewStateChange, viewState, width, height } =
     useDeckGl({
       element,
       isLightTheme: hasLightBackgroundColor(theme),
-      width: props.width,
-      height: props.height,
+      width: propsWidth,
+      height: propsHeight,
       isFullScreen,
     })
 
