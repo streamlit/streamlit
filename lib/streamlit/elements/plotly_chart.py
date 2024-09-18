@@ -506,15 +506,13 @@ class PlotlyMixin:
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
-            key=key,
+            form_id=plotly_chart_proto.form_id,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
             selection_mode=selection_mode,
             is_selection_activated=is_selection_activated,
             theme=theme,
-            form_id=plotly_chart_proto.form_id,
             use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_selection_activated:

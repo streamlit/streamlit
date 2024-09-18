@@ -263,6 +263,14 @@ class ContainerTest(DeltaGeneratorTestCase):
         container_block = self.get_delta_from_queue()
         self.assertFalse(container_block.add_block.vertical.border)
         self.assertFalse(container_block.add_block.allow_empty)
+        self.assertEqual(container_block.add_block.id, "")
+
+    def test_setting_key(self):
+        """Test that the key can be set and that it is included in the
+        generated element ID."""
+        st.container(key="container_key")
+        container_block = self.get_delta_from_queue()
+        assert "container_key" in container_block.add_block.id
 
     def test_height_parameter(self):
         """Test that it can be called with height parameter"""

@@ -545,16 +545,14 @@ class SliderMixin:
         element_id = compute_and_register_element_id(
             "slider",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             min_value=min_value,
             max_value=max_value,
             value=value,
             step=step,
             format=format,
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         SUPPORTED_TYPES = {

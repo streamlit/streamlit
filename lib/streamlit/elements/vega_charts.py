@@ -1894,7 +1894,7 @@ class VegaChartsMixin:
             vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
-                key=key,
+                form_id=vega_lite_proto.form_id,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
                 # or in a named dataset in vega_lite_proto.datasets
@@ -1905,8 +1905,6 @@ class VegaChartsMixin:
                 theme=theme,
                 use_container_width=use_container_width,
                 selection_mode=parsed_selection_modes,
-                form_id=vega_lite_proto.form_id,
-                page=ctx.active_script_hash if ctx else None,
             )
 
             serde = VegaLiteStateSerde(parsed_selection_modes)
