@@ -241,7 +241,11 @@ class StreamlitTest(unittest.TestCase):
             for element, _ in WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS + CONTAINER_ELEMENTS
         }
         mocked_elements.update(NON_ELEMENT_COMMANDS)
-        assert api == mocked_elements
+        assert api == mocked_elements, (
+            "There are new public commands that might be needed to be added to element "
+            "mocks or NON_ELEMENT_COMMANDS. Please add it to the correct list of "
+            "mocked elements or NON_ELEMENT_COMMANDS."
+        )
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""
