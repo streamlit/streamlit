@@ -56,6 +56,15 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 
+def _get_abs_folder_path(path: str) -> str:
+    """Get the absolute folder path for a given path.
+
+    If the path is a directory, return the absolute path.
+    Otherwise, return the absolute path of the parent directory.
+    """
+    return os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path))
+
+
 class EventBasedPathWatcher:
     """Watches a single path on disk using watchdog"""
 
@@ -164,7 +173,7 @@ class _MultiPathWatcher:
         allow_nonexistent: bool = False,
     ) -> None:
         """Start watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        folder_path = _get_abs_folder_path(path)
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -186,7 +195,7 @@ class _MultiPathWatcher:
 
     def stop_watching_path(self, path: str, callback: Callable[[str], None]) -> None:
         """Stop watching a path."""
-        folder_path = os.path.abspath(os.path.dirname(path))
+        folder_path = _get_abs_folder_path(path)
 
         with self._lock:
             folder_handler = self._folder_handlers.get(folder_path)
@@ -201,7 +210,10 @@ class _MultiPathWatcher:
 
             folder_handler.remove_path_change_listener(path, callback)
 
-            if not folder_handler.is_watching_paths():
+            if (
+                not folder_handler.is_watching_paths()
+                and folder_handler.watch is not None
+            ):
                 self._observer.unschedule(folder_handler.watch)
                 del self._folder_handlers[folder_path]
 
@@ -339,19 +351,25 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
-        changed_path = os.path.abspath(changed_path)
+        # Watchdog 5.X is supported Python >=3.9, so watchdog 4.X is used for Python 3.8.
+        # In Watchdog 5.X, the path can be bytes or str, but in Watchdog 4.X, the path is always str,
+        # that's why we convert the path to str, but we need to ignore the unreachable code warning for Python 3.8.
+        if isinstance(changed_path, bytes):  # type: ignore[unreachable, unused-ignore]
+            changed_path = changed_path.decode("utf-8")  # type: ignore[unreachable, unused-ignore]
 
-        changed_path_info = self._watched_paths.get(changed_path, None)
+        abs_changed_path = os.path.abspath(changed_path)
+
+        changed_path_info = self._watched_paths.get(abs_changed_path, None)
         if changed_path_info is None:
             _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",
-                changed_path,
+                abs_changed_path,
                 self._watched_paths,
             )
             return
 
         modification_time = util.path_modification_time(
-            changed_path, changed_path_info.allow_nonexistent
+            abs_changed_path, changed_path_info.allow_nonexistent
         )
 
         # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
@@ -360,23 +378,23 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             modification_time != 0.0
             and modification_time == changed_path_info.modification_time
         ):
-            _LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
+            _LOGGER.debug("File/dir timestamp did not change: %s", abs_changed_path)
             return
 
         changed_path_info.modification_time = modification_time
 
         new_md5 = util.calc_md5_with_blocking_retries(
-            changed_path,
+            abs_changed_path,
             glob_pattern=changed_path_info.glob_pattern,
             allow_nonexistent=changed_path_info.allow_nonexistent,
         )
         if new_md5 == changed_path_info.md5:
-            _LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
+            _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
             return
 
-        _LOGGER.debug("File/dir MD5 changed: %s", changed_path)
+        _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
         changed_path_info.md5 = new_md5
-        changed_path_info.on_changed.send(changed_path)
+        changed_path_info.on_changed.send(abs_changed_path)
 
     def on_created(self, event: events.FileSystemEvent) -> None:
         self.handle_path_change_event(event)

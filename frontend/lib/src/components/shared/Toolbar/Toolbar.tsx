@@ -108,8 +108,8 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
 }): ReactElement => {
   return (
     <StyledToolbarWrapper
-      className={"stElementToolbar"}
-      data-testid={"stElementToolbar"}
+      className="stElementToolbar"
+      data-testid="stElementToolbar"
       locked={locked || isFullScreen}
       target={target}
     >
@@ -117,14 +117,14 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
         {children}
         {onExpand && !disableFullscreenMode && !isFullScreen && (
           <ToolbarAction
-            label={"Fullscreen"}
+            label="Fullscreen"
             icon={Fullscreen}
             onClick={() => onExpand()}
           />
         )}
         {onCollapse && !disableFullscreenMode && isFullScreen && (
           <ToolbarAction
-            label={"Close fullscreen"}
+            label="Close fullscreen"
             icon={FullscreenExit}
             onClick={() => onCollapse()}
           />

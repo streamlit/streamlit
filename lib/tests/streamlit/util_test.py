@@ -16,11 +16,6 @@ from __future__ import annotations
 
 import random
 import unittest
-from unittest.mock import patch
-
-import numpy as np
-import pytest
-from parameterized import parameterized
 
 from streamlit import util
 
@@ -38,37 +33,6 @@ class UtilTest(unittest.TestCase):
         assert non_memoized_func() != non_memoized_func()
         assert yes_memoized_func() == yes_memoized_func()
 
-    @parameterized.expand(
-        [("Linux", False, True), ("Windows", True, False), ("Darwin", False, True)]
-    )
-    def test_open_browser(self, os_type, webbrowser_expect, popen_expect):
-        """Test web browser opening scenarios."""
-        from streamlit import env_util
-
-        env_util.IS_WINDOWS = os_type == "Windows"
-        env_util.IS_DARWIN = os_type == "Darwin"
-        env_util.IS_LINUX_OR_BSD = os_type == "Linux"
-
-        with patch("streamlit.env_util.is_executable_in_path", return_value=True):
-            with patch("webbrowser.open") as webbrowser_open:
-                with patch("subprocess.Popen") as subprocess_popen:
-                    util.open_browser("http://some-url")
-                    assert webbrowser_expect == webbrowser_open.called
-                    assert popen_expect == subprocess_popen.called
-
-    def test_open_browser_linux_no_xdg(self):
-        """Test opening the browser on Linux with no xdg installed"""
-        from streamlit import env_util
-
-        env_util.IS_LINUX_OR_BSD = True
-
-        with patch("streamlit.env_util.is_executable_in_path", return_value=False):
-            with patch("webbrowser.open") as webbrowser_open:
-                with patch("subprocess.Popen") as subprocess_popen:
-                    util.open_browser("http://some-url")
-                    assert webbrowser_open.called
-                    assert not subprocess_popen.called
-
     def test_functools_wraps(self):
         """Test wrap for functools.wraps"""
 
@@ -79,109 +43,6 @@ class UtilTest(unittest.TestCase):
             return True
 
         assert hasattr(f, "__wrapped__")
-
-    @parameterized.expand(
-        [
-            ({}, {}),
-            (
-                {
-                    "HELLO_1": 4,
-                    "Hello_2": "world",
-                    "hElLo_3": 5.5,
-                    "": "",
-                },
-                {"hello_1": 4, "hello_2": "world", "hello_3": 5.5, "": ""},
-            ),
-        ]
-    )
-    def test_lower_clean_dict_keys(self, input_dict, answer_dict):
-        return_dict = util.lower_clean_dict_keys(input_dict)
-        assert return_dict == answer_dict
-
-    @parameterized.expand(
-        [
-            (np.array([1, 2, 3, 4, 5]), 5, 4),
-            # This one will have 0.15000000000000002 because of floating point precision
-            (np.arange(0.0, 0.25, 0.05), 0.15, 3),
-            ([0, 1, 2, 3], 3, 3),
-            ([0.1, 0.2, 0.3], 0.2, 1),
-            ([0.1, 0.2, None], None, 2),
-            ([0.1, 0.2, float("inf")], float("inf"), 2),
-            (["He", "ello w", "orld"], "He", 0),
-            (list(np.arange(0.0, 0.25, 0.05)), 0.15, 3),
-        ]
-    )
-    def test_successful_index_(self, input, find_value, expected_index):
-        actual_index = util.index_(input, find_value)
-        assert actual_index == expected_index
-
-    @parameterized.expand(
-        [
-            (np.array([1, 2, 3, 4, 5]), 6),
-            (np.arange(0.0, 0.25, 0.05), 0.1500002),
-            ([0, 1, 2, 3], 3.00001),
-            ([0.1, 0.2, 0.3], 0.3000004),
-            ([0.1, 0.2, 0.3], None),
-            (["He", "ello w", "orld"], "world"),
-            (list(np.arange(0.0, 0.25, 0.05)), 0.150002),
-        ]
-    )
-    def test_unsuccessful_index_(self, input, find_value):
-        with pytest.raises(ValueError):
-            util.index_(input, find_value)
-
-    @parameterized.expand(
-        [
-            ({"x": ["a"]}, ["x"], {}),
-            ({"a": ["a1", "a2"], "b": ["b1", "b2"]}, ["a"], {"b": ["b1", "b2"]}),
-            ({"c": ["c1", "c2"]}, "no_existing_key", {"c": ["c1", "c2"]}),
-            (
-                {
-                    "embed": ["true"],
-                    "embed_options": ["show_padding", "show_colored_line"],
-                },
-                ["embed", "embed_options"],
-                {},
-            ),
-            (
-                {"EMBED": ["TRUE"], "EMBED_OPTIONS": ["DISABLE_SCROLLING"]},
-                ["embed", "embed_options"],
-                {},
-            ),
-        ]
-    )
-    def test_exclude_keys_in_dict(
-        self,
-        d: dict[str, list[str]],
-        keys_to_drop: list[str],
-        result: dict[str, list[str]],
-    ):
-        assert util.exclude_keys_in_dict(d, keys_to_drop) == result
-
-    @parameterized.expand(
-        [
-            ({"x": ["a"]}, "x", {"a"}),
-            ({"a": ["a1"], "b": ["b1", "b2"]}, "a", {"a1"}),
-            ({"c": ["c1", "c2"]}, "no_existing_key", set()),
-            (
-                {
-                    "embed": ["true"],
-                    "embed_options": ["show_padding", "show_colored_line"],
-                },
-                "embed",
-                {"true"},
-            ),
-            (
-                {"EMBED": ["TRUE"], "EMBED_OPTIONS": ["DISABLE_SCROLLING"]},
-                "embed_options",
-                {"disable_scrolling"},
-            ),
-        ]
-    )
-    def test_extract_key_query_params(
-        self, query_params: dict[str, list[str]], param_key: str, result: set[str]
-    ):
-        assert util.extract_key_query_params(query_params, param_key) == result
 
     def test_calc_md5_can_handle_bytes_and_strings(self):
         assert util.calc_md5("eventually bytes") == util.calc_md5(b"eventually bytes")

@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-x = st.camera_input("Label1", help="help1")
+x = st.camera_input("Label1", help="help1", key="camera_input_1")
 
 if x is not None:
     st.image(x)

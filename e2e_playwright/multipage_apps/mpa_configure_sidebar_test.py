@@ -99,7 +99,9 @@ def test_logo_no_sidebar(
 ):
     """Test that logo renders properly with no sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="logo-no-sidebar"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="logo-no-sidebar")

@@ -21,7 +21,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.type_util import is_custom_dict, is_namedtuple
+from streamlit.type_util import (
+    is_custom_dict,
+    is_list_like,
+    is_namedtuple,
+    is_pydantic_model,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -41,7 +46,7 @@ class JsonMixin:
         *,  # keyword-only arguments:
         expanded: bool | int = True,
     ) -> DeltaGenerator:
-        """Display object or string as a pretty-printed JSON string.
+        """Display an object or string as a pretty-printed, interactive JSON string.
 
         Parameters
         ----------
@@ -52,10 +57,17 @@ class JsonMixin:
             contains serialized JSON.
 
         expanded : bool or int
-            Controls the initial expansion state of the json element.
-            If bool, ``True`` expands all levels, ``False`` collapses all levels.
-            If int, specifies the depth to which the json should be expanded,
-            collapsing deeper levels. Defaults to ``True``.
+            The initial expansion state of the JSON element. This can be one
+            of the following:
+
+            - ``True`` (default): The element is fully expanded.
+            - ``False``: The element is fully collapsed.
+            - An integer: The element is expanded to the depth specified. The
+              integer must be non-negative. ``expanded=0`` is equivalent to
+              ``expanded=False``.
+
+            Regardless of the initial expansion state, users can collapse or
+            expand any key-value pair to show or hide any part of the object.
 
         Example
         -------
@@ -79,7 +91,6 @@ class JsonMixin:
            height: 385px
 
         """
-        import streamlit as st
 
         if is_custom_dict(body):
             body = body.to_dict()
@@ -87,18 +98,20 @@ class JsonMixin:
         if is_namedtuple(body):
             body = body._asdict()
 
-        if isinstance(body, (map, enumerate)):
-            body = list(body)
+        if isinstance(
+            body, (ChainMap, types.MappingProxyType, UserDict)
+        ) or is_pydantic_model(body):
+            body = dict(body)  # type: ignore
 
-        if isinstance(body, (ChainMap, types.MappingProxyType, UserDict)):
-            body = dict(body)
+        if is_list_like(body):
+            body = list(body)
 
         if not isinstance(body, str):
             try:
                 # Serialize body to string and try to interpret sets as lists
                 body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
-                st.warning(
+                self.dg.warning(
                     "Warning: this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )

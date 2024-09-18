@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import os
 import threading
 from pathlib import Path
@@ -74,15 +73,9 @@ class PagesStrategyV1:
         if setup_watcher:
             PagesStrategyV1.watch_pages_dir(pages_manager)
 
-    # In MPA v1, there's no difference between the active hash
-    # and the page script hash.
-    def get_active_script_hash(self) -> PageHash:
-        return self.pages_manager.current_page_hash
-
-    def set_active_script_hash(self, _page_hash: PageHash):
-        # Intentionally do nothing as MPA v1 active_script_hash does not
-        # differentiate the active_script_hash and the page_script_hash
-        pass
+    @property
+    def initial_active_script_hash(self) -> PageHash:
+        return self.pages_manager.current_page_script_hash
 
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
@@ -147,14 +140,7 @@ class PagesStrategyV2:
 
     def __init__(self, pages_manager: PagesManager, **kwargs):
         self.pages_manager = pages_manager
-        self._active_script_hash: PageHash = self.pages_manager.main_script_hash
         self._pages: dict[PageHash, PageInfo] | None = None
-
-    def get_active_script_hash(self) -> PageHash:
-        return self._active_script_hash
-
-    def set_active_script_hash(self, page_hash: PageHash):
-        self._active_script_hash = page_hash
 
     def get_initial_active_script(
         self, page_script_hash: PageHash, page_name: PageName
@@ -165,6 +151,10 @@ class PagesStrategyV2:
             "page_script_hash": page_script_hash
             or self.pages_manager.main_script_hash,  # Default Hash
         }
+
+    @property
+    def initial_active_script_hash(self) -> PageHash:
+        return self.pages_manager.main_script_hash
 
     def get_page_script(self, fallback_page_hash: PageHash) -> PageInfo | None:
         if self._pages is None:
@@ -243,15 +233,11 @@ class PagesManager:
     ):
         self._main_script_path = main_script_path
         self._main_script_hash: PageHash = calc_md5(main_script_path)
-        self._current_page_hash: PageHash = self._main_script_hash
         self.pages_strategy = PagesManager.DefaultStrategy(self, **kwargs)
         self._script_cache = script_cache
         self._intended_page_script_hash: PageHash | None = None
         self._intended_page_name: PageName | None = None
-
-    @property
-    def current_page_hash(self) -> PageHash:
-        return self._current_page_hash
+        self._current_page_script_hash: PageHash = ""
 
     @property
     def main_script_path(self) -> ScriptPath:
@@ -262,6 +248,10 @@ class PagesManager:
         return self._main_script_hash
 
     @property
+    def current_page_script_hash(self) -> PageHash:
+        return self._current_page_script_hash
+
+    @property
     def intended_page_name(self) -> PageName | None:
         return self._intended_page_name
 
@@ -269,29 +259,22 @@ class PagesManager:
     def intended_page_script_hash(self) -> PageHash | None:
         return self._intended_page_script_hash
 
+    @property
+    def initial_active_script_hash(self) -> PageHash:
+        return self.pages_strategy.initial_active_script_hash
+
+    @property
+    def mpa_version(self) -> int:
+        return 2 if isinstance(self.pages_strategy, PagesStrategyV2) else 1
+
+    def set_current_page_script_hash(self, page_script_hash: PageHash) -> None:
+        self._current_page_script_hash = page_script_hash
+
     def get_main_page(self) -> PageInfo:
         return {
             "script_path": self._main_script_path,
             "page_script_hash": self._main_script_hash,
         }
-
-    def get_current_page_script_hash(self) -> PageHash:
-        """Gets the script hash of the associated page of a script."""
-        return self._current_page_hash
-
-    def set_current_page_script_hash(self, page_hash: PageHash) -> None:
-        self._current_page_hash = page_hash
-
-    def get_active_script_hash(self) -> PageHash:
-        """Gets the script hash of the currently executing script."""
-        return self.pages_strategy.get_active_script_hash()
-
-    def set_active_script_hash(self, page_hash: PageHash):
-        return self.pages_strategy.set_active_script_hash(page_hash)
-
-    def reset_active_script_hash(self):
-        # This will only apply to the V2 strategy as V1 ignores the concept
-        self.set_active_script_hash(self.main_script_hash)
 
     def set_script_intent(
         self, page_script_hash: PageHash, page_name: PageName
@@ -305,16 +288,6 @@ class PagesManager:
         return self.pages_strategy.get_initial_active_script(
             page_script_hash, page_name
         )
-
-    @contextlib.contextmanager
-    def run_with_active_hash(self, page_hash: PageHash):
-        original_page_hash = self.get_active_script_hash()
-        self.set_active_script_hash(page_hash)
-        try:
-            yield
-        finally:
-            # in the event of any exception, ensure we set the active hash back
-            self.set_active_script_hash(original_page_hash)
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
         return self.pages_strategy.get_pages()

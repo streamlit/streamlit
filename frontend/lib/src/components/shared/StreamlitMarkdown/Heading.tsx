@@ -58,7 +58,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const [heading, ...rest] = body.split("\n")
 
   return (
-    <div style={{ width }} data-testid="stHeading">
+    <div style={{ width }} className="stHeading" data-testid="stHeading">
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
         isInSidebar={isInSidebar}

@@ -39,7 +39,6 @@ import {
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { useDropzone } from "react-dropzone"
 import { FileRejection } from "react-dropzone"
 import zip from "lodash/zip"
@@ -583,7 +582,7 @@ function ChatInput({
           }}
         />
         {/* Hide the character limit in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <StyledInputInstructionsContainer>
             <InputInstructions
               dirty={dirty}

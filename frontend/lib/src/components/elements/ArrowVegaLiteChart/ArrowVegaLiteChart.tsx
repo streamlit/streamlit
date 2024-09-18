@@ -57,7 +57,6 @@ const DEFAULT_DATA_NAME = "source"
 
 /**
  * Fix bug where Vega Lite was vertically-cropping the x-axis in some cases.
- * For example, in e2e/scripts/add_rows.py
  */
 const BOTTOM_PADDING = 20
 
@@ -594,7 +593,8 @@ export class ArrowVegaLiteChart extends PureComponent<
     return (
       // Create the container Vega draws inside.
       <StyledVegaLiteChartContainer
-        data-testid="stArrowVegaLiteChart"
+        data-testid="stVegaLiteChart"
+        className="stVegaLiteChart"
         useContainerWidth={this.props.element.useContainerWidth}
         isFullScreen={this.props.isFullScreen}
         ref={c => {

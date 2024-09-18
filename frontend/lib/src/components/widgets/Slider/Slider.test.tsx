@@ -140,8 +140,8 @@ describe("Slider widget", () => {
     const props = getProps()
     render(<Slider {...props} />)
 
-    const min = screen.getByTestId("stTickBarMin")
-    const max = screen.getByTestId("stTickBarMax")
+    const min = screen.getByTestId("stSliderTickBarMin")
+    const max = screen.getByTestId("stSliderTickBarMax")
     expect(min).toHaveTextContent("0")
     expect(max).toHaveTextContent("10")
   })
@@ -151,15 +151,16 @@ describe("Slider widget", () => {
       const props = getProps()
       render(<Slider {...props} />)
 
-      const slider = screen.getByRole("slider")
+      const slider = screen.getByTestId("stSlider")
       expect(slider).toBeInTheDocument()
+      expect(slider).toHaveClass("stSlider")
     })
 
     it("displays a thumb value", () => {
       const props = getProps()
       render(<Slider {...props} />)
 
-      expect(screen.getAllByTestId("stThumbValue")).toHaveLength(1)
+      expect(screen.getAllByTestId("stSliderThumbValue")).toHaveLength(1)
     })
 
     it("has the correct value", () => {
@@ -249,7 +250,7 @@ describe("Slider widget", () => {
       const props = getProps({ default: [1, 9] })
       render(<Slider {...props} />)
 
-      expect(screen.getAllByTestId("stThumbValue")).toHaveLength(2)
+      expect(screen.getAllByTestId("stSliderThumbValue")).toHaveLength(2)
     })
 
     it("has the correct value", () => {
@@ -391,8 +392,8 @@ describe("Slider widget", () => {
       })
       render(<Slider {...props} />)
 
-      const min = screen.getByTestId("stTickBarMin")
-      const max = screen.getByTestId("stTickBarMax")
+      const min = screen.getByTestId("stSliderTickBarMin")
+      const max = screen.getByTestId("stSliderTickBarMax")
 
       expect(min).toHaveTextContent("1970-01-01")
       expect(max).toHaveTextContent("1970-01-29")

@@ -46,7 +46,7 @@ import {
   ForwardMsgMetadata,
   generateUID,
   getCachedTheme,
-  getElementWidgetID,
+  getElementId,
   getEmbeddingIdClassName,
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
@@ -89,7 +89,6 @@ import {
   SessionEvent,
   SessionInfo,
   SessionStatus,
-  setCookie,
   StreamlitEndpoints,
   ThemeConfig,
   toExportedTheme,
@@ -654,8 +653,6 @@ export class App extends PureComponent<Props, State> {
         })
       }
 
-      setCookie("_streamlit_xsrf", "")
-
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
       }
@@ -742,9 +739,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    // Pass the current page & run ID for cleanup
+    const logoMetadata = {
+      activeScriptHash: metadata.activeScriptHash,
+      scriptRunId: this.state.scriptRunId,
+    }
+
     this.setState(
       {
-        elements: this.pendingElementsBuffer.appRootWithLogo(logo, metadata),
+        elements: this.pendingElementsBuffer.appRootWithLogo(
+          logo,
+          logoMetadata
+        ),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1195,32 +1201,36 @@ export class App extends PureComponent<Props, State> {
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      // Clear any stale elements left over from the previous run.
-      // (We don't do this if our script had a compilation error and didn't
-      // finish successfully.)
-      this.setState(
-        ({ scriptRunId, fragmentIdsThisRun }) => ({
-          // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(
-            scriptRunId,
-            fragmentIdsThisRun
-          ),
-        }),
-        () => {
-          this.pendingElementsBuffer = this.state.elements
-        }
-      )
-
       if (
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
         status ===
           ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
       ) {
+        // Clear any stale elements left over from the previous run.
+        // We only do that for completed runs, not for runs that were finished early
+        // due to reruns; this is to avoid flickering of elements where they disappear for
+        // a moment and then are readded by a new session. After the new session finished,
+        // leftover elements will be cleared after finished successfully.
+        // We also don't do this if our script had a compilation error and didn't
+        // finish successfully.
+        this.setState(
+          ({ scriptRunId, fragmentIdsThisRun }) => ({
+            // Apply any pending elements that haven't been applied.
+            elements: this.pendingElementsBuffer.clearStaleNodes(
+              scriptRunId,
+              fragmentIdsThisRun
+            ),
+          }),
+          () => {
+            this.pendingElementsBuffer = this.state.elements
+          }
+        )
+
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1274,7 +1284,7 @@ export class App extends PureComponent<Props, State> {
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1449,7 +1459,7 @@ export class App extends PureComponent<Props, State> {
     )
     const activeWidgetIds = new Set(
       Array.from(nextPageElements.getElements())
-        .map(element => getElementWidgetID(element))
+        .map(element => getElementId(element))
         .filter(notUndefined)
     )
 

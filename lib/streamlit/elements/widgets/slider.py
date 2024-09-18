@@ -33,7 +33,8 @@ from typing import (
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -41,11 +42,11 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -56,7 +57,6 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -542,7 +542,7 @@ class SliderMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "slider",
             user_key=key,
             label=label,
@@ -803,7 +803,7 @@ class SliderMixin:
 
         slider_proto = SliderProto()
         slider_proto.type = SliderProto.Type.SLIDER
-        slider_proto.id = id
+        slider_proto.id = element_id
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value
@@ -826,7 +826,6 @@ class SliderMixin:
         widget_state = register_widget(
             "slider",
             slider_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

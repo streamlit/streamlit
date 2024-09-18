@@ -328,6 +328,52 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         self.assertEqual(popover_block.add_block.popover.label, "label")
         self.assertEqual(popover_block.add_block.popover.help, "help text")
 
+    def test_valid_emoji_icon(self):
+        """Test that it can be called with an emoji icon"""
+        popover = st.popover("label", icon="🦄")
+
+        with popover:
+            # Noop
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.icon, "🦄")
+
+    def test_valid_material_icon(self):
+        """Test that it can be called with a material icon"""
+        popover = st.popover("label", icon=":material/download:")
+
+        with popover:
+            # Noop
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.icon, ":material/download:")
+
+    def test_invalid_emoji_icon(self):
+        """Test that it throws an error on invalid emoji icon"""
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.popover("label", icon="invalid")
+        self.assertEqual(
+            str(e.exception),
+            'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
+            "please use a single character instead.",
+        )
+
+    def test_invalid_material_icon(self):
+        """Test that it throws an error on invalid material icon"""
+        icon = ":material/invalid:"
+        invisible_white_space = "\u200b"
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.popover("label", icon=icon)
+        self.assertEqual(
+            str(e.exception),
+            f'The value `"{icon.replace("/", invisible_white_space + "/")}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode like **`:material{invisible_white_space}/thumb_up:`**. ",
+        )
+
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):

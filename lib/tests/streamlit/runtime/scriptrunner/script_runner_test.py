@@ -276,7 +276,7 @@ class ScriptRunnerTest(AsyncTestCase):
         Runtime._instance.media_file_mgr.clear_session_refs.assert_called_once()
 
     @patch("streamlit.exception")
-    def test_run_nonexistent_fragment(self, patched_st_exception):
+    def test_run_nonexistent_fragment(self, mocked_st_exception):
         """Tests that we raise an exception when trying to run a nonexistent fragment."""
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.request_rerun(
@@ -299,7 +299,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
         self._assert_no_exceptions(scriptrunner)
-        patched_st_exception.assert_called_once()
+        mocked_st_exception.assert_called_once()
 
     def test_run_one_fragment(self):
         """Tests that we can run one fragment."""
@@ -320,6 +320,8 @@ class ScriptRunnerTest(AsyncTestCase):
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
+        script_started_event_data = scriptrunner.event_data[0]
+        script_started_event_data["fragment_ids_this_run"] = ["my_fragment"]
 
         fragment.assert_called_once()
 
@@ -352,6 +354,12 @@ class ScriptRunnerTest(AsyncTestCase):
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
+        script_started_event_data = scriptrunner.event_data[0]
+        script_started_event_data["fragment_ids_this_run"] = [
+            "my_fragment1",
+            "my_fragment2",
+            "my_fragment3",
+        ]
 
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
@@ -1212,7 +1220,7 @@ class TestScriptRunner(ScriptRunner):
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
-            user_info={"email": "test@test.com"},
+            user_info={"email": "test@example.com"},
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path),
         )
@@ -1250,7 +1258,7 @@ class TestScriptRunner(ScriptRunner):
             self.script_thread_exceptions.append(e)
 
     def _run_script(self, rerun_data: RerunData) -> None:
-        self.forward_msg_queue.clear()
+        self.clear_forward_msgs()
         super()._run_script(rerun_data)
 
         # Set the _dg_stack here to the one belonging to the thread context

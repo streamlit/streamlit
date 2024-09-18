@@ -31,16 +31,16 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import (
+from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
+from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.data_mocks.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
     TestObject,
 )
-from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
-from tests.streamlit.snowpandas_mocks import Index as SnowpandasIndex
-from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
@@ -560,39 +560,6 @@ class DataframeUtilTest(unittest.TestCase):
             )
 
     @pytest.mark.require_integration
-    def test_verify_snowpandas_integration(self):
-        """Integration test snowpark pandas object handling.
-        This is in addition to the tests using the mocks to verify that
-        the latest version of the library is still supported.
-        """
-        import modin.pandas as modin_pd
-
-        # Import the Snowpark pandas plugin for modin.
-        import snowflake.snowpark.modin.plugin  # noqa: F401
-
-        with create_snowpark_session():
-            snowpandas_df = modin_pd.DataFrame([1, 2, 3], columns=["col1"])
-            assert dataframe_util.is_snowpandas_data_object(snowpandas_df) is True
-            assert isinstance(
-                dataframe_util.convert_anything_to_pandas_df(snowpandas_df),
-                pd.DataFrame,
-            )
-
-            snowpandas_series = snowpandas_df["col1"]
-            assert dataframe_util.is_snowpandas_data_object(snowpandas_series) is True
-            assert isinstance(
-                dataframe_util.convert_anything_to_pandas_df(snowpandas_series),
-                pd.DataFrame,
-            )
-
-            snowpandas_index = snowpandas_df.index
-            assert dataframe_util.is_snowpandas_data_object(snowpandas_index) is True
-            assert isinstance(
-                dataframe_util.convert_anything_to_pandas_df(snowpandas_index),
-                pd.DataFrame,
-            )
-
-    @pytest.mark.require_integration
     def test_verify_dask_integration(self):
         """Integration test dask object handling.
 
@@ -792,14 +759,14 @@ class DataframeUtilTest(unittest.TestCase):
 
     def test_convert_anything_to_sequence_object_is_indexable(self):
         l1 = ["a", "b", "c"]
-        l2 = dataframe_util.convert_anything_to_sequence(l1)
+        l2 = dataframe_util.convert_anything_to_list(l1)
 
         # Assert that l1 was shallow copied into l2.
         self.assertFalse(l1 is l2)
         self.assertEqual(l1, l2)
 
     def test_convert_anything_to_sequence_object_not_indexable(self):
-        converted_list = dataframe_util.convert_anything_to_sequence({"a", "b", "c"})
+        converted_list = dataframe_util.convert_anything_to_list({"a", "b", "c"})
         self.assertIn("a", converted_list)
         self.assertIn("b", converted_list)
         self.assertIn("c", converted_list)
@@ -815,10 +782,10 @@ class DataframeUtilTest(unittest.TestCase):
             OPT1 = "a"
             OPT2 = "b"
 
-        converted_list = dataframe_util.convert_anything_to_sequence(Opt)
+        converted_list = dataframe_util.convert_anything_to_list(Opt)
         self.assertEqual(list(Opt), converted_list)
 
-        converted_list = dataframe_util.convert_anything_to_sequence(StrOpt)
+        converted_list = dataframe_util.convert_anything_to_list(StrOpt)
         self.assertEqual(list(StrOpt), converted_list)
 
     @parameterized.expand(
@@ -833,7 +800,7 @@ class DataframeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_sequence` correctly converts
         a variety of types to a sequence.
         """
-        converted_sequence = dataframe_util.convert_anything_to_sequence(input_data)
+        converted_sequence = dataframe_util.convert_anything_to_list(input_data)
 
         # We convert to a set for the check since some of the formats don't
         # have a guaranteed order.

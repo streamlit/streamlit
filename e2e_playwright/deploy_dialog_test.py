@@ -20,12 +20,12 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_deploy_button_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    deploy_button = themed_app.get_by_test_id("stDeployButton")
+    deploy_button = themed_app.get_by_test_id("stAppDeployButton")
     deploy_button.click()
 
     # Make sure that deploy dialog is properly displayed
     # Before taking screenshot
-    deploy_dialog = themed_app.get_by_test_id("stModal")
+    deploy_dialog = themed_app.get_by_test_id("stDialog")
     expect(deploy_dialog).to_be_visible()
     expect(
         deploy_dialog.get_by_test_id("stDeployDialogCommunityCloudIcon")

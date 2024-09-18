@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -19,9 +20,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_echo_msg(app: Page):
     """Test that st.echo shows that the correct message."""
-    echo_msg = app.locator(".element-container pre").nth(0)
-
-    expect(echo_msg).to_have_text('st.write("This code is awesome!")')
+    expect(app.get_by_test_id("stCode").first).to_have_text(
+        'st.write("This code is awesome!")', use_inner_text=True
+    )
 
 
 def test_echo_msg_code_location(app: Page, assert_snapshot: ImageCompareFunction):

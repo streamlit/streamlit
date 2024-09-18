@@ -448,7 +448,7 @@ def TextColumn(
     >>>             help="Streamlit **widget** commands 🎈",
     >>>             default="st.",
     >>>             max_chars=50,
-    >>>             validate="^st\.[a-z_]+$",
+    >>>             validate=r"^st\.[a-z_]+$",
     >>>         )
     >>>     },
     >>>     hide_index=True,
@@ -571,9 +571,9 @@ def LinkColumn(
     >>>         "apps": st.column_config.LinkColumn(
     >>>             "Trending apps",
     >>>             help="The top trending Streamlit apps",
-    >>>             validate="^https://[a-z]+\\.streamlit\\.app$",
+    >>>             validate=r"^https://[a-z]+\\.streamlit\\.app$",
     >>>             max_chars=100,
-    >>>             display_text="https://(.*?)\\.streamlit\\.app"
+    >>>             display_text=r"https://(.*?)\\.streamlit\\.app"
     >>>         ),
     >>>         "creator": st.column_config.LinkColumn(
     >>>             "App Creator", display_text="Open profile"

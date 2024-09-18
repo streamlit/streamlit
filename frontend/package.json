@@ -1,6 +1,6 @@
 {
   "name": "streamlit",
-  "version": "1.37.1",
+  "version": "1.38.0",
   "private": true,
   "workspaces": [
     "app",
@@ -20,10 +20,9 @@
     "lintLib": "yarn workspace @streamlit/lib lint",
     "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src",
     "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
+    "testcoverage": "yarn workspace @streamlit/lib test --coverage && yarn workspace @streamlit/app test --coverage",
     "testLib": "yarn workspace @streamlit/lib testWatch",
-    "testApp": "yarn workspace @streamlit/app testWatch",
-    "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
-    "cy:run": "unset NODE_OPTIONS && cypress run"
+    "testApp": "yarn workspace @streamlit/app testWatch"
   },
   "browserslist": [
     ">0.2%",

@@ -42,16 +42,18 @@ export function ActionButton({
   onClick,
 }: ActionButtonProps): ReactElement {
   return (
-    <div className="stActionButton" data-testid="stActionButton">
+    <div className="stToolbarActionButton" data-testid="stToolbarActionButton">
       <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
         <StyledActionButtonContainer>
           {icon && (
             <StyledActionButtonIcon
-              data-testid={"stActionButtonIcon"}
+              data-testid="stToolbarActionButtonIcon"
               icon={icon}
             />
           )}
-          {label && <span data-testid="stActionButtonLabel">{label}</span>}
+          {label && (
+            <span data-testid="stToolbarActionButtonLabel">{label}</span>
+          )}
         </StyledActionButtonContainer>
       </BaseButton>
     </div>
@@ -70,7 +72,10 @@ function ToolbarActions({
   metricsMgr,
 }: ToolbarActionsProps): ReactElement {
   return (
-    <StyledToolbarActions data-testid="stToolbarActions">
+    <StyledToolbarActions
+      className="stToolbarActions"
+      data-testid="stToolbarActions"
+    >
       {hostToolbarItems.map(({ key, label, icon }) => (
         <ActionButton
           key={key}

@@ -22,16 +22,15 @@ from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
-import streamlit as st
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import NumpyShape
 
@@ -169,7 +168,6 @@ class MediaMixin:
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         audio_proto = AudioProto()
-        coordinates = self.dg._get_delta_path_str()
 
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
@@ -178,11 +176,11 @@ class MediaMixin:
                 "`sample_rate` must be specified when `data` is a numpy array."
             )
         if not is_data_numpy_array and sample_rate is not None:
-            st.warning(
+            self.dg.warning(
                 "Warning: `sample_rate` will be ignored since data is not a numpy "
                 "array."
             )
-
+        coordinates = self.dg._get_delta_path_str()
         marshall_audio(
             coordinates,
             audio_proto,
@@ -569,7 +567,7 @@ def marshall_video(
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        proto.id = compute_and_register_element_id(
             "video",
             url=proto.url,
             mimetype=mimetype,
@@ -580,8 +578,6 @@ def marshall_video(
             muted=muted,
             page=ctx.active_script_hash if ctx else None,
         )
-
-        proto.id = id
 
 
 def _parse_start_time_end_time(
@@ -745,7 +741,7 @@ def marshall_audio(
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        proto.id = compute_and_register_element_id(
             "audio",
             url=proto.url,
             mimetype=mimetype,
@@ -756,4 +752,3 @@ def marshall_audio(
             autoplay=autoplay,
             page=ctx.active_script_hash if ctx else None,
         )
-        proto.id = id

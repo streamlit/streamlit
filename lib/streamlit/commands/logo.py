@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from streamlit import url_util
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
@@ -32,6 +34,7 @@ def _invalid_logo_text(field_name: str):
 def logo(
     image: AtomicImage,
     *,  # keyword-only args:
+    size: Literal["small", "medium", "large"] = "medium",
     link: str | None = None,
     icon_image: AtomicImage | None = None,
 ) -> None:
@@ -58,6 +61,9 @@ def logo(
         Streamlit scales the image to a height of 24 pixels and a maximum
         width of 240 pixels. Use images with an aspect ratio of 10:1 or less to
         avoid distortion.
+    size: "small", "medium", or "large"
+        The size of the image displayed in the upper-left corner of the app and its
+        sidebar. The default is ``"medium"``.
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
         start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
@@ -150,5 +156,20 @@ def logo(
             fwd_msg.logo.icon_image = icon_image_url
         except Exception as ex:
             raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
+
+    def validate_size(size):
+        if isinstance(size, str):
+            image_size = size.lower()
+            valid_sizes = ["small", "medium", "large"]
+
+            if image_size in valid_sizes:
+                return image_size
+
+        raise StreamlitAPIException(
+            f'The size argument to st.logo must be "small", "medium", or "large". \n'
+            f"The argument passed was {size}."
+        )
+
+    fwd_msg.logo.size = validate_size(size)
 
     ctx.enqueue(fwd_msg)

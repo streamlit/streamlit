@@ -63,7 +63,7 @@ def declare_component(
 
     .. warning::
         Using ``st.components.v1.declare_component`` directly (instead of
-        importing its module) is deprecated and will be disallowd in a later
+        importing its module) is deprecated and will be disallowed in a later
         version.
 
     Parameters

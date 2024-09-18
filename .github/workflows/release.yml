@@ -10,18 +10,14 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
     secrets:
-      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
     permissions:
       # Permission needed to upload constraints file
       contents: write
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
-    with:
-      ref: ${{ github.ref_name }}
-
-  run-cypress-tests:
-    uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{ github.ref_name }}
 
@@ -36,7 +32,6 @@ jobs:
     needs:
       - run-python-tests
       - run-javascript-tests
-      - run-cypress-tests
       - run-playwright-tests
 
     defaults:

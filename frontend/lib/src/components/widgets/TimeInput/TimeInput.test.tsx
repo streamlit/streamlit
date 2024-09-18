@@ -54,7 +54,7 @@ describe("TimeInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
     expect(timeDisplay).toBeInTheDocument()
   })
@@ -133,7 +133,7 @@ describe("TimeInput widget", () => {
     const widgetLabel = screen.getByTestId("stWidgetLabel")
     expect(widgetLabel).toHaveAttribute("disabled")
 
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveAttribute("disabled")
   })
 
@@ -141,7 +141,7 @@ describe("TimeInput widget", () => {
     const props = getProps()
     render(<TimeInput {...props} />)
 
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
     expect(timeDisplay).toHaveTextContent("12:45")
   })
 
@@ -162,7 +162,7 @@ describe("TimeInput widget", () => {
 
     render(<TimeInput {...props} />)
     // Div containing the selected time as a value prop and as text
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
     // Change the widget value
     if (timeDisplay) {
@@ -194,7 +194,7 @@ describe("TimeInput widget", () => {
 
     render(<TimeInput {...props} />)
     // Div containing the selected time as a value prop and as text
-    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    const timeDisplay = screen.getByTestId("stTimeInputTimeDisplay")
 
     // Change the widget value
     if (timeDisplay) {

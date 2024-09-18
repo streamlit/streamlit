@@ -17,6 +17,10 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+)
 
 
 def test_components_iframe_rendering(
@@ -72,6 +76,16 @@ def test_declare_component_correctly_sets_attr(app: Page):
             r"http://not.a.real.url\?streamlitUrl=http%3A%2F%2Flocalhost%3A\d*%2F$"
         ),
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stCustomComponentV1")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "component_1")).to_be_visible()
 
 
 # TODO (willhuang1997): Add tests for handling bytes, JSON, DFs, theme

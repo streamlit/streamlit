@@ -31,10 +31,19 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import runtime
-from streamlit.elements.form_utils import current_form_id, is_in_form
+from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    save_for_app_testing,
+    to_key,
+)
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingPageLabelError,
+    StreamlitPageNotFoundError,
+)
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
@@ -49,7 +58,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 
@@ -86,6 +94,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -133,6 +142,23 @@ class ButtonMixin:
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
         disabled : bool
             An optional boolean, which disables the button if set to True. The
@@ -188,6 +214,7 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -206,6 +233,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -279,6 +307,23 @@ class ButtonMixin:
             An optional string that specifies the button type. Can be "primary" for a
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
+
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
         disabled : bool
             An optional boolean, which disables the download button if set to
@@ -369,8 +414,9 @@ class ButtonMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
-            disabled=disabled,
             type=type,
+            icon=icon,
+            disabled=disabled,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -383,6 +429,7 @@ class ButtonMixin:
         *,
         help: str | None = None,
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -422,6 +469,23 @@ class ButtonMixin:
             button with additional emphasis or "secondary" for a normal button. Defaults
             to "secondary".
 
+        icon : str or None
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
@@ -459,6 +523,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             type=type,
+            icon=icon,
             use_container_width=use_container_width,
         )
 
@@ -590,6 +655,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
@@ -604,10 +670,11 @@ class ButtonMixin:
             writes_allowed=False,
         )
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
             label=label,
+            icon=icon,
             file_name=file_name,
             mime=mime,
             key=key,
@@ -623,7 +690,7 @@ class ButtonMixin:
             )
 
         download_button_proto = DownloadButtonProto()
-        download_button_proto.id = id
+        download_button_proto.id = element_id
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
@@ -636,12 +703,14 @@ class ButtonMixin:
         if help is not None:
             download_button_proto.help = dedent(help)
 
+        if icon is not None:
+            download_button_proto.icon = validate_icon_or_emoji(icon)
+
         serde = ButtonSerde()
 
         button_state = register_widget(
             "download_button",
             download_button_proto,
-            user_key=key,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
@@ -660,6 +729,7 @@ class ButtonMixin:
         help: str | None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -672,6 +742,9 @@ class ButtonMixin:
 
         if help is not None:
             link_button_proto.help = dedent(help)
+
+        if icon is not None:
+            link_button_proto.icon = validate_icon_or_emoji(icon)
 
         return self.dg._enqueue("link_button", link_button_proto)
 
@@ -709,9 +782,7 @@ class ButtonMixin:
             # Handle external links:
             if is_url(page):
                 if label is None or label == "":
-                    raise StreamlitAPIException(
-                        "The label param is required for external links used with st.page_link - please provide a label."
-                    )
+                    raise StreamlitMissingPageLabelError()
                 else:
                     page_link_proto.page = page
                     page_link_proto.external = True
@@ -740,10 +811,18 @@ class ButtonMixin:
                     page_link_proto.page = page_name
                     break
 
-        if page_link_proto.page_script_hash == "":
-            raise StreamlitAPIException(
-                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
-            )
+            if page_link_proto.page_script_hash == "":
+                is_mpa_v2 = (
+                    ctx is not None
+                    and ctx.pages_manager is not None
+                    and ctx.pages_manager.mpa_version == 2
+                )
+
+                raise StreamlitPageNotFoundError(
+                    is_mpa_v2=is_mpa_v2,
+                    page=page,
+                    main_script_directory=main_script_directory,
+                )
 
         return self.dg._enqueue("page_link", page_link_proto)
 
@@ -758,6 +837,7 @@ class ButtonMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
@@ -773,10 +853,11 @@ class ButtonMixin:
             enable_check_callback_rules=not is_form_submitter,
         )
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "button",
             user_key=key,
             label=label,
+            icon=icon,
             key=key,
             help=help,
             is_form_submitter=is_form_submitter,
@@ -801,7 +882,7 @@ class ButtonMixin:
                 )
 
         button_proto = ButtonProto()
-        button_proto.id = id
+        button_proto.id = element_id
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
@@ -813,12 +894,14 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = dedent(help)
 
+        if icon is not None:
+            button_proto.icon = validate_icon_or_emoji(icon)
+
         serde = ButtonSerde()
 
         button_state = register_widget(
             "button",
             button_proto,
-            user_key=key,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
@@ -828,7 +911,7 @@ class ButtonMixin:
         )
 
         if ctx:
-            save_for_app_testing(ctx, id, button_state.value)
+            save_for_app_testing(ctx, element_id, button_state.value)
         self.dg._enqueue("button", button_proto)
 
         return button_state.value

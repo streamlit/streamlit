@@ -46,8 +46,9 @@ describe("Dialog container", () => {
       </Dialog>
     )
 
-    const dialogContainer = screen.getByTestId("stModal")
+    const dialogContainer = screen.getByTestId("stDialog")
     expect(dialogContainer).toBeInTheDocument()
+    expect(dialogContainer).toHaveClass("stDialog")
   })
 
   it("should render the text when open", () => {

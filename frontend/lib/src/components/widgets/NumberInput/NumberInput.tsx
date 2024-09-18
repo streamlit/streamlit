@@ -31,7 +31,6 @@ import {
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives/breakpoints"
 import {
   Source,
   WidgetStateManager,
@@ -198,6 +197,11 @@ export const NumberInput: React.FC<Props> = ({
 
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
+
+  const inForm = isInForm({ formId: elementFormId })
+  // Allows form submission on Enter & displays Enter instructions
+  const allowFormSubmitOnEnter =
+    widgetMgr.allowFormSubmitOnEnter(elementFormId)
 
   // update the step if the props change
   React.useEffect(() => {
@@ -376,12 +380,20 @@ export const NumberInput: React.FC<Props> = ({
         if (dirty) {
           commitValue({ value, source: { fromUi: true } })
         }
-        if (isInForm({ formId: elementFormId })) {
+        if (allowFormSubmitOnEnter) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
     },
-    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
+    [
+      dirty,
+      value,
+      commitValue,
+      widgetMgr,
+      elementFormId,
+      fragmentId,
+      allowFormSubmitOnEnter,
+    ]
   )
 
   return (
@@ -449,7 +461,7 @@ export const NumberInput: React.FC<Props> = ({
             },
             Input: {
               props: {
-                "data-testid": "stNumberInput-Input",
+                "data-testid": "stNumberInputField",
                 step: step,
                 min: min,
                 max: max,
@@ -483,11 +495,10 @@ export const NumberInput: React.FC<Props> = ({
           }}
         />
         {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-        {width > breakpoints.hideNumberInputControls && (
+        {width > theme.breakpoints.hideNumberInputControls && (
           <StyledInputControls>
             <StyledInputControl
-              className="step-down"
-              data-testid="stNumberInput-StepDown"
+              data-testid="stNumberInputStepDown"
               onClick={decrement}
               disabled={!canDec || disabled}
               tabIndex={-1}
@@ -499,8 +510,7 @@ export const NumberInput: React.FC<Props> = ({
               />
             </StyledInputControl>
             <StyledInputControl
-              className="step-up"
-              data-testid="stNumberInput-StepUp"
+              data-testid="stNumberInputStepUp"
               onClick={increment}
               disabled={!canInc || disabled}
               tabIndex={-1}
@@ -515,12 +525,13 @@ export const NumberInput: React.FC<Props> = ({
         )}
       </StyledInputContainer>
       {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > breakpoints.hideWidgetDetails && (
+      {width > theme.breakpoints.hideWidgetDetails && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}
-            inForm={isInForm({ formId: element.formId })}
+            inForm={inForm}
+            allowSubmitOnEnter={allowFormSubmitOnEnter || !inForm}
           />
         </StyledInstructionsContainer>
       )}

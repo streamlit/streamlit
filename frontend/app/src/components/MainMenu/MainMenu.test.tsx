@@ -126,7 +126,7 @@ describe("MainMenu", () => {
     await openMenu(screen)
 
     // first SubMenu (menu items, not dev menu items)
-    const coreMenu = screen.getAllByTestId("main-menu-list")[0]
+    const coreMenu = screen.getAllByTestId("stMainMenuList")[0]
 
     const coreMenuOptions = within(coreMenu).getAllByRole("option")
     expect(coreMenuOptions).toHaveLength(4)
@@ -175,7 +175,7 @@ describe("MainMenu", () => {
     render(<MainMenu {...props} />)
     await openMenu(screen)
 
-    const subMenus = screen.getAllByTestId("main-menu-list")
+    const subMenus = screen.getAllByTestId("stMainMenuList")
     // Make sure there is only one SubMenu (no dev menu)
     expect(subMenus).toHaveLength(1)
 

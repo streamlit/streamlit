@@ -150,3 +150,12 @@ def dialog_with_deprecation_warning():
 
 if st.button("Open Dialog with deprecation warning"):
     dialog_with_deprecation_warning()
+
+
+@st.fragment()
+def fragment():
+    if st.button("Fragment Button"):
+        st.write("Fragment Button clicked")
+
+
+fragment()

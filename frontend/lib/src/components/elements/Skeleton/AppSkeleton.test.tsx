@@ -31,6 +31,8 @@ describe("AppSkeleton element", () => {
     expect(screen.queryAllByTestId("stAppSkeleton")).toEqual([])
 
     // Then, a few ms later (500ms at time of writing) we show the skeleton.
-    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
+    const appSkeleton = await screen.findByTestId("stAppSkeleton")
+    expect(appSkeleton).toBeVisible()
+    expect(appSkeleton).toHaveClass("stAppSkeleton")
   })
 })

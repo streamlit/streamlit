@@ -24,7 +24,11 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
-from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.errors import (
+    FragmentHandledException,
+    FragmentStorageKeyError,
+    StreamlitFragmentWidgetsNotAllowedOutsideError,
+)
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
     _fragment,
@@ -163,7 +167,7 @@ class FragmentTest(unittest.TestCase):
         assert ctx.current_fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_wrapped_fragment_saved_in_FragmentStorage(
+    def test_wrapped_fragment_not_saved_in_FragmentStorage(
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
@@ -180,7 +184,7 @@ class FragmentTest(unittest.TestCase):
         # fragment a single time.
         my_fragment()
         my_fragment()
-        ctx.fragment_storage.set.assert_called_once()
+        assert ctx.fragment_storage.set.call_count == 2
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
@@ -317,37 +321,33 @@ class FragmentTest(unittest.TestCase):
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_active_script_hash_if_needed(self, patched_get_script_run_ctx):
         ctx = MagicMock()
+        patched_run_with_active_hash = MagicMock()
+        ctx.run_with_active_hash = patched_run_with_active_hash
         ctx.fragment_storage = MemoryFragmentStorage()
         ctx.pages_manager = PagesManager("")
         ctx.pages_manager.set_pages({})  # Migrate to MPAv2
-        ctx.pages_manager.set_active_script_hash("some_hash")
-        ctx.active_script_hash = ctx.pages_manager.get_active_script_hash()
+        ctx.active_script_hash = "some_hash"
         patched_get_script_run_ctx.return_value = ctx
 
-        with patch.object(
-            ctx.pages_manager, "run_with_active_hash"
-        ) as patched_run_with_active_hash:
+        @fragment
+        def my_fragment():
+            pass
 
-            @fragment
-            def my_fragment():
-                pass
+        my_fragment()
 
-            my_fragment()
+        # Reach inside our MemoryFragmentStorage internals to pull out our saved
+        # fragment.
+        saved_fragment = list(ctx.fragment_storage._fragments.values())[0]
 
-            # Reach inside our MemoryFragmentStorage internals to pull out our saved
-            # fragment.
-            saved_fragment = list(ctx.fragment_storage._fragments.values())[0]
+        # set the hash to something different for subsequent calls
+        ctx.active_script_hash = "a_different_hash"
 
-            # set the hash to something different for subsequent calls
-            ctx.pages_manager.set_active_script_hash("a_different_hash")
-            ctx.active_script_hash = ctx.pages_manager.get_active_script_hash()
-
-            # Verify subsequent calls will run with the original active script hash
-            saved_fragment()
-            patched_run_with_active_hash.assert_called_with("some_hash")
-            patched_run_with_active_hash.reset_mock()
-            saved_fragment()
-            patched_run_with_active_hash.assert_called_with("some_hash")
+        # Verify subsequent calls will run with the original active script hash
+        saved_fragment()
+        patched_run_with_active_hash.assert_called_with("some_hash")
+        patched_run_with_active_hash.reset_mock()
+        saved_fragment()
+        patched_run_with_active_hash.assert_called_with("some_hash")
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_fragment_code_returns_value(
@@ -605,9 +605,10 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         with pytest.raises(FragmentHandledException) as ex:
             _app(_element_producer)
 
-        assert (
-            str(ex.value)
-            == "Fragments cannot write to elements outside of their container."
+        inner_exception = ex.value.__cause__ or ex.value.__context__
+
+        assert isinstance(
+            inner_exception, StreamlitFragmentWidgetsNotAllowedOutsideError
         )
 
     @parameterized.expand(

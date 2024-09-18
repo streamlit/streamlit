@@ -55,7 +55,6 @@ from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormMixin
-from streamlit.elements.form_utils import FormData, current_form_id
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
 from streamlit.elements.html import HtmlMixin
@@ -63,6 +62,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.lib.form_utils import FormData, current_form_id
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
@@ -417,6 +417,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         add_rows_metadata: AddRowsMetadata | None = None,
+        user_key: str | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -426,6 +427,10 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
+        add_rows_metadata : AddRowsMetadata or None
+            Metadata for the add_rows method
+        user_key : str or None
+            A custom key for the element provided by the user.
 
         Returns
         -------

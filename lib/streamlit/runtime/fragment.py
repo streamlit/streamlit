@@ -163,7 +163,7 @@ def _fragment(
 
         ctx = get_script_run_ctx()
         if ctx is None:
-            return
+            return None
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
@@ -222,9 +222,7 @@ def _fragment(
                 # This ensures that elements (especially widgets) are tied
                 # to a consistent active script hash
                 active_hash_context = (
-                    ctx.pages_manager.run_with_active_hash(
-                        initialized_active_script_hash
-                    )
+                    ctx.run_with_active_hash(initialized_active_script_hash)
                     if initialized_active_script_hash != ctx.active_script_hash
                     else contextlib.nullcontext()
                 )
@@ -268,8 +266,7 @@ def _fragment(
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        if not ctx.fragment_storage.contains(fragment_id):
-            ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()

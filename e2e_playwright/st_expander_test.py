@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_expander
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
@@ -42,7 +42,7 @@ def test_expander_displays_correctly(
 
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
-    main_container = app.get_by_test_id("stAppViewBlockContainer")
+    main_container = app.get_by_test_id("stMain")
     main_expanders = main_container.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(7)
 
@@ -73,7 +73,7 @@ def test_empty_expander_not_rendered(app: Page):
 
 def test_expander_session_state_set(app: Page):
     """Test that session state updates are propagated to expander content"""
-    main_container = app.get_by_test_id("stAppViewBlockContainer")
+    main_container = app.get_by_test_id("stMain")
     main_expanders = main_container.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(7)
 
@@ -112,3 +112,8 @@ def test_expander_renders_icon(app: Page):
     )
     expect(emoji_icon).to_be_visible()
     expect(emoji_icon).to_have_text("🎈")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stExpander")

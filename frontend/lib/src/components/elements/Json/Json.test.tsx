@@ -52,7 +52,7 @@ describe("JSON element", () => {
   it("should show an error with invalid JSON", () => {
     const props = getProps({ body: "invalid JSON" })
     render(<Json {...props} />)
-    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertContainer")).toBeInTheDocument()
   })
 
   it("renders json with NaN and infinity values", () => {

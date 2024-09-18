@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime
-from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
@@ -41,6 +40,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.string_util import to_snake_case
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
@@ -468,8 +468,10 @@ class AppSession:
         if self._local_sources_watcher is not None:
             self._local_sources_watcher.update_watched_pages()
 
-    def _clear_queue(self) -> None:
-        self._browser_queue.clear(retain_lifecycle_msgs=True)
+    def _clear_queue(self, fragment_ids_this_run: list[str] | None = None) -> None:
+        self._browser_queue.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=fragment_ids_this_run
+        )
 
     def _on_scriptrunner_event(
         self,
@@ -481,7 +483,6 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
-        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -499,7 +500,6 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
-                clear_forward_msg_queue,
             )
         )
 
@@ -513,7 +513,6 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
-        clear_forward_msg_queue: bool = True,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -578,8 +577,14 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            if clear_forward_msg_queue:
-                self._clear_queue()
+            # Update the client state with the new page_script_hash if
+            # necessary. This handles an edge case where a script is never
+            # finishes (eg. by calling st.rerun()), but the page has changed
+            # via st.navigation()
+            if page_script_hash != self._client_state.page_script_hash:
+                self._client_state.page_script_hash = page_script_hash
+
+            self._clear_queue(fragment_ids_this_run)
 
             self._enqueue_forward_msg(
                 self._create_new_session_message(
@@ -854,7 +859,8 @@ class AppSession:
             page_proto = msg.app_pages.add()
 
             page_proto.page_script_hash = page_script_hash
-            page_proto.page_name = page_info["page_name"]
+            page_proto.page_name = page_info["page_name"].replace("_", " ")
+            page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
 
 
