@@ -336,7 +336,7 @@ const AudioInput: React.FC<Props> = ({
     >
       <WidgetLabel
         label={element.label}
-        disabled={hasNoMicPermissions}
+        disabled={hasNoMicPermissions || disabled}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
