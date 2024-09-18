@@ -189,12 +189,10 @@ class ColorPickerMixin:
         element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=str(value),
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         # set value default

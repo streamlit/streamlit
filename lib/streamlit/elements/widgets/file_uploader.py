@@ -408,13 +408,11 @@ class FileUploaderMixin:
         element_id = compute_and_register_element_id(
             "file_uploader",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if type:

@@ -887,6 +887,7 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
+            form_id=current_form_id(self.dg),
             data=arrow_bytes,
             width=width,
             height=height,
@@ -894,9 +895,6 @@ class DataEditorMixin:
             column_order=column_order,
             column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
-            key=key,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         proto = ArrowProto()
