@@ -79,7 +79,13 @@ def _get_server_address_if_manually_set() -> str | None:
 def make_url_path_regex(*path, **kwargs) -> str:
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
     path = [x.strip("/") for x in path if x]  # Filter out falsely components.
-    path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
+    path_format = r"^/%s$"
+    trailing_slash = kwargs.get("trailing_slash", "optional")
+    if trailing_slash == "optional":
+        path_format = r"^/%s/?$"
+    elif trailing_slash == "required":
+        path_format = r"^/%s/$"
+
     return path_format % "/".join(path)
 
 

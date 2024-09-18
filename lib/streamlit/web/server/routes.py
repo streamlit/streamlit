@@ -93,8 +93,8 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             super().write_error(status_code, **kwargs)
 
 
-class AddSlashHandler(tornado.web.RequestHandler):
-    @tornado.web.addslash
+class RemoveSlashHandler(tornado.web.RequestHandler):
+    @tornado.web.removeslash
     def get(self):
         pass
 

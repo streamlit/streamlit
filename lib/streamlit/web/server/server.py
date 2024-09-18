@@ -44,10 +44,10 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
-    AddSlashHandler,
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
+    RemoveSlashHandler,
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_regex
@@ -368,6 +368,10 @@ class Server:
             routes.extend(
                 [
                     (
+                        make_url_path_regex(base, "(.*)", trailing_slash="required"),
+                        RemoveSlashHandler,
+                    ),
+                    (
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {
@@ -381,7 +385,6 @@ class Server:
                             ],
                         },
                     ),
-                    (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
                 ]
             )
 
