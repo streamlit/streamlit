@@ -147,6 +147,9 @@ class FormState {
   /** True if the form was created with the clear_on_submit flag. */
   public clearOnSubmit = false
 
+  /** True if the form was created with the enter_to_submit flag. */
+  public enterToSubmit = true
+
   /** Signal emitted when the form is cleared. */
   public readonly formCleared = new Signal()
 
@@ -209,11 +212,17 @@ export class WidgetStateManager {
   }
 
   /**
-   * Register a Form, and assign its clearOnSubmit value.
+   * Register a Form, and assign its clearOnSubmit & enterToSubmit values.
    * The `Form` element calls this when it's first mounted.
    */
-  public setFormClearOnSubmit(formId: string, clearOnSubmit: boolean): void {
-    this.getOrCreateFormState(formId).clearOnSubmit = clearOnSubmit
+  public setFormSubmitBehaviors(
+    formId: string,
+    clearOnSubmit: boolean,
+    enterToSubmit = true
+  ): void {
+    const form = this.getOrCreateFormState(formId)
+    form.clearOnSubmit = clearOnSubmit
+    form.enterToSubmit = enterToSubmit
   }
 
   /**
@@ -680,16 +689,23 @@ export class WidgetStateManager {
   /**
    * Helper function to determine whether a form allows enter to submit
    * for input elements (st.number_input, st.text_input, etc.)
-   * Must be in a form & have 1st submit button enabled to allow
+   * If in form, checks form's enterToSubmit paramf first, otherwise default
+   * behavior: Must have 1st submit button enabled to allow
    */
-  public allowFormSubmitOnEnter(formId: string): boolean {
+  public allowFormEnterToSubmit(formId: string): boolean {
+    // Don't allow if not in form
+    if (!isValidFormId(formId)) return false
+
+    // Check if user-set enterToSubmit param is false (in FormState)
+    const form = this.forms.get(formId)
+    if (form && !form.enterToSubmit) return false
+
+    // Otherwise, use default behavior
     const submitButtons = this.formsData.submitButtons.get(formId)
     const firstSubmitButton = submitButtons?.[0]
 
-    // If no submit buttons for the formId, either not in form or invalid form
-    if (!firstSubmitButton) {
-      return false
-    }
+    // If no submit buttons for the formId, invalid form
+    if (!firstSubmitButton) return false
 
     // Allow form submit on enter as long as 1st submit button is not disabled
     return !firstSubmitButton.disabled

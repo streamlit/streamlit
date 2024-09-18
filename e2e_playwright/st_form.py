@@ -116,3 +116,13 @@ with st.form("form_7"):
     )
     if submitted_7 or submitted_7b:
         st.write("Form submitted")
+
+with st.form("form_8", enter_to_submit=False):
+    st.write("Inside form 8")
+    number_input = st.number_input("Form 8 - Number Input", 0, 100, step=1)
+    submitted_8 = st.form_submit_button(
+        "Form 8 - Submit",
+        use_container_width=True,
+    )
+    if submitted_8:
+        st.write("Form submitted")
