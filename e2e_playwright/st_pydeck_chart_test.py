@@ -15,8 +15,11 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.toolbar_utils import (
+    assert_fullscreen_toolbar_button_interactions,
+)
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
@@ -84,3 +87,21 @@ def test_check_top_level_class(app: Page):
     expect(pydeck_charts.first).to_be_attached(timeout=15000)
 
     check_top_level_class(app, "stDeckGlJsonChart")
+
+
+def test_st_pydeck_clicking_on_fullscreen_toolbar_button(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that clicking on fullscreen toolbar button expands the map into fullscreen."""
+
+    # wait for mapbox to load
+    wait_for_app_run(app, 15000)
+
+    assert_fullscreen_toolbar_button_interactions(
+        app,
+        assert_snapshot=assert_snapshot,
+        widget_test_id="stDeckGlJsonChart",
+        filename_prefix="st_pydeck_chart",
+        # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+        pixel_threshold=1.0,
+    )

@@ -20,6 +20,9 @@ from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import expect_prefixed_markdown, get_element_by_key
 from e2e_playwright.shared.dataframe_utils import click_on_cell, get_open_cell_overlay
+from e2e_playwright.shared.toolbar_utils import (
+    assert_fullscreen_toolbar_button_interactions,
+)
 
 # This test suite covers all interactions of dataframe & data_editor
 
@@ -202,33 +205,11 @@ def test_clicking_on_fullscreen_toolbar_button(
 ):
     """Test that clicking on fullscreen toolbar button expands the dataframe into fullscreen."""
 
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(0)
-    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
-    fullscreen_wrapper = app.get_by_test_id("stFullScreenFrame").nth(0)
-
-    fullscreen_toolbar_button = dataframe_toolbar.get_by_test_id(
-        "stElementToolbarButton"
-    ).last
-
-    # Activate toolbar:
-    dataframe_element.hover()
-    # Check that it is visible
-    expect(dataframe_toolbar).to_have_css("opacity", "1")
-
-    # Click on expand to fullscreen button:
-    fullscreen_toolbar_button.click()
-
-    # Check that it is visible
-    assert_snapshot(
-        fullscreen_wrapper,
-        name="st_dataframe-fullscreen_expanded",
-    )
-
-    # Click again on fullscreen button to close fullscreen mode:
-    fullscreen_toolbar_button.click()
-    assert_snapshot(
-        fullscreen_wrapper,
-        name="st_dataframe-fullscreen_collapsed",
+    assert_fullscreen_toolbar_button_interactions(
+        app,
+        assert_snapshot=assert_snapshot,
+        widget_test_id="stDataFrame",
+        filename_prefix="st_dataframe",
     )
 
 
