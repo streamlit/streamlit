@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit import runtime
 
 single_file = st.file_uploader("Drop a file:", type=["txt"], key="single")
 if single_file is None:
@@ -20,7 +21,12 @@ if single_file is None:
 else:
     st.text(single_file.read())
 
-st.write(repr(st.session_state.single) == repr(single_file))
+# Here and throughout this file, we use `if runtime.is_running():`
+# since we also run e2e python files in "bare Python mode" as part of our
+# Python tests, and this doesn't work in that circumstance
+# st.session_state can only be accessed while running with streamlit
+if runtime.exists():
+    st.write(repr(st.session_state.single) == repr(single_file))
 
 disabled = st.file_uploader(
     "Can't drop a file:", type=["txt"], key="disabled", disabled=True
@@ -30,7 +36,8 @@ if disabled is None:
 else:
     st.text(disabled.read())
 
-st.write(repr(st.session_state.disabled) == repr(disabled))
+if runtime.exists():
+    st.write(repr(st.session_state.disabled) == repr(disabled))
 
 multiple_files = st.file_uploader(
     "Drop multiple files:",
@@ -44,7 +51,8 @@ else:
     files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))
 
-st.write(repr(st.session_state.multiple) == repr(multiple_files))
+if runtime.exists():
+    st.write(repr(st.session_state.multiple) == repr(multiple_files))
 
 with st.form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])
@@ -66,7 +74,8 @@ if hidden_label is None:
 else:
     st.text(hidden_label.read())
 
-st.write(repr(st.session_state.hidden_label) == repr(hidden_label))
+if runtime.exists():
+    st.write(repr(st.session_state.hidden_label) == repr(hidden_label))
 
 collapsed_label = st.file_uploader(
     "Collapsed label:",
@@ -79,7 +88,8 @@ if collapsed_label is None:
 else:
     st.text(collapsed_label.read())
 
-st.write(repr(st.session_state.collapsed_label) == repr(collapsed_label))
+if runtime.exists():
+    st.write(repr(st.session_state.collapsed_label) == repr(collapsed_label))
 
 if not st.session_state.get("counter"):
     st.session_state["counter"] = 0
