@@ -16,59 +16,107 @@ import time
 
 import streamlit as st
 
-audio1 = st.audio_input(
-    label="Audio Input 1", key="the_audio_input", help="This is the help text"
-)
-st.audio(audio1)
-st.write("Audio Input 1:", bool(audio1))
+
+# Main Audio Input Section
+def render_main_audio_input():
+    """
+    Renders the main audio input component with a label and help tooltip.
+    Displays the recorded audio and a boolean indicating if any audio was captured.
+    """
+    audio_input = st.audio_input(
+        label="Audio Input 1", key="the_audio_input", help="This is the help text"
+    )
+    st.audio(audio_input)  # Display the audio playback if available
+    st.write("Audio Input 1:", bool(audio_input))  # Display True if audio was captured
 
 
-audio_input_from_form = None
+# Form Audio Input Section
+def render_form_audio_input():
+    """
+    Renders a form with an audio input and a submit button.
+    The form clears on submission and displays the captured audio.
+    """
+    audio_input_from_form = None
+    with st.form(key="my_form", clear_on_submit=True):
+        audio_input_from_form = st.audio_input(label="Audio Input in Form")
+        st.form_submit_button("Submit")
 
-with st.form(key="my_form", clear_on_submit=True):
-    audio_input_from_form = st.audio_input(label="Audio Input in Form")
-    st.form_submit_button("Submit")
-
-st.write("Audio Input in Form:", audio_input_from_form)
+    st.write("Audio Input in Form:", audio_input_from_form)
 
 
+# Fragment Audio Input Section
 @st.experimental_fragment()
 def test_fragment():
+    """
+    Defines a fragment that includes an audio input component.
+    Displays the captured audio from the fragment.
+    """
     audio_input_from_fragment = st.audio_input(label="Audio Input in Fragment")
     st.write("Audio Input in Fragment:", audio_input_from_fragment)
 
 
-test_fragment()
+# Audio Input with Various Options
+def render_special_audio_inputs():
+    """
+    Renders various audio inputs with different properties such as
+    disabled and hidden label visibility.
+    """
+    st.audio_input(label="Disabled Audio Input", disabled=True)
+    st.audio_input(label="Hidden Label Audio Input", label_visibility="hidden")
 
-st.audio_input(label="Disabled Audio Input", disabled=True)
 
-st.audio_input(label="Hidden Label Audio Input", label_visibility="hidden")
-
-
+# Callback Example
 def on_change():
+    """Callback function to set a flag when audio input changes."""
     st.session_state.audio_input_changed = True
 
 
-st.audio_input(
-    "Testing Callback",
-    on_change=on_change,
-)
-st.write("Audio Input Changed:", "audio_input_changed" in st.session_state)
+def render_callback_audio_input():
+    """
+    Renders an audio input component with an `on_change` callback.
+    Displays whether the audio input has changed.
+    """
+    st.audio_input(
+        label="Testing Callback",
+        on_change=on_change,
+    )
+    st.write("Audio Input Changed:", "audio_input_changed" in st.session_state)
 
 
-if st.button("Create some elements to unmount component"):
-    for _ in range(3):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
-        time.sleep(1)
-        st.write("Another element")
+# Component Remounting Section
+def render_remount_test():
+    """
+    Renders an audio input component, simulates element unmounting, and checks
+    if the value persists after remounting. Also includes a button to create additional elements.
+    """
+    if st.button("Create some elements to unmount component"):
+        for _ in range(3):
+            # Sleep is required to ensure the component properly unmounts.
+            time.sleep(1)
+            st.write("Another element")
 
-audio_input_after_sleep = st.audio_input(
-    label="After sleep audio input", key="after_sleep_audio_input"
-)
-st.write("audio_input-after-sleep:", bool(audio_input_after_sleep))
+    audio_input_after_sleep = st.audio_input(
+        label="After sleep audio input", key="after_sleep_audio_input"
+    )
+    st.write("audio_input-after-sleep:", bool(audio_input_after_sleep))
 
-if "runs" not in st.session_state:
-    st.session_state.runs = 0
-st.session_state.runs += 1
-st.write("Runs:", st.session_state.runs)
+
+# Runs Tracker
+def track_runs():
+    """Tracks how many times the app has been run in this session."""
+    if "runs" not in st.session_state:
+        st.session_state.runs = 0
+    st.session_state.runs += 1
+    st.write("Runs:", st.session_state.runs)
+
+
+# Direct function calls to render the app
+st.title("Audio Input Test App")
+
+render_main_audio_input()
+render_form_audio_input()
+test_fragment()  # Fragment function call
+render_special_audio_inputs()
+render_callback_audio_input()
+render_remount_test()
+track_runs()
