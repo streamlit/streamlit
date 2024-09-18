@@ -45,11 +45,17 @@ const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + BORDER_THRESHOLD
 const DEFAULT_TABLE_HEIGHT = 400
 
 export type AutoSizerReturn = {
+  // The minimum height that the data grid can be resized to
   minHeight: number
+  // The maximum height of the data grid can be resized to
   maxHeight: number
+  // The minimum width of the data grid can be resized to
   minWidth: number
+  // The maximum width of the data grid can be resized to
   maxWidth: number
+  // The current (or initial) size of the data grid
   resizableSize: ResizableSize
+  // A callback function to change the size of the data grid.
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
 }
 
