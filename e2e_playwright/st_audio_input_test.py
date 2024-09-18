@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -23,6 +23,17 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     get_element_by_key,
 )
+
+
+def ensure_waveform_rendered(audio_input: Locator):
+    # Check for the waveform and time code
+    expect(audio_input.get_by_role("canvas")).to_be_visible()
+    time_code = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
+    expect(time_code).to_be_visible()
+    expect(time_code).not_to_have_text("00:00")
+
+    audio_input.hover()
+    expect(audio_input.get_by_role("button", name="Clear recording")).to_be_visible()
 
 
 def test_audio_input_renders(app: Page):
@@ -88,8 +99,10 @@ def test_audio_input_callback(app: Page):
     # Simulate recording interaction
     audio_input = app.get_by_test_id("stAudioInput").nth(5)
     audio_input.get_by_role("button", name="Record").click()
-    app.wait_for_timeout(500)
+    app.wait_for_timeout(1500)
     audio_input.get_by_role("button", name="Stop recording").click()
+
+    ensure_waveform_rendered(audio_input)
 
     # Verify the callback updated the UI
     expect(app.get_by_text("Audio Input Changed: True")).to_be_visible()
@@ -114,6 +127,8 @@ def test_audio_input_remount_keep_value(app: Page):
     # Unmount the component and verify the value is still retained
     click_button(app, "Create some elements to unmount component")
     expect(app.get_by_text("audio_input-after-sleep: True")).to_be_visible()
+
+    ensure_waveform_rendered(audio_input)
 
 
 @pytest.mark.only_browser("chromium")
@@ -205,6 +220,8 @@ def test_audio_input_basic_flow(app: Page):
     expect(pause_button).to_be_visible()
     pause_button.click()
     expect(play_button).to_be_visible()
+
+    ensure_waveform_rendered(audio_input)
 
     # Clear the recording and verify reset to initial state
     audio_input.hover()
