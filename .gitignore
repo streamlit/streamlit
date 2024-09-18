@@ -108,7 +108,3 @@ frontend/test_results
 frontend/cypress/snapshots/darwin
 frontend/cypress/snapshots/linux/1x
 
-########################################################################
-# VSCode
-########################################################################
-.vscode/
