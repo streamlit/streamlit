@@ -853,10 +853,12 @@ class ButtonMixin:
             enable_check_callback_rules=not is_form_submitter,
         )
 
-        form_id = current_form_id(self.dg)
+        # Only the form submitter button needs a form ID at the moment.
+        form_id = current_form_id(self.dg) if is_form_submitter else ""
         element_id = compute_and_register_element_id(
             "button",
             user_key=key,
+            # Only the
             form_id=form_id,
             label=label,
             icon=icon,
