@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 
 import pytest
 from playwright.sync_api import Page
@@ -55,7 +54,7 @@ def test_pydeck_chart_selection_in_form(app: Page):
 
     wait_for_app_run(app)
 
-    empty_selection = re.compile("\\{'selection': None\\}")
+    empty_selection = "{'selection': {'indices': {}, 'objects': {}}}"
     # Nothing should be shown yet because we did not submit the form
     expect_prefixed_markdown(
         app,
@@ -75,9 +74,7 @@ def test_pydeck_chart_selection_in_form(app: Page):
 
     click_form_button(app, "Submit")
 
-    expected_selection = re.compile(
-        "{'selection': {'MyHexLayer': {'last_selection': {'color': {'0': 1, '1': 0, '2': 0, '3': 1}, 'layer': 'MyHexLayer', 'index': 0,"
-    )
+    expected_selection = "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}"
 
     expect_prefixed_markdown(app, markdown_prefix, expected_selection)
     expect_prefixed_markdown(app, markdown_prefix_session_state, expected_selection)
