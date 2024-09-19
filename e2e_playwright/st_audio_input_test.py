@@ -75,6 +75,7 @@ def test_audio_input_disabled_snapshot(
     assert_snapshot(disabled_audio_input_element, name="st_audio_input-disabled")
 
 
+@pytest.mark.only_browser("webkit")
 def test_no_permission_audio_input_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
