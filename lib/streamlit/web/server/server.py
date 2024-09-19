@@ -44,6 +44,7 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
+    AddSlashHandler,
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
@@ -385,6 +386,7 @@ class Server:
                             ],
                         },
                     ),
+                    (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
                 ]
             )
 

@@ -32,6 +32,7 @@ from streamlit.web.server.server import (
     HOST_CONFIG_ENDPOINT,
     MESSAGE_ENDPOINT,
     NEW_HEALTH_ENDPOINT,
+    AddSlashHandler,
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
@@ -208,6 +209,26 @@ class RemoveSlashHandlerTest(tornado.testing.AsyncHTTPTestCase):
         for idx, r in enumerate(responses):
             assert r.code == 301
             assert r.headers["Location"] == paths[idx].rstrip("/")
+
+
+class AddSlashHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/(.*)",
+                    AddSlashHandler,
+                )
+            ]
+        )
+
+    def test_parse_url_path_301(self):
+        paths = ["/page1"]
+        responses = [self.fetch(path, follow_redirects=False) for path in paths]
+
+        for idx, r in enumerate(responses):
+            assert r.code == 301
+            assert r.headers["Location"] == paths[idx] + "/"
 
 
 class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
