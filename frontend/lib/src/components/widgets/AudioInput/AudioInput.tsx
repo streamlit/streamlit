@@ -128,6 +128,8 @@ const AudioInput: React.FC<Props> = ({
   const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
     useState(false)
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
+  const [hasRequestedMicPermissions, setHasRequestedMicPermissions] =
+    useState(false)
 
   const widgetId = element.id
   const widgetFormId = element.formId
@@ -157,21 +159,8 @@ const AudioInput: React.FC<Props> = ({
     ]
   )
 
-  useEffect(() => {
+  const getMicPermissions = useCallback(() => {
     // this first part is to ensure we prompt for getting the user's media devices
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then(() => {
-        RecordPlugin.getAvailableAudioDevices().then(devices => {
-          setAvailableAudioDevices(devices)
-          if (devices.length > 0) {
-            setActiveAudioDeviceId(devices[0].deviceId)
-          }
-        })
-      })
-      .catch(_err => {
-        setHasNoMicPermissions(true)
-      })
   }, [])
 
   const handleClear = useCallback(
@@ -296,9 +285,29 @@ const AudioInput: React.FC<Props> = ({
     }
   }, [wavesurfer])
 
-  const startRecording = useCallback(() => {
-    console.log("startRecording")
-    if (!recordPlugin || !activeAudioDeviceId || !wavesurfer) {
+  const startRecording = useCallback(async () => {
+    let audioDeviceId = activeAudioDeviceId
+
+    if (!hasRequestedMicPermissions) {
+      await navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then(() =>
+          RecordPlugin.getAvailableAudioDevices().then(devices => {
+            setAvailableAudioDevices(devices)
+            if (devices.length > 0) {
+              const { deviceId } = devices[0]
+              setActiveAudioDeviceId(deviceId)
+              audioDeviceId = deviceId
+            }
+          })
+        )
+        .catch(_err => {
+          setHasNoMicPermissions(true)
+        })
+      setHasRequestedMicPermissions(true)
+    }
+
+    if (!recordPlugin || !audioDeviceId || !wavesurfer) {
       return
     }
 
@@ -310,7 +319,7 @@ const AudioInput: React.FC<Props> = ({
       handleClear({ updateWidgetManager: false })
     }
 
-    recordPlugin.startRecording({ deviceId: activeAudioDeviceId }).then(() => {
+    recordPlugin.startRecording({ deviceId: audioDeviceId }).then(() => {
       // Update the record button to show the user that they can stop recording
       forceRerender()
     })
@@ -321,10 +330,11 @@ const AudioInput: React.FC<Props> = ({
     wavesurfer,
     recordingUrl,
     handleClear,
+    hasRequestedMicPermissions,
+    getMicPermissions,
   ])
 
   const stopRecording = useCallback(() => {
-    console.log("stopRecording")
     if (!recordPlugin) return
 
     recordPlugin.stopRecording()
@@ -353,8 +363,6 @@ const AudioInput: React.FC<Props> = ({
 
   const showNoMicPermissionsOrPlaceholder =
     hasNoMicPermissions || showPlaceholder
-
-  console.log({ deleteFileUrl })
 
   return (
     <StyledAudioInputContainerDiv
