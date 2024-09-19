@@ -16,10 +16,13 @@
 
 import { act, renderHook } from "@testing-library/react-hooks"
 
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
-import useTableSizer, { calculateMaxHeight } from "./useTableSizer"
+import useTableSizer, {
+  calculateMaxHeight,
+  MIN_TABLE_WIDTH,
+} from "./useTableSizer"
 
 describe("useTableSizer hook", () => {
   it("applies the configured width", () => {
@@ -40,6 +43,29 @@ describe("useTableSizer hook", () => {
 
     expect(result.current.resizableSize.width).toEqual(TABLE_WIDTH)
     expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+  })
+
+  it("Uses the minimum table width if container width is -1", () => {
+    // The width of the surrounding containers can be -1 in some edge cases
+    // caused by the resize observer in the Block component.
+    // We test that the dataframe component correctly handles this case
+    // by falling back to the minimum table width instead.
+    // Related to: https://github.com/streamlit/streamlit/issues/7949
+    const CONTAINER_WIDTH = -1
+    const { result } = renderHook(() =>
+      useTableSizer(
+        ArrowProto.create({
+          data: TEN_BY_TEN,
+          useContainerWidth: true,
+        }),
+        10,
+        CONTAINER_WIDTH
+      )
+    )
+
+    expect(result.current.resizableSize.width).toEqual(MIN_TABLE_WIDTH)
+    expect(result.current.maxWidth).toEqual(MIN_TABLE_WIDTH)
+    expect(result.current.minWidth).toEqual(MIN_TABLE_WIDTH)
   })
 
   it("adapts to the surrounding container width", () => {
