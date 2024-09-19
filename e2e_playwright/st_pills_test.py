@@ -25,7 +25,6 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_markdown,
     get_element_by_key,
-    get_markdown,
 )
 
 
@@ -53,22 +52,19 @@ def test_click_multiple_pills_and_take_snapshot(
     # click on second element to test multiselect
     get_pill_button(pills, "🪢").click()
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Multi selection: ['📝 Text', '🪢 Graphs']")
 
     # click on same element to test unselect
     get_pill_button(pills, "🪢").click()
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Multi selection: \\['📝 Text'\\]")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Multi selection: ['📝 Text']")
 
     # click on same element and take screenshot of multiple selected pills
     get_pill_button(pills, "🪢").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Multi selection: \\['📝 Text', '🪢 Graphs'\\]")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Multi selection: ['📝 Text', '🪢 Graphs']")
 
     assert_snapshot(pills, name="st_pills-multiselect")
 
@@ -87,49 +83,24 @@ def test_click_single_icon_pill_and_take_snapshot(
     # the icon's span element has the respective text
     # (e.g. :material/zoom_out_map: -> zoom_out_map)
     get_pill_button(pills, "zoom_out_map").click()
-    text = get_markdown(themed_app, "Single selection: 3")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Single selection: 3")
 
     # test unselect in single-select mode
     get_pill_button(pills, "zoom_out_map").click()
-    text = get_markdown(themed_app, "Single selection: None")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Single selection: None")
 
     get_pill_button(pills, "zoom_in").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Single selection: 1")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Single selection: 1")
 
     assert_snapshot(pills, name="st_pills-singleselect_icon_only")
 
 
-def test_pass_default_selections(app: Page):
-    """Test that passed defaults are rendered correctly."""
-    text = get_markdown(app, "Multi selection: \\[\\]")
-    expect(text).to_be_visible()
-
-    click_checkbox(app, "Set default values")
-    text = get_markdown(
-        app, "Multi selection: \\['🧰 General widgets', '📊 Charts', '🧊 3D'\\]"
-    )
-    expect(text).to_be_visible()
-
-    click_checkbox(app, "Set default values")
-    text = get_markdown(app, "Multi selection: \\[\\]")
-    expect(text).to_be_visible()
-
-
-def test_selection_via_on_change_callback(app: Page):
-    """Test that the on_change callback is triggered when a pill is clicked."""
-    pills = get_button_group(app, 2)
-    get_pill_button(pills, "Air").click()
-    wait_for_app_run(app)
-    expect_markdown(app, "on_change selection: Air")
-
-
-def test_pills_are_disabled(app: Page):
+def test_pills_are_disabled_and_take_screenshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     pills = get_button_group(app, 3)
     for pill in pills.locator("button").all():
         expect(pill).to_have_js_property("disabled", True)
@@ -140,6 +111,28 @@ def test_pills_are_disabled(app: Page):
         "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect_markdown(app, "pills-disabled: None")
+    assert_snapshot(pills, name="st_pills-disabled")
+
+
+def test_pass_default_selections(app: Page):
+    """Test that passed defaults are rendered correctly."""
+    expect_markdown(app, "Multi selection: []")
+
+    click_checkbox(app, "Set default values")
+    expect_markdown(
+        app, "Multi selection: ['🧰 General widgets', '📊 Charts', '🧊 3D']"
+    )
+
+    click_checkbox(app, "Set default values")
+    expect_markdown(app, "Multi selection: []")
+
+
+def test_selection_via_on_change_callback(app: Page):
+    """Test that the on_change callback is triggered when a pill is clicked."""
+    pills = get_button_group(app, 2)
+    get_pill_button(pills, "Air").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "on_change selection: Air")
 
 
 def test_pills_work_in_forms(app: Page):
@@ -183,3 +176,30 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "pills")).to_be_visible()
+
+
+def test_pills_with_labels(app: Page):
+    """Test that labels are rendered correctly."""
+
+    # visible label
+    visible_label = app.get_by_test_id("stWidgetLabel").filter(
+        has_text="Select some options"
+    )
+    expect(visible_label).to_be_visible()
+
+    # collapsed label
+    markdown_el = app.get_by_test_id("stWidgetLabel").filter(
+        has_text="Elements (label collapsed)"
+    )
+    expect(markdown_el).to_be_attached()
+    expect(markdown_el).not_to_be_visible()
+    expect(markdown_el).to_have_css("display", "none")
+
+    # hidden label
+    markdown_el = app.get_by_test_id("stWidgetLabel").filter(
+        has_text="Elements (label hidden)"
+    )
+    expect(markdown_el).to_be_attached()
+    expect(markdown_el).not_to_be_visible()
+    expect(markdown_el).to_have_css("display", "flex")
+    expect(markdown_el).to_have_css("visibility", "hidden")

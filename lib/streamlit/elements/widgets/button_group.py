@@ -105,20 +105,16 @@ class SingleSelectSerde(Generic[T]):
         option_indices: Sequence[T],
         default_value: list[int] | None = None,
     ) -> None:
-        """Initialize the FeedbackSerde with a list of sentimets."""
+        # see docstring about why we use MultiSelectSerde here
         self.multiselect_serde: MultiSelectSerde[T] = MultiSelectSerde(
             option_indices, default_value if default_value is not None else []
         )
 
     def serialize(self, value: T | None) -> list[int]:
-        """Serialize the passed sentiment option into its corresponding index
-        (wrapped in a list).
-        """
         _value = [value] if value is not None else []
         return self.multiselect_serde.serialize(_value)
 
     def deserialize(self, ui_value: list[int] | None, widget_id: str = "") -> T | None:
-        """Receive a list of indices and return the corresponding sentiments."""
         deserialized = self.multiselect_serde.deserialize(ui_value, widget_id)
 
         if len(deserialized) == 0:
@@ -214,6 +210,7 @@ def _build_proto(
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
 
+    # not passing the label looks the same as a collapsed label
     if label is not None:
         proto.label = label
         proto.label_visibility.value = get_label_visibility_proto_value(
@@ -458,11 +455,9 @@ class ButtonGroupMixin:
         if selection_mode == "multi":
             return res.value
 
-        return res.value if selection_mode == "single" else None
+        return res.value
 
-    # Disable this more generic widget for now
-    # @gather_metrics("button_group")
-    @gather_metrics("button_group")
+    @gather_metrics("_internal_button_group")
     def _internal_button_group(
         self,
         options: OptionSequence[V],
@@ -523,7 +518,7 @@ class ButtonGroupMixin:
         if selection_mode == "multi":
             return res.value
 
-        return res.value if selection_mode == "single" else None
+        return res.value
 
     def _button_group(
         self,
@@ -563,8 +558,9 @@ class ButtonGroupMixin:
             and isinstance(default, Sequence)
             and len(default) > 1
         ):
+            # add more commands to the error message
             raise StreamlitAPIException(
-                "The default argument to `st.button_group` must be a single value when "
+                "The default argument to `st.pills` must be a single value when "
                 "`selection_mode='single'`."
             )
 

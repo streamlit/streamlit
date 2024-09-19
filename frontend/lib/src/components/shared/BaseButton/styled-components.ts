@@ -298,6 +298,7 @@ export const StyledPillsButton = styled(
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText20,
       borderColor: theme.colors.fadedText20,
+      cursor: "not-allowed",
     },
 
     "& div": {
@@ -401,6 +402,7 @@ export const StyledBorderlessIconButton = styled(
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText20,
+      cursor: "not-allowed",
     },
   }
 })

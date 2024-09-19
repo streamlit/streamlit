@@ -76,18 +76,22 @@ st.write(f"Single selection: {selection}")
 
 st.header("Pills - on_change callback")
 st.pills(
-    "Elements",
+    "Elements (label collapsed)",
     ["Water", "Fire", "Earth", "Air"],
     key="pills_on_change",
     on_change=lambda: st.write(
         f"on_change selection: {st.session_state.pills_on_change}"
     ),
+    label_visibility="collapsed",
 )
 
 
 st.header("Pills - disabled")
 selection = st.pills(
-    "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_disabled", disabled=True
+    "Elements",
+    ["Water", "Fire", "Earth", "Air"],
+    key="pills_disabled",
+    disabled=True,
 )
 st.write("pills-disabled:", str(selection))
 
@@ -95,7 +99,10 @@ st.write("pills-disabled:", str(selection))
 st.header("Pills in form")
 with st.form(key="my_form", clear_on_submit=True):
     selection = st.pills(
-        "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_form"
+        "Elements  (label hidden)",
+        ["Water", "Fire", "Earth", "Air"],
+        key="pills_in_form",
+        label_visibility="hidden",
     )
     st.form_submit_button("Submit")
 

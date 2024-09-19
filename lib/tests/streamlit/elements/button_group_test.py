@@ -545,7 +545,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             )
         assert (
             str(exception.value)
-            == "The default argument to `st.button_group` must be a single value when "
+            == "The default argument to `st.pills` must be a single value when "
             "`selection_mode='single'`."
         )
 
