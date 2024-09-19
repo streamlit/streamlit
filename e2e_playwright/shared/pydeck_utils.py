@@ -67,8 +67,6 @@ def wait_for_chart(app: Page):
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(1, timeout=15000)
 
-    app.wait_for_load_state("networkidle")
-
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
     app.wait_for_timeout(10000)

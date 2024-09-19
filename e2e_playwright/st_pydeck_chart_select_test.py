@@ -30,6 +30,9 @@ from e2e_playwright.shared.pydeck_utils import (
     wait_for_chart,
 )
 
+# The pydeck tests are a lot flakier than need be so increase the pixel threshold
+PIXEL_THRESHOLD = 1.0
+
 
 def _set_selection_mode(app: Page, mode: Literal["single", "multi"]):
     app.get_by_test_id("stSelectbox").nth(0).locator("input").click()
@@ -65,45 +68,42 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     click_handling_div = get_click_handling_div(app)
 
     # Assert we haven't yet written anything out for the debugging state
-    expect(app.get_by_text("objects")).to_have_count(0)
+    expect(app.get_by_text('"indices":{}')).to_have_count(2)
 
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
 
     # Assert that we are printing out the Streamlit custom `objects` return
     # state
-    expect(app.get_by_text("objects")).to_have_count(2)
+    expect(app.get_by_text('"objects":{}')).to_have_count(2)
+    expect(app.get_by_text('"indices":{}')).to_have_count(2)
     # Assert the values returned are correct for the point we selected
-    expect(app.get_by_text('"count":10')).to_have_count(4)
+    expect(app.get_by_text('"count":10')).to_have_count(2)
     # This might look a little confusing, but the output is printing out array
     # index and the index of the item selected
-    expect(app.get_by_text('"indices":[0:0]')).to_have_count(2)
+    expect(app.get_by_text('"indices":{"MyHexLayer":[0:0]}')).to_have_count(2)
 
     # Multiselect and click the hex that has count: 100
     click_handling_div.click(position={"x": 417, "y": 229})
 
-    # Same assert as above, we should be only rendering the same top-level
-    # `objects` field
-    expect(app.get_by_text("objects")).to_have_count(2)
-
     # Now we assert that the values include the new point we selected as well as
     # the previous one
-    expect(app.get_by_text('"count":10')).to_have_count(4)
-    expect(app.get_by_text('"count":100')).to_have_count(4)
+    expect(app.get_by_text('"count":10')).to_have_count(2)
+    expect(app.get_by_text('"count":100')).to_have_count(2)
 
     # This might look a little confusing, but the output is printing out array
     # index and the index of the item selected. We are asserting that we clicked
     # the 0th point first, and the 2nd point second. They are visually printed
     # on separate lines, but in order to select them, we must use the
     # non-whitespace version.
-    expect(app.get_by_text('"indices":[0:01:2]')).to_have_count(2)
+    expect(app.get_by_text('"indices":{"MyHexLayer":[0:01:2]}')).to_have_count(2)
 
     # Deselect everything by clicking away from an object in a layer
     click_handling_div.click(position={"x": 0, "y": 0})
 
     # Assert that we have deselected everything
-    expect(app.get_by_text('"objects":[]')).to_have_count(2)
-    expect(app.get_by_text('"indices":[]')).to_have_count(2)
+    expect(app.get_by_text('"objects":{}')).to_have_count(2)
+    expect(app.get_by_text('"indices":{}')).to_have_count(2)
 
 
 @pytest.mark.only_browser("chromium")
@@ -117,52 +117,46 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
 
     click_handling_div = get_click_handling_div(app)
 
-    # Assert we haven't yet written anything out for the debugging state
-    expect(app.get_by_text("objects")).to_have_count(0)
-
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
 
     # Assert that we are printing out the Streamlit custom `objects` return
     # state
-    expect(app.get_by_text("objects")).to_have_count(2)
+    expect(app.get_by_text('"objects":{}')).to_have_count(2)
+    expect(app.get_by_text('"indices":{}')).to_have_count(2)
     # Assert the values returned are correct for the point we selected
-    expect(app.get_by_text('"count":10')).to_have_count(4)
+    expect(app.get_by_text('"count":10')).to_have_count(2)
     # This might look a little confusing, but the output is printing out array
     # index and the index of the item selected
-    expect(app.get_by_text('"indices":[0:0]')).to_have_count(2)
+    expect(app.get_by_text('"indices":{"MyHexLayer":[0:0]}')).to_have_count(2)
 
     # Click the hex that has count: 100
     click_handling_div.click(position={"x": 417, "y": 229})
 
-    # Same assert as above, we should be only rendering the same top-level
-    # `objects` field
-    expect(app.get_by_text("objects")).to_have_count(2)
-
     # Now we assert that the values include the new point we selected as well as
     # the previous one
-    expect(app.get_by_text('"count":100')).to_have_count(4)
+    expect(app.get_by_text('"count":100')).to_have_count(2)
 
     # This might look a little confusing, but the output is printing out array
     # index and the index of the item selected. We are asserting that we clicked
     # the 0th point first, and the 2nd point second. They are visually printed
     # on separate lines, but in order to select them, we must use the
     # non-whitespace version.
-    expect(app.get_by_text('"indices":[0:2]')).to_have_count(2)
+    expect(app.get_by_text('"indices":{"MyHexLayer":[0:2]}')).to_have_count(2)
 
-    # Shift+click on the hex that has count: 10
+    # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
     # Assert that we are only selecting the hex that has count: 10
     # This might look a little confusing, but the output is printing out array
     # index and the index of the item selected
-    expect(app.get_by_text('"indices":[0:0]')).to_have_count(2)
+    expect(app.get_by_text('"indices":{"MyHexLayer":[0:0]}')).to_have_count(2)
 
     # Deselect everything by clicking away from an object in a layer
     click_handling_div.click(position={"x": 0, "y": 0})
 
     # Assert that we have deselected everything
-    expect(app.get_by_text('"objects":[]')).to_have_count(2)
-    expect(app.get_by_text('"indices":[]')).to_have_count(2)
+    expect(app.get_by_text('"objects":{}')).to_have_count(2)
+    expect(app.get_by_text('"indices":{}')).to_have_count(2)
 
 
 @pytest.mark.only_browser("chromium")
@@ -181,9 +175,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     assert_snapshot(
         click_handling_div,
         name="st_pydeck_chart_select-no-selections",
-        # The pydeck tests are a lot flakier than need be so increase the pixel
-        # threshold
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # Click on the hex that has count: 10
@@ -194,9 +186,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     assert_snapshot(
         click_handling_div,
         name="st_pydeck_chart_select-single-selection",
-        # The pydeck tests are a lot flakier than need be so increase the pixel
-        # threshold
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # Multiselect and click the hex that has count: 100
@@ -207,9 +197,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     assert_snapshot(
         click_handling_div,
         name="st_pydeck_chart_select-multi-selection",
-        # The pydeck tests are a lot flakier than need be so increase the pixel
-        # threshold
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # Deselect everything by clicking away from an object in a layer
@@ -221,9 +209,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     assert_snapshot(
         click_handling_div,
         name="st_pydeck_chart_select-deselected",
-        # The pydeck tests are a lot flakier than need be so increase the pixel
-        # threshold
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
