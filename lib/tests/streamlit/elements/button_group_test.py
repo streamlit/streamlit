@@ -617,15 +617,15 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.button_group
         assert c.default == []
         assert [option.content for option in c.options] == [
-            "Coffee",
-            "Tea",
+            "☕ Coffee",
+            "🍵 Tea",
             "Water",
             "Earth",
             "",
         ]
         assert [option.content_icon for option in c.options] == [
-            "☕",
-            "🍵",
+            "",
+            "",
             ":material/zoom_in:",
             "",
             ":material/zoom_out:",
