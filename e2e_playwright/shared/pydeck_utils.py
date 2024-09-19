@@ -65,14 +65,14 @@ def wait_for_chart(app: Page):
     # The pydeck chart takes a while to load so check that
     # it gets attached with an increased timeout.
     pydeck_charts = app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(1, timeout=15000)
+    expect(pydeck_charts).to_have_count(4, timeout=15000)
 
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
-    app.wait_for_timeout(10000)
+    app.wait_for_timeout(100)
 
 
-def get_click_handling_div(app: Page):
+def get_click_handling_div(app: Page, nth: int):
     # Find canvas with class name "mapboxgl-canvas"
-    expect(app.locator(".mapboxgl-canvas").nth(0)).to_be_visible()
-    return app.locator("#view-default-view").nth(0)
+    expect(app.locator(".mapboxgl-canvas").nth(nth)).to_be_visible()
+    return app.locator("#view-default-view").nth(nth)

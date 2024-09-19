@@ -24,6 +24,8 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     click_button,
+    click_form_button,
+    expect_prefixed_markdown,
 )
 from e2e_playwright.shared.pydeck_utils import (
     get_click_handling_div,
@@ -32,6 +34,8 @@ from e2e_playwright.shared.pydeck_utils import (
 
 # The pydeck tests are a lot flakier than need be so increase the pixel threshold
 PIXEL_THRESHOLD = 1.0
+
+EMPTY_SELECTION = "{'selection': {'indices': {}, 'objects': {}}}"
 
 
 def _set_selection_mode(app: Page, mode: Literal["single", "multi"]):
@@ -65,45 +69,69 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     _set_selection_mode(app, "multi")
     wait_for_chart(app)
 
-    click_handling_div = get_click_handling_div(app)
+    click_handling_div = get_click_handling_div(app, nth=0)
+    markdown_prefix_session_state = "session_state.managed_multiselect_map:"
+    markdown_prefix = "managed_multiselect_map selection:"
 
     # Assert we haven't yet written anything out for the debugging state
-    expect(app.get_by_text('"indices":{}')).to_have_count(2)
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        EMPTY_SELECTION,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        EMPTY_SELECTION,
+    )
 
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
 
-    # Assert that we are printing out the Streamlit custom `objects` return
-    # state
-    expect(app.get_by_text('"objects":{}')).to_have_count(2)
-    expect(app.get_by_text('"indices":{}')).to_have_count(2)
+    first_point_selection = "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}"
     # Assert the values returned are correct for the point we selected
-    expect(app.get_by_text('"count":10')).to_have_count(2)
-    # This might look a little confusing, but the output is printing out array
-    # index and the index of the item selected
-    expect(app.get_by_text('"indices":{"MyHexLayer":[0:0]}')).to_have_count(2)
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        first_point_selection,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        first_point_selection,
+    )
 
     # Multiselect and click the hex that has count: 100
     click_handling_div.click(position={"x": 417, "y": 229})
 
+    second_point_selection = "{'selection': {'indices': {'MyHexLayer': [0, 2]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}, {'count': 100, 'hex': '88283082a9fffff'}]}}}"
     # Now we assert that the values include the new point we selected as well as
     # the previous one
-    expect(app.get_by_text('"count":10')).to_have_count(2)
-    expect(app.get_by_text('"count":100')).to_have_count(2)
-
-    # This might look a little confusing, but the output is printing out array
-    # index and the index of the item selected. We are asserting that we clicked
-    # the 0th point first, and the 2nd point second. They are visually printed
-    # on separate lines, but in order to select them, we must use the
-    # non-whitespace version.
-    expect(app.get_by_text('"indices":{"MyHexLayer":[0:01:2]}')).to_have_count(2)
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        second_point_selection,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        second_point_selection,
+    )
 
     # Deselect everything by clicking away from an object in a layer
     click_handling_div.click(position={"x": 0, "y": 0})
 
     # Assert that we have deselected everything
-    expect(app.get_by_text('"objects":{}')).to_have_count(2)
-    expect(app.get_by_text('"indices":{}')).to_have_count(2)
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        EMPTY_SELECTION,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        EMPTY_SELECTION,
+    )
 
 
 @pytest.mark.only_browser("chromium")
@@ -115,48 +143,67 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
     _set_selection_mode(app, "single")
     wait_for_chart(app)
 
-    click_handling_div = get_click_handling_div(app)
+    click_handling_div = get_click_handling_div(app, nth=0)
+    markdown_prefix_session_state = "session_state.managed_multiselect_map:"
+    markdown_prefix = "managed_multiselect_map selection:"
 
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
-
-    # Assert that we are printing out the Streamlit custom `objects` return
-    # state
-    expect(app.get_by_text('"objects":{}')).to_have_count(2)
-    expect(app.get_by_text('"indices":{}')).to_have_count(2)
-    # Assert the values returned are correct for the point we selected
-    expect(app.get_by_text('"count":10')).to_have_count(2)
-    # This might look a little confusing, but the output is printing out array
-    # index and the index of the item selected
-    expect(app.get_by_text('"indices":{"MyHexLayer":[0:0]}')).to_have_count(2)
+    point_selection = "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}"
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        point_selection,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        point_selection,
+    )
 
     # Click the hex that has count: 100
     click_handling_div.click(position={"x": 417, "y": 229})
 
-    # Now we assert that the values include the new point we selected as well as
-    # the previous one
-    expect(app.get_by_text('"count":100')).to_have_count(2)
-
-    # This might look a little confusing, but the output is printing out array
-    # index and the index of the item selected. We are asserting that we clicked
-    # the 0th point first, and the 2nd point second. They are visually printed
-    # on separate lines, but in order to select them, we must use the
-    # non-whitespace version.
-    expect(app.get_by_text('"indices":{"MyHexLayer":[0:2]}')).to_have_count(2)
+    point_selection = "{'selection': {'indices': {'MyHexLayer': [2]}, 'objects': {'MyHexLayer': [{'count': 100, 'hex': '88283082a9fffff'}]}}}"
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        point_selection,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        point_selection,
+    )
 
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
-    # Assert that we are only selecting the hex that has count: 10
-    # This might look a little confusing, but the output is printing out array
-    # index and the index of the item selected
-    expect(app.get_by_text('"indices":{"MyHexLayer":[0:0]}')).to_have_count(2)
+    point_selection = "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}"
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        point_selection,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        point_selection,
+    )
 
     # Deselect everything by clicking away from an object in a layer
     click_handling_div.click(position={"x": 0, "y": 0})
 
     # Assert that we have deselected everything
-    expect(app.get_by_text('"objects":{}')).to_have_count(2)
-    expect(app.get_by_text('"indices":{}')).to_have_count(2)
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        EMPTY_SELECTION,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        EMPTY_SELECTION,
+    )
 
 
 @pytest.mark.only_browser("chromium")
@@ -170,7 +217,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     _set_selection_mode(app, "multi")
     wait_for_chart(app)
 
-    click_handling_div = get_click_handling_div(app)
+    click_handling_div = get_click_handling_div(app, nth=0)
 
     assert_snapshot(
         click_handling_div,
@@ -224,7 +271,7 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
     _set_selection_mode(app, "multi")
     wait_for_chart(app)
 
-    click_handling_div = get_click_handling_div(app)
+    click_handling_div = get_click_handling_div(app, nth=0)
 
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})
@@ -237,11 +284,116 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
     wait_for_app_run(app, wait_delay=5000)
 
     click_button(app, "Create some elements to unmount component")
+    wait_for_app_run(app, wait_delay=5000)
 
-    click_handling_div.scroll_into_view_if_needed()
     wait_for_chart(app)
 
     assert_snapshot(
         click_handling_div,
         name="st_pydeck_chart_selection_state_remains_after_unmounting",
     )
+
+
+@pytest.mark.only_browser("chromium")
+def test_pydeck_chart_selection_callback(app: Page):
+    """
+    Test the callback functionality of a PyDeck chart.
+    """
+    wait_for_chart(app)
+
+    click_handling_div = get_click_handling_div(app, nth=1)
+
+    markdown_prefix = "PyDeck selection callback:"
+
+    # Assert we haven't yet written anything out for the debugging state
+    expect(app.get_by_text(markdown_prefix)).to_have_count(0)
+
+    # Click on the hex that has count: 10
+    click_handling_div.click(position={"x": 344, "y": 201})
+
+    # Assert that the debug values are written out since we clicked on the map
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}",
+    )
+
+
+@pytest.mark.only_browser("chromium")
+def test_pydeck_chart_selection_in_form(app: Page):
+    """
+    Test the selection functionality of a PyDeck chart within a form.
+    """
+    wait_for_chart(app)
+
+    click_handling_div = get_click_handling_div(app, nth=2)
+
+    # Assert we haven't yet written anything out for the debugging state
+    markdown_prefix = "PyDeck-in-form selection:"
+    markdown_prefix_session_state = "PyDeck-in-form selection in session state:"
+
+    # Click on the hex that has count: 10
+    click_handling_div.click(position={"x": 326, "y": 208})
+
+    wait_for_app_run(app)
+
+    empty_selection = "{'selection': {'indices': {}, 'objects': {}}}"
+    # Nothing should be shown yet because we did not submit the form
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        empty_selection,
+    )
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix_session_state,
+        empty_selection,
+    )
+
+    # submit the form. The selection uses a debounce of 200ms; if we click too
+    # early, the state is not updated correctly and we submit the old,
+    # unselected values
+    app.wait_for_timeout(210)
+
+    click_form_button(app, "Submit")
+
+    expected_selection = "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}"
+
+    expect_prefixed_markdown(app, markdown_prefix, expected_selection)
+    expect_prefixed_markdown(app, markdown_prefix_session_state, expected_selection)
+
+
+@pytest.mark.only_browser("chromium")
+def test_pydeck_chart_selection_in_fragment(app: Page):
+    """
+    Test the selection functionality of a PyDeck chart within a fragment.
+    """
+    wait_for_chart(app)
+
+    click_handling_div = get_click_handling_div(app, nth=3)
+
+    # Check that the main script has run once (the initial run)
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
+
+    # Assert we haven't yet written anything out for the debugging state
+    markdown_prefix = "PyDeck-in-fragment selection:"
+
+    # Nothing should be shown yet because we did do anything yet
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        "{'selection': {'indices': {}, 'objects': {}}}",
+    )
+
+    # Click on the hex that has count: 10
+    click_handling_div.click(position={"x": 344, "y": 201})
+
+    # Assert that the debug values are written out since we clicked on the map
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}",
+    )
+
+    # Check that the main script has not re-run
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
