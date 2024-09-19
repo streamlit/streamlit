@@ -159,10 +159,6 @@ const AudioInput: React.FC<Props> = ({
     ]
   )
 
-  const getMicPermissions = useCallback(() => {
-    // this first part is to ensure we prompt for getting the user's media devices
-  }, [])
-
   const handleClear = useCallback(
     ({ updateWidgetManager }: { updateWidgetManager?: boolean }) => {
       if (isNullOrUndefined(wavesurfer) || isNullOrUndefined(deleteFileUrl)) {
@@ -289,6 +285,7 @@ const AudioInput: React.FC<Props> = ({
     let audioDeviceId = activeAudioDeviceId
 
     if (!hasRequestedMicPermissions) {
+      // this first part is to ensure we prompt for getting the user's media devices
       await navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then(() =>
@@ -331,7 +328,6 @@ const AudioInput: React.FC<Props> = ({
     recordingUrl,
     handleClear,
     hasRequestedMicPermissions,
-    getMicPermissions,
   ])
 
   const stopRecording = useCallback(() => {
