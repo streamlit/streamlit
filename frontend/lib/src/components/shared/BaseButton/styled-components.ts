@@ -331,6 +331,7 @@ export const StyledBorderlessIconButton = styled(
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       color: theme.colors.fadedText20,
+      cursor: "not-allowed",
     },
   }
 })
