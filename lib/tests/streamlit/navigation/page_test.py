@@ -99,6 +99,11 @@ class StPagesTest(DeltaGeneratorTestCase):
         page = st.Page("page_8.py", url_path="/my_url_path")
         assert page.url_path == "my_url_path"
 
+    def test_url_path_strips_trailing_slash(self):
+        """Tests that url path strips leading slash if provided"""
+        page = st.Page("page_8.py", url_path="my_url_path/")
+        assert page.url_path == "my_url_path"
+
     def test_url_path_is_empty_string_if_default(self):
         """Tests that url path is "" if the page is the default page"""
 
@@ -116,6 +121,15 @@ class StPagesTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException):
             st.Page(page_9, url_path="")
+
+    def test_non_default_pages_cannot_have_nested_url_path(self):
+        """Tests that an error is raised if the url path contains a nested path"""
+
+        def page_9():
+            pass
+
+        with pytest.raises(StreamlitAPIException):
+            st.Page(page_9, url_path="foo/bar")
 
     def test_page_with_no_title_raises_api_exception(self):
         """Tests that an error is raised if the title is empty or inferred to be empty"""
