@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { DeckProps, PickingInfo } from "@deck.gl/core/typed"
+import type { DeckProps } from "@deck.gl/core/typed"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -62,38 +62,11 @@ export interface DeckObject {
 }
 
 /**
- * The information that can be serialized back to the server.
- * Intentionally closely matches the PyDeck Cursor Events
- *
- * @see https://deckgl.readthedocs.io/en/latest/event_handling.html
+ * @see PydeckState in the backend for the corresponding Python type.
  */
-type SerializablePickingInfo = Pick<
-  PickingInfo,
-  | "color"
-  | "index"
-  | "picked"
-  | "x"
-  | "y"
-  | "pixel"
-  | "coordinate"
-  | "devicePixel"
-  | "pixelRatio"
-  | "object"
-> & {
-  /**
-   * The Layer ID, if any, that was clicked.
-   *
-   * @see https://deckgl.readthedocs.io/en/latest/event_handling.html
-   */
-  layer: string | null
-}
-
-export type LayerSelection = {
-  last_selection: SerializablePickingInfo
-  indices: number[]
-  objects: unknown[]
-}
-
 export type DeckGlElementState = {
-  selection: { [layerId: string]: LayerSelection } | null
+  selection: {
+    indices: { [layerId: string]: number[] }
+    objects: { [layerId: string]: unknown[] }
+  }
 }

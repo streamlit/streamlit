@@ -38,7 +38,7 @@ import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,
 } from "./styled-components"
-import type { DeckGlElementState, DeckGLProps, LayerSelection } from "./types"
+import type { DeckGlElementState, DeckGLProps } from "./types"
 import { useDeckGl } from "./useDeckGl"
 
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -98,67 +98,49 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         return
       }
 
-      const {
-        color,
-        index,
-        picked,
-        x,
-        y,
-        pixel,
-        coordinate,
-        devicePixel,
-        pixelRatio,
-        object,
-      } = info
+      const { index, object } = info
 
       const layerId = `${info.layer?.id || null}`
       const currState = selection
-
-      const lastSelection: LayerSelection["last_selection"] = {
-        color,
-        layer: layerId,
-        index,
-        picked,
-        x,
-        y,
-        pixel,
-        coordinate,
-        devicePixel,
-        pixelRatio,
-        object,
-      }
+      /** true if a user clicked outside of any layer */
+      const isResetClick = index === -1
 
       const getSelection = (): DeckGlElementState["selection"] => {
+        if (isResetClick) {
+          return {
+            indices: {},
+            objects: {},
+          }
+        }
+
         switch (selectionMode) {
           case DeckGlJsonChartProto.SelectionMode.IGNORE:
-            return {}
+            return {
+              indices: {},
+              objects: {},
+            }
           case DeckGlJsonChartProto.SelectionMode.SINGLE: {
-            const indices = index !== -1 ? [index] : []
-            const objects = index !== -1 ? [object] : []
+            if (currState.selection.indices[layerId]?.[0] === index) {
+              // Unselect the index
+              return {
+                indices: {},
+                objects: {},
+              }
+            }
 
             return {
-              [`${layerId}`]: {
-                last_selection: lastSelection,
-                indices,
-                objects,
-              },
+              indices: { [`${layerId}`]: [index] },
+              objects: { [`${layerId}`]: [object] },
             }
           }
           case DeckGlJsonChartProto.SelectionMode.MULTI: {
-            // If a user doesn't click on an object in a layer, reset the selection
-            const isResetClick = index === -1
-
             const selectionMap: Map<number, unknown> = new Map(
               ((): [number, unknown][] => {
-                if (isResetClick) {
-                  return []
-                }
-
-                const indices = currState?.selection?.[layerId]?.indices || []
+                const indices = currState?.selection?.indices?.[layerId] || []
 
                 return indices.map((index, i) => [
                   index,
-                  currState.selection?.[layerId].objects[i],
+                  currState.selection?.objects?.[layerId]?.[i],
                 ])
               })()
             )
@@ -166,19 +148,34 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             if (selectionMap.has(index)) {
               // Unselect an existing index
               selectionMap.delete(index)
-            }
-
-            if (index !== -1) {
+            } else {
               // Add the newly selected index
               selectionMap.set(index, object)
             }
 
+            if (selectionMap.size === 0) {
+              // If the layer has nothing selected, remove the layer from the returned value
+              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              const { [layerId]: _, ...restIndices } =
+                currState.selection.indices
+              // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars
+              const { [layerId]: __, ...restObjects } =
+                currState.selection.objects
+
+              return {
+                indices: restIndices,
+                objects: restObjects,
+              }
+            }
+
             return {
-              ...(isResetClick ? {} : currState?.selection),
-              [`${layerId}`]: {
-                last_selection: lastSelection,
-                indices: Array.from(selectionMap.keys()),
-                objects: Array.from(selectionMap.values()),
+              indices: {
+                ...currState.selection.indices,
+                [`${layerId}`]: Array.from(selectionMap.keys()),
+              },
+              objects: {
+                ...currState.selection.objects,
+                [`${layerId}`]: Array.from(selectionMap.values()),
               },
             }
           }

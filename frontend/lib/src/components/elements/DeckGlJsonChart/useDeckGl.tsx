@@ -101,7 +101,12 @@ function getDefaultState(
   element: DeckGlJsonChartProto
 ): DeckGlElementState {
   if (!element.id) {
-    return { selection: null }
+    return {
+      selection: {
+        indices: {},
+        objects: {},
+      },
+    }
   }
 
   const initialFigureState = widgetMgr.getElementState(element.id, "selection")
@@ -114,7 +119,12 @@ function getStateFromWidgetMgr(
   element: DeckGlJsonChartProto
 ): DeckGlElementState {
   if (!element.id) {
-    return { selection: null }
+    return {
+      selection: {
+        indices: {},
+        objects: {},
+      },
+    }
   }
 
   // return widgetMgr.getElementState(element.id, "selection")
@@ -123,7 +133,14 @@ function getStateFromWidgetMgr(
     ? JSON5.parse(stringValue)
     : null
 
-  return currState ?? { selection: null }
+  return (
+    currState ?? {
+      selection: {
+        indices: {},
+        objects: {},
+      },
+    }
+  )
 }
 
 function updateWidgetMgrState(
@@ -221,9 +238,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (copy.layers) {
-      const anyLayersHaveSelection = Object.values(data?.selection || {}).some(
-        layer => layer?.indices?.length
-      )
+      const anyLayersHaveSelection = Object.values(
+        data.selection.indices
+      ).some(layer => layer?.length)
 
       copy.layers = copy.layers.map(layer => {
         if (!layer || Array.isArray(layer)) {
@@ -231,7 +248,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         }
 
         const layerId = `${layer.id || null}`
-        const selectedIndices = data?.selection?.[layerId]?.indices || []
+        const selectedIndices = data?.selection?.indices?.[layerId] || []
 
         const fillFunction = LAYER_TYPE_TO_FILL_FUNCTION[layer["@@type"]]
 

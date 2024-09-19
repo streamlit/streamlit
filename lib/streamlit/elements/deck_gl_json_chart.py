@@ -54,69 +54,22 @@ EMPTY_MAP: Final[Mapping[str, Any]] = {
 }
 
 
-class PydeckSelectionState(TypedDict, total=False):
-    """
-    The schema for the PyDeck Chart Selection State
-
-    Attributes
-    ----------
-    color : tuple[int, int, int, int] | None
-        Color of the clicked object in RGBA format.
-    layer : str | None
-        The layer ID, which you can specify by passing `id=...` to a Layer;
-        `None` if no layer is picked.
-    index : int
-        The serial index of the clicked point in the data set; -1 if no layer is
-        picked.
-    picked : bool
-        Indicates whether an object was picked.
-    x : float
-        X coordinate of the pixel on click.
-    y : float
-        Y coordinate of the pixel on click.
-    pixel : tuple[float, float]
-        Pixel coordinate pair.
-    coordinate : tuple[float, float]
-        Latitude/longitude coordinate pair.
-    devicePixel : tuple[int, int] | None
-        Pixel coordinate pair on the device screen.
-    pixelRatio : int
-        The ratio of the resolution in physical pixels to the resolution in CSS
-        pixels for the current display device.
-    object : dict[str, Any] | None
-        Metadata from the selected clicked object, which varies by layer.
-    """
-
-    color: tuple[int, int, int, int] | None
-    layer: str | None
-    index: int
-    picked: bool
-    x: float
-    y: float
-    pixel: tuple[float, float]
-    coordinate: tuple[float, float]
-    devicePixel: tuple[int, int] | None
-    pixelRatio: int
-    object: dict[str, Any] | None
-
-
 class LayerSelectionState(TypedDict, total=False):
     """
     The schema for the PyDeck Layer Selection State
 
     Attributes
     ----------
-    last_selection : PydeckSelectionState
-        The last selection state.
-    indices : list[int]
-        List of indices of selected objects.
-    objects : list[dict[str, Any]]
-        List of metadata objects for the selected items.
+    indices : dict[str, list[int]]
+        Dictionary where keys are the layer id and values are lists of indices
+        of selected objects.
+    objects : dict[str, list[dict[str, Any]]]
+        Dictionary where keys are the layer id and values are lists of metadata
+        objects for the selected items.
     """
 
-    last_selection: PydeckSelectionState
-    indices: list[int]
-    objects: list[dict[str, Any]]
+    indices: dict[str, list[int]]
+    objects: dict[str, list[dict[str, Any]]]
 
 
 class PydeckState(TypedDict, total=False):
@@ -125,12 +78,11 @@ class PydeckState(TypedDict, total=False):
 
     Attributes
     ----------
-    selection : dict[str, LayerSelectionState] | None
-        A dictionary mapping layer IDs to their selection states; `None` if no
-        selection is made.
+    selection : LayerSelectionState
+        The selection state of the PyDeck layers.
     """
 
-    selection: dict[str, LayerSelectionState] | None
+    selection: LayerSelectionState
 
 
 @dataclass
@@ -138,7 +90,12 @@ class PydeckSelectionSerde:
     """PydeckSelectionSerde is used to serialize and deserialize the Pydeck selection state."""
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> PydeckState:
-        empty_selection_state: PydeckState = {"selection": None}
+        empty_selection_state: PydeckState = {
+            "selection": {
+                "indices": {},
+                "objects": {},
+            }
+        }
 
         selection_state = (
             empty_selection_state
