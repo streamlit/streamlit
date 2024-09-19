@@ -27,7 +27,7 @@ from e2e_playwright.shared.app_utils import (
 
 def ensure_waveform_rendered(audio_input: Locator):
     # Check for the waveform and time code
-    expect(audio_input.get_by_role("canvas")).to_be_visible()
+    expect(audio_input.get_by_test_id("stAudioInputWaveSurfer")).to_be_visible()
     time_code = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
     expect(time_code).to_be_visible()
     expect(time_code).not_to_have_text("00:00")
@@ -116,7 +116,7 @@ def test_audio_input_remount_keep_value(app: Page):
     # Simulate recording interaction
     audio_input = app.get_by_test_id("stAudioInput").nth(6)
     audio_input.get_by_role("button", name="Record").click()
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(1500)
     audio_input.get_by_role("button", name="Stop recording").click()
 
     wait_for_app_run(app)
@@ -142,7 +142,7 @@ def test_audio_input_works_in_forms(app: Page):
     # Simulate recording in the form
     form_audio_input = app.get_by_test_id("stAudioInput").nth(1)
     form_audio_input.get_by_role("button", name="Record").click()
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(1500)
     form_audio_input.get_by_role("button", name="Stop recording").click()
 
     # Verify the form state has not changed yet
@@ -166,7 +166,7 @@ def test_audio_input_works_with_fragments(app: Page):
     # Simulate recording interaction in a fragment
     fragment_audio_input = app.get_by_test_id("stAudioInput").nth(2)
     fragment_audio_input.get_by_role("button", name="Record").click()
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(1500)
     fragment_audio_input.get_by_role("button", name="Stop recording").click()
 
     wait_for_app_run(app)
@@ -205,11 +205,13 @@ def test_audio_input_basic_flow(app: Page):
     # Stop recording after a second and verify state change
     stop_button = audio_input.get_by_role("button", name="Stop recording").first
     expect(stop_button).to_be_visible()
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(1500)
     stop_button.click()
 
     wait_for_app_run(app)
     expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
+
+    ensure_waveform_rendered(audio_input)
 
     # Play and pause the recording, then verify the controls
     play_button = audio_input.get_by_role("button", name="Play").first
@@ -220,8 +222,6 @@ def test_audio_input_basic_flow(app: Page):
     expect(pause_button).to_be_visible()
     pause_button.click()
     expect(play_button).to_be_visible()
-
-    ensure_waveform_rendered(audio_input)
 
     # Clear the recording and verify reset to initial state
     audio_input.hover()

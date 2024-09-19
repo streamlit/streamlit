@@ -45,6 +45,7 @@ import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
+import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
 
 import {
   StyledAudioInputContainerDiv,
@@ -86,7 +87,13 @@ const AudioInput: React.FC<Props> = ({
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
   const waveSurferRef = React.useRef<HTMLDivElement | null>(null)
-  const [deleteFileUrl, setDeleteFileUrl] = useState<string | null>(null)
+  const [deleteFileUrl, setDeleteFileUrl] = useWidgetManagerElementState<
+    string | null
+  >({
+    widgetMgr,
+    id: element.id,
+    key: "deleteFileUrl",
+  })
   const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
   // to eventually show the user the available audio devices
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -96,33 +103,27 @@ const AudioInput: React.FC<Props> = ({
   const [activeAudioDeviceId, setActiveAudioDeviceId] = useState<
     string | null
   >(null)
-  const [recordingUrl, setRecordingUrlState] = useState<string | null>(
-    widgetMgr.getElementState(element.id, "recordingUrl")
-  )
-  const setRecordingUrl = useCallback(
-    (url: string | null): void => {
-      setRecordingUrlState(url)
-      widgetMgr.setElementState(element.id, "recordingUrl", url)
-    },
-    [widgetMgr, element.id]
-  )
+
+  const [recordingUrl, setRecordingUrl] = useWidgetManagerElementState<
+    string | null
+  >({
+    widgetMgr,
+    id: element.id,
+    key: "recordingUrl",
+  })
   const [, setRerender] = useState(0)
   const forceRerender = (): void => {
     setRerender(prev => prev + 1)
   }
   const [progressTime, setProgressTime] = useState(STARTING_TIME_STRING)
-  const [recordingTime, setRecordingTimeState] = useState(
-    recordingUrl
-      ? widgetMgr.getElementState(element.id, "recordingTime")
-      : STARTING_TIME_STRING
-  )
-  const setRecordingTime = useCallback(
-    (time: string): void => {
-      setRecordingTimeState(time)
-      widgetMgr.setElementState(element.id, "recordingTime", time)
-    },
-    [widgetMgr, element.id]
-  )
+
+  const [recordingTime, setRecordingTime] =
+    useWidgetManagerElementState<string>({
+      widgetMgr,
+      id: element.id,
+      key: "recordingTime",
+      defaultValue: STARTING_TIME_STRING,
+    })
 
   const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
     useState(false)
@@ -146,7 +147,14 @@ const AudioInput: React.FC<Props> = ({
         }
       })
     },
-    [uploadClient, widgetMgr, widgetId, widgetFormId, fragmentId]
+    [
+      uploadClient,
+      widgetMgr,
+      widgetId,
+      widgetFormId,
+      fragmentId,
+      setDeleteFileUrl,
+    ]
   )
 
   useEffect(() => {
@@ -200,6 +208,7 @@ const AudioInput: React.FC<Props> = ({
       fragmentId,
       setRecordingTime,
       setRecordingUrl,
+      setDeleteFileUrl,
     ]
   )
 
@@ -393,6 +402,7 @@ const AudioInput: React.FC<Props> = ({
           {showPlaceholder && <Placeholder />}
           {hasNoMicPermissions && <NoMicPermissions />}
           <StyledWaveSurferDiv
+            data-testid="stAudioInputWaveSurfer"
             ref={waveSurferRef}
             show={!showNoMicPermissionsOrPlaceholder}
           />
