@@ -86,7 +86,7 @@ export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
     color: theme.colors.primary,
     padding: theme.spacing.threeXS,
   },
-  "&:hover > button, &:focus > button": {
+  "& > button:hover, & > button:focus": {
     color: theme.colors.red,
   },
 }))
@@ -97,11 +97,8 @@ export const StyledActionButtonStartRecordingDiv = styled.span(
       padding: theme.spacing.threeXS,
       color: theme.colors.fadedText40,
     },
-    "&:hover > button, &:focus > button": {
+    "& > button:hover, & > button:focus": {
       color: theme.colors.primary,
-    },
-    "&:disabled > button": {
-      color: theme.colors.fadedText40,
     },
   })
 )
@@ -111,7 +108,7 @@ export const StyledActionButtonPlayPauseDiv = styled.span(({ theme }) => ({
     padding: theme.spacing.threeXS,
     color: theme.colors.fadedText60,
   },
-  "&:hover > button, &:focus > button": {
+  "& > button:hover, & > button:focus": {
     color: theme.colors.bodyText,
   },
 }))

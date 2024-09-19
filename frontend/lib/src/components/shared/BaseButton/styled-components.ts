@@ -251,6 +251,7 @@ export const StyledIconButton = styled(
       backgroundColor: theme.colors.lightGray,
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
+      cursor: "not-allowed",
     },
   }
 })
