@@ -96,27 +96,33 @@ const AudioInput: React.FC<Props> = ({
   const [activeAudioDeviceId, setActiveAudioDeviceId] = useState<
     string | null
   >(null)
-  const [recordingUrl, _setRecordingUrl] = useState<string | null>(
+  const [recordingUrl, setRecordingUrlState] = useState<string | null>(
     widgetMgr.getElementState(element.id, "recordingUrl")
   )
-  const setRecordingUrl = (url: string | null) => {
-    _setRecordingUrl(url)
-    widgetMgr.setElementState(element.id, "recordingUrl", url)
-  }
+  const setRecordingUrl = useCallback(
+    (url: string | null): void => {
+      setRecordingUrlState(url)
+      widgetMgr.setElementState(element.id, "recordingUrl", url)
+    },
+    [widgetMgr, element.id]
+  )
   const [, setRerender] = useState(0)
   const forceRerender = (): void => {
     setRerender(prev => prev + 1)
   }
   const [progressTime, setProgressTime] = useState(STARTING_TIME_STRING)
-  const [recordingTime, _setRecordingTime] = useState(
+  const [recordingTime, setRecordingTimeState] = useState(
     recordingUrl
       ? widgetMgr.getElementState(element.id, "recordingTime")
       : STARTING_TIME_STRING
   )
-  const setRecordingTime = (time: string) => {
-    _setRecordingTime(time)
-    widgetMgr.setElementState(element.id, "recordingTime", time)
-  }
+  const setRecordingTime = useCallback(
+    (time: string): void => {
+      setRecordingTimeState(time)
+      widgetMgr.setElementState(element.id, "recordingTime", time)
+    },
+    [widgetMgr, element.id]
+  )
 
   const [shouldUpdatePlaybackTime, setShouldUpdatePlaybackTime] =
     useState(false)
@@ -192,6 +198,8 @@ const AudioInput: React.FC<Props> = ({
       element,
       widgetMgr,
       fragmentId,
+      setRecordingTime,
+      setRecordingUrl,
     ]
   )
 
