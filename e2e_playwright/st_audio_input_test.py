@@ -75,6 +75,30 @@ def test_audio_input_disabled_snapshot(
     assert_snapshot(disabled_audio_input_element, name="st_audio_input-disabled")
 
 
+def test_no_permission_audio_input_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Take a snapshot of the audio input element when no permission is granted."""
+    no_permission_audio_input = themed_app.get_by_test_id("stAudioInput").nth(0)
+    record_button = no_permission_audio_input.get_by_role("button", name="Record")
+
+    expect(
+        themed_app.get_by_text("This app would like to use your microphone.")
+    ).not_to_be_visible()
+
+    expect(record_button).to_be_visible()
+    expect(record_button).not_to_be_disabled()
+    record_button.click()
+
+    # Verify the permission message is visible
+    expect(
+        themed_app.get_by_text("This app would like to use your microphone.")
+    ).to_be_visible()
+
+    # Capture the snapshot
+    assert_snapshot(no_permission_audio_input, name="st_audio_input-no_permission")
+
+
 def test_audio_input_label_visibility_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
