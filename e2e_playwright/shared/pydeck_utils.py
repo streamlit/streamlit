@@ -69,7 +69,7 @@ def wait_for_chart(app: Page):
 
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
-    app.wait_for_timeout(100)
+    app.wait_for_timeout(10000)
 
 
 def get_click_handling_div(app: Page, nth: int):
