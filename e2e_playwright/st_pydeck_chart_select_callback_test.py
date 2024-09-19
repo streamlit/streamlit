@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-import re
-
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -54,8 +52,8 @@ def test_pydeck_chart_selection_callback(app: Page):
     click_handling_div.click(position={"x": 344, "y": 201})
 
     # Assert that the debug values are written out since we clicked on the map
-    expected_selection = re.compile(
-        "{'selection': {'MyHexLayer': {'last_selection': {'color': {'0': 1, '1': 0, '2': 0, '3': 1}, 'layer': 'MyHexLayer', 'index': 0,"
+    expect_prefixed_markdown(
+        app,
+        markdown_prefix,
+        "{'selection': {'indices': {'MyHexLayer': [0]}, 'objects': {'MyHexLayer': [{'count': 10, 'hex': '88283082b9fffff'}]}}}",
     )
-
-    expect_prefixed_markdown(app, markdown_prefix, expected_selection)
