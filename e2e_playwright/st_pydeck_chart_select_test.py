@@ -70,8 +70,8 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app, nth=0)
-    markdown_prefix_session_state = "session_state.managed_multiselect_map:"
-    markdown_prefix = "managed_multiselect_map selection:"
+    markdown_prefix_session_state = "session_state.managed_map:"
+    markdown_prefix = "managed_map selection:"
 
     # Assert we haven't yet written anything out for the debugging state
     expect_prefixed_markdown(
@@ -144,8 +144,8 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app, nth=0)
-    markdown_prefix_session_state = "session_state.managed_multiselect_map:"
-    markdown_prefix = "managed_multiselect_map selection:"
+    markdown_prefix_session_state = "session_state.managed_map:"
+    markdown_prefix = "managed_map selection:"
 
     # Click on the hex that has count: 10
     click_handling_div.click(position={"x": 344, "y": 201})

@@ -33,13 +33,13 @@ selection_mode: Literal["single", "multi"] = st.selectbox(
     ["single", "multi"],
 )
 
-event_data = get_pydeck_chart("managed_multiselect_map", selection_mode)
+event_data = get_pydeck_chart("managed_map", selection_mode)
 
 st.write(
-    "session_state.managed_multiselect_map:",
-    str(st.session_state.managed_multiselect_map),
+    "session_state.managed_map:",
+    str(st.session_state.get("managed_map") or ""),
 )
-st.write("managed_multiselect_map selection:", str(event_data))
+st.write("managed_map selection:", str(event_data))
 
 
 st.divider()
