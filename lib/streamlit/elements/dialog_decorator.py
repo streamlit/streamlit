@@ -66,6 +66,7 @@ def _dialog_decorator(
     *,
     width: DialogWidth = "small",
     should_show_deprecation_warning: bool = False,
+    dismissible: bool = True,
 ) -> F:
     if title is None or title == "":
         raise StreamlitAPIException(
@@ -80,7 +81,7 @@ def _dialog_decorator(
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
-            title=title, dismissible=True, width=width
+            title=title, dismissible=dismissible, width=width
         )
         dialog.open()
 
@@ -133,7 +134,7 @@ def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
 
 @gather_metrics("dialog")
 def dialog_decorator(
-    title: F | str, *, width: DialogWidth = "small"
+    title: F | str, *, width: DialogWidth = "small", dismissible: bool = True
 ) -> F | Callable[[F], F]:
     """Function decorator to create a modal dialog.
 
@@ -217,12 +218,12 @@ def dialog_decorator(
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title
-            return _dialog_decorator(non_optional_func=f, title=title, width=width)
+            return _dialog_decorator(non_optional_func=f, title=title, width=width, dismissible=dismissible)
 
         return wrapper
 
     func: F = func_or_title
-    return _dialog_decorator(func, "", width=width)
+    return _dialog_decorator(func, "", width=width, dismissible=dismissible)
 
 
 @overload
