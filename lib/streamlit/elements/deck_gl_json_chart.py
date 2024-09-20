@@ -328,11 +328,9 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                key=key,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
-                page=ctx.active_script_hash if ctx else None,
                 spec=spec,
                 form_id=pydeck_proto.form_id,
             )
