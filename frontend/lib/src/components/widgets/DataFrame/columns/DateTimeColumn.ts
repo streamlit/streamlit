@@ -117,12 +117,12 @@ function BaseDateTimeColumn(
 
   let minDate: Date | undefined = undefined
   if (notNullOrUndefined(parameters.min_value)) {
-    minDate = toSafeDate(parameters.min_value) || undefined
+    minDate = toSafeDate(parameters.min_value.slice(0, 19)) || undefined
   }
 
   let maxDate: Date | undefined = undefined
   if (notNullOrUndefined(parameters.max_value)) {
-    maxDate = toSafeDate(parameters.max_value) || undefined
+    maxDate = toSafeDate(parameters.max_value.slice(0, 19)) || undefined
   }
 
   const cellTemplate = {
