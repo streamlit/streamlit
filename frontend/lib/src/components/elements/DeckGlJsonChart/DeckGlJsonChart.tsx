@@ -119,7 +119,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               indices: {},
               objects: {},
             }
-          case DeckGlJsonChartProto.SelectionMode.SINGLE: {
+          case DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT: {
             if (currState.selection.indices[layerId]?.[0] === index) {
               // Unselect the index
               return {
@@ -133,7 +133,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               objects: { [`${layerId}`]: [object] },
             }
           }
-          case DeckGlJsonChartProto.SelectionMode.MULTI: {
+          case DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT: {
             const selectionMap: Map<number, unknown> = new Map(
               ((): [number, unknown][] => {
                 const indices = currState?.selection?.indices?.[layerId] || []

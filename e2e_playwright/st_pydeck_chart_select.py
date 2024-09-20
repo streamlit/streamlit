@@ -28,9 +28,9 @@ if st.button("Create some elements to unmount component"):
         time.sleep(1)
         st.write("Another element")
 
-selection_mode: Literal["single", "multi"] = st.selectbox(
+selection_mode: Literal["single-object", "multi-object"] = st.selectbox(
     "Map Selection Mode",
-    ["single", "multi"],
+    ["single-object", "multi-object"],
 )
 
 event_data = get_pydeck_chart("managed_map", selection_mode)
@@ -54,7 +54,7 @@ def on_selection():
 
 
 selection = get_pydeck_chart(
-    "selection_callback", selection_mode="single", on_select=on_selection
+    "selection_callback", selection_mode="single-object", on_select=on_selection
 )
 
 
@@ -62,7 +62,7 @@ st.divider()
 st.header("PyDeck Chart in Form")
 
 with st.form(key="my_form", clear_on_submit=True):
-    selection = get_pydeck_chart("selection_in_form", selection_mode="single")
+    selection = get_pydeck_chart("selection_in_form", selection_mode="single-object")
     st.form_submit_button("Submit")
 
 st.write("PyDeck-in-form selection:", str(selection))
@@ -79,7 +79,7 @@ st.header("PyDeck Chart in Fragment")
 
 @st.fragment
 def test_fragment():
-    selection = get_pydeck_chart("selection_in_fragment", "single")
+    selection = get_pydeck_chart("selection_in_fragment", "single-object")
     st.write("PyDeck-in-fragment selection:", str(selection))
 
 

@@ -28,6 +28,8 @@ from typing import (
     overload,
 )
 
+from typing_extensions import TypeAlias
+
 from streamlit import config
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.form_utils import current_form_id
@@ -52,6 +54,31 @@ if TYPE_CHECKING:
 EMPTY_MAP: Final[Mapping[str, Any]] = {
     "initialViewState": {"latitude": 0, "longitude": 0, "pitch": 0, "zoom": 1},
 }
+
+SelectionMode: TypeAlias = Literal["single-object", "multi-object"]
+_SELECTION_MODES: Final[set[SelectionMode]] = {
+    "single-object",
+    "multi-object",
+}
+
+
+def parse_selection_mode(
+    selection_mode: SelectionMode,
+) -> PydeckProto.SelectionMode.ValueType:
+    """Parse and check the user provided selection modes."""
+
+    if selection_mode not in _SELECTION_MODES:
+        raise StreamlitAPIException(
+            f"Invalid selection mode: {selection_mode}. "
+            f"Valid options are: {_SELECTION_MODES}"
+        )
+
+    if selection_mode == "single-object":
+        return PydeckProto.SelectionMode.SINGLE_OBJECT
+    elif selection_mode == "multi-object":
+        return PydeckProto.SelectionMode.MULTI_OBJECT
+
+    return PydeckProto.SelectionMode.SINGLE_OBJECT
 
 
 class LayerSelectionState(TypedDict, total=False):
@@ -129,7 +156,7 @@ class PydeckMixin:
         pydeck_obj: Deck | None = None,
         use_container_width: bool = False,
         *,
-        selection_mode: Literal["single", "multi"] = "single",
+        selection_mode: Literal["single-object", "multi-object"] = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
     ) -> PydeckState: ...
@@ -142,7 +169,7 @@ class PydeckMixin:
         *,
         width: int | None = None,
         height: int | None = None,
-        selection_mode: Literal["single", "multi", "ignore"] = "ignore",
+        selection_mode: Literal["single-object", "multi-object", "ignore"] = "ignore",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
     ) -> DeltaGenerator | PydeckState:
@@ -289,7 +316,9 @@ class PydeckMixin:
             # Selections are activated, treat Pydeck as a widget:
             # Ensure we are defaulting to single selection mode if the user
             # hasn't defined it, but has activating selections.
-            selection_mode = "single" if selection_mode == "ignore" else selection_mode
+            selection_mode = (
+                "single-object" if selection_mode == "ignore" else selection_mode
+            )
 
             # Run some checks that are only relevant when selections are activated
             is_callback = callable(on_select)
@@ -315,9 +344,7 @@ class PydeckMixin:
                 form_id=pydeck_proto.form_id,
             )
 
-            pydeck_proto.selection_mode = cast(
-                PydeckProto.SelectionMode.ValueType, selection_mode.upper()
-            )
+            pydeck_proto.selection_mode = parse_selection_mode(selection_mode)
 
             serde = PydeckSelectionSerde()
 

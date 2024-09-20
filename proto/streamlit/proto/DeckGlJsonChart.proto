@@ -49,7 +49,7 @@ message DeckGlJsonChart {
   // Available selection modes:
   enum SelectionMode {
     IGNORE = 0; // Ignore selection events.
-    SINGLE = 1; // Only one object can be selected at a time.
-    MULTI = 2; // Multiple objects can be selected at a time.
+    SINGLE_OBJECT = 1; // Only one object can be selected at a time.
+    MULTI_OBJECT = 2; // Multiple objects can be selected at a time.
   }
 }

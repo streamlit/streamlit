@@ -38,7 +38,7 @@ PIXEL_THRESHOLD = 1.0
 EMPTY_SELECTION = "{'selection': {'indices': {}, 'objects': {}}}"
 
 
-def _set_selection_mode(app: Page, mode: Literal["single", "multi"]):
+def _set_selection_mode(app: Page, mode: Literal["single-object", "multi-object"]):
     app.get_by_test_id("stSelectbox").nth(0).locator("input").click()
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
     selection_dropdown.locator("li").nth(1 if mode == "multi" else 0).click()
@@ -66,7 +66,7 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
     properly and return the expected values in both session_state and as a
     return of st.pydeck.
     """
-    _set_selection_mode(app, "multi")
+    _set_selection_mode(app, "multi-object")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app, nth=0)
@@ -140,7 +140,7 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
     Test single selection and deselection all function properly and return the
     expected values in both session_state and as a return of st.pydeck.
     """
-    _set_selection_mode(app, "single")
+    _set_selection_mode(app, "single-object")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app, nth=0)
@@ -214,7 +214,7 @@ def test_pydeck_chart_multiselect_has_consistent_visuals(
     Test that no selection, single selection, multi selection, and deselection
     all look visually correct.
     """
-    _set_selection_mode(app, "multi")
+    _set_selection_mode(app, "multi-object")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app, nth=0)
@@ -268,7 +268,7 @@ def test_pydeck_chart_selection_state_remains_after_unmounting(
     Test that no selection, single selection, multi selection, and deselection
     all look visually correct.
     """
-    _set_selection_mode(app, "multi")
+    _set_selection_mode(app, "multi-object")
     wait_for_chart(app)
 
     click_handling_div = get_click_handling_div(app, nth=0)
