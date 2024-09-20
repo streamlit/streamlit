@@ -102,10 +102,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const handleClick = useCallback(
     (info: PickingInfo) => {
-      if (disabled) {
-        return
-      }
-
       const { index, object } = info
 
       const layerId = `${info.layer?.id || null}`
@@ -189,7 +185,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         value: { selection: getSelection() },
       })
     },
-    [disabled, selectionMode, selection, setSelection]
+    [selectionMode, selection, setSelection]
   )
 
   const handleClearSelectionClick = useCallback(() => {
@@ -198,6 +194,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       fromUi: true,
     })
   }, [setSelection])
+
+  const hasSelection = typeof selectionMode === "number"
 
   return (
     <StyledDeckGlChart
@@ -213,11 +211,13 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         onCollapse={collapse}
         target={StyledDeckGlChart}
       >
-        <ToolbarAction
-          label="Clear selection"
-          onClick={handleClearSelectionClick}
-          icon={Close}
-        />
+        {hasSelection && (
+          <ToolbarAction
+            label="Clear selection"
+            onClick={handleClearSelectionClick}
+            icon={Close}
+          />
+        )}
       </Toolbar>
       <DeckGL
         viewState={viewState}
@@ -229,7 +229,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         // @ts-expect-error There is a type mismatch due to our versions of the libraries
         ContextProvider={MapContext.Provider}
         controller
-        onClick={typeof selectionMode === "number" ? handleClick : undefined}
+        onClick={hasSelection && !disabled ? handleClick : undefined}
       >
         <StaticMap
           height={height}

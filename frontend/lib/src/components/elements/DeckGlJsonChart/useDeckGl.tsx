@@ -127,7 +127,6 @@ function getStateFromWidgetMgr(
     }
   }
 
-  // return widgetMgr.getElementState(element.id, "selection")
   const stringValue = widgetMgr.getStringValue(element)
   const currState: DeckGlElementState | null = stringValue
     ? JSON5.parse(stringValue)
@@ -153,7 +152,6 @@ function updateWidgetMgrState(
     return
   }
 
-  // widgetMgr.setElementState(element.id, "selection", vws)
   widgetMgr.setStringValue(
     element,
     JSON.stringify(vws.value),
