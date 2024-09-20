@@ -138,11 +138,11 @@ class PydeckMixin:
     def pydeck_chart(
         self,
         pydeck_obj: Deck | None = None,
-        use_container_width: bool = False,
         *,
+        use_container_width: bool = False,
         selection_mode: Literal[
-            "ignore"
-        ],  # No default value here to make it work with mypy
+            "single-object"
+        ],  # Selection mode will only be activated by on_select param, this is a default value here to make it work with mypy
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         key: Key | None = None,
     ) -> DeltaGenerator: ...
@@ -151,9 +151,9 @@ class PydeckMixin:
     def pydeck_chart(
         self,
         pydeck_obj: Deck | None = None,
-        use_container_width: bool = False,
         *,
-        selection_mode: Literal["single-object", "multi-object"] = "single-object",
+        use_container_width: bool = False,
+        selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
     ) -> PydeckState: ...
@@ -162,11 +162,11 @@ class PydeckMixin:
     def pydeck_chart(
         self,
         pydeck_obj: Deck | None = None,
-        use_container_width: bool = False,
         *,
+        use_container_width: bool = False,
         width: int | None = None,
         height: int | None = None,
-        selection_mode: Literal["single-object", "multi-object", "ignore"] = "ignore",
+        selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
     ) -> DeltaGenerator | PydeckState:
@@ -311,11 +311,7 @@ class PydeckMixin:
 
         if is_selection_activated:
             # Selections are activated, treat Pydeck as a widget:
-            # Ensure we are defaulting to single selection mode if the user
-            # hasn't defined it, but has activating selections.
-            selection_mode = (
-                "single-object" if selection_mode == "ignore" else selection_mode
-            )
+            pydeck_proto.selection_mode = parse_selection_mode(selection_mode)
 
             # Run some checks that are only relevant when selections are activated
             is_callback = callable(on_select)
@@ -340,8 +336,6 @@ class PydeckMixin:
                 spec=spec,
                 form_id=pydeck_proto.form_id,
             )
-
-            pydeck_proto.selection_mode = parse_selection_mode(selection_mode)
 
             serde = PydeckSelectionSerde()
 
