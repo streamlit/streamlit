@@ -45,7 +45,9 @@ function useDataLoader(
   numRows: number,
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
-  const columnHeaders = data.columns.length
+  // Not sure why, but data.columns refers to the header rows, and
+  // not the data columns.
+  const numHeaderRows = data.columns.length
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       if (col > columns.length - 1) {
@@ -88,7 +90,7 @@ function useDataLoader(
       try {
         // Arrow has the header in first row
         const arrowCell = data.getCell(
-          originalRow + columnHeaders,
+          originalRow + numHeaderRows,
           originalCol
         )
         return getCellFromArrow(column, arrowCell, data.cssStyles)
@@ -99,7 +101,7 @@ function useDataLoader(
         )
       }
     },
-    [columns, numRows, data, editingState]
+    [columns, numRows, data, editingState, numHeaderRows]
   )
 
   return {
