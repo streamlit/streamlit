@@ -37,6 +37,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -59,6 +60,7 @@ describe("useTableSizer hook", () => {
           useContainerWidth: true,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -80,6 +82,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -99,6 +102,7 @@ describe("useTableSizer hook", () => {
           height: TABLE_HEIGHT,
         }),
         NUMBER_OF_ROWS,
+        false,
         700
       )
     )
@@ -122,6 +126,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -140,6 +145,7 @@ describe("useTableSizer hook", () => {
           useContainerWidth: false,
         }),
         2, // Unicode table has 2 rows
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -163,6 +169,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         100, // VERY_TALL table has 100 rows
+        false,
         CONTAINER_WIDTH,
         CONTAINER_HEIGHT,
         true
@@ -188,6 +195,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         NUMBER_OF_ROWS,
+        false,
         CONTAINER_WIDTH
       )
     )
