@@ -41,7 +41,7 @@ EMPTY_SELECTION = "{'selection': {'indices': {}, 'objects': {}}}"
 def _set_selection_mode(app: Page, mode: Literal["single-object", "multi-object"]):
     app.get_by_test_id("stSelectbox").nth(0).locator("input").click()
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1 if mode == "multi" else 0).click()
+    selection_dropdown.locator("li").nth(1 if mode == "multi-object" else 0).click()
 
     wait_for_app_run(app, wait_delay=5000)
 
