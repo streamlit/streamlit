@@ -43,6 +43,7 @@ const mockInitialViewState = {
 }
 
 jest.mock("@streamlit/lib/src/theme", () => ({
+  ...jest.requireActual("@streamlit/lib/src/theme"),
   hasLightBackgroundColor: jest.fn(() => false),
 }))
 
