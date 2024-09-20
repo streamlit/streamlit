@@ -114,6 +114,29 @@ describe("useTableSizer hook", () => {
     )
   })
 
+  it("correctly includes group row in height calculation", () => {
+    const NUMBER_OF_ROWS = 10
+    const TABLE_HEIGHT = 100
+    const { result } = renderHook(() =>
+      useTableSizer(
+        ArrowProto.create({
+          data: TEN_BY_TEN,
+          useContainerWidth: false,
+          height: TABLE_HEIGHT,
+        }),
+        NUMBER_OF_ROWS,
+        true,
+        700
+      )
+    )
+
+    expect(result.current.resizableSize.height).toEqual(TABLE_HEIGHT)
+    // +1 rows for header row + 1 for group row
+    expect(result.current.maxHeight).toEqual(
+      calculateMaxHeight(NUMBER_OF_ROWS + 2)
+    )
+  })
+
   it("applies useContainerWidth configuration", () => {
     // The width of the surrounding containers
     const CONTAINER_WIDTH = 700
