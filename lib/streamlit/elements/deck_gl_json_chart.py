@@ -144,12 +144,16 @@ class PydeckSelectionSerde:
         }
 
         selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast(PydeckState, AttributeDictionary(json.loads(ui_value)))
+            empty_selection_state if ui_value is None else json.loads(ui_value)
         )
 
-        return selection_state
+        # We have seen some situations where the ui_value was just an empty
+        # dict, so we want to ensure that it always returns the empty state in
+        # case this happens.
+        if "selection" not in selection_state:
+            selection_state = empty_selection_state
+
+        return cast(PydeckState, AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: PydeckState) -> str:
         return json.dumps(selection_state, default=str)
