@@ -39,6 +39,8 @@ class PydeckMixin:
         self,
         pydeck_obj: Deck | None = None,
         use_container_width: bool = False,
+        width: int | None = None,
+        height: int | None = None,
     ) -> DeltaGenerator:
         """Draw a chart using the PyDeck library.
 
@@ -68,7 +70,7 @@ class PydeckMixin:
 
         Parameters
         ----------
-        pydeck_obj: pydeck.Deck or None
+        pydeck_obj : pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
         use_container_width : bool
             Whether to override the figure's native width with the width of
@@ -77,6 +79,19 @@ class PydeckMixin:
             according to the plotting library, up to the width of the parent
             container. If ``use_container_width`` is ``True``, Streamlit sets
             the width of the figure to match the width of the parent container.
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
+
+            To use ``width``, you must set ``use_container_width=False``.
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
 
         Example
         -------
@@ -134,7 +149,9 @@ class PydeckMixin:
 
         """
         pydeck_proto = PydeckProto()
-        marshall(pydeck_proto, pydeck_obj, use_container_width)
+        marshall(
+            pydeck_proto, pydeck_obj, use_container_width, width=width, height=height
+        )
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
     @property
@@ -165,6 +182,8 @@ def marshall(
     pydeck_proto: PydeckProto,
     pydeck_obj: Deck | None,
     use_container_width: bool,
+    width: int | None = None,
+    height: int | None = None,
 ) -> None:
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
@@ -173,6 +192,11 @@ def marshall(
 
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
+
+    if width:
+        pydeck_proto.width = width
+    if height:
+        pydeck_proto.height = height
 
     pydeck_proto.id = ""
 

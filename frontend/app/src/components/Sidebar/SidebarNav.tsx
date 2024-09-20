@@ -20,6 +20,7 @@ import React, {
   ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from "react"
 
@@ -28,7 +29,11 @@ import groupBy from "lodash/groupBy"
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
 
-import { IAppPage, StreamlitEndpoints } from "@streamlit/lib"
+import {
+  IAppPage,
+  localStorageAvailable,
+  StreamlitEndpoints,
+} from "@streamlit/lib"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
 import NavSection from "./NavSection"
@@ -47,6 +52,7 @@ export interface Props {
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
+  expandSidebarNav: boolean
   onPageChange: (pageName: string) => void
 }
 
@@ -132,6 +138,7 @@ const SidebarNav = ({
   endpoints,
   appPages,
   collapseSidebar,
+  expandSidebarNav,
   currentPageScriptHash,
   hasSidebarElements,
   navSections,
@@ -140,8 +147,26 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const { pageLinkBaseUrl } = useContext(AppContext)
 
+  useEffect(() => {
+    const cachedSidebarNavExpanded =
+      localStorageAvailable() &&
+      window.localStorage.getItem("sidebarNavState") === "expanded"
+
+    if (!expanded && (expandSidebarNav || cachedSidebarNavExpanded)) {
+      setExpanded(true)
+    }
+  }, [expanded, expandSidebarNav])
+
   const handleViewButtonClick = useCallback(() => {
-    setExpanded(!expanded)
+    const nextState = !expanded
+    if (localStorageAvailable()) {
+      if (nextState) {
+        localStorage.setItem("sidebarNavState", "expanded")
+      } else {
+        localStorage.removeItem("sidebarNavState")
+      }
+    }
+    setExpanded(nextState)
   }, [expanded])
 
   const generateNavLink = useCallback(
@@ -177,7 +202,7 @@ const SidebarNav = ({
   let contents: ReactNode[] = []
   const totalPages = appPages.length
   const shouldShowViewButton =
-    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD
+    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD && !expandSidebarNav
   const needsCollapse = shouldShowViewButton && !expanded
   if (navSections.length > 0) {
     // For MPAv2 with headers: renders a NavSection for each header with its respective pages

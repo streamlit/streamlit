@@ -250,7 +250,7 @@ describe("TextInput widget", () => {
   it("does update widget value on text changes when inside of a form", async () => {
     const props = getProps({ formId: "formId" })
     const setStringValueSpy = jest.spyOn(props.widgetMgr, "setStringValue")
-    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
 
     render(<TextInput {...props} />)
 
@@ -297,7 +297,7 @@ describe("TextInput widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
@@ -339,7 +339,7 @@ describe("TextInput widget", () => {
   it("shows Input Instructions if in form that allows submit on enter", async () => {
     const user = userEvent.setup()
     const props = getProps({ formId: "form" })
-    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
 
     render(<TextInput {...props} />)
 
@@ -357,7 +357,7 @@ describe("TextInput widget", () => {
     const user = userEvent.setup()
     const props = getProps({ formId: "form" })
     jest
-      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .spyOn(props.widgetMgr, "allowFormEnterToSubmit")
       .mockReturnValue(false)
 
     render(<TextInput {...props} />)

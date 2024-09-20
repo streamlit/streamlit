@@ -80,6 +80,7 @@ message Block {
     string form_id = 1;
     bool clear_on_submit = 2;
     bool border = 3;
+    bool enter_to_submit = 4;
   }
 
   message TabContainer {

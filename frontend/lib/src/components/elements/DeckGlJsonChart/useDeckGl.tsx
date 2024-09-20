@@ -33,13 +33,17 @@ import isEqual from "lodash/isEqual"
 import { ViewStateChangeParameters } from "@deck.gl/core/typed/controllers/controller"
 import { TooltipContent } from "@deck.gl/core/typed/lib/tooltip"
 
+import { useStWidthHeight } from "@streamlit/lib/src/hooks/useStWidthHeight"
+
 import type { DeckObject, PropsWithHeight, StreamlitDeckProps } from "./types"
 
 export type UseDeckGlShape = {
   createTooltip: (info: PickingInfo | null) => TooltipContent
   deck: DeckObject
+  height: number | string
   onViewStateChange: (params: ViewStateChangeParameters) => void
   viewState: Record<string, unknown>
+  width: number | string
 }
 
 export type UseDeckGlProps = Omit<PropsWithHeight, "theme" | "mapboxToken"> & {
@@ -97,8 +101,15 @@ const interpolate = (info: PickingInfo, body: string): string => {
 }
 
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
-  const { element, height, isLightTheme, width } = props
+  const {
+    element,
+    height: propsHeight,
+    isFullScreen: propsIsFullScreen,
+    isLightTheme,
+    width: propsWidth,
+  } = props
   const { tooltip, useContainerWidth: shouldUseContainerWidth } = element
+  const isFullScreen = propsIsFullScreen ?? false
 
   const [viewState, setViewState] = useState<Record<string, unknown>>({
     bearing: 0,
@@ -106,11 +117,19 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     zoom: 11,
   })
 
+  const { height, width } = useStWidthHeight({
+    element,
+    isFullScreen,
+    shouldUseContainerWidth,
+    container: { height: propsHeight, width: propsWidth },
+    heightFallback:
+      (viewState.initialViewState as { height: number } | undefined)?.height ||
+      DEFAULT_DECK_GL_HEIGHT,
+  })
+
   const [initialViewState, setInitialViewState] = useState<
     Record<string, unknown>
   >({})
-
-  const isFullScreen = props.isFullScreen ?? false
 
   const parsedPydeckJson = useMemo(() => {
     return Object.freeze(JSON5.parse<StreamlitDeckProps>(element.json))
@@ -206,7 +225,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   return {
     createTooltip,
     deck,
+    height,
     onViewStateChange,
     viewState,
+    width,
   }
 }

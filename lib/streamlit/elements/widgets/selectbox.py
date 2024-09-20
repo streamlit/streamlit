@@ -287,14 +287,12 @@ class SelectboxMixin:
         element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
-            key=key,
             help=help,
             placeholder=placeholder,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:

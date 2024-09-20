@@ -33,6 +33,7 @@ describe("Form", () => {
       hasSubmitButton: false,
       scriptRunState: ScriptRunState.RUNNING,
       clearOnSubmit: false,
+      enterToSubmit: true,
       widgetMgr: new WidgetStateManager({
         sendRerunBackMsg: jest.fn(),
         formsDataChanged: jest.fn(),

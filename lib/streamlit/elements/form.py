@@ -61,7 +61,12 @@ def _build_duplicate_form_message(user_key: str | None = None) -> str:
 class FormMixin:
     @gather_metrics("form")
     def form(
-        self, key: str, clear_on_submit: bool = False, *, border: bool = True
+        self,
+        key: str,
+        clear_on_submit: bool = False,
+        *,
+        enter_to_submit: bool = True,
+        border: bool = True,
     ) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
@@ -93,6 +98,9 @@ class FormMixin:
             values after the user presses the Submit button. Defaults to False.
             (Note that Custom Components are unaffected by this flag, and
             will not be reset to their defaults on form submission.)
+        enter_to_submit : bool
+            Whether to submit the form when a user presses Enter while
+            interacting with a widget inside the form. Defaults to True.
         border : bool
             Whether to show a border around the form. Defaults to True.
 
@@ -159,6 +167,7 @@ class FormMixin:
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
         block_proto.form.clear_on_submit = clear_on_submit
+        block_proto.form.enter_to_submit = enter_to_submit
         block_proto.form.border = border
         block_dg = self.dg._block(block_proto)
 

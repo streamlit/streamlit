@@ -84,6 +84,8 @@ class MapMixin:
         size: None | str | float = None,
         zoom: int | None = None,
         use_container_width: bool = True,
+        width: int | None = None,
+        height: int | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -162,6 +164,21 @@ class MapMixin:
             Streamlit sets the width of the chart to fit its contents according
             to the plotting library, up to the width of the parent container.
 
+        width : int or None
+            Desired width of the chart expressed in pixels. If ``width`` is
+            ``None`` (default), Streamlit sets the width of the chart to fit
+            its contents according to the plotting library, up to the width of
+            the parent container. If ``width`` is greater than the width of the
+            parent container, Streamlit sets the chart width to match the width
+            of the parent container.
+
+            To use ``width``, you must set ``use_container_width=False``.
+
+        height : int or None
+            Desired height of the chart expressed in pixels. If ``height`` is
+            ``None`` (default), Streamlit sets the height of the chart to fit
+            its contents according to the plotting library.
+
         Examples
         --------
         >>> import streamlit as st
@@ -223,7 +240,9 @@ class MapMixin:
         deck_gl_json = to_deckgl_json(
             data, latitude, longitude, size, color, map_style, zoom
         )
-        marshall(map_proto, deck_gl_json, use_container_width)
+        marshall(
+            map_proto, deck_gl_json, use_container_width, width=width, height=height
+        )
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
@@ -471,8 +490,15 @@ def marshall(
     pydeck_proto: DeckGlJsonChartProto,
     pydeck_json: str,
     use_container_width: bool,
+    height: int | None = None,
+    width: int | None = None,
 ) -> None:
     pydeck_proto.json = pydeck_json
     pydeck_proto.use_container_width = use_container_width
+
+    if width:
+        pydeck_proto.width = width
+    if height:
+        pydeck_proto.height = height
 
     pydeck_proto.id = ""
