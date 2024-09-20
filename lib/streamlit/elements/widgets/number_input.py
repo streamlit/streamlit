@@ -507,7 +507,6 @@ class NumberInputMixin:
 
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
-            "number_input",
             number_input_proto,
             on_change_handler=on_change,
             args=args,
@@ -515,6 +514,7 @@ class NumberInputMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_value"
         )
 
         if widget_state.value_changed:

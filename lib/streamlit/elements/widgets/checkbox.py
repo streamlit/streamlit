@@ -317,7 +317,6 @@ class CheckboxMixin:
         serde = CheckboxSerde(value)
 
         checkbox_state = register_widget(
-            "checkbox",
             checkbox_proto,
             on_change_handler=on_change,
             args=args,
@@ -325,6 +324,7 @@ class CheckboxMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="bool_value",
         )
 
         if checkbox_state.value_changed:

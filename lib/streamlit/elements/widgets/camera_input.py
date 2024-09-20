@@ -226,7 +226,6 @@ class CameraInputMixin:
         serde = CameraInputSerde()
 
         camera_input_state = register_widget(
-            "camera_input",
             camera_input_proto,
             on_change_handler=on_change,
             args=args,
@@ -234,6 +233,7 @@ class CameraInputMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="file_uploader_state_value",
         )
 
         self.dg._enqueue("camera_input", camera_input_proto)

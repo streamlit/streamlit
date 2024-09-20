@@ -328,7 +328,6 @@ class SelectboxMixin:
         serde = SelectboxSerde(opt, index)
 
         widget_state = register_widget(
-            "selectbox",
             selectbox_proto,
             on_change_handler=on_change,
             args=args,
@@ -336,6 +335,7 @@ class SelectboxMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_value",
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

@@ -370,7 +370,6 @@ class RadioMixin:
         serde = RadioSerde(opt, index)
 
         widget_state = register_widget(
-            "radio",
             radio_proto,
             on_change_handler=on_change,
             args=args,
@@ -378,6 +377,7 @@ class RadioMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_value",
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

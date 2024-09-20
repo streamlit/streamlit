@@ -399,7 +399,6 @@ class SelectSliderMixin:
         serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
         widget_state = register_widget(
-            "slider",
             slider_proto,
             on_change_handler=on_change,
             args=args,
@@ -407,6 +406,7 @@ class SelectSliderMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_array_value",
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(

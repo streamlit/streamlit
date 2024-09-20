@@ -226,7 +226,6 @@ class AudioInputMixin:
         serde = AudioInputSerde()
 
         audio_input_state = register_widget(
-            "audio_input",
             audio_input_proto,
             on_change_handler=on_change,
             args=args,
@@ -234,6 +233,7 @@ class AudioInputMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="file_uploader_state_value",
         )
 
         self.dg._enqueue("audio_input", audio_input_proto)

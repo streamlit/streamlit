@@ -581,12 +581,12 @@ class ArrowMixin:
 
             serde = DataframeSelectionSerde()
             widget_state = register_widget(
-                "dataframe",
                 proto,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
             self.dg._enqueue("arrow_data_frame", proto)
             return cast(DataframeState, widget_state.value)

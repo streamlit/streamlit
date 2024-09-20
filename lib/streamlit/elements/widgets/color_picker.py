@@ -237,7 +237,6 @@ class ColorPickerMixin:
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
-            "color_picker",
             color_picker_proto,
             on_change_handler=on_change,
             args=args,
@@ -245,6 +244,7 @@ class ColorPickerMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
