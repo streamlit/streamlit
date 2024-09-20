@@ -195,7 +195,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     })
   }, [setSelection])
 
-  const hasSelection = typeof selectionMode === "number"
+  const hasSelection =
+    typeof selectionMode === "number" &&
+    selectionMode !== DeckGlJsonChartProto.SelectionMode.IGNORE
 
   return (
     <StyledDeckGlChart
