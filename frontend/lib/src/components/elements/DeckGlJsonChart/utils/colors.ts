@@ -157,9 +157,7 @@ const getOriginalColorWithAppliedOpacity = ({
     // the differentiation between selected and unselected objects is more
     // pronounced
     calculatedOpacity = Math.max(
-      typeof originalColor[3] === "number"
-        ? originalColor[3]
-        : Number.MIN_SAFE_INTEGER,
+      typeof originalColor[3] === "number" ? originalColor[3] : opacity,
       opacity
     )
   } else {
@@ -167,9 +165,7 @@ const getOriginalColorWithAppliedOpacity = ({
     // unselected opacity In this case, we want to use the lower opacity so that
     // we aren't raising the visibility of objects unnecessarily
     calculatedOpacity = Math.min(
-      typeof originalColor[3] === "number"
-        ? originalColor[3]
-        : Number.MAX_SAFE_INTEGER,
+      typeof originalColor[3] === "number" ? originalColor[3] : opacity,
       opacity
     )
   }
