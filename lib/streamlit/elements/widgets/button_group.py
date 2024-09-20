@@ -405,6 +405,130 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> list[V] | V | None:
+        r"""Display a pills widget.
+
+        A pills widget is similar to a single- or multiselect widget where the passed
+        ``options`` are visually shown as pills-button.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this widget is for.
+            The label can optionally contain GitHub-flavored Markdown of the
+            following types: Bold, Italics, Strikethroughs, Inline Code, and
+            Links.
+
+            Unsupported Markdown elements are unwrapped so only their children
+            (text contents) render. Display unsupported elements as literal
+            characters by backslash-escaping them. E.g.,
+            ``"1\. Not an ordered list"``.
+
+            See the ``body`` parameter of |st.markdown|_ for additional,
+            supported Markdown directives.
+
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
+
+            .. |st.markdown| replace:: ``st.markdown``
+            .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        selection_mode: "single" or "multiple"
+            The selection mode for the widget. If "single", only one option can be
+            selected. If "multiple", multiple options can be selected.
+
+        options: Iterable of V
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
+
+        default: Iterable of V, V, or None
+            List of default value or a single value. If the ``selection_mode``
+            is "single", only a single value is allowed to be passed.
+
+        format_func : function
+            Function to modify the display of the options. It receives
+            the raw option as an argument and should output the label to be
+            shown for that option. This has no impact on the return value of
+            the command.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+
+        help : str
+            An optional tooltip that gets displayed next to the multiselect.
+
+        on_change : callable
+            An optional callback invoked when this feedback widget's value
+            changes.
+
+        args : tuple
+            An optional tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        disabled : bool
+            An optional boolean, which disables the widget if set
+            to True. The default is False. This argument can only be supplied
+            by keyword.
+
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
+            is still empty space for it above the widget (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible".
+
+        Returns
+        -------
+        list of V or V or None
+            A list of selected options or an empty list if the ``selection_mode`` is
+            "multiple".
+            If the "selection_mode" is "single", the return value is the selected option
+            or None.
+
+        Examples
+        --------
+        Display a pills widget with multi select, and show the option:
+
+        >>> import streamlit as st
+        >>>
+        >>> options = ["one", "two", "three", "four", "five"]
+        >>> selection = st.pills(label="Numbered pills",
+                                options, selection_mode="multiple")
+        >>> st.markdown(f"You selected option: '{selection}'.")
+
+        .. output ::
+            TBD
+
+
+        Display a pills widget that renders icons-only:
+
+        >>> import streamlit as st
+        >>>
+        >>> option_to_icon_map = {
+        >>>     0: ":material/add:",
+        >>>     1: ":material/zoom_in:",
+        >>>     2: ":material/zoom_out:",
+        >>>     3: ":material/zoom_out_map:",
+        >>> }
+        >>> selection = st.pills(
+        >>>     "Icon-only pills",
+        >>>     options=option_to_icon_map.keys(),
+        >>>     format_func=lambda option: option_to_icon_map[option],
+        >>>     selection_mode="single",
+        >>> )
+        >>> st.write(f"Single selection: {selection}")
+
+        .. output ::
+            TBD
+
+        """
+
         maybe_raise_label_warnings(label, label_visibility)
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
