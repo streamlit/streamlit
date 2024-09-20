@@ -50,7 +50,7 @@ selection = st.pills(
     "Select some options",
     pills_options,
     key="pills",
-    selection_mode="multi",
+    selection_mode="multiple",
     default=default,
     help="This is for choosing options",
 )

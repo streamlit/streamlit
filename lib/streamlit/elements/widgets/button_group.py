@@ -86,7 +86,7 @@ _STAR_ICON: Final = ":material/star:"
 # in base64 format and send it over the wire as an image.
 _SELECTED_STAR_ICON: Final = ":material/star_filled:"
 
-SelectionMode: TypeAlias = Literal["single", "multi"]
+SelectionMode: TypeAlias = Literal["single", "multiple"]
 
 
 class SingleSelectSerde(Generic[T]):
@@ -137,7 +137,7 @@ class SingleOrMultiSelectSerde(Generic[T]):
         self,
         options: Sequence[T],
         default_values: list[int],
-        type: Literal["single", "multi"],
+        type: Literal["single", "multiple"],
     ):
         self.options = options
         self.default_values = default_values
@@ -225,11 +225,11 @@ def _build_proto(
     return proto
 
 
-def _maybe_raise_selection_mode_warning(selection_mode: str):
+def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode):
     """Check if the selection_mode value is valid or raise exception otherwise."""
-    if selection_mode not in ["single", "multi"]:
+    if selection_mode not in ["single", "multiple"]:
         raise StreamlitAPIException(
-            "The selection_mode argument must be one of ['single', 'multi']. "
+            "The selection_mode argument must be one of ['single', 'multiple']. "
             f"The argument passed was '{selection_mode}'."
         )
 
@@ -394,7 +394,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["single", "multi"] = "single",
+        selection_mode: Literal["single", "multiple"] = "single",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -455,7 +455,7 @@ class ButtonGroupMixin:
             help=help,
         )
 
-        if selection_mode == "multi":
+        if selection_mode == "multiple":
             return res.value
 
         return res.value
@@ -467,7 +467,7 @@ class ButtonGroupMixin:
         *,
         key: Key | None = None,
         default: Sequence[V] | V | None = None,
-        selection_mode: Literal["single", "multi"] = "single",
+        selection_mode: Literal["single", "multiple"] = "single",
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
         style: Literal["segment", "pills"] = "segment",
@@ -521,7 +521,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
         )
 
-        if selection_mode == "multi":
+        if selection_mode == "multiple":
             return res.value
 
         return res.value
