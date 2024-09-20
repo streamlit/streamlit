@@ -40,16 +40,15 @@ message DeckGlJsonChart {
   // Height in pixels
   uint32 height = 8;
 
-  // If set, treat this instance as a Widget
-  SelectionMode selection_mode = 9;
+  // If non-empty, treat this instance as a Widget
+  repeated SelectionMode selection_mode = 9;
 
   // The form ID of the widget, this is required if the chart has selection events
   string form_id = 10;
 
   // Available selection modes:
   enum SelectionMode {
-    IGNORE = 0; // Ignore selection events.
-    SINGLE_OBJECT = 1; // Only one object can be selected at a time.
-    MULTI_OBJECT = 2; // Multiple objects can be selected at a time.
+    SINGLE_OBJECT = 0; // Only one object can be selected at a time.
+    MULTI_OBJECT = 1; // Multiple objects can be selected at a time.
   }
 }

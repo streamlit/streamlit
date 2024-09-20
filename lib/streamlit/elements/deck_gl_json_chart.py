@@ -21,6 +21,7 @@ from typing import (
     Any,
     Dict,
     Final,
+    Iterable,
     Literal,
     Mapping,
     TypedDict,
@@ -63,19 +64,40 @@ _SELECTION_MODES: Final[set[SelectionMode]] = {
 
 
 def parse_selection_mode(
-    selection_mode: SelectionMode,
-) -> PydeckProto.SelectionMode.ValueType:
+    selection_mode: SelectionMode | Iterable[SelectionMode],
+) -> set[PydeckProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
+    if isinstance(selection_mode, str):
+        # Only a single selection mode was passed
+        selection_mode_set = {selection_mode}
+    else:
+        # Multiple selection modes were passed.
+        # This is not yet supported as a functionality, but the infra is here to
+        # support it in the future!
+        # @see DeckGlJsonChart.tsx
+        raise StreamlitAPIException(
+            f"Invalid selection mode: {selection_mode}. ",
+            "Selection mode must be a single value, but got a set instead.",
+        )
 
-    if selection_mode == "single-object":
-        return PydeckProto.SelectionMode.SINGLE_OBJECT
-    elif selection_mode == "multi-object":
-        return PydeckProto.SelectionMode.MULTI_OBJECT
+    if not selection_mode_set.issubset(_SELECTION_MODES):
+        raise StreamlitAPIException(
+            f"Invalid selection mode: {selection_mode}. "
+            f"Valid options are: {_SELECTION_MODES}"
+        )
 
-    raise StreamlitAPIException(
-        f"Invalid selection mode: {selection_mode}. "
-        f"Valid options are: {_SELECTION_MODES}"
-    )
+    if selection_mode_set.issuperset({"single-object", "multi-object"}):
+        raise StreamlitAPIException(
+            "Only one of `single-object` or `multi-object` can be selected as selection mode."
+        )
+
+    parsed_selection_modes = []
+    for selection_mode in selection_mode_set:
+        if selection_mode == "single-object":
+            parsed_selection_modes.append(PydeckProto.SelectionMode.SINGLE_OBJECT)
+        elif selection_mode == "multi-object":
+            parsed_selection_modes.append(PydeckProto.SelectionMode.MULTI_OBJECT)
+    return set(parsed_selection_modes)
 
 
 class LayerSelectionState(TypedDict, total=False):
@@ -311,7 +333,7 @@ class PydeckMixin:
 
         if is_selection_activated:
             # Selections are activated, treat Pydeck as a widget:
-            pydeck_proto.selection_mode = parse_selection_mode(selection_mode)
+            pydeck_proto.selection_mode.extend(parse_selection_mode(selection_mode))
 
             # Run some checks that are only relevant when selections are activated
             is_callback = callable(on_select)

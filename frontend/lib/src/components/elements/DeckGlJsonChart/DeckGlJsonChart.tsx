@@ -69,7 +69,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     widgetMgr,
     width: propsWidth,
   } = props
-  const { selectionMode, mapboxToken: elementMapboxToken } = element
+  const { selectionMode: allSelectionModes, mapboxToken: elementMapboxToken } =
+    element
   const theme: EmotionTheme = useTheme()
   const {
     createTooltip,
@@ -91,6 +92,16 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     width: propsWidth,
   })
 
+  /**
+   * Our proto for selectionMode is an array in order to support future-looking
+   * functionality. Currently, we only support 1 single selection mode, so we'll
+   * only use the first one (if it exists) to determine our selection mode.
+   *
+   * @see deck_gl_json_chart.py #parse_selection_mode
+   */
+  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
+    allSelectionModes[0]
+  const hasSelection = selectionMode !== undefined
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
@@ -115,8 +126,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         }
 
         switch (selectionMode) {
-          case DeckGlJsonChartProto.SelectionMode.IGNORE:
-            return EMPTY_SELECTION
           case DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT: {
             if (currState.selection.indices[layerId]?.[0] === index) {
               // Unselect the index
@@ -194,10 +203,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       fromUi: true,
     })
   }, [setSelection])
-
-  const hasSelection =
-    typeof selectionMode === "number" &&
-    selectionMode !== DeckGlJsonChartProto.SelectionMode.IGNORE
 
   return (
     <StyledDeckGlChart
