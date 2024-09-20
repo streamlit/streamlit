@@ -36,13 +36,13 @@ if TYPE_CHECKING:
 
 def register_widget(
     element_proto: WidgetProto,
+    *,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
-    *,
     value_type: ValueFieldName,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.

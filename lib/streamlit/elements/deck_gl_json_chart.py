@@ -399,12 +399,12 @@ class PydeckMixin:
             serde = PydeckSelectionSerde()
 
             widget_state = register_widget(
-                "deck_gl_json_chart",
                 pydeck_proto,
                 ctx=ctx,
                 deserializer=serde.deserialize,
                 on_change_handler=on_select if callable(on_select) else None,
                 serializer=serde.serialize,
+                value_type="string_value",
             )
 
             self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
