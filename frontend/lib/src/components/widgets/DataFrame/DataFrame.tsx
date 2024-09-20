@@ -186,10 +186,10 @@ function DataFrame({
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(
-    0,
-    dataDimensions.rows - data.columns.length
-  )
+  // Not sure why, but data.columns refers to the header rows, and
+  // not the data columns.
+  const numHeaderRows = data.columns.length
+  const originalNumRows = Math.max(0, dataDimensions.rows - numHeaderRows)
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
@@ -525,7 +525,7 @@ function DataFrame({
   const { columns: glideColumns, onColumnResize } =
     useColumnSizer(transformedColumns)
 
-  const usesGroupRow = data.columns.length > 1
+  const usesGroupRow = numHeaderRows > 1
   const {
     minHeight,
     maxHeight,
