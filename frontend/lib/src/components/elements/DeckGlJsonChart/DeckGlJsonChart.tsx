@@ -23,12 +23,15 @@ import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 import { LayersList, PickingInfo } from "@deck.gl/core/typed"
 import { useTheme } from "@emotion/react"
+import { Close } from "@emotion-icons/material-outlined"
 
 import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-import Toolbar from "@streamlit/lib/src/components/shared/Toolbar"
+import Toolbar, {
+  ToolbarAction,
+} from "@streamlit/lib/src/components/shared/Toolbar"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { assertNever } from "@streamlit/lib/src/util/assertNever"
@@ -193,6 +196,13 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     [disabled, selectionMode, selection, setSelection]
   )
 
+  const handleClearSelectionClick = useCallback(() => {
+    setSelection({
+      value: { selection: { indices: {}, objects: {} } },
+      fromUi: true,
+    })
+  }, [setSelection])
+
   return (
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
@@ -206,7 +216,13 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         onExpand={expand}
         onCollapse={collapse}
         target={StyledDeckGlChart}
-      />
+      >
+        <ToolbarAction
+          label="Clear selection"
+          onClick={handleClearSelectionClick}
+          icon={Close}
+        />
+      </Toolbar>
       <DeckGL
         viewState={viewState}
         onViewStateChange={onViewStateChange}
