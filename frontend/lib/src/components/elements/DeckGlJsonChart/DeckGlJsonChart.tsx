@@ -48,6 +48,11 @@ import "mapbox-gl/dist/mapbox-gl.css"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
+const EMPTY_SELECTION: DeckGlElementState["selection"] = {
+  indices: {},
+  objects: {},
+}
+
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
@@ -110,25 +115,16 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
       const getSelection = (): DeckGlElementState["selection"] => {
         if (isResetClick) {
-          return {
-            indices: {},
-            objects: {},
-          }
+          return EMPTY_SELECTION
         }
 
         switch (selectionMode) {
           case DeckGlJsonChartProto.SelectionMode.IGNORE:
-            return {
-              indices: {},
-              objects: {},
-            }
+            return EMPTY_SELECTION
           case DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT: {
             if (currState.selection.indices[layerId]?.[0] === index) {
               // Unselect the index
-              return {
-                indices: {},
-                objects: {},
-              }
+              return EMPTY_SELECTION
             }
 
             return {
@@ -198,7 +194,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const handleClearSelectionClick = useCallback(() => {
     setSelection({
-      value: { selection: { indices: {}, objects: {} } },
+      value: { selection: EMPTY_SELECTION },
       fromUi: true,
     })
   }, [setSelection])
