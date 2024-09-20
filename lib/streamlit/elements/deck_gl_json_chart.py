@@ -67,18 +67,15 @@ def parse_selection_mode(
 ) -> PydeckProto.SelectionMode.ValueType:
     """Parse and check the user provided selection modes."""
 
-    if selection_mode not in _SELECTION_MODES:
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
-        )
-
     if selection_mode == "single-object":
         return PydeckProto.SelectionMode.SINGLE_OBJECT
     elif selection_mode == "multi-object":
         return PydeckProto.SelectionMode.MULTI_OBJECT
 
-    return PydeckProto.SelectionMode.SINGLE_OBJECT
+    raise StreamlitAPIException(
+        f"Invalid selection mode: {selection_mode}. "
+        f"Valid options are: {_SELECTION_MODES}"
+    )
 
 
 class LayerSelectionState(TypedDict, total=False):
