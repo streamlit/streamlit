@@ -57,7 +57,7 @@ with st.echo(code_location="below"):
             "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝, yes, long long long long text",
         ],
         key="segments",
-        selection_mode="multi",
+        selection_mode="multiple",
         default=default,
         help="You can choose multiple options",
     )
@@ -79,21 +79,21 @@ with st.echo(code_location="below"):
     st.write(f"Single selection: {selection}")
 
 
-st.header("Icon-only button group - Segments", anchor="icon-only-button-group-segments")
-with st.echo(code_location="below"):
-    selection = st.segments(
-        "select an icon",
-        options=[0, 1, 2, 3],
-        icons=[
-            ":material/add:",
-            ":material/zoom_in:",
-            ":material/zoom_out:",
-            ":material/zoom_out_map:",
-        ],
-        format_func=lambda x: "",
-        selection_mode="single",
-    )
-    st.write(f"Single icon selection: {selection}")
+# st.header("Icon-only button group - Segments", anchor="icon-only-button-group-segments")
+# with st.echo(code_location="below"):
+#     selection = st.segments(
+#         "select an icon",
+#         options=[0, 1, 2, 3],
+#         icons=[
+#             ":material/add:",
+#             ":material/zoom_in:",
+#             ":material/zoom_out:",
+#             ":material/zoom_out_map:",
+#         ],
+#         format_func=lambda x: "",
+#         selection_mode="single",
+#     )
+#     st.write(f"Single icon selection: {selection}")
 
 
 st.header("on_change callback - Segments", anchor="on-change-callback-segments")
@@ -126,7 +126,7 @@ with st.echo(code_location="below"):
             "Emotions",
             ["Joy", "Sadness", "Anger", "Disgust"],
             key="segments_in_form",
-            selection_mode="multi",
+            selection_mode="multiple",
         )
         st.form_submit_button("Submit")
     st.write(

@@ -427,8 +427,7 @@ class ButtonGroupMixin:
         label: str,
         options: OptionSequence[V],
         *,
-        selection_mode: Literal["single", "multi"] = "single",
-        icons: list[str | None] | None = None,
+        selection_mode: Literal["single", "multiple"] = "single",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[V], str] | None = None,
         key: str | int | None = None,
@@ -443,7 +442,6 @@ class ButtonGroupMixin:
             options,
             label=label,
             selection_mode=selection_mode,
-            icons=icons,
             default=default,
             format_func=format_func,
             key=key,
@@ -463,8 +461,7 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         label: str | None = None,
-        selection_mode: Literal["single", "multi"] = "single",
-        icons: list[str | None] | None = None,
+        selection_mode: Literal["single", "multiple"] = "single",
         default: Sequence[V] | V | None = None,
         format_func: Callable[[V], str] | None = None,
         key: Key | None = None,
@@ -530,9 +527,7 @@ class ButtonGroupMixin:
         if selection_mode == "multiple":
             return res.value
 
-        return (
-            res.value[0] if selection_mode == "single" and len(res.value) > 0 else None
-        )
+        return res.value
 
     def _button_group(
         self,
