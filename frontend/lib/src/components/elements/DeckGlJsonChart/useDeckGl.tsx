@@ -203,6 +203,20 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     Record<string, unknown>
   >({})
 
+  /**
+   * Our proto for selectionMode is an array in order to support future-looking
+   * functionality. Currently, we only support 1 single selection mode, so we'll
+   * only use the first one (if it exists) to determine our selection mode.
+   *
+   * @see deck_gl_json_chart.py #parse_selection_mode
+   */
+  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
+    allSelectionModes[0]
+  const isSelectionModeActivated = selectionMode !== undefined
+
+  const hasActiveSelection =
+    isSelectionModeActivated && Object.keys(data.selection.indices).length > 0
+
   const parsedPydeckJson = useMemo(() => {
     return Object.freeze(JSON5.parse<ParsedDeckGlConfig>(element.json))
     // Only parse JSON when transitioning to/from fullscreen, the json changes, or theme changes
@@ -237,9 +251,20 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         data.selection.indices
       ).some(layer => layer?.length)
 
+      const anyLayersHavePickableDefined = copy.layers.some(layer =>
+        Object.hasOwn(layer, "pickable")
+      )
+
       copy.layers = copy.layers.map(layer => {
         if (!layer || Array.isArray(layer)) {
           return layer
+        }
+
+        if (isSelectionModeActivated && !anyLayersHavePickableDefined) {
+          // If selection mode is activated and no layers have pickable defined,
+          // set pickable to true for every layer. This is something Streamlit
+          // does to help make map selection easier to work with out of the box.
+          layer.pickable = true
         }
 
         const layerId = `${layer.id || null}`
@@ -297,11 +322,12 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     return jsonConverter.convert(copy)
   }, [
+    data.selection.indices,
     height,
     isFullScreen,
     isLightTheme,
+    isSelectionModeActivated,
     parsedPydeckJson,
-    data,
     shouldUseContainerWidth,
     theme.colors.gray20,
     theme.colors.primary,
@@ -357,20 +383,6 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     },
     [setViewState]
   )
-
-  /**
-   * Our proto for selectionMode is an array in order to support future-looking
-   * functionality. Currently, we only support 1 single selection mode, so we'll
-   * only use the first one (if it exists) to determine our selection mode.
-   *
-   * @see deck_gl_json_chart.py #parse_selection_mode
-   */
-  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
-    allSelectionModes[0]
-  const isSelectionModeActivated = selectionMode !== undefined
-
-  const hasActiveSelection =
-    isSelectionModeActivated && Object.keys(data.selection.indices).length > 0
 
   return {
     createTooltip,

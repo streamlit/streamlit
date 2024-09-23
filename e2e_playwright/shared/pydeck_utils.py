@@ -47,7 +47,6 @@ def get_pydeck_chart(
                     "H3HexagonLayer",
                     df,
                     id="MyHexLayer",
-                    pickable=True,
                     stroked=True,
                     filled=True,
                     get_hexagon="hex",
