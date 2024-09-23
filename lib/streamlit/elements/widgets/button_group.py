@@ -429,7 +429,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multiple"] = "single",
         default: Sequence[V] | V | None = None,
-        format_func: Callable[[V], str] | None = None,
+        format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -454,24 +454,23 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
         )
 
-    # Disable this more generic widget for now and use as base function for pills and segments wrapper
-    # @gather_metrics("button_group")
+    @gather_metrics("_internal_button_group")
     def _internal_button_group(
         self,
         options: OptionSequence[V],
         *,
-        label: str | None = None,
-        selection_mode: Literal["single", "multiple"] = "single",
-        default: Sequence[V] | V | None = None,
-        format_func: Callable[[V], str] | None = None,
         key: Key | None = None,
-        help: str | None = None,
-        style: Literal["segments", "pills"] = "segments",
+        default: Sequence[V] | V | None = None,
+        selection_mode: Literal["single", "multiple"] = "single",
+        disabled: bool = False,
+        format_func: Callable[[Any], str] | None = None,
+        style: Literal["segment", "pills"] = "segment",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        disabled: bool = False,
+        label: str | None = None,
         label_visibility: LabelVisibility = "visible",
+        help: str | None = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -508,19 +507,19 @@ class ButtonGroupMixin:
 
         res = self._button_group(
             indexable_options,
-            label=label,
-            selection_mode=selection_mode,
             default=default_values,
+            selection_mode=selection_mode,
+            disabled=disabled,
             format_func=_transformed_format_func,
             key=key,
             help=help,
             style=style,
-            on_change=on_change,
             serializer=serde.serialize,
             deserializer=serde.deserialize,
+            on_change=on_change,
             args=args,
             kwargs=kwargs,
-            disabled=disabled,
+            label=label,
             label_visibility=label_visibility,
         )
 
@@ -538,7 +537,7 @@ class ButtonGroupMixin:
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
         style: Literal["segments", "pills", "borderless"] = "segments",
-        format_func: Callable[[V, str | None], ButtonGroupProto.Option] | None = None,
+        format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
