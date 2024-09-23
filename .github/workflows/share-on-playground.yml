@@ -1,0 +1,92 @@
+name: Share on Playground
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write  # Allows the workflow to update issue content
+
+jobs:
+  share-issue-code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Share issue code on playground
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueBody = issue.body;
+            const labels = issue.labels.map(label => label.name);
+
+            // Check if the issue has the 'type:bug' label
+            if (!labels.includes('type:bug')) {
+              console.log('Issue does not have the type:bug label. Exiting workflow.');
+              return;
+            }
+
+            // Check if the issue body already contains a Streamlit Playground link
+            if (issueBody.includes('streamlit.io/playground')) {
+              console.log('Issue already contains a Streamlit Playground link. Exiting workflow.');
+              return;
+            }
+
+            const header = '### Reproducible Code Example';
+
+            // Find the index of the '### Reproducible Code Example' header
+            const headerIndex = issueBody.indexOf(header);
+
+            if (headerIndex !== -1) {
+              // Get the substring after the header
+              const afterHeader = issueBody.substring(headerIndex + header.length);
+
+              // Match the code block directly under the header
+              const codeBlockMatch = afterHeader.match(/```python\s*([\s\S]*?)```/);
+
+              if (codeBlockMatch) {
+                let codeSnippet = codeBlockMatch[1].trim();
+
+                // Check if the code snippet contains any code
+                if (!codeSnippet) {
+                  console.log('Code snippet is empty. Exiting workflow.');
+                  return;
+                }
+
+                // Compress using gzip
+                const zlib = require('zlib');
+                const compressed = zlib.gzipSync(codeSnippet);
+
+                // Base64 encode
+                const base64Encoded = compressed.toString('base64');
+
+                // Make URL safe
+                const urlSafeBase64 = base64Encoded
+                  .replace(/\+/g, '-')
+                  .replace(/\//g, '_')
+                  .replace(/=+$/, '');
+
+                // Construct the URL
+                const url = `https://streamlit.io/playground?code=${urlSafeBase64}`;
+
+                // Construct the badge markdown
+                const badgeMarkdown = `[![Open in Streamlit Playground](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](${url})`;
+
+                // Rebuild the issue body, inserting the badge between the header and code block
+                const beforeHeader = issueBody.substring(0, headerIndex + header.length);
+                const restOfBody = afterHeader.substring(codeBlockMatch.index + codeBlockMatch[0].length);
+
+                const newIssueBody = `${beforeHeader}\n\n${badgeMarkdown}\n\n${codeBlockMatch[0]}${restOfBody}`;
+
+                // Update the issue body
+                await github.rest.issues.update({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: newIssueBody
+                });
+              } else {
+                console.log('No code block found under the Reproducible Code Example header.');
+              }
+            } else {
+              console.log('Reproducible Code Example header not found.');
+            }
