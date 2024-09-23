@@ -244,10 +244,13 @@ export function getColumnFromArrow(
   const title = columnHeaders[columnHeaders.length - 1]
 
   // If there are multiple header columns, join these names with a "/"
-  // and use it as group name.
+  // and use it as group name, but ignore empty strings:
   const group =
     columnHeaders.length > 1
-      ? columnHeaders.slice(0, -1).join(" / ")
+      ? columnHeaders
+          .filter(column => column !== "")
+          .slice(0, -1)
+          .join(" / ")
       : undefined
 
   let arrowType = data.types.data[columnPosition]
