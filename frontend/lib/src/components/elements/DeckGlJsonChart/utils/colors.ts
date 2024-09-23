@@ -32,25 +32,26 @@ import { jsonConverter } from "./jsonConverter"
  * can actually change the color of.
  */
 export const LAYER_TYPE_TO_FILL_FUNCTION = {
-  [geoLayers.GeohashLayer.layerName]: "getFillColor",
-  [geoLayers.H3ClusterLayer.layerName]: "getFillColor",
-  [geoLayers.H3HexagonLayer.layerName]: "getFillColor",
-  [geoLayers.MVTLayer.layerName]: "getFillColor",
-  [geoLayers.QuadkeyLayer.layerName]: "getFillColor",
-  [geoLayers.S2Layer.layerName]: "getFillColor",
-  [geoLayers.TripsLayer.layerName]: "getColor",
-  [layers.ColumnLayer.layerName]: "getFillColor",
-  [layers.GeoJsonLayer.layerName]: "getFillColor",
-  [layers.IconLayer.layerName]: "getColor",
-  [layers.LineLayer.layerName]: "getColor",
-  [layers.PathLayer.layerName]: "getColor",
-  [layers.PointCloudLayer.layerName]: "getColor",
-  [layers.PolygonLayer.layerName]: "getFillColor",
-  [layers.ScatterplotLayer.layerName]: "getFillColor",
-  [layers.SolidPolygonLayer.layerName]: "getFillColor",
-  [layers.TextLayer.layerName]: "getColor",
-  [meshLayers.ScenegraphLayer.layerName]: "getColor",
-  [meshLayers.SimpleMeshLayer.layerName]: "getColor",
+  [geoLayers.GeohashLayer.layerName]: ["getFillColor"],
+  [geoLayers.H3ClusterLayer.layerName]: ["getFillColor"],
+  [geoLayers.H3HexagonLayer.layerName]: ["getFillColor"],
+  [geoLayers.MVTLayer.layerName]: ["getFillColor"],
+  [geoLayers.QuadkeyLayer.layerName]: ["getFillColor"],
+  [geoLayers.S2Layer.layerName]: ["getFillColor"],
+  [geoLayers.TripsLayer.layerName]: ["getColor"],
+  [layers.ArcLayer.layerName]: ["getTargetColor", "getSourceColor"],
+  [layers.ColumnLayer.layerName]: ["getFillColor"],
+  [layers.GeoJsonLayer.layerName]: ["getFillColor"],
+  [layers.IconLayer.layerName]: ["getColor"],
+  [layers.LineLayer.layerName]: ["getColor"],
+  [layers.PathLayer.layerName]: ["getColor"],
+  [layers.PointCloudLayer.layerName]: ["getColor"],
+  [layers.PolygonLayer.layerName]: ["getFillColor"],
+  [layers.ScatterplotLayer.layerName]: ["getFillColor"],
+  [layers.SolidPolygonLayer.layerName]: ["getFillColor"],
+  [layers.TextLayer.layerName]: ["getColor"],
+  [meshLayers.ScenegraphLayer.layerName]: ["getColor"],
+  [meshLayers.SimpleMeshLayer.layerName]: ["getColor"],
 }
 
 type SerializedColorValue = string | number
@@ -72,7 +73,7 @@ export type FillFunction<T = unknown> = (
 ) => SerializedColorArray | SerializedColorValue
 
 type FillFunctionArgs<T = unknown> = ObjectCallbackShape<T> & {
-  originalFillFunction: FillFunction<T>
+  originalFillFunction: FillFunction<T> | undefined
 }
 
 /**

@@ -270,49 +270,53 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         const layerId = `${layer.id || null}`
         const selectedIndices = data?.selection?.indices?.[layerId] || []
 
-        const fillFunction = LAYER_TYPE_TO_FILL_FUNCTION[layer["@@type"]]
+        const fillFunctions = LAYER_TYPE_TO_FILL_FUNCTION[layer["@@type"]]
 
-        if (!fillFunction || !Object.hasOwn(layer, fillFunction)) {
+        if (!fillFunctions) {
           return layer
         }
 
         const clonedLayer = { ...layer }
-        clonedLayer.updateTriggers = {
-          // Tell Deck.gl to recompute the fill color when the selection changes.
-          // Without this, objects in layers will have stale colors when selection changes.
-          // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
-          [fillFunction]: [
-            ...(clonedLayer.updateTriggers?.[fillFunction] || []),
-            selectedIndices,
-            anyLayersHaveSelection,
-          ],
-        }
+        fillFunctions.forEach(fillFunction => {
+          clonedLayer.updateTriggers = {
+            // Tell Deck.gl to recompute the fill color when the selection changes.
+            // Without this, objects in layers will have stale colors when selection changes.
+            // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
+            [fillFunction]: [
+              ...(clonedLayer.updateTriggers?.[fillFunction] || []),
+              selectedIndices,
+              anyLayersHaveSelection,
+            ],
+          }
 
-        const shouldUseOriginalFillFunction = !anyLayersHaveSelection
+          const shouldUseOriginalFillFunction = !anyLayersHaveSelection
 
-        if (shouldUseOriginalFillFunction) {
-          // If we aren't changing the fill color, we don't need to change the fillFunction
-          return clonedLayer
-        }
+          if (shouldUseOriginalFillFunction) {
+            // If we aren't changing the fill color, we don't need to change the fillFunction
+            return clonedLayer
+          }
 
-        const originalFillFunction = layer[fillFunction] as FillFunction
+          const originalFillFunction = layer[fillFunction] as
+            | FillFunction
+            | undefined
 
-        // Fallback colors in case there are issues while parsing the colors for a given object
-        const selectedColor = parseToRgba(theme.colors.primary)
-        const unselectedColor = parseToRgba(theme.colors.gray20)
+          // Fallback colors in case there are issues while parsing the colors for a given object
+          const selectedColor = parseToRgba(theme.colors.primary)
+          const unselectedColor = parseToRgba(theme.colors.gray20)
 
-        const newFillFunction: FillFunction = (object, objectInfo) => {
-          return getContextualFillColor({
-            isSelected: selectedIndices.includes(objectInfo.index),
-            object,
-            objectInfo,
-            originalFillFunction,
-            selectedColor,
-            unselectedColor,
-          })
-        }
+          const newFillFunction: FillFunction = (object, objectInfo) => {
+            return getContextualFillColor({
+              isSelected: selectedIndices.includes(objectInfo.index),
+              object,
+              objectInfo,
+              originalFillFunction,
+              selectedColor,
+              unselectedColor,
+            })
+          }
 
-        clonedLayer[fillFunction] = newFillFunction
+          clonedLayer[fillFunction] = newFillFunction
+        })
 
         return clonedLayer
       })
