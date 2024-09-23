@@ -258,6 +258,10 @@ class PydeckMixin:
             - callable: A Python callable that will be called when a selection
                 is made. The callable will be passed the selection state as a
                 dictionary.
+
+            If ``on_select`` is not ``"ignore"``, ensure that the layers given
+            to the ``pydeck_obj`` have stable IDs so that selection state can be
+            maintained across reruns.
         selection_mode : "single-object" or "multi-object"
             The types of selections Streamlit should allow. This can be one of
             the following:
