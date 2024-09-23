@@ -338,6 +338,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
               flexWrap: "wrap",
               columnGap: getButtonGroupColumnGap(style, theme),
               rowGap: rowGap,
+              maxWidth: "fit-content",
+              "::after": {
+                content: "''",
+                flex: 10000,
+              },
             },
           },
         }}

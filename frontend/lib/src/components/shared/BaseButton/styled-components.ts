@@ -339,6 +339,8 @@ export const StyledSegmentsButton = styled(
   return {
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
     borderRadius: theme.radii.none,
+    flex: "1 0 fit-content",
+    maxWidth: "100%",
 
     "&:first-child": {
       borderTopLeftRadius: theme.radii.default,
