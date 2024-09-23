@@ -246,6 +246,33 @@ class PydeckMixin:
             Desired height of the chart expressed in pixels. If ``height`` is
             ``None`` (default), Streamlit sets the height of the chart to fit
             its contents according to the plotting library.
+        on_select : "ignore" or "rerun" or callable
+            How the chart should respond to user selection events. This controls
+            whether or not the dataframe behaves like an input widget.
+            ``on_select`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the dataframe. The dataframe will not behave like an
+              input widget.
+            - ``"rerun"``: Rerun the script when a selection is made.
+            - callable: A Python callable that will be called when a selection
+                is made. The callable will be passed the selection state as a
+                dictionary.
+        selection_mode : "single-object" or "multi-object"
+            The types of selections Streamlit should allow. This can be one of
+            the following:
+
+            - ``"single-object"`` (default): Only one object can be selected at
+              a time.
+            - ``"multi-object"``: Multiple objects can be selected at a time.
+        key : str
+            An optional string to use for giving this element a stable
+            identity. If ``key`` is ``None`` (default), this element's identity
+            will be determined based on the values of the other parameters.
+
+            Additionally, if selections are activated and ``key`` is provided,
+            Streamlit will register the key in Session State to store the
+            selection state. The selection state is read-only.
 
         Example
         -------
