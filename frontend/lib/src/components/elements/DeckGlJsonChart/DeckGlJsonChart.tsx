@@ -66,15 +66,17 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     widgetMgr,
     width: propsWidth,
   } = props
-  const { selectionMode: allSelectionModes, mapboxToken: elementMapboxToken } =
-    element
+  const { mapboxToken: elementMapboxToken } = element
   const theme: EmotionTheme = useTheme()
   const {
     createTooltip,
     data: selection,
     deck,
+    hasActiveSelection,
     height,
+    isSelectionModeActivated,
     onViewStateChange,
+    selectionMode,
     setSelection,
     viewState,
     width,
@@ -89,16 +91,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     width: propsWidth,
   })
 
-  /**
-   * Our proto for selectionMode is an array in order to support future-looking
-   * functionality. Currently, we only support 1 single selection mode, so we'll
-   * only use the first one (if it exists) to determine our selection mode.
-   *
-   * @see deck_gl_json_chart.py #parse_selection_mode
-   */
-  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
-    allSelectionModes[0]
-  const hasSelection = selectionMode !== undefined
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
@@ -110,6 +102,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const handleClick = useCallback(
     (info: PickingInfo) => {
+      if (selectionMode === undefined) {
+        // Safety check
+        return
+      }
+
       const { index, object } = info
 
       const layerId = `${info.layer?.id || null}`
@@ -214,8 +211,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         onExpand={expand}
         onCollapse={collapse}
         target={StyledDeckGlChart}
+        locked={hasActiveSelection && !disabled ? true : undefined}
       >
-        {hasSelection && (
+        {hasActiveSelection && !disabled && (
           <ToolbarAction
             label="Clear selection"
             onClick={handleClearSelectionClick}
@@ -233,7 +231,9 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         // @ts-expect-error There is a type mismatch due to our versions of the libraries
         ContextProvider={MapContext.Provider}
         controller
-        onClick={hasSelection && !disabled ? handleClick : undefined}
+        onClick={
+          isSelectionModeActivated && !disabled ? handleClick : undefined
+        }
       >
         <StaticMap
           height={height}

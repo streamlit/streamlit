@@ -17,7 +17,7 @@
 import React from "react"
 
 import JSON5 from "json5"
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { renderHook } from "@testing-library/react-hooks"
 import { PickingInfo } from "@deck.gl/core/typed"
 
@@ -294,6 +294,112 @@ describe("#useDeckGl", () => {
       rerender({ ...initialProps, ...newProps })
 
       expect(JSON5.parse).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe("selectionMode", () => {
+    it("should be undefined when allSelectionModes is empty", () => {
+      const initialProps = getUseDeckGlProps({ selectionMode: [] })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBeUndefined()
+    })
+
+    it("should be defined when allSelectionModes has single object select", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBe(
+        DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT
+      )
+    })
+
+    it("should be defined when allSelectionModes has multi object select", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBe(
+        DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT
+      )
+    })
+
+    it("should return the first selection mode given, if multiple are given", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [
+          DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT,
+          DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT,
+        ],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBe(
+        DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT
+      )
+    })
+  })
+
+  describe("isSelectionModeActivated", () => {
+    it("should activate selection mode when selectionMode is defined", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.isSelectionModeActivated).toBe(true)
+    })
+
+    it("should not activate selection mode when selectionMode is undefined", () => {
+      const initialProps = getUseDeckGlProps({ selectionMode: [] })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.isSelectionModeActivated).toBe(false)
+    })
+  })
+
+  describe("hasActiveSelection", () => {
+    it("should be false when selection is empty", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.hasActiveSelection).toBe(false)
+    })
+
+    it("should be true when selection is not empty", async () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      await act(async () => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [0] },
+              objects: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [{}] },
+            },
+          },
+        })
+      })
+
+      rerender()
+
+      expect(result.current.hasActiveSelection).toBe(true)
     })
   })
 })

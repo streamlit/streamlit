@@ -47,13 +47,16 @@ import {
 
 type UseDeckGlShape = {
   createTooltip: (info: PickingInfo | null) => TooltipContent
+  data: DeckGlElementState
   deck: DeckObject
+  hasActiveSelection: boolean
   height: number | string
+  isSelectionModeActivated: boolean
   onViewStateChange: (params: ViewStateChangeParameters) => void
+  selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
   setSelection: React.Dispatch<
     React.SetStateAction<ValueWSource<DeckGlElementState> | null>
   >
-  data: DeckGlElementState
   viewState: Record<string, unknown>
   width: number | string
 }
@@ -161,7 +164,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     widgetMgr,
     width: propsWidth,
   } = props
-  const { tooltip, useContainerWidth: shouldUseContainerWidth } = element
+  const {
+    selectionMode: allSelectionModes,
+    tooltip,
+    useContainerWidth: shouldUseContainerWidth,
+  } = element
   const isFullScreen = propsIsFullScreen ?? false
 
   const [data, setSelection] = useBasicWidgetClientState<
@@ -350,12 +357,29 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     [setViewState]
   )
 
+  /**
+   * Our proto for selectionMode is an array in order to support future-looking
+   * functionality. Currently, we only support 1 single selection mode, so we'll
+   * only use the first one (if it exists) to determine our selection mode.
+   *
+   * @see deck_gl_json_chart.py #parse_selection_mode
+   */
+  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
+    allSelectionModes[0]
+  const isSelectionModeActivated = selectionMode !== undefined
+
+  const hasActiveSelection =
+    isSelectionModeActivated && Object.keys(data.selection.indices).length > 0
+
   return {
     createTooltip,
-    deck,
-    height,
-    onViewStateChange,
     data,
+    deck,
+    hasActiveSelection,
+    height,
+    isSelectionModeActivated,
+    onViewStateChange,
+    selectionMode,
     setSelection,
     viewState,
     width,
