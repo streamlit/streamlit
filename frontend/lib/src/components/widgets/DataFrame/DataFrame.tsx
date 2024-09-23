@@ -189,7 +189,13 @@ function DataFrame({
   // Not sure why, but data.columns refers to the header rows, and
   // not the data columns.
   const numHeaderRows = data.columns.length
-  const originalNumRows = Math.max(0, dataDimensions.rows - numHeaderRows)
+
+  // Empty dataframes still capture a header row, but data.columns.length
+  // is 0. So, to get the actual number of rows, we need to subtract 1.
+  const originalNumRows = Math.max(
+    0,
+    dataDimensions.rows - (numHeaderRows || 1)
+  )
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.

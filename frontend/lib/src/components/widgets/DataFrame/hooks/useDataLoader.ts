@@ -45,8 +45,7 @@ function useDataLoader(
   numRows: number,
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
-  // Not sure why, but data.columns refers to the header rows, and
-  // not the data columns.
+  // data.columns refers to the header rows (not sure about why it is named this way)
   const numHeaderRows = data.columns.length
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
