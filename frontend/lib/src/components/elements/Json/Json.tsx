@@ -29,6 +29,7 @@ import {
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 
+import { StyledJsonWrapper } from "./styled-components"
 export interface JsonProps {
   width: number
   element: JsonProto
@@ -76,10 +77,10 @@ export default function Json({
   }
 
   return (
-    <div
+    <StyledJsonWrapper
       className="stJson"
       data-testid="stJson"
-      style={styleProp}
+      width={width}
       ref={elementRef}
     >
       <ReactJson
@@ -97,6 +98,6 @@ export default function Json({
           whiteSpace: "pre-wrap", // preserve whitespace
         }}
       />
-    </div>
+    </StyledJsonWrapper>
   )
 }

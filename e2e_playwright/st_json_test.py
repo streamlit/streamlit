@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.json renders the data correctly."""
     json_elements = app.get_by_test_id("stJson")
-    expect(json_elements).to_have_count(7)
+    expect(json_elements).to_have_count(8)
 
     assert_snapshot(json_elements.nth(0), name="st_json-simple_dict")
     assert_snapshot(json_elements.nth(1), name="st_json-collapsed")
@@ -30,6 +30,7 @@ def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(json_elements.nth(4), name="st_json-simple_list")
     assert_snapshot(json_elements.nth(5), name="st_json-empty_dict")
     assert_snapshot(json_elements.nth(6), name="st_json-expanded_2")
+    assert_snapshot(json_elements.nth(7), name="st_json-keep_bounds")
 
 
 def test_st_json_displays_correctly_when_themed(
