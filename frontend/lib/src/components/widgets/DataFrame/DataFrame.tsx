@@ -186,10 +186,9 @@ function DataFrame({
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
-  // Not sure why, but data.columns refers to the header rows, and
-  // not the data columns.
+  // data.columns refers to the header rows, and
+  // not the data columns. Not sure why it is named this way.
   const numHeaderRows = data.columns.length
-
   const originalNumRows = Math.max(0, dataDimensions.dataRows)
 
   // For empty tables, we show an extra row that

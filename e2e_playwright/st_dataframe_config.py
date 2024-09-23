@@ -516,18 +516,18 @@ st.dataframe(
 
 st.subheader("Hierarchical headers")
 
-zipped_arrays = [
-    ["a", "b", "c"],
-    ["a", "b", "d"],
-    ["e", "f", "c"],
-    ["g", "h", "d"],
-    ["", "h", "i"],
-]
 df = pd.DataFrame(
     np.random.randn(3, 5),
     index=["A", "B", "C"],
     columns=pd.MultiIndex.from_tuples(
-        zipped_arrays, names=["first", "second", "third"]
+        [
+            ["a", "b", "c"],
+            ["a", "b", "d"],
+            ["e", "f", "c"],
+            ["g", "h", "d"],
+            ["", "h", "i"],
+        ],
+        names=["first", "second", "third"],
     ),
 )
 
