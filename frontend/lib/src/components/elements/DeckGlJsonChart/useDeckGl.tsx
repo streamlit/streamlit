@@ -65,6 +65,13 @@ export type UseDeckGlProps = Omit<DeckGLProps, "mapboxToken"> & {
 
 const DEFAULT_DECK_GL_HEIGHT = 500
 
+export const EMPTY_STATE: DeckGlElementState = {
+  selection: {
+    indices: {},
+    objects: {},
+  },
+}
+
 /**
  * Interpolates variables within a string using values from a PickingInfo object.
  *
@@ -101,17 +108,12 @@ function getDefaultState(
   element: DeckGlJsonChartProto
 ): DeckGlElementState {
   if (!element.id) {
-    return {
-      selection: {
-        indices: {},
-        objects: {},
-      },
-    }
+    return EMPTY_STATE
   }
 
   const initialFigureState = widgetMgr.getElementState(element.id, "selection")
 
-  return initialFigureState ?? {}
+  return initialFigureState ?? EMPTY_STATE
 }
 
 function getStateFromWidgetMgr(
@@ -119,12 +121,7 @@ function getStateFromWidgetMgr(
   element: DeckGlJsonChartProto
 ): DeckGlElementState {
   if (!element.id) {
-    return {
-      selection: {
-        indices: {},
-        objects: {},
-      },
-    }
+    return EMPTY_STATE
   }
 
   const stringValue = widgetMgr.getStringValue(element)
@@ -132,14 +129,7 @@ function getStateFromWidgetMgr(
     ? JSON5.parse(stringValue)
     : null
 
-  return (
-    currState ?? {
-      selection: {
-        indices: {},
-        objects: {},
-      },
-    }
-  )
+  return currState ?? EMPTY_STATE
 }
 
 function updateWidgetMgrState(

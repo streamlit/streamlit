@@ -42,16 +42,13 @@ import {
   StyledNavigationControlContainer,
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
-import { useDeckGl } from "./useDeckGl"
+import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
 
 import "mapbox-gl/dist/mapbox-gl.css"
 
 registerLoaders([CSVLoader, GLTFLoader])
 
-const EMPTY_SELECTION: DeckGlElementState["selection"] = {
-  indices: {},
-  objects: {},
-}
+const EMPTY_SELECTION = EMPTY_STATE.selection
 
 const EMPTY_LAYERS: LayersList = []
 

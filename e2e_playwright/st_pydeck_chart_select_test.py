@@ -361,6 +361,7 @@ def test_pydeck_chart_selection_in_form(app: Page):
 
     expect_prefixed_markdown(app, markdown_prefix, expected_selection)
     expect_prefixed_markdown(app, markdown_prefix_session_state, expected_selection)
+    expect(app.get_by_test_id("stForm")).not_to_contain_text("Error")
 
 
 @pytest.mark.only_browser("chromium")
