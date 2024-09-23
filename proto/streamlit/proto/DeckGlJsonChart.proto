@@ -33,4 +33,10 @@ message DeckGlJsonChart {
 
   // The user-configured Mapbox token. If empty, the token id fetched from https://data.streamlit.io/tokens.json
   string mapbox_token = 6;
+
+  // Width in pixels
+  uint32 width = 7;
+
+  // Height in pixels
+  uint32 height = 8;
 }

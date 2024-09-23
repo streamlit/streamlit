@@ -28,6 +28,7 @@ import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
+import Toolbar from "@streamlit/lib/src/components/shared/Toolbar"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 
 import withMapboxToken from "./withMapboxToken"
@@ -45,15 +46,25 @@ registerLoaders([CSVLoader, GLTFLoader])
 const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
-  const { element, height, isFullScreen, width } = props
-  const theme: EmotionTheme = useTheme()
-  const { createTooltip, deck, onViewStateChange, viewState } = useDeckGl({
+  const {
+    collapse,
+    disableFullscreenMode,
     element,
-    isLightTheme: hasLightBackgroundColor(theme),
-    width,
-    height,
+    expand,
+    height: propsHeight,
     isFullScreen,
-  })
+    width: propsWidth,
+  } = props
+  const theme: EmotionTheme = useTheme()
+
+  const { createTooltip, deck, onViewStateChange, viewState, width, height } =
+    useDeckGl({
+      element,
+      isLightTheme: hasLightBackgroundColor(theme),
+      width: propsWidth,
+      height: propsHeight,
+      isFullScreen,
+    })
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -69,12 +80,19 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
       width={width}
-      height={deck.initialViewState.height}
+      height={height}
     >
+      <Toolbar
+        isFullScreen={isFullScreen}
+        disableFullscreenMode={disableFullscreenMode}
+        onExpand={expand}
+        onCollapse={collapse}
+        target={StyledDeckGlChart}
+      />
       <DeckGL
         viewState={viewState}
         onViewStateChange={onViewStateChange}
-        height={deck.initialViewState.height}
+        height={height}
         width={width}
         layers={isInitialized ? deck.layers : EMPTY_LAYERS}
         getTooltip={createTooltip}
@@ -83,7 +101,7 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
         controller
       >
         <StaticMap
-          height={deck.initialViewState.height}
+          height={height}
           width={width}
           mapStyle={
             deck.mapStyle &&
@@ -105,5 +123,5 @@ export const DeckGlJsonChart: FC<PropsWithHeight> = props => {
 }
 
 export default withMapboxToken("st.pydeck_chart")(
-  withFullScreenWrapper(DeckGlJsonChart)
+  withFullScreenWrapper(DeckGlJsonChart, true)
 )

@@ -42,6 +42,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("chat_input", lambda: st.chat_input("Chat with me")),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
+    ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),

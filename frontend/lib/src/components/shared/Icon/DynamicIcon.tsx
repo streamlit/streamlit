@@ -30,8 +30,7 @@ interface IconPackEntry {
 function parseIconPackEntry(iconName: string): IconPackEntry {
   // This is a regex to match icon pack and icon name from the strings of format
   // :pack/icon: like :material/settings_suggest:
-  const iconRegexp = /^:(.+)\/(.+):$/
-  const matchResult = iconName.match(iconRegexp)
+  const matchResult = iconName.match(/^:(.+)\/(.+):$/)
   if (matchResult === null) {
     return { pack: "emoji", icon: iconName }
   }

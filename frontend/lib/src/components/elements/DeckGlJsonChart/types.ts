@@ -31,6 +31,9 @@ export interface DeckGLProps {
 
 export interface PropsWithHeight extends DeckGLProps {
   height?: number
+  expand?: () => void
+  collapse?: () => void
+  disableFullscreenMode?: boolean
 }
 
 export interface DeckObject {

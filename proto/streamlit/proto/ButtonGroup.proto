@@ -19,6 +19,8 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ButtonGroupProto";
 
+import "streamlit/proto/LabelVisibilityMessage.proto";
+
 message ButtonGroup {
   enum ClickMode {
       SINGLE_SELECT = 0;
@@ -27,7 +29,12 @@ message ButtonGroup {
 
   message Option {
     string content = 1;
-    string selected_content = 2;
+    // when set, this is the content that will be displayed when the option is selected
+    optional string selected_content = 2;
+    // when set, this is the icon that will be displayed next to the option
+    optional string content_icon = 3;
+    // when set, this is the icon that will be displayed next to the option when then option is selected
+    optional string selected_content_icon = 4;
   }
 
   string id = 1;
@@ -47,4 +54,17 @@ message ButtonGroup {
     ALL_UP_TO_SELECTED = 1;
   }
   SelectionVisualization selection_visualization = 9;
+
+  enum Style {
+    SEGMENT = 0;
+    PILLS = 1;
+    BORDERLESS = 2;
+  }
+  Style style = 10;
+
+  string label = 11;
+  LabelVisibilityMessage label_visibility = 12;
+  optional string help = 13;
+
+  // next id: 14
 }
