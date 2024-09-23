@@ -28,7 +28,7 @@ function getBrowserInfo(): {
   return {
     browserName: result.browser.name || "Unknown",
     browserVersion: result.browser.version || "Unknown",
-    deviceType: result.device.type || "Desktop",
+    deviceType: result.device.type || "desktop",
     os: result.os.name || "Unknown",
   }
 }

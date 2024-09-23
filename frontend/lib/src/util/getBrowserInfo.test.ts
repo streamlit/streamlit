@@ -38,7 +38,7 @@ describe("getBrowserInfo", () => {
     expect(result).toEqual({
       browserName: "Opera",
       browserVersion: "77.0.4054.254",
-      deviceType: "Desktop",
+      deviceType: "desktop",
       os: "Windows",
     })
   })
@@ -52,7 +52,7 @@ describe("getBrowserInfo", () => {
     expect(result).toEqual({
       browserName: "Brave",
       browserVersion: "92.0.4515.107",
-      deviceType: "Desktop",
+      deviceType: "desktop",
       os: "Mac OS",
     })
   })
@@ -80,7 +80,7 @@ describe("getBrowserInfo", () => {
     expect(result).toEqual({
       browserName: "IE",
       browserVersion: "11.0",
-      deviceType: "Desktop",
+      deviceType: "desktop",
       os: "Windows",
     })
   })
@@ -94,7 +94,7 @@ describe("getBrowserInfo", () => {
     expect(result).toEqual({
       browserName: "Maxthon",
       browserVersion: "6.1.0.2000",
-      deviceType: "Desktop",
+      deviceType: "desktop",
       os: "Windows",
     })
   })
@@ -108,7 +108,7 @@ describe("getBrowserInfo", () => {
     expect(result).toEqual({
       browserName: "Chrome",
       browserVersion: "91.0.4472.114",
-      deviceType: "Desktop",
+      deviceType: "desktop",
       os: "Chromium OS",
     })
   })
