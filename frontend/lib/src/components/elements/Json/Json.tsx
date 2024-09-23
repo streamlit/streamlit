@@ -42,7 +42,6 @@ export default function Json({
   width,
   element,
 }: Readonly<JsonProps>): ReactElement {
-  const styleProp = { width }
   const theme: EmotionTheme = useTheme()
 
   const elementRef = useRef<HTMLDivElement>(null)
