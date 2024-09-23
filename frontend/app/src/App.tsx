@@ -119,7 +119,7 @@ import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { StyledApp } from "@streamlit/app/src/styled-components"
 import withScreencast, {
   ScreenCastHOC,
@@ -216,7 +216,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly sessionInfo = new SessionInfo()
 
-  private readonly metricsMgr = new SegmentMetricsManager(this.sessionInfo)
+  private readonly metricsMgr = new MetricsManager(this.sessionInfo)
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -449,7 +449,10 @@ export class App extends PureComponent<Props, State> {
           enableCustomParentMessages,
           mapboxToken,
           enforceDownloadInNewTab,
+          metricsUrl,
         } = response
+
+        this.metricsMgr.setMetricsConfig(metricsUrl)
 
         const appConfig: AppConfig = {
           allowedOrigins,
@@ -1095,6 +1098,7 @@ export class App extends PureComponent<Props, State> {
 
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
+      sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)

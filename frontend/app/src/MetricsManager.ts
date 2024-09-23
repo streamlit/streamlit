@@ -15,14 +15,20 @@
  */
 
 import pick from "lodash/pick"
+import { v4 as uuidv4 } from "uuid"
 
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
   DeployedAppMetadata,
+  getCookie,
+  setCookie,
   IS_DEV_ENV,
+  localStorageAvailable,
   logAlways,
   SessionInfo,
 } from "@streamlit/lib"
+
+const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/tokens.json"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -41,7 +47,7 @@ export interface CustomComponentCounter {
   [name: string]: number
 }
 
-export class SegmentMetricsManager {
+export class MetricsManager {
   /** The app's SessionInfo instance. */
   private readonly sessionInfo: SessionInfo
 
@@ -51,6 +57,21 @@ export class SegmentMetricsManager {
    * Whether to send metrics to the server.
    */
   private actuallySendMetrics = false
+
+  /**
+   * The URL to which metrics are sent.
+   */
+  private metricsUrl: string | undefined = undefined
+
+  /**
+   * Function to send a message to the host.
+   */
+  private sendMessageToHost: (message: any) => void = () => {}
+
+  /**
+   * The anonymous ID of the user.
+   */
+  private anonymousId = ""
 
   /**
    * Queue of metrics events that were enqueued before this MetricsManager was
@@ -74,11 +95,15 @@ export class SegmentMetricsManager {
 
   public initialize({
     gatherUsageStats,
+    sendMessageToHost,
   }: {
     gatherUsageStats: boolean
+    sendMessageToHost: (message: any) => void
   }): void {
     this.initialized = true
     this.actuallySendMetrics = gatherUsageStats
+    this.sendMessageToHost = sendMessageToHost
+    this.anonymousId = this.getAnonymousId()
 
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
@@ -113,6 +138,16 @@ export class SegmentMetricsManager {
     this.appHash = appHash
   }
 
+  // Set configuration for metrics - provided by host config
+  // or fetched from default URL if not provided.
+  public setMetricsConfig = (metricsUrl = ""): void => {
+    if (metricsUrl) {
+      this.metricsUrl = metricsUrl
+    } else {
+      this.requestDefaultMetricsConfig()
+    }
+  }
+
   // The schema of metrics events (including key names and value types) should
   // only be changed when requested by the data team. This is why `reportHash`
   // retains its old name.
@@ -126,22 +161,19 @@ export class SegmentMetricsManager {
       source: "browser",
       streamlitVersion: this.sessionInfo.current.streamlitVersion,
       isHello: this.sessionInfo.isHello,
+      anonymousId: this.anonymousId,
     }
 
     // Don't actually track events when in dev mode, just print them instead.
     // This is just to keep us from tracking too many events and having to pay
     // for all of them.
-    if (IS_DEV_ENV) {
-      logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
-    } else {
-      this.track(evName, data, {
-        context: {
-          // Segment automatically attaches the IP address. But we don't use, process,
-          // or store IP addresses for our telemetry. To make this more explicit, we
-          // are overwriting this here so that it is never even sent to Segment.
-          ip: "0.0.0.0",
-        },
-      })
+    // if (IS_DEV_ENV) {
+    //   logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
+    // } else
+    if (this.metricsUrl === "postMessage") {
+      this.postMessageEvent(evName, data)
+    } else if (this.metricsUrl) {
+      this.track(evName, data, {})
     }
   }
 
@@ -158,7 +190,21 @@ export class SegmentMetricsManager {
     data: Record<string, unknown>,
     context: Record<string, unknown>
   ): void {
-    analytics.track(evName, data, context)
+    // Send the event to the metrics URL
+  }
+
+  private postMessageEvent(
+    evName: string,
+    data: Record<string, unknown>,
+    context?: Record<string, unknown>
+  ): void {
+    // Trigger message to the host
+    console.log("== Sending message to host ==")
+    console.log({
+      evName,
+      data,
+      context,
+    })
   }
 
   // Get the installation IDs from the session
@@ -185,5 +231,65 @@ export class SegmentMetricsManager {
       ])
     }
     return {}
+  }
+
+  /**
+   * Fallback for no metrics host configuration
+   * Checks if cached in localStorage, otherwise fetches the config
+   * from a default URL.
+   */
+  private async requestDefaultMetricsConfig(): Promise<any> {
+    if (localStorageAvailable()) {
+      const cachedConfig = localStorage.getItem("stMetricsConfig")
+      if (cachedConfig) {
+        this.metricsUrl = cachedConfig
+      }
+    }
+
+    const response = await fetch(DEFAULT_METRICS_CONFIG)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metrics config: ${response.status}`)
+    } else {
+      const jsonResponse = await response.json()
+      const metricsUrl = jsonResponse["mapbox-localhost"]
+      if (metricsUrl) {
+        this.metricsUrl = metricsUrl
+        if (localStorageAvailable()) {
+          localStorage.setItem("stMetricsConfig", metricsUrl)
+        }
+      }
+    }
+  }
+
+  /**
+   * Get/Create user's anonymous ID
+   * Checks if existing in cookie or localStorage, otherwise generates
+   * a new UUID and stores it in both.
+   */
+  private getAnonymousId(): string {
+    const anonymousIdCookie = getCookie("ajs_anonymous_id")
+    const anonymousIdLocalStorage = localStorageAvailable()
+      ? localStorage.getItem("ajs_anonymous_id")
+      : null
+
+    const expiration = new Date()
+    expiration.setFullYear(new Date().getFullYear() + 1)
+
+    if (anonymousIdCookie) {
+      this.anonymousId = anonymousIdCookie
+
+      localStorage.setItem("ajs_anonymous_id", anonymousIdCookie)
+    } else if (anonymousIdLocalStorage) {
+      this.anonymousId = anonymousIdLocalStorage
+
+      setCookie("ajs_anonymous_id", anonymousIdLocalStorage, expiration)
+    } else {
+      this.anonymousId = uuidv4()
+
+      setCookie("ajs_anonymous_id", this.anonymousId, expiration)
+      localStorage.setItem("ajs_anonymous_id", this.anonymousId)
+    }
+
+    return this.anonymousId
   }
 }

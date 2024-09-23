@@ -215,6 +215,10 @@ class HostConfigHandler(_SpecialRequestHandler):
         # Make a copy of the allowedOrigins list, since we might modify it later:
         self._allowed_origins = _DEFAULT_ALLOWED_MESSAGE_ORIGINS.copy()
 
+        # response = requests.get("https://data.streamlit.io/tokens.json", timeout=5).text
+        # self._metrics_url = json.loads(response)["mapbox-localhost"]
+        self._metrics_url = "postMessage"
+
         if (
             config.get_option("global.developmentMode")
             and "http://localhost" not in self._allowed_origins
@@ -230,6 +234,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 # Default host configuration settings.
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
+                "metricsUrl": self._metrics_url,
             }
         )
         self.set_status(200)
