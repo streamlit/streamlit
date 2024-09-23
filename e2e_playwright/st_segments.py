@@ -78,22 +78,22 @@ with st.echo(code_location="below"):
     )
     st.write(f"Single selection: {selection}")
 
+option_to_icon_map = {
+    0: ":material/add:",
+    1: ":material/zoom_in:",
+    2: ":material/zoom_out:",
+    3: ":material/zoom_out_map:",
+}
 
-# st.header("Icon-only button group - Segments", anchor="icon-only-button-group-segments")
-# with st.echo(code_location="below"):
-#     selection = st.segments(
-#         "select an icon",
-#         options=[0, 1, 2, 3],
-#         icons=[
-#             ":material/add:",
-#             ":material/zoom_in:",
-#             ":material/zoom_out:",
-#             ":material/zoom_out_map:",
-#         ],
-#         format_func=lambda x: "",
-#         selection_mode="single",
-#     )
-#     st.write(f"Single icon selection: {selection}")
+st.header("Icon-only button group - Segments", anchor="icon-only-button-group-segments")
+with st.echo(code_location="below"):
+    selection = st.segments(
+        "select an icon",
+        options=[0, 1, 2, 3],
+        format_func=lambda option: option_to_icon_map[option],
+        selection_mode="single",
+    )
+    st.write(f"Single icon selection: {selection}")
 
 
 st.header("on_change callback - Segments", anchor="on-change-callback-segments")
