@@ -272,6 +272,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
         const originalFillFunction = layer[fillFunction] as FillFunction
 
+        // Fallback colors in case there are issues while parsing the colors for a given object
         const selectedColor = parseToRgba(theme.colors.primary)
         const unselectedColor = parseToRgba(theme.colors.gray20)
 

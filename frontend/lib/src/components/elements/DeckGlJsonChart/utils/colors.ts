@@ -193,9 +193,11 @@ export const getContextualFillColor = ({
   unselectedOpacity = Math.floor(255 * 0.4),
 }: {
   isSelected: boolean
+  /** Fallback color in case there are issues in parsing the color for the current object */
   selectedColor: SerializedColorArray
   /** How much opacity should be applied to the selected item. Defaults to 100% */
   selectedOpacity?: number
+  /** Fallback color in case there are issues in parsing the color for the current object */
   unselectedColor: SerializedColorArray
   /** How much opacity should be applied to the not selected items. Defaults to 40% */
   unselectedOpacity?: number
