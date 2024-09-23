@@ -26,6 +26,7 @@ import { StyledErrorContainer, StyledForm } from "./styled-components"
 export interface Props {
   formId: string
   clearOnSubmit: boolean
+  enterToSubmit: boolean
   width: number
   hasSubmitButton: boolean
   scriptRunState: ScriptRunState
@@ -51,14 +52,14 @@ export function Form(props: Props): ReactElement {
     width,
     scriptRunState,
     clearOnSubmit,
+    enterToSubmit,
     border,
   } = props
 
-  // Tell WidgetStateManager if this form is `clearOnSubmit` so that it can
-  // do the right thing when the form is submitted.
+  // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
   useEffect(() => {
-    widgetMgr.setFormClearOnSubmit(formId, clearOnSubmit)
-  }, [widgetMgr, formId, clearOnSubmit])
+    widgetMgr.setFormSubmitBehaviors(formId, clearOnSubmit, enterToSubmit)
+  }, [widgetMgr, formId, clearOnSubmit, enterToSubmit])
 
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.

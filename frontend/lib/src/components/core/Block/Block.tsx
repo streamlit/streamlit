@@ -136,7 +136,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.type === "form") {
-    const { formId, clearOnSubmit, border } = node.deltaBlock
+    const { formId, clearOnSubmit, enterToSubmit, border } = node.deltaBlock
       .form as BlockProto.Form
     const submitButtons = props.formsData.submitButtons.get(formId)
     const hasSubmitButton =
@@ -145,6 +145,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       <Form
         formId={formId}
         clearOnSubmit={clearOnSubmit}
+        enterToSubmit={enterToSubmit}
         width={props.width}
         hasSubmitButton={hasSubmitButton}
         scriptRunState={props.scriptRunState}

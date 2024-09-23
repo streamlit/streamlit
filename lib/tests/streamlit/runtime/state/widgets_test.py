@@ -514,13 +514,26 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         [
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_and_register_element_id, because st.feedback doesn't take a label
-                # and its arguments are different.
+                # passing to compute_and_register_element_id, because st.feedback does
+                # not take a label and its arguments are different.
                 lambda key,
                 options,
                 disabled=False,
                 default=[],
-                click_mode=0: st.feedback("stars", disabled=disabled),
+                click_mode=0,
+                style="": st.feedback("stars", disabled=disabled),
+                "button_group",
+            ),
+            (
+                # define a lambda that matches the signature of what button_group is
+                # passing to compute_and_register_element_id, because st.feedback does
+                # not take a label and its arguments are different.
+                lambda key,
+                options,
+                disabled=False,
+                default=[],
+                click_mode=0,
+                style="": st.pills("some_label", options, disabled=disabled),
                 "button_group",
             ),
             (st.multiselect, "multiselect"),

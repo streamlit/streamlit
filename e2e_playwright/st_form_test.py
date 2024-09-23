@@ -178,6 +178,19 @@ def test_form_disabled_submit_on_enter(app: Page):
     expect(form_7.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
 
 
+def test_enter_to_submit_false(app: Page):
+    """Tests that pressing Enter does not submit form when enter_to_submit=False."""
+    form_8 = app.get_by_test_id("stForm").nth(7)
+    number_input = form_8.get_by_test_id("stNumberInput").locator("input")
+    number_input.fill("42")
+    expect(form_8.get_by_test_id("InputInstructions")).to_have_text("")
+
+    # Try to submit the form by pressing Enter, check not submitted.
+    number_input.press("Enter")
+    wait_for_app_run(app)
+    expect(form_8.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
+
+
 def test_form_submits_on_click(app: Page):
     """Tests that submit via enabled form submit button works."""
     form_6 = app.get_by_test_id("stForm").nth(5)

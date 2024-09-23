@@ -212,14 +212,18 @@ class StreamlitPage:
                 "The title of the page cannot be empty or consist of underscores/spaces only"
             )
 
-        if url_path is not None and url_path.strip() == "" and not default:
-            raise StreamlitAPIException(
-                "The URL path cannot be an empty string unless the page is the default page."
-            )
-
         self._url_path: str = inferred_name
         if url_path is not None:
-            self._url_path = url_path.lstrip("/")
+            if url_path.strip() == "" and not default:
+                raise StreamlitAPIException(
+                    "The URL path cannot be an empty string unless the page is the default page."
+                )
+
+            self._url_path = url_path.strip("/")
+            if "/" in self._url_path:
+                raise StreamlitAPIException(
+                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                )
 
         if self._icon:
             validate_icon_or_emoji(self._icon)

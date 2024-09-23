@@ -37,16 +37,16 @@ coords: "np.typing.NDArray[np.float64]" = cast(
     Any,
     np.random.randn(1000, 2) / [50, 50],
 ) + [37.76, -122.4]
-df = pd.DataFrame(coords, columns=["lat", "lon"])
+simple_map_df = pd.DataFrame(coords, columns=["lat", "lon"])
 
-st.map(df)
+st.map(simple_map_df)
 
 
 """
 ### Simple map with zoom
 """
 
-st.map(df, zoom=8)
+st.map(simple_map_df, zoom=8)
 
 
 """
@@ -70,3 +70,10 @@ st.map(
     size="size",
     use_container_width=False,
 )
+
+
+"""
+### Simple map with defined width and height
+"""
+
+st.map(simple_map_df, width=200, height=250, use_container_width=False)
