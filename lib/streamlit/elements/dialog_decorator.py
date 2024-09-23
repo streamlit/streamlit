@@ -218,7 +218,9 @@ def dialog_decorator(
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             title: str = func_or_title
-            return _dialog_decorator(non_optional_func=f, title=title, width=width, dismissible=dismissible)
+            return _dialog_decorator(
+                non_optional_func=f, title=title, width=width, dismissible=dismissible
+            )
 
         return wrapper
 
