@@ -108,6 +108,7 @@ class ConfigOption:
         replaced_by: str | None = None,
         type_: type = str,
         sensitive: bool = False,
+        multiple: bool = False,
     ):
         """Create a ConfigOption with the given name.
 
@@ -179,6 +180,7 @@ class ConfigOption:
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
         self.sensitive = sensitive
+        self.multiple = multiple
 
         if self.replaced_by:
             self.deprecated = True
