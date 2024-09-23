@@ -165,7 +165,6 @@ class StreamlitTest(unittest.TestCase):
                 "multiselect",
                 "number_input",
                 "page_link",
-                "pills",
                 "plotly_chart",
                 "popover",
                 "progress",
