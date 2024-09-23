@@ -183,9 +183,19 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         }
       }
 
+      const newSelection = getSelection()
+
+      if (
+        JSON.stringify(newSelection) === JSON.stringify(currState.selection)
+      ) {
+        // If the new selection is the same as the current selection, do
+        // nothing, and do not trigger a re-run
+        return
+      }
+
       setSelection({
         fromUi: true,
-        value: { selection: getSelection() },
+        value: { selection: newSelection },
       })
     },
     [selectionMode, selection, setSelection]
