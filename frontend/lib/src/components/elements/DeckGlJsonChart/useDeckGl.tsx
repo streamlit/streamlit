@@ -256,11 +256,16 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       )
 
       copy.layers = copy.layers.map(layer => {
-        if (!layer || Array.isArray(layer)) {
+        if (
+          !layer ||
+          Array.isArray(layer) ||
+          // If selection mode is not activated, do not make any additional changes to each layer
+          !isSelectionModeActivated
+        ) {
           return layer
         }
 
-        if (isSelectionModeActivated && !anyLayersHavePickableDefined) {
+        if (!anyLayersHavePickableDefined) {
           // If selection mode is activated and no layers have pickable defined,
           // set pickable to true for every layer. This is something Streamlit
           // does to help make map selection easier to work with out of the box.
