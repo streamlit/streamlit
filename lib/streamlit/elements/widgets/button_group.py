@@ -464,7 +464,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["single", "multiple"] = "single",
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
-        style: Literal["segment", "pills"] = "segment",
+        style: Literal["segments", "pills"] = "segments",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
