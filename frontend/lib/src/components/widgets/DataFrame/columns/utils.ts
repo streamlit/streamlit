@@ -23,19 +23,17 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
-import toString from "lodash/toString"
 import merge from "lodash/merge"
-import numbro from "numbro"
-import { sprintf } from "sprintf-js"
+import toString from "lodash/toString"
 import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
+import numbro from "numbro"
+import { sprintf } from "sprintf-js"
 
+import { Type as ArrowType } from "@streamlit/lib/src/dataframes/Quiver"
+import { formatPeriod } from "@streamlit/lib/src/dataframes/arrowUtils"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import {
-  Type as ArrowType,
-  Quiver,
-} from "@streamlit/lib/src/dataframes/Quiver"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -465,7 +463,13 @@ export function formatNumber(
   } else if (format === "duration[ns]") {
     return moment.duration(value / (1000 * 1000), "milliseconds").humanize()
   } else if (format.startsWith("period[")) {
-    return Quiver.formatPeriodType(BigInt(value), format as any)
+    const match = format.match(/period\[(.*)]/)
+    if (match === null) {
+      return String(value)
+    }
+    const [, freq] = match
+
+    return formatPeriod(value, freq as any)
   }
 
   return sprintf(format, value)

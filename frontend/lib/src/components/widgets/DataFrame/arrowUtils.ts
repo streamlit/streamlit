@@ -30,6 +30,7 @@ import {
   DataFrameCell,
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
+import { convertTimestampToSeconds } from "@streamlit/lib/src/dataframes/arrowUtils"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -303,6 +304,7 @@ export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const numIndices = dimensions.headerColumns
   const numColumns = dimensions.dataColumns
 
+  console.log("numIndices", numIndices)
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
@@ -383,7 +385,7 @@ export function getCellFromArrow(
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = moment
         .unix(
-          Quiver.convertToSeconds(
+          convertTimestampToSeconds(
             arrowCell.content,
             arrowCell.field?.type?.unit ?? 0
           )

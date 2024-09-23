@@ -26,23 +26,29 @@ import {
   StructRow,
   Table,
   tableFromIPC,
-  util,
   Vector,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import range from "lodash/range"
 import unzip from "lodash/unzip"
 import zip from "lodash/zip"
-import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
-import numbro from "numbro"
 
+import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
-import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
-import { logWarning } from "@streamlit/lib/src/util/log"
+
+import {
+  convertVectorToList,
+  formatDate,
+  formatDecimal,
+  formatDuration,
+  formatFloat,
+  formatPeriodField,
+  formatTime,
+} from "./arrowUtils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -110,13 +116,15 @@ interface Types {
 
 /** Type information for single-index columns, and data columns. */
 export interface Type {
+  field: Field | undefined
+
   /** The type label returned by pandas.api.types.infer_dtype */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
-  pandas_type: IndexTypeName | string
+  pandas_type: IndexTypeName | string | undefined
 
   /** The numpy dtype that corresponds to the types returned in df.dtypes */
-  numpy_type: string
+  numpy_type: string | undefined
 
   /** Type metadata. */
   meta?: Record<string, any> | null
@@ -125,117 +133,6 @@ export interface Type {
 type IntervalData = "int64" | "uint64" | "float64" | "datetime64[ns]"
 type IntervalClosed = "left" | "right" | "both" | "neither"
 type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
-
-// The frequency strings defined in pandas.
-// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#period-aliases
-// Not supported: "N" (nanoseconds), "U" & "us" (microseconds), and "B" (business days).
-// Reason is that these types are not supported by moment.js, but also they are not
-// very commonly used in practice.
-type SupportedPandasOffsetType =
-  // yearly frequency:
-  | "A" // deprecated alias
-  | "Y"
-  // quarterly frequency:
-  | "Q"
-  // monthly frequency:
-  | "M"
-  // weekly frequency:
-  | "W"
-  // calendar day frequency:
-  | "D"
-  // hourly frequency:
-  | "H" // deprecated alias
-  | "h"
-  // minutely frequency
-  | "T" // deprecated alias
-  | "min"
-  // secondly frequency:
-  | "S" // deprecated alias
-  | "s"
-  // milliseconds frequency:
-  | "L" // deprecated alias
-  | "ms"
-
-type PeriodFrequency =
-  | SupportedPandasOffsetType
-  | `${SupportedPandasOffsetType}-${string}`
-type PeriodType = `period[${PeriodFrequency}]`
-
-const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
-const formatMs = (duration: number): string =>
-  moment("19700101", "YYYYMMDD")
-    .add(duration, "ms")
-    .format("YYYY-MM-DD HH:mm:ss.SSS")
-
-const formatSec = (duration: number): string =>
-  moment("19700101", "YYYYMMDD")
-    .add(duration, "s")
-    .format("YYYY-MM-DD HH:mm:ss")
-
-const formatMin = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "m").format("YYYY-MM-DD HH:mm")
-
-const formatHours = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "h").format("YYYY-MM-DD HH:mm")
-
-const formatDay = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD")
-
-const formatMonth = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "M").format("YYYY-MM")
-
-const formatYear = (duration: number): string =>
-  moment("19700101", "YYYYMMDD").add(duration, "y").format("YYYY")
-
-const formatWeeks = (duration: number, freqParam?: string): string => {
-  if (!freqParam) {
-    throw new Error('Frequency "W" requires parameter')
-  }
-  const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
-  if (dayIndex < 0) {
-    throw new Error(
-      `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
-        WEEKDAY_SHORT
-      )}`
-    )
-  }
-  const startDate = moment("19700101", "YYYYMMDD")
-    .add(duration, "w")
-    .day(dayIndex - 6)
-    .format("YYYY-MM-DD")
-  const endDate = moment("19700101", "YYYYMMDD")
-    .add(duration, "w")
-    .day(dayIndex)
-    .format("YYYY-MM-DD")
-
-  return `${startDate}/${endDate}`
-}
-
-const formatQuarter = (duration: number): string =>
-  moment("19700101", "YYYYMMDD")
-    .add(duration, "Q")
-    .endOf("quarter")
-    .format("YYYY[Q]Q")
-
-const PERIOD_TYPE_FORMATTERS: Record<
-  SupportedPandasOffsetType,
-  (duration: number, freqParam?: string) => string
-> = {
-  L: formatMs,
-  ms: formatMs,
-  S: formatSec,
-  s: formatSec,
-  T: formatMin,
-  min: formatMin,
-  H: formatHours,
-  h: formatHours,
-  D: formatDay,
-  M: formatMonth,
-  W: formatWeeks,
-  Q: formatQuarter,
-  Y: formatYear,
-  A: formatYear,
-}
 
 /** Interval data type. */
 interface Interval {
@@ -262,7 +159,7 @@ export enum IndexTypeName {
  * and we parse it into this typed object - so these member names come from
  * Arrow.)
  */
-interface Schema {
+interface PandasSchema {
   /**
    * The DataFrame's index names (either provided by user or generated,
    * guaranteed unique). It is used to fetch the index data. Each DataFrame has
@@ -439,15 +336,27 @@ export class Quiver {
 
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
-    const schema = Quiver.parseSchema(table)
-    const rawColumns = Quiver.getRawColumns(schema)
-    const fields = Quiver.parseFields(table.schema)
+    console.log(table)
+    const pandasSchema = Quiver.parsePandasSchema(table)
 
-    const index = Quiver.parseIndex(table, schema)
-    const columns = Quiver.parseColumns(schema)
-    const indexNames = Quiver.parseIndexNames(schema)
+    const rawColumns = Quiver.getRawColumns(table.schema, pandasSchema)
+    console.log(rawColumns)
+
+    const fields = Quiver.parseFields(table.schema)
+    const columns = Quiver.parseColumns(table.schema, pandasSchema)
+    console.log("columns", columns)
+
     const data = Quiver.parseData(table, columns, rawColumns)
-    const types = Quiver.parseTypes(table, schema)
+    console.log("data", data)
+
+    const index: Index = pandasSchema
+      ? Quiver.parseIndex(table, pandasSchema)
+      : []
+    const indexNames: string[] = pandasSchema
+      ? Quiver.parseIndexNames(pandasSchema)
+      : []
+
+    const types = Quiver.parseTypes(table.schema, pandasSchema)
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
       : undefined
@@ -463,29 +372,41 @@ export class Quiver {
     this._indexNames = indexNames
   }
 
-  /** Parse Arrow table's schema from a JSON string to an object. */
-  private static parseSchema(table: Table): Schema {
+  /** Parse Arrow table's Pandas schema from a JSON string to an object. */
+  private static parsePandasSchema(table: Table): PandasSchema | undefined {
     const schema = table.schema.metadata.get("pandas")
     if (isNullOrUndefined(schema)) {
-      // This should never happen!
-      throw new Error("Table schema is missing.")
+      // No Pandas schema found. This happens if the dataset
+      // did not touched Pandas during serialization.
+      return undefined
     }
     return JSON.parse(schema)
   }
 
   /** Get unprocessed column names for data columns. Needed for selecting
    * data columns when there are multi-columns. */
-  private static getRawColumns(schema: Schema): string[] {
-    return (
-      schema.columns
-        .map(columnSchema => columnSchema.field_name)
-        // Filter out all index columns
-        .filter(columnName => !schema.index_columns.includes(columnName))
-    )
+  private static getRawColumns(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): string[] {
+    console.log(arrowSchema)
+    console.log(pandasSchema)
+    if (pandasSchema) {
+      return (
+        pandasSchema.columns
+          .map(columnSchema => columnSchema.field_name)
+          // Filter out all index columns
+          .filter(
+            columnName => !pandasSchema.index_columns.includes(columnName)
+          )
+      )
+    }
+
+    return (arrowSchema.fields || []).map(field => field.name)
   }
 
   /** Parse DataFrame's index header values. */
-  private static parseIndex(table: Table, schema: Schema): Index {
+  private static parseIndex(table: Table, schema: PandasSchema): Index {
     return schema.index_columns
       .map(indexName => {
         // Generate a range using the "range" index metadata.
@@ -507,7 +428,7 @@ export class Quiver {
   }
 
   /** Parse DataFrame's index header names. */
-  private static parseIndexNames(schema: Schema): string[] {
+  private static parseIndexNames(schema: PandasSchema): string[] {
     return schema.index_columns.map(indexName => {
       // Range indices are treated differently since they
       // contain additional metadata (e.g. start, stop, step).
@@ -525,29 +446,36 @@ export class Quiver {
   }
 
   /** Parse DataFrame's column header values. */
-  private static parseColumns(schema: Schema): Columns {
-    // If DataFrame `columns` has multi-level indexing, the length of
-    // `column_indexes` will show how many levels there are.
-    const isMultiIndex = schema.column_indexes.length > 1
+  private static parseColumns(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): Columns {
+    if (pandasSchema) {
+      // If DataFrame `columns` has multi-level indexing, the length of
+      // `column_indexes` will show how many levels there are.
+      const isMultiIndex = pandasSchema.column_indexes.length > 1
 
-    // Perform the following transformation:
-    // ["('1','foo')", "('2','bar')", "('3','baz')"] -> ... -> [["1", "2", "3"], ["foo", "bar", "baz"]]
-    return unzip(
-      schema.columns
-        .map(columnSchema => columnSchema.field_name)
-        // Filter out all index columns
-        .filter(fieldName => !schema.index_columns.includes(fieldName))
-        .map(fieldName =>
-          isMultiIndex
-            ? JSON.parse(
-                fieldName
-                  .replace(/\(/g, "[")
-                  .replace(/\)/g, "]")
-                  .replace(/'/g, '"')
-              )
-            : [fieldName]
-        )
-    )
+      // Perform the following transformation:
+      // ["('1','foo')", "('2','bar')", "('3','baz')"] -> ... -> [["1", "2", "3"], ["foo", "bar", "baz"]]
+      return unzip(
+        pandasSchema.columns
+          .map(columnSchema => columnSchema.field_name)
+          // Filter out all index columns
+          .filter(fieldName => !pandasSchema.index_columns.includes(fieldName))
+          .map(fieldName =>
+            isMultiIndex
+              ? JSON.parse(
+                  fieldName
+                    .replace(/\(/g, "[")
+                    .replace(/\)/g, "]")
+                    .replace(/'/g, '"')
+                )
+              : [fieldName]
+          )
+      )
+    }
+
+    return [(arrowSchema.fields || []).map(field => field.name)]
   }
 
   /** Parse DataFrame's data. */
@@ -566,17 +494,21 @@ export class Quiver {
   }
 
   /** Parse DataFrame's index and data types. */
-  private static parseTypes(table: Table, schema: Schema): Types {
-    const index = Quiver.parseIndexType(schema)
-    const data = Quiver.parseDataType(table, schema)
+  private static parseTypes(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): Types {
+    const index = pandasSchema ? Quiver.parseIndexType(pandasSchema) : []
+    const data = Quiver.parseDataType(arrowSchema, pandasSchema)
     return { index, data }
   }
 
   /** Parse types for each index column. */
-  private static parseIndexType(schema: Schema): Type[] {
+  private static parseIndexType(schema: PandasSchema): Type[] {
     return schema.index_columns.map(indexName => {
       if (Quiver.isRangeIndex(indexName)) {
         return {
+          field: undefined,
           pandas_type: IndexTypeName.RangeIndex,
           numpy_type: IndexTypeName.RangeIndex,
           meta: indexName as RangeIndex,
@@ -594,6 +526,7 @@ export class Quiver {
       }
 
       return {
+        field: undefined,
         pandas_type: indexColumn.pandas_type,
         numpy_type: indexColumn.numpy_type,
         meta: indexColumn.metadata,
@@ -622,33 +555,39 @@ export class Quiver {
 
     const categoricalDict =
       this._data.getChildAt(dataColumnIndex)?.data[0]?.dictionary
-    if (categoricalDict) {
-      // get all values into a list
-      const values = []
-
-      for (let i = 0; i < categoricalDict.length; i++) {
-        values.push(categoricalDict.get(i))
-      }
-      return values
-    }
-    return undefined
+    return notNullOrUndefined(categoricalDict)
+      ? convertVectorToList(categoricalDict)
+      : undefined
   }
 
   /** Parse types for each non-index column. */
-  private static parseDataType(table: Table, schema: Schema): Type[] {
-    return (
-      schema.columns
-        // Filter out all index columns
-        .filter(
-          columnSchema =>
-            !schema.index_columns.includes(columnSchema.field_name)
-        )
-        .map(columnSchema => ({
-          pandas_type: columnSchema.pandas_type,
-          numpy_type: columnSchema.numpy_type,
-          meta: columnSchema.metadata,
-        }))
-    )
+  private static parseDataType(
+    arrowSchema: ArrowSchema,
+    pandasSchema: PandasSchema | undefined
+  ): Type[] {
+    if (pandasSchema) {
+      return (
+        pandasSchema.columns
+          // Filter out all index columns
+          .filter(
+            columnSchema =>
+              !pandasSchema.index_columns.includes(columnSchema.field_name)
+          )
+          .map((columnSchema, index) => ({
+            field: arrowSchema.fields[index],
+            pandas_type: columnSchema.pandas_type,
+            numpy_type: columnSchema.numpy_type,
+            meta: columnSchema.metadata,
+          }))
+      )
+    }
+    {
+      return (arrowSchema.fields || []).map(field => ({
+        field,
+        pandas_type: undefined,
+        numpy_type: undefined,
+      }))
+    }
   }
 
   /** Parse styler information from proto. */
@@ -880,148 +819,17 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const leftBracket = closed === "both" || closed === "left" ? "[" : "("
     const rightBracket = closed === "both" || closed === "right" ? "]" : ")"
     const leftInterval = Quiver.format(interval.left, {
+      field: undefined,
       pandas_type: subtype,
       numpy_type: subtype,
     })
     const rightInterval = Quiver.format(interval.right, {
+      field: undefined,
       pandas_type: subtype,
       numpy_type: subtype,
     })
 
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
-  }
-
-  /**
-   * Adjusts a time value to seconds based on the unit information in the field.
-   *
-   * The unit numbers are specified here:
-   * https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
-   */
-  public static convertToSeconds(
-    value: number | bigint,
-    unit: number
-  ): number {
-    let unitAdjustment
-
-    if (unit === 1) {
-      // Milliseconds
-      unitAdjustment = 1000
-    } else if (unit === 2) {
-      // Microseconds
-      unitAdjustment = 1000 * 1000
-    } else if (unit === 3) {
-      // Nanoseconds
-      unitAdjustment = 1000 * 1000 * 1000
-    } else {
-      // Interpret it as seconds as a fallback
-      return Number(value)
-    }
-
-    // Do the calculation based on bigints, if the value
-    // is a bigint and not safe for usage as number.
-    // This might lose some precision since it doesn't keep
-    // fractional parts.
-    if (typeof value === "bigint" && !Number.isSafeInteger(Number(value))) {
-      return Number(value / BigInt(unitAdjustment))
-    }
-
-    return Number(value) / unitAdjustment
-  }
-
-  private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.convertToSeconds(data, field?.type?.unit ?? 0)
-    return moment
-      .unix(timeInSeconds)
-      .utc()
-      .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
-  }
-
-  private static formatDuration(data: number | bigint, field?: Field): string {
-    return moment
-      .duration(
-        Quiver.convertToSeconds(data, field?.type?.unit ?? 3),
-        "seconds"
-      )
-      .humanize()
-  }
-
-  /**
-   * Formats a decimal value with a given scale to a string.
-   *
-   * This code is partly based on: https://github.com/apache/arrow/issues/35745
-   *
-   * TODO: This is only a temporary workaround until ArrowJS can format decimals correctly.
-   * This is tracked here:
-   * https://github.com/apache/arrow/issues/37920
-   * https://github.com/apache/arrow/issues/28804
-   * https://github.com/apache/arrow/issues/35745
-   */
-  private static formatDecimal(value: Uint32Array, scale: number): string {
-    // Format Uint32Array to a numerical string and pad it with zeros
-    // So that it is exactly the length of the scale.
-    let numString = util
-      .bigNumToString(new util.BN(value))
-      .padStart(scale, "0")
-
-    // ArrowJS 13 correctly adds a minus sign for negative numbers.
-    // but it doesn't handle th fractional part yet. So we can just return
-    // the value if scale === 0, but we need to do some additional processing
-    // for the fractional part if scale > 0.
-
-    if (scale === 0) {
-      return numString
-    }
-
-    let sign = ""
-    if (numString.startsWith("-")) {
-      // Check if number is negative, and if so remember the sign and remove it.
-      // We will add it back later.
-      sign = "-"
-      numString = numString.slice(1)
-    }
-    // Extract the whole number part. If the number is < 1, it doesn't
-    // have a whole number part, so we'll use "0" instead.
-    // E.g for 123450 with scale 3, we'll get "123" as the whole part.
-    const wholePart = numString.slice(0, -scale) || "0"
-    // Extract the fractional part and remove trailing zeros.
-    // E.g. for 123450 with scale 3, we'll get "45" as the fractional part.
-    const decimalPart = trimEnd(numString.slice(-scale), "0") || ""
-    // Combine the parts and add the sign.
-    return `${sign}${wholePart}` + (decimalPart ? `.${decimalPart}` : "")
-  }
-
-  public static formatPeriodType(
-    duration: bigint,
-    typeName: PeriodType
-  ): string {
-    const match = typeName.match(/period\[(.*)]/)
-    if (match === null) {
-      logWarning(`Invalid period type: ${typeName}`)
-      return String(duration)
-    }
-    const [, freq] = match
-    return this.formatPeriod(duration, freq as PeriodFrequency)
-  }
-
-  private static formatPeriod(
-    duration: bigint,
-    freq: PeriodFrequency
-  ): string {
-    const [freqName, freqParam] = freq.split("-", 2)
-    const momentConverter =
-      PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
-    if (!momentConverter) {
-      logWarning(`Unsupported period frequency: ${freq}`)
-      return String(duration)
-    }
-    const durationNumber = Number(duration)
-    if (!Number.isSafeInteger(durationNumber)) {
-      logWarning(
-        `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
-      )
-      return String(duration)
-    }
-    return momentConverter(durationNumber, freqParam)
   }
 
   private static formatCategoricalType(
@@ -1040,10 +848,6 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         const { subtype, closed } = extensionMetadata
         return Quiver.formatInterval(x as StructRow, subtype, closed)
       }
-      if (extensionName === "pandas.Period") {
-        const { freq } = extensionMetadata
-        return Quiver.formatPeriod(x as bigint, freq)
-      }
     }
     return String(x)
   }
@@ -1052,12 +856,17 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   public static getTypeName(type: Type): IndexTypeName | string {
     // For `PeriodType` and `IntervalType` types are kept in `numpy_type`,
     // for the rest of the indexes in `pandas_type`.
+    if (type.pandas_type === undefined || type.numpy_type === undefined) {
+      return String(type.field?.type)
+    }
+
     return type.pandas_type === "object" ? type.numpy_type : type.pandas_type
   }
 
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
+    const extensionName = field && field.metadata.get("ARROW:extension:name")
 
     if (isNullOrUndefined(x)) {
       return "<NA>"
@@ -1066,11 +875,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // date
     const isDate = x instanceof Date || Number.isFinite(x)
     if (isDate && typeName === "date") {
-      return moment.utc(x as Date | number).format("YYYY-MM-DD")
+      return formatDate(x as Date | number)
     }
     // time
     if (typeof x === "bigint" && typeName === "time") {
-      return Quiver.formatTime(Number(x), field)
+      return formatTime(Number(x), field)
     }
 
     // datetimetz
@@ -1102,8 +911,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       )
     }
 
-    if (typeName?.startsWith("period")) {
-      return Quiver.formatPeriodType(x as bigint, typeName as PeriodType)
+    if (typeName?.startsWith("period") || extensionName === "pandas.period") {
+      return formatPeriodField(x as bigint, field)
     }
 
     if (typeName === "categorical") {
@@ -1114,11 +923,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName?.startsWith("timedelta")) {
-      return this.formatDuration(x as number | bigint, field)
+      return formatDuration(x as number | bigint, field)
     }
 
     if (typeName === "decimal") {
-      return this.formatDecimal(x as Uint32Array, field?.type?.scale || 0)
+      return formatDecimal(x as Uint32Array, field)
     }
 
     // Nested arrays and objects.
@@ -1147,7 +956,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName === "float64" && Number.isFinite(x)) {
-      return numbro(x).format("0,0.0000")
+      return formatFloat(x as number)
     }
 
     return String(x)
@@ -1210,7 +1019,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    const headerColumns = this._index.length || this.types.index.length || 1
+    const headerColumns = this._index.length || this.types.index.length || 0
     const headerRows = this._columns.length || 1
     const dataRows = this._data.numRows || 0
     const dataColumns = this._data.numCols || this._columns?.[0]?.length || 0
@@ -1321,6 +1130,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         // ArrowJS automatically converts "columns" cells to strings.
         // Keep ArrowJS structure for consistency.
         contentType: {
+          field: undefined,
           pandas_type: IndexTypeName.UnicodeIndex,
           numpy_type: "object",
         },
@@ -1362,9 +1172,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   public getIndexValue(rowIndex: number, columnIndex: number): any {
     const index = this._index[columnIndex]
-    const value =
-      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
-    return value
+    return index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
   }
 
   public getDataValue(rowIndex: number, columnIndex: number): any {
