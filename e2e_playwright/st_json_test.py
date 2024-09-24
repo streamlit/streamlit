@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 
 def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
@@ -31,6 +31,15 @@ def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(json_elements.nth(5), name="st_json-empty_dict")
     assert_snapshot(json_elements.nth(6), name="st_json-expanded_2")
     assert_snapshot(json_elements.nth(7), name="st_json-keep_bounds")
+
+
+def test_st_json_keeps_container_bounds(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test st.json keeps the container bounds."""
+    expander_with_json = get_expander(app, "Expander with json")
+    expect(expander_with_json.get_by_test_id("stJson")).to_have_count(1)
+    assert_snapshot(expander_with_json, name="st_json-keep_bounds")
 
 
 def test_st_json_displays_correctly_when_themed(
