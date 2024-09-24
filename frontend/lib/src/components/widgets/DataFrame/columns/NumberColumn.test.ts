@@ -22,8 +22,8 @@ import {
   DataType,
 } from "@streamlit/lib/src/dataframes/Quiver"
 
-import { BaseColumnProps, isErrorCell } from "./utils"
 import NumberColumn, { NumberColumnParams } from "./NumberColumn"
+import { BaseColumnProps, isErrorCell } from "./utils"
 
 const MOCK_FLOAT_ARROW_TYPE: ArrowType = {
   pandas_type: "float64",
@@ -48,6 +48,7 @@ const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   isEditable: false,
   isHidden: false,
   isIndex: false,
+  isPinned: false,
   isStretched: false,
 }
 

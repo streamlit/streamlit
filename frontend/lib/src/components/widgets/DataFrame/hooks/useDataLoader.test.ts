@@ -16,18 +16,18 @@
 
 import React from "react"
 
-import { renderHook } from "@testing-library/react-hooks"
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { renderHook } from "@testing-library/react-hooks"
 
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
 import {
   BaseColumn,
   isErrorCell,
   TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 import useDataLoader from "./useDataLoader"
 
@@ -41,6 +41,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: true,
     isHidden: false,
     isIndex: true,
+    isPinned: true,
     isStretched: false,
     title: "",
   }),
@@ -52,6 +53,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: true,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
     title: "c1",
   }),
@@ -64,6 +66,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isEditable: true,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
     title: "c2",
   }),

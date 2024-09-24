@@ -23,19 +23,19 @@ import {
   LoadingCell,
   TextCell,
 } from "@glideapps/glide-data-grid"
-import toString from "lodash/toString"
 import merge from "lodash/merge"
-import numbro from "numbro"
-import { sprintf } from "sprintf-js"
+import toString from "lodash/toString"
 import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
+import numbro from "numbro"
+import { sprintf } from "sprintf-js"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   Type as ArrowType,
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   isNullOrUndefined,
   notNullOrUndefined,
@@ -62,6 +62,8 @@ export interface BaseColumnProps {
   readonly isHidden: boolean
   // If `True`, the column is a table index:
   readonly isIndex: boolean
+  // If `True`, the column is pinned/frozen:
+  readonly isPinned: boolean
   // If `True`, the column is a stretched:
   readonly isStretched: boolean
   // If `True`, a value is required before the cell or row can be submitted:

@@ -19,7 +19,6 @@ import {
   DataFrameCell,
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
   CATEGORICAL_COLUMN,
   DECIMAL,
@@ -29,7 +28,17 @@ import {
   STYLER,
   UNICODE,
 } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
+import {
+  applyPandasStylerCss,
+  extractCssProperty,
+  getAllColumnsFromArrow,
+  getCellFromArrow,
+  getColumnFromArrow,
+  getColumnTypeFromArrow,
+  getIndexFromArrow,
+} from "./arrowUtils"
 import {
   CheckboxColumn,
   ColumnCreator,
@@ -43,15 +52,6 @@ import {
   TextColumn,
   TimeColumn,
 } from "./columns"
-import {
-  applyPandasStylerCss,
-  extractCssProperty,
-  getAllColumnsFromArrow,
-  getCellFromArrow,
-  getColumnFromArrow,
-  getColumnTypeFromArrow,
-  getIndexFromArrow,
-} from "./arrowUtils"
 import { isIntegerType } from "./isIntegerType"
 
 const MOCK_TEXT_COLUMN = TextColumn({
@@ -278,6 +278,7 @@ describe("getIndexFromArrow", () => {
         pandas_type: "int64",
       },
       isIndex: true,
+      isPinned: true,
       isHidden: false,
     })
 
@@ -293,6 +294,7 @@ describe("getIndexFromArrow", () => {
         pandas_type: "unicode",
       },
       isIndex: true,
+      isPinned: true,
       isHidden: false,
     })
   })
@@ -317,6 +319,7 @@ describe("getColumnFromArrow", () => {
         pandas_type: "unicode",
       },
       isIndex: false,
+      isPinned: false,
       isHidden: false,
     })
   })
@@ -342,6 +345,7 @@ describe("getColumnFromArrow", () => {
         pandas_type: "categorical",
       },
       isIndex: false,
+      isPinned: false,
       isHidden: false,
       columnTypeOptions: {
         options: ["bar", "foo"],
@@ -369,6 +373,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: true,
+        isPinned: true,
         name: "",
         title: "",
       },
@@ -384,6 +389,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: false,
+        isPinned: false,
         name: "c1",
         title: "c1",
       },
@@ -399,6 +405,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: false,
+        isPinned: false,
         name: "c2",
         title: "c2",
       },
@@ -425,6 +432,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: true,
+        isPinned: true,
         name: "",
         title: "",
       },
@@ -461,6 +469,7 @@ describe("getCellFromArrow", () => {
       isEditable: false,
       isHidden: false,
       isIndex: false,
+      isPinned: false,
       isStretched: false,
       arrowType: {
         pandas_type: "decimal",
@@ -501,6 +510,7 @@ describe("getCellFromArrow", () => {
         isEditable: false,
         isHidden: false,
         isIndex: false,
+        isPinned: false,
         isStretched: false,
         arrowType: {
           pandas_type: "time",
@@ -541,6 +551,7 @@ describe("getCellFromArrow", () => {
         isEditable: false,
         isHidden: false,
         isIndex: false,
+        isPinned: false,
         isStretched: false,
         arrowType: {
           pandas_type: "time",
@@ -586,6 +597,7 @@ describe("getCellFromArrow", () => {
         isEditable: false,
         isHidden: false,
         isIndex: false,
+        isPinned: false,
         isStretched: false,
         arrowType: {
           pandas_type: "datetime",

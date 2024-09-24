@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { act, renderHook } from "@testing-library/react-hooks"
 import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
+import { act, renderHook } from "@testing-library/react-hooks"
 
 import {
   BaseColumn,
@@ -43,6 +43,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isRequired: true,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
     help: TOOLTIP_CONTENT,
   }),
@@ -59,6 +60,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isRequired: false,
     isHidden: false,
     isIndex: false,
+    isPinned: false,
     isStretched: false,
   }),
 ]

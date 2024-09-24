@@ -223,6 +223,7 @@ export function getIndexFromArrow(
     isEditable,
     arrowType,
     isIndex: true,
+    isPinned: true,
     isHidden: false,
   } as BaseColumnProps
 }
@@ -271,6 +272,7 @@ export function getColumnFromArrow(
     arrowType,
     columnTypeOptions,
     isIndex: false,
+    isPinned: false,
     isHidden: false,
   } as BaseColumnProps
 }
@@ -287,6 +289,7 @@ export function getEmptyIndexColumn(): BaseColumnProps {
     indexNumber: 0,
     isEditable: false,
     isIndex: true,
+    isPinned: true,
   } as BaseColumnProps
 }
 
