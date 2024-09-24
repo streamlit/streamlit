@@ -389,7 +389,7 @@ class ButtonGroupMixin:
         return sentiment.value
 
     @gather_metrics("pills")
-    def pills(
+    def _pills(
         self,
         label: str,
         options: OptionSequence[V],
