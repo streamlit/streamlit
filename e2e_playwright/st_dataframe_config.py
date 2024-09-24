@@ -521,11 +521,11 @@ df = pd.DataFrame(
     index=["A", "B", "C"],
     columns=pd.MultiIndex.from_tuples(
         [
-            ["a", "b", "c"],
-            ["a", "b", "d"],
-            ["e", "f", "c"],
-            ["g", "h", "d"],
-            ["", "h", "i"],
+            ("a", "b", "c"),
+            ("a", "b", "d"),
+            ("e", "f", "c"),
+            ("g", "h", "d"),
+            ("", "h", "i"),
         ],
         names=["first", "second", "third"],
     ),
