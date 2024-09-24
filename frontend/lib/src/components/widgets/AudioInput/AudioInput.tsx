@@ -19,6 +19,7 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -48,6 +49,7 @@ import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
 
 import {
+  StyledAlertWrapperDiv,
   StyledAudioInputContainerDiv,
   StyledWaveformContainerDiv,
   StyledWaveformInnerDiv,
@@ -67,6 +69,9 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
+import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
+import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
+import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 
 export interface Props {
   element: AudioInputProto
@@ -83,6 +88,7 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
+  const isSafari = useMemo(() => getBrowserInfo().browserName === "Safari", [])
   const theme = useTheme()
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
@@ -360,65 +366,79 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholder =
     hasNoMicPermissions || showPlaceholder
 
+  const isDisabled = disabled || hasNoMicPermissions || isSafari
+
   return (
-    <StyledAudioInputContainerDiv
-      className="stAudioInput"
-      data-testid="stAudioInput"
-    >
-      <WidgetLabel
-        label={element.label}
-        disabled={hasNoMicPermissions || disabled}
-        labelVisibility={labelVisibilityProtoValueToEnum(
-          element.labelVisibility?.value
-        )}
-      >
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon content={element.help} placement={Placement.TOP} />
-          </StyledWidgetLabelHelp>
-        )}
-      </WidgetLabel>
-      <StyledWaveformContainerDiv>
-        <Toolbar
-          isFullScreen={false}
-          disableFullscreenMode={true}
-          target={StyledWaveformContainerDiv}
-        >
-          {deleteFileUrl && (
-            <ToolbarAction
-              label="Clear recording"
-              icon={Delete}
-              onClick={() => handleClear({ updateWidgetManager: true })}
-              data-testid="stAudioInputClearRecordingButton"
-            />
-          )}
-        </Toolbar>
-        <AudioInputActionButtons
-          isRecording={isRecording}
-          isPlaying={isPlaying}
-          recordingUrlExists={Boolean(recordingUrl)}
-          startRecording={startRecording}
-          stopRecording={stopRecording}
-          onClickPlayPause={onClickPlayPause}
-          disabled={disabled || hasNoMicPermissions}
-        />
-        <StyledWaveformInnerDiv>
-          {showPlaceholder && <Placeholder />}
-          {hasNoMicPermissions && <NoMicPermissions />}
-          <StyledWaveSurferDiv
-            data-testid="stAudioInputWaveSurfer"
-            ref={waveSurferRef}
-            show={!showNoMicPermissionsOrPlaceholder}
+    <>
+      {isSafari && (
+        <StyledAlertWrapperDiv>
+          <AlertElement
+            width={100}
+            kind={Kind.ERROR}
+            icon={"🚨"}
+            body="`st.experimental_audio_input` does not yet work on Safari. Please use another browser."
           />
-        </StyledWaveformInnerDiv>
-        <StyledWaveformTimeCode
-          isPlayingOrRecording={isPlayingOrRecording}
-          data-testid="stAudioInputWaveformTimeCode"
+        </StyledAlertWrapperDiv>
+      )}
+      <StyledAudioInputContainerDiv
+        className="stAudioInput"
+        data-testid="stAudioInput"
+      >
+        <WidgetLabel
+          label={element.label}
+          disabled={isDisabled}
+          labelVisibility={labelVisibilityProtoValueToEnum(
+            element.labelVisibility?.value
+          )}
         >
-          {shouldUpdatePlaybackTime ? progressTime : recordingTime}
-        </StyledWaveformTimeCode>
-      </StyledWaveformContainerDiv>
-    </StyledAudioInputContainerDiv>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon content={element.help} placement={Placement.TOP} />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
+        <StyledWaveformContainerDiv>
+          <Toolbar
+            isFullScreen={false}
+            disableFullscreenMode={true}
+            target={StyledWaveformContainerDiv}
+          >
+            {deleteFileUrl && (
+              <ToolbarAction
+                label="Clear recording"
+                icon={Delete}
+                onClick={() => handleClear({ updateWidgetManager: true })}
+                data-testid="stAudioInputClearRecordingButton"
+              />
+            )}
+          </Toolbar>
+          <AudioInputActionButtons
+            isRecording={isRecording}
+            isPlaying={isPlaying}
+            recordingUrlExists={Boolean(recordingUrl)}
+            startRecording={startRecording}
+            stopRecording={stopRecording}
+            onClickPlayPause={onClickPlayPause}
+            disabled={isDisabled}
+          />
+          <StyledWaveformInnerDiv>
+            {showPlaceholder && <Placeholder />}
+            {hasNoMicPermissions && <NoMicPermissions />}
+            <StyledWaveSurferDiv
+              data-testid="stAudioInputWaveSurfer"
+              ref={waveSurferRef}
+              show={!showNoMicPermissionsOrPlaceholder}
+            />
+          </StyledWaveformInnerDiv>
+          <StyledWaveformTimeCode
+            isPlayingOrRecording={isPlayingOrRecording}
+            data-testid="stAudioInputWaveformTimeCode"
+          >
+            {shouldUpdatePlaybackTime ? progressTime : recordingTime}
+          </StyledWaveformTimeCode>
+        </StyledWaveformContainerDiv>
+      </StyledAudioInputContainerDiv>
+    </>
   )
 }
 
