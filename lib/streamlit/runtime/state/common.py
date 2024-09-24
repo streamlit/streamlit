@@ -47,6 +47,7 @@ from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
 from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
+from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart
 from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
@@ -71,6 +72,7 @@ WidgetProto: TypeAlias = Union[
     ColorPicker,
     ComponentInstance,
     DateInput,
+    DeckGlJsonChart,
     DownloadButton,
     FileUploader,
     MultiSelect,

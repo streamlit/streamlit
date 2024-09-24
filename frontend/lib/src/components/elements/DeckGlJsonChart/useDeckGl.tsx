@@ -17,57 +17,63 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import JSON5 from "json5"
-import {
-  CartoLayer,
-  colorBins,
-  colorCategories,
-  colorContinuous,
-} from "@deck.gl/carto/typed"
-import * as layers from "@deck.gl/layers/typed"
-import { JSONConverter } from "@deck.gl/json/typed"
-import * as geoLayers from "@deck.gl/geo-layers/typed"
-import * as aggregationLayers from "@deck.gl/aggregation-layers/typed"
-import * as meshLayers from "@deck.gl/mesh-layers/typed"
 import { PickingInfo } from "@deck.gl/core/typed"
 import isEqual from "lodash/isEqual"
 import { ViewStateChangeParameters } from "@deck.gl/core/typed/controllers/controller"
 import { TooltipContent } from "@deck.gl/core/typed/lib/tooltip"
+import { parseToRgba } from "color2k"
 
 import { useStWidthHeight } from "@streamlit/lib/src/hooks/useStWidthHeight"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
+import {
+  useBasicWidgetClientState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import type { DeckObject, PropsWithHeight, StreamlitDeckProps } from "./types"
+import type {
+  DeckGlElementState,
+  DeckGLProps,
+  DeckObject,
+  ParsedDeckGlConfig,
+} from "./types"
+import { jsonConverter } from "./utils/jsonConverter"
+import {
+  FillFunction,
+  getContextualFillColor,
+  LAYER_TYPE_TO_FILL_FUNCTION,
+} from "./utils/colors"
 
-export type UseDeckGlShape = {
+type UseDeckGlShape = {
   createTooltip: (info: PickingInfo | null) => TooltipContent
+  data: DeckGlElementState
   deck: DeckObject
+  hasActiveSelection: boolean
   height: number | string
+  isSelectionModeActivated: boolean
   onViewStateChange: (params: ViewStateChangeParameters) => void
+  selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
+  setSelection: React.Dispatch<
+    React.SetStateAction<ValueWSource<DeckGlElementState> | null>
+  >
   viewState: Record<string, unknown>
   width: number | string
 }
 
-export type UseDeckGlProps = Omit<PropsWithHeight, "theme" | "mapboxToken"> & {
+export type UseDeckGlProps = Omit<DeckGLProps, "mapboxToken"> & {
   isLightTheme: boolean
+  theme: EmotionTheme
 }
 
 const DEFAULT_DECK_GL_HEIGHT = 500
 
-const configuration = {
-  classes: {
-    ...layers,
-    ...aggregationLayers,
-    ...geoLayers,
-    ...meshLayers,
-    CartoLayer,
-  },
-  functions: {
-    colorBins,
-    colorCategories,
-    colorContinuous,
+export const EMPTY_STATE: DeckGlElementState = {
+  selection: {
+    indices: {},
+    objects: {},
   },
 }
-
-export const jsonConverter = new JSONConverter({ configuration })
 
 /**
  * Interpolates variables within a string using values from a PickingInfo object.
@@ -100,16 +106,82 @@ const interpolate = (info: PickingInfo, body: string): string => {
   return body
 }
 
+function getDefaultState(
+  widgetMgr: WidgetStateManager,
+  element: DeckGlJsonChartProto
+): DeckGlElementState {
+  if (!element.id) {
+    return EMPTY_STATE
+  }
+
+  const initialFigureState = widgetMgr.getElementState(element.id, "selection")
+
+  return initialFigureState ?? EMPTY_STATE
+}
+
+function getStateFromWidgetMgr(
+  widgetMgr: WidgetStateManager,
+  element: DeckGlJsonChartProto
+): DeckGlElementState {
+  if (!element.id) {
+    return EMPTY_STATE
+  }
+
+  const stringValue = widgetMgr.getStringValue(element)
+  const currState: DeckGlElementState | null = stringValue
+    ? JSON5.parse(stringValue)
+    : null
+
+  return currState ?? EMPTY_STATE
+}
+
+function updateWidgetMgrState(
+  element: DeckGlJsonChartProto,
+  widgetMgr: WidgetStateManager,
+  vws: ValueWSource<DeckGlElementState>,
+  fragmentId?: string
+): void {
+  if (!element.id) {
+    return
+  }
+
+  widgetMgr.setStringValue(
+    element,
+    JSON.stringify(vws.value),
+    { fromUi: vws.fromUi },
+    fragmentId
+  )
+}
+
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     element,
+    fragmentId,
     height: propsHeight,
     isFullScreen: propsIsFullScreen,
     isLightTheme,
+    theme,
+    widgetMgr,
     width: propsWidth,
   } = props
-  const { tooltip, useContainerWidth: shouldUseContainerWidth } = element
+  const {
+    selectionMode: allSelectionModes,
+    tooltip,
+    useContainerWidth: shouldUseContainerWidth,
+  } = element
   const isFullScreen = propsIsFullScreen ?? false
+
+  const [data, setSelection] = useBasicWidgetClientState<
+    DeckGlElementState,
+    DeckGlJsonChartProto
+  >({
+    element,
+    getDefaultState,
+    getStateFromWidgetMgr,
+    updateWidgetMgrState,
+    widgetMgr,
+    fragmentId,
+  })
 
   const [viewState, setViewState] = useState<Record<string, unknown>>({
     bearing: 0,
@@ -131,8 +203,22 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     Record<string, unknown>
   >({})
 
+  /**
+   * Our proto for selectionMode is an array in order to support future-looking
+   * functionality. Currently, we only support 1 single selection mode, so we'll
+   * only use the first one (if it exists) to determine our selection mode.
+   *
+   * @see deck_gl_json_chart.py #parse_selection_mode
+   */
+  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
+    allSelectionModes[0]
+  const isSelectionModeActivated = selectionMode !== undefined
+
+  const hasActiveSelection =
+    isSelectionModeActivated && Object.keys(data.selection.indices).length > 0
+
   const parsedPydeckJson = useMemo(() => {
-    return Object.freeze(JSON5.parse<StreamlitDeckProps>(element.json))
+    return Object.freeze(JSON5.parse<ParsedDeckGlConfig>(element.json))
     // Only parse JSON when transitioning to/from fullscreen, the json changes, or theme changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen, isLightTheme, element.json])
@@ -160,15 +246,100 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       }
     }
 
+    if (copy.layers) {
+      const anyLayersHaveSelection = Object.values(
+        data.selection.indices
+      ).some(layer => layer?.length)
+
+      const anyLayersHavePickableDefined = copy.layers.some(layer =>
+        Object.hasOwn(layer, "pickable")
+      )
+
+      copy.layers = copy.layers.map(layer => {
+        if (
+          !layer ||
+          Array.isArray(layer) ||
+          // If selection mode is not activated, do not make any additional changes to each layer
+          !isSelectionModeActivated
+        ) {
+          return layer
+        }
+
+        if (!anyLayersHavePickableDefined) {
+          // If selection mode is activated and no layers have pickable defined,
+          // set pickable to true for every layer. This is something Streamlit
+          // does to help make map selection easier to work with out of the box.
+          layer.pickable = true
+        }
+
+        const layerId = `${layer.id || null}`
+        const selectedIndices = data?.selection?.indices?.[layerId] || []
+
+        const fillFunctions = LAYER_TYPE_TO_FILL_FUNCTION[layer["@@type"]]
+
+        if (!fillFunctions) {
+          return layer
+        }
+
+        const clonedLayer = { ...layer }
+        fillFunctions.forEach(fillFunction => {
+          clonedLayer.updateTriggers = {
+            // Tell Deck.gl to recompute the fill color when the selection changes.
+            // Without this, objects in layers will have stale colors when selection changes.
+            // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
+            [fillFunction]: [
+              ...(clonedLayer.updateTriggers?.[fillFunction] || []),
+              selectedIndices,
+              anyLayersHaveSelection,
+            ],
+          }
+
+          const shouldUseOriginalFillFunction = !anyLayersHaveSelection
+
+          if (shouldUseOriginalFillFunction) {
+            // If we aren't changing the fill color, we don't need to change the fillFunction
+            return clonedLayer
+          }
+
+          const originalFillFunction = layer[fillFunction] as
+            | FillFunction
+            | undefined
+
+          // Fallback colors in case there are issues while parsing the colors for a given object
+          const selectedColor = parseToRgba(theme.colors.primary)
+          const unselectedColor = parseToRgba(theme.colors.gray20)
+
+          const newFillFunction: FillFunction = (object, objectInfo) => {
+            return getContextualFillColor({
+              isSelected: selectedIndices.includes(objectInfo.index),
+              object,
+              objectInfo,
+              originalFillFunction,
+              selectedColor,
+              unselectedColor,
+            })
+          }
+
+          clonedLayer[fillFunction] = newFillFunction
+        })
+
+        return clonedLayer
+      })
+    }
+
     delete copy?.views // We are not using views. This avoids a console warning.
 
     return jsonConverter.convert(copy)
   }, [
+    data.selection.indices,
     height,
     isFullScreen,
     isLightTheme,
+    isSelectionModeActivated,
     parsedPydeckJson,
     shouldUseContainerWidth,
+    theme.colors.gray20,
+    theme.colors.primary,
     width,
   ])
 
@@ -224,9 +395,14 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   return {
     createTooltip,
+    data,
     deck,
+    hasActiveSelection,
     height,
+    isSelectionModeActivated,
     onViewStateChange,
+    selectionMode,
+    setSelection,
     viewState,
     width,
   }
