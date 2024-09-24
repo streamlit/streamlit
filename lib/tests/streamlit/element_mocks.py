@@ -48,11 +48,10 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("download_button", lambda: st.download_button("Download me", b"")),
     ("camera_input", lambda: st.camera_input("Take a picture")),
     ("chat_input", lambda: st.chat_input("Chat with me")),
-    ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
-    ("segments", lambda: st.segments("Some segments", ["a", "b", "c"])),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     # ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
+    ("segments", lambda: st.segments("Some segments", ["a", "b", "c"])),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
