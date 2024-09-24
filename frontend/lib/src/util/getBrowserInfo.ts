@@ -28,6 +28,12 @@ function getBrowserInfo(): {
   return {
     browserName: result.browser.name || "Unknown",
     browserVersion: result.browser.version || "Unknown",
+    /**
+     * 'desktop' is not a valid value for device.type in ua-parser-js.
+     * We default to 'desktop' if the value is not present.
+     * Possible options from ua-parser-js are:
+     * 'mobile', 'tablet', 'smarttv', 'wearable', 'embedded', 'console'
+     */
     deviceType: result.device.type || "desktop",
     os: result.os.name || "Unknown",
   }
