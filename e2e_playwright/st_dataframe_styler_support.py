@@ -142,6 +142,9 @@ st.dataframe(
         "number (formatted)": st.column_config.NumberColumn(format="$%.2f"),
         "url (formatted)": st.column_config.LinkColumn(display_text="Open"),
         "datetime (formatted)": st.column_config.DatetimeColumn(format="MMM DD, YYYY"),
+        "number": st.column_config.NumberColumn(),
+        "url": st.column_config.LinkColumn(),
+        "datetime": st.column_config.DatetimeColumn(),
     },
     hide_index=True,
 )
