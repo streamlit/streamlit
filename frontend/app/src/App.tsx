@@ -855,7 +855,7 @@ export class App extends PureComponent<Props, State> {
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
-      browserInfo,
+      ...browserInfo,
     })
   }
 
