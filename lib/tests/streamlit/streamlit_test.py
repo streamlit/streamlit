@@ -119,7 +119,6 @@ class StreamlitTest(unittest.TestCase):
                 "altair_chart",
                 "area_chart",
                 "audio",
-                "audio_input",
                 "balloons",
                 "bar_chart",
                 "bokeh_chart",
@@ -211,6 +210,7 @@ class StreamlitTest(unittest.TestCase):
                 "Page",
                 "fragment",
                 # Experimental APIs:
+                "experimental_audio_input",
                 "experimental_dialog",
                 "experimental_fragment",
                 "experimental_get_query_params",
