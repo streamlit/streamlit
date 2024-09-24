@@ -98,8 +98,7 @@ class ConfigTest(unittest.TestCase):
         config_option = ConfigOption(
             "_test.simpleParam",
             description="Simple config option.",
-            default_val=12345,
-            multiple=True,
+            default_val=[12345],
         )
 
         assert config_option.key == "_test.simpleParam"
@@ -107,7 +106,7 @@ class ConfigTest(unittest.TestCase):
         assert config_option.name == "simpleParam"
         assert config_option.description == "Simple config option."
         assert config_option.where_defined == ConfigOption.DEFAULT_DEFINITION
-        assert config_option.value == 12345
+        assert config_option.value == [12345]
         assert config_option.env_var == "STREAMLIT__TEST_SIMPLE_PARAM"
         assert config_option.multiple
 
@@ -339,7 +338,6 @@ class ConfigTest(unittest.TestCase):
             "_test.testMultipleValueOption",
             description="This option tests multiple values for an option",
             default_val=["Option 1", "Option 2"],
-            multiple=True,
         )
 
         assert option.multiple

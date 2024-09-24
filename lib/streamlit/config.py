@@ -188,7 +188,6 @@ def _create_option(
     replaced_by: str | None = None,
     type_: type = str,
     sensitive: bool = False,
-    multiple: bool = False,
 ) -> ConfigOption:
     '''Create a ConfigOption and store it globally in this module.
 
@@ -237,7 +236,6 @@ def _create_option(
         replaced_by=replaced_by,
         type_=type_,
         sensitive=sensitive,
-        multiple=multiple,
     )
     assert (
         option.section in _section_descriptions
@@ -569,7 +567,6 @@ _create_option(
         Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
     default_val=[],
-    multiple=True,
 )
 
 _create_option(
@@ -980,7 +977,6 @@ _create_option(
         file_util.get_streamlit_file_path("secrets.toml"),
         file_util.get_project_streamlit_file_path("secrets.toml"),
     ],
-    multiple=True,
 )
 
 

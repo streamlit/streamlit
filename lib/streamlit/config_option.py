@@ -108,7 +108,6 @@ class ConfigOption:
         replaced_by: str | None = None,
         type_: type = str,
         sensitive: bool = False,
-        multiple: bool = False,
     ):
         """Create a ConfigOption with the given name.
 
@@ -180,7 +179,8 @@ class ConfigOption:
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
         self.sensitive = sensitive
-        self.multiple = multiple
+        # infer multiple values if the default value is a list or tuple
+        self.multiple = isinstance(default_val, (list, tuple))
 
         if self.replaced_by:
             self.deprecated = True
