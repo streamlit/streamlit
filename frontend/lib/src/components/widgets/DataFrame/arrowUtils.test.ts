@@ -62,6 +62,7 @@ const MOCK_TEXT_COLUMN = TextColumn({
   isEditable: false,
   isHidden: false,
   isIndex: false,
+  isPinned: false,
   isStretched: false,
   arrowType: {
     pandas_type: "unicode",
@@ -78,6 +79,7 @@ const MOCK_NUMBER_COLUMN = NumberColumn({
   isHidden: false,
   isIndex: false,
   isStretched: false,
+  isPinned: false,
   arrowType: {
     pandas_type: "int64",
     numpy_type: "int64",
