@@ -129,5 +129,5 @@ export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
 }))
 
 export const StyledAlertWrapperDiv = styled.div(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
+  marginTop: theme.spacing.lg,
 }))

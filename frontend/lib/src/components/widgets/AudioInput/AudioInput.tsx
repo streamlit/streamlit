@@ -88,7 +88,10 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
-  const isSafari = useMemo(() => getBrowserInfo().browserName === "Safari", [])
+  const isSafari = useMemo(() => {
+    const { browserName, os } = getBrowserInfo()
+    return browserName === "Safari" || os === "iOS"
+  }, [])
   const theme = useTheme()
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
@@ -370,16 +373,6 @@ const AudioInput: React.FC<Props> = ({
 
   return (
     <>
-      {isSafari && (
-        <StyledAlertWrapperDiv>
-          <AlertElement
-            width={100}
-            kind={Kind.ERROR}
-            icon={"🚨"}
-            body="`st.experimental_audio_input` does not yet work on Safari. Please use another browser."
-          />
-        </StyledAlertWrapperDiv>
-      )}
       <StyledAudioInputContainerDiv
         className="stAudioInput"
         data-testid="stAudioInput"
@@ -438,6 +431,15 @@ const AudioInput: React.FC<Props> = ({
           </StyledWaveformTimeCode>
         </StyledWaveformContainerDiv>
       </StyledAudioInputContainerDiv>
+      {isSafari && (
+        <StyledAlertWrapperDiv>
+          <AlertElement
+            width={100}
+            kind={Kind.WARNING}
+            body="`st.experimental_audio_input` does not yet work on this browser. It will be supported in one of the next versions of Streamlit. Please use Chrome or Firefox on a non-iOS device for now."
+          />
+        </StyledAlertWrapperDiv>
+      )}
     </>
   )
 }

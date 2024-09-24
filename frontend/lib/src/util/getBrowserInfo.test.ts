@@ -154,4 +154,32 @@ describe("getBrowserInfo", () => {
       os: "Mac OS",
     })
   })
+
+  it("should detect Safari browser on iOS", () => {
+    mockUserAgent(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"
+    )
+
+    const result = getBrowserInfo()
+    expect(result).toEqual({
+      browserName: "Mobile Safari",
+      browserVersion: "14.0",
+      deviceType: "mobile",
+      os: "iOS",
+    })
+  })
+
+  it("should detect Chrome browser on iOS", () => {
+    mockUserAgent(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/91.0.4472.114 Mobile/15E148 Safari/604.1"
+    )
+
+    const result = getBrowserInfo()
+    expect(result).toEqual({
+      browserName: "Chrome",
+      browserVersion: "91.0.4472.114",
+      deviceType: "mobile",
+      os: "iOS",
+    })
+  })
 })
