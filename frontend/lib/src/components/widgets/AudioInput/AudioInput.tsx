@@ -47,6 +47,9 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
+import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
+import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
+import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 
 import {
   StyledAlertWrapperDiv,
@@ -69,9 +72,6 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
-import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
-import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 
 export interface Props {
   element: AudioInputProto
