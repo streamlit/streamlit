@@ -131,7 +131,9 @@ with st.echo(code_location="below"):
         st.form_submit_button("Submit")
     st.write(
         "segments-in-form:",
-        str(st.session_state.segments_in_form),
+        str(st.session_state.segments_in_form)
+        if "segments_in_form" in st.session_state
+        else None,
     )
 
 
