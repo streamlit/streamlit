@@ -57,7 +57,7 @@ export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
       // fine by default!)
       backgroundColor: hasLightBackgroundColor(theme)
         ? ""
-        : `color-mix(in srgb, ${theme.colors.bgColor} 90%, white 10%)`,
+        : theme.colors.darkenedBgMix25,
     },
 
     // On dark backgrounds, invert the color for the + and - symbols
