@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export const StyledWrapper = styled.div({
   display: "table",
