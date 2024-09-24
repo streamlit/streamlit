@@ -88,13 +88,16 @@ def test_no_permission_audio_input_snapshot(
     ).not_to_be_visible()
 
     expect(record_button).to_be_visible()
-    expect(record_button).not_to_be_disabled()
-    record_button.click()
+    expect(record_button).to_be_disabled()
+
+    # TODO(nico): uncomment once safari blockade is lifted
+    # expect(record_button).not_to_be_disabled()
+    # record_button.click()
 
     # Verify the permission message is visible
-    expect(
-        themed_app.get_by_text("This app would like to use your microphone.")
-    ).to_be_visible()
+    # expect(
+    #     themed_app.get_by_text("This app would like to use your microphone.")
+    # ).to_be_visible()
 
     # Capture the snapshot
     assert_snapshot(no_permission_audio_input, name="st_audio_input-no_permission")
