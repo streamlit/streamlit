@@ -47,7 +47,7 @@ pills_options = [
     "📦 Collections of components",
     "📦 Very very long text" * 20,  # pill with very long text
 ]
-selection = ButtonGroupMixin.pills(
+selection = ButtonGroupMixin._pills(
     st._main,
     "Select some options",
     pills_options,
@@ -66,7 +66,7 @@ option_to_icon_map = {
     2: ":material/zoom_out:",
     3: ":material/zoom_out_map:",
 }
-selection = ButtonGroupMixin.pills(
+selection = ButtonGroupMixin._pills(
     st._main,
     "Select a single option",
     options=[0, 1, 2, 3],
@@ -78,7 +78,7 @@ st.write(f"Single selection: {selection}")
 
 
 st.header("Pills - on_change callback")
-ButtonGroupMixin.pills(
+ButtonGroupMixin._pills(
     st._main,
     "Elements (label collapsed)",
     ["Water", "Fire", "Earth", "Air"],
@@ -91,7 +91,7 @@ ButtonGroupMixin.pills(
 
 
 st.header("Pills - disabled")
-selection = ButtonGroupMixin.pills(
+selection = ButtonGroupMixin._pills(
     st._main,
     "Elements",
     ["Water", "Fire", "Earth", "Air"],
@@ -103,7 +103,7 @@ st.write("pills-disabled:", str(selection))
 
 st.header("Pills in form")
 with st.form(key="my_form", clear_on_submit=True):
-    selection = ButtonGroupMixin.pills(
+    selection = ButtonGroupMixin._pills(
         st._main,
         "Elements  (label hidden)",
         ["Water", "Fire", "Earth", "Air"],
@@ -124,7 +124,7 @@ st.header("Pills in fragment")
 
 @st.experimental_fragment()
 def test_fragment():
-    selection = ButtonGroupMixin.pills(
+    selection = ButtonGroupMixin._pills(
         st._main, "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"
     )
     st.write("pills-in-fragment:", str(selection))
@@ -141,7 +141,7 @@ if st.button("Create some elements to unmount component"):
         time.sleep(1)
         st.write("Another element")
 
-selection = ButtonGroupMixin.pills(
+selection = ButtonGroupMixin._pills(
     st._main, "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sleep"
 )
 st.write("pills-after-sleep:", str(selection))

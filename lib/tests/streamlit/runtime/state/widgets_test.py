@@ -534,7 +534,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": ButtonGroupMixin.pills(
+                style="": ButtonGroupMixin._pills(
                     st._main, "some_label", options, disabled=disabled
                 ),
                 "button_group",
