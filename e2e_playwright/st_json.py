@@ -54,3 +54,15 @@ st.json(
     },
     expanded=2,
 )
+
+st.subheader("Keeps container bounds:")
+
+col1, col2 = st.container(key="container_with_json").columns(2)
+
+with col1.container(border=True):
+    st.json(
+        {
+            "foo": "a" * 100,
+            "bar": "this is a very long string that will not fit in the column and will cause it to wrap",
+        }
+    )
