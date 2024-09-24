@@ -155,6 +155,11 @@ def dialog_decorator(
     dialog programmatically, call ``st.rerun()`` explicitly inside of the
     dialog function.
 
+    To enforce that dialogs are always closed programmatically, you can set the
+    ``dismissible`` parameter to ``False``. This will hide the "**X**" button in the
+    upper-right corner of the dialog and prevent the user from dismissing the dialog
+    by clicking outside of it or pressing ``ESC``.
+
     ``st.dialog`` inherits behavior from |st.fragment|_.
     When a user interacts with an input widget created inside a dialog function,
     Streamlit only reruns the dialog function instead of the full script.
