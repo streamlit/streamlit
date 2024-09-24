@@ -1869,7 +1869,6 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled,
       appPages,
       navSections,
-      pageLayouts,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
