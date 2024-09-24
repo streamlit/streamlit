@@ -1016,7 +1016,11 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
+    const {
+      appHash,
+      pageLayouts,
+      currentPageScriptHash: prevPageScriptHash,
+    } = this.state
     const {
       scriptRunId,
       name: scriptName,
@@ -1082,6 +1086,20 @@ export class App extends PureComponent<Props, State> {
         mainScriptHash
       )
     }
+
+    // Use previously saved layout if exists, otherwise default to CENTERED
+    // Pages using set_page_config(layout=...) will be overriding these values
+    this.setState((prevState: State) => {
+      const newLayout =
+        pageLayouts[newPageScriptHash] ?? PageConfig.Layout.CENTERED
+      return {
+        layout: newLayout,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: newLayout === PageConfig.Layout.WIDE,
+        },
+      }
+    })
   }
 
   /**
@@ -1457,23 +1475,13 @@ export class App extends PureComponent<Props, State> {
         .filter(notUndefined)
     )
 
-    // Set new page layout before rerun
-    // 1. Use previously saved layout if exists, otherwise default to CENTERED
-    // 2. This forces pages without set_page_config(layout=...) to correctly reset to default
-    // 3. Pages using set_page_config(layout=...) will be overriding these values
+    // Save current page layout before rerun
     this.setState((prevState: State) => {
       const pageLayouts = prevState.pageLayouts
       pageLayouts[prevState.currentPageScriptHash] = prevState.layout
-      const newLayout =
-        pageLayouts[pageScriptHash] ?? PageConfig.Layout.CENTERED
       console.log("Backup page layout", prevState.pageLayouts)
       return {
-        layout: newLayout,
         pageLayouts: pageLayouts,
-        userSettings: {
-          ...prevState.userSettings,
-          wideMode: newLayout === PageConfig.Layout.WIDE,
-        },
       }
     })
 
@@ -1861,6 +1869,7 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled,
       appPages,
       navSections,
+      pageLayouts,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
