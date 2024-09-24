@@ -44,9 +44,6 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   img: {
     maxWidth: "100%",
   },
-  code: {
-    background: transparentize(theme.colors.darkenedBgMix100, 0.8),
-  },
   "*": {
     fontSize: `${theme.fontSizes.sm} !important`,
   },
