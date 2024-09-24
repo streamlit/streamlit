@@ -30,7 +30,7 @@ def test_st_json_displays_correctly(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(json_elements.nth(4), name="st_json-simple_list")
     assert_snapshot(json_elements.nth(5), name="st_json-empty_dict")
     assert_snapshot(json_elements.nth(6), name="st_json-expanded_2")
-    assert_snapshot(json_elements.nth(7), name="st_json-keep_bounds")
+    # The container bounds test is screenshot tested in another test below
 
 
 def test_st_json_keeps_container_bounds(
