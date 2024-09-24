@@ -59,7 +59,7 @@ st.subheader("Keeps container bounds:")
 
 col1, col2 = st.columns(2)
 
-with col1.expander("Expander with json", expanded=True):
+with col1.container(border=True, key="container_with_json"):
     st.json(
         {
             "foo": "a" * 100,
