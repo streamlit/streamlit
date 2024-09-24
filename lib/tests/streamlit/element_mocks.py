@@ -34,6 +34,14 @@ _CHART_DATA = pd.DataFrame(
 
 ELEMENT_PRODUCER = Callable[[], Any]
 
+H3_HEX_DATA = [
+    {"hex": "88283082b9fffff", "count": 10},
+    {"hex": "88283082d7fffff", "count": 50},
+    {"hex": "88283082a9fffff", "count": 100},
+]
+df = pd.DataFrame(H3_HEX_DATA)
+
+
 WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # buttons
     ("button", lambda: st.button("Click me")),
@@ -42,7 +50,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("chat_input", lambda: st.chat_input("Chat with me")),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
-    ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
+    # ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
@@ -103,6 +111,38 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     (
         "plotly_chart",
         lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="rerun"),
+    ),
+    (
+        "pydeck_chart",
+        lambda: st.pydeck_chart(
+            pdk.Deck(
+                map_style="mapbox://styles/mapbox/outdoors-v12",
+                initial_view_state=pdk.ViewState(
+                    latitude=37.7749295,
+                    longitude=-122.4194155,
+                    zoom=11,
+                    bearing=0,
+                    pitch=30,
+                ),
+                layers=[
+                    pdk.Layer(
+                        "H3HexagonLayer",
+                        df,
+                        id="MyHexLayer",
+                        pickable=True,
+                        stroked=True,
+                        filled=True,
+                        get_hexagon="hex",
+                        line_width_min_pixels=2,
+                        get_fill_color="[120, count > 50 ? 255 : 0, 255]",
+                    ),
+                ],
+            ),
+            use_container_width=True,
+            key="mocked_pydeck_chart",
+            on_select="rerun",
+            selection_mode="single-object",
+        ),
     ),
 ]
 

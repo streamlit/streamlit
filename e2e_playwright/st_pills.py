@@ -15,6 +15,7 @@
 import time
 
 import streamlit as st
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 
 st.header("Pills - standard")
 
@@ -46,7 +47,8 @@ pills_options = [
     "📦 Collections of components",
     "📦 Very very long text" * 20,  # pill with very long text
 ]
-selection = st.pills(
+selection = ButtonGroupMixin._pills(
+    st._main,
     "Select some options",
     pills_options,
     key="pills",
@@ -64,7 +66,8 @@ option_to_icon_map = {
     2: ":material/zoom_out:",
     3: ":material/zoom_out_map:",
 }
-selection = st.pills(
+selection = ButtonGroupMixin._pills(
+    st._main,
     "Select a single option",
     options=[0, 1, 2, 3],
     format_func=lambda option: option_to_icon_map[option],
@@ -75,7 +78,8 @@ st.write(f"Single selection: {selection}")
 
 
 st.header("Pills - on_change callback")
-st.pills(
+ButtonGroupMixin._pills(
+    st._main,
     "Elements (label collapsed)",
     ["Water", "Fire", "Earth", "Air"],
     key="pills_on_change",
@@ -87,7 +91,8 @@ st.pills(
 
 
 st.header("Pills - disabled")
-selection = st.pills(
+selection = ButtonGroupMixin._pills(
+    st._main,
     "Elements",
     ["Water", "Fire", "Earth", "Air"],
     key="pills_disabled",
@@ -98,7 +103,8 @@ st.write("pills-disabled:", str(selection))
 
 st.header("Pills in form")
 with st.form(key="my_form", clear_on_submit=True):
-    selection = st.pills(
+    selection = ButtonGroupMixin._pills(
+        st._main,
         "Elements  (label hidden)",
         ["Water", "Fire", "Earth", "Air"],
         key="pills_in_form",
@@ -118,8 +124,8 @@ st.header("Pills in fragment")
 
 @st.experimental_fragment()
 def test_fragment():
-    selection = st.pills(
-        "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"
+    selection = ButtonGroupMixin._pills(
+        st._main, "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_in_fragment"
     )
     st.write("pills-in-fragment:", str(selection))
 
@@ -135,8 +141,8 @@ if st.button("Create some elements to unmount component"):
         time.sleep(1)
         st.write("Another element")
 
-selection = st.pills(
-    "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sleep"
+selection = ButtonGroupMixin._pills(
+    st._main, "Elements", ["Water", "Fire", "Earth", "Air"], key="pills_after_sleep"
 )
 st.write("pills-after-sleep:", str(selection))
 
