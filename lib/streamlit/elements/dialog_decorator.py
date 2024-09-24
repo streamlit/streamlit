@@ -118,7 +118,7 @@ def _dialog_decorator(
 
 @overload
 def dialog_decorator(
-    title: str, *, width: DialogWidth = "small"
+    title: str, *, width: DialogWidth = "small", dismissible: bool = True
 ) -> Callable[[F], F]: ...
 
 
@@ -129,7 +129,9 @@ def dialog_decorator(
 # this 'trick'. The overload is required to have a good type hint for the decorated
 # function args.
 @overload
-def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F: ...
+def dialog_decorator(
+    title: F, *, width: DialogWidth = "small", dismissible: bool = True
+) -> F: ...
 
 
 @gather_metrics("dialog")
@@ -179,6 +181,9 @@ def dialog_decorator(
         The width of the modal dialog. If ``width`` is ``"small`` (default), the
         modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
         modal dialog will be about 750 pixels wide.
+    dismissible : bool
+        Whether the modal dialog can be dismissed by clicking outside of it or by pressing ``ESC``.
+        Setting it to False also hides the ``X`` button in the upper-right corner of the dialog.
 
     Examples
     --------
