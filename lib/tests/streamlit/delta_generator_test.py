@@ -92,6 +92,8 @@ class RunWarningTest(unittest.TestCase):
             for name, _ in inspect.getmembers(DeltaGenerator)
             if not name.startswith("_")
         }
+        # Add additional public method that are only exposed in the delta generator
+        # but not the top-level namespace:
         self.assertEqual(api, DG_ELEMENT_COMMANDS.union({"add_rows", "id", "dg"}))
 
 
