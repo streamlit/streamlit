@@ -2120,42 +2120,6 @@ describe("App", () => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
       })
     })
-
-    it("calls MetricsManager handleDeltaMessage", () => {
-      renderApp(getProps())
-
-      const metricsManager = getStoredValue<SegmentMetricsManager>(
-        SegmentMetricsManager
-      )
-      const handleDeltaMessageSpy = jest.spyOn(
-        metricsManager,
-        "handleDeltaMessage"
-      )
-
-      // Need to set up a Script ID
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-      // Need to set the script to running
-      sendForwardMessage("sessionStatusChanged", {
-        runOnSave: false,
-        scriptIsRunning: true,
-      })
-      sendForwardMessage(
-        "delta",
-        {
-          type: "newElement",
-          newElement: {
-            type: "text",
-            text: {
-              body: "Here is some text",
-              help: "",
-            },
-          },
-        },
-        { deltaPath: [0, 0] }
-      )
-
-      expect(handleDeltaMessageSpy).toHaveBeenCalledTimes(1)
-    })
   })
 
   describe("App.handleAutoRerun and autoRerun interval handling", () => {

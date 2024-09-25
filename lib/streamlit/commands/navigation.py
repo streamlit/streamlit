@@ -57,6 +57,7 @@ def navigation(
     pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
     position: Literal["sidebar", "hidden"] = "sidebar",
+    expanded: bool = False,
 ) -> StreamlitPage:
     """
     Configure the available pages in a multipage app.
@@ -101,6 +102,12 @@ def navigation(
 
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
+
+    expanded: bool
+        Whether the navigation menu should be expanded. If ``True``,
+        the navigation menu will always be expanded. If ``False``, the
+        navigation menu will be collapsed and will include a button
+        to view more options.
 
     Returns
     -------
@@ -215,6 +222,8 @@ def navigation(
         msg.navigation.position = NavigationProto.Position.HIDDEN
     else:
         msg.navigation.position = NavigationProto.Position.SIDEBAR
+
+    msg.navigation.expanded = expanded
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:

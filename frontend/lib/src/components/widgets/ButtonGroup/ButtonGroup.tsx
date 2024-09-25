@@ -14,28 +14,34 @@
  * limitations under the License.
  */
 
-import React, {
-  forwardRef,
-  ReactElement,
-  Ref,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import React, { forwardRef, memo, ReactElement, Ref, useMemo } from "react"
 
 import { useTheme } from "@emotion/react"
-import isEqual from "lodash/isEqual"
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { ButtonGroup as ButtonGroupProto } from "@streamlit/lib/src/proto"
+import {
+  ButtonGroup as ButtonGroupProto,
+  LabelVisibilityMessage,
+} from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
+import {
+  StyledWidgetLabelHelpInline,
+  WidgetLabel,
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import {
+  useBasicWidgetState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
   disabled: boolean
@@ -62,7 +68,9 @@ function handleSelection(
   if (mode == ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(index, currentSelection ?? [])
   }
-  return [index]
+
+  // unselect if item is already selected
+  return currentSelection?.includes(index) ? [] : [index]
 }
 
 function getSingleSelection(currentSelection: number[]): number {
@@ -73,17 +81,47 @@ function getSingleSelection(currentSelection: number[]): number {
 }
 
 function syncWithWidgetManager(
-  selected: number[],
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
-  fragmentId?: string,
-  fromUi = true
+  valueWithSource: ValueWSource<ButtonGroupValue>,
+  fragmentId?: string
 ): void {
-  widgetMgr.setIntArrayValue(element, selected, { fromUi: fromUi }, fragmentId)
+  widgetMgr.setIntArrayValue(
+    element,
+    valueWithSource.value,
+    { fromUi: valueWithSource.fromUi },
+    fragmentId
+  )
 }
 
-function getContentElement(content: string): ReactElement {
-  return <DynamicIcon size="lg" iconValue={content} />
+export function getContentElement(
+  content: string,
+  icon?: string,
+  style?: ButtonGroupProto.Style
+): { element: ReactElement; kind: BaseButtonKind; size: BaseButtonSize } {
+  const kind =
+    style === ButtonGroupProto.Style.PILLS
+      ? BaseButtonKind.PILLS
+      : style === ButtonGroupProto.Style.BORDERLESS
+      ? BaseButtonKind.BORDERLESS_ICON
+      : BaseButtonKind.SEGMENT
+  const size =
+    style === ButtonGroupProto.Style.BORDERLESS
+      ? BaseButtonSize.XSMALL
+      : BaseButtonSize.MEDIUM
+
+  const iconSize = style === ButtonGroupProto.Style.BORDERLESS ? "lg" : "base"
+
+  return {
+    element: (
+      <>
+        {icon && <DynamicIcon size={iconSize} iconValue={icon} />}
+        {content && <StreamlitMarkdown source={content} allowHTML={false} />}
+      </>
+    ),
+    kind: kind,
+    size: size,
+  }
 }
 
 /**
@@ -118,16 +156,15 @@ function showAsSelected(
   return selected.length > 0 && index < selected[0]
 }
 
-function getContent(
+function getButtonKindAndSize(
   isVisuallySelected: boolean,
-  fallbackContent: string,
-  selectionContent?: string | undefined | null
-): string {
-  if (isVisuallySelected && selectionContent) {
-    return selectionContent
+  buttonKind: BaseButtonKind
+): BaseButtonKind {
+  if (isVisuallySelected) {
+    buttonKind = `${buttonKind}Active` as BaseButtonKind
   }
 
-  return fallbackContent
+  return buttonKind
 }
 
 function createOptionChild(
@@ -135,7 +172,8 @@ function createOptionChild(
   index: number,
   selectionVisualization: ButtonGroupProto.SelectionVisualization,
   clickMode: ButtonGroupProto.ClickMode,
-  selected: number[]
+  selected: number[],
+  style: ButtonGroupProto.Style
 ): React.FunctionComponent {
   const isVisuallySelected = showAsSelected(
     selectionVisualization,
@@ -143,112 +181,92 @@ function createOptionChild(
     selected,
     index
   )
-  const content = getContent(
-    isVisuallySelected,
-    option.content ?? "",
-    option.selectedContent
-  )
 
-  // we have to use forwardRef here becaused BasewebButtonGroup passes it down to its children
-  const buttonKind =
-    !isVisuallySelected || option.selectedContent || false
-      ? BaseButtonKind.BORDERLESS_ICON
-      : BaseButtonKind.BORDERLESS_ICON_ACTIVE
+  let content = option.content
+  let icon = option.contentIcon
+  if (isVisuallySelected) {
+    content = option.selectedContent ? option.selectedContent : content
+    icon = option.selectedContentIcon ? option.selectedContentIcon : icon
+  }
+
+  // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
+  // and we see a console.error otherwise
   return forwardRef(function BaseButtonGroup(
     props: any,
     _: Ref<BasewebButtonGroup>
   ): ReactElement {
+    const { element, kind, size } = getContentElement(
+      content ?? "",
+      icon ?? undefined,
+      style
+    )
+    const buttonKind = getButtonKindAndSize(
+      !!(
+        isVisuallySelected &&
+        !option.selectedContent &&
+        !option.selectedContentIcon
+      ),
+      kind
+    )
     return (
-      <BaseButton {...props} size={BaseButtonSize.XSMALL} kind={buttonKind}>
-        {getContentElement(content)}
+      <BaseButton {...props} size={size} kind={buttonKind}>
+        {element}
       </BaseButton>
     )
   })
 }
 
+type ButtonGroupValue = number[]
+
 function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
-): number[] {
-  const storedValue = widgetMgr.getIntArrayValue(element)
-  return storedValue ?? element.default
+): ButtonGroupValue | undefined {
+  return widgetMgr.getIntArrayValue(element)
+}
+
+function getDefaultStateFromProto(
+  element: ButtonGroupProto
+): ButtonGroupValue {
+  return element.default ?? null
+}
+
+function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
+  return element.value ?? null
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr } = props
   const {
     clickMode,
-    default: defaultValues,
     options,
-    value,
     selectionVisualization,
+    style,
+    label,
+    labelVisibility,
+    help,
   } = element
-
   const theme: EmotionTheme = useTheme()
 
-  const [selected, setSelected] = useState<number[]>(
-    getInitialValue(widgetMgr, element) || []
-  )
-
-  const elementRef = React.useRef(element)
-  // set to undefined for the first render so we know when its mounted
-  const selectedRef = React.useRef<number[] | undefined>(undefined)
-
-  // This is required for the form clearing functionality:
-  useEffect(() => {
-    if (!element.formId) {
-      // We don't need the form clear functionality if its not in a form
-      // or if selections are not activated.
-      return
-    }
-
-    const formClearHelper = new FormClearHelper()
-    // On form clear, reset the selections (in chart & widget state)
-    formClearHelper.manageFormClearListener(widgetMgr, element.formId, () => {
-      setSelected(defaultValues)
-    })
-
-    return () => {
-      formClearHelper.disconnect()
-    }
-  }, [element.formId, widgetMgr, defaultValues])
-
-  const valueString = useMemo(() => JSON.stringify(value), [value])
-  useEffect(() => {
-    const parsedValue = JSON.parse(valueString)
-    if (elementRef.current.setValue) {
-      setSelected(parsedValue)
-      syncWithWidgetManager(
-        selected,
-        elementRef.current,
-        widgetMgr,
-        fragmentId,
-        false
-      )
-      elementRef.current.setValue = false
-    } else {
-      // only commit to the backend if the value has changed
-      if (isEqual(selected, selectedRef.current)) {
-        return
-      }
-      const fromUi = selectedRef.current === undefined ? false : true
-      syncWithWidgetManager(
-        selected,
-        elementRef.current,
-        widgetMgr,
-        fragmentId,
-        fromUi
-      )
-    }
-    selectedRef.current = selected
-  }, [selected, widgetMgr, fragmentId, valueString])
+  const [value, setValueWSource] = useBasicWidgetState<
+    ButtonGroupValue,
+    ButtonGroupProto
+  >({
+    getStateFromWidgetMgr: getInitialValue,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState: syncWithWidgetManager,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
 
   const onClick = (
     _event: React.SyntheticEvent<HTMLButtonElement>,
     index: number
   ): void => {
-    const newSelected = handleSelection(clickMode, index, selected)
-    setSelected(newSelected)
+    const newSelected = handleSelection(clickMode, index, value)
+    setValueWSource({ value: newSelected, fromUi: true })
   }
 
   let mode = undefined
@@ -258,32 +276,56 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     mode = MODE.checkbox
   }
 
-  const optionElements = options.map((option, index) => {
-    const Element = createOptionChild(
-      option,
-      index,
-      selectionVisualization,
-      clickMode,
-      selected
-    )
-    return <Element key={`${option.content}-${index}`} />
-  })
+  const optionElements = useMemo(
+    () =>
+      options.map((option, index) => {
+        const Element = createOptionChild(
+          option,
+          index,
+          selectionVisualization,
+          clickMode,
+          value,
+          style
+        )
+        return <Element key={`${option.content}-${index}`} />
+      }),
+    [clickMode, options, selectionVisualization, style, value]
+  )
+
+  const gap =
+    style === ButtonGroupProto.Style.BORDERLESS
+      ? theme.spacing.threeXS
+      : theme.spacing.twoXS
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
+      <WidgetLabel
+        label={label}
+        disabled={disabled}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value ??
+            LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+        )}
+      >
+        {help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={help} placement={Placement.TOP} />
+          </StyledWidgetLabelHelpInline>
+        )}
+      </WidgetLabel>
       <BasewebButtonGroup
         disabled={disabled}
         mode={mode}
         onClick={onClick}
         selected={
           clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-            ? selected
-            : getSingleSelection(selected)
+            ? value
+            : getSingleSelection(value)
         }
         overrides={{
           Root: {
             style: {
               flexWrap: "wrap",
-              gap: theme.spacing.threeXS,
+              gap: gap,
             },
           },
         }}
@@ -294,4 +336,4 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   )
 }
 
-export default ButtonGroup
+export default memo(ButtonGroup)

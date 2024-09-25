@@ -40,7 +40,7 @@ with st.popover(
 
 with st.popover("popover 4 (with dataframe)", help="help text"):
     st.markdown("Popover with dataframe")
-    st.dataframe(df, use_container_width=False)
+    st.dataframe(df, use_container_width=True)
     st.image(np.repeat(0, 100).reshape(10, 10))
 
 with st.sidebar.popover("popover 5 (in sidebar)"):

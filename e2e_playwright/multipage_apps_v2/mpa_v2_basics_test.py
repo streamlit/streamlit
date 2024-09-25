@@ -218,6 +218,93 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     )
 
 
+def test_handles_expanded_navigation_parameter_correctly(app: Page):
+    """Test that we handle expanded param of st.navigation nav correctly."""
+
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    # By default, the navigation is collapsed
+    view_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_button).to_be_visible()
+
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+
+    # Forced expansion removes the View less button and shows all links
+    click_checkbox(app, "Expand navigation")
+    wait_for_app_run(app)
+
+    view_button = app.get_by_test_id("stSidebarNavViewButton")
+
+    expect(view_button).not_to_be_visible()
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+
+    # Removing forced expansion shows the View less button but remains expanded
+    click_checkbox(app, "Expand navigation")
+    wait_for_app_run(app)
+    view_button = app.get_by_test_id("stSidebarNavViewButton")
+
+    expect(view_button).to_be_visible()
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+
+
+def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int):
+    """Test that the navigation expansion state is preserved across page changes."""
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    # verify the default setting is collapsed
+    view_more_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_more_button).to_be_visible()
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+
+    # User clicks View more which preserves the setting
+    view_more_button.click()
+
+    # Verify navigation is expanded
+    view_less_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_less_button).to_have_text("View less")
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+
+    # Reload the page and ensure elements are in the sidebar
+    app.goto(f"http://localhost:{app_port}")
+    wait_for_app_loaded(app)
+
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    # Verify navigation remains expanded
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+    view_less_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_less_button).to_have_text("View less")
+
+    # Undo the setting (eliminating the preference)
+    view_less_button.click()
+
+    # Verify navigation is collapsed
+    view_less_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_less_button).to_have_text("View 3 more")
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+
+    # Reload the page and ensure elements are in the sidebar
+    app.goto(f"http://localhost:{app_port}")
+    wait_for_app_loaded(app)
+
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+    expect(app.get_by_test_id("stSidebarNavViewButton")).to_have_text("View 3 more")
+
+
 def test_switch_page_by_path(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with a path."""
 

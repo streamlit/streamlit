@@ -88,6 +88,7 @@ page14 = st.Page(page_14, title="page 14")
 
 hide_sidebar = st.checkbox("Hide sidebar")
 dynamic_nav = st.checkbox("Change navigation dynamically")
+expanded = st.checkbox("Expand navigation")
 pg = st.navigation(
     (
         [page2, page3, page5, page9]
@@ -102,6 +103,7 @@ pg = st.navigation(
         }
     ),
     position="hidden" if hide_sidebar else "sidebar",
+    expanded=expanded,
 )
 
 if st.button("page 5"):

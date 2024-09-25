@@ -15,8 +15,11 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.toolbar_utils import (
+    assert_fullscreen_toolbar_button_interactions,
+)
 
 
 # Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
@@ -27,7 +30,7 @@ def test_pydeck_chart_has_consistent_visuals(
     # The pydeck chart takes a while to load so check that
     # it gets attached with an increased timeout.
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
-    expect(pydeck_charts).to_have_count(5, timeout=15000)
+    expect(pydeck_charts).to_have_count(6, timeout=15000)
 
     # The map assets can take more time to load, add an extra timeout
     # to prevent flakiness.
@@ -68,6 +71,13 @@ def test_pydeck_chart_has_consistent_visuals(
         pixel_threshold=1.0,
     )
 
+    # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+    assert_snapshot(
+        pydeck_charts.nth(5).locator("canvas").nth(1),
+        name="st_pydeck_chart-custom_width_height",
+        pixel_threshold=1.0,
+    )
+
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
@@ -77,3 +87,23 @@ def test_check_top_level_class(app: Page):
     expect(pydeck_charts.first).to_be_attached(timeout=15000)
 
     check_top_level_class(app, "stDeckGlJsonChart")
+
+
+# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
+@pytest.mark.skip_browser("firefox")
+def test_st_pydeck_clicking_on_fullscreen_toolbar_button(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that clicking on fullscreen toolbar button expands the map into fullscreen."""
+
+    # wait for mapbox to load
+    wait_for_app_run(app, 15000)
+
+    assert_fullscreen_toolbar_button_interactions(
+        app,
+        assert_snapshot=assert_snapshot,
+        widget_test_id="stDeckGlJsonChart",
+        filename_prefix="st_pydeck_chart",
+        # The pydeck tests are a lot flakier than need be so increase the pixel threshold
+        pixel_threshold=1.0,
+    )
