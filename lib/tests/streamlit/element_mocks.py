@@ -46,7 +46,6 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # buttons
     ("button", lambda: st.button("Click me")),
     ("download_button", lambda: st.download_button("Download me", b"")),
-    ("camera_input", lambda: st.camera_input("Take a picture")),
     ("chat_input", lambda: st.chat_input("Chat with me")),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
@@ -57,6 +56,9 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
     # other widgets
     ("color_picker", lambda: st.color_picker("Pick a color")),
+    # media manager
+    ("experimental_audio_input", lambda: st.experimental_audio_input("Record me")),
+    ("camera_input", lambda: st.camera_input("Take a picture")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),

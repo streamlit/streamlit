@@ -102,6 +102,7 @@ DG_ELEMENT_COMMANDS = {
     "error",
     "exception",
     "expander",
+    "experimental_audio_input",
     "feedback",
     "file_uploader",
     "form",

@@ -38,15 +38,10 @@ import {
   StyledTertiaryButton,
 } from "./styled-components"
 
-function BaseButton({
-  kind,
-  size,
-  disabled,
-  onClick,
-  fluidWidth,
-  children,
-  autoFocus,
-}: Readonly<BaseButtonPropsT>): ReactElement {
+function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
+  const { kind, size, disabled, onClick, fluidWidth, children, autoFocus } =
+    props
+
   let ComponentType = StyledPrimaryButton
 
   if (kind === BaseButtonKind.SECONDARY) {
@@ -89,7 +84,8 @@ function BaseButton({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
-      data-testid={`stBaseButton-${kind}`}
+      data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
+      aria-label={props["aria-label"] ?? ""}
     >
       {children}
     </ComponentType>
