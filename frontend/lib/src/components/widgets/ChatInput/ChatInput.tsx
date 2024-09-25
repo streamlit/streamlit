@@ -403,6 +403,7 @@ function ChatInput({
       files.forEach(f => deleteFile(f.id))
     },
   })
+
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
     multiple: element.acceptFile === "multiple",
@@ -423,6 +424,17 @@ function ChatInput({
 
     return scrollHeight
   }
+
+  const getTextAreaBorderStyle = (): React.CSSProperties =>
+    element.acceptFile
+      ? { border: "none" }
+      : {
+          // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+          borderLeftWidth: theme.sizes.borderWidth,
+          borderRightWidth: theme.sizes.borderWidth,
+          borderTopWidth: theme.sizes.borderWidth,
+          borderBottomWidth: theme.sizes.borderWidth,
+        }
 
   const handleSubmit = (): void => {
     // We want the chat input to always be in focus
@@ -558,13 +570,7 @@ function ChatInput({
                 minHeight: theme.sizes.minElementHeight,
                 outline: "none",
                 backgroundColor: theme.colors.transparent,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                border: element.acceptFile ? "none" : theme.sizes.borderWidth,
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
-                // width: `${width}px`,
+                ...getTextAreaBorderStyle(),
               },
             },
             InputContainer: {

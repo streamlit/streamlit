@@ -40,10 +40,11 @@ export const StyledChatInput = styled.div(({ theme }) => {
     borderRadius: theme.radii.default,
     display: "flex",
     alignItems: "center",
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
+    border: `${theme.sizes.borderWidth} solid`,
+    borderColor: theme.colors.transparent,
 
     ":focus-within": {
-      border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+      borderColor: theme.colors.primary,
     },
   }
 })
@@ -122,9 +123,7 @@ export const StyledVerticalDivider = styled.div<StyledVerticalDividerProps>(
       height: "1.125rem",
       width: theme.sizes.borderWidth,
       marginRight: theme.spacing.xs,
-      ...(color
-        ? { backgroundColor: color }
-        : { backgroundColor: theme.colors.fadedText20 }),
+      backgroundColor: color ?? theme.colors.fadedText20,
     }
   }
 )
