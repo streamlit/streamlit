@@ -19,7 +19,7 @@ emoji==2.13.2
 exceptiongroup==1.2.2
 execnet==2.1.1
 filelock==3.16.1
-fonttools==4.54.0
+fonttools==4.54.1
 gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
@@ -113,7 +113,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
-uv==0.4.15
+uv==0.4.16
 vega-datasets==0.9.0
 virtualenv==20.26.5
 watchdog==5.0.2
