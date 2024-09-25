@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import urlparse
 
 import tornado.web
 
@@ -108,17 +109,24 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
         client, _ = create_oauth_client(provider)
         token = client.authorize_access_token(self)
         user = token.get("userinfo")
+
+        redirect_uri = None
+        if secrets_singleton.load_if_toml_exists():
+            auth_section = secrets_singleton.get("auth")
+            if auth_section:
+                redirect_uri = auth_section.get("redirect_uri", None)
+
+        if not redirect_uri:
+            self.redirect("/")
+            return
+        cookie_dict = dict(user)
+        redirect_uri_parsed = urlparse(redirect_uri)
+        cookie_dict["origin"] = (
+            redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
+        )
+
         if user:
-            self.set_signed_cookie("_streamlit_uzer", json.dumps(user), httpOnly=True)
-        if not user:
-            access_token = token.get("access_token")
-            dict_for_cookie = {
-                "access_token": access_token,
-                "provider": provider,
-            }
             self.set_signed_cookie(
-                "_streamlit_uzer",
-                json.dumps(dict_for_cookie),
-                httpOnly=True,
+                "_streamlit_uzer", json.dumps(cookie_dict), httpOnly=True
             )
         self.redirect("/")

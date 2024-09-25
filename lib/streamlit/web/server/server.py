@@ -56,7 +56,12 @@ from streamlit.web.server.routes import (
     RemoveSlashHandler,
     StaticFileHandler,
 )
-from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_regex
+from streamlit.web.server.server_util import (
+    DEVELOPMENT_PORT,
+    get_cookie_secret,
+    is_xsrf_enabled,
+    make_url_path_regex,
+)
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
@@ -412,8 +417,8 @@ class Server:
 
         return tornado.web.Application(
             routes,
-            cookie_secret=config.get_option("server.cookieSecret"),
-            xsrf_cookies=config.get_option("server.enableXsrfProtection"),
+            cookie_secret=get_cookie_secret(),
+            xsrf_cookies=is_xsrf_enabled(),
             # Set the websocket message size. The default value is too low.
             websocket_max_message_size=get_max_message_size_bytes(),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]

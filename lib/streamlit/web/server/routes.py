@@ -22,7 +22,10 @@ import tornado.web
 from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
+from streamlit.web.server.server_util import (
+    emit_endpoint_deprecation_notice,
+    is_xsrf_enabled,
+)
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -58,7 +61,6 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         be cached indefinitely.
         """
         is_index_url = len(path) == 0
-
         if is_index_url or path.endswith(".html"):
             self.set_header("Cache-Control", "no-cache")
         else:
@@ -173,7 +175,7 @@ class HealthHandler(_SpecialRequestHandler):
             # server.enableXsrfProtection is updated, the browser does not reload the document.
             # Manually setting the cookie on /healthz since it is pinged when the
             # browser is disconnected from the server.
-            if config.get_option("server.enableXsrfProtection"):
+            if is_xsrf_enabled():
                 cookie_kwargs = self.settings.get("xsrf_cookie_kwargs", {})
                 self.set_cookie(
                     self.settings.get("xsrf_cookie_name", "_streamlit_xsrf"),
