@@ -45,7 +45,7 @@ def get_version():
             return m.group("version")
 
 
-# Commands that are not considered as elements.
+# Commands that don't result in rendered elements in the frontend
 NON_ELEMENT_COMMANDS = {
     "Page",
     "cache",
@@ -57,6 +57,8 @@ NON_ELEMENT_COMMANDS = {
     "experimental_get_query_params",
     "experimental_set_query_params",
     "experimental_user",
+    # form_submit_button is an element, but different since it
+    # requires a form container wrapping it.
     "form_submit_button",
     "fragment",
     "get_option",
