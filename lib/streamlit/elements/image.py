@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
@@ -134,6 +135,9 @@ class ImageMixin:
             If "always" or True, set the image's width to the column width.
             If "never" or False, set the image's width to its natural size.
             Note: if set, `use_column_width` takes precedence over the `width` parameter.
+        .. deprecated::
+            The `use_column_width` parameter has been deprecated and will be removed in a future release.
+            Please utilize the `use_container_width` parameter instead.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
@@ -170,6 +174,11 @@ class ImageMixin:
             )
 
         if use_column_width is not None:
+            show_deprecation_warning(
+                "The `use_column_width` parameter has been deprecated and will be removed "
+                "in a future release. Please utilize the `use_container_width` parameter instead."
+            )
+
             if use_column_width == "auto":
                 width = WidthBehaviour.AUTO
             elif use_column_width == "always" or use_column_width is True:
