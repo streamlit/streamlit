@@ -48,6 +48,7 @@ from streamlit.web.server.routes import (
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
+    RemoveSlashHandler,
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_regex
@@ -368,6 +369,10 @@ class Server:
             routes.extend(
                 [
                     (
+                        make_url_path_regex(base, "(.*)", trailing_slash="required"),
+                        RemoveSlashHandler,
+                    ),
+                    (
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {
@@ -381,7 +386,10 @@ class Server:
                             ],
                         },
                     ),
-                    (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
+                    (
+                        make_url_path_regex(base, trailing_slash="prohibited"),
+                        AddSlashHandler,
+                    ),
                 ]
             )
 

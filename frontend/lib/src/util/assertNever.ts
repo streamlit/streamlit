@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-
-export const StyledTooltipContainer = styled.label(() => ({
-  marginLeft: "10px",
-  position: "relative",
-  top: "-1px",
-}))
+/**
+ * Asserts that a given value is of type `never`. This function is useful for
+ * ensuring exhaustive checks in TypeScript. If the function is called, it
+ * throws an error indicating that a non-exhaustive branch was reached.
+ *
+ * @param {never} x - The value that should be of type `never`.
+ * @throws {Error} Throws an error if a non-exhaustive branch is reached.
+ * @returns {never} This function never returns a value.
+ */
+export const assertNever = (x: never): never => {
+  throw new Error(`Reached a branch with non-exhaustive item: ${x}`)
+}

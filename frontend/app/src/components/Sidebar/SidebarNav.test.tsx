@@ -48,6 +48,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   collapseSidebar: jest.fn(),
   currentPageScriptHash: "",
   hasSidebarElements: false,
+  expandSidebarNav: false,
   onPageChange: jest.fn(),
   endpoints: mockEndpoints(),
   ...props,
@@ -57,6 +58,7 @@ describe("SidebarNav", () => {
   afterEach(() => {
     // @ts-expect-error
     reactDeviceDetect.isMobile = false
+    window.localStorage.clear()
   })
 
   it("replaces underscores with spaces in pageName", () => {
@@ -147,6 +149,37 @@ describe("SidebarNav", () => {
     )
   })
 
+  it("does not render View less button when explicitly asked to expand", () => {
+    render(
+      <SidebarNav
+        {...getProps({
+          expandSidebarNav: true,
+          hasSidebarElements: true,
+          appPages: [
+            {
+              pageScriptHash: "main_page_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+              isDefault: true,
+            },
+          ].concat(
+            Array.from({ length: 12 }, (_, index) => ({
+              pageScriptHash: `other_page_hash${index}`,
+              pageName: `my other page${index}`,
+              urlPathname: `my_other_page${index}`,
+              isDefault: false,
+            }))
+          ),
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stSidebarNavSeparator")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSidebarNavViewButton")
+    ).not.toBeInTheDocument()
+  })
+
   it("renders View more button when there are more than 13 elements", () => {
     render(
       <SidebarNav
@@ -207,7 +240,7 @@ describe("SidebarNav", () => {
     expect(screen.getAllByTestId("stSidebarNavLink")).toHaveLength(12)
   })
 
-  it("renders View less button when visible and expanded", async () => {
+  it("renders View less button when expanded", async () => {
     render(
       <SidebarNav
         {...getProps({
@@ -236,6 +269,38 @@ describe("SidebarNav", () => {
 
     const viewLessButton = await screen.findByText("View less")
     expect(viewLessButton).toBeInTheDocument()
+  })
+
+  it("renders View less button when user prefers expansion", () => {
+    window.localStorage.setItem("sidebarNavState", "expanded")
+
+    render(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            {
+              pageScriptHash: "main_page_hash",
+              pageName: "streamlit app",
+              urlPathname: "streamlit_app",
+              isDefault: true,
+            },
+          ].concat(
+            Array.from({ length: 13 }, (_, index) => ({
+              pageScriptHash: `other_page_hash${index}`,
+              pageName: `my other page${index}`,
+              urlPathname: `my_other_page${index}`,
+              isDefault: false,
+            }))
+          ),
+        })}
+      />
+    )
+
+    const viewLessButton = screen.getByText("View less")
+    expect(viewLessButton).toBeInTheDocument()
+    const navLinks = screen.getAllByTestId("stSidebarNavLink")
+    expect(navLinks).toHaveLength(14)
   })
 
   it("is unexpanded by default, displaying 10 links when > 12 pages", () => {

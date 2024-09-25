@@ -28,7 +28,7 @@ export interface Props {
   maxLength?: number
   className?: string
   type?: "multiline" | "single" | "chat"
-  allowSubmitOnEnter?: boolean
+  allowEnterToSubmit?: boolean
 }
 
 const InputInstructions = ({
@@ -38,7 +38,7 @@ const InputInstructions = ({
   maxLength,
   className,
   type = "single",
-  allowSubmitOnEnter = true,
+  allowEnterToSubmit = true,
 }: Props): ReactElement => {
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
@@ -53,8 +53,8 @@ const InputInstructions = ({
     )
   }
 
-  // Show enter instruction if not a form or form allows submit on Enter
-  if (dirty && allowSubmitOnEnter) {
+  // Show enter instruction if not a form or form allows Enter to submit
+  if (dirty && allowEnterToSubmit) {
     const toSubmitFormOrApplyText = inForm ? "submit form" : "apply"
     if (type === "multiline") {
       const commandKey = isFromMac() ? "⌘" : "Ctrl"

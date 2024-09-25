@@ -48,6 +48,11 @@ module.exports = {
     // This can be fixed by adding it to transformIgnorePatterns
     "/node_modules/(?!glideapps)/.+\\.js$",
   ],
+  coveragePathIgnorePatterns: [
+    "src/profiler/(.*)$",
+    "src/vendor/bokeh/(.*)$",
+    "proto.js",
+  ],
   modulePaths: [],
   moduleNameMapper: {
     "^src/(.*)$": "<rootDir>/src/$1",

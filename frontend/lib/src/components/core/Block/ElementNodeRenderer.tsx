@@ -316,7 +316,7 @@ const RawElementNodeRenderer = (
       return (
         <DeckGlJsonChart
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...elementProps}
+          {...widgetProps}
         />
       )
 

@@ -162,8 +162,13 @@ class LayoutsMixin:
                 block_proto.vertical.border = True
 
         if key:
+            # At the moment, the ID is only used for extracting the
+            # key on the frontend and setting it as CSS class.
+            # There are plans to use the ID for other container features
+            # in the future. This might require including more container
+            # parameters in the ID calculation.
             block_proto.id = compute_and_register_element_id(
-                "container", user_key=key, height=height, border=border
+                "container", user_key=key, form_id=None
             )
 
         return self.dg._block(block_proto)

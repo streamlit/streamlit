@@ -33,22 +33,19 @@ export type ValueWSource<T> = {
   value: T
 } & Source
 
-// Interface for a proto that has a .value, .setValue, and .formId
-interface ValueElementProtoInterface<T> {
-  value?: T
-  setValue: boolean
+// Interface for a proto that has a .formId
+interface ValueElementProtoInterface {
   formId: string
 }
 
 export interface UseValueWSourceArgs<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface<T> // Proto for this widget.
+  P extends ValueElementProtoInterface // Proto for this widget.
 > {
   // Important: these callback functions need to have stable references! So
   // either declare them at the module level or wrap in useCallback.
   getStateFromWidgetMgr: (wm: WidgetStateManager, el: P) => T | undefined
-  getDefaultStateFromProto: (el: P) => T
-  getCurrStateFromProto: (el: P) => T
+  getDefaultState: (wm: WidgetStateManager, el: P) => T
   updateWidgetMgrState: (
     el: P,
     wm: WidgetStateManager,
@@ -61,18 +58,16 @@ export interface UseValueWSourceArgs<
 }
 
 /**
- * A React hook that makes the simplest kinds of widgets very easy to
- * implement.
+ * A React hook that makes the simplest kinds of widgets very easy to implement.
+ * Use the clientState version when the widget does not have a .setValue on its
+ * proto, otherwise utilize `useBasicWidgetState`.
  */
-export function useBasicWidgetState<
+export function useBasicWidgetClientState<
   T, // Type of the value stored in WidgetStateManager.
-  P extends ValueElementProtoInterface<T> // Proto for this widget.
+  P extends ValueElementProtoInterface // Proto for this widget.
 >({
-  // Important: these callback functions need to have stable references! So
-  // either declare them at the module level or wrap in useCallback.
   getStateFromWidgetMgr,
-  getDefaultStateFromProto,
-  getCurrStateFromProto,
+  getDefaultState,
   updateWidgetMgrState,
   element,
   widgetMgr,
@@ -83,10 +78,10 @@ export function useBasicWidgetState<
 ] {
   const [currentValue, setCurrentValue] = useState<T>(() => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
-    // Otherwise, use the default value from the widget protobuf.
+    // Otherwise, use the default value.
     return (
       getStateFromWidgetMgr(widgetMgr, element) ??
-      getDefaultStateFromProto(element)
+      getDefaultState(widgetMgr, element)
     )
   })
 
@@ -111,6 +106,74 @@ export function useBasicWidgetState<
     updateWidgetMgrState(element, widgetMgr, nextValueWSource, fragmentId)
   }, [nextValueWSource, updateWidgetMgrState, element, widgetMgr, fragmentId])
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  const onFormCleared = useCallback((): void => {
+    setNextValueWSource({
+      value: getDefaultState(widgetMgr, element),
+      fromUi: true,
+    })
+  }, [setNextValueWSource, element, getDefaultState, widgetMgr])
+
+  // Manage our form-clear event handler.
+  useFormClearHelper({ widgetMgr, element, onFormCleared })
+
+  return [currentValue, setNextValueWSource]
+}
+
+// Interface for a proto that has a .value, .setValue, and .formId
+interface ValueElementProtoInterfaceWithSetValue<T>
+  extends ValueElementProtoInterface {
+  value?: T
+  setValue: boolean
+}
+
+export interface UseValueWSourceArgsWithSetValue<
+  T, // Type of the value stored in WidgetStateManager.
+  P extends ValueElementProtoInterfaceWithSetValue<T> // Proto for this widget.
+> extends Omit<UseValueWSourceArgs<T, P>, "getDefaultState"> {
+  // Important: these callback functions need to have stable references! So
+  // either declare them at the module level or wrap in useCallback.
+  getDefaultStateFromProto: (el: P) => T
+  getCurrStateFromProto: (el: P) => T
+}
+
+/**
+ * A React hook that makes the simplest kinds of widgets very easy to implement.
+ */
+export function useBasicWidgetState<
+  T, // Type of the value stored in WidgetStateManager.
+  P extends ValueElementProtoInterfaceWithSetValue<T> // Proto for this widget.
+>({
+  getStateFromWidgetMgr,
+  getDefaultStateFromProto,
+  getCurrStateFromProto,
+  updateWidgetMgrState,
+  element,
+  widgetMgr,
+  fragmentId,
+}: UseValueWSourceArgsWithSetValue<T, P>): [
+  T,
+  Dispatch<SetStateAction<ValueWSource<T> | null>>
+] {
+  const getDefaultState = useCallback<(wm: WidgetStateManager, el: P) => T>(
+    (wm, el) => {
+      return getDefaultStateFromProto(el)
+    },
+    [getDefaultStateFromProto]
+  )
+
+  const [currentValue, setNextValueWSource] = useBasicWidgetClientState({
+    getStateFromWidgetMgr,
+    getDefaultState,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
+
   // Respond to value changes via session_state. This is also set via an
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
@@ -121,21 +184,7 @@ export function useBasicWidgetState<
       value: getCurrStateFromProto(element),
       fromUi: false,
     })
-  }, [element, getCurrStateFromProto])
-
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  const onFormCleared = useCallback((): void => {
-    setNextValueWSource({
-      value: getDefaultStateFromProto(element),
-      fromUi: true,
-    })
-  }, [setNextValueWSource, element, getDefaultStateFromProto])
-
-  // Manage our form-clear event handler.
-  useFormClearHelper({ widgetMgr, element, onFormCleared })
+  }, [element, getCurrStateFromProto, setNextValueWSource])
 
   return [currentValue, setNextValueWSource]
 }

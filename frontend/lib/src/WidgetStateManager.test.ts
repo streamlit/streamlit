@@ -660,7 +660,7 @@ describe("Widget State Manager", () => {
     })
   })
 
-  describe("allowFormSubmitOnEnter", () => {
+  describe("allowFormEnterToSubmit", () => {
     it("returns true for a valid formId with 1st submit button enabled", () => {
       // Create form with a submit button
       const formId = "mockFormId"
@@ -681,7 +681,7 @@ describe("Widget State Manager", () => {
       // Form should exist & allow submission on Enter
       // @ts-expect-error - checking that form exists via internal state
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
-      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(true)
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(true)
     })
 
     it("returns false for an invalid formId", () => {
@@ -706,7 +706,7 @@ describe("Widget State Manager", () => {
 
       // @ts-expect-error - Other form should NOT exist & should not allow submit on Enter
       expect(widgetMgr.forms.get("INVALID_FORM_ID")).toBeFalsy()
-      expect(widgetMgr.allowFormSubmitOnEnter("INVALID_FORM_ID")).toBe(false)
+      expect(widgetMgr.allowFormEnterToSubmit("INVALID_FORM_ID")).toBe(false)
     })
 
     it("returns false for a valid formId with no submit buttons", () => {
@@ -724,7 +724,7 @@ describe("Widget State Manager", () => {
 
       // @ts-expect-error - Created form should exist, but no allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
-      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(false)
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
     })
 
     it("returns false if the 1st submit button disabled", () => {
@@ -746,7 +746,7 @@ describe("Widget State Manager", () => {
 
       // @ts-expect-error - Created form should exist, but no allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
-      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(false)
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
     })
 
     it("returns true if the 1st submit button enabled, others disabled", () => {
@@ -772,7 +772,32 @@ describe("Widget State Manager", () => {
 
       // @ts-expect-error - Created form should exist and allow submit on Enter
       expect(widgetMgr.forms.get(formId)).toBeTruthy()
-      expect(widgetMgr.allowFormSubmitOnEnter(formId)).toBe(true)
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(true)
+    })
+
+    it("returns false if form created with enter_to_submit=False", () => {
+      // Create form with a submit button
+      const formId = "mockFormId"
+
+      // Create form with enter_to_submit=False
+      widgetMgr.setFormSubmitBehaviors(formId, false, false)
+
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.setStringValue(
+        { id: "widget1", formId },
+        "foo",
+        {
+          fromUi: true,
+        },
+        undefined
+      )
+
+      // @ts-expect-error - Created form should exist, but no allow submit on Enter
+      expect(widgetMgr.forms.get(formId)).toBeTruthy()
+      expect(widgetMgr.allowFormEnterToSubmit(formId)).toBe(false)
     })
   })
 

@@ -145,10 +145,10 @@ describe("InputInstructions", () => {
       )
     })
 
-    it("should not show enter instructions if allowSubmitOnEnter is false", () => {
+    it("should not show enter instructions if allowEnterToSubmit is false", () => {
       const props = getProps({
         inForm: true,
-        allowSubmitOnEnter: false,
+        allowEnterToSubmit: false,
       })
       render(<InputInstructions {...props} />)
 

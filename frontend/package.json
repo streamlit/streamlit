@@ -20,6 +20,7 @@
     "lintLib": "yarn workspace @streamlit/lib lint",
     "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src",
     "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
+    "testcoverage": "yarn workspace @streamlit/lib test --coverage && yarn workspace @streamlit/app test --coverage",
     "testLib": "yarn workspace @streamlit/lib testWatch",
     "testApp": "yarn workspace @streamlit/app testWatch"
   },
@@ -28,5 +29,6 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
