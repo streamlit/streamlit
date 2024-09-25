@@ -87,7 +87,8 @@ function useDataLoader(
       }
 
       try {
-        // Arrow has the header in first row
+        // We skip all header rows to get to to the actual data rows.
+        // in th Arrow data.
         const arrowCell = data.getCell(
           originalRow + numHeaderRows,
           originalCol

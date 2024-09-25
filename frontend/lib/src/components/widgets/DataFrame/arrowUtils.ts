@@ -240,14 +240,24 @@ export function getColumnFromArrow(
   data: Quiver,
   columnPosition: number
 ): BaseColumnProps {
-  const columnHeaders = data.columns.map(column => column[columnPosition])
-  const title = columnHeaders[columnHeaders.length - 1]
+  // data.columns refers to the header rows (not sure about why it is named this way)
+  // It is a matrix of column names.
+  const columnHeaderNames = data.columns.map(column => column[columnPosition])
+  const title =
+    columnHeaderNames.length > 0
+      ? columnHeaderNames[columnHeaderNames.length - 1]
+      : ""
 
-  // If there are multiple header columns, join these names with a "/"
-  // and use it as group name, but ignore empty strings:
+  // If there are > 1 header columns, join all these headers with a "/"
+  // and use it as the group name, but ignore empty strings headers.
+  // This does not include the last column, which we use as the actual
+  // column name. E.g.
+  // columnHeaders = ["a", "b", "c"] -> group = "a / b" name: "c"
+  // columnHeaders = ["", "b", "c"] -> group = "b" name: "c"
+
   const group =
-    columnHeaders.length > 1
-      ? columnHeaders
+    columnHeaderNames.length > 1
+      ? columnHeaderNames
           .filter(column => column !== "")
           .slice(0, -1)
           .join(" / ")

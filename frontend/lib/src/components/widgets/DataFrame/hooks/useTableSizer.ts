@@ -82,12 +82,12 @@ function useTableSizer(
   containerHeight?: number,
   isFullScreen?: boolean
 ): AutoSizerReturn {
+  // Group row + column header row
+  const numHeaderRows = usesGroupRow ? 2 : 1
+  const numTrailingRows =
+    element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
   // Calculate the maximum height of the table based on the number of rows:
-  let maxHeight = calculateMaxHeight(
-    numRows +
-      (usesGroupRow ? 2 : 1) + // Group row + column header row
-      (element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0) // Trailing row
-  )
+  let maxHeight = calculateMaxHeight(numRows + numHeaderRows + numTrailingRows)
 
   // The initial height is either the default table height or the maximum
   // (full) height based if its smaller than the default table height.
