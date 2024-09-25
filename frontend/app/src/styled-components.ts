@@ -48,8 +48,16 @@ export const MsgLogger = styled.div({
   padding: "50px 50px 0 50px",
   backgroundColor: "#ffffff30",
   color: "#84ff84",
+  maxWidth: "600px",
+  right: "0",
 })
 
 export const MsgBundle = styled.div({
   marginBottom: "2rem",
 })
+
+export const Msg = styled.div(() => ({
+  marginBottom: "0.5rem",
+  backgroundColor: "#494949",
+  padding: "0.125rem",
+}))

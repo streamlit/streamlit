@@ -17,6 +17,7 @@
 import React, {
   ReactElement,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -25,9 +26,13 @@ import React, {
 
 import classNames from "classnames"
 import { useTheme } from "@emotion/react"
+import { set } from "lodash"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import {
+  Block as BlockProto,
+  Json as JsonProto,
+} from "@streamlit/lib/src/proto"
 import { AppNode, BlockNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import {
   getElementId,
@@ -40,6 +45,7 @@ import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Dialog from "@streamlit/lib/src/components/elements/Dialog"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
+import Json from "@streamlit/lib/src/components/elements/Json"
 
 import {
   assignDividerColor,
@@ -54,6 +60,7 @@ import {
   StyledColumn,
   StyledDeltaInfo,
   StyledDeltaPathHighlighter,
+  StyledDetailsCloseButton,
   StyledHorizontalBlock,
   StyledVerticalBlock,
   StyledVerticalBlockBorderWrapper,
@@ -68,6 +75,147 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
 interface BlockPropsWithWidth extends BaseBlockProps {
   node: BlockNode
   width: number
+}
+
+const NodeDetailsWrapper = ({
+  id,
+  node,
+  childProps,
+}: {
+  id: string
+  node: ElementNode
+  childProps: any
+}): ReactElement => {
+  const [event, setEvent] = React.useState<
+    React.MouseEvent<HTMLDivElement, MouseEvent> | undefined
+  >(undefined)
+  const [position, setPosition] = React.useState({ x: 0, y: 0 })
+  const [enableDrag, setEnableDrag] = React.useState(false)
+  console.log("position", position, event)
+  const classNameDeltaPath = `[${node.metadata.deltaPath}]`
+
+  const highlight = (
+    e: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ): void => {
+    e.stopPropagation()
+
+    const elements = document.getElementsByClassName(classNameDeltaPath)
+    // only highlight when there is more than one element to hightlight / link
+    if (elements.length < 2) {
+      return
+    }
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i] as HTMLElement
+      if (element.classList.contains("highlight")) {
+        continue
+      }
+      element.classList.add("highlight")
+      element.style.border = "1px solid red"
+    }
+  }
+
+  const removeHighlight = useCallback((): void => {
+    if (event) {
+      return
+    }
+    // event.stopPropagation()
+    const elements = document.getElementsByClassName(classNameDeltaPath)
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i] as HTMLElement
+      element.classList.remove("highlight")
+      element.style.border = ""
+    }
+  }, [classNameDeltaPath, event])
+
+  useEffect(() => {
+    if (!event) {
+      removeHighlight()
+    }
+  }, [event, removeHighlight])
+
+  return (
+    <>
+      <StyledDeltaPathHighlighter
+        key={id}
+        className={classNameDeltaPath !== "[]" ? classNameDeltaPath : ""}
+        onContextMenu={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          // if (e.button !== 2) {
+          //   return
+          // }
+          // dismiss open state
+          if (event) {
+            setEvent(undefined)
+            return
+          }
+
+          setEvent(e)
+          setPosition({
+            // x: e.currentTarget.clientLeft - 400,
+            // y: Math.max(50, e.currentTarget.clientTop - 100),
+            x: e.pageX,
+            y: e.pageY,
+          })
+
+          highlight(e)
+        }}
+        onMouseOver={highlight}
+        onMouseLeave={removeHighlight}
+      >
+        <ElementNodeRenderer key={id} {...childProps} />
+        <StyledDeltaInfo>{classNameDeltaPath}</StyledDeltaInfo>
+      </StyledDeltaPathHighlighter>
+      {event && (
+        <div
+          className="stDeltaInfo"
+          draggable={true}
+          onDrag={e => {
+            // e.stopPropogation()
+            e.preventDefault()
+            e.stopPropagation()
+            if (e.clientX === 0 && e.clientY === 0) {
+              return
+            }
+            setPosition({
+              x: e.clientX,
+              y: e.clientY,
+            })
+          }}
+          style={{
+            position: "fixed",
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            zIndex: 1000000,
+          }}
+          onDragOver={e => {
+            e.stopPropagation()
+            e.preventDefault()
+          }}
+        >
+          <StyledDetailsCloseButton
+            onClick={() => {
+              setEvent(undefined)
+            }}
+          >
+            X
+          </StyledDetailsCloseButton>
+          <Json
+            width={300}
+            element={JsonProto.create({
+              body: JSON.stringify({
+                deltaPath: JSON.stringify(node.metadata.deltaPath),
+                elementId: id,
+                fragmentId: node.fragmentId,
+                scriptRunId: node.scriptRunId,
+              }),
+              expanded: true,
+            })}
+          />
+        </div>
+      )}
+    </>
+  )
 }
 
 // Render BlockNodes (i.e. container nodes).
@@ -239,12 +387,13 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             }
 
             elementKeySet.add(key)
-
             return (
-              <StyledDeltaPathHighlighter key={key}>
-                <ElementNodeRenderer key={key} {...childProps} />
-                <StyledDeltaInfo>{`[${node.metadata.deltaPath}]`}</StyledDeltaInfo>
-              </StyledDeltaPathHighlighter>
+              <NodeDetailsWrapper
+                key={key}
+                id={key}
+                node={node}
+                childProps={childProps}
+              />
             )
           }
 

@@ -220,7 +220,13 @@ export const StyledDeltaInfo = styled.div({
 
 export const StyledDeltaPathHighlighter = styled.div({
   display: "inline-flex",
-  "&:hover": {
-    border: "1px solid red",
-  },
+})
+
+export const StyledDetailsCloseButton = styled.button({
+  background: "none",
+  border: "none",
+  color: "red",
+  right: "0",
+  position: "absolute",
+  zIndex: 1,
 })
