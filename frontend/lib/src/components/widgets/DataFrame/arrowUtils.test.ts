@@ -19,7 +19,6 @@ import {
   DataFrameCell,
   Quiver,
 } from "@streamlit/lib/src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
   CATEGORICAL_COLUMN,
   DECIMAL,
@@ -29,7 +28,17 @@ import {
   STYLER,
   UNICODE,
 } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
+import {
+  applyPandasStylerCss,
+  extractCssProperty,
+  getAllColumnsFromArrow,
+  getCellFromArrow,
+  getColumnFromArrow,
+  getColumnTypeFromArrow,
+  getIndexFromArrow,
+} from "./arrowUtils"
 import {
   CheckboxColumn,
   ColumnCreator,
@@ -43,15 +52,6 @@ import {
   TextColumn,
   TimeColumn,
 } from "./columns"
-import {
-  applyPandasStylerCss,
-  extractCssProperty,
-  getAllColumnsFromArrow,
-  getCellFromArrow,
-  getColumnFromArrow,
-  getColumnTypeFromArrow,
-  getIndexFromArrow,
-} from "./arrowUtils"
 import { isIntegerType } from "./isIntegerType"
 
 const MOCK_TEXT_COLUMN = TextColumn({
@@ -318,6 +318,29 @@ describe("getColumnFromArrow", () => {
       },
       isIndex: false,
       isHidden: false,
+    })
+  })
+
+  it("works with multi-index headers", () => {
+    const element = ArrowProto.create({
+      data: MULTI,
+    })
+    const data = new Quiver(element)
+
+    const column = getColumnFromArrow(data, 0)
+    expect(column).toEqual({
+      id: "column-red-0",
+      name: "red",
+      title: "red",
+      isEditable: true,
+      arrowType: {
+        meta: null,
+        numpy_type: "object",
+        pandas_type: "unicode",
+      },
+      isIndex: false,
+      isHidden: false,
+      group: "1",
     })
   })
 

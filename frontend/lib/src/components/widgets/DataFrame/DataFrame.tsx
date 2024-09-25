@@ -186,7 +186,7 @@ function DataFrame({
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.rows - 1)
+  const originalNumRows = Math.max(0, dataDimensions.dataRows)
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
@@ -522,6 +522,10 @@ function DataFrame({
   const { columns: glideColumns, onColumnResize } =
     useColumnSizer(transformedColumns)
 
+  // data.columns refers to the header rows, and
+  // not the data columns. Not sure why it is named this way.
+  // To activate the group row feature, we need at least two header rows.
+  const usesGroupRow = data.columns.length > 1
   const {
     minHeight,
     maxHeight,
@@ -532,6 +536,7 @@ function DataFrame({
   } = useTableSizer(
     element,
     numRows,
+    usesGroupRow,
     containerWidth,
     containerHeight,
     isFullScreen

@@ -16,18 +16,18 @@
 
 import React from "react"
 
-import { renderHook } from "@testing-library/react-hooks"
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { renderHook } from "@testing-library/react-hooks"
 
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { UNICODE } from "@streamlit/lib/src/mocks/arrow"
 import {
   BaseColumn,
   isErrorCell,
   TextColumn,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { MULTI, UNICODE } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 import useDataLoader from "./useDataLoader"
 
@@ -111,6 +111,26 @@ describe("useDataLoader hook", () => {
 
     // if column out of bounds. return error cell
     expect(isErrorCell(result.current.getCellContent([3, 0]))).toBe(true)
+  })
+
+  it("correctly handles multi-index headers", () => {
+    const element = ArrowProto.create({
+      data: MULTI,
+    })
+    const data = new Quiver(element)
+    const numRows = data.dimensions.rows
+
+    const { result } = renderHook(() => {
+      const editingState = React.useRef<EditingState>(
+        new EditingState(numRows)
+      )
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
+    })
+
+    // Check that row 0 is returning the correct cell value:
+    expect(
+      MOCK_COLUMNS[0].getCellValue(result.current.getCellContent([2, 0]))
+    ).toBe("foo")
   })
 
   it("uses editing state if a cell got edited", () => {
