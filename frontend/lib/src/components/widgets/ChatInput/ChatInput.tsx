@@ -43,12 +43,16 @@ import { useDropzone } from "react-dropzone"
 import { FileRejection } from "react-dropzone"
 import zip from "lodash/zip"
 
+import BaseButton, {
+  BaseButtonKind,
+} from "@streamlit/lib/src/components/shared/BaseButton"
 import {
   StyledChatInput,
   StyledChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,
+  StyledVerticalDivider,
 } from "./styled-components"
 
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
@@ -68,6 +72,7 @@ import {
 } from "@streamlit/lib/src/proto"
 import { set } from "lodash"
 import UploadedFiles from "../FileUploader/UploadedFiles"
+import { AttachFile } from "@emotion-icons/material-outlined"
 
 export interface Props {
   disabled: boolean
@@ -398,6 +403,7 @@ function ChatInput({
       files.forEach(f => deleteFile(f.id))
     },
   })
+
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
     multiple: element.acceptFile === "multiple",
@@ -418,6 +424,17 @@ function ChatInput({
 
     return scrollHeight
   }
+
+  const getTextAreaBorderStyle = (): React.CSSProperties =>
+    element.acceptFile
+      ? { border: "none" }
+      : {
+          // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+          borderLeftWidth: theme.sizes.borderWidth,
+          borderRightWidth: theme.sizes.borderWidth,
+          borderTopWidth: theme.sizes.borderWidth,
+          borderBottomWidth: theme.sizes.borderWidth,
+        }
 
   const handleSubmit = (): void => {
     // We want the chat input to always be in focus
@@ -524,12 +541,20 @@ function ChatInput({
       </div>
       <StyledChatInput>
         {element.acceptFile !== "false" ? (
-          <div {...getRootProps()}>
-            <input {...getInputProps()} />
-            <button>+</button>
-          </div>
+          <>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <BaseButton
+                kind={BaseButtonKind.BORDERLESS_ICON}
+                onClick={() => {}}
+                disabled={disabled}
+              >
+                <Icon content={AttachFile} size="base" color="inherit" />
+              </BaseButton>
+            </div>
+            <StyledVerticalDivider />
+          </>
         ) : null}
-
         <UITextArea
           inputRef={chatInputRef}
           value={value}
@@ -545,12 +570,7 @@ function ChatInput({
                 minHeight: theme.sizes.minElementHeight,
                 outline: "none",
                 backgroundColor: theme.colors.transparent,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
-                width: `${width}px`,
+                ...getTextAreaBorderStyle(),
               },
             },
             InputContainer: {
