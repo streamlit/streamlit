@@ -501,3 +501,15 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.imgs.width, image.WidthBehaviour.MIN_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_and_use_column_width(self):
+        """Test st.image with use_container_width and use_column_width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.image(img, use_container_width=True, use_column_width=True)
+
+        self.assertTrue(
+            "`use_container_width` and `use_column_width` cannot be set at the same time."
+            in str(e.exception)
+        )

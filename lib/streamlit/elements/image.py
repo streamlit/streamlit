@@ -162,6 +162,12 @@ class ImageMixin:
 
         """
 
+        if use_container_width is not None and use_column_width is not None:
+            raise StreamlitAPIException(
+                "`use_container_width` and `use_column_width` cannot be set at the same time.",
+                "Please utilize `use_container_width` since `use_column_width` is deprecated.",
+            )
+
         if use_column_width is not None:
             if use_column_width == "auto" or (
                 use_column_width is None and width is None
