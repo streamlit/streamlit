@@ -61,6 +61,8 @@ ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
+# @see Image.proto
+# @see WidthBehavior on the frontend
 class WidthBehaviour(IntEnum):
     """
     Special values that are recognized by the frontend and allow us to change the
@@ -70,6 +72,8 @@ class WidthBehaviour(IntEnum):
     ORIGINAL = -1
     COLUMN = -2
     AUTO = -3
+    MIN_IMAGE_OR_CONTAINER = -4
+    MAX_IMAGE_OR_CONTAINER = -5
 
 
 WidthBehaviour.ORIGINAL.__doc__ = """Display the image at its original width"""
@@ -94,6 +98,8 @@ class ImageMixin:
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
+        *,
+        use_container_width: bool | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -114,6 +120,14 @@ class ImageMixin:
             Image width. None means use the image width,
             but do not exceed the width of the column.
             Should be set for SVG images, as they have no default image width.
+        use_container_width : bool
+            Whether to override the figure's native width with the width of the
+            parent container. If ``use_container_width`` is ``True``, Streamlit
+            sets the width of the figure to match the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the width of the image to its natural width, up to
+            the width of the parent container.
+            Note: if set, `use_container_width` takes precedence over the `width` parameter.
         use_column_width : "auto", "always", "never", or bool
             If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
@@ -149,14 +163,29 @@ class ImageMixin:
 
         """
 
-        if use_column_width == "auto" or (use_column_width is None and width is None):
-            width = WidthBehaviour.AUTO
-        elif use_column_width == "always" or use_column_width is True:
-            width = WidthBehaviour.COLUMN
-        elif width is None:
-            width = WidthBehaviour.ORIGINAL
-        elif width <= 0:
-            raise StreamlitAPIException("Image width must be positive.")
+        if use_column_width is not None:
+            if use_column_width == "auto":
+                width = WidthBehaviour.AUTO
+            elif use_column_width == "always" or use_column_width is True:
+                width = WidthBehaviour.COLUMN
+            elif width is None:
+                width = WidthBehaviour.ORIGINAL
+            elif width <= 0:
+                raise StreamlitAPIException("Image width must be positive.")
+
+        else:
+            # Check for non-existent params first
+            if use_container_width is None and width is None:
+                use_container_width = False
+
+            if use_container_width is True:
+                width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
+            elif use_container_width is False:
+                width = WidthBehaviour.MIN_IMAGE_OR_CONTAINER
+            elif width is None:
+                width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
+            elif width <= 0:
+                raise StreamlitAPIException("Image width must be positive.")
 
         image_list_proto = ImageListProto()
         marshall_images(
