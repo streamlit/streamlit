@@ -121,6 +121,7 @@ class RunWarningTest(unittest.TestCase):
                 "error",
                 "exception",
                 "expander",
+                "experimental_audio_input",
                 "feedback",
                 "file_uploader",
                 "form",

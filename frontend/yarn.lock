@@ -3442,6 +3442,11 @@
     "@types/d3-transition" "*"
     "@types/d3-zoom" "*"
 
+"@types/debounce@*":
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/@types/debounce/-/debounce-1.2.4.tgz#cb7e85d9ad5ababfac2f27183e8ac8b576b2abb3"
+  integrity sha512-jBqiORIzKDOToaF63Fm//haOCHuwQuLa2202RK4MozpA6lh93eCBc+/8+wZn5OzjJt3ySdc+74SXWXB55Ewtyw==
+
 "@types/debug@^4.0.0":
   version "4.1.7"
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.7.tgz#7cc0ea761509124709b8b2d1090d8f6c17aadb82"
@@ -3891,6 +3896,13 @@
   resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-9.0.2.tgz#ede1d1b1e451548d44919dc226253e32a6952c4b"
   integrity sha512-kNnC1GFBLuhImSnV7w4njQkUiJi0ZXUycu1rUaouPqiKlXkh77JKgdRnTAp1x5eBwcIwbtI+3otwzuIDEuDoxQ==
 
+"@types/wavesurfer.js@^6.0.12":
+  version "6.0.12"
+  resolved "https://registry.yarnpkg.com/@types/wavesurfer.js/-/wavesurfer.js-6.0.12.tgz#3cbec05cb70fa8c9a79a8da70cc9be10166f9d83"
+  integrity sha512-oM9hYlPIVms4uwwoaGs9d0qp7Xk7IjSGkdwgmhUymVUIIilRfjtSQvoOgv4dpKiW0UozWRSyXfQqTobi0qWyCw==
+  dependencies:
+    "@types/debounce" "*"
+
 "@types/ws@^8.5.1":
   version "8.5.4"
   resolved "https://registry.yarnpkg.com/@types/ws/-/ws-8.5.4.tgz#bb10e36116d6e570dd943735f86c933c1587b8a5"
@@ -4062,6 +4074,11 @@
   dependencies:
     "@typescript-eslint/types" "5.51.0"
     eslint-visitor-keys "^3.3.0"
+
+"@wavesurfer/react@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@wavesurfer/react/-/react-1.0.7.tgz#5bbb8fe8080f4478e896a32eeeb5ed111bbc4266"
+  integrity sha512-Bw2rd2zqVL1ERy8N9mciacbQW3N5Gn9oRjhq3kjqgtLeE8a1WSTU+4kU0E37541jf432eNZ8lNzuodFFSiNccw==
 
 "@webassemblyjs/ast@1.12.1", "@webassemblyjs/ast@^1.12.1":
   version "1.12.1"
@@ -15591,12 +15608,7 @@ tslib@^2.0.0, tslib@^2.0.1, tslib@^2.0.3, tslib@^2.1.0, tslib@^2.2.0, tslib@^2.4
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.6.2.tgz#703ac29425e7b37cd6fd456e92404d46d1f3e4ae"
   integrity sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==
 
-tslib@^2.6.3:
-  version "2.7.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.7.0.tgz#d9b40c5c40ab59e8738f297df3087bf1a2690c01"
-  integrity sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==
-
-tslib@~2.6.3:
+tslib@^2.6.3, tslib@~2.6.3:
   version "2.6.3"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.6.3.tgz#0438f810ad7a9edcde7a241c3d80db693c8cbfe0"
   integrity sha512-xNvxJEOUiWPGhUuUdQgAJPKOOJfGnIyKySOc09XkKsgdUV/3E2zvwZYdejjmRgPCgcym1juLH3226yA7sEFJKQ==
@@ -16485,6 +16497,11 @@ watchpack@^2.4.1:
   dependencies:
     glob-to-regexp "^0.4.1"
     graceful-fs "^4.1.2"
+
+wavesurfer.js@^7.8.2:
+  version "7.8.2"
+  resolved "https://registry.yarnpkg.com/wavesurfer.js/-/wavesurfer.js-7.8.2.tgz#4e8b657292f5e341b01eff4a94e9c2ae03c1ce72"
+  integrity sha512-tcQrhtILu7lOy4ZkfkqFjjv+fK4dDVNoEF4vh79W5RtkLjByCt7jqcneEG1lf+6XMBXyWE5AHQ8bAE/Ch4HdtQ==
 
 wbuf@^1.1.0, wbuf@^1.7.3:
   version "1.7.3"

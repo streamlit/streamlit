@@ -210,6 +210,7 @@ class StreamlitTest(unittest.TestCase):
                 "Page",
                 "fragment",
                 # Experimental APIs:
+                "experimental_audio_input",
                 "experimental_dialog",
                 "experimental_fragment",
                 "experimental_get_query_params",

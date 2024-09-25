@@ -73,6 +73,7 @@ export function ToolbarAction({
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
+          aria-label={label}
         >
           {icon && (
             <Icon
