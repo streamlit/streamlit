@@ -20,6 +20,7 @@ import tornado.web
 
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.web.server.oidc_mixin import TornadoOAuth, TornadoOAuth2App
+from streamlit.web.server.server_util import get_cookie_secret
 
 
 class AuthCache:
@@ -69,8 +70,23 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
 
 class AuthlibLoginHandler(tornado.web.RequestHandler):
     async def get(self):
-        provider = self.get_argument("provider", None)
-        client, redirect_uri = create_oauth_client(provider)
+        try:
+            from authlib.jose import JoseError, jwt
+        except ImportError:
+            self.redirect("/")
+            return
+
+        provider_token = self.get_argument("provider", None)
+        claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
+        try:
+            payload = jwt.decode(
+                provider_token, get_cookie_secret(), claims_options=claim_options
+            )
+            payload.validate()
+        except JoseError:
+            self.redirect("/")
+            return
+        client, redirect_uri = create_oauth_client(payload["provider"])
         return client.authorize_redirect(self, redirect_uri)
 
 

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Iterator, Mapping, NoReturn, Union
 
 from streamlit import runtime
@@ -23,6 +24,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx as _get_script_run_ctx,
 )
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.web.server.server_util import get_cookie_secret
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
@@ -65,9 +67,23 @@ def validate_auth_credentials(provider: str) -> None:
 
 
 def generate_login_redirect_url(provider: str | None = None) -> str:
+    try:
+        from authlib.jose import jwt
+    except ImportError:
+        raise StreamlitAPIException(
+            "To use Auth you need to install the 'authlib' package."
+        ) from None
+
     base_url = "/authliblogin"
+    header = {"alg": "HS256"}
+    payload = {
+        "provider": provider,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=2),
+    }
+    provider_token = jwt.encode(header, payload, get_cookie_secret())
+
     if provider is not None:
-        base_url += f"?provider={provider}"
+        base_url += f"?provider={provider_token.decode('latin-1')}"
     return base_url
 
 
