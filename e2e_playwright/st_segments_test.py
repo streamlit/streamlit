@@ -53,22 +53,19 @@ def test_click_multiple_segments_and_take_snapshot(
     # click on second element to test multiselect
     get_segment_button(segments, "📊 Charts").click()
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Multi selection: \\['Foobar', '📊 Charts'\\]")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Multi selection: ['Foobar', '📊 Charts']")
 
     # click on same element to test unselect
     get_segment_button(segments, "📊 Charts").click()
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Multi selection: \\['Foobar'\\]")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Multi selection: ['Foobar']")
 
     # click on same element and take screenshot of multiple selected segments
     get_segment_button(segments, "📊 Charts").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
-    text = get_markdown(themed_app, "Multi selection: \\['Foobar', '📊 Charts'\\]")
-    expect(text).to_be_visible()
+    expect_markdown(themed_app, "Multi selection: ['Foobar', '📊 Charts']")
 
     assert_snapshot(segments, name="st_segments-multiselect")
 
@@ -138,21 +135,18 @@ def test_click_single_icon_segment_and_take_snapshot(
 
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
-    text = get_markdown(app, "Multi selection: []")
-    expect(text).to_be_visible()
+    expect_markdown(app, "Multi selection: []")
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    text = get_markdown(
+    expect_markdown(
         app,
-        "Multi selection: \\['Foobar', '🧰 General widgets'\\]",
+        "Multi selection: ['Foobar', '🧰 General widgets']",
     )
-    expect(text).to_be_visible()
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    text = get_markdown(app, "Multi selection: []")
-    expect(text).to_be_visible()
+    expect_markdown(app, "Multi selection: []")
 
 
 def test_selection_via_on_change_callback(app: Page):
@@ -160,7 +154,7 @@ def test_selection_via_on_change_callback(app: Page):
     segments = get_button_group(app, 3)
     get_segment_button(segments, "Sadness").click()
     wait_for_app_run(app)
-    expect_markdown(app, "on_change selection: 'Sadness'")
+    expect_markdown(app, "on_change selection: Sadness")
 
 
 def test_segments_are_disabled(app: Page):
