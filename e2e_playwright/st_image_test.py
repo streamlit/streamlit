@@ -76,6 +76,14 @@ def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunc
     assert_snapshot(columns_container, name="st_image-use_column_width")
 
 
+def test_st_image_use_container_width_parameter(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    columns_container = app.get_by_test_id("stHorizontalBlock").nth(1)
+    columns_container.scroll_into_view_if_needed()
+    assert_snapshot(columns_container, name="st_image-use_container_width")
+
+
 def test_fullscreen_button_exists(app: Page):
     """Test that element has the fullscreen button."""
     expect(app.get_by_test_id("StyledFullScreenButton").first).to_be_attached()

@@ -456,3 +456,48 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             st.image("does/not/exist", width=-1234)
 
         self.assertTrue("Image width must be positive." in str(ctx.exception))
+
+    def test_st_image_use_container_width_default(self):
+        """Test st.image without specifying a use_container_width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MAX_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_true(self):
+        """Test st.image with use_container_width=True."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_container_width=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MAX_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_false(self):
+        """Test st.image with use_container_width=False."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MIN_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_true_and_given_width(self):
+        """Test st.image with use_container_width=True and a given width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, width=100, use_container_width=True)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MAX_IMAGE_OR_CONTAINER)
+
+    def test_st_image_use_container_width_false_and_given_width(self):
+        """Test st.image with use_container_width=False and a given width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, width=100, use_container_width=False)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.MIN_IMAGE_OR_CONTAINER)
