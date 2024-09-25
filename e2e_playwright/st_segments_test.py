@@ -138,7 +138,7 @@ def test_click_single_icon_segment_and_take_snapshot(
 
 def test_pass_default_selections(app: Page):
     """Test that passed defaults are rendered correctly."""
-    text = get_markdown(app, "Multi selection: None")
+    text = get_markdown(app, "Multi selection: []")
     expect(text).to_be_visible()
 
     click_checkbox(app, "Set default values")
@@ -151,7 +151,7 @@ def test_pass_default_selections(app: Page):
 
     click_checkbox(app, "Set default values")
     wait_for_app_run(app)
-    text = get_markdown(app, "Multi selection: None")
+    text = get_markdown(app, "Multi selection: []")
     expect(text).to_be_visible()
 
 
@@ -160,7 +160,7 @@ def test_selection_via_on_change_callback(app: Page):
     segments = get_button_group(app, 3)
     get_segment_button(segments, "Sadness").click()
     wait_for_app_run(app)
-    expect_markdown(app, "on_change selection: ['Sadness']")
+    expect_markdown(app, "on_change selection: 'Sadness'")
 
 
 def test_segments_are_disabled(app: Page):
