@@ -165,7 +165,6 @@ class StreamlitTest(unittest.TestCase):
                 "multiselect",
                 "number_input",
                 "page_link",
-                "pills",
                 "plotly_chart",
                 "popover",
                 "progress",
@@ -211,6 +210,7 @@ class StreamlitTest(unittest.TestCase):
                 "Page",
                 "fragment",
                 # Experimental APIs:
+                "experimental_audio_input",
                 "experimental_dialog",
                 "experimental_fragment",
                 "experimental_get_query_params",

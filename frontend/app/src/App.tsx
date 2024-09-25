@@ -101,6 +101,7 @@ import {
   notNullOrUndefined,
   preserveEmbedQueryParams,
 } from "@streamlit/lib/src/util/utils"
+import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"
@@ -840,6 +841,8 @@ export class App extends PureComponent<Props, State> {
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     const pageProfileObj = PageProfile.toObject(pageProfile)
+
+    const browserInfo = getBrowserInfo()
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
       isFragmentRun: Boolean(pageProfileObj.isFragmentRun),
@@ -852,6 +855,7 @@ export class App extends PureComponent<Props, State> {
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
+      browserInfo,
     })
   }
 

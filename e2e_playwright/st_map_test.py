@@ -40,6 +40,18 @@ def test_st_map_has_consistent_visuals(
         pixel_threshold=1.0,
     )
 
+    assert_snapshot(
+        maps.nth(0).locator(".mapboxgl-ctrl-group").nth(0),
+        name="st_map-zoom_controls",
+    )
+
+    # Hover on the zoom out button
+    maps.nth(0).locator(".mapboxgl-ctrl-zoom-out").hover()
+    assert_snapshot(
+        maps.nth(0).locator(".mapboxgl-ctrl-group").nth(0),
+        name="st_map-zoom_out_hover",
+    )
+
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         maps.nth(1).locator("canvas").nth(1),

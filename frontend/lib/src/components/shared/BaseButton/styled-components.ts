@@ -56,6 +56,8 @@ export interface BaseButtonProps {
   fluidWidth?: boolean | number
   children: ReactNode
   autoFocus?: boolean
+  "data-testid"?: string
+  "aria-label"?: string
 }
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
@@ -249,6 +251,7 @@ export const StyledIconButton = styled(
       backgroundColor: theme.colors.lightGray,
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
+      cursor: "not-allowed",
     },
   }
 })

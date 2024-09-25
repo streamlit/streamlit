@@ -23,9 +23,9 @@ import streamlit as st
 # NOTE: We intentionally don't verify that values returned by these widgets work as
 # expected as doing so in this type of batch test would drastically increase the
 # boilerplate code required to write this. Instead, we rely on other tests to fully test
-# return values. We also don't test the camera_input, data_editor, and file_uploader
-# widgets as well as custom components here due to the disproportionate amount of work
-# required to do so.
+# return values. We also don't test the audio_input, camera_input, data_editor, and
+# file_uploader widgets as well as custom components here due to the disproportionate
+# amount of work required to do so.
 @st.fragment
 def my_big_fragment():
     st.button("a button")
