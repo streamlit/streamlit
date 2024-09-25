@@ -14,24 +14,27 @@
  * limitations under the License.
  */
 
-import ObjectColumn from "./ObjectColumn"
-import TextColumn from "./TextColumn"
-import CheckboxColumn from "./CheckboxColumn"
-import SelectboxColumn from "./SelectboxColumn"
-import ListColumn from "./ListColumn"
-import NumberColumn from "./NumberColumn"
-import LinkColumn from "./LinkColumn"
-import ImageColumn from "./ImageColumn"
-import ProgressColumn from "./ProgressColumn"
-import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import {
   AreaChartColumn,
   BarChartColumn,
   LineChartColumn,
 } from "./ChartColumn"
+import CheckboxColumn from "./CheckboxColumn"
+import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+import ImageColumn from "./ImageColumn"
+import LinkColumn from "./LinkColumn"
+import ListColumn from "./ListColumn"
+import NumberColumn from "./NumberColumn"
+import ObjectColumn from "./ObjectColumn"
+import ProgressColumn from "./ProgressColumn"
+import SelectboxColumn from "./SelectboxColumn"
+import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
+export type { DateTimeColumnParams } from "./DateTimeColumn"
+export type { LinkColumnParams } from "./LinkColumn"
+export type { NumberColumnParams } from "./NumberColumn"
 
 export * from "./utils"
 
@@ -63,19 +66,19 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
 export const CustomCells = []
 
 export {
-  ObjectColumn,
-  TextColumn,
+  AreaChartColumn,
+  BarChartColumn,
   CheckboxColumn,
-  SelectboxColumn,
+  DateColumn,
+  DateTimeColumn,
+  ImageColumn,
+  LineChartColumn,
+  LinkColumn,
   ListColumn,
   NumberColumn,
-  LinkColumn,
-  DateTimeColumn,
-  DateColumn,
-  TimeColumn,
-  LineChartColumn,
-  BarChartColumn,
-  AreaChartColumn,
-  ImageColumn,
+  ObjectColumn,
   ProgressColumn,
+  SelectboxColumn,
+  TextColumn,
+  TimeColumn,
 }

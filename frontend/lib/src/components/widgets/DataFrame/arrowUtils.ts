@@ -42,9 +42,12 @@ import {
   ColumnCreator,
   DateColumn,
   DateTimeColumn,
+  DateTimeColumnParams,
   isErrorCell,
+  LinkColumnParams,
   ListColumn,
   NumberColumn,
+  NumberColumnParams,
   ObjectColumn,
   removeLineBreaks,
   SelectboxColumn,
@@ -453,19 +456,35 @@ export function getCellFromArrow(
           ...cellTemplate,
           displayData,
         } as TextCell
-      } else if (cellTemplate.kind === GridCellKind.Number) {
+      } else if (
+        cellTemplate.kind === GridCellKind.Number &&
+        // Only apply styler value if format was not explicitly set by the user.
+        isNullOrUndefined(
+          (column.columnTypeOptions as NumberColumnParams)?.format
+        )
+      ) {
         cellTemplate = {
           ...cellTemplate,
           displayData,
         } as NumberCell
-      } else if (cellTemplate.kind === GridCellKind.Uri) {
+      } else if (
+        cellTemplate.kind === GridCellKind.Uri &&
+        // Only apply styler value if display text was not explicitly set by the user.
+        isNullOrUndefined(
+          (column.columnTypeOptions as LinkColumnParams)?.display_text
+        )
+      ) {
         cellTemplate = {
           ...cellTemplate,
           displayData,
         } as UriCell
       } else if (
         cellTemplate.kind === GridCellKind.Custom &&
-        (cellTemplate as DatePickerType).data?.kind === "date-picker-cell"
+        (cellTemplate as DatePickerType).data?.kind === "date-picker-cell" &&
+        // Only apply styler value if format was not explicitly set by the user.
+        isNullOrUndefined(
+          (column.columnTypeOptions as DateTimeColumnParams)?.format
+        )
       ) {
         cellTemplate = {
           ...cellTemplate,
