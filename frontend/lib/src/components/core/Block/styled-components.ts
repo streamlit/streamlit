@@ -207,3 +207,20 @@ export const StyledVerticalBlockBorderWrapper =
       }),
     })
   )
+
+export const StyledDeltaInfo = styled.div({
+  position: "absolute",
+  right: 0,
+  backgroundColor: "white",
+  color: "black",
+  "&:hover": {
+    color: "red",
+  },
+})
+
+export const StyledDeltaPathHighlighter = styled.div({
+  display: "inline-flex",
+  "&:hover": {
+    border: "1px solid red",
+  },
+})

@@ -52,6 +52,8 @@ import {
 import ElementNodeRenderer from "./ElementNodeRenderer"
 import {
   StyledColumn,
+  StyledDeltaInfo,
+  StyledDeltaPathHighlighter,
   StyledHorizontalBlock,
   StyledVerticalBlock,
   StyledVerticalBlockBorderWrapper,
@@ -203,7 +205,8 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { libConfig } = useContext(LibContext)
 
   // Handle cycling of colors for dividers:
-  assignDividerColor(props.node, useTheme())
+  const theme = useTheme()
+  assignDividerColor(props.node, theme)
 
   // Capture all the element ids to avoid rendering the same element twice
   const elementKeySet = new Set<string>()
@@ -237,7 +240,12 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
             elementKeySet.add(key)
 
-            return <ElementNodeRenderer key={key} {...childProps} />
+            return (
+              <StyledDeltaPathHighlighter key={key}>
+                <ElementNodeRenderer key={key} {...childProps} />
+                <StyledDeltaInfo>{`[${node.metadata.deltaPath}]`}</StyledDeltaInfo>
+              </StyledDeltaPathHighlighter>
+            )
           }
 
           // Recursive case: render a block, which can contain other blocks
@@ -251,7 +259,12 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               node: node as BlockNode,
             }
 
-            return <BlockNodeRenderer key={index} {...childProps} />
+            return (
+              <StyledDeltaPathHighlighter key={index}>
+                <BlockNodeRenderer key={index} {...childProps} />
+                <StyledDeltaInfo>{node.deltaBlock.type}</StyledDeltaInfo>
+              </StyledDeltaPathHighlighter>
+            )
           }
 
           // We don't have any other node types!

@@ -120,7 +120,11 @@ import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatche
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-import { StyledApp } from "@streamlit/app/src/styled-components"
+import {
+  MsgBundle,
+  MsgLogger,
+  StyledApp,
+} from "@streamlit/app/src/styled-components"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -181,6 +185,8 @@ interface State {
   appConfig: AppConfig
   autoReruns: NodeJS.Timer[]
   inputsDisabled: boolean
+  handledMessageBundles: ForwardMsg[][]
+  handledMessageBundleMetadata: MessageBundleMetadata[]
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -210,6 +216,12 @@ export const showDevelopmentOptions = (
   }
   return hostIsOwner || isLocalhost()
 }
+
+// all messages between the script started and finished session
+let messageBundle: ForwardMsg[] = []
+type MessageBundleMetadata = { receivedAt?: number }
+let messageBundleMetadata: MessageBundleMetadata = {}
+let scriptFinishedMsg = false
 
 export class App extends PureComponent<Props, State> {
   private readonly endpoints: StreamlitEndpoints
@@ -312,6 +324,8 @@ export class App extends PureComponent<Props, State> {
       appConfig: {},
       autoReruns: [],
       inputsDisabled: false,
+      handledMessageBundles: [],
+      handledMessageBundleMetadata: [],
     }
 
     this.connectionManager = null
@@ -687,6 +701,30 @@ export class App extends PureComponent<Props, State> {
    * Callback when we get a message from the server.
    */
   handleMessage = (msgProto: ForwardMsg): void => {
+    messageBundle.push(msgProto)
+
+    if (msgProto.type === "newSession") {
+      messageBundleMetadata.receivedAt = Date.now()
+    } else if (msgProto.type === "scriptFinished") {
+      scriptFinishedMsg = true
+    } else if (msgProto.type === "sessionStatusChanged" && scriptFinishedMsg) {
+      scriptFinishedMsg = false
+      this.setState((prevState: State) => {
+        return {
+          handledMessageBundles: [
+            messageBundle,
+            ...prevState.handledMessageBundles,
+          ],
+          handledMessageBundleMetadata: [
+            messageBundleMetadata,
+            ...prevState.handledMessageBundleMetadata,
+          ],
+        }
+      })
+      messageBundle = []
+      messageBundleMetadata = {}
+    }
+
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
     const dispatchProto = (obj: any, name: string, funcs: any): any => {
@@ -1985,6 +2023,34 @@ export class App extends PureComponent<Props, State> {
               />
               {renderedDialog}
             </StyledApp>
+            <MsgLogger>
+              {this.state.handledMessageBundles.map((bundle, bundleIndex) => {
+                return (
+                  <MsgBundle key={bundleIndex}>
+                    <div>
+                      Bundle (receivedAt:{" "}
+                      {
+                        this.state.handledMessageBundleMetadata[bundleIndex]
+                          .receivedAt
+                      }
+                      ):
+                    </div>
+                    {bundle.map((msg, index) => {
+                      const parsedMsg = {
+                        scriptRunId: msg.newSession?.scriptRunId,
+                        type: msg.type,
+                        fragmentId: msg.delta?.fragmentId,
+                      }
+                      return (
+                        <div key={msg.hash + index}>
+                          {JSON.stringify(parsedMsg)}
+                        </div>
+                      )
+                    })}
+                  </MsgBundle>
+                )
+              })}
+            </MsgLogger>
           </HotKeys>
         </LibContext.Provider>
       </AppContext.Provider>

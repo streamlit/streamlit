@@ -39,3 +39,17 @@ export const StyledApp = styled.div(({ theme }) => {
     },
   }
 })
+
+export const MsgLogger = styled.div({
+  position: "absolute",
+  overflow: "scroll",
+  zIndex: 1000000000,
+  height: "100%",
+  padding: "50px 50px 0 50px",
+  backgroundColor: "#ffffff30",
+  color: "#84ff84",
+})
+
+export const MsgBundle = styled.div({
+  marginBottom: "2rem",
+})
