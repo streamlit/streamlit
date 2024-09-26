@@ -1578,6 +1578,18 @@
     minimatch "^3.1.2"
     strip-json-comments "^3.1.1"
 
+"@ffmpeg/ffmpeg@^0.12.10":
+  version "0.12.10"
+  resolved "https://registry.yarnpkg.com/@ffmpeg/ffmpeg/-/ffmpeg-0.12.10.tgz#e3cce21f21f11f33dfc1ec1d5ad5694f4a3073c9"
+  integrity sha512-lVtk8PW8e+NUzGZhPTWj2P1J4/NyuCrbDD3O9IGpSeLYtUZKBqZO8CNj1WYGghep/MXoM8e1qVY1GztTkf8YYQ==
+  dependencies:
+    "@ffmpeg/types" "^0.12.2"
+
+"@ffmpeg/types@^0.12.2":
+  version "0.12.2"
+  resolved "https://registry.yarnpkg.com/@ffmpeg/types/-/types-0.12.2.tgz#bc7eef321ae50225c247091f1f23fd3087c6aa1d"
+  integrity sha512-NJtxwPoLb60/z1Klv0ueshguWQ/7mNm106qdHkB4HL49LXszjhjCCiL+ldHJGQ9ai2Igx0s4F24ghigy//ERdA==
+
 "@floating-ui/core@^1.6.0":
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/@floating-ui/core/-/core-1.6.0.tgz#fa41b87812a16bf123122bf945946bae3fdf7fc1"

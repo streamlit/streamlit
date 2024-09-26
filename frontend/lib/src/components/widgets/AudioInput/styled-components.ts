@@ -127,7 +127,3 @@ export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
 export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
 }))
-
-export const StyledAlertWrapperDiv = styled.div(({ theme }) => ({
-  marginTop: theme.spacing.lg,
-}))

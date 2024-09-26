@@ -43,6 +43,7 @@
     "@emotion/is-prop-valid": "^1.2.0",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
+    "@ffmpeg/ffmpeg": "^0.12.10",
     "@glideapps/glide-data-grid": "6.0.4-alpha8",
     "@glideapps/glide-data-grid-cells": "6.0.4-alpha8",
     "@glideapps/glide-data-grid-source": "6.0.4-alpha8",

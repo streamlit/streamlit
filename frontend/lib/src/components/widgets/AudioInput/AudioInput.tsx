@@ -47,12 +47,8 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
-import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
-import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 
 import {
-  StyledAlertWrapperDiv,
   StyledAudioInputContainerDiv,
   StyledWaveformContainerDiv,
   StyledWaveformInnerDiv,
@@ -72,6 +68,7 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
+import convertMp4ToWav from "./convertMp4ToWav"
 
 export interface Props {
   element: AudioInputProto
@@ -88,10 +85,6 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
-  const isSafari = useMemo(() => {
-    const { browserName, os } = getBrowserInfo()
-    return browserName === "Safari" || os === "iOS"
-  }, [])
   const theme = useTheme()
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
@@ -241,11 +234,24 @@ const AudioInput: React.FC<Props> = ({
       })
     )
 
-    rp.on("record-end", blob => {
-      const url = URL.createObjectURL(blob)
-      setRecordingUrl(url)
+    rp.on("record-end", async blob => {
+      let wavBlob: Blob | undefined = undefined
+      if (blob.type === "audio/mp4") {
+        wavBlob = await convertMp4ToWav(blob)
+      } else if (blob.type === "audio/wav") {
+        wavBlob = blob
+      } else {
+        console.error("Unsupported audio mimeType: ", blob.type)
+      }
 
-      const file = new File([blob], "audio.wav", { type: blob.type })
+      if (!wavBlob) {
+        return
+      }
+
+      const url = URL.createObjectURL(wavBlob)
+      const file = new File([wavBlob], `audio.wav`, { type: wavBlob.type })
+
+      setRecordingUrl(url)
       uploadTheFile(file)
     })
 
@@ -369,7 +375,7 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholder =
     hasNoMicPermissions || showPlaceholder
 
-  const isDisabled = disabled || hasNoMicPermissions || isSafari
+  const isDisabled = disabled || hasNoMicPermissions
 
   return (
     <>
@@ -431,15 +437,6 @@ const AudioInput: React.FC<Props> = ({
           </StyledWaveformTimeCode>
         </StyledWaveformContainerDiv>
       </StyledAudioInputContainerDiv>
-      {isSafari && (
-        <StyledAlertWrapperDiv>
-          <AlertElement
-            width={100}
-            kind={Kind.WARNING}
-            body="`st.experimental_audio_input` does not yet work on this browser. It will be supported in one of the next versions of Streamlit. Please use Chrome or Firefox on a non-iOS device for now."
-          />
-        </StyledAlertWrapperDiv>
-      )}
     </>
   )
 }
