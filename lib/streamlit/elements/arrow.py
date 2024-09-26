@@ -78,7 +78,7 @@ class DataframeSelectionState(TypedDict, total=False):
     """
     The schema for the dataframe selection state.
 
-    The selection state is stored in a dictionary-like object that suports both
+    The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
@@ -136,7 +136,7 @@ class DataframeState(TypedDict, total=False):
     """
     The schema for the dataframe event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -304,7 +304,9 @@ class ArrowMixin:
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values and colors. It does not support some of the more exotic
             styling options, like bar charts, hovering, and captions. For
-            these styling options, use column configuration instead.
+            these styling options, use column configuration instead. Text and
+            number formatting from ``column_config`` always takes precedence
+            over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -417,9 +419,9 @@ class ArrowMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element that can be used
-            with the ``.add_rows()`` method. Otherwise, this method returns a
+            with the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``DataframeState``
             dictionary schema.

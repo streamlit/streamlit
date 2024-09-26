@@ -101,7 +101,7 @@ class VegaLiteState(TypedDict, total=False):
     """
     The schema for the Vega-Lite event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -1570,9 +1570,9 @@ class VegaChartsMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns a
+            the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
@@ -1734,9 +1734,9 @@ class VegaChartsMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns a
+            the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
