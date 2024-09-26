@@ -317,6 +317,103 @@ describe("AppView element", () => {
     expect(style.maxWidth).toEqual("initial")
   })
 
+  describe("handles padding an embedded app", () => {
+    it("embedded triggers default padding", () => {
+      const realUseContext = React.useContext
+      jest.spyOn(React, "useContext").mockImplementation(input => {
+        if (input === AppContext) {
+          return getContextOutput({ embedded: true })
+        }
+
+        return realUseContext(input)
+      })
+      render(<AppView {...getProps()} />)
+      const style = window.getComputedStyle(
+        screen.getByTestId("stMainBlockContainer")
+      )
+      expect(style.paddingTop).toEqual("2.1rem")
+      expect(style.paddingBottom).toEqual("1rem")
+    })
+
+    it("showPadding triggers expected padding", () => {
+      const realUseContext = React.useContext
+      jest.spyOn(React, "useContext").mockImplementation(input => {
+        if (input === AppContext) {
+          return getContextOutput({ showPadding: true })
+        }
+
+        return realUseContext(input)
+      })
+      render(<AppView {...getProps()} />)
+      const style = window.getComputedStyle(
+        screen.getByTestId("stMainBlockContainer")
+      )
+      expect(style.paddingTop).toEqual("6rem")
+      expect(style.paddingBottom).toEqual("10rem")
+    })
+
+    it("showToolbar triggers expected top padding", () => {
+      const realUseContext = React.useContext
+      jest.spyOn(React, "useContext").mockImplementation(input => {
+        if (input === AppContext) {
+          return getContextOutput({ showToolbar: true })
+        }
+
+        return realUseContext(input)
+      })
+      render(<AppView {...getProps()} />)
+      const style = window.getComputedStyle(
+        screen.getByTestId("stMainBlockContainer")
+      )
+      expect(style.paddingTop).toEqual("4.5rem")
+      expect(style.paddingBottom).toEqual("1rem")
+    })
+
+    it("hasSidebar triggers expected top padding", () => {
+      const realUseContext = React.useContext
+      jest.spyOn(React, "useContext").mockImplementation(input => {
+        if (input === AppContext) {
+          return getContextOutput({ embedded: true })
+        }
+
+        return realUseContext(input)
+      })
+
+      const sidebarElement = new ElementNode(
+        makeElementWithInfoText("sidebar!"),
+        ForwardMsgMetadata.create({}),
+        "no script run id",
+        FAKE_SCRIPT_HASH
+      )
+
+      const sidebar = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [sidebarElement],
+        new BlockProto({ allowEmpty: true })
+      )
+
+      const empty = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        new BlockProto({ allowEmpty: true })
+      )
+
+      const props = getProps({
+        elements: new AppRoot(
+          FAKE_SCRIPT_HASH,
+          new BlockNode(FAKE_SCRIPT_HASH, [empty, sidebar, empty, empty])
+        ),
+      })
+
+      render(<AppView {...props} />)
+      const style = window.getComputedStyle(
+        screen.getByTestId("stMainBlockContainer")
+      )
+      expect(style.paddingTop).toEqual("4.5rem")
+      expect(style.paddingBottom).toEqual("1rem")
+    })
+  })
+
   describe("handles logo rendering with no sidebar", () => {
     const imageOnly = LogoProto.create({
       image:

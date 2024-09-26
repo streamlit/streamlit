@@ -18,14 +18,14 @@ import React from "react"
 
 import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { getCellFromArrow } from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
-import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
   getErrorCell,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 type DataLoaderReturn = Pick<DataEditorProps, "getCellContent">
 
@@ -45,6 +45,8 @@ function useDataLoader(
   numRows: number,
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
+  // data.columns refers to the header rows (not sure about why it is named this way)
+  const numHeaderRows = data.columns.length
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       if (col > columns.length - 1) {
@@ -85,8 +87,12 @@ function useDataLoader(
       }
 
       try {
-        // Arrow has the header in first row
-        const arrowCell = data.getCell(originalRow + 1, originalCol)
+        // We skip all header rows to get to to the actual data rows.
+        // in th Arrow data.
+        const arrowCell = data.getCell(
+          originalRow + numHeaderRows,
+          originalCol
+        )
         return getCellFromArrow(column, arrowCell, data.cssStyles)
       } catch (error) {
         return getErrorCell(
@@ -95,7 +101,7 @@ function useDataLoader(
         )
       }
     },
-    [columns, numRows, data, editingState]
+    [columns, numRows, data, editingState, numHeaderRows]
   )
 
   return {

@@ -48,6 +48,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.streamlit_test import ELEMENT_COMMANDS
 
 
 def identity(x):
@@ -91,88 +92,22 @@ class RunWarningTest(unittest.TestCase):
             for name, _ in inspect.getmembers(DeltaGenerator)
             if not name.startswith("_")
         }
-        self.assertEqual(
-            api,
-            {
-                "add_rows",
-                "altair_chart",
-                "area_chart",
-                "audio",
-                "balloons",
-                "bar_chart",
-                "bokeh_chart",
-                "button",
-                "camera_input",
-                "caption",
-                "chat_input",
-                "chat_message",
-                "checkbox",
-                "code",
-                "color_picker",
-                "columns",
-                "container",
-                "dataframe",
-                "data_editor",
-                "date_input",
-                "dg",
-                "divider",
-                "download_button",
-                "empty",
-                "error",
-                "exception",
-                "expander",
-                "feedback",
-                "file_uploader",
-                "form",
-                "form_submit_button",
-                "graphviz_chart",
-                "header",
-                "help",
-                "html",
-                "id",
-                "image",
-                "info",
-                "json",
-                "latex",
-                "line_chart",
-                "link_button",
-                "map",
-                "markdown",
-                "metric",
-                "multiselect",
-                "number_input",
-                "page_link",
-                "pills",
-                "plotly_chart",
-                "popover",
-                "progress",
-                "pydeck_chart",
-                "pyplot",
-                "radio",
-                "scatter_chart",
-                "select_slider",
-                "selectbox",
-                "slider",
-                "snow",
-                "subheader",
-                "success",
-                "status",
-                "table",
-                "tabs",
-                "text",
-                "text_area",
-                "text_input",
-                "time_input",
-                "title",
-                "toast",
-                "toggle",
-                "vega_lite_chart",
-                "video",
-                "warning",
-                "write",
-                "write_stream",
-            },
-        )
+        expected_api = ELEMENT_COMMANDS.copy()
+
+        # Remove commands that are only exposed in the top-level namespace (st.*)
+        # and cannot be called on a DeltaGenerator object.
+        expected_api = expected_api - {
+            "spinner",
+            "dialog",
+            "experimental_dialog",
+            "echo",
+            "logo",
+        }
+
+        # Add public commands that only exist in the delta generator:
+        expected_api = expected_api.union({"add_rows", "id", "dg"})
+
+        self.assertEqual(api, expected_api)
 
 
 class DeltaGeneratorTest(DeltaGeneratorTestCase):

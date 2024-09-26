@@ -48,16 +48,18 @@ ElementType: TypeAlias = str
 ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
     MappingProxyType(
         {
+            "audio_input": "file_uploader_state_value",
             "button": "trigger_value",
             "button_group": "int_array_value",
             "camera_input": "file_uploader_state_value",
-            "checkbox": "bool_value",
             "chat_input": "chat_input_value",
+            "checkbox": "bool_value",
             "color_picker": "string_value",
             "component_instance": "json_value",
             "data_editor": "string_value",
             "dataframe": "string_value",
             "date_input": "string_array_value",
+            "deck_gl_json_chart": "string_value",
             "download_button": "trigger_value",
             "file_uploader": "file_uploader_state_value",
             "multiselect": "int_array_value",

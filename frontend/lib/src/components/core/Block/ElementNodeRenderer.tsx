@@ -22,6 +22,7 @@ import classNames from "classnames"
 import {
   Alert as AlertProto,
   Arrow as ArrowProto,
+  AudioInput as AudioInputProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
@@ -155,6 +156,10 @@ const Video = React.lazy(
 )
 
 // Lazy-load widgets.
+const AudioInput = React.lazy(
+  () => import("@streamlit/lib/src/components/widgets/AudioInput")
+)
+
 const Button = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Button")
 )
@@ -316,7 +321,7 @@ const RawElementNodeRenderer = (
       return (
         <DeckGlJsonChart
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...elementProps}
+          {...widgetProps}
         />
       )
 
@@ -496,6 +501,20 @@ const RawElementNodeRenderer = (
           {...widgetProps}
         />
       )
+
+    case "audioInput": {
+      const audioInputProto = node.element.audioInput as AudioInputProto
+      widgetProps.disabled = widgetProps.disabled || audioInputProto.disabled
+
+      return (
+        <AudioInput
+          key={audioInputProto.id}
+          uploadClient={props.uploadClient}
+          element={audioInputProto}
+          {...widgetProps}
+        ></AudioInput>
+      )
+    }
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
