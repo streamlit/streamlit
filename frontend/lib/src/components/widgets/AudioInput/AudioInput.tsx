@@ -67,7 +67,7 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
-import convertMp4ToWav from "./convertMp4ToWav"
+import convertMp4ToWav from "./convertAudioToWav"
 
 export interface Props {
   element: AudioInputProto
@@ -235,12 +235,11 @@ const AudioInput: React.FC<Props> = ({
 
     rp.on("record-end", async blob => {
       let wavBlob: Blob | undefined = undefined
-      if (blob.type === "audio/mp4") {
-        wavBlob = await convertMp4ToWav(blob)
-      } else if (blob.type === "audio/wav") {
+
+      if (blob.type === "audio/wav") {
         wavBlob = blob
       } else {
-        console.error("Unsupported audio mimeType: ", blob.type)
+        wavBlob = await convertMp4ToWav(blob)
       }
 
       if (!wavBlob) {

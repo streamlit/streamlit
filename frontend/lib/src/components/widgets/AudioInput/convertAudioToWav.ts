@@ -17,37 +17,42 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg"
 
 /**
- * Converts an MP4 Blob to a WAV Blob using FFmpeg.
- * @param mp4Blob - The input MP4 file as a Blob.
+ * Converts any audio/video Blob to a WAV Blob using FFmpeg.
+ * @param fileBlob - The input file as a Blob.
  * @returns - A Promise that resolves with the WAV file as a Blob.
  */
-async function convertMp4ToWav(mp4Blob: Blob): Promise<Blob | undefined> {
+async function convertFileToWav(fileBlob: Blob): Promise<Blob | undefined> {
   const ffmpeg = new FFmpeg()
 
   try {
-    // load FFmpeg if it's not loaded already
+    // Load FFmpeg if it's not loaded already
     if (!ffmpeg.loaded) {
       await ffmpeg.load()
     }
 
-    const mp4ArrayBuffer = await mp4Blob.arrayBuffer()
-    const mp4Uint8Array = new Uint8Array(mp4ArrayBuffer)
+    const inputArrayBuffer = await fileBlob.arrayBuffer()
+    const inputUint8Array = new Uint8Array(inputArrayBuffer)
 
-    // write the MP4 file to FFmpeg's virtual file system
-    ffmpeg.writeFile("input.mp4", mp4Uint8Array)
+    // Guess the input file extension based on the Blob's MIME type
+    const mimeType = fileBlob.type
+    const extension = mimeType.split("/")[1] || "dat" // Fallback to ".dat" if unknown
+    const inputFileName = `input.${extension}`
 
-    // conversion from MP4 to WAV
-    await ffmpeg.exec(["-i", "input.mp4", "output.wav"])
+    // Write the input file to FFmpeg's virtual file system with the guessed extension
+    ffmpeg.writeFile(inputFileName, inputUint8Array)
 
-    // read the WAV file from FFmpeg's virtual file system
+    // Convert the input file to WAV
+    await ffmpeg.exec(["-i", inputFileName, "output.wav"])
+
+    // Read the WAV file from FFmpeg's virtual file system
     const wavData = await ffmpeg.readFile("output.wav")
     const wavBlob = new Blob([wavData], { type: "audio/wav" })
 
     return wavBlob
   } catch (error) {
-    console.error("Error converting MP4 to WAV:", error)
+    console.error("Error converting file to WAV:", error)
     return undefined
   }
 }
 
-export default convertMp4ToWav
+export default convertFileToWav
