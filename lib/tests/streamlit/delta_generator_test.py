@@ -94,7 +94,8 @@ class RunWarningTest(unittest.TestCase):
         }
         expected_api = ELEMENT_COMMANDS.copy()
 
-        # Remove commands that are only exposed in the top-level namespace:
+        # Remove commands that are only exposed in the top-level namespace (st.*)
+        # and cannot be called on a DeltaGenerator object.
         expected_api = expected_api - {
             "spinner",
             "dialog",
