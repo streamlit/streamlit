@@ -45,7 +45,8 @@ def get_version():
             return m.group("version")
 
 
-NON_ELEMENT_COMMANDS = {
+# Commands that don't result in rendered elements in the frontend
+NON_ELEMENT_COMMANDS: set[str] = {
     "Page",
     "cache",
     "cache_data",
@@ -56,7 +57,6 @@ NON_ELEMENT_COMMANDS = {
     "experimental_get_query_params",
     "experimental_set_query_params",
     "experimental_user",
-    "form_submit_button",
     "fragment",
     "get_option",
     "navigation",
@@ -69,6 +69,13 @@ NON_ELEMENT_COMMANDS = {
     "sidebar",
     "stop",
     "switch_page",
+}
+
+# Element commands that are exposed on the DeltaGenerator
+# and on the top-level Streamlit namespace.
+# We extract them from the element mocks.
+ELEMENT_COMMANDS: set[str] = {
+    command for command, _ in WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS + CONTAINER_ELEMENTS
 }
 
 
@@ -103,125 +110,6 @@ class StreamlitTest(unittest.TestCase):
             self.assertEqual(matplotlib.get_backend().lower(), "agg")
         sys.platform = ORIG_PLATFORM
 
-    def test_public_api(self):
-        """Test that we don't accidentally remove (or add) symbols
-        to the public `st` API.
-        """
-        api = {
-            k
-            for k, v in st.__dict__.items()
-            if not k.startswith("_") and not isinstance(v, type(st))
-        }
-        self.assertEqual(
-            api,
-            {
-                # DeltaGenerator methods:
-                "altair_chart",
-                "area_chart",
-                "audio",
-                "balloons",
-                "bar_chart",
-                "bokeh_chart",
-                "button",
-                "caption",
-                "camera_input",
-                "chat_input",
-                "chat_message",
-                "checkbox",
-                "code",
-                "columns",
-                "context",
-                "tabs",
-                "container",
-                "dataframe",
-                "data_editor",
-                "date_input",
-                "dialog",
-                "divider",
-                "download_button",
-                "expander",
-                "pydeck_chart",
-                "empty",
-                "error",
-                "exception",
-                "feedback",
-                "file_uploader",
-                "form",
-                "form_submit_button",
-                "graphviz_chart",
-                "header",
-                "help",
-                "html",
-                "image",
-                "info",
-                "json",
-                "latex",
-                "line_chart",
-                "link_button",
-                "logo",
-                "map",
-                "markdown",
-                "metric",
-                "multiselect",
-                "number_input",
-                "page_link",
-                "plotly_chart",
-                "popover",
-                "progress",
-                "pyplot",
-                "radio",
-                "scatter_chart",
-                "selectbox",
-                "select_slider",
-                "slider",
-                "snow",
-                "subheader",
-                "success",
-                "status",
-                "table",
-                "text",
-                "text_area",
-                "text_input",
-                "time_input",
-                "title",
-                "toast",
-                "toggle",
-                "vega_lite_chart",
-                "video",
-                "warning",
-                "write",
-                "write_stream",
-                "color_picker",
-                "sidebar",
-                # Other modules the user should have access to:
-                "echo",
-                "spinner",
-                "set_page_config",
-                "stop",
-                "rerun",
-                "switch_page",
-                "cache",
-                "secrets",
-                "session_state",
-                "query_params",
-                "cache_data",
-                "cache_resource",
-                "navigation",
-                "Page",
-                "fragment",
-                # Experimental APIs:
-                "experimental_audio_input",
-                "experimental_dialog",
-                "experimental_fragment",
-                "experimental_get_query_params",
-                "experimental_set_query_params",
-                "experimental_user",
-                "get_option",
-                "set_option",
-                "connection",
-            },
-        )
-
     def test_ensure_completeness_element_mocks(self):
         """Test that we have mocked all elements in the public API.
 
@@ -247,6 +135,17 @@ class StreamlitTest(unittest.TestCase):
             "mocks or NON_ELEMENT_COMMANDS. Please add it to the correct list of "
             "mocked elements or NON_ELEMENT_COMMANDS."
         )
+
+    def test_public_api(self):
+        """Test that we don't accidentally remove (or add) symbols
+        to the public `st` API.
+        """
+        api = {
+            k
+            for k, v in st.__dict__.items()
+            if not k.startswith("_") and not isinstance(v, type(st))
+        }
+        self.assertEqual(api, ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS))
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""
