@@ -57,9 +57,6 @@ NON_ELEMENT_COMMANDS: set[str] = {
     "experimental_get_query_params",
     "experimental_set_query_params",
     "experimental_user",
-    # form_submit_button is an element, but different since it
-    # requires a form container wrapping it.
-    "form_submit_button",
     "fragment",
     "get_option",
     "navigation",

@@ -47,6 +47,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("button", lambda: st.button("Click me")),
     ("download_button", lambda: st.download_button("Download me", b"")),
     ("chat_input", lambda: st.chat_input("Chat with me")),
+    ("form_submit_button", lambda: st.form("my_form").form_submit_button("Submit")),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     # ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
