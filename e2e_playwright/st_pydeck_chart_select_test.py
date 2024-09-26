@@ -135,7 +135,9 @@ def test_pydeck_chart_multiselect_interactions_and_return_values(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
-def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
+def test_pydeck_chart_single_select_interactions_and_return_values(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """
     Test single selection and deselection all function properly and return the
     expected values in both session_state and as a return of st.pydeck.
@@ -203,6 +205,22 @@ def test_pydeck_chart_single_select_interactions_and_return_values(app: Page):
         app,
         markdown_prefix_session_state,
         EMPTY_SELECTION,
+    )
+
+    # Scatterplot checks
+    click_handling_div = get_click_handling_div(app, nth=4)
+    click_handling_div.scroll_into_view_if_needed()
+
+    # Click on the scatterplot point with the biggest size
+    click_handling_div.click(position={"x": 279, "y": 331})
+
+    wait_for_app_run(app, wait_delay=5000)
+
+    # Assert that we have deselected everything
+    assert_snapshot(
+        click_handling_div,
+        name="st_pydeck_chart_select-scatterplot-single-selection",
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
