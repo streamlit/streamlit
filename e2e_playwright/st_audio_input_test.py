@@ -142,6 +142,7 @@ def test_audio_input_remount_keep_value(app: Page):
 
     # Simulate recording interaction
     audio_input = app.get_by_test_id("stAudioInput").nth(6)
+    audio_input.scroll_into_view_if_needed()
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
     audio_input.get_by_role("button", name="Stop recording").click()
@@ -192,6 +193,7 @@ def test_audio_input_works_with_fragments(app: Page):
 
     # Simulate recording interaction in a fragment
     fragment_audio_input = app.get_by_test_id("stAudioInput").nth(2)
+    fragment_audio_input.scroll_into_view_if_needed()
     fragment_audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
     fragment_audio_input.get_by_role("button", name="Stop recording").click()
