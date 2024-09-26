@@ -124,8 +124,7 @@ class CameraInputMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             A tooltip that gets displayed next to the camera input.
@@ -152,9 +151,9 @@ class CameraInputMixin:
         Returns
         -------
         None or UploadedFile
-            The UploadedFile class is a subclass of BytesIO, and therefore
-            it is "file-like". This means you can pass them anywhere where
-            a file is expected.
+            The UploadedFile class is a subclass of BytesIO, and therefore is
+            "file-like". This means you can pass an instance of it anywhere a
+            file is expected.
 
         Examples
         --------
@@ -164,6 +163,10 @@ class CameraInputMixin:
         >>>
         >>> if picture:
         ...     st.image(picture)
+
+        .. output::
+           https://doc-camera-input.streamlit.app/
+           height: 600px
 
         """
         ctx = get_script_run_ctx()
