@@ -48,7 +48,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.streamlit_test import DG_ELEMENT_COMMANDS
+from tests.streamlit.streamlit_test import ELEMENT_COMMANDS
 
 
 def identity(x):
@@ -92,7 +92,7 @@ class RunWarningTest(unittest.TestCase):
             for name, _ in inspect.getmembers(DeltaGenerator)
             if not name.startswith("_")
         }
-        expected_api = DG_ELEMENT_COMMANDS.copy()
+        expected_api = ELEMENT_COMMANDS.copy()
 
         # Remove commands that are only exposed in the top-level namespace:
         expected_api = expected_api - {
