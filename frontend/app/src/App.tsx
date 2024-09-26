@@ -736,7 +736,7 @@ export class App extends PureComponent<Props, State> {
           this.handleNavigation(navigation),
         authRedirect: (authRedirect: AuthRedirect) => {
           if (isInChildFrame()) {
-            this.hostCommunicationMgr.sendMessageToHost({
+            this.hostCommunicationMgr.sendMessageToSameOriginHost({
               type: "REDIRECT_TO_URL",
               url: authRedirect.url,
             })

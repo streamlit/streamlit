@@ -138,6 +138,22 @@ export default class HostCommunicationManager {
 
   /**
    * Register a function to deliver a message to the Host
+   * that is on the same origin as the Guest
+   */
+  public sendMessageToSameOriginHost = (
+    message: IGuestToHostMessage
+  ): void => {
+    window.parent.postMessage(
+      {
+        stCommVersion: HOST_COMM_VERSION,
+        ...message,
+      } as VersionedMessage<IGuestToHostMessage>,
+      window.location.origin
+    )
+  }
+
+  /**
+   * Register a function to deliver a message to the Host
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
     window.parent.postMessage(
