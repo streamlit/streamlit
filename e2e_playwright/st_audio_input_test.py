@@ -179,6 +179,8 @@ def test_audio_input_works_in_forms(app: Page):
     # Submit the form and verify the state update
     click_form_button(app, "Submit")
     wait_for_app_run(app)
+
+    app.get_by_text("Audio Input in Form:").scroll_into_view_if_needed()
     expect(app.get_by_text("Audio Input in Form: None")).not_to_be_visible()
 
 
@@ -201,6 +203,7 @@ def test_audio_input_works_with_fragments(app: Page):
     wait_for_app_run(app)
 
     # Verify the state is updated without additional reruns
+    app.get_by_text("Audio Input in Fragment:").scroll_into_view_if_needed()
     expect(app.get_by_text("Audio Input in Fragment: None")).not_to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
