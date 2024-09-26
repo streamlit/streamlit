@@ -92,9 +92,21 @@ class RunWarningTest(unittest.TestCase):
             for name, _ in inspect.getmembers(DeltaGenerator)
             if not name.startswith("_")
         }
-        # Add additional public method that are only exposed in the delta generator
-        # but not the top-level namespace:
-        self.assertEqual(api, DG_ELEMENT_COMMANDS.union({"add_rows", "id", "dg"}))
+        expected_api = DG_ELEMENT_COMMANDS.copy()
+
+        # Remove commands that are only exposed in the top-level namespace:
+        expected_api = expected_api - {
+            "spinner",
+            "dialog",
+            "experimental_dialog",
+            "echo",
+            "logo",
+        }
+
+        # Add public commands that only exist in the delta generator:
+        expected_api = expected_api.union({"add_rows", "id", "dg"})
+
+        self.assertEqual(api, expected_api)
 
 
 class DeltaGeneratorTest(DeltaGeneratorTestCase):

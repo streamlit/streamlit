@@ -46,7 +46,7 @@ def get_version():
 
 
 # Commands that don't result in rendered elements in the frontend
-NON_ELEMENT_COMMANDS = {
+NON_ELEMENT_COMMANDS: set[str] = {
     "Page",
     "cache",
     "cache_data",
@@ -76,91 +76,9 @@ NON_ELEMENT_COMMANDS = {
 
 # Element commands that are exposed on the DeltaGenerator
 # and on the top-level Streamlit namespace.
-DG_ELEMENT_COMMANDS = {
-    "altair_chart",
-    "area_chart",
-    "audio",
-    "balloons",
-    "bar_chart",
-    "bokeh_chart",
-    "button",
-    "camera_input",
-    "caption",
-    "chat_input",
-    "chat_message",
-    "checkbox",
-    "code",
-    "color_picker",
-    "columns",
-    "container",
-    "dataframe",
-    "data_editor",
-    "date_input",
-    "divider",
-    "download_button",
-    "empty",
-    "error",
-    "exception",
-    "expander",
-    "experimental_audio_input",
-    "feedback",
-    "file_uploader",
-    "form",
-    "form_submit_button",
-    "graphviz_chart",
-    "header",
-    "help",
-    "html",
-    "image",
-    "info",
-    "json",
-    "latex",
-    "line_chart",
-    "link_button",
-    "map",
-    "markdown",
-    "metric",
-    "multiselect",
-    "number_input",
-    "page_link",
-    "plotly_chart",
-    "popover",
-    "progress",
-    "pydeck_chart",
-    "pyplot",
-    "radio",
-    "scatter_chart",
-    "select_slider",
-    "selectbox",
-    "slider",
-    "snow",
-    "subheader",
-    "success",
-    "status",
-    "table",
-    "tabs",
-    "text",
-    "text_area",
-    "text_input",
-    "time_input",
-    "title",
-    "toast",
-    "toggle",
-    "vega_lite_chart",
-    "video",
-    "warning",
-    "write",
-    "write_stream",
-}
-
-# Element commands that are only exposed in the top-level Streamlit namespace
-# and not on the DeltaGenerator.
-TOP_LEVEL_ELEMENT_COMMANDS = {
-    "spinner",
-    "dialog",
-    "experimental_dialog",
-    "echo",
-    "logo",
+# We extract them from the element mocks.
+ELEMENT_COMMANDS: set[str] = {
+    command for command, _ in WIDGET_ELEMENTS + NON_WIDGET_ELEMENTS + CONTAINER_ELEMENTS
 }
 
 
@@ -195,20 +113,6 @@ class StreamlitTest(unittest.TestCase):
             self.assertEqual(matplotlib.get_backend().lower(), "agg")
         sys.platform = ORIG_PLATFORM
 
-    def test_public_api(self):
-        """Test that we don't accidentally remove (or add) symbols
-        to the public `st` API.
-        """
-        api = {
-            k
-            for k, v in st.__dict__.items()
-            if not k.startswith("_") and not isinstance(v, type(st))
-        }
-        self.assertEqual(
-            api,
-            DG_ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS, TOP_LEVEL_ELEMENT_COMMANDS),
-        )
-
     def test_ensure_completeness_element_mocks(self):
         """Test that we have mocked all elements in the public API.
 
@@ -234,6 +138,17 @@ class StreamlitTest(unittest.TestCase):
             "mocks or NON_ELEMENT_COMMANDS. Please add it to the correct list of "
             "mocked elements or NON_ELEMENT_COMMANDS."
         )
+
+    def test_public_api(self):
+        """Test that we don't accidentally remove (or add) symbols
+        to the public `st` API.
+        """
+        api = {
+            k
+            for k, v in st.__dict__.items()
+            if not k.startswith("_") and not isinstance(v, type(st))
+        }
+        self.assertEqual(api, ELEMENT_COMMANDS.union(NON_ELEMENT_COMMANDS))
 
     def test_pydoc(self):
         """Test that we can run pydoc on the streamlit package"""
