@@ -128,7 +128,7 @@ describe("StatusWidget element", () => {
     const stopScript = jest.fn()
     render(<StatusWidget {...getProps({ stopScript })} />)
 
-    fireEvent.click(screen.getByTestId("baseButton-header"))
+    fireEvent.click(screen.getByTestId("stBaseButton-header"))
 
     expect(stopScript).toHaveBeenCalled()
   })

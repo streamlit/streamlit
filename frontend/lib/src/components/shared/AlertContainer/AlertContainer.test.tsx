@@ -35,7 +35,9 @@ const getProps = (
 describe("AlertContainer element", () => {
   it("renders a Notification", () => {
     render(<AlertContainer {...getProps()} />)
-    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
+    const alertContainer = screen.getByTestId("stAlertContainer")
+    expect(alertContainer).toBeInTheDocument()
+    expect(alertContainer).toHaveClass("stAlertContainer")
   })
 
   it("renders its children", () => {

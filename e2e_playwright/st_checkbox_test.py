@@ -16,7 +16,12 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import expect_help_tooltip, get_expander
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    expect_help_tooltip,
+    get_element_by_key,
+    get_expander,
+)
 
 CHECKBOX_ELEMENTS = 11
 
@@ -116,3 +121,13 @@ def test_grouped_checkboxes_height(app: Page, assert_snapshot: ImageCompareFunct
     expect(expander_details.get_by_test_id("stCheckbox").nth(0)).to_have_css(
         "height", "24px"
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stCheckbox")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "checkbox4")).to_be_visible()

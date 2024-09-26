@@ -41,7 +41,7 @@ describe("Snow element", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
-    const snowElement = screen.getByTestId("snow")
+    const snowElement = screen.getByTestId("stSnow")
     expect(snowElement).toBeInTheDocument()
 
     const snowImages = screen.getAllByRole("img")
@@ -52,11 +52,11 @@ describe("Snow element", () => {
     })
   })
 
-  it("renders as hidden element", () => {
+  it("uses correct top-level class", () => {
     const props = getProps()
     render(<Snow {...props} />)
 
-    const snowElement = screen.getByTestId("snow")
-    expect(snowElement).toHaveClass("stHidden")
+    const snowElement = screen.getByTestId("stSnow")
+    expect(snowElement).toHaveClass("stSnow")
   })
 })

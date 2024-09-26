@@ -33,8 +33,8 @@ export interface GraphVizChartProps {
 export function GraphVizChart({
   element,
   isFullScreen,
-}: GraphVizChartProps): ReactElement {
-  const chartId = `graphviz-chart-${element.elementId}`
+}: Readonly<GraphVizChartProps>): ReactElement {
+  const chartId = `st-graphviz-chart-${element.elementId}`
 
   useEffect(() => {
     try {
@@ -65,7 +65,7 @@ export function GraphVizChart({
 
   return (
     <StyledGraphVizChart
-      className="graphviz stGraphVizChart"
+      className="stGraphVizChart"
       data-testid="stGraphVizChart"
       id={chartId}
       isFullScreen={isFullScreen}

@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal
 from urllib.parse import urljoin
 
 from streamlit import config, net_util, url_util
@@ -76,10 +76,17 @@ def _get_server_address_if_manually_set() -> str | None:
     return None
 
 
-def make_url_path_regex(*path, **kwargs) -> str:
+def make_url_path_regex(
+    *path, trailing_slash: Literal["optional", "required", "prohibited"] = "optional"
+) -> str:
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
     path = [x.strip("/") for x in path if x]  # Filter out falsely components.
-    path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"
+    path_format = r"^/%s$"
+    if trailing_slash == "optional":
+        path_format = r"^/%s/?$"
+    elif trailing_slash == "required":
+        path_format = r"^/%s/$"
+
     return path_format % "/".join(path)
 
 

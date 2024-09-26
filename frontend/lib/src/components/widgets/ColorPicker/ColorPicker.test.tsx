@@ -50,6 +50,7 @@ describe("ColorPicker widget", () => {
     render(<ColorPicker {...props} />)
     const colorPicker = screen.getByTestId("stColorPicker")
     expect(colorPicker).toBeInTheDocument()
+    expect(colorPicker).toHaveClass("stColorPicker")
   })
 
   it("sets widget value on mount", () => {
@@ -84,7 +85,7 @@ describe("ColorPicker widget", () => {
     const props = getProps()
     render(<ColorPicker {...props} />)
 
-    const colorBlock = screen.getByTestId("stColorBlock")
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
     fireEvent.click(colorBlock)
     expect(colorBlock).toHaveStyle("background-color: #000000")
 
@@ -99,7 +100,7 @@ describe("ColorPicker widget", () => {
     render(<ColorPicker {...props} />)
 
     const newColor = "#e91e63"
-    const colorBlock = screen.getByTestId("stColorBlock")
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
     fireEvent.click(colorBlock)
 
     // Our widget should be updated.
@@ -121,13 +122,13 @@ describe("ColorPicker widget", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     jest.spyOn(props.widgetMgr, "setStringValue")
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     render(<ColorPicker {...props} />)
 
     // Choose a new color
     const newColor = "#e91e63"
-    const colorBlock = screen.getByTestId("stColorBlock")
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
     fireEvent.click(colorBlock)
 
     // Update the color

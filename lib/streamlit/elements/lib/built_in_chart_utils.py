@@ -34,7 +34,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util, type_util
-from streamlit.color_util import (
+from streamlit.elements.lib.color_util import (
     Color,
     is_color_like,
     is_color_tuple_like,
@@ -89,7 +89,6 @@ class ChartType(Enum):
 # color legends in all instances, since the "size" circles vary in size based
 # on the data, and their container is top-aligned with the color container. But
 # through trial-and-error I found this value to be a good enough middle ground.
-# See e2e/scripts/st_arrow_scatter_chart.py for some alignment tests.
 #
 # NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
 # ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
@@ -641,14 +640,10 @@ def _parse_y_columns(
     elif isinstance(y_from_user, str):
         y_column_list = [y_from_user]
 
-    elif type_util.is_sequence(y_from_user):
-        y_column_list = [str(col) for col in y_from_user]
-
     else:
-        raise StreamlitAPIException(
-            "y parameter should be a column name (str) or list thereof. "
-            f"Value given: {y_from_user} (type {type(y_from_user)})"
-        )
+        y_column_list = [
+            str(col) for col in dataframe_util.convert_anything_to_list(y_from_user)
+        ]
 
     for col in y_column_list:
         if col not in df.columns:
@@ -671,10 +666,15 @@ def _get_offset_encoding(
     x_offset = alt.XOffset()
     y_offset = alt.YOffset()
 
+    # our merge gate does not find the alt.UndefinedType type for some reason
+    _color_column: str | alt.UndefinedType = (  # type: ignore[name-defined]
+        color_column if color_column is not None else alt.utils.Undefined
+    )
+
     if chart_type is ChartType.VERTICAL_BAR:
-        x_offset = alt.XOffset(field=color_column)
+        x_offset = alt.XOffset(field=_color_column)
     elif chart_type is ChartType.HORIZONTAL_BAR:
-        y_offset = alt.YOffset(field=color_column)
+        y_offset = alt.YOffset(field=_color_column)
 
     return x_offset, y_offset
 
@@ -916,11 +916,13 @@ def _get_color_encoding(
             if len(color_values) != len(y_column_list):
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
-            if len(color_value) == 1:
+            if len(color_values) == 1:
                 return alt.ColorValue(to_css_color(cast(Any, color_value[0])))
             else:
                 return alt.Color(
-                    field=color_column,
+                    field=color_column
+                    if color_column is not None
+                    else alt.utils.Undefined,
                     scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
                     legend=_COLOR_LEGEND_SETTINGS,
                     type="nominal",
@@ -930,7 +932,7 @@ def _get_color_encoding(
         raise StreamlitInvalidColorError(df, color_from_user)
 
     elif color_column is not None:
-        column_type: str | tuple[str, list[Any]]
+        column_type: VegaLiteType
 
         if color_column == _MELTED_COLOR_COLUMN_NAME:
             column_type = "nominal"

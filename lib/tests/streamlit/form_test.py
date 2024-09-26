@@ -181,6 +181,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         self.assertEqual("foo", form_proto.form.form_id)
         self.assertEqual(True, form_proto.form.clear_on_submit)
+        self.assertEqual(True, form_proto.form.enter_to_submit)
         self.assertEqual(True, form_proto.form.border)
         self.clear_queue()
 
@@ -192,6 +193,17 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         self.assertEqual("bar", form_proto.form.form_id)
         self.assertEqual(False, form_proto.form.clear_on_submit)
+
+    def test_form_enter_to_submit(self):
+        """Test that a form can be created with enter_to_submit=False."""
+
+        # Test with enter_to_submit=False
+        with st.form(key="foo", enter_to_submit=False):
+            pass
+
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        form_proto = self.get_delta_from_queue(0).add_block
+        self.assertEqual(False, form_proto.form.enter_to_submit)
 
     def test_form_without_border(self):
         """Test that a form can be created without a border."""
@@ -312,6 +324,24 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
 
         last_delta = self.get_delta_from_queue()
         self.assertEqual("primary", last_delta.new_element.button.type)
+
+    def test_submit_button_emoji_icon(self):
+        """Test that a submit button can be called with an emoji icon."""
+
+        form = st.form("foo")
+        form.form_submit_button(icon="⚡")
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("⚡", last_delta.new_element.button.icon)
+
+    def test_submit_button_material_icon(self):
+        """Test that a submit button can be called with a Material icon."""
+
+        form = st.form("foo")
+        form.form_submit_button(icon=":material/thumb_up:")
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual(":material/thumb_up:", last_delta.new_element.button.icon)
 
     def test_submit_button_can_use_container_width_by_default(self):
         """Test that a submit button can be called with use_container_width=True."""

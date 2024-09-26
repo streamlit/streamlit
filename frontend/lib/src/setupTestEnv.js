@@ -18,6 +18,10 @@ if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = jest.fn()
 }
 
+// Required for vega-lite tests since
+// structuredClone is not supported in Jest
+global.structuredClone = v => JSON.parse(JSON.stringify(v))
+
 // TODO: Hides console error for running FE tests
 // react-18-upgrade
 const originalConsoleError = console.error

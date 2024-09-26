@@ -103,7 +103,7 @@ def mapping_demo():
         )
 
 
-st.set_page_config(page_title="Mapping Demo", page_icon="🌍")
+st.set_page_config(page_title="Mapping Demo", page_icon=":material/public:")
 st.markdown("# Mapping Demo")
 st.sidebar.header("Mapping Demo")
 st.write(

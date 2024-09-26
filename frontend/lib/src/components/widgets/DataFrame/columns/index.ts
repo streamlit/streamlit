@@ -33,6 +33,9 @@ import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
+export type { DateTimeColumnParams } from "./DateTimeColumn"
+export type { LinkColumnParams } from "./LinkColumn"
+export type { NumberColumnParams } from "./NumberColumn"
 
 export * from "./utils"
 

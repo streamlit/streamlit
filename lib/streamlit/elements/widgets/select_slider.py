@@ -16,12 +16,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Sequence,
+    Tuple,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeGuard
 
-from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
-from streamlit.elements.form import current_form_id
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.options_selector_utils import (
+    index_,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
+)
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -29,9 +43,9 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
-    maybe_coerce_enum,
-    maybe_coerce_enum_sequence,
+    save_for_app_testing,
     to_key,
 )
 from streamlit.errors import StreamlitAPIException
@@ -46,14 +60,8 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
-    compute_widget_id,
-    save_for_app_testing,
 )
-from streamlit.type_util import (
-    T,
-    check_python_comparable,
-)
-from streamlit.util import index_
+from streamlit.type_util import T, check_python_comparable
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -102,12 +110,58 @@ class SelectSliderSerde(Generic[T]):
 
 
 class SelectSliderMixin:
+    @overload
+    def select_slider(  # type: ignore[overload-overlap]
+        self,
+        label: str,
+        options: OptionSequence[T],
+        value: tuple[T, T] | list[T],
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> tuple[T, T]: ...
+
+    # The overload-overlap error given by mypy here stems from
+    # the fact that
+    #
+    #   opt:List[object] = [1, 2, "3"]
+    #   select_slider("foo", options=opt, value=[1, 2])
+    #
+    # matches both overloads; "opt" matches
+    # OptionsSequence[T] in each case, binding T to object.
+    # However, the list[int] type of "value" can be interpreted
+    # as subtype of object, or as a subtype of List[object],
+    # meaning it matches both signatures.
+
+    @overload
+    def select_slider(
+        self,
+        label: str,
+        options: OptionSequence[T] = (),
+        value: T | None = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
     @gather_metrics("select_slider")
     def select_slider(
         self,
         label: str,
         options: OptionSequence[T] = (),
-        value: object = None,
+        value: T | Sequence[T] | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
@@ -153,10 +207,10 @@ class SelectSliderMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
-            Each label will be cast to str internally by default.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
 
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
@@ -266,7 +320,7 @@ class SelectSliderMixin:
         self,
         label: str,
         options: OptionSequence[T] = (),
-        value: object = None,
+        value: T | Sequence[T] | None = None,
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
@@ -287,7 +341,7 @@ class SelectSliderMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = convert_anything_to_sequence(options)
+        opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if len(opt) == 0:
@@ -313,20 +367,18 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "select_slider",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             value=slider_value,
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         slider_proto = SliderProto()
-        slider_proto.id = id
+        slider_proto.id = element_id
         slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
@@ -349,7 +401,6 @@ class SelectSliderMixin:
         widget_state = register_widget(
             "slider",
             slider_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -369,7 +420,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue("slider", slider_proto)
         return widget_state.value

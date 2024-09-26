@@ -19,11 +19,11 @@ import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton/styled-components"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export { BaseButtonKind, BaseButtonSize }
 
@@ -122,7 +122,7 @@ export const StyledPrimaryLinkButton = styled(
     color: theme.colors.white,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active, &[disabled]:visited": {
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
@@ -134,7 +134,7 @@ export const StyledSecondaryLinkButton = styled(
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   color: theme.colors.bodyText,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   "&:visited": {
     color: theme.colors.bodyText,
   },
@@ -152,7 +152,7 @@ export const StyledSecondaryLinkButton = styled(
     color: theme.colors.primary,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
-    borderColor: theme.colors.fadedText10,
+    borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText40,
     cursor: "not-allowed",

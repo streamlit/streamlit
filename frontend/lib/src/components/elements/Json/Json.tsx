@@ -16,10 +16,10 @@
 
 import React, { ReactElement, useRef } from "react"
 
-import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
-import ReactJson from "react-json-view"
 import Clipboard from "clipboard"
+import ReactJson from "react-json-view"
+import { useTheme } from "@emotion/react"
 
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
@@ -29,6 +29,7 @@ import {
 } from "@streamlit/lib/src/theme"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 
+import { StyledJsonWrapper } from "./styled-components"
 export interface JsonProps {
   width: number
   element: JsonProto
@@ -37,8 +38,10 @@ export interface JsonProps {
 /**
  * Functional element representing JSON structured text.
  */
-export default function Json({ width, element }: JsonProps): ReactElement {
-  const styleProp = { width }
+export default function Json({
+  width,
+  element,
+}: Readonly<JsonProps>): ReactElement {
   const theme: EmotionTheme = useTheme()
 
   const elementRef = useRef<HTMLDivElement>(null)
@@ -73,10 +76,15 @@ export default function Json({ width, element }: JsonProps): ReactElement {
   }
 
   return (
-    <div data-testid="stJson" style={styleProp} ref={elementRef}>
+    <StyledJsonWrapper
+      className="stJson"
+      data-testid="stJson"
+      width={width}
+      ref={elementRef}
+    >
       <ReactJson
         src={bodyObject}
-        collapsed={!element.expanded}
+        collapsed={element.maxExpandDepth ?? !element.expanded}
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}
@@ -89,6 +97,6 @@ export default function Json({ width, element }: JsonProps): ReactElement {
           whiteSpace: "pre-wrap", // preserve whitespace
         }}
       />
-    </div>
+    </StyledJsonWrapper>
   )
 }

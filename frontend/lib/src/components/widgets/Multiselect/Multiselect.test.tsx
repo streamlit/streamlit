@@ -56,7 +56,7 @@ describe("Multiselect widget", () => {
     const props = getProps()
     render(<Multiselect {...props} />)
 
-    const multiSelect = screen.getByRole("combobox")
+    const multiSelect = screen.getByTestId("stMultiSelect")
     expect(multiSelect).toBeInTheDocument()
   })
 
@@ -95,7 +95,6 @@ describe("Multiselect widget", () => {
     render(<Multiselect {...props} />)
     const multiSelect = screen.getByTestId("stMultiSelect")
 
-    expect(multiSelect).toHaveClass("row-widget")
     expect(multiSelect).toHaveClass("stMultiSelect")
     expect(multiSelect).toHaveStyle(`width: ${props.width}px`)
   })
@@ -238,7 +237,7 @@ describe("Multiselect widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntArrayValue")
 

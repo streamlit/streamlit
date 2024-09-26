@@ -59,6 +59,7 @@ def _convert_config_option_to_click_option(
         "type": config_option.type,
         "option": option,
         "envvar": config_option.env_var,
+        "multiple": config_option.multiple,
     }
 
 
@@ -101,6 +102,7 @@ def configurator_options(func: F) -> F:
             parsed_parameter["param"],
             help=parsed_parameter["description"],
             type=parsed_parameter["type"],
+            multiple=parsed_parameter["multiple"],
             **click_option_kwargs,
         )
         func = config_option(func)
@@ -176,9 +178,9 @@ def main_version():
 def main_docs():
     """Show help in browser."""
     click.echo("Showing help page in browser...")
-    from streamlit import util
+    from streamlit import cli_util
 
-    util.open_browser("https://docs.streamlit.io")
+    cli_util.open_browser("https://docs.streamlit.io")
 
 
 @main.command("hello")

@@ -15,10 +15,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
-from streamlit.dataframe_util import OptionSequence, convert_anything_to_sequence
-from streamlit.elements.form import current_form_id
+from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.options_selector_utils import index_, maybe_coerce_enum
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -26,8 +27,9 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
-    maybe_coerce_enum,
+    save_for_app_testing,
     to_key,
 )
 from streamlit.errors import StreamlitAPIException
@@ -41,12 +43,10 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     T,
     check_python_comparable,
 )
-from streamlit.util import index_
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -74,6 +74,42 @@ class SelectboxSerde(Generic[T]):
 
 
 class SelectboxMixin:
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str = "Choose an option",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
+    @overload
+    def selectbox(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str = "Choose an option",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T | None: ...
+
     @gather_metrics("selectbox")
     def selectbox(
         self,
@@ -117,10 +153,10 @@ class SelectboxMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
-            Each label will be cast to str internally by default.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
 
         index : int
             The index of the preselected option on first render. If ``None``,
@@ -245,20 +281,18 @@ class SelectboxMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        opt = convert_anything_to_sequence(options)
+        opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
-            key=key,
             help=help,
             placeholder=placeholder,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:
@@ -276,7 +310,7 @@ class SelectboxMixin:
             index = None
 
         selectbox_proto = SelectboxProto()
-        selectbox_proto.id = id
+        selectbox_proto.id = element_id
         selectbox_proto.label = label
         if index is not None:
             selectbox_proto.default = index
@@ -296,7 +330,6 @@ class SelectboxMixin:
         widget_state = register_widget(
             "selectbox",
             selectbox_proto,
-            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -313,7 +346,7 @@ class SelectboxMixin:
             selectbox_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("selectbox", selectbox_proto)
         return widget_state.value
 

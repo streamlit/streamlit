@@ -142,7 +142,7 @@ export const StyledCameraInputBaseButton =
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.lightenedBg05,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
     borderRadius: `0 0 ${theme.radii.default} ${theme.radii.default}`,
     "&:hover": {
       borderColor: theme.colors.primary,
@@ -162,7 +162,7 @@ export const StyledCameraInputBaseButton =
     },
     fontWeight: theme.fontWeights.normal,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-    margin: 0,
+    margin: theme.spacing.none,
     lineHeight: theme.lineHeights.base,
     color: "inherit",
     width: "100%",

@@ -86,7 +86,7 @@ def test_checkbox_in_fragment(app: Page):
 def test_color_picker_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    color_block_element = app.get_by_test_id("stColorBlock")
+    color_block_element = app.get_by_test_id("stColorPickerBlock")
     color_block_element.click()
     app.locator('[data-baseweb="popover"]').locator("input").fill("0xFFFFFF")
     color_block_element.click()
@@ -171,7 +171,7 @@ def test_selectbox_in_fragment(app: Page):
 def test_slider_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    slider_element = app.get_by_test_id("stThumbValue")
+    slider_element = app.get_by_test_id("stSliderThumbValue")
     slider_element.click(force=True)
     slider_element.press("ArrowRight")
     wait_for_app_run(app)

@@ -20,7 +20,11 @@ from e2e_playwright.conftest import (
     wait_for_app_loaded,
     wait_for_app_run,
 )
-from e2e_playwright.shared.app_utils import click_checkbox
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    click_checkbox,
+    get_element_by_key,
+)
 
 
 def main_heading(app: Page):
@@ -56,6 +60,8 @@ expected_page_order = [
     "page 10",
     "page 11",
     "page 12",
+    "page 13",
+    "page 14",
 ]
 
 
@@ -187,13 +193,17 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # Expand the nav
     view_button.click(force=True)
     expect(view_button).to_have_text("View less")
+    # move the mouse out of the way to avoid hover effects
+    themed_app.mouse.move(0, 0)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
     # Collapse the nav
     view_button.click(force=True)
-    expect(view_button).to_have_text("View more")
+    expect(view_button).to_have_text("View 3 more")
+    # move the mouse out of the way to avoid hover effects
+    themed_app.mouse.move(0, 0)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
@@ -201,16 +211,104 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     # Expand the nav again
     view_button.click(force=True)
     expect(view_button).to_have_text("View less")
+    # move the mouse out of the way to avoid hover effects
+    themed_app.mouse.move(0, 0)
     assert_snapshot(
         themed_app.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
 
+def test_handles_expanded_navigation_parameter_correctly(app: Page):
+    """Test that we handle expanded param of st.navigation nav correctly."""
+
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    # By default, the navigation is collapsed
+    view_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_button).to_be_visible()
+
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+
+    # Forced expansion removes the View less button and shows all links
+    click_checkbox(app, "Expand navigation")
+    wait_for_app_run(app)
+
+    view_button = app.get_by_test_id("stSidebarNavViewButton")
+
+    expect(view_button).not_to_be_visible()
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+
+    # Removing forced expansion shows the View less button but remains expanded
+    click_checkbox(app, "Expand navigation")
+    wait_for_app_run(app)
+    view_button = app.get_by_test_id("stSidebarNavViewButton")
+
+    expect(view_button).to_be_visible()
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+
+
+def test_preserves_navigation_expansion_user_preference(app: Page, app_port: int):
+    """Test that the navigation expansion state is preserved across page changes."""
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    # verify the default setting is collapsed
+    view_more_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_more_button).to_be_visible()
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+
+    # User clicks View more which preserves the setting
+    view_more_button.click()
+
+    # Verify navigation is expanded
+    view_less_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_less_button).to_have_text("View less")
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+
+    # Reload the page and ensure elements are in the sidebar
+    app.goto(f"http://localhost:{app_port}")
+    wait_for_app_loaded(app)
+
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    # Verify navigation remains expanded
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(13)
+    view_less_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_less_button).to_have_text("View less")
+
+    # Undo the setting (eliminating the preference)
+    view_less_button.click()
+
+    # Verify navigation is collapsed
+    view_less_button = app.get_by_test_id("stSidebarNavViewButton")
+    expect(view_less_button).to_have_text("View 3 more")
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+
+    # Reload the page and ensure elements are in the sidebar
+    app.goto(f"http://localhost:{app_port}")
+    wait_for_app_loaded(app)
+
+    click_checkbox(app, "Show sidebar elements")
+    wait_for_app_run(app)
+
+    links = app.get_by_test_id("stSidebarNav").locator("a")
+    expect(links).to_have_count(10)
+    expect(app.get_by_test_id("stSidebarNavViewButton")).to_have_text("View 3 more")
+
+
 def test_switch_page_by_path(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with a path."""
 
-    app.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
-    wait_for_app_run(app)
+    click_button(app, "page 5")
 
     expect(page_heading(app)).to_contain_text("Page 5")
 
@@ -218,8 +316,7 @@ def test_switch_page_by_path(app: Page):
 def test_switch_page_by_st_page(app: Page):
     """Test that we can switch between pages by triggering st.switch_page with st.Page."""
 
-    app.get_by_test_id("baseButton-secondary").filter(has_text="page 9").click()
-    wait_for_app_run(app)
+    click_button(app, "page 9")
 
     expect(page_heading(app)).to_contain_text("Page 9")
 
@@ -233,8 +330,8 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_port: int):
     expect(app).to_have_url(f"http://localhost:{app_port}/?foo=bar")
 
     # Trigger st.switch_page
-    app.get_by_test_id("baseButton-secondary").filter(has_text="page 5").click()
-    wait_for_app_loaded(app)
+    click_button(app, "page 5")
+
     # Check that query params don't persist
     expect(app).to_have_url(f"http://localhost:{app_port}/page_5")
 
@@ -289,10 +386,12 @@ def test_renders_logos(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(500)
 
     # Collapsed logo
-    expect(app.get_by_test_id("collapsedControl").locator("a")).to_have_attribute(
-        "href", "https://www.example.com"
+    expect(
+        app.get_by_test_id("stSidebarCollapsedControl").locator("a")
+    ).to_have_attribute("href", "https://www.example.com")
+    assert_snapshot(
+        app.get_by_test_id("stSidebarCollapsedControl"), name="collapsed-logo"
     )
-    assert_snapshot(app.get_by_test_id("collapsedControl"), name="collapsed-logo")
 
 
 def test_page_link_with_path(app: Page):
@@ -385,3 +484,35 @@ def test_widget_state_reset_on_page_switch(app: Page):
 
     # Slider reset
     expect(app.get_by_text("x is 1")).to_be_attached()
+
+
+def test_rapid_fire_interaction(app: Page):
+    """Check that the number input can handle rapid fire clicks in an Multipage app."""
+    get_page_link(app, "page 14").click()
+
+    number_input = get_element_by_key(app, "mynum")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # we need to have the clicking last a long enough time
+    for _ in range(30):
+        step_up_btn.click()
+
+    wait_for_app_run(app)
+
+    expect(number_input.locator("input")).to_have_value("31")
+
+
+def test_rapid_fire_interaction_in_fragment(app: Page):
+    """Check that the number input in a fragment can handle rapid fire clicks in an Multipage app."""
+    get_page_link(app, "page 14").click()
+
+    number_input = get_element_by_key(app, "mynum2")
+    step_up_btn = number_input.get_by_test_id("stNumberInputStepUp")
+
+    # we need to have the clicking last a long enough time
+    for _ in range(30):
+        step_up_btn.click()
+
+    wait_for_app_run(app)
+
+    expect(number_input.locator("input")).to_have_value("31")

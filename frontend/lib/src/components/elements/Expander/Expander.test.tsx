@@ -48,6 +48,7 @@ describe("Expander container", () => {
     )
     const expanderContainer = screen.getByTestId("stExpander")
     expect(expanderContainer).toBeInTheDocument()
+    expect(expanderContainer).toHaveClass("stExpander")
   })
 
   it("does not render a list", () => {

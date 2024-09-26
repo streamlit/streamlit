@@ -42,9 +42,10 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.scriptrunner import ScriptRunContext, add_script_run_ctx
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import create_mock_script_run_ctx
 
 if TYPE_CHECKING:
     from streamlit.components.types.base_custom_component import BaseCustomComponent
@@ -81,8 +82,7 @@ class DeclareComponentTest(unittest.TestCase):
         self.runtime = Runtime(config)
 
         # declare_component needs a script_run_ctx to be set
-        self.script_run_ctx = MagicMock(spec=ScriptRunContext)
-        add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
     def tearDown(self) -> None:
         Runtime._instance = None

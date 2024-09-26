@@ -387,6 +387,8 @@ function ComponentInstance(props: Props): ReactElement {
       {loadingSkeleton}
       {warns}
       <iframe
+        className="stCustomComponentV1"
+        data-testid="stCustomComponentV1"
         allow={DEFAULT_IFRAME_FEATURE_POLICY}
         ref={iframeRef}
         src={getSrc(componentName, registry, url)}

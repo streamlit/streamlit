@@ -15,8 +15,8 @@
  */
 
 import styled from "@emotion/styled"
-import { ChevronLeft } from "react-feather"
 import { darken } from "color2k"
+import { ChevronLeft } from "react-feather"
 
 import { Small } from "@streamlit/lib"
 
@@ -109,7 +109,7 @@ export const StyledButtonContainer = styled.div(({ theme }) => ({
 export const StyledCheckbox = styled.input(({ theme }) => ({
   marginRight: theme.spacing.xs,
   appearance: "none",
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.fadedText10}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
   width: theme.fontSizes.md,
   height: theme.fontSizes.md,
   borderRadius: theme.radii.md,

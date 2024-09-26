@@ -108,8 +108,9 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
+      expect(elementNodeRenderer).toHaveClass("stElementContainer")
       // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
     })
@@ -125,12 +126,12 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("balloons")
+      expect(elementRendererChildren[0]).toHaveClass("stBalloons")
     })
   })
 
@@ -146,7 +147,7 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       expect(elementNodeRenderer.children).toHaveLength(0)
@@ -163,12 +164,12 @@ describe("ElementNodeRenderer Block Component", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("stSkeleton")).toBeNull()
       )
-      const elementNodeRenderer = screen.getByTestId("element-container")
+      const elementNodeRenderer = screen.getByTestId("stElementContainer")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
-      expect(elementRendererChildren[0]).toHaveClass("snow")
+      expect(elementRendererChildren[0]).toHaveClass("stSnow")
     })
   })
 })

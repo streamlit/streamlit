@@ -20,7 +20,7 @@ from typing import Callable
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.util import calc_md5
@@ -206,14 +206,24 @@ class StreamlitPage:
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
         self._icon: str = icon or inferred_icon
-        if url_path is not None and url_path.strip() == "" and not default:
+
+        if self._title.strip() == "":
             raise StreamlitAPIException(
-                "The URL path cannot be an empty string unless the page is the default page."
+                "The title of the page cannot be empty or consist of underscores/spaces only"
             )
 
         self._url_path: str = inferred_name
         if url_path is not None:
-            self._url_path = url_path.lstrip("/")
+            if url_path.strip() == "" and not default:
+                raise StreamlitAPIException(
+                    "The URL path cannot be an empty string unless the page is the default page."
+                )
+
+            self._url_path = url_path.strip("/")
+            if "/" in self._url_path:
+                raise StreamlitAPIException(
+                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                )
 
         if self._icon:
             validate_icon_or_emoji(self._icon)
@@ -276,7 +286,7 @@ class StreamlitPage:
         if not ctx:
             return
 
-        with ctx.pages_manager.run_with_active_hash(self._script_hash):
+        with ctx.run_with_active_hash(self._script_hash):
             if callable(self._page):
                 self._page()
                 return

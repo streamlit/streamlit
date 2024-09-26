@@ -46,7 +46,7 @@ import {
   ForwardMsgMetadata,
   generateUID,
   getCachedTheme,
-  getElementWidgetID,
+  getElementId,
   getEmbeddingIdClassName,
   getHostSpecifiedTheme,
   getIFrameEnclosingApp,
@@ -89,7 +89,6 @@ import {
   SessionEvent,
   SessionInfo,
   SessionStatus,
-  setCookie,
   StreamlitEndpoints,
   ThemeConfig,
   toExportedTheme,
@@ -102,6 +101,7 @@ import {
   notNullOrUndefined,
   preserveEmbedQueryParams,
 } from "@streamlit/lib/src/util/utils"
+import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 import AppView from "@streamlit/app/src/components/AppView"
 import StatusWidget from "@streamlit/app/src/components/StatusWidget"
@@ -156,6 +156,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  expandSidebarNav: boolean
   appPages: IAppPage[]
   navSections: string[]
   // The hash of the current page executing
@@ -294,6 +295,7 @@ export class App extends PureComponent<Props, State> {
       // true as well for consistency.
       hideTopBar: true,
       hideSidebarNav: true,
+      expandSidebarNav: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
       fragmentIdsThisRun: [],
@@ -654,8 +656,6 @@ export class App extends PureComponent<Props, State> {
         })
       }
 
-      setCookie("_streamlit_xsrf", "")
-
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
       }
@@ -742,9 +742,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    // Pass the current page & run ID for cleanup
+    const logoMetadata = {
+      activeScriptHash: metadata.activeScriptHash,
+      scriptRunId: this.state.scriptRunId,
+    }
+
     this.setState(
       {
-        elements: this.pendingElementsBuffer.appRootWithLogo(logo, metadata),
+        elements: this.pendingElementsBuffer.appRootWithLogo(
+          logo,
+          logoMetadata
+        ),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -832,6 +841,8 @@ export class App extends PureComponent<Props, State> {
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     const pageProfileObj = PageProfile.toObject(pageProfile)
+
+    const browserInfo = getBrowserInfo()
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
       isFragmentRun: Boolean(pageProfileObj.isFragmentRun),
@@ -844,6 +855,7 @@ export class App extends PureComponent<Props, State> {
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
+      browserInfo,
     })
   }
 
@@ -894,15 +906,6 @@ export class App extends PureComponent<Props, State> {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
-
-        const customComponentCounter =
-          this.metricsMgr.getAndResetCustomComponentCounter()
-        Object.entries(customComponentCounter).forEach(([name, count]) => {
-          this.metricsMgr.enqueue("customComponentStats", {
-            name,
-            count,
-          })
-        })
       }
 
       return {
@@ -1195,32 +1198,36 @@ export class App extends PureComponent<Props, State> {
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      // Clear any stale elements left over from the previous run.
-      // (We don't do this if our script had a compilation error and didn't
-      // finish successfully.)
-      this.setState(
-        ({ scriptRunId, fragmentIdsThisRun }) => ({
-          // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(
-            scriptRunId,
-            fragmentIdsThisRun
-          ),
-        }),
-        () => {
-          this.pendingElementsBuffer = this.state.elements
-        }
-      )
-
       if (
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
         status ===
           ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
       ) {
+        // Clear any stale elements left over from the previous run.
+        // We only do that for completed runs, not for runs that were finished early
+        // due to reruns; this is to avoid flickering of elements where they disappear for
+        // a moment and then are readded by a new session. After the new session finished,
+        // leftover elements will be cleared after finished successfully.
+        // We also don't do this if our script had a compilation error and didn't
+        // finish successfully.
+        this.setState(
+          ({ scriptRunId, fragmentIdsThisRun }) => ({
+            // Apply any pending elements that haven't been applied.
+            elements: this.pendingElementsBuffer.clearStaleNodes(
+              scriptRunId,
+              fragmentIdsThisRun
+            ),
+          }),
+          () => {
+            this.pendingElementsBuffer = this.state.elements
+          }
+        )
+
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1274,7 +1281,7 @@ export class App extends PureComponent<Props, State> {
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
           Array.from(this.state.elements.getElements())
-            .map(element => getElementWidgetID(element))
+            .map(element => getElementId(element))
             .filter(notUndefined)
         )
         this.widgetMgr.removeInactive(activeWidgetIds)
@@ -1326,9 +1333,6 @@ export class App extends PureComponent<Props, State> {
       deltaMsg,
       metadataMsg
     )
-
-    // Update metrics
-    this.metricsMgr.handleDeltaMessage(deltaMsg)
 
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
@@ -1407,8 +1411,6 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
-    this.metricsMgr.enqueue("rerunScript")
-
     this.setState({ scriptRunState: ScriptRunState.RERUN_REQUESTED })
 
     // Note: `rerunScript` is incorrectly called in some places.
@@ -1449,7 +1451,7 @@ export class App extends PureComponent<Props, State> {
     )
     const activeWidgetIds = new Set(
       Array.from(nextPageElements.getElements())
-        .map(element => getElementWidgetID(element))
+        .map(element => getElementId(element))
         .filter(notUndefined)
     )
 
@@ -1607,7 +1609,6 @@ export class App extends PureComponent<Props, State> {
   clearCache = (): void => {
     this.closeDialog()
     if (this.isServerConnected()) {
-      this.metricsMgr.enqueue("clearCache")
       const backMsg = new BackMsg({ clearCache: true })
       backMsg.type = "clearCache"
       this.sendBackMsg(backMsg)
@@ -1826,6 +1827,7 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       hideTopBar,
       hideSidebarNav,
+      expandSidebarNav,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -1908,11 +1910,12 @@ export class App extends PureComponent<Props, State> {
             <StyledApp
               className={outerDivClass}
               data-testid="stApp"
-              data-teststate={
+              data-test-script-state={
                 scriptRunId == INITIAL_SCRIPT_RUN_ID
                   ? "initial"
                   : scriptRunState
               }
+              data-test-connection-state={connectionState}
             >
               {/* The tabindex below is required for testing. */}
               <Header>
@@ -1978,6 +1981,7 @@ export class App extends PureComponent<Props, State> {
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                expandSidebarNav={expandSidebarNav}
               />
               {renderedDialog}
             </StyledApp>

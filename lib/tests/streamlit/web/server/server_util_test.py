@@ -74,3 +74,20 @@ class ServerUtilTest(unittest.TestCase):
             actual_url = server_util.get_url("the_ip_address")
 
         self.assertEqual(expected_url, actual_url)
+
+    def test_make_url_path_regex(self):
+        assert (
+            server_util.make_url_path_regex("foo") == r"^/foo/?$"
+        )  # defaults to optional
+        assert (
+            server_util.make_url_path_regex("foo", trailing_slash="optional")
+            == r"^/foo/?$"
+        )
+        assert (
+            server_util.make_url_path_regex("foo", trailing_slash="required")
+            == r"^/foo/$"
+        )
+        assert (
+            server_util.make_url_path_regex("foo", trailing_slash="prohibited")
+            == r"^/foo$"
+        )

@@ -43,7 +43,7 @@ const createContainer = (): ReactElement => (
     overrides={{
       Root: {
         props: {
-          "data-testid": "toastContainer",
+          "data-testid": "stToastContainer",
         },
       },
     }}
@@ -86,6 +86,10 @@ describe("Toast Component", () => {
     expect(toast).toHaveTextContent("This is a toast message")
     expect(closeButton).toBeInTheDocument()
     expect(expandButton).not.toBeInTheDocument()
+
+    const toastElement = screen.getByTestId("stToast")
+    expect(toastElement).toBeInTheDocument()
+    expect(toastElement).toHaveClass("stToast")
   })
 
   test("renders long toast messages with expand option", () => {

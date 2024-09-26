@@ -34,7 +34,6 @@ import {
   StyledWidgetLabelHelp,
   WidgetLabel,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 const NO_OPTIONS_MSG = "No options to select."
@@ -182,11 +181,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
     const showKeyboardOnMobile = options.length > 10
 
     return (
-      <div
-        className="row-widget stSelectbox"
-        data-testid="stSelectbox"
-        style={style}
-      >
+      <div className="stSelectbox" data-testid="stSelectbox" style={style}>
         <WidgetLabel
           label={label}
           labelVisibility={labelVisibility}
@@ -284,7 +279,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: "1px",
+                      marginTop: theme.spacing.px,
                     }),
                   },
                 },
@@ -298,8 +293,8 @@ export class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: iconSizes.xl,
-                      height: iconSizes.xl,
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
                     }),
                   },
                 },

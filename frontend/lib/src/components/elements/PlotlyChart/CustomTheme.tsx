@@ -137,7 +137,7 @@ export function applyStreamlitThemeTemplateLayout(
     },
     hoverlabel: {
       bgcolor: colors.bgColor,
-      bordercolor: colors.fadedText10,
+      bordercolor: colors.borderColor,
       font: {
         color: getGray70(theme),
         family: genericFonts.bodyFont,

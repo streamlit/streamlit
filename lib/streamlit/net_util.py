@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from streamlit import util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -24,6 +23,9 @@ _LOGGER: Final = get_logger(__name__)
 # URLs for checking the current machine's external IP address.
 _AWS_CHECK_IP: Final = "http://checkip.amazonaws.com"
 _AWS_CHECK_IP_HTTPS: Final = "https://checkip.amazonaws.com"
+
+# URL of Streamlit's help page.
+_HELP_DOC: Final = "https://docs.streamlit.io/"
 
 _external_ip: str | None = None
 _internal_ip: str | None = None
@@ -53,7 +55,7 @@ def get_external_ip() -> str | None:
     else:
         _LOGGER.warning(
             "Did not auto detect external IP.\nPlease go to %s for debugging hints.",
-            util.HELP_DOC,
+            _HELP_DOC,
         )
         _external_ip = None
 

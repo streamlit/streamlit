@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import check_top_level_class
 
 
 def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -48,3 +49,8 @@ def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(alert_elements.nth(17), name="st_alert-warning_non_emoji_icon")
     assert_snapshot(alert_elements.nth(18), name="st_alert-info_non_emoji_icon")
     assert_snapshot(alert_elements.nth(19), name="st_alert-success_non_emoji_icon")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stAlert")

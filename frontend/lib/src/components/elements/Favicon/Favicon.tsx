@@ -28,8 +28,7 @@ function iconToUrl(icon: string): string {
     return ""
   }
 
-  const iconUrl = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${matchResult[2]}/default/24px.svg`
-  return iconUrl
+  return `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${matchResult[2]}/default/24px.svg`
 }
 
 /**

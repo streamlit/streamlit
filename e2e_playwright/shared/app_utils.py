@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import platform
 import re
-from typing import Pattern
+from typing import Literal, Pattern
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Frame, Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 
@@ -116,8 +116,10 @@ def get_form_submit_button(
     Locator
         The element.
     """
-    element = locator.get_by_test_id("baseButton-secondaryFormSubmit").filter(
-        has_text=label
+    element = (
+        locator.get_by_test_id("stFormSubmitButton")
+        .filter(has_text=label)
+        .locator("button")
     )
     expect(element).to_be_visible()
     return element
@@ -250,7 +252,7 @@ def expect_markdown(
 
 def expect_exception(
     locator: Locator | Page,
-    expected_message: str | Pattern[str],
+    expected_message: str | Pattern[str] | None = None,
 ) -> None:
     """Expect an exception to be displayed in the app.
 
@@ -260,13 +262,22 @@ def expect_exception(
     locator : Locator
         The locator to search for the exception element.
 
-    expected_message : str or Pattern[str]
+    expected_message : str or Pattern[str] or None
         The expected message to be displayed in the exception.
     """
-    exception_el = locator.get_by_test_id("stException").filter(
-        has_text=expected_message
-    )
+
+    if expected_message is None:
+        exception_el = locator.get_by_test_id("stException")
+    else:
+        exception_el = locator.get_by_test_id("stException").filter(
+            has_text=expected_message
+        )
     expect(exception_el).to_be_visible()
+
+
+def expect_no_exception(locator: Locator | Page):
+    exception_el = locator.get_by_test_id("stException")
+    expect(exception_el).not_to_be_attached()
 
 
 def expect_warning(
@@ -410,3 +421,210 @@ def expect_help_tooltip(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
     expect(tooltip_content).not_to_be_attached()
+
+
+def expect_script_state(
+    page: Page,
+    state: Literal[
+        "initial",
+        "running",
+        "notRunning",
+        "rerunRequested",
+        "stopRequested",
+        "compilationError",
+    ],
+) -> None:
+    """Expect the app to be in a specific script state.
+
+    Parameters
+    ----------
+    page : Page
+        The page to search for the script state.
+
+    state :
+        The expected script state.
+    """
+    page.wait_for_selector(
+        f"[data-testid='stApp'][data-test-script-state='{state}']",
+        timeout=10000,
+        state="attached",
+    )
+
+
+def get_element_by_key(locator: Locator | Page, key: str) -> Locator:
+    """Get an element with the given user-defined key.
+
+    Parameters
+    ----------
+
+    locator : Locator
+        The locator to search for the element.
+
+    key : str
+        The user-defined key of the element
+
+    Returns
+    -------
+    Locator
+        The element.
+
+    """
+    class_name = re.sub(r"[^a-zA-Z0-9_-]", "-", key.strip())
+    class_name = f"st-key-{class_name}"
+    return locator.locator(f".{class_name}")
+
+
+def expand_sidebar(app: Page) -> Locator:
+    """Expands the sidebar.
+
+    Returns
+    -------
+    Locator
+        The sidebar element.
+    """
+    app.get_by_test_id("stSidebarCollapsedControl").click()
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    return sidebar
+
+
+def check_top_level_class(app: Page, test_id: str) -> None:
+    """Check that the top level class is correctly set.
+
+    It should be the same as the test id of the element
+    and set on the same component.
+
+    Parameters
+    ----------
+    app : Page
+        The page to search for the element.
+
+    test_id : str
+        The test id of the element to check.
+    """
+    expect(app.get_by_test_id(test_id).first).to_have_class(re.compile(test_id))
+
+
+def register_connection_status_observer(page_or_frame: Page | Frame | None) -> None:
+    if page_or_frame is None:
+        return None
+
+    return page_or_frame.evaluate("""async () => {
+        window.streamlitPlaywrightDebugConnectionStatuses = [];
+        const callback = (mutationList, observer) => {
+            if (!mutationList || mutationList.length === 0) {
+                return
+            }
+            const target = mutationList[0].target
+            if (!target) {
+                return
+            }
+            let state = target
+                            .getAttribute('data-test-connection-state')
+                            .toUpperCase();
+            window.streamlitPlaywrightDebugConnectionStatuses.push(state);
+        }
+        const observer = new MutationObserver(callback);
+        // Observe app status for changes
+        const targetNode = document.querySelector('[data-testid=stApp]')
+        if (!targetNode) {
+            console.log("stApp not found")
+            return
+        }
+        const config = {
+            childList: false,
+            subtree: false,
+            attributeFilter: ['data-test-connection-state']
+        };
+        observer.observe(targetNode, config);
+    }""")
+
+
+def get_observed_connection_statuses(page_or_frame: Page | Frame | None) -> list[str]:
+    if page_or_frame is None:
+        return []
+
+    return page_or_frame.evaluate(
+        "() => window.streamlitPlaywrightDebugConnectionStatuses"
+    )
+
+
+def expect_connection_status(
+    page_or_frame: Page | Frame | None, expected_status: str, callable_action: str
+) -> None:
+    """Wait for the expected_status to appear in the app's connection-state attribute.
+
+    Uses the browser's MutationObserver API to observe changes to the DOM. This way,
+    we will never have a race condition between calling disconnect and checking the
+    status.
+    If the status is not observed within 1 second, the promise will resolved with an
+    error message. We don't use reject because on Firefox this seem to cause an
+    undefined error which is not as precise as our error message.
+    Otherwise, the promise is resolved with the status.
+
+    The resolved status will be uppercased.
+    """
+
+    if page_or_frame is None:
+        return None
+
+    status = page_or_frame.evaluate(
+        """async ([expectedStatus]) => {
+                // the first call to resolve will be the one returned to the caller
+                // so its either the observed status or the timeout. Subsequent
+                // calls are no-ops.
+                const p = new Promise((resolve) => {
+                    // Define a timeoutId so that we can cancel the timeout in the
+                    // callback upon success
+                    let timeoutId = null
+                    let resolved = false
+                    const callback = (mutationList, observer) => {
+                        if (!mutationList || mutationList.length === 0) {
+                            return
+                        }
+                        const target = mutationList[0].target
+                        if (!target) {
+                            return
+                        }
+                        let state = target
+                                        .getAttribute('data-test-connection-state')
+                                        .toUpperCase();
+                        if (state.indexOf(expectedStatus.toUpperCase()) > -1) {
+                            resolved = true
+                            if (timeoutId) clearTimeout(timeoutId)
+                            if (observer) observer.disconnect()
+                            resolve(state)
+                        }
+                    }
+                    const observer = new MutationObserver(callback);
+                    // Observe app status for changes
+                    const targetNode = document.querySelector('[data-testid=stApp]')
+                    if (!targetNode) {
+                        resolve("stApp not found")
+                        return
+                    }
+                    const config = {
+                        childList: false,
+                        subtree: false,
+                        attributeFilter: ['data-test-connection-state']
+                    };
+                    observer.observe(targetNode, config);
+            """
+        + callable_action
+        + """
+                    if (!resolved) {
+                        timeoutId = setTimeout(() => {
+                            if (observer) observer.disconnect()
+                            resolve(`timeout: did not observe status '${expectedStatus}'`)
+                            return
+                        }, 1500);
+                    }
+                })
+
+                const status = await p
+                return status
+            }
+            """,
+        [expected_status],
+    )
+    assert status == expected_status, status

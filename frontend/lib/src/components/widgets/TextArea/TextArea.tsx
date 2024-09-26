@@ -37,7 +37,6 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
@@ -172,17 +171,16 @@ class TextArea extends React.PureComponent<Props, State> {
   private onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     const { metaKey, ctrlKey } = e
     const { dirty } = this.state
+    const { element, widgetMgr, fragmentId } = this.props
+    const { formId } = element
+    const allowFormEnterToSubmit = widgetMgr.allowFormEnterToSubmit(formId)
 
     if (this.isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
       e.preventDefault()
 
       this.commitWidgetValue({ fromUi: true })
-      const { formId } = this.props.element
-      if (isInForm({ formId })) {
-        this.props.widgetMgr.submitForm(
-          this.props.element.formId,
-          this.props.fragmentId
-        )
+      if (allowFormEnterToSubmit) {
+        widgetMgr.submitForm(formId, fragmentId)
       }
     }
   }
@@ -191,12 +189,15 @@ class TextArea extends React.PureComponent<Props, State> {
     const { element, disabled, width, widgetMgr, theme } = this.props
     const { value, dirty } = this.state
     const style = { width }
-    const { height, placeholder } = element
+    const { height, placeholder, formId } = element
+    // Show "Please enter" instructions if in a form & allowed, or not in form
+    const allowEnterToSubmit =
+      widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
       widgetMgr,
-      element.formId,
+      formId,
       this.onFormCleared
     )
 
@@ -247,7 +248,7 @@ class TextArea extends React.PureComponent<Props, State> {
             },
             Root: {
               props: {
-                "data-testid": "stTextInput-RootElement",
+                "data-testid": "stTextAreaRootElement",
               },
               style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
@@ -260,13 +261,14 @@ class TextArea extends React.PureComponent<Props, State> {
           }}
         />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > breakpoints.hideWidgetDetails && (
+        {width > theme.breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}
             maxLength={element.maxChars}
             type={"multiline"}
-            inForm={isInForm({ formId: element.formId })}
+            inForm={isInForm({ formId })}
+            allowEnterToSubmit={allowEnterToSubmit}
           />
         )}
       </div>

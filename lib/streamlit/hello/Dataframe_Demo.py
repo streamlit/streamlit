@@ -64,7 +64,7 @@ def data_frame_demo():
         )
 
 
-st.set_page_config(page_title="DataFrame Demo", page_icon="📊")
+st.set_page_config(page_title="DataFrame Demo", page_icon=":material/table:")
 st.markdown("# DataFrame Demo")
 st.sidebar.header("DataFrame Demo")
 st.write(

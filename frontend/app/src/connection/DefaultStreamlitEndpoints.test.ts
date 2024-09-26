@@ -129,10 +129,15 @@ describe("DefaultStreamlitEndpoints", () => {
     const appPages = [
       {
         pageScriptHash: "main_page_hash",
-        pageName: "streamlit_app",
+        pageName: "streamlit app",
+        urlPathname: "streamlit_app",
         isDefault: true,
       },
-      { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
+      {
+        pageScriptHash: "other_page_hash",
+        pageName: "my other page",
+        urlPathname: "my_other_page",
+      },
     ]
 
     it("uses window.location.port", () => {

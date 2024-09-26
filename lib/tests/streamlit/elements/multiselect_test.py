@@ -14,6 +14,7 @@
 
 """multiselect unit tests."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -24,13 +25,19 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.widgets.multiselect import (
     _get_default_count,
-    _get_over_max_options_message,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitSelectionCountExceedsMaxError,
+)
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.data_test_cases import (
+    SHARED_TEST_CASES,
+    CaseMetadata,
+)
 
 
 class Multiselectbox(DeltaGeneratorTestCase):
@@ -57,28 +64,18 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertEqual(c.disabled, True)
 
     @parameterized.expand(
-        [
-            (("m", "f"), ["m", "f"]),
-            (["male", "female"], ["male", "female"]),
-            (np.array(["m", "f"]), ["m", "f"]),
-            (pd.Series(np.array(["male", "female"])), ["male", "female"]),
-            (pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
-            (
-                pd.DataFrame(
-                    data=[[1, 4, 7], [2, 5, 8], [3, 6, 9]], columns=["a", "b", "c"]
-                ).columns,
-                ["a", "b", "c"],
-            ),
-        ]
+        SHARED_TEST_CASES,
     )
-    def test_option_types(self, options, proto_options):
+    def test_option_types(self, name: str, input_data: Any, metadata: CaseMetadata):
         """Test that it supports different types of options."""
-        st.multiselect("the label", options)
+        st.multiselect("the label", input_data)
 
         c = self.get_delta_from_queue().new_element.multiselect
-        self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [])
-        self.assertEqual(c.options, proto_options)
+        assert c.label == "the label"
+        assert c.default[:] == []
+        assert {str(item) for item in c.options} == {
+            str(item) for item in metadata.expected_sequence
+        }
 
     def test_cast_options_to_string(self):
         """Test that it casts options to string."""
@@ -89,7 +86,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [2])
+        self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
     def test_default_string(self):
@@ -97,11 +94,11 @@ class Multiselectbox(DeltaGeneratorTestCase):
         arg_options = ["some str", 123, None, {}]
         proto_options = ["some str", "123", "None", "{}"]
 
-        st.multiselect("the label", arg_options, default={})
+        st.multiselect("the label", arg_options, default=123)
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
-        self.assertListEqual(c.default[:], [3])
+        self.assertListEqual(c.default[:], [1])
         self.assertEqual(c.options, proto_options)
 
     def test_format_function(self):
@@ -134,12 +131,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
-
-    @parameterized.expand([(15, TypeError)])
-    def test_invalid_options(self, options, expected):
-        """Test that it handles invalid options."""
-        with self.assertRaises(expected):
-            st.multiselect("the label", options)
 
     @parameterized.expand([(None, []), ([], []), (["Tea", "Water"], [1, 2])])
     def test_defaults(self, defaults, expected):
@@ -326,76 +317,68 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertTrue(el.is_warning)
 
     def test_over_max_selections_initialization(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitSelectionCountExceedsMaxError):
             st.multiselect(
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
-        self.assertEqual(
-            str(e.exception),
-            """
-Multiselect has 3 options selected but `max_selections`
-is set to 2. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 2 options.
-""",
-        )
 
     @parameterized.expand(
         [
             (
                 1,
                 1,
-                """
-Multiselect has 1 option selected but `max_selections`
-is set to 1. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 1 option.
-""",
+                (
+                    "Multiselect has 1 option selected but `max_selections` is set to 1. "
+                    "This happened because you either gave too many options to `default` or "
+                    "you manipulated the widget's state through `st.session_state`. "
+                    "Note that the latter can happen before the line indicated in the traceback. "
+                    "Please select at most 1 option."
+                ),
             ),
             (
                 1,
                 0,
-                """
-Multiselect has 1 option selected but `max_selections`
-is set to 0. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 0 options.
-""",
+                (
+                    "Multiselect has 1 option selected but `max_selections` is set to 0. "
+                    "This happened because you either gave too many options to `default` or "
+                    "you manipulated the widget's state through `st.session_state`. "
+                    "Note that the latter can happen before the line indicated in the traceback. "
+                    "Please select at most 0 options."
+                ),
             ),
             (
                 2,
                 1,
-                """
-Multiselect has 2 options selected but `max_selections`
-is set to 1. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 1 option.
-""",
+                (
+                    "Multiselect has 2 options selected but `max_selections` is set to 1. "
+                    "This happened because you either gave too many options to `default` or "
+                    "you manipulated the widget's state through `st.session_state`. "
+                    "Note that the latter can happen before the line indicated in the traceback. "
+                    "Please select at most 1 option."
+                ),
             ),
             (
                 3,
                 2,
-                """
-Multiselect has 3 options selected but `max_selections`
-is set to 2. This happened because you either gave too many options to `default`
-or you manipulated the widget's state through `st.session_state`. Note that
-the latter can happen before the line indicated in the traceback.
-Please select at most 2 options.
-""",
+                (
+                    "Multiselect has 3 options selected but `max_selections` is set to 2. "
+                    "This happened because you either gave too many options to `default` or "
+                    "you manipulated the widget's state through `st.session_state`. "
+                    "Note that the latter can happen before the line indicated in the traceback. "
+                    "Please select at most 2 options."
+                ),
             ),
         ]
     )
     def test_get_over_max_options_message(
         self, current_selections, max_selections, expected_msg
     ):
-        self.assertEqual(
-            _get_over_max_options_message(current_selections, max_selections),
-            expected_msg,
+        self.maxDiff = 1000
+        error = StreamlitSelectionCountExceedsMaxError(
+            current_selections_count=current_selections,
+            max_selections_count=max_selections,
         )
+        self.assertEqual(str(error), expected_msg)
 
 
 def test_multiselect_enum_coercion():

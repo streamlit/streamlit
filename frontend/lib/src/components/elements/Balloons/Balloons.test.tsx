@@ -39,8 +39,9 @@ describe("Balloons element", () => {
     const props = getProps()
     render(<Balloons {...props} />)
 
-    const balloonElement = screen.getByTestId("balloons")
+    const balloonElement = screen.getByTestId("stBalloons")
     expect(balloonElement).toBeInTheDocument()
+    expect(balloonElement).toHaveClass("stBalloons")
 
     const balloonImages = screen.getAllByRole("img")
     expect(balloonImages.length).toBe(NUM_BALLOONS)
@@ -50,11 +51,11 @@ describe("Balloons element", () => {
     })
   })
 
-  it("renders as hidden element", () => {
+  it("uses correct top-level class", () => {
     const props = getProps()
     render(<Balloons {...props} />)
 
-    const balloonElement = screen.getByTestId("balloons")
-    expect(balloonElement).toHaveClass("stHidden")
+    const balloonElement = screen.getByTestId("stBalloons")
+    expect(balloonElement).toHaveClass("stBalloons")
   })
 })

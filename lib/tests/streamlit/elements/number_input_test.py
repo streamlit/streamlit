@@ -20,8 +20,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber
+from streamlit.elements.lib.js_number import JSNumber
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueAboveMaxError,
+)
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
@@ -320,6 +323,8 @@ class NumberInputTest(DeltaGeneratorTestCase):
         )
 
     def test_should_keep_type_of_return_value_after_rerun(self):
+        # set the initial page script hash
+        self.script_run_ctx.reset(page_script_hash=self.script_run_ctx.page_script_hash)
         # Generate widget id and reset context
         st.number_input("a number", min_value=1, max_value=100, key="number")
         widget_id = self.script_run_ctx.session_state.get_widget_states()[0].id
@@ -367,7 +372,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_should_raise_exception_when_default_gt_max_and_min_is_none(self):
         value = 11
         max_value = 10
-        with pytest.raises(StreamlitAPIException):
+        with self.assertRaises(StreamlitValueAboveMaxError):
             st.number_input("My Label", value=value, max_value=max_value)
 
     def test_shows_cached_widget_replay_warning(self):

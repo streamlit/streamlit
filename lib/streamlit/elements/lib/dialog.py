@@ -14,16 +14,18 @@
 
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Literal, cast
 
 from typing_extensions import Self, TypeAlias
 
-from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    enqueue_message,
+    get_script_run_ctx,
+)
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -84,8 +86,9 @@ class Dialog(DeltaGenerator):
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
 
-        # We store the delta path here, because in _update we enqueue a new proto message to update the
-        # open status. Without this, the dialog content is gone when the _update message is sent
+        # We store the delta path here, because in _update we enqueue a new proto
+        # message to update the open status. Without this, the dialog content is gone
+        # when the _update message is sent
         delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )
@@ -93,9 +96,6 @@ class Dialog(DeltaGenerator):
 
         dialog._delta_path = delta_path
         dialog._current_proto = block_proto
-        # We add a sleep here to give the web app time to react to the update. Otherwise,
-        #  we might run into issues where the dialog cannot be opened again after closing
-        time.sleep(0.05)
         return dialog
 
     def __init__(
@@ -121,13 +121,9 @@ class Dialog(DeltaGenerator):
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
         msg.delta.add_block.dialog.is_open = should_open
-
         self._current_proto = msg.delta.add_block
 
-        # We add a sleep here to give the web app time to react to the update. Otherwise,
-        #  we might run into issues where the dialog cannot be opened again after closing
-        time.sleep(0.05)
-        _enqueue_message(msg)
+        enqueue_message(msg)
 
     def open(self) -> None:
         self._update(True)

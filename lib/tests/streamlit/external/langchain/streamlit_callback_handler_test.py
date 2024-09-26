@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import unittest
 
+import pytest
+
 import streamlit as st
 
 
+@pytest.mark.require_integration
 class StreamlitCallbackHandlerAPITest(unittest.TestCase):
     def test_import_path(self):
         """StreamlitCallbackHandler is imported by LangChain itself, and so it

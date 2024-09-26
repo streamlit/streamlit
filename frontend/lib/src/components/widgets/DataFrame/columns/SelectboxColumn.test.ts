@@ -19,8 +19,8 @@ import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Type as ArrowType } from "@streamlit/lib/src/dataframes/Quiver"
 
-import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 import SelectboxColumn, { SelectboxColumnParams } from "./SelectboxColumn"
+import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_CATEGORICAL_TYPE: ArrowType = {
   pandas_type: "int8",
@@ -130,6 +130,21 @@ describe("SelectboxColumn", () => {
 
     const errorCell = mockColumn.getCell(null, true)
     expect(isErrorCell(errorCell)).toEqual(true)
+  })
+
+  it("uses faded style for index columns", () => {
+    const mockColumn = getSelectboxColumn(
+      MOCK_CATEGORICAL_TYPE,
+      {
+        options: ["foo", "bar"],
+      },
+      {
+        isIndex: true,
+      }
+    )
+
+    const mockCell = mockColumn.getCell("foo")
+    expect(mockCell.style).toEqual("faded")
   })
 
   it("creates error cell if value is not in options", () => {

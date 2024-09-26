@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, click_toggle
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    click_checkbox,
+    click_toggle,
+)
 
 
 def change_widget_values(app: Page):
@@ -130,8 +134,111 @@ def test_form_with_stretched_button(
     )
 
 
+def test_form_submit_with_emoji_icon(app: Page, assert_snapshot: ImageCompareFunction):
+    """Tests if the form submit button with emoji icon renders correctly."""
+    form_4 = app.get_by_test_id("stForm").nth(3)
+
+    assert_snapshot(form_4, name="st_form_submit-emoji_icon")
+
+
+def test_form_submit_with_material_icon(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Tests if the form submit button with material icon renders correctly."""
+    form_5 = app.get_by_test_id("stForm").nth(4)
+
+    assert_snapshot(form_5, name="st_form_submit-material_icon")
+
+
+def test_form_submits_on_enter(app: Page):
+    """Tests that submit on enter works when 1st submit button enabled."""
+    form_6 = app.get_by_test_id("stForm").nth(5)
+    text_input = form_6.get_by_test_id("stTextInput").locator("input")
+    text_input.type("Test")
+    expect(form_6.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to submit form"
+    )
+
+    # Submit the form by pressing Enter, check if submitted.
+    text_input.press("Enter")
+    wait_for_app_run(app)
+    expect(form_6.get_by_test_id("stMarkdown").last).to_have_text("Form submitted")
+
+
+def test_form_disabled_submit_on_enter(app: Page):
+    """Tests that submit on enter does not work when 1st submit button disabled."""
+    form_7 = app.get_by_test_id("stForm").nth(6)
+    text_input = form_7.get_by_test_id("stTextInput").locator("input")
+    text_input.fill("Test")
+    expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
+
+    # Try to submit the form by pressing Enter, check not submitted.
+    text_input.press("Enter")
+    wait_for_app_run(app)
+    expect(form_7.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
+
+
+def test_enter_to_submit_false(app: Page):
+    """Tests that pressing Enter does not submit form when enter_to_submit=False."""
+    form_8 = app.get_by_test_id("stForm").nth(7)
+    number_input = form_8.get_by_test_id("stNumberInput").locator("input")
+    number_input.fill("42")
+    expect(form_8.get_by_test_id("InputInstructions")).to_have_text("")
+
+    # Try to submit the form by pressing Enter, check not submitted.
+    number_input.press("Enter")
+    wait_for_app_run(app)
+    expect(form_8.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
+
+
+def test_form_submits_on_click(app: Page):
+    """Tests that submit via enabled form submit button works."""
+    form_6 = app.get_by_test_id("stForm").nth(5)
+    text_input = form_6.get_by_test_id("stTextInput").locator("input")
+    text_input.fill("Test")
+    expect(form_6.get_by_test_id("InputInstructions")).to_have_text(
+        "Press Enter to submit form"
+    )
+
+    # Submit form with enabled submit button, check submitted
+    form_6.get_by_test_id("stFormSubmitButton").first.click()
+    wait_for_app_run(app)
+    expect(form_6.get_by_test_id("stMarkdown").last).to_have_text("Form submitted")
+
+
+def test_form_disabled_submit_on_click(app: Page):
+    """Tests that submit via disabled form submit button does not work."""
+    form_7 = app.get_by_test_id("stForm").nth(6)
+    text_input = form_7.get_by_test_id("stTextInput").locator("input")
+    text_input.fill("Test")
+    expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
+
+    # Try submit with disabled submit button, check not submitted
+    form_7.get_by_test_id("stFormSubmitButton").first.click()
+    wait_for_app_run(app)
+    expect(form_7.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
+
+
+def test_secondary_submit_buttons_enabled(app: Page):
+    """Tests that secondary submit buttons work when enabled."""
+    form_7 = app.get_by_test_id("stForm").nth(6)
+    text_input = form_7.get_by_test_id("stTextInput").locator("input")
+    text_input.fill("Test")
+    expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
+
+    # Submit form with secondary submit button, check submitted
+    form_7.get_by_test_id("stFormSubmitButton").last.click()
+    wait_for_app_run(app)
+    expect(form_7.get_by_test_id("stMarkdown").last).to_have_text("Form submitted")
+
+
 def test_borderless_form(app: Page, assert_snapshot: ImageCompareFunction):
     """Tests if the borderless form (border=False) renders correctly."""
     form_3 = app.get_by_test_id("stForm").nth(2)
 
     assert_snapshot(form_3, name="st_form-borderless")
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stForm")

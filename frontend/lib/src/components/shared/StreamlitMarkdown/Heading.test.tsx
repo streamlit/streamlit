@@ -49,6 +49,9 @@ describe("Heading", () => {
     expect(heading).not.toHaveTextContent("this is a new line")
     expect(screen.getByText("this is a new line")).toBeInTheDocument()
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
+
+    const headingElement = screen.getByTestId("stHeading")
+    expect(headingElement).toHaveClass("stHeading")
   })
 
   it("renders properly without a new line", () => {

@@ -33,8 +33,10 @@ describe("st._arrow_table", () => {
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
     render(<ArrowTable {...props} />)
+    const tableElement = screen.getByTestId("stTable")
+    expect(tableElement).toBeInTheDocument()
+    expect(tableElement).toHaveClass("stTable")
 
-    expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
     expect(
       screen.queryByTestId("stTableStyledEmptyTableCell")

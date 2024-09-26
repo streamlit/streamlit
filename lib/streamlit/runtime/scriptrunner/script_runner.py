@@ -30,15 +30,22 @@ from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner.exceptions import RerunException, StopException
+from streamlit.runtime.metrics_util import (
+    create_page_profile_message,
+    to_microseconds,
+)
 from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-from streamlit.runtime.scriptrunner.script_requests import (
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
     ScriptRequests,
     ScriptRequestType,
 )
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
@@ -432,8 +439,6 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
-            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
-
             ctx = self._get_script_run_ctx()
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
@@ -455,20 +460,12 @@ class ScriptRunner:
                     widget_ids = {w.id for w in rerun_data.widget_states.widgets}
                 self._session_state.on_script_finished(widget_ids)
 
+            fragment_ids_this_run = list(rerun_data.fragment_id_queue)
+
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
-            )
-            self._pages_manager.reset_active_script_hash()
-
-            # We want to clear the forward_msg_queue during full script runs and
-            # fragment-scoped fragment reruns. For normal fragment runs, clearing the
-            # forward_msg_queue may cause us to drop messages either corresponding to
-            # other, unrelated fragments or that this fragment run depends on.
-            fragment_ids_this_run = rerun_data.fragment_id_queue
-            clear_forward_msg_queue = (
-                not fragment_ids_this_run or rerun_data.is_fragment_scoped_rerun
             )
 
             self.on_event.send(
@@ -477,7 +474,6 @@ class ScriptRunner:
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
-                clear_forward_msg_queue=clear_forward_msg_queue,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -612,12 +608,6 @@ class ScriptRunner:
 
             if ctx.gather_usage_stats:
                 try:
-                    # Prevent issues with circular import
-                    from streamlit.runtime.metrics_util import (
-                        create_page_profile_message,
-                        to_microseconds,
-                    )
-
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(

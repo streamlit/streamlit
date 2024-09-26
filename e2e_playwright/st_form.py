@@ -68,3 +68,61 @@ with st.form("form_3", border=False):
         "Form 3 - Submit (use_container_width)",
         use_container_width=True,
     )
+
+with st.form("form_4"):
+    st.write("Inside form 4 - emoji icon")
+    text_input = st.text_input("Form 4 - Text Input")
+    st.form_submit_button(
+        "Form 4 - Submit with emoji icon",
+        use_container_width=True,
+        icon="🔍",
+    )
+
+with st.form("form_5"):
+    st.write("Inside form 5 - material icon")
+    text_input = st.text_input("Form 5 - Text Input")
+    st.form_submit_button(
+        "Form 5 - Submit with material icon",
+        use_container_width=True,
+        icon=":material/key:",
+    )
+
+with st.form("form_6"):
+    st.write("Inside form 6 - Submit on Enter")
+    text_input = st.text_input("Form 6 - Text Input")
+    submitted_6 = st.form_submit_button(
+        "Form 6 - First Submit",
+        use_container_width=True,
+    )
+    submitted_6b = st.form_submit_button(
+        "Form 6 - Second Submit",
+        disabled=True,
+        use_container_width=True,
+    )
+    if submitted_6 or submitted_6b:
+        st.write("Form submitted")
+
+with st.form("form_7"):
+    st.write("Inside form 7")
+    text_input = st.text_input("Form 7 - Text Input")
+    submitted_7 = st.form_submit_button(
+        "Form 7 - Disables Submit on Enter",
+        use_container_width=True,
+        disabled=True,
+    )
+    submitted_7b = st.form_submit_button(
+        "Form 7 - Second Submit",
+        use_container_width=True,
+    )
+    if submitted_7 or submitted_7b:
+        st.write("Form submitted")
+
+with st.form("form_8", enter_to_submit=False):
+    st.write("Inside form 8")
+    number_input = st.number_input("Form 8 - Number Input", 0, 100, step=1)
+    submitted_8 = st.form_submit_button(
+        "Form 8 - Submit",
+        use_container_width=True,
+    )
+    if submitted_8:
+        st.write("Form submitted")

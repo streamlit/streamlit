@@ -291,15 +291,7 @@ def _get_variable_name_from_code_str(code):
 
     # If constant, there's no variable name.
     # E.g. st.help("foo") or st.help(123) should give you None.
-    elif type(arg_node) in (
-        ast.Constant,
-        # Python 3.7 support:
-        ast.Num,
-        ast.Str,
-        ast.Bytes,
-        ast.NameConstant,
-        ast.Ellipsis,
-    ):
+    elif type(arg_node) is ast.Constant:
         return None
 
     # Otherwise, return whatever is inside st.help(<-- here -->)

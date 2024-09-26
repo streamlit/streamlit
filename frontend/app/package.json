@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/app",
-  "version": "1.37.1",
+  "version": "1.38.0",
   "license": "Apache-2.0",
   "private": true,
   "homepage": "./",
@@ -30,8 +30,8 @@
     "@emotion/react": "^11.10.5",
     "@emotion/serialize": "^1.1.1",
     "@emotion/styled": "^11.10.5",
-    "@streamlit/lib": "1.37.1",
-    "axios": "^1.6.0",
+    "@streamlit/lib": "1.38.0",
+    "axios": "^1.7.4",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
     "color2k": "^2.0.2",
@@ -78,10 +78,6 @@
     "axios-mock-adapter": "^1.21.2",
     "babel-plugin-emotion": "^11.0.0",
     "buffer": "^6.0.3",
-    "cypress": "^9.7.0",
-    "cypress-file-upload": "^5.0.8",
-    "cypress-image-snapshot": "^4.0.1",
-    "cypress-real-events": "^1.7.6",
     "eslint": "^8.33.0",
     "eslint-config-airbnb-typescript": "^17.0.0",
     "eslint-config-prettier": "^8.6.0",
@@ -99,6 +95,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-github-actions-reporter": "^1.0.3",
     "jest-websocket-mock": "^2.4.0",
+    "mini-css-extract-plugin": "^2.4.5",
     "prettier": "^2.8.3",
     "prop-types": "^15.7.2",
     "react-scripts": "5.0.1",
@@ -107,7 +104,7 @@
     "tsconfig-paths-webpack-plugin": "^4.0.1",
     "typescript": "^4.9.5",
     "util": "^0.12.5",
-    "webpack": "5.76.0"
+    "webpack": "5.94.0"
   },
   "resolutions": {
     "@types/html-minifier-terser": "^7.0.0",

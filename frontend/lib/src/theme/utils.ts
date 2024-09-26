@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { getLuminance, transparentize } from "color2k"
 import camelcase from "camelcase"
+import { getLuminance, parseToRgba, toHex, transparentize } from "color2k"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
 import isObject from "lodash/isObject"
@@ -26,11 +26,6 @@ import {
   CustomThemeConfig,
   ICustomThemeConfig,
 } from "@streamlit/lib/src/proto"
-import { logError } from "@streamlit/lib/src/util/log"
-import {
-  localStorageAvailable,
-  LocalStore,
-} from "@streamlit/lib/src/util/storageUtils"
 import {
   baseTheme,
   CachedTheme,
@@ -40,18 +35,23 @@ import {
   ThemeConfig,
   ThemeSpacing,
 } from "@streamlit/lib/src/theme"
+import { logError } from "@streamlit/lib/src/util/log"
+import {
+  localStorageAvailable,
+  LocalStore,
+} from "@streamlit/lib/src/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
   isLightThemeInQueryParams,
 } from "@streamlit/lib/src/util/utils"
 
-import { fonts } from "./primitives/typography"
+import { createBaseUiTheme } from "./createThemeUtil"
 import {
   computeDerivedColors,
   createEmotionColors,
   DerivedColors,
 } from "./getColors"
-import { createBaseUiTheme } from "./createThemeUtil"
+import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -675,36 +675,49 @@ export function getWrappedHeadersStyle(theme: EmotionTheme): {
   return {
     "& h1": {
       fontSize: theme.fontSizes.xl,
-      fontWeight: 600,
+      fontWeight: theme.fontWeights.bold,
     },
 
     "& h2": {
       fontSize: theme.fontSizes.lg,
-      fontWeight: 600,
+      fontWeight: theme.fontWeights.bold,
     },
 
     "& h3": {
       fontSize: theme.fontSizes.mdLg,
-      fontWeight: 600,
+      fontWeight: theme.fontWeights.bold,
     },
 
     "& h4": {
       fontSize: theme.fontSizes.md,
-      fontWeight: 600,
+      fontWeight: theme.fontWeights.bold,
     },
 
     "& h5": {
       fontSize: theme.fontSizes.sm,
-      fontWeight: 600,
+      fontWeight: theme.fontWeights.bold,
     },
 
     "& h6": {
       fontSize: theme.fontSizes.twoSm,
-      fontWeight: 600,
+      fontWeight: theme.fontWeights.bold,
     },
   }
 }
 
 function addPxUnit(n: number): string {
   return `${n}px`
+}
+
+export function blend(color: string, background: string | undefined): string {
+  if (background === undefined) return color
+  const [r, g, b, a] = parseToRgba(color)
+  if (a === 1) return color
+  const [br, bg, bb, ba] = parseToRgba(background)
+  const ao = a + ba * (1 - a)
+  // (xaA + xaB·(1−aA))/aR
+  const ro = Math.round((a * r + ba * br * (1 - a)) / ao)
+  const go = Math.round((a * g + ba * bg * (1 - a)) / ao)
+  const bo = Math.round((a * b + ba * bb * (1 - a)) / ao)
+  return toHex(`rgba(${ro}, ${go}, ${bo}, ${ao})`)
 }

@@ -23,7 +23,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
 )
@@ -57,6 +57,7 @@ def navigation(
     pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
     position: Literal["sidebar", "hidden"] = "sidebar",
+    expanded: bool = False,
 ) -> StreamlitPage:
     """
     Configure the available pages in a multipage app.
@@ -101,6 +102,12 @@ def navigation(
 
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
+
+    expanded: bool
+        Whether the navigation menu should be expanded. If ``True``,
+        the navigation menu will always be expanded. If ``False``, the
+        navigation menu will be collapsed and will include a button
+        to view more options.
 
     Returns
     -------
@@ -215,6 +222,8 @@ def navigation(
         msg.navigation.position = NavigationProto.Position.HIDDEN
     else:
         msg.navigation.position = NavigationProto.Position.SIDEBAR
+
+    msg.navigation.expanded = expanded
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
@@ -256,7 +265,7 @@ def navigation(
     page_to_return._can_be_called = True
     msg.navigation.page_script_hash = page_to_return._script_hash
     # Set the current page script hash to the page that is going to be executed
-    ctx.pages_manager.set_current_page_script_hash(page_to_return._script_hash)
+    ctx.set_mpa_v2_page(page_to_return._script_hash)
 
     # This will either navigation or yield if the page is not found
     ctx.enqueue(msg)

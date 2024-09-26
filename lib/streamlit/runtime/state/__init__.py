@@ -24,11 +24,7 @@ from streamlit.runtime.state.session_state_proxy import (
     SessionStateProxy,
     get_session_state,
 )
-from streamlit.runtime.state.widgets import (
-    NoValue,
-    coalesce_widget_states,
-    register_widget,
-)
+from streamlit.runtime.state.widgets import register_widget
 
 __all__ = [
     "WidgetArgs",
@@ -41,7 +37,5 @@ __all__ = [
     "SessionStateStatProvider",
     "SessionStateProxy",
     "get_session_state",
-    "NoValue",
-    "coalesce_widget_states",
     "register_widget",
 ]
