@@ -33,14 +33,14 @@ export const MAX_COLUMN_AUTO_WIDTH = 500
 // The border size in pixels (2)
 // to prevent overlap problem with selection ring.
 export const BORDER_THRESHOLD = 2
-// The default row height in pixels
-export const ROW_HEIGHT = 35
+// The default row height in pixels, used as fallback
+// if no row height is set by the user.
+export const DEFAULT_ROW_HEIGHT = 35
+// The default header height in pixels
+export const HEADER_HEIGHT = 35
 // Min width for the resizable table container:
 // Based on one column at minimum width + borders
 export const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + BORDER_THRESHOLD
-// Min height for the resizable table container:
-// Based on header + one column, and border threshold
-const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + BORDER_THRESHOLD
 // The default maximum height of the table:
 const DEFAULT_TABLE_HEIGHT = 400
 
@@ -53,15 +53,14 @@ export type AutoSizerReturn = {
   minWidth: number
   // The maximum width of the data grid can be resized to
   maxWidth: number
+  // The row height of the data grid
+  rowHeight: number
   // The current (or initial) size of the data grid
   resizableSize: ResizableSize
   // A callback function to change the size of the data grid.
   setResizableSize: React.Dispatch<React.SetStateAction<ResizableSize>>
 }
 
-export function calculateMaxHeight(numRows: number): number {
-  return Math.max(numRows * ROW_HEIGHT + BORDER_THRESHOLD, MIN_TABLE_HEIGHT)
-}
 /**
  * A custom React hook that manages all aspects related to the size of the table.
  *
@@ -82,12 +81,24 @@ function useTableSizer(
   containerHeight?: number,
   isFullScreen?: boolean
 ): AutoSizerReturn {
+  // Use the user-configured row height, if set, otherwise use the default
+  const rowHeight = element.rowHeight ?? DEFAULT_ROW_HEIGHT
+  // Min height for the resizable table container:
+  // Based on header + one column, and border threshold
+  const minHeight = HEADER_HEIGHT + rowHeight + BORDER_THRESHOLD
+
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
     element.editingMode === ArrowProto.EditingMode.DYNAMIC ? 1 : 0
   // Calculate the maximum height of the table based on the number of rows:
-  let maxHeight = calculateMaxHeight(numRows + numHeaderRows + numTrailingRows)
+  const totalDataRows = numRows + numTrailingRows
+  let maxHeight = Math.max(
+    totalDataRows * rowHeight +
+      numHeaderRows * HEADER_HEIGHT +
+      BORDER_THRESHOLD,
+    minHeight
+  )
 
   // The initial height is either the default table height or the maximum
   // (full) height based if its smaller than the default table height.
@@ -98,7 +109,7 @@ function useTableSizer(
 
   if (element.height) {
     // User has explicitly configured a height
-    initialHeight = Math.max(element.height, MIN_TABLE_HEIGHT)
+    initialHeight = Math.max(element.height, minHeight)
     maxHeight = Math.max(element.height, maxHeight)
   }
 
@@ -210,10 +221,11 @@ function useTableSizer(
   }, [isFullScreen])
 
   return {
-    minHeight: MIN_TABLE_HEIGHT,
+    minHeight,
     maxHeight,
     minWidth: MIN_TABLE_WIDTH,
     maxWidth,
+    rowHeight,
     resizableSize,
     setResizableSize,
   }

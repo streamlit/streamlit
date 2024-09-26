@@ -44,6 +44,8 @@ message Arrow {
   repeated string column_order = 11;
   // Activated dataframe selections events
   repeated SelectionMode selection_mode = 12;
+  // Row height in pixels
+  optional uint32 row_height = 13;
 
   // Available editing modes:
   enum EditingMode {
