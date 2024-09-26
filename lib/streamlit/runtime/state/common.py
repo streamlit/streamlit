@@ -26,7 +26,6 @@ from typing import (
     Literal,
     Tuple,
     TypeVar,
-    Union,
     cast,
     get_args,
 )
@@ -37,56 +36,6 @@ from streamlit import util
 from streamlit.errors import (
     StreamlitAPIException,
 )
-from streamlit.proto.Arrow_pb2 import Arrow
-from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
-from streamlit.proto.AudioInput_pb2 import AudioInput
-from streamlit.proto.Button_pb2 import Button
-from streamlit.proto.ButtonGroup_pb2 import ButtonGroup
-from streamlit.proto.CameraInput_pb2 import CameraInput
-from streamlit.proto.ChatInput_pb2 import ChatInput
-from streamlit.proto.Checkbox_pb2 import Checkbox
-from streamlit.proto.ColorPicker_pb2 import ColorPicker
-from streamlit.proto.Components_pb2 import ComponentInstance
-from streamlit.proto.DateInput_pb2 import DateInput
-from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart
-from streamlit.proto.DownloadButton_pb2 import DownloadButton
-from streamlit.proto.FileUploader_pb2 import FileUploader
-from streamlit.proto.MultiSelect_pb2 import MultiSelect
-from streamlit.proto.NumberInput_pb2 import NumberInput
-from streamlit.proto.PlotlyChart_pb2 import PlotlyChart
-from streamlit.proto.Radio_pb2 import Radio
-from streamlit.proto.Selectbox_pb2 import Selectbox
-from streamlit.proto.Slider_pb2 import Slider
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.proto.TimeInput_pb2 import TimeInput
-
-# Protobuf types for all widgets.
-WidgetProto: TypeAlias = Union[
-    Arrow,
-    ArrowVegaLiteChart,
-    AudioInput,
-    Button,
-    ButtonGroup,
-    CameraInput,
-    ChatInput,
-    Checkbox,
-    ColorPicker,
-    ComponentInstance,
-    DateInput,
-    DeckGlJsonChart,
-    DownloadButton,
-    FileUploader,
-    MultiSelect,
-    NumberInput,
-    PlotlyChart,
-    Radio,
-    Selectbox,
-    Slider,
-    TextArea,
-    TextInput,
-    TimeInput,
-]
 
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"

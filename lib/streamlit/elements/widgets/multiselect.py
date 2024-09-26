@@ -300,7 +300,7 @@ class MultiSelectMixin:
 
         serde = MultiSelectSerde(indexable_options, default_values)
         widget_state = register_widget(
-            proto,
+            proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

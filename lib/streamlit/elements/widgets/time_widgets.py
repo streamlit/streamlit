@@ -496,7 +496,7 @@ class TimeWidgetsMixin:
 
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
-            time_input_proto,
+            time_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
@@ -797,7 +797,7 @@ class TimeWidgetsMixin:
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
-            date_input_proto,
+            date_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

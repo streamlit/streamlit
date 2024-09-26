@@ -399,7 +399,7 @@ class PydeckMixin:
             serde = PydeckSelectionSerde()
 
             widget_state = register_widget(
-                pydeck_proto,
+                pydeck_proto.id,
                 ctx=ctx,
                 deserializer=serde.deserialize,
                 on_change_handler=on_select if callable(on_select) else None,

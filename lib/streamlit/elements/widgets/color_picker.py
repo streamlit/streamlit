@@ -237,7 +237,7 @@ class ColorPickerMixin:
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
-            color_picker_proto,
+            color_picker_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

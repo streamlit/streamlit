@@ -328,7 +328,7 @@ class SelectboxMixin:
         serde = SelectboxSerde(opt, index)
 
         widget_state = register_widget(
-            selectbox_proto,
+            selectbox_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

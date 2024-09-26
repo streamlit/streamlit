@@ -507,7 +507,7 @@ class NumberInputMixin:
 
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
-            number_input_proto,
+            number_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

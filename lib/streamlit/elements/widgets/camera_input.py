@@ -226,7 +226,7 @@ class CameraInputMixin:
         serde = CameraInputSerde()
 
         camera_input_state = register_widget(
-            camera_input_proto,
+            camera_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

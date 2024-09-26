@@ -370,7 +370,7 @@ class RadioMixin:
         serde = RadioSerde(opt, index)
 
         widget_state = register_widget(
-            radio_proto,
+            radio_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

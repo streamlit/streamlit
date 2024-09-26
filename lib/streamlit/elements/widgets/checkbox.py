@@ -317,7 +317,7 @@ class CheckboxMixin:
         serde = CheckboxSerde(value)
 
         checkbox_state = register_widget(
-            checkbox_proto,
+            checkbox_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

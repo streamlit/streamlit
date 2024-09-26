@@ -399,7 +399,7 @@ class SelectSliderMixin:
         serde = SelectSliderSerde(opt, slider_value, _is_range_value(value))
 
         widget_state = register_widget(
-            slider_proto,
+            slider_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

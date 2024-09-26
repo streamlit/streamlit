@@ -15,8 +15,10 @@
 """Tests widget-related functionality"""
 
 import inspect
+import sys
 import unittest
 from dataclasses import dataclass
+from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
 
 from parameterized import parameterized
@@ -29,18 +31,20 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
+    ValueFieldName,
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
-from streamlit.runtime.state.widgets import user_key_from_element_id
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.element_mocks import (
-    WIDGET_ELEMENTS,
+from streamlit.runtime.state.widgets import (
+    register_widget_from_metadata,
+    user_key_from_element_id,
 )
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.element_mocks import ELEMENT_PRODUCER, WIDGET_ELEMENTS
 
 
 def _create_widget(id, states):
@@ -385,7 +389,9 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         return kwargs
 
     @parameterized.expand(WIDGET_ELEMENTS)
-    def test_no_usage_of_excluded_kwargs(self, _element_name: str, widget_func):
+    def test_no_usage_of_excluded_kwargs(
+        self, _element_name: str, widget_func: ELEMENT_PRODUCER
+    ):
         with patch(
             "streamlit.elements.lib.utils._compute_element_id",
             wraps=_compute_element_id,
@@ -585,6 +591,31 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         # argument shouldn't affect a widget's ID.
         with self.assertRaises(errors.DuplicateWidgetID):
             st.data_editor(data=[], disabled=True)
+
+
+class RegisterWidgetsTest(DeltaGeneratorTestCase):
+    @parameterized.expand(WIDGET_ELEMENTS)
+    @unittest.skipIf(
+        sys.version_info < (3, 9), reason="the type check requires python3.9 or higher"
+    )
+    def test_register_widget_called_with_valid_value_type(
+        self, _element_name: str, widget_func: ELEMENT_PRODUCER
+    ):
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            widget_func()
+        assert patched_register_widget_from_metadata.call_count == 1
+        widget_metadata_arg: WidgetMetadata = (
+            patched_register_widget_from_metadata.call_args[0][0]
+        )
+        assert widget_metadata_arg.value_type in get_args(ValueFieldName)
+        # test that the value_type also maps to a protobuf field
+        assert (
+            widget_metadata_arg.value_type
+            in WidgetState.DESCRIPTOR.fields_by_name.keys()
+        )
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

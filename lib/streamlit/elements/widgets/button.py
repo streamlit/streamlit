@@ -709,7 +709,7 @@ class ButtonMixin:
         serde = ButtonSerde()
 
         button_state = register_widget(
-            download_button_proto,
+            download_button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
@@ -902,7 +902,7 @@ class ButtonMixin:
         serde = ButtonSerde()
 
         button_state = register_widget(
-            button_proto,
+            button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,

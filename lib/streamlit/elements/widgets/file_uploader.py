@@ -457,7 +457,7 @@ class FileUploaderMixin:
         # representing the current set of files that this uploader should
         # know about.
         widget_state = register_widget(
-            file_uploader_proto,
+            file_uploader_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

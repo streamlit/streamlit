@@ -226,7 +226,7 @@ class AudioInputMixin:
         serde = AudioInputSerde()
 
         audio_input_state = register_widget(
-            audio_input_proto,
+            audio_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,

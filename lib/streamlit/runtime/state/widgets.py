@@ -25,7 +25,6 @@ from streamlit.runtime.state.common import (
     WidgetDeserializer,
     WidgetKwargs,
     WidgetMetadata,
-    WidgetProto,
     WidgetSerializer,
     user_key_from_element_id,
 )
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
 
 
 def register_widget(
-    element_proto: WidgetProto,
+    element_id: str,
     *,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
@@ -50,8 +49,8 @@ def register_widget(
 
     Parameters
     ----------
-    element_proto : WidgetProto
-        The proto of the specified type (e.g. Button/Multiselect/Slider proto)
+    element_id : str
+        The id of the element. Must be unique.
     deserializer : WidgetDeserializer[T]
         Called to convert a widget's protobuf value to the value returned by
         its st.<widget_name> function.
@@ -101,7 +100,7 @@ def register_widget(
     """
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
-        element_proto.id,
+        element_id,
         deserializer,
         serializer,
         value_type=value_type,
