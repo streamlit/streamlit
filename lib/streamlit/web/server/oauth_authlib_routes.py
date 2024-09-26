@@ -14,13 +14,16 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 from urllib.parse import urlparse
 
 import tornado.web
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.secrets import secrets_singleton
+from streamlit.user_info import decode_provider_token
 from streamlit.web.server.oidc_mixin import TornadoOAuth, TornadoOAuth2App
-from streamlit.web.server.server_util import get_cookie_secret
+from streamlit.web.server.server_util import AUTH_COOKIE_NAME
 
 
 class AuthCache:
@@ -68,35 +71,33 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
     return oauth.create_client(provider), redirect_uri
 
 
-class AuthlibLoginHandler(tornado.web.RequestHandler):
+class AuthLoginHandler(tornado.web.RequestHandler):
     async def get(self):
-        try:
-            from authlib.jose import JoseError, jwt
-        except ImportError:
-            self.redirect("/")
-            return
-
         provider_token = self.get_argument("provider", None)
-        claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
         try:
-            payload = jwt.decode(
-                provider_token, get_cookie_secret(), claims_options=claim_options
-            )
-            payload.validate()
-        except JoseError:
+            payload = decode_provider_token(provider_token)
+        except StreamlitAPIException:
             self.redirect("/")
             return
         client, redirect_uri = create_oauth_client(payload["provider"])
         return client.authorize_redirect(self, redirect_uri)
 
 
-class LogoutHandler(tornado.web.RequestHandler):
+class AuthHandlerMixin(tornado.web.RequestHandler):
+    def set_auth_cookie(self, user_info: dict[str, Any]) -> None:
+        self.set_signed_cookie(AUTH_COOKIE_NAME, json.dumps(user_info), httpOnly=True)
+
+    def clear_auth_cookie(self) -> None:
+        self.clear_cookie(AUTH_COOKIE_NAME)
+
+
+class LogoutHandler(AuthHandlerMixin, tornado.web.RequestHandler):
     def get(self):
-        self.clear_cookie("_streamlit_uzer")
+        self.clear_auth_cookie()
         self.redirect("/")
 
 
-class AuthlibCallbackHandler(tornado.web.RequestHandler):
+class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
     async def get(self):
         state_code_from_url = self.get_argument("state")
         current_cache_keys = list(auth_cache.get_dict().keys())
@@ -114,11 +115,17 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
                 "error": error,
                 "email": None,
             }
-            self.set_signed_cookie(
-                "_streamlit_uzer",
-                json.dumps(dict_for_cookie),
-            )
+            self.set_auth_cookie(dict_for_cookie)
+            self.redirect("/")
+            return
 
+        if provider is None:
+            dict_for_cookie = {
+                "provider": None,
+                "error": "Missing provider",
+                "email": None,
+            }
+            self.set_auth_cookie(dict_for_cookie)
             self.redirect("/")
             return
 
@@ -142,7 +149,5 @@ class AuthlibCallbackHandler(tornado.web.RequestHandler):
         )
 
         if user:
-            self.set_signed_cookie(
-                "_streamlit_uzer", json.dumps(cookie_dict), httpOnly=True
-            )
+            self.set_auth_cookie(cookie_dict)
         self.redirect("/")

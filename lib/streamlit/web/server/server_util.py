@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 # The port reserved for internal development.
 DEVELOPMENT_PORT: Final = 3000
 
+AUTH_COOKIE_NAME: Final = "_streamlit_user"
+
 
 def is_url_from_allowed_origins(url: str) -> bool:
     """Return True if URL is from allowed origins (for CORS purpose).

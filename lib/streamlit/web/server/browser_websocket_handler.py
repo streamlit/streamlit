@@ -35,6 +35,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.runtime import Runtime, SessionClient, SessionClientDisconnectedError
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import (
+    AUTH_COOKIE_NAME,
     is_url_from_allowed_origins,
     is_xsrf_enabled,
 )
@@ -141,7 +142,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
             ]
 
-            raw_cookie_value = self.get_signed_cookie("_streamlit_uzer")
+            raw_cookie_value = self.get_signed_cookie(AUTH_COOKIE_NAME)
             if is_xsrf_enabled() and raw_cookie_value:
                 csrf_protocol_value = ws_protocols[1]
 

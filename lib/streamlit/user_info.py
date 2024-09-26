@@ -15,19 +15,64 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Iterator, Mapping, NoReturn, Union
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, NoReturn, Union
 
-from streamlit import runtime
+from streamlit import config, runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx as _get_script_run_ctx,
 )
 from streamlit.runtime.secrets import secrets_singleton
-from streamlit.web.server.server_util import get_cookie_secret
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfo
+
+
+def get_signing_secret() -> str:
+    signing_secret = config.get_option("server.cookieSecret")
+    if secrets_singleton.load_if_toml_exists():
+        auth_section = secrets_singleton.get("auth")
+        if auth_section:
+            signing_secret = auth_section.get("cookie_secret", signing_secret)
+    return signing_secret
+
+
+def encode_provider_token(provider: str) -> str:
+    try:
+        from authlib.jose import jwt
+    except ImportError:
+        raise StreamlitAPIException(
+            "To use Auth you need to install the 'authlib' package."
+        ) from None
+
+    header = {"alg": "HS256"}
+    payload = {
+        "provider": provider,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=2),
+    }
+    provider_token = jwt.encode(header, payload, get_signing_secret())
+    return provider_token.decode("latin-1")
+
+
+def decode_provider_token(provider_token: str) -> Mapping[str, Any]:
+    try:
+        from authlib.jose import JoseError, jwt
+    except ImportError:
+        raise StreamlitAPIException(
+            "To use Auth you need to install the 'authlib' package."
+        ) from None
+
+    claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
+    try:
+        payload = jwt.decode(
+            provider_token, get_signing_secret(), claims_options=claim_options
+        )
+        payload.validate()
+    except JoseError as e:
+        raise StreamlitAPIException(f"Error decoding provider token: {e}") from None
+
+    return payload
 
 
 def validate_auth_credentials(provider: str) -> None:
@@ -66,25 +111,10 @@ def validate_auth_credentials(provider: str) -> None:
         )
 
 
-def generate_login_redirect_url(provider: str | None = None) -> str:
-    try:
-        from authlib.jose import jwt
-    except ImportError:
-        raise StreamlitAPIException(
-            "To use Auth you need to install the 'authlib' package."
-        ) from None
-
-    base_url = "/authliblogin"
-    header = {"alg": "HS256"}
-    payload = {
-        "provider": provider,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=2),
-    }
-    provider_token = jwt.encode(header, payload, get_cookie_secret())
-
-    if provider is not None:
-        base_url += f"?provider={provider_token.decode('latin-1')}"
-    return base_url
+def generate_login_redirect_url(provider: str) -> str:
+    base_url = "/auth/login"
+    provider_token = encode_provider_token(provider)
+    return f"{base_url}?provider={provider_token}"
 
 
 def _get_user_info() -> UserInfo:
@@ -125,16 +155,14 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
     """
 
     def login(
-        self, send_redirect_to_host: bool = False, provider: str | None = None
+        self,
+        provider: str,
     ) -> None:
         context = _get_script_run_ctx()
         if context is not None:
             validate_auth_credentials(provider)
             fwd_msg = ForwardMsg()
             fwd_msg.auth_redirect.url = generate_login_redirect_url(provider)
-            fwd_msg.auth_redirect.action_type = "login"
-            if send_redirect_to_host:
-                fwd_msg.auth_redirect.send_redirect_to_host = True
             context.enqueue(fwd_msg)
 
     def logout(self) -> None:
@@ -150,8 +178,7 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
                 ).session._user_info = {}
 
             fwd_msg = ForwardMsg()
-            fwd_msg.auth_redirect.url = "/authliblogout"
-            fwd_msg.auth_redirect.action_type = "logout"
+            fwd_msg.auth_redirect.url = "/auth/logout"
             context.enqueue(fwd_msg)
 
     def is_logged_in(self) -> bool:

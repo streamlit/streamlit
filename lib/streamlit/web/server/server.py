@@ -44,8 +44,8 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.oauth_authlib_routes import (
-    AuthlibCallbackHandler,
-    AuthlibLoginHandler,
+    AuthCallbackHandler,
+    AuthLoginHandler,
     LogoutHandler,
 )
 from streamlit.web.server.routes import (
@@ -104,6 +104,10 @@ HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
     r"(?:script-health-check|_stcore/script-health-check)"
 )
+
+OAUTH2_CALLBACK_ENDPOINT: Final = "/oauth2callback"
+AUTH_LOGIN_ENDPOINT: Final = "/auth/login"
+AUTH_LOGOUT_ENDPOINT: Final = "/auth/logout"
 
 
 class RetriesExceeded(Exception):
@@ -300,15 +304,15 @@ class Server:
 
         routes: list[Any] = [
             (
-                make_url_path_regex(base, "oauth2callback"),
-                AuthlibCallbackHandler,
+                make_url_path_regex(base, OAUTH2_CALLBACK_ENDPOINT),
+                AuthCallbackHandler,
             ),
             (
-                make_url_path_regex(base, "authliblogin"),
-                AuthlibLoginHandler,
+                make_url_path_regex(base, AUTH_LOGIN_ENDPOINT),
+                AuthLoginHandler,
             ),
             (
-                make_url_path_regex(base, "authliblogout"),
+                make_url_path_regex(base, AUTH_LOGOUT_ENDPOINT),
                 LogoutHandler,
             ),
             (
