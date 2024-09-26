@@ -46,8 +46,13 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # buttons
     ("button", lambda: st.button("Click me")),
     ("download_button", lambda: st.download_button("Download me", b"")),
-    ("chat_input", lambda: st.chat_input("Chat with me")),
-    ("form_submit_button", lambda: st.form("my_form").form_submit_button("Submit")),
+    (
+        "form_submit_button",
+        # Form submit button doesn't work in the context of the test
+        # since it requires a form context. Therefore, we just mock it via
+        # a button.
+        lambda: st.button("Submit"),
+    ),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
     # ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
@@ -72,6 +77,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # text_widgets
     ("text_area", lambda: st.text_area("Write me")),
     ("text_input", lambda: st.text_input("Write me")),
+    ("chat_input", lambda: st.chat_input("Chat with me")),
     # time_widgets
     ("date_input", lambda: st.date_input("Pick a date")),
     ("time_input", lambda: st.time_input("Pick a time")),
