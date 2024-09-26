@@ -49,9 +49,9 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     (
         "form_submit_button",
         # Form submit button doesn't work in the context of the test
-        # since it requires a form context. Therefore, we just mock it via
-        # a button.
-        lambda: st.button("Submit"),
+        # since it requires to be wrapped in a form. Therefore,
+        # we are just using a text input as a proxy for the form submit button.
+        lambda: st.text_input("Write me"),
     ),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
