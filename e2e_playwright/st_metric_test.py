@@ -107,6 +107,23 @@ def test_ellipses_and_help_shows_up_properly(
     )
 
 
+def test_code_in_help_shows_up_properly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    metric_element = themed_app.get_by_test_id("stMetric").nth(9)
+    hover_target = metric_element.get_by_test_id("stTooltipHoverTarget")
+    tooltip_content = themed_app.get_by_test_id("stTooltipContent")
+
+    expect(hover_target).to_be_visible()
+    hover_target.hover()
+    expect(tooltip_content).to_have_text("Test help with code select * from table")
+
+    assert_snapshot(
+        tooltip_content,
+        name="st_metric-code_in_help",
+    )
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMetric")
