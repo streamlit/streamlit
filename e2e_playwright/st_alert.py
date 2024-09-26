@@ -85,3 +85,10 @@ st.success(
     "This is a success message with non emoji icon",
     icon=":material/celebration:",
 )
+
+st.error("""
+## Big error
+
+This is a big error message.
+
+""")
