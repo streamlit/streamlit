@@ -67,7 +67,7 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
-import convertMp4ToWav from "./convertAudioToWav"
+import convertMp4ToWav, { loadFFmpeg } from "./convertAudioToWav"
 
 export interface Props {
   element: AudioInputProto
@@ -134,6 +134,11 @@ const AudioInput: React.FC<Props> = ({
 
   const widgetId = element.id
   const widgetFormId = element.formId
+
+  // load ffmpeg if it hasn't been loaded yet so that the experience is smoother when stopping recording
+  useEffect(() => {
+    loadFFmpeg()
+  }, [])
 
   const uploadTheFile = useCallback(
     (file: File) => {

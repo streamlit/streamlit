@@ -16,6 +16,14 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg"
 
+export function loadFFmpeg(): void {
+  const ffmpeg = new FFmpeg()
+
+  if (!ffmpeg.loaded) {
+    ffmpeg.load()
+  }
+}
+
 /**
  * Converts any audio/video Blob to a WAV Blob using FFmpeg.
  * @param fileBlob - The input file as a Blob.
