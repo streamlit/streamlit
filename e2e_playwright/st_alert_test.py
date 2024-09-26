@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class
 def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts render correctly using snapshot testing."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(20)
+    expect(alert_elements).to_have_count(21)
 
     # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
@@ -49,6 +49,8 @@ def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(alert_elements.nth(17), name="st_alert-warning_non_emoji_icon")
     assert_snapshot(alert_elements.nth(18), name="st_alert-info_non_emoji_icon")
     assert_snapshot(alert_elements.nth(19), name="st_alert-success_non_emoji_icon")
+
+    assert_snapshot(alert_elements.nth(20), name="st_alert-error_with_heading")
 
 
 def test_check_top_level_class(app: Page):
