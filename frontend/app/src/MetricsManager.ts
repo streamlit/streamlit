@@ -19,6 +19,8 @@ import { v4 as uuidv4 } from "uuid"
 
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
+  MetricsEvent,
+  PageProfileEvent,
   DeployedAppMetadata,
   getCookie,
   setCookie,
@@ -114,6 +116,28 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
+  // Set configuration for metrics - provided by host config
+  // or fetched from default URL if not provided.
+  public setMetricsConfig = (metricsUrl = ""): void => {
+    if (metricsUrl) {
+      this.metricsUrl = metricsUrl
+    } else {
+      this.requestDefaultMetricsConfig()
+    }
+  }
+
+  // App hash gets set when updateReport happens.
+  // This means that it will be attached to most, but not all, metrics events.
+  // The viewReport and createReport events are sent before updateReport happens,
+  // so they will not include the appHash.
+  public setAppHash = (appHash: string): void => {
+    this.appHash = appHash
+  }
+
+  public setMetadata(metadata: DeployedAppMetadata): void {
+    this.metadata = metadata
+  }
+
   public enqueue(evName: string, evData: Record<string, any> = {}): void {
     if (!this.initialized || !this.sessionInfo.isSet) {
       this.pendingEvents.push([evName, evData])
@@ -128,24 +152,6 @@ export class MetricsManager {
       this.sendPendingEvents()
     }
     this.send(evName, evData)
-  }
-
-  // App hash gets set when updateReport happens.
-  // This means that it will be attached to most, but not all, metrics events.
-  // The viewReport and createReport events are sent before updateReport happens,
-  // so they will not include the appHash.
-  public setAppHash = (appHash: string): void => {
-    this.appHash = appHash
-  }
-
-  // Set configuration for metrics - provided by host config
-  // or fetched from default URL if not provided.
-  public setMetricsConfig = (metricsUrl = ""): void => {
-    if (metricsUrl) {
-      this.metricsUrl = metricsUrl
-    } else {
-      this.requestDefaultMetricsConfig()
-    }
   }
 
   // The schema of metrics events (including key names and value types) should
@@ -173,7 +179,7 @@ export class MetricsManager {
     if (this.metricsUrl === "postMessage") {
       this.postMessageEvent(evName, data)
     } else if (this.metricsUrl) {
-      this.track(evName, data, {})
+      this.track(evName, data)
     }
   }
 
@@ -185,52 +191,50 @@ export class MetricsManager {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private track(
-    evName: string,
-    data: Record<string, unknown>,
-    context: Record<string, unknown>
-  ): void {
+  private track(evName: string, data: Record<string, unknown>): void {
+    const eventProto = this.buildEventProto(evName, data)
+    const eventJson = eventProto.toJSON()
     // Send the event to the metrics URL
+    console.log("== Test Sending message to metrics url ==")
+    console.log(eventJson)
   }
 
   private postMessageEvent(
     evName: string,
-    data: Record<string, unknown>,
-    context?: Record<string, unknown>
+    data: Record<string, unknown>
   ): void {
+    const eventProto = this.buildEventProto(evName, data)
+    const eventJson = eventProto.toJSON()
     // Trigger message to the host
-    console.log("== Sending message to host ==")
-    console.log({
-      evName,
-      data,
-      context,
+    console.log("== Test Sending message to host ==")
+    console.log(eventJson)
+  }
+
+  private buildEventProto(
+    evName: string,
+    data: Record<string, unknown>
+  ): MetricsEvent {
+    const eventProto = new MetricsEvent({
+      event: evName,
+      anonymousId: this.anonymousId,
+      ...this.getContextData(),
+      dev: IS_DEV_ENV,
+      isHello: this.sessionInfo.isHello,
+      ...this.getInstallationData(),
+      reportHash: this.appHash,
+      source: "browser",
+      streamlitVersion: this.sessionInfo.current.streamlitVersion,
+      ...this.getHostTrackingData(),
     })
-  }
 
-  // Get the installation IDs from the session
-  private getInstallationData(): Record<string, unknown> {
-    return {
-      machineIdV3: this.sessionInfo.current.installationIdV3,
+    if (evName === "menuClick") {
+      eventProto.label = data.label as string
+    } else if (evName === "pageProfile") {
+      const pageProfileEvent = new PageProfileEvent({ ...data })
+      eventProto.pageProfile = pageProfileEvent
     }
-  }
 
-  public setMetadata(metadata: DeployedAppMetadata): void {
-    this.metadata = metadata
-  }
-
-  // Use the tracking data injected by the host of the app if included.
-  private getHostTrackingData(): DeployedAppMetadata {
-    if (this.metadata) {
-      return pick(this.metadata, [
-        "hostedAt",
-        "owner",
-        "repo",
-        "branch",
-        "mainModule",
-        "creatorId",
-      ])
-    }
-    return {}
+    return eventProto
   }
 
   /**
@@ -291,5 +295,40 @@ export class MetricsManager {
     }
 
     return this.anonymousId
+  }
+
+  /**
+   * Get context data for metrics
+   */
+  private getContextData(): Record<string, unknown> {
+    return {
+      contextPageUrl: window.location.href,
+      contextPageTitle: document.title,
+      contextPagePath: window.location.pathname,
+      contextPageReferrer: document.referrer,
+      contextPageSearch: window.location.search,
+    }
+  }
+
+  // Get the installation IDs from the session
+  private getInstallationData(): Record<string, unknown> {
+    return {
+      machineIdV3: this.sessionInfo.current.installationIdV3,
+    }
+  }
+
+  // Use the tracking data injected by the host of the app if included.
+  private getHostTrackingData(): DeployedAppMetadata {
+    if (this.metadata) {
+      return pick(this.metadata, [
+        "hostedAt",
+        "owner",
+        "repo",
+        "branch",
+        "mainModule",
+        "creatorId",
+      ])
+    }
+    return {}
   }
 }
