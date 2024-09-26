@@ -296,18 +296,33 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
           const shouldUseOriginalFillFunction = !anyLayersHaveSelection
 
-          if (shouldUseOriginalFillFunction) {
-            // If we aren't changing the fill color, we don't need to change the fillFunction
-            return clonedLayer
-          }
-
           const originalFillFunction = layer[fillFunction] as
             | FillFunction
             | undefined
 
+          if (shouldUseOriginalFillFunction || !originalFillFunction) {
+            // If we aren't changing the fill color, we don't need to change the fillFunction
+            return clonedLayer
+          }
+
+          const selectedOpacity = 255
+          const unselectedOpacity = Math.floor(255 * 0.4)
+
           // Fallback colors in case there are issues while parsing the colors for a given object
-          const selectedColor = parseToRgba(theme.colors.primary)
-          const unselectedColor = parseToRgba(theme.colors.gray20)
+          const selectedColorParsed = parseToRgba(theme.colors.primary)
+          const selectedColor: [number, number, number, number] = [
+            selectedColorParsed[0],
+            selectedColorParsed[1],
+            selectedColorParsed[2],
+            selectedOpacity,
+          ]
+          const unselectedColorParsed = parseToRgba(theme.colors.gray20)
+          const unselectedColor: [number, number, number, number] = [
+            unselectedColorParsed[0],
+            unselectedColorParsed[1],
+            unselectedColorParsed[2],
+            unselectedOpacity,
+          ]
 
           const newFillFunction: FillFunction = (object, objectInfo) => {
             return getContextualFillColor({
@@ -317,6 +332,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
               originalFillFunction,
               selectedColor,
               unselectedColor,
+              selectedOpacity,
+              unselectedOpacity,
             })
           }
 

@@ -100,7 +100,7 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
-class LayerSelectionState(TypedDict, total=False):
+class PydeckSelectionState(TypedDict, total=False):
     """
     The schema for the PyDeck Layer Selection State
 
@@ -124,11 +124,11 @@ class PydeckState(TypedDict, total=False):
 
     Attributes
     ----------
-    selection : LayerSelectionState
+    selection : PydeckSelectionState
         The selection state of the PyDeck layers.
     """
 
-    selection: LayerSelectionState
+    selection: PydeckSelectionState
 
 
 @dataclass
@@ -166,6 +166,8 @@ class PydeckMixin:
         pydeck_obj: Deck | None = None,
         *,
         use_container_width: bool = False,
+        width: int | None = None,
+        height: int | None = None,
         selection_mode: Literal[
             "single-object"
         ],  # Selection mode will only be activated by on_select param, this is a default value here to make it work with mypy
@@ -179,6 +181,8 @@ class PydeckMixin:
         pydeck_obj: Deck | None = None,
         *,
         use_container_width: bool = False,
+        width: int | None = None,
+        height: int | None = None,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
