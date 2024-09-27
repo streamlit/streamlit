@@ -25,6 +25,12 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
+def stop_recording(audio_input: Locator):
+    """Stop recording audio and wait for the recording to complete."""
+    audio_input.get_by_role("button", name="Stop recording").click()
+    audio_input.wait_for_timeout(5000)  # ci seems to be very slow so adding wait here
+
+
 def ensure_waveform_is_not_rendered(audio_input: Locator):
     expect(audio_input.get_by_test_id("stAudioInputWaveSurfer")).not_to_be_visible()
 
@@ -140,7 +146,8 @@ def test_audio_input_callback(app: Page):
     audio_input = app.get_by_test_id("stAudioInput").nth(5)
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
-    audio_input.get_by_role("button", name="Stop recording").click()
+
+    stop_recording(audio_input)
 
     ensure_waveform_rendered(audio_input)
 
@@ -158,7 +165,8 @@ def test_audio_input_remount_keep_value(app: Page):
     audio_input.scroll_into_view_if_needed()
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
-    audio_input.get_by_role("button", name="Stop recording").click()
+
+    stop_recording(audio_input)
 
     wait_for_app_run(app)
 
@@ -184,7 +192,8 @@ def test_audio_input_works_in_forms(app: Page):
     form_audio_input = app.get_by_test_id("stAudioInput").nth(1)
     form_audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
-    form_audio_input.get_by_role("button", name="Stop recording").click()
+
+    stop_recording(form_audio_input)
 
     submit_button = app.get_by_role("button", name="Submit")
     submit_button.scroll_into_view_if_needed()
@@ -217,7 +226,8 @@ def test_audio_input_works_with_fragments(app: Page):
     fragment_audio_input.scroll_into_view_if_needed()
     fragment_audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
-    fragment_audio_input.get_by_role("button", name="Stop recording").click()
+
+    stop_recording(fragment_audio_input)
 
     wait_for_app_run(app)
 
@@ -253,11 +263,7 @@ def test_audio_input_basic_flow(app: Page):
     expect(clock).to_have_text("00:00")
     record_button.click()
 
-    # Stop recording after a second and verify state change
-    stop_button = audio_input.get_by_role("button", name="Stop recording").first
-    expect(stop_button).to_be_visible()
-    app.wait_for_timeout(1500)
-    stop_button.click()
+    stop_recording(audio_input)
 
     wait_for_app_run(app)
     expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
