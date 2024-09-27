@@ -176,12 +176,17 @@ def test_audio_input_works_in_forms(app: Page):
     # Verify the form state has not changed yet
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
 
+    # Make sure the audio is done uploading before submitting the form
+    app.wait_for_timeout(3000)
+
     # Submit the form and verify the state update
     click_form_button(app, "Submit")
     wait_for_app_run(app)
 
     app.get_by_text("Audio Input in Form:").scroll_into_view_if_needed()
-    expect(app.get_by_text("Audio Input in Form: None")).not_to_be_visible()
+    expect(app.get_by_text("Audio Input in Form: None")).not_to_be_visible(
+        timeout=10000
+    )
 
 
 @pytest.mark.only_browser("chromium")
@@ -204,7 +209,9 @@ def test_audio_input_works_with_fragments(app: Page):
 
     # Verify the state is updated without additional reruns
     app.get_by_text("Audio Input in Fragment:").scroll_into_view_if_needed()
-    expect(app.get_by_text("Audio Input in Fragment: None")).not_to_be_visible()
+    expect(app.get_by_text("Audio Input in Fragment: None")).not_to_be_visible(
+        timeout=10000
+    )
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
     # Clear recording and verify the state remains consistent
