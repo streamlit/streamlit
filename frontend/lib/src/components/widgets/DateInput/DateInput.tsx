@@ -242,7 +242,7 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   private createErrorMessage = (invalidDate: string): string => {
-    const { minDate, maxDate } = this.state
+    const { isRange, minDate, maxDate } = this.state
     const months = [
       "January",
       "February",
@@ -258,12 +258,24 @@ class DateInput extends React.PureComponent<Props, State> {
       "December",
     ]
     let errorString = ""
-    if (invalidDate === "min" && minDate) {
-      const month = months[minDate.getMonth()]
-      errorString = `**Streamlit API Error**: The ${invalidDate} date you have entered is out of range. Please enter a date after ${month} ${minDate.getDate()}, ${minDate.getFullYear()}.`
-    } else if (invalidDate === "max" && maxDate) {
-      const month = months[maxDate.getMonth()]
-      errorString = `**Streamlit API Error**: The ${invalidDate} date you have entered is out of range. Please enter a date before ${month} ${maxDate.getDate()}, ${maxDate.getFullYear()}.`
+    const minDateStr =
+      minDate &&
+      `${
+        months[minDate.getMonth()]
+      } ${minDate.getDate()}, ${minDate.getFullYear()}`
+    const maxDateStr =
+      maxDate &&
+      `${
+        months[maxDate.getMonth()]
+      } ${maxDate.getDate()}, ${maxDate.getFullYear()}`
+    const rangeMessage = !isRange && ` between ${minDateStr} and ${maxDateStr}`
+
+    if (rangeMessage) {
+      errorString = `**Streamlit API Error**: The date you have entered is out of range. Please enter a date ${rangeMessage}.`
+    } else if (invalidDate === "min") {
+      errorString = `**Streamlit API Error**: The min date you have entered is out of range. Please enter a date on or after ${minDateStr}.`
+    } else if (invalidDate === "max") {
+      errorString = `**Streamlit API Error**: The max date you have entered is out of range. Please enter a date on or before ${maxDateStr}.`
     }
     return errorString
   }
