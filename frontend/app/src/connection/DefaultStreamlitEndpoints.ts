@@ -34,7 +34,6 @@ interface Props {
 const MEDIA_ENDPOINT = "/media"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
-const FORWARD_MSG_CACHE_ENDPOINT = "/_stcore/message"
 
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
 export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
