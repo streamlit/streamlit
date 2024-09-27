@@ -29,7 +29,9 @@
   visibility: hidden;
   padding: 8px;
   position: fixed;
-  z-index: 1000;
+  // We set z-index to ensure the tooltip is always on top
+  // Sidebar is 999991, Dialog 1000040, so set it to 1000050
+  z-index: 1000050;
   font-family: sans-serif;
   font-size: 11px;
   border-radius: 3px;
