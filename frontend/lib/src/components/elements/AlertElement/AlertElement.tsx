@@ -45,6 +45,7 @@ export interface AlertElementProps {
   icon?: string
   kind: Kind
   width: number
+  style?: React.CSSProperties
 }
 
 /**
@@ -55,6 +56,7 @@ export default function AlertElement({
   body,
   kind,
   width,
+  style,
 }: Readonly<AlertElementProps>): ReactElement {
   const markdownWidth = {
     // Fix issue #6394 - Need to account for 1.25rem padding + 0.5rem gap when icon present
@@ -62,7 +64,7 @@ export default function AlertElement({
   }
 
   return (
-    <div className="stAlert" data-testid="stAlert">
+    <div className="stAlert" data-testid="stAlert" style={style}>
       <AlertContainer width={width} kind={kind}>
         <StyledAlertContent>
           {icon && (
