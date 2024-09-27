@@ -709,14 +709,14 @@ class ButtonMixin:
         serde = ButtonSerde()
 
         button_state = register_widget(
-            "download_button",
-            download_button_proto,
+            download_button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="trigger_value",
         )
 
         self.dg._enqueue("download_button", download_button_proto)
@@ -902,14 +902,14 @@ class ButtonMixin:
         serde = ButtonSerde()
 
         button_state = register_widget(
-            "button",
-            button_proto,
+            button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="trigger_value",
         )
 
         if ctx:

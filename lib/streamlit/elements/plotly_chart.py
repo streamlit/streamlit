@@ -524,12 +524,12 @@ class PlotlyMixin:
             serde = PlotlyChartSelectionSerde()
 
             widget_state = register_widget(
-                "plotly_chart",
-                plotly_chart_proto,
+                plotly_chart_proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)

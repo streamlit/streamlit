@@ -457,14 +457,14 @@ class FileUploaderMixin:
         # representing the current set of files that this uploader should
         # know about.
         widget_state = register_widget(
-            "file_uploader",
-            file_uploader_proto,
+            file_uploader_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="file_uploader_state_value",
         )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)

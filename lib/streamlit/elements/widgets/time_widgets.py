@@ -496,14 +496,14 @@ class TimeWidgetsMixin:
 
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
-            "time_input",
-            time_input_proto,
+            time_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -797,14 +797,14 @@ class TimeWidgetsMixin:
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
-            "date_input",
-            date_input_proto,
+            date_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_array_value",
         )
 
         if widget_state.value_changed:

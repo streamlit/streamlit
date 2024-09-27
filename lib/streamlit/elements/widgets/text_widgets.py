@@ -331,14 +331,14 @@ class TextWidgetsMixin:
         serde = TextInputSerde(value)
 
         widget_state = register_widget(
-            "text_input",
-            text_input_proto,
+            text_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -586,14 +586,14 @@ class TextWidgetsMixin:
 
         serde = TextAreaSerde(value)
         widget_state = register_widget(
-            "text_area",
-            text_area_proto,
+            text_area_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:

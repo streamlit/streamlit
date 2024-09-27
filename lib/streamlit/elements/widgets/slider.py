@@ -822,14 +822,14 @@ class SliderMixin:
         serde = SliderSerde(value, data_type, single_value, orig_tz)
 
         widget_state = register_widget(
-            "slider",
-            slider_proto,
+            slider_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_array_value",
         )
 
         if widget_state.value_changed:

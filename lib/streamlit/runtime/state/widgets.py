@@ -14,10 +14,7 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
-from typing import TYPE_CHECKING, Final, Mapping
-
-from typing_extensions import TypeAlias
+from typing import TYPE_CHECKING
 
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
@@ -28,7 +25,6 @@ from streamlit.runtime.state.common import (
     WidgetDeserializer,
     WidgetKwargs,
     WidgetMetadata,
-    WidgetProto,
     WidgetSerializer,
     user_key_from_element_id,
 )
@@ -37,65 +33,24 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
 
 
-ElementType: TypeAlias = str
-
-# NOTE: We use this table to start with a best-effort guess for the value_type
-# of each widget. Once we actually receive a proto for a widget from the
-# frontend, the guess is updated to be the correct type. Unfortunately, we're
-# not able to always rely on the proto as the type may be needed earlier.
-# Thankfully, in these cases (when value_type == "trigger_value"), the static
-# table here being slightly inaccurate should never pose a problem.
-ELEMENT_TYPE_TO_VALUE_TYPE: Final[Mapping[ElementType, ValueFieldName]] = (
-    MappingProxyType(
-        {
-            "audio_input": "file_uploader_state_value",
-            "button": "trigger_value",
-            "button_group": "int_array_value",
-            "camera_input": "file_uploader_state_value",
-            "chat_input": "string_trigger_value",
-            "checkbox": "bool_value",
-            "color_picker": "string_value",
-            "component_instance": "json_value",
-            "data_editor": "string_value",
-            "dataframe": "string_value",
-            "date_input": "string_array_value",
-            "deck_gl_json_chart": "string_value",
-            "download_button": "trigger_value",
-            "file_uploader": "file_uploader_state_value",
-            "multiselect": "int_array_value",
-            "number_input": "double_value",
-            "plotly_chart": "string_value",
-            "radio": "int_value",
-            "selectbox": "int_value",
-            "slider": "double_array_value",
-            "text_area": "string_value",
-            "text_input": "string_value",
-            "time_input": "string_value",
-            "vega_lite_chart": "string_value",
-        }
-    )
-)
-
-
 def register_widget(
-    element_type: ElementType,
-    element_proto: WidgetProto,
+    element_id: str,
+    *,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
     on_change_handler: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
+    value_type: ValueFieldName,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
     Parameters
     ----------
-    element_type : ElementType
-        The type of the element as stored in proto.
-    element_proto : WidgetProto
-        The proto of the specified type (e.g. Button/Multiselect/Slider proto)
+    element_id : str
+        The id of the element. Must be unique.
     deserializer : WidgetDeserializer[T]
         Called to convert a widget's protobuf value to the value returned by
         its st.<widget_name> function.
@@ -109,6 +64,15 @@ def register_widget(
         args to pass to on_change_handler when invoked
     kwargs : WidgetKwargs or None
         kwargs to pass to on_change_handler when invoked
+    value_type: ValueType
+        The value_type the widget is going to use.
+        We use this information to start with a best-effort guess for the value_type
+        of each widget. Once we actually receive a proto for a widget from the
+        frontend, the guess is updated to be the correct type. Unfortunately, we're
+        not able to always rely on the proto as the type may be needed earlier.
+        Thankfully, in these cases (when value_type == "trigger_value"), the static
+        table here being slightly inaccurate should never pose a problem.
+
 
     Returns
     -------
@@ -136,10 +100,10 @@ def register_widget(
     """
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
-        element_proto.id,
+        element_id,
         deserializer,
         serializer,
-        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
+        value_type=value_type,
         callback=on_change_handler,
         callback_args=args,
         callback_kwargs=kwargs,

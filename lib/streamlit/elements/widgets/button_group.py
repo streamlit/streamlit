@@ -620,14 +620,14 @@ class ButtonGroupMixin:
         )
 
         widget_state = register_widget(
-            widget_name,
-            proto,
+            proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=deserializer,
             serializer=serializer,
             ctx=ctx,
+            value_type="int_array_value",
         )
 
         if widget_state.value_changed:

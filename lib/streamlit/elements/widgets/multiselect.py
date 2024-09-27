@@ -300,14 +300,14 @@ class MultiSelectMixin:
 
         serde = MultiSelectSerde(indexable_options, default_values)
         widget_state = register_widget(
-            "multiselect",
-            proto,
+            proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_array_value",
         )
 
         _check_max_selections(widget_state.value, max_selections)

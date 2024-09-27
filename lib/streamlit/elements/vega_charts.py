@@ -1910,12 +1910,12 @@ class VegaChartsMixin:
             serde = VegaLiteStateSerde(parsed_selection_modes)
 
             widget_state = register_widget(
-                "vega_lite_chart",
-                vega_lite_proto,
+                vega_lite_proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
 
             self.dg._enqueue(

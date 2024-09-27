@@ -943,14 +943,14 @@ class DataEditorMixin:
         serde = DataEditorSerde()
 
         widget_state = register_widget(
-            "data_editor",
-            proto,
+            proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
