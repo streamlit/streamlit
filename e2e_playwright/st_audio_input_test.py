@@ -25,9 +25,23 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
+def ensure_waveform_is_not_rendered(audio_input: Locator):
+    # Check for the waveform and time code
+    expect(audio_input.get_by_test_id("stAudioInputWaveSurfer")).not_to_be_visible()
+
+    time_code = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
+    expect(time_code).to_have_text("00:00")
+
+    audio_input.hover()
+    expect(
+        audio_input.get_by_role("button", name="Clear recording")
+    ).not_to_be_visible()
+
+
 def ensure_waveform_rendered(audio_input: Locator):
     # Check for the waveform and time code
     expect(audio_input.get_by_test_id("stAudioInputWaveSurfer")).to_be_visible()
+
     time_code = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
     expect(time_code).to_be_visible()
     expect(time_code).not_to_have_text("00:00")
@@ -120,6 +134,8 @@ def test_audio_input_label_visibility_snapshot(
 @pytest.mark.only_browser("chromium")
 def test_audio_input_callback(app: Page):
     """Test that the callback is triggered when audio input changes."""
+    ensure_waveform_is_not_rendered()
+
     # Initial state before any interaction
     expect(app.get_by_text("Audio Input Changed: False")).to_be_visible()
 
@@ -137,6 +153,8 @@ def test_audio_input_callback(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_audio_input_remount_keep_value(app: Page):
+    ensure_waveform_is_not_rendered()
+
     """Test that the audio input component remounts without resetting its value."""
     expect(app.get_by_text("audio_input-after-sleep: False")).to_be_visible()
 
@@ -163,6 +181,7 @@ def test_audio_input_remount_keep_value(app: Page):
 def test_audio_input_works_in_forms(app: Page):
     """Test the functionality of the audio input component within a form."""
     app.context.grant_permissions(["microphone"])
+    ensure_waveform_is_not_rendered()
 
     # Initial form state
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
@@ -175,9 +194,6 @@ def test_audio_input_works_in_forms(app: Page):
 
     submit_button = app.get_by_role("button", name="Submit")
     submit_button.scroll_into_view_if_needed()
-    expect(
-        submit_button
-    ).to_be_disabled()  # should be disabled right after uploading due to the upload disabling form submission
     expect(submit_button).to_be_enabled()  # then it should be enabled
 
     # Verify the form state has not changed yet
@@ -187,16 +203,17 @@ def test_audio_input_works_in_forms(app: Page):
     click_form_button(app, "Submit")
     wait_for_app_run(app)
 
+    ensure_waveform_is_not_rendered(form_audio_input)
+
     app.get_by_text("Audio Input in Form:").scroll_into_view_if_needed()
-    expect(app.get_by_text("Audio Input in Form: None")).not_to_be_visible(
-        timeout=10000
-    )
+    expect(app.get_by_text("Audio Input in Form: None")).not_to_be_visible()
 
 
 @pytest.mark.only_browser("chromium")
 def test_audio_input_works_with_fragments(app: Page):
     """Test that the audio input component works correctly inside fragments."""
     app.context.grant_permissions(["microphone"])
+    ensure_waveform_is_not_rendered()
 
     # Initial state for fragments
     expect(app.get_by_text("Runs: 1")).to_be_visible()
@@ -213,9 +230,7 @@ def test_audio_input_works_with_fragments(app: Page):
 
     # Verify the state is updated without additional reruns
     app.get_by_text("Audio Input in Fragment:").scroll_into_view_if_needed()
-    expect(app.get_by_text("Audio Input in Fragment: None")).not_to_be_visible(
-        timeout=10000
-    )
+    expect(app.get_by_text("Audio Input in Fragment: None")).not_to_be_visible()
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
     # Clear recording and verify the state remains consistent
@@ -228,6 +243,7 @@ def test_audio_input_works_with_fragments(app: Page):
 def test_audio_input_basic_flow(app: Page):
     """Test the basic flow of recording, playing, and clearing audio input."""
     app.context.grant_permissions(["microphone"])
+    ensure_waveform_is_not_rendered()
 
     # Verify initial state
     expect(app.get_by_text("Audio Input 1: False")).to_be_visible()

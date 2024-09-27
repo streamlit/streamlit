@@ -28,6 +28,7 @@ import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
 
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
@@ -142,7 +143,8 @@ const AudioInput: React.FC<Props> = ({
 
   const transcodeAndUploadFile = useCallback(
     async (blob: Blob) => {
-      widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
+      if (notNullOrUndefined(widgetFormId))
+        widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
 
       let wavBlob: Blob | undefined = undefined
 
@@ -175,7 +177,8 @@ const AudioInput: React.FC<Props> = ({
           }
         })
         .finally(() => {
-          widgetMgr.setFormsWithUploadsInProgress(new Set())
+          if (notNullOrUndefined(widgetFormId))
+            widgetMgr.setFormsWithUploadsInProgress(new Set())
         })
     },
     [
@@ -226,6 +229,17 @@ const AudioInput: React.FC<Props> = ({
       setDeleteFileUrl,
     ]
   )
+
+  useEffect(() => {
+    if (isNullOrUndefined(widgetFormId)) return
+
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(widgetMgr, widgetFormId, () => {
+      handleClear({ updateWidgetManager: true })
+    })
+
+    return () => formClearHelper.disconnect()
+  }, [widgetFormId, handleClear, widgetMgr])
 
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
