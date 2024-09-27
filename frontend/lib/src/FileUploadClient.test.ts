@@ -40,7 +40,6 @@ describe("FileUploadClient Upload", () => {
         buildAppPageURL: jest.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
         deleteFileAtURL: jest.fn(),
-        fetchCachedForwardMsg: jest.fn(),
       },
       formsWithPendingRequestsChanged,
       requestFileURLs,

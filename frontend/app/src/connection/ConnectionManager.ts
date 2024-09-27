@@ -136,6 +136,14 @@ export class ConnectionManager {
     }
   }
 
+  public getCachedMessageHashes(): string[] {
+    // StaticConnection does not use a MessageCache.
+    if (this.connection instanceof WebsocketConnection) {
+      return this.connection?.getCachedMessageHashes() ?? []
+    }
+    return []
+  }
+
   private async connect(): Promise<void> {
     try {
       this.connection = await this.connectToRunningServer()

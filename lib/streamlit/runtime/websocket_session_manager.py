@@ -124,13 +124,7 @@ class WebsocketSessionManager(SessionManager):
             session.request_script_stop()
             session.disconnect_file_watchers()
 
-            self._session_storage.save(
-                SessionInfo(
-                    client=None,
-                    session=session,
-                    script_run_count=active_session_info.script_run_count,
-                )
-            )
+            self._session_storage.save(SessionInfo(client=None, session=session))
             del self._active_session_info_by_id[session_id]
 
     def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:

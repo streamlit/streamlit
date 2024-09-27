@@ -21,8 +21,6 @@ import {
 
 import { ForwardMsg } from "./proto"
 import { logMessage } from "./util/log"
-import { ensureError } from "./util/ErrorHandling"
-import { StreamlitEndpoints } from "./StreamlitEndpoints"
 
 class CacheEntry {
   public readonly encodedMsg: Uint8Array
@@ -45,17 +43,11 @@ class CacheEntry {
 export class ForwardMsgCache {
   private readonly messages = new Map<string, CacheEntry>()
 
-  private readonly endpoints: StreamlitEndpoints
-
   /**
    * A counter that tracks the number of times the underlying script
    * has been run. We use this to expire our cache entries.
    */
   private scriptRunCount = 0
-
-  constructor(endpoints: StreamlitEndpoints) {
-    this.endpoints = endpoints
-  }
 
   /**
    * Increment our scriptRunCount, and remove all entries from the cache
@@ -80,6 +72,10 @@ export class ForwardMsgCache {
     })
   }
 
+  public getCachedMessageHashes(): string[] {
+    return Array.from(this.messages.keys())
+  }
+
   /**
    * Process a ForwardMsg, "de-referencing" it if it's a reference to
    * a cached message.
@@ -88,8 +84,6 @@ export class ForwardMsgCache {
    *   unmodified.
    * - If the message is instead a reference to another message, look for
    *   the referenced message in the cache, and return it.
-   * - If the referenced message isn't in our cache, request it from the
-   *   server, cache it, and return it.
    */
   public async processMessagePayload(
     msg: ForwardMsg,
@@ -101,26 +95,17 @@ export class ForwardMsgCache {
       return msg
     }
 
-    let newMsg = this.getCachedMessage(msg.refHash as string, true)
+    const newMsg = this.getCachedMessage(msg.refHash as string, true)
     if (notNullOrUndefined(newMsg)) {
       logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
-      const encodedNewMsg = await this.endpoints.fetchCachedForwardMsg(
-        msg.refHash as string
-      )
-      try {
-        newMsg = ForwardMsg.decode(encodedNewMsg)
-      } catch (e) {
-        throw new Error(
-          `Failed to decode ForwardMsg (hash=${msg.refHash}): ${
-            ensureError(e).message
-          }`
-        )
-      }
 
-      this.maybeCacheMessage(newMsg, encodedNewMsg)
+      // TODO (lukasmasuch): Catch the error somewhere and trigger a rerun if this happens
+      throw new Error(
+        `Cached ForwardMsg MISS [hash=${msg.refHash}]. This is not expected to happen`
+      )
     }
 
     // Copy the metadata from the refMsg into our new message
