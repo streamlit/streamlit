@@ -189,7 +189,7 @@ def test_audio_input_works_in_forms(app: Page):
 
     submit_button = app.get_by_role("button", name="Submit")
     submit_button.scroll_into_view_if_needed()
-    expect(submit_button).to_be_enabled()  # then it should be enabled
+    expect(submit_button).to_be_enabled()
 
     # Verify the form state has not changed yet
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
