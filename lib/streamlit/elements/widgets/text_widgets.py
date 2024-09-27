@@ -437,7 +437,7 @@ class TextWidgetsMixin:
 
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
-            default height is used. Note: height must be at least 95 pixels.
+            default height is used. Height must be at least 95 pixels.
 
         max_chars : int or None
             Maximum number of characters allowed in text area.
