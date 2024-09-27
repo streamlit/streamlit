@@ -148,7 +148,7 @@ const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({
   if (isUploading) {
     return (
       <StyledActionButtonContainerDiv>
-        <StyledSpinner />
+        <StyledSpinner aria-label="Uploading" />
       </StyledActionButtonContainerDiv>
     )
   }

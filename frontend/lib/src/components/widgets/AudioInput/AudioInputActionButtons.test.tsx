@@ -30,6 +30,7 @@ describe("AudioInputActionButton", () => {
         disabled={false}
         isRecording={false}
         isPlaying={false}
+        isUploading={false}
         recordingUrlExists={false}
         startRecording={jest.fn()}
         stopRecording={jest.fn()}
@@ -47,6 +48,7 @@ describe("AudioInputActionButton", () => {
         disabled={false}
         isRecording={false}
         isPlaying={false}
+        isUploading={false}
         recordingUrlExists={false}
         startRecording={startRecording}
         stopRecording={jest.fn()}
@@ -66,6 +68,7 @@ describe("AudioInputActionButton", () => {
         disabled={false}
         isRecording={true}
         isPlaying={false}
+        isUploading={false}
         recordingUrlExists={false}
         startRecording={jest.fn()}
         stopRecording={stopRecording}
@@ -85,6 +88,7 @@ describe("AudioInputActionButton", () => {
         disabled={false}
         isRecording={false}
         isPlaying={false}
+        isUploading={false}
         recordingUrlExists={true}
         startRecording={jest.fn()}
         stopRecording={jest.fn()}
@@ -105,6 +109,7 @@ describe("AudioInputActionButton", () => {
         disabled={false}
         isRecording={false}
         isPlaying={true}
+        isUploading={false}
         recordingUrlExists={true}
         startRecording={jest.fn()}
         stopRecording={jest.fn()}
@@ -126,6 +131,7 @@ describe("AudioInputActionButton", () => {
           disabled={true}
           isRecording={false}
           isPlaying={false}
+          isUploading={false}
           recordingUrlExists={false}
           startRecording={startRecording}
           stopRecording={jest.fn()}
@@ -136,6 +142,25 @@ describe("AudioInputActionButton", () => {
       expect(screen.getByLabelText("Record")).toBeInTheDocument()
       fireEvent.click(screen.getByLabelText("Record"))
       expect(startRecording).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("when uploading", () => {
+    it("should render the uploading spinner", () => {
+      render(
+        <AudioInputActionButtons
+          disabled={true}
+          isRecording={false}
+          isPlaying={false}
+          isUploading={true}
+          recordingUrlExists={false}
+          startRecording={jest.fn()}
+          stopRecording={jest.fn()}
+          onClickPlayPause={jest.fn()}
+        />
+      )
+
+      expect(screen.getByLabelText("Uploading")).toBeInTheDocument()
     })
   })
 })
