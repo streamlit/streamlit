@@ -26,7 +26,6 @@ from e2e_playwright.shared.app_utils import (
 
 
 def ensure_waveform_is_not_rendered(audio_input: Locator):
-    # Check for the waveform and time code
     expect(audio_input.get_by_test_id("stAudioInputWaveSurfer")).not_to_be_visible()
 
     time_code = audio_input.get_by_test_id("stAudioInputWaveformTimeCode")
