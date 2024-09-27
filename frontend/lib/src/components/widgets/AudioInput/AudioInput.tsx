@@ -132,6 +132,7 @@ const AudioInput: React.FC<Props> = ({
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
   const [hasRequestedMicPermissions, setHasRequestedMicPermissions] =
     useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   const widgetId = element.id
   const widgetFormId = element.formId
@@ -143,6 +144,7 @@ const AudioInput: React.FC<Props> = ({
 
   const transcodeAndUploadFile = useCallback(
     async (blob: Blob) => {
+      setIsUploading(true)
       if (notNullOrUndefined(widgetFormId))
         widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
 
@@ -179,6 +181,8 @@ const AudioInput: React.FC<Props> = ({
         .finally(() => {
           if (notNullOrUndefined(widgetFormId))
             widgetMgr.setFormsWithUploadsInProgress(new Set())
+
+          setIsUploading(false)
         })
     },
     [
@@ -439,6 +443,7 @@ const AudioInput: React.FC<Props> = ({
           <AudioInputActionButtons
             isRecording={isRecording}
             isPlaying={isPlaying}
+            isUploading={isUploading}
             recordingUrlExists={Boolean(recordingUrl)}
             startRecording={startRecording}
             stopRecording={stopRecording}

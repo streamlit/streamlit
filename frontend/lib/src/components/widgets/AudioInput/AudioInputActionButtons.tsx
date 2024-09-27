@@ -30,6 +30,7 @@ import {
   StyledActionButtonPlayPauseDiv,
   StyledActionButtonStartRecordingDiv,
   StyledActionButtonStopRecordingDiv,
+  StyledSpinner,
 } from "./styled-components"
 
 interface BaseActionButtonProps {
@@ -61,6 +62,7 @@ interface AudioInputActionButtonProps {
   disabled: boolean
   isRecording: boolean
   isPlaying: boolean
+  isUploading: boolean
   recordingUrlExists: boolean
   startRecording(): void
   stopRecording(): void
@@ -137,11 +139,20 @@ const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({
   disabled,
   isRecording,
   isPlaying,
+  isUploading,
   recordingUrlExists,
   startRecording,
   stopRecording,
   onClickPlayPause,
 }) => {
+  if (isUploading) {
+    return (
+      <StyledActionButtonContainerDiv>
+        <StyledSpinner />
+      </StyledActionButtonContainerDiv>
+    )
+  }
+
   return (
     <StyledActionButtonContainerDiv>
       {isRecording ? (

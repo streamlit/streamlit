@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { Spinner } from "baseui/spinner"
 
 export const StyledAudioInputContainerDiv = styled.div()
 
@@ -127,3 +128,20 @@ export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
 export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
 }))
+
+export const StyledSpinner = styled(Spinner)(({ theme }) => {
+  return {
+    fontSize: theme.fontSizes.sm,
+    width: "1.375rem",
+    height: "1.375rem",
+    borderWidth: "3px",
+    radius: "4px",
+    justifyContents: "center",
+    padding: theme.spacing.none,
+    margin: theme.spacing.none,
+    borderColor: theme.colors.borderColor,
+    borderTopColor: theme.colors.primary,
+    flexGrow: 0,
+    flexShrink: 0,
+  }
+})
