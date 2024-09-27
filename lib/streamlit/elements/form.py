@@ -100,7 +100,19 @@ class FormMixin:
             will not be reset to their defaults on form submission.)
         enter_to_submit : bool
             Whether to submit the form when a user presses Enter while
-            interacting with a widget inside the form. Defaults to True.
+            interacting with a widget inside the form.
+
+            If this is ``True`` (default), pressing Enter while interacting
+            with a form widget is equivalent to clicking the first
+            ``st.form_submit_button`` in the form.
+
+            If this is ``False``, the user must click an
+            ``st.form_submit_button`` to submit the form.
+
+            If the first ``st.form_submit_button`` in the form is disabled,
+            the form will override submission behavior with
+            ``enter_to_submit=False``.
+
         border : bool
             Whether to show a border around the form. Defaults to True.
 
@@ -193,13 +205,13 @@ class FormMixin:
         """Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
-        sent to Streamlit in a batch.
+        sent from the user's browser to your Streamlit server in a batch.
 
-        Every form must have a form_submit_button. A form_submit_button
-        cannot exist outside a form.
+        Every form must have at least one ``st.form_submit_button``. An
+        ``st.form_submit_button`` cannot exist outside of a form.
 
-        For more information about forms, check out our
-        `blog post <https://blog.streamlit.io/introducing-submit-button-and-forms/>`_.
+        For more information about forms, check out our `docs
+        <https://docs.streamlit.io/develop/concepts/architecture/forms>`_.
 
         Parameters
         ----------
@@ -236,8 +248,14 @@ class FormMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
         disabled : bool
-            An optional boolean, which disables the button if set to True. The
-            default is False.
+            Whether to disable the button. If this is ``False`` (default), the
+            user can interact with the button. If this is ``True``, the button
+            is grayed-out and can't be clicked.
+
+            If the first ``st.form_submit_button`` in the form is disabled,
+            the form will override submission behavior with
+            ``enter_to_submit=False``.
+
         use_container_width : bool
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes

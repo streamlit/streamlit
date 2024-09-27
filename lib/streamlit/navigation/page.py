@@ -55,21 +55,21 @@ def Page(
     Parameters
     ----------
 
-    page: str, Path, or callable
+    page : str, Path, or callable
         The page source as a ``Callable`` or path to a Python file. If the page
         source is defined by a Python file, the path can be a string or
         ``pathlib.Path`` object, but must be declared relative to the
         entrypoint file. If the page source is defined by a ``Callable``, the
         ``Callable`` can't accept arguments.
 
-    title: str or None
+    title : str or None
         The title of the page. If this is ``None`` (default), the page title
         (in the browser tab) and label (in the navigation menu) will be
         inferred from the filename or callable name in ``page``. For more
         information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-    icon: str or None
+    icon : str or None
         An optional emoji or icon to display next to the page title and label.
         If ``icon`` is ``None`` (default), no icon is displayed next to the
         page label in the navigation menu, and a Streamlit icon is displayed
@@ -88,7 +88,7 @@ def Page(
             <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
             font library.
 
-    url_path: str or None
+    url_path : str or None
         The page's URL pathname, which is the path relative to the app's root
         URL. If this is ``None`` (default), the URL pathname will be inferred
         from the filename or callable name in ``page``. For more information,
@@ -97,8 +97,10 @@ def Page(
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
+        ``url_path`` can't include forward slashes; paths can't include
+        subdirectories.
 
-    default: bool
+    default : bool
         Whether this page is the default page to be shown when the app is
         loaded. If ``default`` is ``False`` (default), the page will have a
         nonempty URL pathname. However, if no default page is passed to
