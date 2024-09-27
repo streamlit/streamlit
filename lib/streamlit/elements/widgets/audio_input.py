@@ -165,9 +165,9 @@ class AudioInputMixin:
         >>> if audio_value:
         ...     st.audio(audio_value)
 
-        .. output::
-           https://doc-audio-input.streamlit.app/
-           height: 260px
+        `View this example <https://doc-audio-input.streamlit.app/>`_ on
+        Community Cloud. ``st.experimental_audio_input`` is not yet fully
+        supported in embedded apps.
 
         """
         ctx = get_script_run_ctx()
