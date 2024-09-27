@@ -101,7 +101,7 @@ def parse_selection_mode(
 
 
 class PydeckSelectionState(TypedDict, total=False):
-    """
+    r"""
     The schema for the PyDeck chart selection state.
 
     The selection state is stored in a dictionary-like object that supports
@@ -118,7 +118,6 @@ class PydeckSelectionState(TypedDict, total=False):
         A dictionary of object attributes by layer. Each key in the dictionary
         is a layer id, and each value is a list of metadata dictionaries for
         the selected objects in that layer.
-
 
     Examples
     --------
@@ -370,6 +369,7 @@ class PydeckMixin:
             - ``"single-object"`` (default): Only one object can be selected at
               a time.
             - ``"multi-object"``: Multiple objects can be selected at a time.
+
         key : str
             An optional string to use for giving this element a stable
             identity. If ``key`` is ``None`` (default), this element's identity
