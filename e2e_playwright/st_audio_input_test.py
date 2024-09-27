@@ -173,11 +173,15 @@ def test_audio_input_works_in_forms(app: Page):
     app.wait_for_timeout(1500)
     form_audio_input.get_by_role("button", name="Stop recording").click()
 
+    submit_button = app.get_by_role("button", name="Submit")
+    submit_button.scroll_into_view_if_needed()
+    expect(
+        submit_button
+    ).to_be_disabled()  # should be disabled right after uploading due to the upload disabling form submission
+    expect(submit_button).to_be_enabled()  # then it should be enabled
+
     # Verify the form state has not changed yet
     expect(app.get_by_text("Audio Input in Form: None")).to_be_visible()
-
-    # Make sure the audio is done uploading before submitting the form
-    app.wait_for_timeout(3000)
 
     # Submit the form and verify the state update
     click_form_button(app, "Submit")

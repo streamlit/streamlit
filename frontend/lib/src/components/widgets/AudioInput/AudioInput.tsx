@@ -140,22 +140,46 @@ const AudioInput: React.FC<Props> = ({
     loadFFmpeg()
   }, [])
 
-  const uploadTheFile = useCallback(
-    (file: File) => {
+  const transcodeAndUploadFile = useCallback(
+    async (blob: Blob) => {
+      widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
+
+      let wavBlob: Blob | undefined = undefined
+
+      if (blob.type === "audio/wav") {
+        wavBlob = blob
+      } else {
+        wavBlob = await convertMp4ToWav(blob)
+      }
+
+      if (!wavBlob) {
+        return
+      }
+
+      const url = URL.createObjectURL(wavBlob)
+      const file = new File([wavBlob], `audio.wav`, { type: wavBlob.type })
+
+      setRecordingUrl(url)
+
       uploadFiles({
         files: [file],
         uploadClient,
         widgetMgr,
         widgetInfo: { id: widgetId, formId: widgetFormId },
         fragmentId,
-      }).then(({ successfulUploads }) => {
-        const upload = successfulUploads[0]
-        if (upload && upload.fileUrl.deleteUrl) {
-          setDeleteFileUrl(upload.fileUrl.deleteUrl)
-        }
       })
+        .then(({ successfulUploads }) => {
+          const upload = successfulUploads[0]
+          if (upload && upload.fileUrl.deleteUrl) {
+            setDeleteFileUrl(upload.fileUrl.deleteUrl)
+          }
+        })
+        .finally(() => {
+          widgetMgr.setFormsWithUploadsInProgress(new Set())
+        })
     },
     [
+      setRecordingUrl,
       uploadClient,
       widgetMgr,
       widgetId,
@@ -239,23 +263,7 @@ const AudioInput: React.FC<Props> = ({
     )
 
     rp.on("record-end", async blob => {
-      let wavBlob: Blob | undefined = undefined
-
-      if (blob.type === "audio/wav") {
-        wavBlob = blob
-      } else {
-        wavBlob = await convertMp4ToWav(blob)
-      }
-
-      if (!wavBlob) {
-        return
-      }
-
-      const url = URL.createObjectURL(wavBlob)
-      const file = new File([wavBlob], `audio.wav`, { type: wavBlob.type })
-
-      setRecordingUrl(url)
-      uploadTheFile(file)
+      transcodeAndUploadFile(blob)
     })
 
     rp.on("record-progress", time => {
@@ -272,7 +280,7 @@ const AudioInput: React.FC<Props> = ({
     // note: intentionally excluding theme so that we don't have to recreate the wavesurfer instance
     // and colors will be updated separately
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uploadTheFile])
+  }, [transcodeAndUploadFile])
 
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
 
