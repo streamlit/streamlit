@@ -106,9 +106,9 @@ def navigation(
     expanded : bool
         Whether the navigation menu should be expanded. If this is ``False``
         (default), the navigation menu will be collapsed and will include a
-        button to view more options. If this is ``True``, the navigation menu
-        will always be expanded; no button to collapse the menu will be
-        displayed.
+        button to view more options when there are too many pages to display.
+        If this is ``True``, the navigation menu will always be expanded; no
+        button to collapse the menu will be displayed.
 
         If ``st.navigation`` changes from ``expanded=True`` to
         ``expanded=False`` on a rerun, the menu will stay expanded and a
