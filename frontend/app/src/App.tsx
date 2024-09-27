@@ -2029,16 +2029,20 @@ export class App extends PureComponent<Props, State> {
               {renderedDialog}
             </StyledApp>
             <MsgLogger>
+              <div>
+                MessageBundles: {this.state.handledMessageBundles.length}
+              </div>
+              <div>---</div>
               {this.state.handledMessageBundles.map((bundle, bundleIndex) => {
                 const metadata =
                   this.state.handledMessageBundleMetadata[bundleIndex]
                 return (
                   <>
-                    <span>
-                      {this.state.handledMessageBundles.length - bundleIndex}.{" "}
-                    </span>
                     <MsgBundle key={metadata.receivedAt}>
-                      <div>Bundle (receivedAt: {metadata.receivedAt}):</div>
+                      <div>
+                        {this.state.handledMessageBundles.length - bundleIndex}
+                        . Bundle (receivedAt: {metadata.receivedAt}):
+                      </div>
                       {bundle.map((msg, index) => {
                         const parsedMsg = {
                           scriptRunId: msg.newSession?.scriptRunId,
@@ -2055,6 +2059,9 @@ export class App extends PureComponent<Props, State> {
                             deltaType:
                               (msg.delta?.newElement as ElementProto)?.type ||
                               (msg.delta?.addBlock as BlockProto)?.type,
+                            // eslint-disable-next-line
+                            // @ts-ignore
+                            loadedFromCache: msg.loadedFromCache,
                             deltaPath:
                               msg.metadata?.deltaPath &&
                               msg.metadata?.deltaPath.length > 0
@@ -2101,7 +2108,17 @@ export class App extends PureComponent<Props, State> {
                               }
                             }}
                           >
-                            {JSON.stringify(parsedMsg, undefined, 1)}
+                            {/* {JSON.stringify(parsedMsg, undefined, 1)} */}
+                            {parsedMsg.type}
+                            {parsedMsg.deltaPath && `[${parsedMsg.deltaPath}]`}
+                            <Json
+                              element={JsonProto.create({
+                                body: JSON.stringify({ ...parsedMsg }),
+                              })}
+                              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                              // @ts-ignore
+                              width="100%"
+                            />
                           </Msg>
                         )
                       })}

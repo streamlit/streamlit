@@ -26,7 +26,6 @@ import React, {
 
 import classNames from "classnames"
 import { useTheme } from "@emotion/react"
-import { set } from "lodash"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
@@ -90,7 +89,6 @@ const NodeDetailsWrapper = ({
     React.MouseEvent<HTMLDivElement, MouseEvent> | undefined
   >(undefined)
   const [position, setPosition] = React.useState({ x: 0, y: 0 })
-  const [enableDrag, setEnableDrag] = React.useState(false)
   console.log("position", position, event)
   const classNameDeltaPath = `[${node.metadata.deltaPath}]`
 
@@ -141,9 +139,6 @@ const NodeDetailsWrapper = ({
         onContextMenu={e => {
           e.preventDefault()
           e.stopPropagation()
-          // if (e.button !== 2) {
-          //   return
-          // }
           // dismiss open state
           if (event) {
             setEvent(undefined)
@@ -152,13 +147,9 @@ const NodeDetailsWrapper = ({
 
           setEvent(e)
           setPosition({
-            // x: e.currentTarget.clientLeft - 400,
-            // y: Math.max(50, e.currentTarget.clientTop - 100),
             x: e.pageX,
             y: e.pageY,
           })
-
-          highlight(e)
         }}
         onMouseOver={highlight}
         onMouseLeave={removeHighlight}
@@ -168,7 +159,7 @@ const NodeDetailsWrapper = ({
       </StyledDeltaPathHighlighter>
       {event && (
         <div
-          className="stDeltaInfo"
+          className={`stDeltaInfo ${classNameDeltaPath}`}
           draggable={true}
           onDrag={e => {
             // e.stopPropogation()
@@ -187,6 +178,8 @@ const NodeDetailsWrapper = ({
             left: `${position.x}px`,
             top: `${position.y}px`,
             zIndex: 1000000,
+            boxShadow: "0 4px 8px 0 rgba(0,0,0,0.2)",
+            borderRadius: "5px",
           }}
           onDragOver={e => {
             e.stopPropagation()
@@ -201,13 +194,14 @@ const NodeDetailsWrapper = ({
             X
           </StyledDetailsCloseButton>
           <Json
-            width={300}
+            width={400}
             element={JsonProto.create({
               body: JSON.stringify({
                 deltaPath: JSON.stringify(node.metadata.deltaPath),
                 elementId: id,
                 fragmentId: node.fragmentId,
                 scriptRunId: node.scriptRunId,
+                fromCurrentRun: node.scriptRunId === childProps.scriptRunId,
               }),
               expanded: true,
             })}
@@ -411,7 +405,9 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             return (
               <StyledDeltaPathHighlighter key={index}>
                 <BlockNodeRenderer key={index} {...childProps} />
-                <StyledDeltaInfo>{node.deltaBlock.type}</StyledDeltaInfo>
+                {/* <StyledDeltaInfo style={{ bottom: 0, top: "unset" }}>
+                  {node.deltaBlock.type}
+                </StyledDeltaInfo> */}
               </StyledDeltaPathHighlighter>
             )
           }

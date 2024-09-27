@@ -31,6 +31,7 @@ export const StyledApp = styled.div(({ theme }) => {
     bottom: theme.spacing.none,
     colorScheme: lightBackground ? "light" : "dark",
     overflow: "hidden",
+    width: "75%",
     "@media print": {
       float: "none",
       height: theme.sizes.full,
@@ -40,24 +41,28 @@ export const StyledApp = styled.div(({ theme }) => {
   }
 })
 
-export const MsgLogger = styled.div({
+export const MsgLogger = styled.div(({ theme }) => ({
   position: "absolute",
   overflow: "scroll",
   zIndex: 1000000000,
   height: "100%",
   padding: "50px 50px 0 50px",
-  backgroundColor: "#ffffff30",
-  color: "#84ff84",
-  maxWidth: "600px",
+  backgroundColor: theme.colors.secondaryBg,
+  color: theme.colors.codeTextColor,
+  // maxWidth: `calc(${theme.sizes.contentMaxWidth} - 10rem)`,
+  width: "25%",
   right: "0",
-})
+}))
 
 export const MsgBundle = styled.div({
   marginBottom: "2rem",
 })
 
-export const Msg = styled.div(() => ({
-  marginBottom: "0.5rem",
-  backgroundColor: "#494949",
-  padding: "0.125rem",
+export const Msg = styled.div(({ theme }) => ({
+  marginBottom: theme.spacing.sm,
+  backgroundColor: theme.colors.bgColor,
+  padding: theme.spacing.sm,
+  // card design:
+  boxShadow: "0 4px 8px 0 rgba(0,0,0,0.2)",
+  borderRadius: "5px",
 }))

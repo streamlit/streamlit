@@ -96,7 +96,11 @@ export class ForwardMsgCache {
     encodedMsg: Uint8Array
   ): Promise<ForwardMsg> {
     this.maybeCacheMessage(msg, encodedMsg)
+    let loadedFromCache = false
 
+    // eslint-disable-next-line
+    //@ts-ignore
+    msg.loadedFromCache = loadedFromCache
     if (msg.type !== "refHash") {
       return msg
     }
@@ -104,6 +108,7 @@ export class ForwardMsgCache {
     let newMsg = this.getCachedMessage(msg.refHash as string, true)
     if (notNullOrUndefined(newMsg)) {
       logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
+      loadedFromCache = true
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
@@ -128,6 +133,9 @@ export class ForwardMsgCache {
       throw new Error("ForwardMsg has no metadata")
     }
     newMsg.metadata = ForwardMsg.decode(encodedMsg).metadata
+    // eslint-disable-next-line
+    //@ts-ignore
+    newMsg.loadedFromCache = loadedFromCache
     return newMsg
   }
 

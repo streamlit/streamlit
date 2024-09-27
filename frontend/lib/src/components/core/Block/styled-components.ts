@@ -211,15 +211,18 @@ export const StyledVerticalBlockBorderWrapper =
 export const StyledDeltaInfo = styled.div({
   position: "absolute",
   right: 0,
+  top: 0,
   backgroundColor: "white",
   color: "black",
   "&:hover": {
     color: "red",
   },
+  height: "fit-content",
 })
 
 export const StyledDeltaPathHighlighter = styled.div({
-  display: "inline-flex",
+  // display: "inline-flex",
+  position: "relative",
 })
 
 export const StyledDetailsCloseButton = styled.button({
