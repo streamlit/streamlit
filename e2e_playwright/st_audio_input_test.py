@@ -263,6 +263,8 @@ def test_audio_input_basic_flow(app: Page):
     expect(clock).to_have_text("00:00")
     record_button.click()
 
+    app.wait_for_timeout(1500)
+
     stop_recording(audio_input, app)
 
     wait_for_app_run(app)
