@@ -605,6 +605,8 @@ class DataEditorMixin:
 
             .. note::
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
+                - Text and number formatting from ``column_config`` always takes
+                  precedence over text and number formatting from ``pandas.Styler``.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
                   ``complex``, ``list``, ``tuple``, ``bytes``, ``bytearray``,
@@ -679,8 +681,7 @@ class DataEditorMixin:
         key : str
             An optional string to use as the unique key for this widget. If this
             is omitted, a key will be generated for the widget based on its
-            content. Multiple widgets of the same type may not share the same
-            key.
+            content. No two widgets may have the same key.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.

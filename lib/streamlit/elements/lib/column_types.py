@@ -317,6 +317,9 @@ def NumberColumn(
         This does not impact the return value. Valid formatters: %d %e %f %g %i %u.
         You can also add prefixes and suffixes, e.g. ``"$ %.2f"`` to show a dollar prefix.
 
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
+
     min_value : int, float, or None
         The minimum value that can be entered.
         If None (default), there will be no minimum.
@@ -541,6 +544,8 @@ def LinkColumn(
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
+        Text formatting from ``column_config`` always takes precedence over
+        text formatting from ``pandas.Styler``.
 
     Examples
     --------
@@ -1213,6 +1218,9 @@ def DatetimeColumn(
         `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
         formats. If None (default), uses ``YYYY-MM-DD HH:mm:ss``.
 
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
+
     min_value: datetime.datetime or None
         The minimum datetime that can be entered.
         If None (default), there will be no minimum.
@@ -1332,6 +1340,9 @@ def TimeColumn(
         `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
         formats. If None (default), uses ``HH:mm:ss``.
 
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
+
     min_value: datetime.time or None
         The minimum time that can be entered.
         If None (default), there will be no minimum.
@@ -1445,6 +1456,9 @@ def DateColumn(
         A momentJS format string controlling how times are displayed. See
         `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
         formats. If None (default), uses ``YYYY-MM-DD``.
+
+        Number formatting from ``column_config`` always takes precedence over
+        number formatting from ``pandas.Styler``.
 
     min_value: datetime.date or None
         The minimum date that can be entered.
