@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""audio_input unit test."""
+"""experimental_audio_input unit test."""
 
 from parameterized import parameterized
 
@@ -25,7 +25,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 class AudioInputTest(DeltaGeneratorTestCase):
     def test_just_label(self):
         """Test that it can be called with no other values."""
-        st.audio_input("the label")
+        st.experimental_audio_input("the label")
 
         c = self.get_delta_from_queue().new_element.audio_input
         self.assertEqual(c.label, "the label")
@@ -43,14 +43,16 @@ class AudioInputTest(DeltaGeneratorTestCase):
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
         """Test that it can be called with label_visibility parameter."""
-        st.audio_input("the label", label_visibility=label_visibility_value)
+        st.experimental_audio_input(
+            "the label", label_visibility=label_visibility_value
+        )
 
         c = self.get_delta_from_queue().new_element.audio_input
         self.assertEqual(c.label_visibility.value, proto_value)
 
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
-            st.audio_input("the label", label_visibility="wrong_value")
+            st.experimental_audio_input("the label", label_visibility="wrong_value")
 
         self.assertEqual(
             str(e.exception),

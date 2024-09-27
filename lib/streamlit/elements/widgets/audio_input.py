@@ -83,8 +83,8 @@ class AudioInputSerde:
 
 
 class AudioInputMixin:
-    @gather_metrics("audio_input")
-    def audio_input(
+    @gather_metrics("experimental_audio_input")
+    def experimental_audio_input(
         self,
         label: str,
         *,
@@ -160,7 +160,7 @@ class AudioInputMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> audio_value = st.audio_input("Record a voice message")
+        >>> audio_value = st.experimental_audio_input("Record a voice message")
         >>>
         >>> if audio_value:
         ...     st.audio(audio_value)
