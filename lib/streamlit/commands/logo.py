@@ -73,20 +73,20 @@ def logo(
         start with "\\http://" or "\\https://". If ``link`` is ``None`` (default),
         the logo will not include a hyperlink.
     icon_image: Anything supported by st.image or None
-        An alternate, typically smaller image to replace ``image`` in the
+        An optional, typically smaller image to replace ``image`` in the
         upper-left corner when the sidebar is closed. If ``icon_image`` is
-        ``None`` (default), Streamlit will display the same image in the
-        upper-left corner when the sidebar is open or closed. Otherwise,
-        Streamlit will render ``icon_image`` in the upper-left corner of the
-        app when the sidebar is closed.
+        ``None`` (default), Streamlit will always display ``image`` in the
+        upper-left corner, regardless of whether the sidebar is open or closed.
+        Otherwise, Streamlit will render ``icon_image`` in the upper-left
+        corner of the app when the sidebar is closed.
 
         Streamlit scales the image to a max height set by ``size`` and a max
         width to fit within the sidebar. If the sidebar is closed, the max
-        width is retained from when it was open.
+        width is retained from when it was last open.
 
-        For best results, pass wide image to ``image`` and a square image to
-        ``icon_image``. Or, pass a square image to ``image`` and leave
-        ``icon_image=None``.
+        For best results, pass a wide or horizontal image to ``image`` and a
+        square image to ``icon_image``. Or, pass a square image to ``image``
+        and leave ``icon_image=None``.
 
     Examples
     --------

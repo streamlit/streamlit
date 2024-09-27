@@ -110,7 +110,7 @@ class VegaLiteState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The name of each Vega-Lite selection parameter becomes an attribute in
         the ``selection`` dictionary. The format of the data within each

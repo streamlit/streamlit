@@ -191,7 +191,7 @@ class ButtonMixin:
            https://doc-buton.streamlit.app/
            height: 220px
 
-        Although you can add icons to your button through Markdown, the
+        Although you can add icons to your buttons through Markdown, the
         ``icon`` parameter is a convenient and consistent alternative.
 
         >>> import streamlit as st

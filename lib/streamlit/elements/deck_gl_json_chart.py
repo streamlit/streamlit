@@ -173,8 +173,12 @@ class PydeckSelectionState(TypedDict, total=False):
     >>>
     >>> event.selection
 
+    .. output ::
+        https://doc-pydeck-event-state-selections.streamlit.app/
+        height: 700px
+
     This is an example of the selection state when selecting a single object
-    from a layer with id, `captial-cities`:
+    from a layer with id, ``"captial-cities"``:
 
     >>> {
     >>>   "indices":{
@@ -216,7 +220,7 @@ class PydeckState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``PydeckSelectionState``
         dictionary schema.
@@ -356,7 +360,7 @@ class PydeckMixin:
             - ``"rerun"``: Streamlit will rerun the app when the user selects
               data in the chart. In this case, ``st.pydeck_chart`` will return
               the selection data as a dictionary.
-            - callable: Streamlit will rerun the app and execute the callable
+            - A ``callable``: Streamlit will rerun the app and execute the callable
               as a callback function before the rest of the app. In this case,
               ``st.pydeck_chart`` will return the selection data as a
               dictionary.

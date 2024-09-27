@@ -64,7 +64,7 @@ class EmptyMixin:
         >>> import time
         >>>
         >>> st.button("Start over")
-        >>
+        >>>
         >>> placeholder = st.empty()
         >>> placeholder.markdown("Hello")
         >>> time.sleep(1)

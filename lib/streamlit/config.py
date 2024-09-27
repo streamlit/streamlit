@@ -100,7 +100,7 @@ def set_user_option(key: str, value: Any) -> None:
         - ``client.showSidebarNavigation``
         - ``client.toolbarMode``
 
-    Calling ``st.set_option`` with any other options will raise a
+    Calling ``st.set_option`` with any other option will raise a
     ``StreamlitAPIException``. When changing a configuration option in a
     running app, you may need to trigger a rerun after changing the option to
     see the effects.

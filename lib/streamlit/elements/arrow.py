@@ -145,7 +145,7 @@ class DataframeState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``DataframeSelectionState``
         dictionary schema.
@@ -295,7 +295,7 @@ class ArrowMixin:
             - ``snowflake.snowpark.dataframe.DataFrame``,
               ``snowflake.snowpark.table.Table``
 
-            If a dataype is not recognized, Streamlit will convert the object
+            If a data type is not recognized, Streamlit will convert the object
             to a ``pandas.DataFrame`` or ``pyarrow.Table`` using a
             ``.to_pandas()`` or ``.to_arrow()`` method, respectively, if
             available.
