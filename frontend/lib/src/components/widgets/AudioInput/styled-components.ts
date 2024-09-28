@@ -54,14 +54,15 @@ export const StyledWaveformTimeCode = styled.span<{
   fontSize: theme.fontSizes.sm,
 }))
 
-// NoMicPermissions
-export const StyledNoMicInputContainerDiv = styled.div(() => ({
+export const StyledErrorContainerDiv = styled.div(() => ({
   width: "100%",
   textAlign: "center",
   overflow: "hidden",
 }))
 
-export const StyledNoMicPermissionsErrorTextSpan = styled.span()
+export const StyledErrorTextSpan = styled.span(({ theme }) => ({
+  color: theme.colors.bodyText,
+}))
 
 export const StyledNoMicInputLearnMoreLink = styled.a()
 

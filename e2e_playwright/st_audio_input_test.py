@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Locator, Page, Route, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -292,3 +292,33 @@ def test_audio_input_basic_flow(app: Page):
     expect(app.get_by_text("Audio Input 1: False")).to_be_visible()
     expect(audio_input.get_by_role("button", name="Record").first).to_be_visible()
     expect(clock).to_have_text("00:00")
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_error_state(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test the error state of audio input."""
+    themed_app.context.grant_permissions(["microphone"])
+
+    def handle(route: Route):
+        route.abort("failed")
+
+    themed_app.route("**/_stcore/upload_file/**", handle)
+
+    audio_input = themed_app.get_by_test_id("stAudioInput").first
+
+    audio_input.get_by_role("button", name="Record").click()
+    themed_app.wait_for_timeout(1500)
+    stop_recording(audio_input, themed_app)
+
+    expect(
+        audio_input.get_by_text("An error has occurred, please try again.")
+    ).to_be_visible()
+
+    assert_snapshot(audio_input, name="st_audio_input-error_state")
+
+    audio_input.get_by_role("button", name="Reset").click()
+    expect(
+        audio_input.get_by_text("An error has occurred, please try again.")
+    ).not_to_be_visible()
