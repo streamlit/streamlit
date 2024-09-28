@@ -32,7 +32,7 @@ importlib_resources==6.4.5
 iniconfig==2.0.0
 jaraco.classes==3.4.0
 jaraco.context==6.0.1
-jaraco.functools==4.0.2
+jaraco.functools==4.1.0
 jeepney==0.8.0
 Jinja2==3.1.4
 jsonschema==4.23.0
@@ -47,7 +47,7 @@ more-itertools==10.5.0
 mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
-narwhals==1.8.3
+narwhals==1.8.4
 nh3==0.2.18
 nodeenv==1.9.1
 numpy==1.26.4
@@ -113,8 +113,8 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
-uv==0.4.16
+uv==0.4.17
 vega-datasets==0.9.0
-virtualenv==20.26.5
-watchdog==5.0.2
+virtualenv==20.26.6
+watchdog==5.0.3
 zipp==3.20.2
