@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from authlib.integrations.base_client import (
-    FrameworkIntegration,  # type: ignore[import-untyped]
+from authlib.integrations.base_client import (  # type: ignore[import-untyped]
+    FrameworkIntegration,
 )
 
 from streamlit.runtime.secrets import AttrDict

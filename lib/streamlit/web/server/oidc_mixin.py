@@ -20,8 +20,8 @@ from authlib.integrations.base_client import (  # type: ignore[import-untyped]
     OAuthError,
     OpenIDMixin,
 )
-from authlib.integrations.requests_client import (
-    OAuth2Session,  # type: ignore[import-untyped]
+from authlib.integrations.requests_client import (  # type: ignore[import-untyped]
+    OAuth2Session,
 )
 
 from streamlit.web.server.authlib_tornado_integration import TornadoIntegration
