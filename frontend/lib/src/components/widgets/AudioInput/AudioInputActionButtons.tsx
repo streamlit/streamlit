@@ -17,7 +17,12 @@
 import React, { memo } from "react"
 
 import { Mic } from "@emotion-icons/material-outlined"
-import { Pause, PlayArrow, StopCircle } from "@emotion-icons/material-rounded"
+import {
+  Pause,
+  PlayArrow,
+  Refresh,
+  StopCircle,
+} from "@emotion-icons/material-rounded"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import BaseButton, {
@@ -30,6 +35,7 @@ import {
   StyledActionButtonPlayPauseDiv,
   StyledActionButtonStartRecordingDiv,
   StyledActionButtonStopRecordingDiv,
+  StyledSpinner,
 } from "./styled-components"
 
 interface BaseActionButtonProps {
@@ -57,14 +63,17 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
   </BaseButton>
 )
 
-interface AudioInputActionButtonProps {
+export interface AudioInputActionButtonProps {
   disabled: boolean
   isRecording: boolean
   isPlaying: boolean
+  isUploading: boolean
+  isError: boolean
   recordingUrlExists: boolean
   startRecording(): void
   stopRecording(): void
   onClickPlayPause(): void
+  onClear(): void
 }
 
 interface AudioInputStopRecordingButtonProps {
@@ -81,6 +90,10 @@ interface AudioInputPlayPauseButtonProps {
 interface AudioInputStartRecordingButtonProps {
   disabled: boolean
   startRecording(): void
+}
+
+interface AudioInputResetButtonProps {
+  onClick(): void
 }
 
 export const AudioInputStopRecordingButton: React.FC<
@@ -133,15 +146,47 @@ export const AudioInputStartRecordingButton: React.FC<
   </StyledActionButtonStartRecordingDiv>
 )
 
+export const AudioInputResetButton: React.FC<AudioInputResetButtonProps> = ({
+  onClick,
+}) => (
+  <StyledActionButtonPlayPauseDiv>
+    <ActionButton
+      disabled={false}
+      onClick={onClick}
+      ariaLabel="Reset"
+      iconContent={Refresh}
+    />
+  </StyledActionButtonPlayPauseDiv>
+)
+
 const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({
   disabled,
   isRecording,
   isPlaying,
+  isUploading,
+  isError,
   recordingUrlExists,
   startRecording,
   stopRecording,
   onClickPlayPause,
+  onClear,
 }) => {
+  if (isError) {
+    return (
+      <StyledActionButtonContainerDiv>
+        <AudioInputResetButton onClick={onClear} />
+      </StyledActionButtonContainerDiv>
+    )
+  }
+
+  if (isUploading) {
+    return (
+      <StyledActionButtonContainerDiv>
+        <StyledSpinner aria-label="Uploading" />
+      </StyledActionButtonContainerDiv>
+    )
+  }
+
   return (
     <StyledActionButtonContainerDiv>
       {isRecording ? (
