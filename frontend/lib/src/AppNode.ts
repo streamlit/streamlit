@@ -147,7 +147,8 @@ export interface AppNode {
   clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
+    fragmentIdOfBlock?: string,
+    deletedNodes?: string[]
   ): AppNode | undefined
 
   /**
@@ -266,7 +267,8 @@ export class ElementNode implements AppNode {
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
+    fragmentIdOfBlock?: string,
+    deletedNodes?: string[]
   ): ElementNode | undefined {
     if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
       // If we're currently running a fragment, nodes unrelated to the fragment
@@ -282,6 +284,18 @@ export class ElementNode implements AppNode {
         return this
       }
     }
+
+    if (this.scriptRunId !== currentScriptRunId) {
+      const deletedNodeInfo = {
+        body: this.element,
+        metadata: this.metadata,
+        scriptRunId: this.scriptRunId,
+        fragmentId: this.fragmentId,
+      }
+      console.log("[DEBUG] push deletedNode", deletedNodeInfo)
+      deletedNodes?.push(JSON.stringify(deletedNodeInfo))
+    }
+
     return this.scriptRunId === currentScriptRunId ? this : undefined
   }
 
@@ -499,12 +513,21 @@ export class BlockNode implements AppNode {
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,
-    fragmentIdOfBlock?: string
+    fragmentIdOfBlock?: string,
+    deletedNodes?: string[]
   ): BlockNode | undefined {
     if (!fragmentIdsThisRun || !fragmentIdsThisRun.length) {
       // If we're not currently running a fragment, then we can remove any blocks
       // that don't correspond to currentScriptRunId.
       if (this.scriptRunId !== currentScriptRunId) {
+        deletedNodes?.push(
+          JSON.stringify({
+            type: "Block",
+            reason: "Remove due to old script run id.",
+            isFragmentRun: false,
+            children: this.children,
+          })
+        )
         return undefined
       }
     } else {
@@ -513,6 +536,14 @@ export class BlockNode implements AppNode {
 
       // The parent block was modified but this element wasn't, so it's stale.
       if (fragmentIdOfBlock && this.scriptRunId !== currentScriptRunId) {
+        deletedNodes?.push(
+          JSON.stringify({
+            type: "Block",
+            reason: "Remove becasue parentBlock was modified.",
+            isFragmentRun: true,
+            children: this.children,
+          })
+        )
         return undefined
       }
 
@@ -533,7 +564,8 @@ export class BlockNode implements AppNode {
         return child.clearStaleNodes(
           currentScriptRunId,
           fragmentIdsThisRun,
-          fragmentIdOfBlock
+          fragmentIdOfBlock,
+          deletedNodes
         )
       })
       .filter(notUndefined)
@@ -806,10 +838,15 @@ export class AppRoot {
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>
-  ): AppRoot {
+  ): [AppRoot, string[]] {
+    const deletedNodes: string[] = []
     const main =
-      this.main.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
-      new BlockNode(this.mainScriptHash)
+      this.main.clearStaleNodes(
+        currentScriptRunId,
+        fragmentIdsThisRun,
+        undefined,
+        deletedNodes
+      ) || new BlockNode(this.mainScriptHash)
     const sidebar =
       this.sidebar.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode(this.mainScriptHash)
@@ -822,17 +859,20 @@ export class AppRoot {
 
     const appLogo =
       this.appLogo?.scriptRunId === currentScriptRunId ? this.appLogo : null
-
-    return new AppRoot(
-      this.mainScriptHash,
-      new BlockNode(
+    console.log("[DEBUG] deletedNodes", deletedNodes)
+    return [
+      new AppRoot(
         this.mainScriptHash,
-        [main, sidebar, event, bottom],
-        new BlockProto({ allowEmpty: true }),
-        currentScriptRunId
+        new BlockNode(
+          this.mainScriptHash,
+          [main, sidebar, event, bottom],
+          new BlockProto({ allowEmpty: true }),
+          currentScriptRunId
+        ),
+        appLogo
       ),
-      appLogo
-    )
+      deletedNodes,
+    ]
   }
 
   /** Return a Set containing all Elements in the tree. */

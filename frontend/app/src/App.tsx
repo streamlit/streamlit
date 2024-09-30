@@ -22,6 +22,7 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 import without from "lodash/without"
 
+import Selectbox from "@streamlit/lib/src/components/shared/Dropdown"
 import {
   AppConfig,
   AppRoot,
@@ -129,6 +130,7 @@ import {
   MsgBundle,
   MsgLogger,
   StyledApp,
+  StyledDebugPanel,
 } from "@streamlit/app/src/styled-components"
 import withScreencast, {
   ScreenCastHOC,
@@ -192,6 +194,8 @@ interface State {
   inputsDisabled: boolean
   handledMessageBundles: ForwardMsg[][]
   handledMessageBundleMetadata: MessageBundleMetadata[]
+  selectedDebugMenuOption: number
+  deletedNotesInfo: string[]
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -331,6 +335,8 @@ export class App extends PureComponent<Props, State> {
       inputsDisabled: false,
       handledMessageBundles: [],
       handledMessageBundleMetadata: [],
+      selectedDebugMenuOption: 0,
+      deletedNotesInfo: [],
     }
 
     this.connectionManager = null
@@ -1254,13 +1260,18 @@ export class App extends PureComponent<Props, State> {
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
         this.setState(
-          ({ scriptRunId, fragmentIdsThisRun }) => ({
-            // Apply any pending elements that haven't been applied.
-            elements: this.pendingElementsBuffer.clearStaleNodes(
-              scriptRunId,
-              fragmentIdsThisRun
-            ),
-          }),
+          ({ scriptRunId, fragmentIdsThisRun }) => {
+            const [newAppRoot, deletedNodesInfo] =
+              this.pendingElementsBuffer.clearStaleNodes(
+                scriptRunId,
+                fragmentIdsThisRun
+              )
+            return {
+              // Apply any pending elements that haven't been applied.
+              elements: newAppRoot,
+              deletedNotesInfo: deletedNodesInfo,
+            }
+          },
           () => {
             this.pendingElementsBuffer = this.state.elements
           }
@@ -2025,109 +2036,141 @@ export class App extends PureComponent<Props, State> {
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
                 expandSidebarNav={expandSidebarNav}
+                setDeletedNodesInfo={(deletedNotesInfo: string[]) => {
+                  this.setState({ deletedNotesInfo: deletedNotesInfo })
+                }}
               />
               {renderedDialog}
             </StyledApp>
-            <MsgLogger>
-              <div>
-                MessageBundles: {this.state.handledMessageBundles.length}
-              </div>
-              <div>---</div>
-              {this.state.handledMessageBundles.map((bundle, bundleIndex) => {
-                const metadata =
-                  this.state.handledMessageBundleMetadata[bundleIndex]
-                return (
-                  <>
-                    <MsgBundle key={metadata.receivedAt}>
-                      <div>
-                        {this.state.handledMessageBundles.length - bundleIndex}
-                        . Bundle (receivedAt: {metadata.receivedAt}):
-                      </div>
-                      {bundle.map((msg, index) => {
-                        const parsedMsg = {
-                          scriptRunId: msg.newSession?.scriptRunId,
-                          type: msg.type,
-                          fragmentId: msg.delta?.fragmentId,
-                          ...{
-                            sessionId: msg.newSession?.scriptRunId,
-                            fragmentIds: msg.newSession?.fragmentIdsThisRun,
-                            scriptFinishedStatus: msg.scriptFinished
-                              ? ForwardMsg.ScriptFinishedStatus[
-                                  msg.scriptFinished
-                                ]
-                              : undefined,
-                            deltaType:
-                              (msg.delta?.newElement as ElementProto)?.type ||
-                              (msg.delta?.addBlock as BlockProto)?.type,
-                            // eslint-disable-next-line
-                            // @ts-ignore
-                            loadedFromCache: msg.loadedFromCache,
-                            deltaPath:
-                              msg.metadata?.deltaPath &&
-                              msg.metadata?.deltaPath.length > 0
-                                ? msg.metadata?.deltaPath
-                                : undefined,
-                          },
-                        }
-                        const classNameDeltaPath = `[${msg.metadata?.deltaPath}]`
-                        return (
-                          <Msg
-                            key={msg.hash + index}
-                            className={
-                              classNameDeltaPath !== "[]"
-                                ? classNameDeltaPath
-                                : ""
+            <StyledDebugPanel>
+              <Selectbox
+                disabled={false}
+                value={this.state.selectedDebugMenuOption}
+                options={["Messages", "Deleted"]}
+                onChange={value =>
+                  this.setState({ selectedDebugMenuOption: value ?? 0 })
+                }
+              />
+              {this.state.selectedDebugMenuOption === 0 && (
+                <MsgLogger>
+                  <div>
+                    MessageBundles: {this.state.handledMessageBundles.length}
+                  </div>
+                  <div>---</div>
+                  {this.state.handledMessageBundles.map(
+                    (bundle, bundleIndex) => {
+                      const metadata =
+                        this.state.handledMessageBundleMetadata[bundleIndex]
+                      return (
+                        <MsgBundle key={metadata.receivedAt}>
+                          <div>
+                            {this.state.handledMessageBundles.length -
+                              bundleIndex}
+                            . Bundle (receivedAt: {metadata.receivedAt}):
+                          </div>
+                          {bundle.map((msg, index) => {
+                            const parsedMsg = {
+                              scriptRunId: msg.newSession?.scriptRunId,
+                              type: msg.type,
+                              fragmentId: msg.delta?.fragmentId,
+                              ...{
+                                sessionId: msg.newSession?.scriptRunId,
+                                fragmentIds:
+                                  msg.newSession?.fragmentIdsThisRun,
+                                scriptFinishedStatus: msg.scriptFinished
+                                  ? ForwardMsg.ScriptFinishedStatus[
+                                      msg.scriptFinished
+                                    ]
+                                  : undefined,
+                                deltaType:
+                                  (msg.delta?.newElement as ElementProto)
+                                    ?.type ||
+                                  (msg.delta?.addBlock as BlockProto)?.type,
+                                // eslint-disable-next-line
+                                // @ts-ignore
+                                loadedFromCache: msg.loadedFromCache,
+                                deltaPath:
+                                  msg.metadata?.deltaPath &&
+                                  msg.metadata?.deltaPath.length > 0
+                                    ? msg.metadata?.deltaPath
+                                    : undefined,
+                              },
                             }
-                            onMouseOver={() => {
-                              const elements =
-                                document.getElementsByClassName(
-                                  classNameDeltaPath
-                                )
-                              // only highlight when there is more than one element to hightlight / link
-                              if (elements.length < 2) {
-                                return
-                              }
-                              for (let i = 0; i < elements.length; i++) {
-                                const element = elements[i] as HTMLElement
-                                if (element.classList.contains("highlight")) {
-                                  continue
+                            const classNameDeltaPath = `[${msg.metadata?.deltaPath}]`
+                            return (
+                              <Msg
+                                key={msg.hash + index}
+                                className={
+                                  classNameDeltaPath !== "[]"
+                                    ? classNameDeltaPath
+                                    : ""
                                 }
-                                element.classList.add("highlight")
-                                element.style.border = "1px solid red"
-                              }
-                            }}
-                            onMouseOut={() => {
-                              const elements =
-                                document.getElementsByClassName(
-                                  classNameDeltaPath
-                                )
-                              for (let i = 0; i < elements.length; i++) {
-                                const element = elements[i] as HTMLElement
-                                element.classList.remove("highlight")
-                                element.style.border = ""
-                              }
-                            }}
-                          >
-                            {/* {JSON.stringify(parsedMsg, undefined, 1)} */}
-                            {parsedMsg.type}
-                            {parsedMsg.deltaPath && `[${parsedMsg.deltaPath}]`}
-                            <Json
-                              element={JsonProto.create({
-                                body: JSON.stringify({ ...parsedMsg }),
-                              })}
-                              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                              // @ts-ignore
-                              width="100%"
-                            />
-                          </Msg>
-                        )
-                      })}
-                      <div>---</div>
-                    </MsgBundle>
-                  </>
-                )
-              })}
-            </MsgLogger>
+                                onMouseOver={() => {
+                                  const elements =
+                                    document.getElementsByClassName(
+                                      classNameDeltaPath
+                                    )
+                                  // only highlight when there is more than one element to hightlight / link
+                                  if (elements.length < 2) {
+                                    return
+                                  }
+                                  for (let i = 0; i < elements.length; i++) {
+                                    const element = elements[i] as HTMLElement
+                                    if (
+                                      element.classList.contains("highlight")
+                                    ) {
+                                      continue
+                                    }
+                                    element.classList.add("highlight")
+                                    element.style.border = "1px solid red"
+                                  }
+                                }}
+                                onMouseOut={() => {
+                                  const elements =
+                                    document.getElementsByClassName(
+                                      classNameDeltaPath
+                                    )
+                                  for (let i = 0; i < elements.length; i++) {
+                                    const element = elements[i] as HTMLElement
+                                    element.classList.remove("highlight")
+                                    element.style.border = ""
+                                  }
+                                }}
+                              >
+                                {parsedMsg.type}
+                                {parsedMsg.deltaPath &&
+                                  `[${parsedMsg.deltaPath}]`}
+                                <Json
+                                  element={JsonProto.create({
+                                    body: JSON.stringify({ ...parsedMsg }),
+                                  })}
+                                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                                  // @ts-ignore
+                                  width="100%"
+                                />
+                              </Msg>
+                            )
+                          })}
+                          <div>---</div>
+                        </MsgBundle>
+                      )
+                    }
+                  )}
+                </MsgLogger>
+              )}
+              {this.state.selectedDebugMenuOption === 1 &&
+                this.state.deletedNotesInfo.map(info => (
+                  <Json
+                    key={info}
+                    element={JsonProto.create({
+                      body: info,
+                    })}
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
+                    width="100%"
+                  />
+                ))}
+            </StyledDebugPanel>
           </HotKeys>
         </LibContext.Provider>
       </AppContext.Provider>

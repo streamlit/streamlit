@@ -93,6 +93,8 @@ export interface AppViewProps {
   hideSidebarNav: boolean
 
   expandSidebarNav: boolean
+
+  setDeletedNodesInfo: (deletedNodesInfo: string[]) => void
 }
 
 /**
