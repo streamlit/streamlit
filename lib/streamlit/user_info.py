@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Iterator, Mapping, NoReturn, Union
+from typing import TYPE_CHECKING, Iterator, Mapping, NoReturn, Union
 
 from streamlit import config, runtime
 from streamlit.errors import StreamlitAPIException
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 def get_signing_secret() -> str:
-    signing_secret = config.get_option("server.cookieSecret")
+    signing_secret: str = config.get_option("server.cookieSecret")
     if secrets_singleton.load_if_toml_exists():
         auth_section = secrets_singleton.get("auth")
         if auth_section:
@@ -40,7 +40,7 @@ def get_signing_secret() -> str:
 
 def encode_provider_token(provider: str) -> str:
     try:
-        from authlib.jose import jwt
+        from authlib.jose import jwt  # type: ignore[import-untyped]
     except ImportError:
         raise StreamlitAPIException(
             "To use Auth you need to install the 'authlib' package."
@@ -51,13 +51,13 @@ def encode_provider_token(provider: str) -> str:
         "provider": provider,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=2),
     }
-    provider_token = jwt.encode(header, payload, get_signing_secret())
+    provider_token: bytes = jwt.encode(header, payload, get_signing_secret())
     return provider_token.decode("latin-1")
 
 
-def decode_provider_token(provider_token: str) -> Mapping[str, Any]:
+def decode_provider_token(provider_token: str):
     try:
-        from authlib.jose import JoseError, jwt
+        from authlib.jose import JoseError, JWTClaims, jwt
     except ImportError:
         raise StreamlitAPIException(
             "To use Auth you need to install the 'authlib' package."
@@ -65,7 +65,7 @@ def decode_provider_token(provider_token: str) -> Mapping[str, Any]:
 
     claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
     try:
-        payload = jwt.decode(
+        payload: JWTClaims = jwt.decode(
             provider_token, get_signing_secret(), claims_options=claim_options
         )
         payload.validate()
@@ -173,9 +173,9 @@ class UserInfoProxy(Mapping[str, Union[str, None]]):
 
             if runtime.exists():
                 instance = runtime.get_instance()
-                instance._session_mgr.get_session_info(
-                    session_id
-                ).session._user_info = {}
+                session_info = instance._session_mgr.get_session_info(session_id)
+                if session_info is not None:
+                    session_info.session._user_info = {}
 
             fwd_msg = ForwardMsg()
             fwd_msg.auth_redirect.url = "/auth/logout"

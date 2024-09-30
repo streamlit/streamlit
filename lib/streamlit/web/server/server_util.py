@@ -78,7 +78,7 @@ def get_cookie_secret() -> str:
 
     If the user has not set a cookie secret, we generate a random one.
     """
-    cookie_secret = config.get_option("server.cookieSecret")
+    cookie_secret: str = config.get_option("server.cookieSecret")
     if secrets_singleton.load_if_toml_exists():
         auth_section = secrets_singleton.get("auth")
         if auth_section:

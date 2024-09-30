@@ -68,9 +68,14 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         _, token, _ = self._decode_xsrf_token(supplied_token)
         _, expected_token, _ = self._get_raw_xsrf_token()
 
-        return bool(token) and hmac.compare_digest(utf8(token), utf8(expected_token))
+        decoded_token = utf8(token)
+        decoded_expected_token = utf8(expected_token)
 
-    def _parse_user_cookie(self, raw_cookie_value: str, email) -> dict[str, Any]:
+        if not decoded_token or not decoded_expected_token:
+            return False
+        return hmac.compare_digest(decoded_token, decoded_expected_token)
+
+    def _parse_user_cookie(self, raw_cookie_value: bytes, email) -> dict[str, Any]:
         cookie_value = json.loads(raw_cookie_value)
         user_info = {}
 

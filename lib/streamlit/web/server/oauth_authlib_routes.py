@@ -75,6 +75,8 @@ class AuthLoginHandler(tornado.web.RequestHandler):
     async def get(self):
         provider_token = self.get_argument("provider", None)
         try:
+            if provider_token is None:
+                raise StreamlitAPIException("Missing provider token")
             payload = decode_provider_token(provider_token)
         except StreamlitAPIException:
             self.redirect("/")

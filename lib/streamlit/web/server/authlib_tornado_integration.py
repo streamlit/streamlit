@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from authlib.integrations.base_client import FrameworkIntegration
+from authlib.integrations.base_client import (
+    FrameworkIntegration,  # type: ignore[import-untyped]
+)
 
 from streamlit.runtime.secrets import AttrDict
 
 
-class TornadoIntegration(FrameworkIntegration):
+class TornadoIntegration(FrameworkIntegration):  # type: ignore[misc]
     def update_token(self, token, refresh_token=None, access_token=None):
         """We do not support token refresh, since we obtain and operate user
         identity tokens"""

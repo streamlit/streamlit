@@ -13,19 +13,21 @@
 # limitations under the License.
 
 import tornado.web
-from authlib.integrations.base_client import (
+from authlib.integrations.base_client import (  # type: ignore[import-untyped]
     BaseApp,
     BaseOAuth,
     OAuth2Mixin,
     OAuthError,
     OpenIDMixin,
 )
-from authlib.integrations.requests_client import OAuth2Session
+from authlib.integrations.requests_client import (
+    OAuth2Session,  # type: ignore[import-untyped]
+)
 
 from streamlit.web.server.authlib_tornado_integration import TornadoIntegration
 
 
-class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
+class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):  # type: ignore[misc]
     client_cls = OAuth2Session
 
     def load_server_metadata(self):
@@ -87,7 +89,7 @@ class TornadoOAuth2App(OAuth2Mixin, OpenIDMixin, BaseApp):
         return token
 
 
-class TornadoOAuth(BaseOAuth):
+class TornadoOAuth(BaseOAuth):  # type: ignore[misc]
     oauth2_client_cls = TornadoOAuth2App
     framework_integration_cls = TornadoIntegration
 
