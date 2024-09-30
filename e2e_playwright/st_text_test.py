@@ -22,23 +22,17 @@ def test_st_text_shows_correct_text(app: Page):
     expect(app.get_by_test_id("stText").nth(0)).to_have_text("This text is awesome!")
 
 
-def test_st_text_shows_ascii_art_correctly(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    assert_snapshot(app.get_by_test_id("stText").nth(1), name="st_text-ascii_art")
-
-
 def test_st_text_doesnt_apply_formatting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
-        app.get_by_test_id("stText").nth(2), name="st_text-no_formatting_applied"
+        app.get_by_test_id("stText").nth(1), name="st_text-no_formatting_applied"
     )
 
 
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
-    text_with_help = app.get_by_test_id("stText").nth(3)
+    text_with_help = app.get_by_test_id("stText").nth(2)
     expect_help_tooltip(app, text_with_help, "This is a help tooltip!")
 
 
