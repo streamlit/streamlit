@@ -272,6 +272,14 @@ def test_audio_input_basic_flow(app: Page):
 
     ensure_waveform_rendered(audio_input)
 
+    expect(app.get_by_text("Channels:")).to_be_visible()
+    expect(app.get_by_text("Sample Width:")).to_be_visible()
+    expect(app.get_by_text("Frame Rate (Sample Rate):")).to_be_visible()
+    expect(app.get_by_text("Duration:")).to_be_visible()
+
+    # Ensure no error is displayed
+    expect(app.get_by_text("Error loading WAV file")).not_to_be_visible()
+
     # Play and pause the recording, then verify the controls
     play_button = audio_input.get_by_role("button", name="Play").first
     expect(clock).not_to_have_text("00:00")

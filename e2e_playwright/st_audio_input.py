@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import time
+import wave
 
 import streamlit as st
 
@@ -28,6 +30,30 @@ def render_main_audio_input():
     )
     st.audio(audio_input)  # Display the audio playback if available
     st.write("Audio Input 1:", bool(audio_input))  # Display True if audio was captured
+
+    if audio_input is not None:
+        # Load the uploaded file as a file-like object
+        wav_file_like = io.BytesIO(audio_input.read())
+
+        try:
+            # Open the in-memory file with the wave module
+            with wave.open(wav_file_like, "rb") as wav_file:
+                # Extract information about the WAV file
+                num_channels = wav_file.getnchannels()
+                sample_width = wav_file.getsampwidth()
+                frame_rate = wav_file.getframerate()
+                num_frames = wav_file.getnframes()
+                duration = num_frames / float(frame_rate)
+
+                # Display the information
+                st.write(f"**Channels**: {num_channels}")
+                st.write(f"**Sample Width**: {sample_width} bytes")
+                st.write(f"**Frame Rate (Sample Rate)**: {frame_rate} Hz")
+                st.write(f"**Number of Frames**: {num_frames}")
+                st.write(f"**Duration**: {duration:.2f} seconds")
+
+        except wave.Error as e:
+            st.error(f"Error loading WAV file: {e}")
 
 
 # Form Audio Input Section
