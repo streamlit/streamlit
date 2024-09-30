@@ -107,6 +107,21 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
             state_provider_mapping[code] = provider
         provider = state_provider_mapping.get(state_code_from_url, None)
 
+        redirect_uri = None
+        if secrets_singleton.load_if_toml_exists():
+            auth_section = secrets_singleton.get("auth")
+            if auth_section:
+                redirect_uri = auth_section.get("redirect_uri", None)
+
+        if not redirect_uri:
+            self.redirect("/")
+            return
+
+        redirect_uri_parsed = urlparse(redirect_uri)
+        origin_from_redirect_uri = (
+            redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
+        )
+
         error = self.get_argument("error", None)
 
         if error:
@@ -114,6 +129,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
                 "provider": provider,
                 "error": error,
                 "email": None,
+                "origin": origin_from_redirect_uri,
             }
             self.set_auth_cookie(dict_for_cookie)
             self.redirect("/")
@@ -124,6 +140,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
                 "provider": None,
                 "error": "Missing provider",
                 "email": None,
+                "origin": origin_from_redirect_uri,
             }
             self.set_auth_cookie(dict_for_cookie)
             self.redirect("/")
@@ -133,20 +150,8 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         token = client.authorize_access_token(self)
         user = token.get("userinfo")
 
-        redirect_uri = None
-        if secrets_singleton.load_if_toml_exists():
-            auth_section = secrets_singleton.get("auth")
-            if auth_section:
-                redirect_uri = auth_section.get("redirect_uri", None)
-
-        if not redirect_uri:
-            self.redirect("/")
-            return
         cookie_dict = dict(user)
-        redirect_uri_parsed = urlparse(redirect_uri)
-        cookie_dict["origin"] = (
-            redirect_uri_parsed.scheme + "://" + redirect_uri_parsed.netloc
-        )
+        cookie_dict["origin"] = origin_from_redirect_uri
 
         if user:
             self.set_auth_cookie(cookie_dict)

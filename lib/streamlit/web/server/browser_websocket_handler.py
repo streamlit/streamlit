@@ -81,6 +81,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         )
         if cookie_value_origin == expected_origin_value:
             user_info["email"] = cookie_value.get("email", email)
+            del cookie_value["origin"]
             user_info["userinfo"] = cookie_value
 
         return user_info
