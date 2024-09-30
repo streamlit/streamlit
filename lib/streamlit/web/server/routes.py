@@ -217,7 +217,7 @@ class HostConfigHandler(_SpecialRequestHandler):
 
         # response = requests.get("https://data.streamlit.io/tokens.json", timeout=5).text
         # self._metrics_url = json.loads(response)["mapbox-localhost"]
-        self._metrics_url = "postMessage"
+        self._metrics_url = "https://webhooks.fivetran.com/webhooks/69b8ff71-3e5c-4073-a9ef-c4b49e411b25"
 
         if (
             config.get_option("global.developmentMode")

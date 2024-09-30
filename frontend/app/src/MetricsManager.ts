@@ -30,7 +30,8 @@ import {
   SessionInfo,
 } from "@streamlit/lib"
 
-const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/tokens.json"
+const DEFAULT_METRICS_CONFIG =
+  "https://webhooks.fivetran.com/webhooks/69b8ff71-3e5c-4073-a9ef-c4b49e411b25"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -139,7 +140,7 @@ export class MetricsManager {
   }
 
   public enqueue(evName: string, evData: Record<string, any> = {}): void {
-    if (!this.initialized || !this.sessionInfo.isSet) {
+    if (!this.initialized || !this.sessionInfo.isSet || !this.metricsUrl) {
       this.pendingEvents.push([evName, evData])
       return
     }
@@ -167,19 +168,24 @@ export class MetricsManager {
       source: "browser",
       streamlitVersion: this.sessionInfo.current.streamlitVersion,
       isHello: this.sessionInfo.isHello,
-      anonymousId: this.anonymousId,
     }
 
     // Don't actually track events when in dev mode, just print them instead.
     // This is just to keep us from tracking too many events and having to pay
     // for all of them.
-    // if (IS_DEV_ENV) {
-    //   logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
-    // } else
-    if (this.metricsUrl === "postMessage") {
+    if (IS_DEV_ENV) {
+      logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
+    } else if (this.metricsUrl === "postMessage") {
       this.postMessageEvent(evName, data)
     } else if (this.metricsUrl) {
-      this.track(evName, data)
+      this.track(evName, data, {
+        context: {
+          // Segment automatically attaches the IP address. But we don't use, process,
+          // or store IP addresses for our telemetry. To make this more explicit, we
+          // are overwriting this here so that it is never even sent to Segment.
+          ip: "7.7.7.7",
+        },
+      })
     }
   }
 
@@ -191,12 +197,33 @@ export class MetricsManager {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private track(evName: string, data: Record<string, unknown>): void {
+  private async track(
+    evName: string,
+    data: Record<string, unknown>,
+    context: Record<string, unknown> = {}
+  ): Promise<void> {
+    console.log(
+      "== Test Sending message to Segment & test Fivetran Webhook:",
+      evName,
+      data
+    )
+
+    // Send the event to Segment
+    analytics.track(evName, data, context)
+
     const eventProto = this.buildEventProto(evName, data)
     const eventJson = eventProto.toJSON()
     // Send the event to the metrics URL
-    console.log("== Test Sending message to metrics url ==")
-    console.log(eventJson)
+    // @ts-expect-error
+    const request = new Request(this.metricsUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(eventJson),
+    })
+    const response = await fetch(request)
+    console.log("Response Status:", response.status)
   }
 
   private postMessageEvent(
@@ -212,7 +239,8 @@ export class MetricsManager {
 
   private buildEventProto(
     evName: string,
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
+    overrides: Record<string, unknown> = {}
   ): MetricsEvent {
     const eventProto = new MetricsEvent({
       event: evName,
@@ -247,22 +275,26 @@ export class MetricsManager {
       const cachedConfig = localStorage.getItem("stMetricsConfig")
       if (cachedConfig) {
         this.metricsUrl = cachedConfig
+        return
       }
     }
 
-    const response = await fetch(DEFAULT_METRICS_CONFIG)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch metrics config: ${response.status}`)
-    } else {
-      const jsonResponse = await response.json()
-      const metricsUrl = jsonResponse["mapbox-localhost"]
-      if (metricsUrl) {
-        this.metricsUrl = metricsUrl
-        if (localStorageAvailable()) {
-          localStorage.setItem("stMetricsConfig", metricsUrl)
-        }
-      }
-    }
+    this.metricsUrl = DEFAULT_METRICS_CONFIG
+
+    // // Add this back in when we have a metrics config to fetch
+    // const response = await fetch(DEFAULT_METRICS_CONFIG)
+    // if (!response.ok) {
+    //   throw new Error(`Failed to fetch metrics config: ${response.status}`)
+    // } else {
+    //   const jsonResponse = await response.json()
+    //   const metricsUrl = jsonResponse["mapbox-localhost"]
+    //   if (metricsUrl) {
+    //     this.metricsUrl = metricsUrl
+    //     if (localStorageAvailable()) {
+    //       localStorage.setItem("stMetricsConfig", metricsUrl)
+    //     }
+    //   }
+    // }
   }
 
   /**
