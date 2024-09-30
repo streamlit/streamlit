@@ -120,7 +120,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
-        this.widgetMgr.setFormsWithUploads(formIds),
+        this.widgetMgr.setFormsWithUploadsInProgress(formIds),
       requestFileURLs: jest.fn(),
     })
 
