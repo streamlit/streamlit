@@ -19,7 +19,7 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "MetricsEventProto";
 
-import "streamlit/proto/PageProfileEvent.proto";
+import "streamlit/proto/PageProfile.proto";
 
 // Metrics events:
 message MetricsEvent {
@@ -32,30 +32,53 @@ message MetricsEvent {
   string context_page_path = 5;
   string context_page_referrer = 6;
   string context_page_search = 7;
+  string context_locale = 8;
+  string context_user_agent = 9;
 
-  bool dev = 8;
-  bool is_hello = 9;
-  string machine_id_v3 = 10;
-  string report_hash = 11;
-  string source = 12;
-  string streamlit_version = 13;
+  bool dev = 10;
+  bool is_hello = 11;
+  string machine_id_v3 = 12;
+  string report_hash = 13;
+  string source = 14;
+  string streamlit_version = 15;
 
 
   // Host tracking fields:
-  string hosted_at = 14;
-  string owner = 15;
-  string repo = 16;
-  string branch = 17;
-  string main_module = 18;
-  string creator_id = 19;
+  string hosted_at = 16;
+  string owner = 17;
+  string repo = 18;
+  string branch = 19;
+  string main_module = 20;
+  string creator_id = 21;
 
 
   // Menu Click Event field:
-  optional string label = 20;
+  string label = 22;
 
   // Page Profile Event fields:
-  optional PageProfileEvent page_profile = 21;
+  // Same as PageProfile msg
+  repeated Command commands = 23;
+  int64 exec_time = 24;
+  int64 prep_time = 25;
+  repeated string config = 26;
+  string uncaught_exception = 27;
+  repeated string attributions = 28;
+  string os = 29;
+  string timezone = 30;
+  bool headless = 31;
+  bool is_fragment_run = 32;
 
+  // Addtl fields for metrics event
+  string app_id = 33;
+  int64 numPages = 34;
+  string session_id = 35;
+  string python_version = 36;
+  string page_script_hash = 37;
+  string active_theme = 38;
+  int64 total_load_time = 39;
+  string browser_name = 40;
+  string browser_version = 41;
+  string device_type = 42;
 
-  // Next ID: 22
+  // Next ID: 43
 }

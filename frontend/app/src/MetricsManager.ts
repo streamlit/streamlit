@@ -205,7 +205,8 @@ export class MetricsManager {
     console.log(
       "== Test Sending message to Segment & test Fivetran Webhook:",
       evName,
-      data
+      data,
+      this.anonymousId
     )
 
     // Send the event to Segment
@@ -258,8 +259,7 @@ export class MetricsManager {
     if (evName === "menuClick") {
       eventProto.label = data.label as string
     } else if (evName === "pageProfile") {
-      const pageProfileEvent = new PageProfileEvent({ ...data })
-      eventProto.pageProfile = pageProfileEvent
+      return new MetricsEvent({ ...eventProto, ...data })
     }
 
     return eventProto
@@ -314,7 +314,9 @@ export class MetricsManager {
     if (anonymousIdCookie) {
       this.anonymousId = anonymousIdCookie
 
-      localStorage.setItem("ajs_anonymous_id", anonymousIdCookie)
+      if (localStorageAvailable()) {
+        localStorage.setItem("ajs_anonymous_id", anonymousIdCookie)
+      }
     } else if (anonymousIdLocalStorage) {
       this.anonymousId = anonymousIdLocalStorage
 
@@ -323,7 +325,9 @@ export class MetricsManager {
       this.anonymousId = uuidv4()
 
       setCookie("ajs_anonymous_id", this.anonymousId, expiration)
-      localStorage.setItem("ajs_anonymous_id", this.anonymousId)
+      if (localStorageAvailable()) {
+        localStorage.setItem("ajs_anonymous_id", this.anonymousId)
+      }
     }
 
     return this.anonymousId
@@ -339,6 +343,10 @@ export class MetricsManager {
       contextPagePath: window.location.pathname,
       contextPageReferrer: document.referrer,
       contextPageSearch: window.location.search,
+      // @ts-expect-error
+      contextLocale:
+        window.navigator.userLanguage || window.navigator.language,
+      contextUserAgent: window.navigator.userAgent,
     }
   }
 
