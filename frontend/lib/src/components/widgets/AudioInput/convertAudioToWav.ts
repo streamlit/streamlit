@@ -14,53 +14,81 @@
  * limitations under the License.
  */
 
-import { FFmpeg } from "@ffmpeg/ffmpeg"
-
-export function loadFFmpeg(): void {
-  const ffmpeg = new FFmpeg()
-
-  if (!ffmpeg.loaded) {
-    ffmpeg.load()
-  }
-}
-
 /**
- * Converts any audio/video Blob to a WAV Blob using FFmpeg.
+ * Converts a file Blob (audio/video) to a WAV Blob.
  * @param fileBlob - The input file as a Blob.
- * @returns - A Promise that resolves with the WAV file as a Blob.
+ * @returns - A Promise resolving with the WAV file as a Blob.
  */
 async function convertFileToWav(fileBlob: Blob): Promise<Blob | undefined> {
-  const ffmpeg = new FFmpeg()
+  const audioContext = new window.AudioContext()
+  const arrayBuffer = await fileBlob.arrayBuffer()
 
+  let audioBuffer: AudioBuffer
   try {
-    // Load FFmpeg if it's not loaded already
-    if (!ffmpeg.loaded) {
-      await ffmpeg.load()
-    }
-
-    const inputArrayBuffer = await fileBlob.arrayBuffer()
-    const inputUint8Array = new Uint8Array(inputArrayBuffer)
-
-    // Guess the input file extension based on the Blob's MIME type
-    const mimeType = fileBlob.type
-    const extension = mimeType.split("/")[1] || "dat" // Fallback to ".dat" if unknown
-    const inputFileName = `input.${extension}`
-
-    // Write the input file to FFmpeg's virtual file system with the guessed extension
-    ffmpeg.writeFile(inputFileName, inputUint8Array)
-
-    // Convert the input file to WAV
-    await ffmpeg.exec(["-i", inputFileName, "output.wav"])
-
-    // Read the WAV file from FFmpeg's virtual file system
-    const wavData = await ffmpeg.readFile("output.wav")
-    const wavBlob = new Blob([wavData], { type: "audio/wav" })
-
-    return wavBlob
+    audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   } catch (error) {
-    console.error("Error converting file to WAV:", error)
-    return undefined
+    console.error("Error decoding audio data:", error)
+    return undefined // Return undefined if decoding fails
   }
+
+  const numOfChan = audioBuffer.numberOfChannels
+  const length = audioBuffer.length * numOfChan * 2 + 44
+  const buffer = new ArrayBuffer(length)
+  const view = new DataView(buffer)
+  let offset = 0
+
+  const writeString = (
+    view: DataView,
+    offset: number,
+    string: string
+  ): void => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i))
+    }
+  }
+
+  // Write WAV header
+  writeString(view, offset, "RIFF")
+  offset += 4
+  view.setUint32(offset, length - 8, true) // Size of file minus RIFF header
+  offset += 4
+  writeString(view, offset, "WAVE")
+  offset += 4
+  writeString(view, offset, "fmt ")
+  offset += 4
+  view.setUint32(offset, 16, true) // PCM format
+  offset += 4
+  view.setUint16(offset, 1, true) // PCM
+  offset += 2
+  view.setUint16(offset, numOfChan, true) // Number of channels
+  offset += 2
+  view.setUint32(offset, audioBuffer.sampleRate, true) // Sample rate
+  offset += 4
+  view.setUint32(offset, audioBuffer.sampleRate * numOfChan * 2, true) // Byte rate
+  offset += 4
+  view.setUint16(offset, numOfChan * 2, true) // Block align
+  offset += 2
+  view.setUint16(offset, 16, true) // Bits per sample (16-bit)
+  offset += 2
+  writeString(view, offset, "data")
+  offset += 4
+  view.setUint32(offset, audioBuffer.length * numOfChan * 2, true) // Data chunk size
+  offset += 4
+
+  // Write PCM data
+  for (let i = 0; i < audioBuffer.length; i++) {
+    for (let channel = 0; channel < numOfChan; channel++) {
+      const sample = Math.max(
+        -1,
+        Math.min(1, audioBuffer.getChannelData(channel)[i])
+      )
+      view.setInt16(offset, sample * 0x7fff, true)
+      offset += 2
+    }
+  }
+
+  const wavArray = new Uint8Array(buffer)
+  return new Blob([wavArray], { type: "audio/wav" })
 }
 
 export default convertFileToWav
