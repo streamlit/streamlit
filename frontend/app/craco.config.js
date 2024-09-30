@@ -113,7 +113,8 @@ module.exports = {
         webpackConfig.output.filename = "static/js/[name].js"
         webpackConfig.output.cssFilename = "static/css/[name].css"
         // Use fixed names for font files as well.
-        webpackConfig.output.assetModuleFilename = "static/media/[base]"
+        webpackConfig.output.assetModuleFilename =
+          "static/media/[name].[contenthash][ext]"
 
         // The MiniCssExtractPlugin doesn't honor cssFilename, so recreate the
         // plugin with better settings if it's present.
