@@ -16,25 +16,19 @@
 
 import React, { ReactElement } from "react"
 
-import { ENABLE_PERIPHERALS_DOCS_URL } from "@streamlit/lib/src/urls"
-
 import {
   StyledErrorContainerDiv,
   StyledErrorTextSpan,
-  StyledNoMicInputLearnMoreLink,
 } from "./styled-components"
 
-const NoMicPermissions = (): ReactElement => {
+const AudioInputErrorState = (): ReactElement => {
   return (
     <StyledErrorContainerDiv>
       <StyledErrorTextSpan>
-        This app would like to use your microphone.
-      </StyledErrorTextSpan>{" "}
-      <StyledNoMicInputLearnMoreLink href={ENABLE_PERIPHERALS_DOCS_URL}>
-        Learn how to allow access.
-      </StyledNoMicInputLearnMoreLink>
+        An error has occurred, please try again.
+      </StyledErrorTextSpan>
     </StyledErrorContainerDiv>
   )
 }
 
-export default NoMicPermissions
+export default AudioInputErrorState

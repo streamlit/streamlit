@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { Spinner } from "baseui/spinner"
 
 export const StyledAudioInputContainerDiv = styled.div()
 
@@ -53,14 +54,15 @@ export const StyledWaveformTimeCode = styled.span<{
   fontSize: theme.fontSizes.sm,
 }))
 
-// NoMicPermissions
-export const StyledNoMicInputContainerDiv = styled.div(() => ({
+export const StyledErrorContainerDiv = styled.div(() => ({
   width: "100%",
   textAlign: "center",
   overflow: "hidden",
 }))
 
-export const StyledNoMicPermissionsErrorTextSpan = styled.span()
+export const StyledErrorTextSpan = styled.span(({ theme }) => ({
+  color: theme.colors.bodyText,
+}))
 
 export const StyledNoMicInputLearnMoreLink = styled.a()
 
@@ -128,6 +130,19 @@ export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
 }))
 
-export const StyledAlertWrapperDiv = styled.div(({ theme }) => ({
-  marginTop: theme.spacing.lg,
-}))
+export const StyledSpinner = styled(Spinner)(({ theme }) => {
+  return {
+    fontSize: theme.fontSizes.sm,
+    width: "1.375rem",
+    height: "1.375rem",
+    borderWidth: "3px",
+    radius: theme.radii.md,
+    justifyContents: "center",
+    padding: theme.spacing.none,
+    margin: theme.spacing.none,
+    borderColor: theme.colors.borderColor,
+    borderTopColor: theme.colors.primary,
+    flexGrow: 0,
+    flexShrink: 0,
+  }
+})
