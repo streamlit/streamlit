@@ -68,7 +68,7 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
-import convertMp4ToWav from "./convertAudioToWav"
+import convertAudioToWav from "./convertAudioToWav"
 import AudioInputErrorState from "./AudioInputErrorState"
 
 export interface Props {
@@ -150,7 +150,7 @@ const AudioInput: React.FC<Props> = ({
       if (blob.type === "audio/wav") {
         wavBlob = blob
       } else {
-        wavBlob = await convertMp4ToWav(blob)
+        wavBlob = await convertAudioToWav(blob)
       }
 
       if (!wavBlob) {

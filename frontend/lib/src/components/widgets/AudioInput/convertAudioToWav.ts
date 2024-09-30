@@ -19,6 +19,9 @@
  * @param fileBlob - The input file as a Blob.
  * @returns - A Promise resolving with the WAV file as a Blob.
  */
+
+import { logError } from "@streamlit/lib/src/util/log"
+
 async function convertFileToWav(fileBlob: Blob): Promise<Blob | undefined> {
   const audioContext = new window.AudioContext()
   const arrayBuffer = await fileBlob.arrayBuffer()
@@ -27,7 +30,7 @@ async function convertFileToWav(fileBlob: Blob): Promise<Blob | undefined> {
   try {
     audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
   } catch (error) {
-    console.error("Error decoding audio data:", error)
+    logError(error)
     return undefined // Return undefined if decoding fails
   }
 
