@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// code in this file was adapted logic from recorder.js library
+// code in this file was adapted from recorder.js library
 
 import { logError } from "@streamlit/lib/src/util/log"
 
