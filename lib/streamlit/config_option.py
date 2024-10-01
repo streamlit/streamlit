@@ -179,6 +179,8 @@ class ConfigOption:
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
         self.sensitive = sensitive
+        # infer multiple values if the default value is a list or tuple
+        self.multiple = isinstance(default_val, (list, tuple))
 
         if self.replaced_by:
             self.deprecated = True
