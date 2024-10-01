@@ -28,4 +28,5 @@ message PageLink {
   optional bool use_container_width = 6;
   bool disabled = 7;
   bool external = 8;
+  string query_string = 9;
 }

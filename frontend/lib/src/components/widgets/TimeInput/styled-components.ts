@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 
 export const StyledClearIconContainer = styled.div(() => ({
-  position: "absolute",
+  position: "absolute" as const,
   top: "50%",
   right: "2.05em",
 }))

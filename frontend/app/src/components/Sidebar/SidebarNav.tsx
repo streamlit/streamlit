@@ -53,7 +53,7 @@ export interface Props {
   currentPageScriptHash: string
   hasSidebarElements: boolean
   expandSidebarNav: boolean
-  onPageChange: (pageName: string) => void
+  onPageChange: (pageName: string, queryString?: string) => void
 }
 
 // We make the sidebar nav collapsible when there are more than 12 pages.

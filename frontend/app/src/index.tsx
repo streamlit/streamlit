@@ -20,19 +20,22 @@ import "./setWebpackPublicPath"
 
 import React from "react"
 
-import ReactDOM from "react-dom"
+import { createRoot } from "react-dom/client"
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
+import { isNullOrUndefined } from "lib/src/util/utils"
 
 import ThemedApp from "./ThemedApp"
 
 const engine = new Styletron({ prefix: "st-" })
+const container = document.getElementById("root")
+if (isNullOrUndefined(container)) {
+  throw new Error("root DOM object not found; could not mount React app!")
+}
 
-// TODO: Deprecated in React 18 - Need to revise to new API
-// react-18-upgrade
-ReactDOM.render(
+const root = createRoot(container)
+root.render(
   <StyletronProvider value={engine}>
     <ThemedApp />
-  </StyletronProvider>,
-  document.getElementById("root")
+  </StyletronProvider>
 )

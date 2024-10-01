@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import os
 from itertools import dropwhile
-from typing import Literal, NoReturn
+from typing import Iterable, Literal, Mapping, NoReturn
 
-import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
@@ -28,6 +27,7 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     get_script_run_ctx,
 )
+from streamlit.runtime.state.query_params import QueryParams
 
 
 @gather_metrics("stop")
@@ -53,7 +53,7 @@ def stop() -> NoReturn:  # type: ignore[misc]
     if ctx and ctx.script_requests:
         ctx.script_requests.request_stop()
         # Force a yield point so the runner can stop
-        st.empty()
+        ctx.session_state._yield_callback()
 
 
 def _new_fragment_id_queue(
@@ -142,11 +142,14 @@ def rerun(  # type: ignore[misc]
             )
         )
         # Force a yield point so the runner can do the rerun
-        st.empty()
+        ctx.session_state._yield_callback()
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
+def switch_page(
+    page: str | StreamlitPage,
+    query_params: Mapping[str, str | Iterable[str]] | None = None,
+) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
@@ -213,14 +216,20 @@ def switch_page(page: str | StreamlitPage) -> NoReturn:  # type: ignore[misc]
         page_script_hash = matched_pages[0]["page_script_hash"]
 
     # We want to reset query params (with exception of embed) when switching pages
-    with ctx.session_state.query_params() as qp:
-        qp.clear()
+    # but also allow the user to update the query_params explicitly.
+    if isinstance(query_params, QueryParams):
+        _params_to_send = query_params
+    else:
+        _params_to_send = QueryParams()
+        _params_to_send._disable_forward_msg = True
+        if query_params is not None:
+            _params_to_send.from_dict(query_params)
 
     ctx.script_requests.request_rerun(
         RerunData(
-            query_string=ctx.query_string,
+            query_string=_params_to_send.to_string(),
             page_script_hash=page_script_hash,
         )
     )
     # Force a yield point so the runner can do the rerun
-    st.empty()
+    ctx.session_state._yield_callback()

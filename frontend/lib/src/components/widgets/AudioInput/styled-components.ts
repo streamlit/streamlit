@@ -55,9 +55,9 @@ export const StyledWaveformTimeCode = styled.span<{
 }))
 
 export const StyledErrorContainerDiv = styled.div(() => ({
-  width: "100%",
-  textAlign: "center",
-  overflow: "hidden",
+  width: "100%" as const,
+  textAlign: "center" as const,
+  overflow: "hidden" as const,
 }))
 
 export const StyledErrorTextSpan = styled.span(({ theme }) => ({

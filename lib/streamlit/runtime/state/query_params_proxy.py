@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable, Iterator, MutableMapping, overload
 
+from typing_extensions import Self
+
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.query_params import missing_key_error_message
 from streamlit.runtime.state.session_state_proxy import get_session_state
@@ -164,12 +166,12 @@ class QueryParamsProxy(MutableMapping[str, str]):
     @overload
     def from_dict(
         self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]]
-    ) -> None: ...
+    ) -> Self: ...
 
     @overload
     def from_dict(
         self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]]
-    ) -> None: ...
+    ) -> Self: ...
 
     @gather_metrics("query_params.from_dict")
     def from_dict(self, params):
@@ -205,3 +207,19 @@ class QueryParamsProxy(MutableMapping[str, str]):
         """
         with get_session_state().query_params() as qp:
             return qp.from_dict(params)
+
+    @gather_metrics("query_params.to_string")
+    def to_string(self) -> str:
+        """
+        Get all query parameters as a url-encoded query string.
+
+        This method primarily exists for internal use and is not needed for
+        most cases.
+
+        Returns
+        -------
+        str
+            A URL encoding of the current query paramters in the app's URL.
+        """
+        with get_session_state().query_params() as qp:
+            return qp.to_string()

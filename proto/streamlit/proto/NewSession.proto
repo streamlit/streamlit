@@ -69,6 +69,10 @@ message NewSession {
 
   // Hash of the main script running (ie streamlit run main_script.py)
   string main_script_hash = 11;
+
+  // Any query string that has been set by the backend for this session; should
+  // not include any embed= or embed_theme= keys.
+  string query_string = 12;
 }
 
 // Contains the session status that existed at the time the user connected.

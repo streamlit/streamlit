@@ -26,7 +26,7 @@ export const StyledImageList = styled.div(({ theme }) => ({
 
 export const StyledImageContainer = styled.div(() => ({
   display: "flex",
-  flexDirection: "column",
+  flexDirection: "column" as const,
   alignItems: "stretch",
   width: "auto",
   flexGrow: 0,

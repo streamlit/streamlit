@@ -109,6 +109,10 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.external
         assert c.use_container_width is False
 
+    def test_external_with_query_params(self):
+        with pytest.raises(StreamlitAPIException):
+            st.page_link("https://streamlit.io", query_params={"foo": "bar"})
+
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_label(self):
         """Test that st.page_link accepts an st.Page, but does not uses its title"""
@@ -153,3 +157,21 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert not c.disabled
         assert c.icon == ""
         assert c.help == ""
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_st_page_with_query_params(self):
+        """Test that st.page_link uses query params when specified with query_params"""
+        page = st.Page("foo.py", title="QP Test")
+        st.query_params["foo"] = ["bar", "baz"]
+        st.query_params["marvin"] = "paranoid"
+        st.page_link(page=page, query_params=st.query_params)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "QP Test"
+        assert all(
+            x in c.page for x in ["foo?", "foo=bar", "foo=baz", "marvin=paranoid"]
+        )
+        assert {k: c.query_params[k].values for k in c.query_params} == {
+            k: st.query_params.get_all(k) for k in st.query_params
+        }
+        assert not c.external

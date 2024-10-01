@@ -88,6 +88,8 @@ export enum LoadingScreenType {
  * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key
  * (EMBED_QUERY_PARAM_KEY, EMBED_OPTIONS_QUERY_PARAM_KEY). Is case insensitive.
  */
+// TODO: this function needs to use the App State query params, not
+// window.location.search; so in theory the params should get passed in.
 export function getEmbedUrlParams(embedKey: string): Set<string> {
   const embedUrlParams = new Set<string>()
   const urlParams = new URLSearchParams(window.location.search)
@@ -110,23 +112,27 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
  *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
  *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
  */
-export function preserveEmbedQueryParams(): string {
+export function preserveEmbedQueryParams(
+  queryString: string | URLSearchParams
+): URLSearchParams {
+  const queryParams =
+    typeof queryString == "string"
+      ? new URLSearchParams(queryString)
+      : queryString
   if (!isEmbed()) {
-    return ""
+    return queryParams
   }
 
   const embedOptionsValues = new URLSearchParams(
     window.location.search
   ).getAll(EMBED_OPTIONS_QUERY_PARAM_KEY)
 
-  // instantiate multiple key values with an array of string pairs
-  // https://stackoverflow.com/questions/72571132/urlsearchparams-with-multiple-values
-  const embedUrlMap: string[][] = []
-  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, EMBED_TRUE])
+  queryParams.set(EMBED_QUERY_PARAM_KEY, EMBED_TRUE)
+  queryParams.delete(EMBED_OPTIONS_QUERY_PARAM_KEY)
   embedOptionsValues.forEach((embedValue: string) => {
-    embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
+    queryParams.append(EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue)
   })
-  return new URLSearchParams(embedUrlMap).toString()
+  return queryParams
 }
 
 /**
@@ -516,7 +522,7 @@ export function extractPageNameFromPathName(
   // regex special-characters. This is why we're stuck with the
   // weird-looking triple `replace()`.
   return decodeURIComponent(
-    document.location.pathname
+    pathname
       .replace(`/${basePath}`, "")
       .replace(new RegExp("^/?"), "")
       .replace(new RegExp("/$"), "")
@@ -565,4 +571,59 @@ export function keysToSnakeCase(
     acc[newKey] = value
     return acc
   }, {} as Record<string, any>)
+}
+
+export function areURLSearchParamsEqual(
+  params1: URLSearchParams,
+  params2: URLSearchParams
+): boolean {
+  // Short circuit some obvious mis-match conditions.
+  // Needed a newer version of typescript for these:
+  // https://github.com/microsoft/TypeScript/blob/2170e6c6cc12f08bfa2975955da2f145e4be6101/src/lib/dom.generated.d.ts#L22555-L22557
+  if (params1.size != params2.size) {
+    return false
+  }
+  if (params1.size == 0 && params2.size == 0) {
+    return true
+  }
+
+  // Loop over keys and check their entries are all the same
+  const keys = new Set([...params1.keys(), ...params2.keys()])
+  for (const key of keys) {
+    const p1Values = params1.getAll(key)
+    const p2Values = params2.getAll(key)
+    // If entries are not the same length, get out
+    if (p1Values.length !== p2Values.length) {
+      return false
+    }
+    // Check that all entries for the key are the same and in the same order
+    for (const [index] of p1Values.entries()) {
+      if (p1Values[index] !== p2Values[index]) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+export function areUserURLSearchParamsEqual(
+  params1: string | URLSearchParams,
+  params2: string | URLSearchParams
+): boolean {
+  // make mutable copies
+  const queryParams1 = new URLSearchParams(params1)
+  const queryParams2 = new URLSearchParams(params2)
+
+  // remove Embed params
+  for (const embedKey of [
+    EMBED_QUERY_PARAM_KEY,
+    EMBED_OPTIONS_QUERY_PARAM_KEY,
+  ]) {
+    queryParams1.delete(embedKey)
+    queryParams2.delete(embedKey)
+  }
+
+  // Compare the remaining
+  return areURLSearchParamsEqual(queryParams1, queryParams2)
 }

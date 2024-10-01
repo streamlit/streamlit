@@ -474,6 +474,7 @@ class ScriptRunner:
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                query_string=ctx.query_string,
             )
 
             # Compile the script. Any errors thrown here will be surfaced

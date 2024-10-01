@@ -483,6 +483,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        query_string: str = "",
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -500,6 +501,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                query_string,
             )
         )
 
@@ -513,6 +515,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        query_string: str = "",
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -552,6 +555,10 @@ class AppSession:
         clear_forward_msg_queue : bool
             If set (the default), clears the queue of forward messages to be sent to the
             browser. Set only for the SCRIPT_STARTED event.
+        query_string : str
+            The query string set at the top of this script run. Typically ignored by
+            the frontend, primarily used when `st.switch_page` wants to inject new query
+            params on a page switch.
         """
 
         assert (
@@ -588,7 +595,7 @@ class AppSession:
 
             self._enqueue_forward_msg(
                 self._create_new_session_message(
-                    page_script_hash, fragment_ids_this_run, pages
+                    page_script_hash, fragment_ids_this_run, pages, query_string
                 )
             )
 
@@ -687,6 +694,7 @@ class AppSession:
         page_script_hash: str,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        query_string: str = "",
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
@@ -696,6 +704,7 @@ class AppSession:
         msg.new_session.main_script_path = self._pages_manager.main_script_path
         msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
+        msg.new_session.query_string = query_string
 
         if fragment_ids_this_run:
             msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)

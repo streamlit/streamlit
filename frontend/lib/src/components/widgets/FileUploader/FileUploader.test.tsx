@@ -18,7 +18,7 @@ import "@testing-library/jest-dom"
 import React from "react"
 
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { userEvent } from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/src/test_util"
 import {

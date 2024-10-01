@@ -337,6 +337,7 @@ function sendForwardMessage(
 ): void {
   act(() => {
     const fwMessage = new ForwardMsg()
+    // @ts-ignore
     fwMessage[type] = cloneDeep(message)
     if (metadata) {
       fwMessage.metadata = metadata

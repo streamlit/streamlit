@@ -61,7 +61,7 @@ export interface SidebarProps {
   appLogo: Logo | null
   appPages: IAppPage[]
   navSections: string[]
-  onPageChange: (pageName: string) => void
+  onPageChange: (pageName: string, queryString?: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
   expandSidebarNav: boolean

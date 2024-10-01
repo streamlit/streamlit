@@ -42,7 +42,7 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
 
 export const StyledWidgetLabelHelp = styled.div(() => ({
   display: "flex",
-  flexDirection: "row",
+  flexDirection: "row" as const,
   justifyContent: "flex-end",
   flex: 1,
 }))

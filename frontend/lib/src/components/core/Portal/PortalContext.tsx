@@ -15,6 +15,13 @@
  */
 import React from "react"
 
+import styled from "@emotion/styled"
+
+export const StyledTooltipContainer = styled.label(() => ({
+  marginLeft: "10px",
+  position: "relative" as const,
+  top: "-1px",
+}))
 export const PortalContext = React.createContext<
   (() => HTMLElement | null) | null
 >(null)

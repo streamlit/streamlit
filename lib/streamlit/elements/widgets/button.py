@@ -22,7 +22,9 @@ from typing import (
     TYPE_CHECKING,
     BinaryIO,
     Final,
+    Iterable,
     Literal,
+    Mapping,
     TextIO,
     Union,
     cast,
@@ -58,6 +60,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
 
@@ -551,6 +554,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        query_params: Mapping[str, str | Iterable[str]] | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -615,6 +619,12 @@ class ButtonMixin:
             Whether to expand the link's width to fill its parent container.
             The default is ``True`` for page links in the sidebar and ``False``
             for those in the main app.
+        query_params : dict[str, str]
+            An optional dictionary (or other mapping) which is used to populate
+            the query parameters (the portion of the url after "?") on the switched-to
+            page. If not provided, all parameters are cleared when the page is changed.
+            If `st.query_params` itself is provided, all parameters will be maintained
+            on the new page.
 
         Example
         -------
@@ -654,6 +664,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             use_container_width=use_container_width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -771,6 +782,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        query_params: Mapping[str, str | Iterable[str]] | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
@@ -795,6 +807,10 @@ class ButtonMixin:
         else:
             # Handle external links:
             if is_url(page):
+                if query_params is not None:
+                    raise StreamlitAPIException(
+                        "The query_params argument cannot be used with st.page_link when the link provided is a raw URL."
+                    )
                 if label is None or label == "":
                     raise StreamlitMissingPageLabelError()
                 else:
@@ -837,6 +853,16 @@ class ButtonMixin:
                     page=page,
                     main_script_directory=main_script_directory,
                 )
+
+        if query_params is not None:
+            if not hasattr(query_params, "get_all"):
+                query_params_internal: QueryParams = QueryParams()
+                # turn off sending forward messages for THIS QueryParams
+                query_params_internal._disable_forward_msg = True
+                query_params_internal.from_dict(query_params)
+            else:
+                query_params_internal = cast(QueryParams, query_params)
+            page_link_proto.query_string = query_params_internal.to_string()
 
         return self.dg._enqueue("page_link", page_link_proto)
 
@@ -985,3 +1011,9 @@ def marshall_file(
         file_url = ""
 
     proto_download_button.url = file_url
+
+
+# def update_query_params_proto(proto: PageLinkProto, qp: Mapping[str, Iterable[str]]):
+#     """Updates the query_params PageLinkProto message iteratively, since it cannot be directly assigned."""
+#     for key, values in qp.items():
+#         proto.query_params[key].values.extend(values)
