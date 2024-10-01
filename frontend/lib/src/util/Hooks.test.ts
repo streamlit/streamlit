@@ -46,6 +46,7 @@ describe("useIsOverflowing", () => {
 
   it("sets state to false if the element is not overflowing", () => {
     const ref = { current: { scrollHeight: 1, clientHeight: 1 } }
+
     // @ts-expect-error
     useIsOverflowing(ref)
 

@@ -1,0 +1,102 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+const { RuleTester } = require("eslint")
+const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
+
+const ruleTester = new RuleTester({})
+
+ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
+  valid: [
+    {
+      name: "theme value is allowed",
+      code: "var a = { color: theme.colors.primary };",
+    },
+    {
+      name: "built-in values are allowed: 'auto'",
+      code: "var a = { lineHeight: 'auto' };",
+    },
+    {
+      name: "built-in values are allowed: 'transparent'",
+      code: "var a = { lineHeight: 'transparent' };",
+    },
+    {
+      name: "built-in values are allowed: 'solid'",
+      code: "var a = { lineHeight: 'solid' };",
+    },
+    {
+      name: "built-in values are allowed: 'initial'",
+      code: "var a = { lineHeight: 'initial' };",
+    },
+    {
+      name: "built-in values are allowed: 'none'",
+      code: "var a = { lineHeight: 'none' };",
+    },
+    {
+      name: "built-in values are allowed: 'collapse'",
+      code: "var a = { border: 'collapse' };",
+    },
+    {
+      name: "built-in values are allowed: 'fit-content'",
+      code: "var a = { width: 'fit-content' };",
+    },
+    {
+      name: "built-in values are allowed: 'inherit'",
+      code: "var a = { lineHeight: 'inherit' };",
+    },
+    {
+      name: "built-in values are allowed together with the '!important' directive: 'inherit !important'",
+      code: "var a = { lineHeight: 'inherit !important' };",
+    },
+    {
+      name: "number value of 0 is allowed",
+      code: "var a = { color: theme.colors.primary, lineHeight: 0 };",
+    },
+    {
+      name: "vh, vw, % units after numbers are allowed",
+      code: "var a = { color: theme.colors.primary, maxHeight: '100vh', width: '42vw', maxWidth: '99%' };",
+    },
+  ],
+  invalid: [
+    {
+      name: "color value should not be allowed",
+      code: "var a = { color: 'red' };",
+      errors: 1,
+    },
+    {
+      name: "color value and line-height number should not be allowed",
+      code: "var a = { color: 'red', lineHeight: 1.5 };",
+      errors: 2,
+    },
+    {
+      name: "color value should not be allowed, but line-height value is allowed",
+      code: "var a = { color: 'red', lineHeight: 'inherit' };",
+      errors: 1,
+    },
+    {
+      name: "number should not be allowed",
+      code: "var a = { margin: 40 };",
+      errors: 1,
+    },
+    {
+      name: "percentages in non-numbers are disallowed",
+      code: "var a = { color: theme.colors.primary, lineHeight: 'sneaky-non-number%' };",
+      errors: 1,
+    },
+  ],
+})
+
+console.log("All 'no-hardcoded-theme-values' tests passed!")
