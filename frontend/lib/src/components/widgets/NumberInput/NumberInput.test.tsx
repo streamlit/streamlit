@@ -236,6 +236,27 @@ describe("NumberInput widget", () => {
     )
   })
 
+  it("shows Input Instructions if focused again and in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    fireEvent.blur(numberInput)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+
+    fireEvent.focus(numberInput)
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press Enter to submit form"
+    )
+  })
+
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
     const user = userEvent.setup()
     const props = getIntProps({ formId: "form" })

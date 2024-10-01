@@ -525,7 +525,7 @@ export const NumberInput: React.FC<Props> = ({
         )}
       </StyledInputContainer>
       {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > theme.breakpoints.hideWidgetDetails && (
+      {isFocused && width > theme.breakpoints.hideWidgetDetails && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions
             dirty={dirty}

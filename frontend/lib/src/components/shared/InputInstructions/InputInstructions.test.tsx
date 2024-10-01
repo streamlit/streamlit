@@ -154,5 +154,18 @@ describe("InputInstructions", () => {
 
       expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
     })
+
+    it("should show enter instructions in form even when input is not dirty", () => {
+      const props = getProps({
+        dirty: false,
+        inForm: true,
+        allowEnterToSubmit: true,
+      })
+      render(<InputInstructions {...props} />)
+
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
+        "Press Enter to submit form"
+      )
+    })
   })
 })

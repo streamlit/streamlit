@@ -55,6 +55,11 @@ interface State {
   dirty: boolean
 
   /**
+   * Whether the area is currently focused.
+   */
+  focused: boolean
+
+  /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
@@ -68,6 +73,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
   public state: State = {
     dirty: false,
+    focused: false,
     value: this.initialValue,
   }
 
@@ -138,7 +144,10 @@ class TextArea extends React.PureComponent<Props, State> {
     if (this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
+    this.setState({ focused: false })
   }
+
+  private onFocus = (): void => this.setState({ focused: true })
 
   private onChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     const { value } = e.target
@@ -224,6 +233,7 @@ class TextArea extends React.PureComponent<Props, State> {
           value={value ?? ""}
           placeholder={placeholder}
           onBlur={this.onBlur}
+          onFocus={this.onFocus}
           onChange={this.onChange}
           onKeyDown={this.onKeyDown}
           aria-label={element.label}
@@ -261,7 +271,7 @@ class TextArea extends React.PureComponent<Props, State> {
           }}
         />
         {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > theme.breakpoints.hideWidgetDetails && (
+        {this.state.focused && width > theme.breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}
