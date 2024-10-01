@@ -437,7 +437,7 @@ class TextWidgetsMixin:
 
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
-            default height is used. Height must be at least 95 pixels.
+            default height is used. Height must be at least 68 pixels (4.25rem).
 
         max_chars : int or None
             Maximum number of characters allowed in text area.
@@ -499,10 +499,10 @@ class TextWidgetsMixin:
            height: 300px
 
         """
-        # Specified height must be at least 95 pixels (3 lines of text).
-        if height is not None and height < 95:
+        # Specified height must be at least 68 pixels (3 lines of text).
+        if height is not None and height < 68:
             raise StreamlitAPIException(
-                f"Invalid height {height}px for st.text_area - must be at least 95 pixels."
+                f"Invalid height {height}px for `st.text_area` - must be at least 68 pixels."
             )
 
         ctx = get_script_run_ctx()

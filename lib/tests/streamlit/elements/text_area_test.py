@@ -89,7 +89,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
         self.assertEqual(
             str(e.exception),
-            "Invalid height 50px for st.text_area - must be at least 95 pixels.",
+            "Invalid height 50px for `st.text_area` - must be at least 68 pixels.",
         )
 
     def test_placeholder(self):

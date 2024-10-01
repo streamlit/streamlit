@@ -201,6 +201,9 @@ class TextArea extends React.PureComponent<Props, State> {
       this.onFormCleared
     )
 
+    // Default minHeight is 95px, unless height set lower (can't be < 68px or 4.25rem)
+    const minHeight = height && height < 95 ? `${height}px` : "95px"
+
     return (
       <div className="stTextArea" data-testid="stTextArea" style={style}>
         <WidgetLabel
@@ -231,10 +234,13 @@ class TextArea extends React.PureComponent<Props, State> {
           id={this.id}
           overrides={{
             Input: {
+              props: {
+                "data-testid": "stTextAreaInputElement",
+              },
               style: {
                 lineHeight: theme.lineHeights.inputWidget,
                 height: height ? `${height}px` : "",
-                minHeight: "95px",
+                minHeight,
                 resize: "vertical",
                 "::placeholder": {
                   opacity: "0.7",
