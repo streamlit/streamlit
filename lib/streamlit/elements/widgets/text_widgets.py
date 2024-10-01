@@ -168,8 +168,7 @@ class TextWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         type : "default" or "password"
             The type of the text input. This can be either "default" (for
@@ -331,14 +330,14 @@ class TextWidgetsMixin:
         serde = TextInputSerde(value)
 
         widget_state = register_widget(
-            "text_input",
-            text_input_proto,
+            text_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -445,8 +444,7 @@ class TextWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the textarea.
@@ -586,14 +584,14 @@ class TextWidgetsMixin:
 
         serde = TextAreaSerde(value)
         widget_state = register_widget(
-            "text_area",
-            text_area_proto,
+            text_area_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:

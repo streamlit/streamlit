@@ -34,4 +34,5 @@ export const sizes = {
   headerDecorationHeight: "0.125rem",
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
+  largestElementHeight: "4.25rem",
 }

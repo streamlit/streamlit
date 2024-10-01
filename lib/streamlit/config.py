@@ -91,23 +91,37 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
 
 
 def set_user_option(key: str, value: Any) -> None:
-    """Set config option.
+    """Set a configuration option.
 
-    Currently, only the following config options can be set within the script itself:
-        * client.caching
+    Currently, only ``client`` configuration options can be set within the
+    script itself:
 
-    Calling with any other options will raise StreamlitAPIException.
+        - ``client.showErrorDetails``
+        - ``client.showSidebarNavigation``
+        - ``client.toolbarMode``
 
-    Run `streamlit config show` in the terminal to see all available options.
+    Calling ``st.set_option`` with any other option will raise a
+    ``StreamlitAPIException``. When changing a configuration option in a
+    running app, you may need to trigger a rerun after changing the option to
+    see the effects.
+
+    Run ``streamlit config show`` in a terminal to see all available options.
 
     Parameters
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
+        available options, run ``streamlit config show`` in a terminal.
 
     value
         The new value to assign to this config option.
+
+    Example
+    -------
+
+    >>> import streamlit as st
+    >>>
+    >>> st.set_option("client.showErrorDetails", True)
 
     """
     try:
@@ -124,15 +138,23 @@ def set_user_option(key: str, value: Any) -> None:
 
 
 def get_option(key: str) -> Any:
-    """Return the current value of a given Streamlit config option.
+    """Return the current value of a given Streamlit configuration option.
 
-    Run `streamlit config show` in the terminal to see all available options.
+    Run ``streamlit config show`` in a terminal to see all available options.
 
     Parameters
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
+        available options, run ``streamlit config show`` in a terminal.
+
+    Example
+    -------
+
+    >>> import streamlit as st
+    >>>
+    >>> color = st.get_option("theme.primaryColor")
+
     """
     with _config_lock:
         config_options = get_config_options()

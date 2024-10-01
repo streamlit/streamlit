@@ -23,6 +23,7 @@ import "streamlit/proto/Alert.proto";
 import "streamlit/proto/AuthRedirect.proto";
 import "streamlit/proto/Arrow.proto";
 import "streamlit/proto/Audio.proto";
+import "streamlit/proto/AudioInput.proto";
 import "streamlit/proto/Balloons.proto";
 import "streamlit/proto/ArrowVegaLiteChart.proto";
 import "streamlit/proto/BokehChart.proto";
@@ -81,6 +82,7 @@ message Element {
     Arrow arrow_table = 39;
     ArrowVegaLiteChart arrow_vega_lite_chart = 41;
     Audio audio = 13;
+    AudioInput audio_input = 56;
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
@@ -131,7 +133,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 56
+    // Next ID: 57
   }
 
   reserved 9;
