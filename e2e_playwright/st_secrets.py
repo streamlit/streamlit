@@ -18,10 +18,10 @@ from typing import Final
 import streamlit as st
 from streamlit import runtime
 
-original_option = st.get_option("secrets.files")
-st.write("Secret: ", st.secrets["fake"]["FAKE_CONFIG"])
-
 if runtime.exists():
+    original_option = st.get_option("secrets.files")
+    st.write("Secret: ", st.secrets["fake"]["FAKE_CONFIG"])
+
     # We are hacking here, but we are setting the secrets file to a different file to determine if it works
     TEST_ASSETS_DIR: Final[str] = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "test_assets"
