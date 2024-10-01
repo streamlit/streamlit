@@ -154,7 +154,7 @@ class AudioInputMixin:
         None or UploadedFile
             The UploadedFile class is a subclass of BytesIO, and therefore is
             "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            file is expected. The MIME type for the audio data is ``audio/wav``.
 
         Examples
         --------
@@ -165,9 +165,9 @@ class AudioInputMixin:
         >>> if audio_value:
         ...     st.audio(audio_value)
 
-        `View this example <https://doc-audio-input.streamlit.app/>`_ on
-        Community Cloud. ``st.experimental_audio_input`` is not yet fully
-        supported in embedded apps.
+        .. output::
+           https://doc-audio-input.streamlit.app/
+           height: 260px
 
         """
         ctx = get_script_run_ctx()
