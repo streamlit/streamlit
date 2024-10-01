@@ -19,7 +19,6 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react"
 
@@ -29,6 +28,7 @@ import RecordPlugin from "wavesurfer.js/dist/plugins/record"
 import { Delete } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
 
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
@@ -47,12 +47,8 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
-import getBrowserInfo from "@streamlit/lib/src/util/getBrowserInfo"
-import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 
 import {
-  StyledAlertWrapperDiv,
   StyledAudioInputContainerDiv,
   StyledWaveformContainerDiv,
   StyledWaveformInnerDiv,
@@ -72,6 +68,8 @@ import {
 } from "./constants"
 import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
+import convertAudioToWav from "./convertAudioToWav"
+import AudioInputErrorState from "./AudioInputErrorState"
 
 export interface Props {
   element: AudioInputProto
@@ -88,10 +86,6 @@ const AudioInput: React.FC<Props> = ({
   fragmentId,
   disabled,
 }): ReactElement => {
-  const isSafari = useMemo(() => {
-    const { browserName, os } = getBrowserInfo()
-    return browserName === "Safari" || os === "iOS"
-  }, [])
   const theme = useTheme()
   const previousTheme = usePrevious(theme)
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
@@ -139,26 +133,62 @@ const AudioInput: React.FC<Props> = ({
   const [hasNoMicPermissions, setHasNoMicPermissions] = useState(false)
   const [hasRequestedMicPermissions, setHasRequestedMicPermissions] =
     useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isError, setIsError] = useState(false)
 
   const widgetId = element.id
   const widgetFormId = element.formId
 
-  const uploadTheFile = useCallback(
-    (file: File) => {
+  const transcodeAndUploadFile = useCallback(
+    async (blob: Blob) => {
+      setIsUploading(true)
+      if (notNullOrUndefined(widgetFormId))
+        widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
+
+      let wavBlob: Blob | undefined = undefined
+
+      if (blob.type === "audio/wav") {
+        wavBlob = blob
+      } else {
+        wavBlob = await convertAudioToWav(blob)
+      }
+
+      if (!wavBlob) {
+        setIsError(true)
+        return
+      }
+
+      const url = URL.createObjectURL(wavBlob)
+      const file = new File([wavBlob], "audio.wav", { type: wavBlob.type })
+
+      setRecordingUrl(url)
+
       uploadFiles({
         files: [file],
         uploadClient,
         widgetMgr,
         widgetInfo: { id: widgetId, formId: widgetFormId },
         fragmentId,
-      }).then(({ successfulUploads }) => {
-        const upload = successfulUploads[0]
-        if (upload && upload.fileUrl.deleteUrl) {
-          setDeleteFileUrl(upload.fileUrl.deleteUrl)
-        }
       })
+        .then(({ successfulUploads, failedUploads }) => {
+          if (failedUploads.length > 0) {
+            setIsError(true)
+            return
+          }
+          const upload = successfulUploads[0]
+          if (upload && upload.fileUrl.deleteUrl) {
+            setDeleteFileUrl(upload.fileUrl.deleteUrl)
+          }
+        })
+        .finally(() => {
+          if (notNullOrUndefined(widgetFormId))
+            widgetMgr.setFormsWithUploadsInProgress(new Set())
+
+          setIsUploading(false)
+        })
     },
     [
+      setRecordingUrl,
       uploadClient,
       widgetMgr,
       widgetId,
@@ -206,6 +236,17 @@ const AudioInput: React.FC<Props> = ({
     ]
   )
 
+  useEffect(() => {
+    if (isNullOrUndefined(widgetFormId)) return
+
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(widgetMgr, widgetFormId, () => {
+      handleClear({ updateWidgetManager: true })
+    })
+
+    return () => formClearHelper.disconnect()
+  }, [widgetFormId, handleClear, widgetMgr])
+
   const initializeWaveSurfer = useCallback(() => {
     if (waveSurferRef.current === null) return
 
@@ -241,12 +282,8 @@ const AudioInput: React.FC<Props> = ({
       })
     )
 
-    rp.on("record-end", blob => {
-      const url = URL.createObjectURL(blob)
-      setRecordingUrl(url)
-
-      const file = new File([blob], "audio.wav", { type: blob.type })
-      uploadTheFile(file)
+    rp.on("record-end", async blob => {
+      transcodeAndUploadFile(blob)
     })
 
     rp.on("record-progress", time => {
@@ -263,7 +300,7 @@ const AudioInput: React.FC<Props> = ({
     // note: intentionally excluding theme so that we don't have to recreate the wavesurfer instance
     // and colors will be updated separately
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uploadTheFile])
+  }, [transcodeAndUploadFile])
 
   useEffect(() => initializeWaveSurfer(), [initializeWaveSurfer])
 
@@ -366,81 +403,77 @@ const AudioInput: React.FC<Props> = ({
   const isPlayingOrRecording = isRecording || isPlaying
   const showPlaceholder = !isRecording && !recordingUrl && !hasNoMicPermissions
 
-  const showNoMicPermissionsOrPlaceholder =
-    hasNoMicPermissions || showPlaceholder
+  const showNoMicPermissionsOrPlaceholderOrError =
+    hasNoMicPermissions || showPlaceholder || isError
 
-  const isDisabled = disabled || hasNoMicPermissions || isSafari
+  const isDisabled = disabled || hasNoMicPermissions
 
   return (
-    <>
-      <StyledAudioInputContainerDiv
-        className="stAudioInput"
-        data-testid="stAudioInput"
+    <StyledAudioInputContainerDiv
+      className="stAudioInput"
+      data-testid="stAudioInput"
+    >
+      <WidgetLabel
+        label={element.label}
+        disabled={isDisabled}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          element.labelVisibility?.value
+        )}
       >
-        <WidgetLabel
-          label={element.label}
-          disabled={isDisabled}
-          labelVisibility={labelVisibilityProtoValueToEnum(
-            element.labelVisibility?.value
-          )}
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon content={element.help} placement={Placement.TOP} />
+          </StyledWidgetLabelHelp>
+        )}
+      </WidgetLabel>
+      <StyledWaveformContainerDiv>
+        <Toolbar
+          isFullScreen={false}
+          disableFullscreenMode={true}
+          target={StyledWaveformContainerDiv}
         >
-          {element.help && (
-            <StyledWidgetLabelHelp>
-              <TooltipIcon content={element.help} placement={Placement.TOP} />
-            </StyledWidgetLabelHelp>
-          )}
-        </WidgetLabel>
-        <StyledWaveformContainerDiv>
-          <Toolbar
-            isFullScreen={false}
-            disableFullscreenMode={true}
-            target={StyledWaveformContainerDiv}
-          >
-            {deleteFileUrl && (
-              <ToolbarAction
-                label="Clear recording"
-                icon={Delete}
-                onClick={() => handleClear({ updateWidgetManager: true })}
-                data-testid="stAudioInputClearRecordingButton"
-              />
-            )}
-          </Toolbar>
-          <AudioInputActionButtons
-            isRecording={isRecording}
-            isPlaying={isPlaying}
-            recordingUrlExists={Boolean(recordingUrl)}
-            startRecording={startRecording}
-            stopRecording={stopRecording}
-            onClickPlayPause={onClickPlayPause}
-            disabled={isDisabled}
-          />
-          <StyledWaveformInnerDiv>
-            {showPlaceholder && <Placeholder />}
-            {hasNoMicPermissions && <NoMicPermissions />}
-            <StyledWaveSurferDiv
-              data-testid="stAudioInputWaveSurfer"
-              ref={waveSurferRef}
-              show={!showNoMicPermissionsOrPlaceholder}
+          {deleteFileUrl && (
+            <ToolbarAction
+              label="Clear recording"
+              icon={Delete}
+              onClick={() => handleClear({ updateWidgetManager: true })}
+              data-testid="stAudioInputClearRecordingButton"
             />
-          </StyledWaveformInnerDiv>
-          <StyledWaveformTimeCode
-            isPlayingOrRecording={isPlayingOrRecording}
-            data-testid="stAudioInputWaveformTimeCode"
-          >
-            {shouldUpdatePlaybackTime ? progressTime : recordingTime}
-          </StyledWaveformTimeCode>
-        </StyledWaveformContainerDiv>
-      </StyledAudioInputContainerDiv>
-      {isSafari && (
-        <StyledAlertWrapperDiv>
-          <AlertElement
-            width={100}
-            kind={Kind.WARNING}
-            body="`st.experimental_audio_input` does not yet work on this browser. It will be supported in one of the next versions of Streamlit. Please use Chrome or Firefox on a non-iOS device for now."
+          )}
+        </Toolbar>
+        <AudioInputActionButtons
+          isRecording={isRecording}
+          isPlaying={isPlaying}
+          isUploading={isUploading}
+          isError={isError}
+          recordingUrlExists={Boolean(recordingUrl)}
+          startRecording={startRecording}
+          stopRecording={stopRecording}
+          onClickPlayPause={onClickPlayPause}
+          onClear={() => {
+            handleClear({ updateWidgetManager: false })
+            setIsError(false)
+          }}
+          disabled={isDisabled}
+        />
+        <StyledWaveformInnerDiv>
+          {isError && <AudioInputErrorState />}
+          {showPlaceholder && <Placeholder />}
+          {hasNoMicPermissions && <NoMicPermissions />}
+          <StyledWaveSurferDiv
+            data-testid="stAudioInputWaveSurfer"
+            ref={waveSurferRef}
+            show={!showNoMicPermissionsOrPlaceholderOrError}
           />
-        </StyledAlertWrapperDiv>
-      )}
-    </>
+        </StyledWaveformInnerDiv>
+        <StyledWaveformTimeCode
+          isPlayingOrRecording={isPlayingOrRecording}
+          data-testid="stAudioInputWaveformTimeCode"
+        >
+          {shouldUpdatePlaybackTime ? progressTime : recordingTime}
+        </StyledWaveformTimeCode>
+      </StyledWaveformContainerDiv>
+    </StyledAudioInputContainerDiv>
   )
 }
 
