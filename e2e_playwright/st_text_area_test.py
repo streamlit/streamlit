@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_exception,
     expect_help_tooltip,
     get_element_by_key,
 )
@@ -52,7 +53,7 @@ def test_help_tooltip_works(app: Page):
 def test_text_area_has_correct_initial_values(app: Page):
     """Test that st.text_area has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(12)
+    expect(markdown_elements).to_have_count(13)
 
     expected = [
         "value 1: ",
@@ -67,6 +68,7 @@ def test_text_area_has_correct_initial_values(app: Page):
         "text area changed: False",
         "value 10: 1234",
         "value 11: default text",
+        "value 12: default text",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -233,8 +235,9 @@ def test_calls_callback_on_change(app: Page):
 
 def test_invalid_height(app: Page):
     """Test that it raises an error when passed an invalid height."""
-    expect(app.get_by_test_id("stExceptionMessage")).to_have_text(
-        " StreamlitAPIException: Invalid height 65px for st.text_area - must be at least 68 pixels."
+    expect_exception(
+        app,
+        "StreamlitAPIException: Invalid height 65px for st.text_area - must be at least 68 pixels.",
     )
 
 
