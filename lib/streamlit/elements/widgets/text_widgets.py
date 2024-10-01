@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, cast, overload
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -26,6 +26,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -41,7 +42,6 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     SupportsStr,
 )
@@ -168,8 +168,7 @@ class TextWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         type : "default" or "password"
             The type of the text input. This can be either "default" (for
@@ -275,19 +274,17 @@ class TextWidgetsMixin:
         # Make sure value is always string or None:
         value = str(value) if value is not None else None
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=value,
             max_chars=max_chars,
-            key=key,
             type=type,
             help=help,
             autocomplete=autocomplete,
             placeholder=str(placeholder),
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         session_state = get_session_state().filtered_state
@@ -295,7 +292,7 @@ class TextWidgetsMixin:
             value = None
 
         text_input_proto = TextInputProto()
-        text_input_proto.id = id
+        text_input_proto.id = element_id
         text_input_proto.label = label
         if value is not None:
             text_input_proto.default = value
@@ -333,15 +330,14 @@ class TextWidgetsMixin:
         serde = TextInputSerde(value)
 
         widget_state = register_widget(
-            "text_input",
-            text_input_proto,
-            user_key=key,
+            text_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -448,8 +444,7 @@ class TextWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the textarea.
@@ -548,18 +543,16 @@ class TextWidgetsMixin:
 
         value = str(value) if value is not None else None
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=value,
             height=height,
             max_chars=max_chars,
-            key=key,
             help=help,
             placeholder=str(placeholder),
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         session_state = get_session_state().filtered_state
@@ -567,7 +560,7 @@ class TextWidgetsMixin:
             value = None
 
         text_area_proto = TextAreaProto()
-        text_area_proto.id = id
+        text_area_proto.id = element_id
         text_area_proto.label = label
         if value is not None:
             text_area_proto.default = value
@@ -591,15 +584,14 @@ class TextWidgetsMixin:
 
         serde = TextAreaSerde(value)
         widget_state = register_widget(
-            "text_area",
-            text_area_proto,
-            user_key=key,
+            text_area_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:

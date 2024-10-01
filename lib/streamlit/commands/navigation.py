@@ -57,6 +57,7 @@ def navigation(
     pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
     position: Literal["sidebar", "hidden"] = "sidebar",
+    expanded: bool = False,
 ) -> StreamlitPage:
     """
     Configure the available pages in a multipage app.
@@ -81,7 +82,7 @@ def navigation(
 
     Parameters
     ----------
-    pages: list[StreamlitPage] or dict[str, list[StreamlitPage]]
+    pages : list[StreamlitPage] or dict[str, list[StreamlitPage]]
         The available pages for the app.
 
         To create labeled sections or page groupings within the navigation
@@ -94,13 +95,24 @@ def navigation(
 
         Use ``st.Page`` to create ``StreamlitPage`` objects.
 
-    position: "sidebar" or "hidden"
+    position : "sidebar" or "hidden"
         The position of the navigation menu. If ``position`` is ``"sidebar"``
         (default), the navigation widget appears at the top of the sidebar. If
         ``position`` is ``"hidden"``, the navigation widget is not displayed.
 
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
+
+    expanded : bool
+        Whether the navigation menu should be expanded. If this is ``False``
+        (default), the navigation menu will be collapsed and will include a
+        button to view more options when there are too many pages to display.
+        If this is ``True``, the navigation menu will always be expanded; no
+        button to collapse the menu will be displayed.
+
+        If ``st.navigation`` changes from ``expanded=True`` to
+        ``expanded=False`` on a rerun, the menu will stay expanded and a
+        collapse button will be displayed.
 
     Returns
     -------
@@ -215,6 +227,8 @@ def navigation(
         msg.navigation.position = NavigationProto.Position.HIDDEN
     else:
         msg.navigation.position = NavigationProto.Position.SIDEBAR
+
+    msg.navigation.expanded = expanded
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
@@ -256,7 +270,7 @@ def navigation(
     page_to_return._can_be_called = True
     msg.navigation.page_script_hash = page_to_return._script_hash
     # Set the current page script hash to the page that is going to be executed
-    ctx.pages_manager.set_current_page_script_hash(page_to_return._script_hash)
+    ctx.set_mpa_v2_page(page_to_return._script_hash)
 
     # This will either navigation or yield if the page is not found
     ctx.enqueue(msg)

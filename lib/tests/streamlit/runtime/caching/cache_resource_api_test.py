@@ -29,7 +29,6 @@ from streamlit.runtime.caching import (
     cached_message_replay,
     get_resource_cache_stats_provider,
 )
-from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
@@ -46,11 +45,11 @@ from tests.streamlit.runtime.caching.common_cache_test import (
 from tests.testutil import create_mock_script_run_ctx
 
 if TYPE_CHECKING:
-    from streamlit.runtime.caching.cached_message_replay import MultiCacheResults
+    from streamlit.runtime.caching.cached_message_replay import CachedResult
 
 
-def as_cached_result(value: Any) -> MultiCacheResults:
-    return _as_cached_result(value, CacheType.RESOURCE)
+def as_cached_result(value: Any) -> CachedResult:
+    return _as_cached_result(value)
 
 
 class CacheResourceTest(unittest.TestCase):

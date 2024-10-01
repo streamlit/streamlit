@@ -39,7 +39,7 @@ if st.button("Create some elements to unmount component"):
         st.write("Another element")
 
 
-st.data_editor(random_df, num_rows="dynamic")
+st.data_editor(random_df, num_rows="dynamic", key="data_editor")
 
 
 cell_overlay_test_df = pd.DataFrame(

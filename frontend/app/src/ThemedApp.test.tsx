@@ -60,8 +60,7 @@ describe("ThemedApp", () => {
 
   it("contains the overlay portal required by the interactive table", () => {
     render(<ThemedApp />)
-
-    expect(screen.getByTestId("portal")).toBeInTheDocument()
-    expect(screen.getByTestId("portal")).toBeInTheDocument()
+    const portalElement = screen.getByTestId("portal")
+    expect(portalElement).toBeInTheDocument()
   })
 })

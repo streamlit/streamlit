@@ -17,8 +17,17 @@ from unittest import mock
 from parameterized import param, parameterized
 
 import streamlit as st
-from streamlit.commands.page_config import ENG_EMOJIS, RANDOM_EMOJIS, PageIcon
-from streamlit.errors import StreamlitAPIException
+from streamlit.commands.page_config import (
+    ENG_EMOJIS,
+    RANDOM_EMOJIS,
+    PageIcon,
+    _lower_clean_dict_keys,
+)
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidSidebarStateError,
+    StreamlitInvalidURLError,
+)
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.string_util import is_emoji
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -93,12 +102,8 @@ class PageConfigTest(DeltaGeneratorTestCase):
         self.assertEqual(c.initial_sidebar_state, PageConfigProto.COLLAPSED)
 
     def test_set_page_config_sidebar_invalid(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitInvalidSidebarStateError):
             st.set_page_config(initial_sidebar_state="INVALID")
-        self.assertEqual(
-            str(e.exception),
-            '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")',
-        )
 
     def test_set_page_config_menu_items_about(self):
         menu_items = {" about": "*This is an about. This accepts markdown.*"}
@@ -122,10 +127,9 @@ class PageConfigTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get_help_url, "https://get_help.com")
 
     def test_set_page_config_menu_items_empty_string(self):
-        with self.assertRaises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitInvalidURLError):
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
-        self.assertEqual(str(e.exception), '"" is a not a valid URL!')
 
     def test_set_page_config_menu_items_none(self):
         menu_items = {"report a bug": None, "GET HELP": None, "about": None}
@@ -141,11 +145,29 @@ class PageConfigTest(DeltaGeneratorTestCase):
             st.set_page_config(menu_items=menu_items)
         self.assertEqual(
             str(e.exception),
-            'We only accept the keys: "Get help", "Report a bug", and "About" '
-            '("invalid" is not a valid key.)',
+            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` '
+            '(`"invalid"` is not a valid key.)',
         )
 
     def test_set_page_config_menu_items_empty_dict(self):
         st.set_page_config(menu_items={})
         c = self.get_message_from_queue().page_config_changed.menu_items
         self.assertEqual(c.about_section_md, "")
+
+    @parameterized.expand(
+        [
+            ({}, {}),
+            (
+                {
+                    "HELLO_1": 4,
+                    "Hello_2": "world",
+                    "hElLo_3": 5.5,
+                    "": "",
+                },
+                {"hello_1": 4, "hello_2": "world", "hello_3": 5.5, "": ""},
+            ),
+        ]
+    )
+    def test_lower_clean_dict_keys(self, input_dict, answer_dict):
+        return_dict = _lower_clean_dict_keys(input_dict)
+        assert return_dict == answer_dict

@@ -21,7 +21,8 @@ from typing import TYPE_CHECKING, Literal, TypeVar, Union, cast, overload
 
 from typing_extensions import TypeAlias
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -29,11 +30,17 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
-from streamlit.js_number import JSNumber, JSNumberBoundsException
+from streamlit.errors import (
+    StreamlitInvalidNumberFormatError,
+    StreamlitJSNumberBoundsError,
+    StreamlitMixedNumericTypesError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
+)
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -44,7 +51,6 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -242,8 +248,7 @@ class NumberInputMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the input.
@@ -350,42 +355,34 @@ class NumberInputMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             min_value=min_value,
             max_value=max_value,
             value=value,
             step=step,
             format=format,
-            key=key,
             help=help,
             placeholder=None if placeholder is None else str(placeholder),
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
-        int_args = all(
+        all_int_args = all(
             isinstance(a, (numbers.Integral, type(None), str))
             for a in number_input_args
         )
 
-        float_args = all(
+        all_float_args = all(
             isinstance(a, (float, type(None), str)) for a in number_input_args
         )
 
-        if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
-            )
+        if not all_int_args and not all_float_args:
+            raise StreamlitMixedNumericTypesError(value=value, min_value=min_value, max_value=max_value, step=step)
 
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
@@ -394,9 +391,9 @@ class NumberInputMixin:
         if value == "min":
             if min_value is not None:
                 value = min_value
-            elif int_args and float_args:
+            elif all_int_args and all_float_args:
                 value = 0.0  # if no values are provided, defaults to float
-            elif int_args:
+            elif all_int_args:
                 value = 0
             else:
                 value = 0.0
@@ -405,7 +402,7 @@ class NumberInputMixin:
         float_value = isinstance(value, float)
 
         if value is None:
-            if int_args and not float_args:
+            if all_int_args and not all_float_args:
                 # Select int type if all relevant args are ints:
                 int_value = True
             else:
@@ -437,22 +434,18 @@ class NumberInputMixin:
         try:
             float(format % 2)
         except (TypeError, ValueError):
-            raise StreamlitAPIException(
-                "Format string for st.number_input contains invalid characters: %s"
-                % format
-            )
+            raise StreamlitInvalidNumberFormatError(format)
+
 
         # Ensure that the value matches arguments' types.
-        all_ints = int_value and int_args
+        all_ints = int_value and all_int_args
 
         if min_value is not None and value is not None and min_value > value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be greater than or equal to the `min_value` {min_value}"
-            )
+            raise StreamlitValueBelowMinError(value=value, min_value=min_value)
+
+
         if max_value is not None and value is not None and max_value < value:
-            raise StreamlitAPIException(
-                f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
-            )
+            raise StreamlitValueAboveMaxError(value=value, max_value=max_value)
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
@@ -476,12 +469,12 @@ class NumberInputMixin:
                 if value is not None:
                     JSNumber.validate_float_bounds(value, "`value`")
         except JSNumberBoundsException as e:
-            raise StreamlitAPIException(str(e))
+            raise StreamlitJSNumberBoundsError(str(e))
 
         data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
 
         number_input_proto = NumberInputProto()
-        number_input_proto.id = id
+        number_input_proto.id = element_id
         number_input_proto.data_type = data_type
         number_input_proto.label = label
         if value is not None:
@@ -513,15 +506,14 @@ class NumberInputMixin:
 
         serde = NumberInputSerde(value, data_type)
         widget_state = register_widget(
-            "number_input",
-            number_input_proto,
-            user_key=key,
+            number_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="double_value"
         )
 
         if widget_state.value_changed:

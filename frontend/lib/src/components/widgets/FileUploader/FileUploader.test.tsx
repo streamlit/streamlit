@@ -638,7 +638,7 @@ describe("FileUploader widget tests", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
 

@@ -91,6 +91,8 @@ export interface AppViewProps {
   currentPageScriptHash: string
 
   hideSidebarNav: boolean
+
+  expandSidebarNav: boolean
 }
 
 /**
@@ -112,6 +114,7 @@ function AppView(props: AppViewProps): ReactElement {
     navSections,
     onPageChange,
     currentPageScriptHash,
+    expandSidebarNav,
     hideSidebarNav,
     sendMessageToHost,
     endpoints,
@@ -183,6 +186,16 @@ function AppView(props: AppViewProps): ReactElement {
     const displayImage = appLogo.iconImage ? appLogo.iconImage : appLogo.image
     const source = endpoints.buildMediaURL(displayImage)
 
+    const logo = (
+      <StyledLogo
+        src={source}
+        size={appLogo.size}
+        alt="Logo"
+        className="stLogo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -191,11 +204,11 @@ function AppView(props: AppViewProps): ReactElement {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   // Activate scroll to bottom whenever there are bottom elements:
@@ -221,7 +234,7 @@ function AppView(props: AppViewProps): ReactElement {
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <StyledAppViewContainer
-      className="appview-container"
+      className="stAppViewContainer appview-container"
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
@@ -236,6 +249,7 @@ function AppView(props: AppViewProps): ReactElement {
           onPageChange={onPageChange}
           currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
+          expandSidebarNav={expandSidebarNav}
         >
           <StyledSidebarBlockContainer>
             {renderBlock(elements.sidebar)}
@@ -245,8 +259,7 @@ function AppView(props: AppViewProps): ReactElement {
       {!showSidebar && appLogo && (
         <StyledSidebarOpenContainer
           chevronDownshift={sidebarChevronDownshift}
-          isCollapsed={true}
-          data-testid="collapsedControl"
+          data-testid="stSidebarCollapsedControl"
         >
           {renderLogo(appLogo)}
         </StyledSidebarOpenContainer>
@@ -255,11 +268,12 @@ function AppView(props: AppViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
-        className="main"
+        className="stMain"
+        data-testid="stMain"
       >
         <StyledAppViewBlockContainer
-          className="block-container"
-          data-testid="stAppViewBlockContainer"
+          className="stMainBlockContainer block-container"
+          data-testid="stMainBlockContainer"
           isWideMode={wideMode}
           showPadding={showPadding}
           addPaddingForHeader={showToolbar || showColoredLine}
@@ -276,7 +290,7 @@ function AppView(props: AppViewProps): ReactElement {
         well together. */}
         {!hasBottomElements && (
           <StyledIFrameResizerAnchor
-            data-testid="IframeResizerAnchor"
+            data-testid="stAppIframeResizerAnchor"
             data-iframe-height
           />
         )}
@@ -288,7 +302,10 @@ function AppView(props: AppViewProps): ReactElement {
            height in the scroll area. Thereby, the bottom container will never
            cover something if you scroll to the end.*/}
             <StyledAppViewBlockSpacer />
-            <StyledStickyBottomContainer data-testid="stBottom">
+            <StyledStickyBottomContainer
+              className="stBottom"
+              data-testid="stBottom"
+            >
               <StyledInnerBottomContainer>
                 <StyledBottomBlockContainer
                   data-testid="stBottomBlockContainer"
@@ -304,7 +321,7 @@ function AppView(props: AppViewProps): ReactElement {
       </Component>
       {hasEventElements && (
         <EventContainer scriptRunId={elements.event.scriptRunId}>
-          <StyledEventBlockContainer>
+          <StyledEventBlockContainer className="stEvent" data-testid="stEvent">
             {renderBlock(elements.event)}
           </StyledEventBlockContainer>
         </EventContainer>

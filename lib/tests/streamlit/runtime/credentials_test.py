@@ -310,12 +310,12 @@ class CredentialsClassTest(unittest.TestCase):
             m.post("https://api.segment.io/v1/t", status_code=200)
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
-            creds.activation = _verify_email("email@test.com")
+            creds.activation = _verify_email("email@example.com")
             creds.save()
             last_request = m.request_history[-1]
             assert last_request.method == "POST"
             assert last_request.url == "https://api.segment.io/v1/t"
-            assert '"userId": "email@test.com"' in last_request.text
+            assert '"userId": "email@example.com"' in last_request.text
 
     @tempdir()
     def test_email_not_send(self, temp_dir):
@@ -341,7 +341,7 @@ class CredentialsClassTest(unittest.TestCase):
             m.post("https://api.segment.io/v1/t", status_code=403)
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
-            creds.activation = _verify_email("email@test.com")
+            creds.activation = _verify_email("email@example.com")
             with self.assertLogs(
                 "streamlit.runtime.credentials", level="ERROR"
             ) as mock_logger:

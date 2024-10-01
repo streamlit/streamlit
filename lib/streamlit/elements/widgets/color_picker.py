@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -27,6 +27,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -40,7 +41,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -104,8 +104,7 @@ class ColorPickerMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the color picker.
@@ -186,15 +185,13 @@ class ColorPickerMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "color_picker",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=str(value),
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         # set value default
@@ -224,7 +221,7 @@ class ColorPickerMixin:
             )
 
         color_picker_proto = ColorPickerProto()
-        color_picker_proto.id = id
+        color_picker_proto.id = element_id
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
@@ -239,15 +236,14 @@ class ColorPickerMixin:
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
-            "color_picker",
-            color_picker_proto,
-            user_key=key,
+            color_picker_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:

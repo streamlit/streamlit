@@ -23,14 +23,14 @@ from typing import TYPE_CHECKING, Dict, Final, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, type_util, url_util
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import NumpyShape
 
@@ -191,6 +191,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            form_id=current_form_id(self.dg),
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -349,6 +350,7 @@ class MediaMixin:
             loop,
             autoplay,
             muted,
+            form_id=current_form_id(self.dg),
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -457,6 +459,7 @@ def marshall_video(
     loop: bool = False,
     autoplay: bool = False,
     muted: bool = False,
+    form_id: str | None = None,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -499,6 +502,9 @@ def marshall_video(
     muted: bool
         Whether the video should play with the audio silenced. This can be used to
         enable autoplay without user interaction. Defaults to False.
+    form_id: str | None
+        The ID of the form that this element is placed in. Provide None if
+        the element is not placed in a form.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
@@ -565,10 +571,12 @@ def marshall_video(
                 ) from original_err
 
     if autoplay:
-        ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        proto.id = compute_and_register_element_id(
             "video",
+            # video does not yet allow setting a user-defined key
+            user_key=None,
+            form_id=form_id,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -576,10 +584,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
-            page=ctx.active_script_hash if ctx else None,
         )
-
-        proto.id = id
 
 
 def _parse_start_time_end_time(
@@ -698,6 +703,7 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    form_id: str | None = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -724,6 +730,9 @@ def marshall_audio(
     autoplay : bool
         Whether the audio should start playing automatically.
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
+    form_id: str | None
+        The ID of the form that this element is placed in. Provide None if
+        the element is not placed in a form.
     """
 
     proto.start_time = start_time
@@ -741,10 +750,11 @@ def marshall_audio(
         _marshall_av_media(coordinates, proto, data, mimetype)
 
     if autoplay:
-        ctx = get_script_run_ctx()
         proto.autoplay = autoplay
-        id = compute_widget_id(
+        proto.id = compute_and_register_element_id(
             "audio",
+            user_key=None,
+            form_id=form_id,
             url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
@@ -752,6 +762,4 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
-            page=ctx.active_script_hash if ctx else None,
         )
-        proto.id = id

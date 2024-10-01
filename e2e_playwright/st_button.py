@@ -61,6 +61,9 @@ st.button(
     ":material/search: _button 7_ (**styled** :green[label]) :material/arrow_forward:"
 )
 
+st.button("Like Button", icon=":material/thumb_up:")
+st.button("Star Button", icon="⭐")
+
 cols = st.columns(3)
 
 # Order of conn_types matters to preserve the order in st_button.spec.js and the snapshot

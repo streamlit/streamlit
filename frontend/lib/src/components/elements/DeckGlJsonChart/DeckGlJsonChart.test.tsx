@@ -17,14 +17,19 @@
 import React from "react"
 
 import JSON5 from "json5"
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
+import { renderHook } from "@testing-library/react-hooks"
+import { PickingInfo } from "@deck.gl/core/typed"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import "@testing-library/jest-dom"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import "@testing-library/jest-dom"
 
-import { DeckGlJsonChart, PropsWithHeight, State } from "./DeckGlJsonChart"
+import { DeckGlJsonChart } from "./DeckGlJsonChart"
+import type { DeckGLProps } from "./types"
+import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -37,15 +42,15 @@ const mockInitialViewState = {
   zoom: 6,
 }
 
-const mockId = "testId"
 jest.mock("@streamlit/lib/src/theme", () => ({
+  ...jest.requireActual("@streamlit/lib/src/theme"),
   hasLightBackgroundColor: jest.fn(() => false),
 }))
 
 const getProps = (
   elementProps: Partial<DeckGlJsonChartProto> = {},
   initialViewStateProps: Record<string, unknown> = {}
-): PropsWithHeight => {
+): DeckGLProps => {
   const json = {
     initialViewState: mockInitialViewState,
     layers: [
@@ -73,15 +78,29 @@ const getProps = (
 
   return {
     element: DeckGlJsonChartProto.create({
-      id: mockId,
       json: JSON.stringify(json),
       ...elementProps,
     }),
     width: 0,
     mapboxToken: "mapboxToken",
     height: undefined,
-    theme: mockTheme.emotion,
     isFullScreen: false,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    }),
+    fragmentId: "myFragmentId",
+  }
+}
+
+const getUseDeckGlProps = (
+  elementProps: Partial<DeckGlJsonChartProto> = {},
+  initialViewStateProps: Record<string, unknown> = {}
+): UseDeckGlProps => {
+  return {
+    ...getProps(elementProps, initialViewStateProps),
+    isLightTheme: false,
+    theme: mockTheme.emotion,
   }
 }
 
@@ -92,111 +111,148 @@ describe("DeckGlJsonChart element", () => {
     render(<DeckGlJsonChart {...props} />)
 
     const deckGlJsonChart = screen.getByTestId("stDeckGlJsonChart")
-    expect(deckGlJsonChart).toBeInTheDocument()
+    expect(deckGlJsonChart).toBeVisible()
   })
+})
 
+describe("#useDeckGl", () => {
   it("should merge client and server changes in viewState", () => {
-    const props = getProps()
-    const initialViewStateServer = mockInitialViewState
+    const initialProps = getUseDeckGlProps()
 
-    const initialViewStateClient = { ...mockInitialViewState, zoom: 8 }
-
-    const state = {
-      viewState: initialViewStateClient,
-      initialViewState: initialViewStateClient,
-    }
-
-    const result = DeckGlJsonChart.getDerivedStateFromProps(props, state)
-
-    expect(result).toEqual({
-      // should match original mockInitialViewState
-      viewState: { ...initialViewStateClient, zoom: 6 },
-      initialViewState: initialViewStateServer,
+    const {
+      result: { current },
+      rerender,
+    } = renderHook(props => useDeckGl(props), {
+      initialProps,
     })
+
+    expect(current.viewState).toEqual(mockInitialViewState)
+
+    rerender({
+      ...initialProps,
+      element: getUseDeckGlProps({}, { zoom: 8 }).element,
+    })
+
+    // should match original mockInitialViewState
+    expect(current.viewState).toEqual({ ...mockInitialViewState, zoom: 6 })
   })
 
   describe("createTooltip", () => {
-    let deckGlInstance: any
+    it("should return null if info is null", () => {
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(),
+      })
 
-    beforeEach(() => {
-      deckGlInstance = new DeckGlJsonChart({ ...getProps() })
+      expect(current.createTooltip(null)).toBe(null)
     })
 
-    it("should return false if info is undefined", () => {
-      const result = deckGlInstance.createTooltip(undefined)
-      expect(result).toBe(false)
+    it("should return null if info.object is undefined", () => {
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(),
+      })
+
+      expect(current.createTooltip({} as PickingInfo)).toBe(null)
     })
 
-    it("should return false if info.object is undefined", () => {
-      const result = deckGlInstance.createTooltip({})
-      expect(result).toBe(false)
-    })
+    it("should return null if element.tooltip is undefined", () => {
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({ tooltip: undefined }),
+      })
 
-    it("should return false if element.tooltip is undefined", () => {
-      const result = deckGlInstance.createTooltip({ object: {} })
-      expect(result).toBe(false)
+      expect(current.createTooltip({ object: {} } as PickingInfo)).toBe(null)
     })
 
     it("should interpolate the html with the correct object", () => {
-      deckGlInstance.props.element.tooltip = JSON.stringify({
-        html: "<b>Elevation Value:</b> {elevationValue}",
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({
+          tooltip: JSON.stringify({
+            html: "<b>Elevation Value:</b> {elevationValue}",
+          }),
+        }),
       })
-      const result = deckGlInstance.createTooltip({
+
+      const result = current.createTooltip({
         object: { elevationValue: 10 },
-      })
+      } as PickingInfo)
+
+      if (result === null || typeof result !== "object") {
+        throw new Error("Expected result to be an object")
+      }
 
       expect(result.html).toBe("<b>Elevation Value:</b> 10")
     })
 
     it("should interpolate the html from object with a properties field", () => {
-      deckGlInstance.props.element.tooltip = JSON.stringify({
-        html: "<b>Elevation Value:</b> {elevationValue}",
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({
+          tooltip: JSON.stringify({
+            html: "<b>Elevation Value:</b> {elevationValue}",
+          }),
+        }),
       })
-      const result = deckGlInstance.createTooltip({
+
+      const result = current.createTooltip({
         object: { properties: { elevationValue: 10 } },
-      })
+      } as PickingInfo)
+
+      if (result === null || typeof result !== "object") {
+        throw new Error("Expected result to be an object")
+      }
 
       expect(result.html).toBe("<b>Elevation Value:</b> 10")
     })
 
     it("should return the tooltip unchanged when object does have an expected schema", () => {
-      deckGlInstance.props.element.tooltip = JSON.stringify({
-        html: "<b>Elevation Value:</b> {elevationValue}",
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({
+          tooltip: JSON.stringify({
+            html: "<b>Elevation Value:</b> {elevationValue}",
+          }),
+        }),
       })
-      const result = deckGlInstance.createTooltip({
+
+      const result = current.createTooltip({
         object: { unexpectedSchema: { elevationValue: 10 } },
-      })
+      } as PickingInfo)
+
+      if (result === null || typeof result !== "object") {
+        throw new Error("Expected result to be an object")
+      }
 
       expect(result.html).toBe("<b>Elevation Value:</b> {elevationValue}")
     })
 
     it("should interpolate the html with the an empty string", () => {
-      deckGlInstance.props = getProps({
-        tooltip: "",
-      })
-      const result = deckGlInstance.createTooltip({
-        object: { elevationValue: 10 },
+      const {
+        result: { current },
+      } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({ tooltip: "" }),
       })
 
-      expect(result.html).toBe(undefined)
+      const result = current.createTooltip({
+        object: { elevationValue: 10 },
+      } as PickingInfo)
+
+      expect(result).toBe(null)
     })
   })
 
-  describe("getDeckObject", () => {
-    const newId = "newTestId"
+  describe("deck", () => {
     const newJson = {
       initialViewState: mockInitialViewState,
       mapStyle: "mapbox://styles/mapbox/light-v9",
-    }
-
-    const originalState: State = {
-      pydeckJson: newJson,
-      isFullScreen: false,
-      viewState: {},
-      initialized: false,
-      initialViewState: mockInitialViewState,
-      id: mockId,
-      isLightTheme: false,
     }
 
     const mockJsonParse = jest.fn().mockReturnValue(newJson)
@@ -209,37 +265,141 @@ describe("DeckGlJsonChart element", () => {
       mockJsonParse.mockClear()
     })
 
-    const testJsonParsing = (
-      description: string,
-      stateOverride: Partial<State>
-    ): void => {
-      // the description will be passed in
-      // eslint-disable-next-line jest/valid-title
-      it(description, () => {
-        DeckGlJsonChart.getDeckObject(getProps(), originalState)
+    const testCases: {
+      description: string
+      newProps: Partial<UseDeckGlProps>
+    }[] = [
+      {
+        description: "should call JSON5.parse when the json is different",
+        newProps: getUseDeckGlProps(undefined, { zoom: 19 }),
+      },
+      {
+        description: "should call JSON5.parse when FullScreen state changes",
+        newProps: { isFullScreen: true },
+      },
+      {
+        description: "should call JSON5.parse when theme state changes",
+        newProps: { isLightTheme: true },
+      },
+    ]
 
-        expect(JSON5.parse).not.toHaveBeenCalled()
-
-        DeckGlJsonChart.getDeckObject(getProps(), {
-          ...originalState,
-          ...stateOverride,
-        })
-
-        expect(JSON5.parse).toHaveBeenCalledTimes(1)
+    it.each(testCases)("$description", ({ newProps }) => {
+      const initialProps = getUseDeckGlProps()
+      const { rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
       })
-    }
 
-    testJsonParsing(
-      "should call JSON5.parse when the element id is different",
-      { id: newId }
-    )
-    testJsonParsing("should call JSON5.parse when FullScreen state changes", {
-      id: mockId,
-      isFullScreen: true,
+      expect(JSON5.parse).toHaveBeenCalledTimes(1)
+
+      rerender({ ...initialProps, ...newProps })
+
+      expect(JSON5.parse).toHaveBeenCalledTimes(2)
     })
-    testJsonParsing("should call JSON5.parse when theme state changes", {
-      id: mockId,
-      isLightTheme: true,
+  })
+
+  describe("selectionMode", () => {
+    it("should be undefined when allSelectionModes is empty", () => {
+      const initialProps = getUseDeckGlProps({ selectionMode: [] })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBeUndefined()
+    })
+
+    it("should be defined when allSelectionModes has single object select", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBe(
+        DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT
+      )
+    })
+
+    it("should be defined when allSelectionModes has multi object select", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBe(
+        DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT
+      )
+    })
+
+    it("should return the first selection mode given, if multiple are given", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [
+          DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT,
+          DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT,
+        ],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.selectionMode).toBe(
+        DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT
+      )
+    })
+  })
+
+  describe("isSelectionModeActivated", () => {
+    it("should activate selection mode when selectionMode is defined", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.isSelectionModeActivated).toBe(true)
+    })
+
+    it("should not activate selection mode when selectionMode is undefined", () => {
+      const initialProps = getUseDeckGlProps({ selectionMode: [] })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.isSelectionModeActivated).toBe(false)
+    })
+  })
+
+  describe("hasActiveSelection", () => {
+    it("should be false when selection is empty", () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+      expect(result.current.hasActiveSelection).toBe(false)
+    })
+
+    it("should be true when selection is not empty", async () => {
+      const initialProps = getUseDeckGlProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      })
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      await act(async () => {
+        result.current.setSelection({
+          fromUi: true,
+          value: {
+            selection: {
+              indices: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [0] },
+              objects: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [{}] },
+            },
+          },
+        })
+      })
+
+      rerender()
+
+      expect(result.current.hasActiveSelection).toBe(true)
     })
   })
 })

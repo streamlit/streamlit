@@ -20,7 +20,7 @@ import signal
 import sys
 from typing import Any, Final
 
-from streamlit import cli_util, config, env_util, file_util, net_util, secrets, util
+from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
@@ -130,7 +130,7 @@ def _on_server_start(server: Server) -> None:
         else:
             addr = "localhost"
 
-        util.open_browser(server_util.get_url(addr))
+        cli_util.open_browser(server_util.get_url(addr))
 
     # Schedule the browser to open on the main thread.
     asyncio.get_running_loop().call_soon(maybe_open_browser)

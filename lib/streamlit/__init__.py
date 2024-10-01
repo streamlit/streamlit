@@ -131,7 +131,7 @@ import streamlit.column_config as _column_config
 # disables implicit_reexport, where you use the respective command in the example_app.py
 # Streamlit app.
 
-from streamlit.echo import echo as echo
+from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
 from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
@@ -265,6 +265,7 @@ dialog = _dialog_decorator
 fragment = _fragment
 
 # Experimental APIs
+experimental_audio_input = _main.experimental_audio_input
 experimental_dialog = _experimental_dialog_decorator
 experimental_fragment = _experimental_fragment
 experimental_user = _UserInfoProxy()

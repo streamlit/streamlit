@@ -239,7 +239,7 @@ describe("TextArea widget", () => {
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
@@ -263,6 +263,55 @@ describe("TextArea widget", () => {
       },
       undefined
     )
+  })
+
+  it("shows Input Instructions on dirty state when not in form (by default)", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press ⌘+Enter to apply"
+    )
+  })
+
+  it("shows Input Instructions if in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+      "Press ⌘+Enter to submit form"
+    )
+  })
+
+  it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest
+      .spyOn(props.widgetMgr, "allowFormEnterToSubmit")
+      .mockReturnValue(false)
+
+    render(<TextArea {...props} />)
+
+    // Trigger dirty state
+    const textArea = screen.getByRole("textbox")
+    await user.click(textArea)
+    await user.keyboard("TEST")
+
+    expect(screen.queryByTestId("InputInstructions")).toHaveTextContent("")
   })
 
   it("focuses input when clicking label", async () => {

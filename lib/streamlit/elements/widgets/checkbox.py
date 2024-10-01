@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -26,6 +26,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -38,7 +39,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -102,8 +102,7 @@ class CheckboxMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the checkbox.
@@ -207,8 +206,7 @@ class CheckboxMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the toggle.
@@ -291,19 +289,17 @@ class CheckboxMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=bool(value),
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         checkbox_proto = CheckboxProto()
-        checkbox_proto.id = id
+        checkbox_proto.id = element_id
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.type = type
@@ -319,15 +315,14 @@ class CheckboxMixin:
         serde = CheckboxSerde(value)
 
         checkbox_state = register_widget(
-            "checkbox",
-            checkbox_proto,
-            user_key=key,
+            checkbox_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="bool_value",
         )
 
         if checkbox_state.value_changed:

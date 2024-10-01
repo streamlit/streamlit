@@ -18,6 +18,9 @@ import pandas as pd
 import streamlit as st
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
+np.random.seed(0)
+data = np.random.randint(low=0, high=20, size=(20, 3))
+
 
 @st.dialog("Test Dialog with Images")
 def dialog_with_images():
@@ -150,3 +153,22 @@ def dialog_with_deprecation_warning():
 
 if st.button("Open Dialog with deprecation warning"):
     dialog_with_deprecation_warning()
+
+
+@st.fragment()
+def fragment():
+    if st.button("Fragment Button"):
+        st.write("Fragment Button clicked")
+
+
+fragment()
+
+
+@st.dialog("Dialog with chart")
+def dialog_with_chart():
+    st.write("This dialog has a chart")
+    st.bar_chart(pd.DataFrame(data, columns=["a", "b", "c"]))
+
+
+if st.button("Open Chart Dialog"):
+    dialog_with_chart()

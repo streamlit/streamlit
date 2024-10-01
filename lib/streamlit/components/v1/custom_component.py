@@ -20,16 +20,16 @@ from typing import TYPE_CHECKING, Any
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import NoValue, register_widget
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state import register_widget
 from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
@@ -143,9 +143,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 "Could not convert component args to JSON", ex
             )
 
-        def marshall_component(
-            dg: DeltaGenerator, element: Element
-        ) -> Any | type[NoValue]:
+        def marshall_component(dg: DeltaGenerator, element: Element) -> Any:
             element.component_instance.component_name = self.name
             element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:
@@ -172,26 +170,22 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             if key is None:
                 marshall_element_args()
-                computed_id = compute_widget_id(
+                computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
-                    name=self.name,
                     form_id=current_form_id(dg),
+                    name=self.name,
                     url=self.url,
-                    key=key,
                     json_args=serialized_json_args,
                     special_args=special_args,
-                    page=ctx.active_script_hash if ctx else None,
                 )
             else:
-                computed_id = compute_widget_id(
+                computed_id = compute_and_register_element_id(
                     "component_instance",
                     user_key=key,
-                    name=self.name,
                     form_id=current_form_id(dg),
+                    name=self.name,
                     url=self.url,
-                    key=key,
-                    page=ctx.active_script_hash if ctx else None,
                 )
             element.component_instance.id = computed_id
 
@@ -200,14 +194,12 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 return ui_value
 
             component_state = register_widget(
-                element_type="component_instance",
-                element_proto=element.component_instance,
-                user_key=key,
-                widget_func_name=self.name,
+                element.component_instance.id,
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=ctx,
                 on_change_handler=on_change,
+                value_type="json_value",
             )
             widget_value = component_state.value
 

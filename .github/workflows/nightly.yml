@@ -75,17 +75,12 @@ jobs:
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
     secrets:
-      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
 
   run-javascript-tests:
     needs: create-nightly-tag
     uses: ./.github/workflows/js-tests.yml
-    with:
-      ref: ${{needs.create-nightly-tag.outputs.tag}}
-
-  run-cypress-tests:
-    needs: create-nightly-tag
-    uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
 
@@ -104,7 +99,6 @@ jobs:
       - create-nightly-tag
       - run-python-tests
       - run-javascript-tests
-      - run-cypress-tests
       - run-playwright-tests
 
     env:
@@ -122,8 +116,6 @@ jobs:
         run: python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly js
-      - if: ${{ needs.run-cypress-tests.result == 'failure' }}
-        run: python scripts/slack_notifications.py nightly cypress
       - if: ${{ needs.run-playwright-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly playwright
 
@@ -135,7 +127,6 @@ jobs:
       - create-nightly-tag
       - run-python-tests
       - run-javascript-tests
-      - run-cypress-tests
       - run-playwright-tests
     permissions:
       id-token: write

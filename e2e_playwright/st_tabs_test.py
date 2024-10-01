@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_expander
+from e2e_playwright.shared.app_utils import check_top_level_class, get_expander
 
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -37,3 +37,8 @@ def test_displays_correctly_in_sidebar(app: Page):
 
 def test_contains_all_tabs_when_overflowing(app: Page):
     expect(get_expander(app, "Expander").get_by_test_id("stTab")).to_have_count(25)
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stTabs")

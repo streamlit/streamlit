@@ -63,7 +63,7 @@ def declare_component(
 
     .. warning::
         Using ``st.components.v1.declare_component`` directly (instead of
-        importing its module) is deprecated and will be disallowd in a later
+        importing its module) is deprecated and will be disallowed in a later
         version.
 
     Parameters
@@ -73,13 +73,13 @@ def declare_component(
 
     path: str or None
         The path to serve the component's frontend files from. If ``path`` is
-        ``None`` (default), Streamlit will server the component from the
+        ``None`` (default), Streamlit will serve the component from the
         location in ``url``. Either ``path`` or ``url`` must be specified, but
         not both.
 
     url: str or None
         The URL that the component is served from. If ``url`` is ``None``
-        (default), Streamlit will server the component from the location in
+        (default), Streamlit will serve the component from the location in
         ``path``. Either ``path`` or ``url`` must be specified, but not both.
 
     Returns

@@ -323,8 +323,7 @@ class Slider extends React.PureComponent<Props, State> {
           aria-label={this.props.element.label}
         >
           <StyledThumbValue
-            className="StyledThumbValue"
-            data-testid="stThumbValue"
+            data-testid="stSliderThumbValue"
             disabled={props.$disabled === true}
             ref={this.thumbValueRef[thumbIndex]}
           >
@@ -340,11 +339,17 @@ class Slider extends React.PureComponent<Props, State> {
     const { max, min } = element
 
     return (
-      <StyledTickBar data-testid="stTickBar">
-        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMin">
+      <StyledTickBar data-testid="stSliderTickBar">
+        <StyledTickBarItem
+          disabled={disabled}
+          data-testid="stSliderTickBarMin"
+        >
           {this.formatValue(min)}
         </StyledTickBarItem>
-        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMax">
+        <StyledTickBarItem
+          disabled={disabled}
+          data-testid="stSliderTickBarMax"
+        >
           {this.formatValue(max)}
         </StyledTickBarItem>
       </StyledTickBar>
@@ -412,9 +417,9 @@ class Slider extends React.PureComponent<Props, State> {
             Track: {
               style: {
                 backgroundColor: "none !important",
-                paddingBottom: 0,
-                paddingLeft: 0,
-                paddingRight: 0,
+                paddingBottom: spacing.none,
+                paddingLeft: spacing.none,
+                paddingRight: spacing.none,
                 paddingTop: spacing.twoThirdsSmFont,
               },
             },

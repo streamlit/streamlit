@@ -31,7 +31,6 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import dataframe_util
-from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -41,9 +40,10 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -53,7 +53,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from numpy import typing as npt
@@ -79,7 +78,7 @@ class DataframeSelectionState(TypedDict, total=False):
     """
     The schema for the dataframe selection state.
 
-    The selection state is stored in a dictionary-like object that suports both
+    The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
@@ -137,7 +136,7 @@ class DataframeState(TypedDict, total=False):
     """
     The schema for the dataframe event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -146,7 +145,7 @@ class DataframeState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``DataframeSelectionState``
         dictionary schema.
@@ -271,21 +270,48 @@ class ArrowMixin:
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
-        This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
-        It can also display several other types that can be converted to dataframes,
-        e.g. numpy arrays, lists, sets and dictionaries.
+        This command works with a wide variety of collection-like and
+        dataframe-like object types.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, \
-            pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, \
-            snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : dataframe-like, collection-like, or None
             The data to display.
+
+            Dataframe-like objects include dataframe and series objects from
+            popular libraries like Dask, Modin, Numpy, pandas, Polars, PyArrow,
+            Snowpark, Xarray, and more. You can use database cursors and
+            clients that comply with the
+            `Python Database API Specification v2.0 (PEP 249)
+            <https://peps.python.org/pep-0249/>`_. Additionally, you can use
+            anything that supports the `Python dataframe interchange protocol
+            <https://data-apis.org/dataframe-protocol/latest/>`_.
+
+            For example, you can use the following:
+
+            - ``pandas.DataFrame``, ``pandas.Series``, ``pandas.Index``,
+              ``pandas.Styler``, and ``pandas.Array``
+            - ``polars.DataFrame``, ``polars.LazyFrame``, and ``polars.Series``
+            - ``snowflake.snowpark.dataframe.DataFrame``,
+              ``snowflake.snowpark.table.Table``
+
+            If a data type is not recognized, Streamlit will convert the object
+            to a ``pandas.DataFrame`` or ``pyarrow.Table`` using a
+            ``.to_pandas()`` or ``.to_arrow()`` method, respectively, if
+            available.
 
             If ``data`` is a ``pandas.Styler``, it will be used to style its
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values and colors. It does not support some of the more exotic
-            pandas styling features, like bar charts, hovering, and captions.
+            styling options, like bar charts, hovering, and captions. For
+            these styling options, use column configuration instead. Text and
+            number formatting from ``column_config`` always takes precedence
+            over text and number formatting from ``pandas.Styler``.
+
+            Collection-like objects include all Python-native ``Collection``
+            types, such as ``dict``, ``list``, and ``set``.
+
+            If ``data`` is ``None``, Streamlit renders an empty table.
 
         width : int or None
             Desired width of the dataframe expressed in pixels. If ``width`` is
@@ -393,9 +419,9 @@ class ArrowMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element that can be used
-            with the ``.add_rows()`` method. Otherwise, this method returns a
+            with the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``DataframeState``
             dictionary schema.
@@ -541,31 +567,28 @@ class ArrowMixin:
             proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
-            proto.id = compute_widget_id(
+            proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
+                form_id=proto.form_id,
                 data=proto.data,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
                 column_order=proto.column_order,
                 column_config=proto.columns,
-                key=key,
                 selection_mode=selection_mode,
                 is_selection_activated=is_selection_activated,
-                form_id=proto.form_id,
-                page=ctx.page_script_hash if ctx else None,
             )
 
             serde = DataframeSelectionSerde()
             widget_state = register_widget(
-                "dataframe",
-                proto,
-                user_key=key,
+                proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
             self.dg._enqueue("arrow_data_frame", proto)
             return cast(DataframeState, widget_state.value)
@@ -581,7 +604,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : Anything supported by st.dataframe
             The table data.
 
         Example

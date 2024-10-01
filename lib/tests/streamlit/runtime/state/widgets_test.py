@@ -15,21 +15,36 @@
 """Tests widget-related functionality"""
 
 import inspect
+import sys
 import unittest
+from dataclasses import dataclass
+from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
 
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
+from streamlit.elements.lib.utils import (
+    _compute_element_id,
+    compute_and_register_element_id,
+)
+from streamlit.elements.widgets.button_group import ButtonGroupMixin
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import _coalesce_widget_states
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX, compute_widget_id
+from streamlit.runtime.state.common import (
+    GENERATED_ELEMENT_ID_PREFIX,
+    ValueFieldName,
+)
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
-from streamlit.runtime.state.widgets import user_key_from_widget_id
+from streamlit.runtime.state.widgets import (
+    register_widget_from_metadata,
+    user_key_from_element_id,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.element_mocks import ELEMENT_PRODUCER, WIDGET_ELEMENTS
 
 
 def _create_widget(id, states):
@@ -329,45 +344,117 @@ class WidgetManagerTests(unittest.TestCase):
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
-        id = compute_widget_id("button", label="the label")
-        assert id.startswith(GENERATED_WIDGET_ID_PREFIX)
+        element_id = compute_and_register_element_id(
+            "button", label="the label", user_key="my_key", form_id=None
+        )
+        assert element_id.startswith(GENERATED_ELEMENT_ID_PREFIX)
 
 
-class ComputeWidgetIdTests(DeltaGeneratorTestCase):
+# These kwargs are not supposed to be used for element ID calculation:
+EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
+    # Internal stuff
+    "ctx",
+    # Formatting/display stuff: can be changed without resetting an element.
+    "disabled",
+    "format_func",
+    "label_visibility",
+    # on_change callbacks and similar/related parameters.
+    "args",
+    "kwargs",
+    "on_change",
+    "on_click",
+    "on_submit",
+    # Key should be provided via `user_key` instead.
+    "key",
+}
+
+
+class ComputeElementIdTests(DeltaGeneratorTestCase):
     """Enforce that new arguments added to the signature of a widget function are taken
-    into account when computing widget IDs unless explicitly excluded.
+    into account when computing element IDs unless explicitly excluded.
     """
 
     def signature_to_expected_kwargs(self, sig):
-        # These widget kwargs aren't used for widget ID calculation, meaning that they
-        # can be changed without resetting the widget.
-        excluded_kwargs = {
-            # Internal stuff
-            "ctx",
-            # Formatting/display stuff
-            "disabled",
-            "format_func",
-            "label_visibility",
-            # on_change callbacks and similar/related parameters.
-            "args",
-            "kwargs",
-            "on_change",
-            "on_click",
-            "on_submit",
-        }
-
         kwargs = {
             kwarg: ANY
             for kwarg in sig.parameters.keys()
-            if kwarg not in excluded_kwargs
+            if kwarg not in EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION
         }
 
-        # Add some kwargs that are passed to compute_widget_id but don't appear in widget
-        # signatures.
-        for kwarg in ["form_id", "user_key", "page"]:
+        # Add some kwargs that are passed to compute element ID
+        # but don't appear in widget signatures.
+        for kwarg in ["form_id", "user_key"]:
             kwargs[kwarg] = ANY
 
         return kwargs
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_no_usage_of_excluded_kwargs(
+        self, _element_name: str, widget_func: ELEMENT_PRODUCER
+    ):
+        with patch(
+            "streamlit.elements.lib.utils._compute_element_id",
+            wraps=_compute_element_id,
+        ) as patched_compute_element_id:
+            widget_func()
+
+        # Get call kwargs from patched_compute_element_id
+        call_kwargs = patched_compute_element_id.call_args[1]
+
+        kwargs_intersection = set(call_kwargs.keys()) & set(
+            EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION
+        )
+        assert not kwargs_intersection, (
+            "These kwargs are not supposed to be used for element ID calculation: "
+            + str(kwargs_intersection)
+        )
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_includes_essential_kwargs(self, element_name: str, widget_func):
+        """Test that active_script_hash and form ID are always included in
+        element ID calculation."""
+
+        expected_form_id: str | None = "form_id"
+
+        @dataclass
+        class MockForm:
+            form_id = expected_form_id
+
+        with patch(
+            "streamlit.elements.lib.utils._compute_element_id",
+            wraps=_compute_element_id,
+        ) as patched_compute_element_id:
+            # Some elements cannot be used in a form:
+            if element_name not in ["button", "chat_input", "download_button"]:
+                with patch(
+                    "streamlit.elements.lib.form_utils._current_form",
+                    return_value=MockForm(),
+                ):
+                    widget_func()
+            else:
+                widget_func()
+                expected_form_id = None
+
+        # Get call kwargs from patched_compute_element_id
+        call_kwargs = patched_compute_element_id.call_args[1]
+        assert (
+            "active_script_hash" in call_kwargs
+        ), "active_script_hash is expected to always be included "
+        "in element ID calculation."
+
+        # Elements that don't set a form ID
+        assert (
+            call_kwargs.get("form_id") == expected_form_id
+        ), "form_id is expected to be included in element ID calculation."
+
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_triggers_duplicate_id_error(self, _element_name: str, widget_func):
+        """
+        Test that duplicate ID error is raised if the same widget is called twice.
+        """
+        widget_func()
+        with self.assertRaises(errors.DuplicateWidgetID):
+            widget_func()
 
     @parameterized.expand(
         [
@@ -385,15 +472,15 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     )
     def test_widget_id_computation(self, widget_func, module_name):
         with patch(
-            f"streamlit.elements.widgets.{module_name}.compute_widget_id",
-            wraps=compute_widget_id,
-        ) as patched_compute_widget_id:
+            f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
+        ) as patched_compute_and_register_element_id:
             widget_func("my_widget")
 
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
-        patched_compute_widget_id.assert_called_with(ANY, **expected_sig)
+        patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
@@ -409,9 +496,9 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
     )
     def test_widget_id_computation_no_form_widgets(self, widget_func, module_name):
         with patch(
-            f"streamlit.elements.widgets.{module_name}.compute_widget_id",
-            wraps=compute_widget_id,
-        ) as patched_compute_widget_id:
+            f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
+        ) as patched_compute_and_register_element_id:
             if widget_func == st.download_button:
                 widget_func("my_widget", data="")
             else:
@@ -420,10 +507,6 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         sig = inspect.signature(widget_func)
         expected_sig = self.signature_to_expected_kwargs(sig)
 
-        # button and chat widgets don't include a form_id param in their calls to
-        # compute_widget_id because having either in forms (aside from the form's
-        # submit button) is illegal.
-        del expected_sig["form_id"]
         if widget_func == st.button:
             expected_sig["is_form_submitter"] = ANY
         # we exclude `data` for `st.download_button` here and not
@@ -432,19 +515,34 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         if widget_func == st.download_button:
             del expected_sig["data"]
 
-        patched_compute_widget_id.assert_called_with(ANY, **expected_sig)
+        patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
     @parameterized.expand(
         [
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_widget_id, because st.feedback doesn't take a label
-                # and its arguments are different.
+                # passing to compute_and_register_element_id, because st.feedback does
+                # not take a label and its arguments are different.
                 lambda key,
                 options,
                 disabled=False,
                 default=[],
-                click_mode=0: st.feedback("stars", disabled=disabled),
+                click_mode=0,
+                style="": st.feedback("stars", disabled=disabled),
+                "button_group",
+            ),
+            (
+                # define a lambda that matches the signature of what button_group is
+                # passing to compute_and_register_element_id, because st.pills does
+                # not take a label and its arguments are different.
+                lambda key,
+                options,
+                disabled=False,
+                default=[],
+                click_mode=0,
+                style="": ButtonGroupMixin._pills(
+                    st._main, "some_label", options, disabled=disabled
+                ),
                 "button_group",
             ),
             (st.multiselect, "multiselect"),
@@ -457,13 +555,13 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         options = ["a", "b", "c"]
 
         with patch(
-            f"streamlit.elements.widgets.{module_name}.compute_widget_id",
-            wraps=compute_widget_id,
-        ) as patched_compute_widget_id:
+            f"streamlit.elements.widgets.{module_name}.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
+        ) as patched_compute_and_register_element_id:
             widget_func("my_widget", options)
 
         sig = inspect.signature(widget_func)
-        patched_compute_widget_id.assert_called_with(
+        patched_compute_and_register_element_id.assert_called_with(
             ANY, **self.signature_to_expected_kwargs(sig)
         )
 
@@ -474,9 +572,9 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
     def test_widget_id_computation_data_editor(self):
         with patch(
-            "streamlit.elements.widgets.data_editor.compute_widget_id",
-            wraps=compute_widget_id,
-        ) as patched_compute_widget_id:
+            "streamlit.elements.widgets.data_editor.compute_and_register_element_id",
+            wraps=compute_and_register_element_id,
+        ) as patched_compute_and_register_element_id:
             st.data_editor(data=[])
 
         sig = inspect.signature(st.data_editor)
@@ -487,12 +585,37 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
         del expected_sig["hide_index"]
         del expected_sig["column_config"]
 
-        patched_compute_widget_id.assert_called_with(ANY, **expected_sig)
+        patched_compute_and_register_element_id.assert_called_with(ANY, **expected_sig)
 
         # Double check that we get a DuplicateWidgetID error since the `disabled`
         # argument shouldn't affect a widget's ID.
         with self.assertRaises(errors.DuplicateWidgetID):
             st.data_editor(data=[], disabled=True)
+
+
+class RegisterWidgetsTest(DeltaGeneratorTestCase):
+    @parameterized.expand(WIDGET_ELEMENTS)
+    @unittest.skipIf(
+        sys.version_info < (3, 9), reason="the type check requires python3.9 or higher"
+    )
+    def test_register_widget_called_with_valid_value_type(
+        self, _element_name: str, widget_func: ELEMENT_PRODUCER
+    ):
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched_register_widget_from_metadata:
+            widget_func()
+        assert patched_register_widget_from_metadata.call_count == 1
+        widget_metadata_arg: WidgetMetadata = (
+            patched_register_widget_from_metadata.call_args[0][0]
+        )
+        assert widget_metadata_arg.value_type in get_args(ValueFieldName)
+        # test that the value_type also maps to a protobuf field
+        assert (
+            widget_metadata_arg.value_type
+            in WidgetState.DESCRIPTOR.fields_by_name.keys()
+        )
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
@@ -502,7 +625,7 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="c")
 
         k = list(state._keys())[0]
-        assert user_key_from_widget_id(k) == "c"
+        assert user_key_from_element_id(k) == "c"
 
     def test_get_widget_user_key_none(self):
         state = get_script_run_ctx().session_state._state
@@ -510,14 +633,14 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Absence of a user key is represented as None throughout our code
-        assert user_key_from_widget_id(k) is None
+        assert user_key_from_element_id(k) is None
 
     def test_get_widget_user_key_hyphens(self):
         state = get_script_run_ctx().session_state._state
         st.slider("slider", key="my-slider")
 
         k = list(state._keys())[0]
-        assert user_key_from_widget_id(k) == "my-slider"
+        assert user_key_from_element_id(k) == "my-slider"
 
     def test_get_widget_user_key_incorrect_none(self):
         state = get_script_run_ctx().session_state._state
@@ -525,4 +648,4 @@ class WidgetUserKeyTests(DeltaGeneratorTestCase):
 
         k = list(state._keys())[0]
         # Incorrectly inidcates no user key
-        assert user_key_from_widget_id(k) is None
+        assert user_key_from_element_id(k) is None

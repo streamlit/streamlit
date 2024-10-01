@@ -17,10 +17,12 @@
 import React, { ReactElement, Suspense } from "react"
 
 import debounceRender from "react-debounce-render"
+import classNames from "classnames"
 
 import {
   Alert as AlertProto,
   Arrow as ArrowProto,
+  AudioInput as AudioInputProto,
   Audio as AudioProto,
   BokehChart as BokehChartProto,
   ButtonGroup as ButtonGroupProto,
@@ -83,9 +85,12 @@ import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { getElementId } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseBlockProps,
+  convertKeyToClassName,
+  getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -151,6 +156,10 @@ const Video = React.lazy(
 )
 
 // Lazy-load widgets.
+const AudioInput = React.lazy(
+  () => import("@streamlit/lib/src/components/widgets/AudioInput")
+)
+
 const Button = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Button")
 )
@@ -301,6 +310,7 @@ const RawElementNodeRenderer = (
         <StreamlitSyntaxHighlighter
           language={codeProto.language}
           showLineNumbers={codeProto.showLineNumbers}
+          wrapLines={codeProto.wrapLines}
         >
           {codeProto.codeText}
         </StreamlitSyntaxHighlighter>
@@ -311,7 +321,7 @@ const RawElementNodeRenderer = (
       return (
         <DeckGlJsonChart
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...elementProps}
+          {...widgetProps}
         />
       )
 
@@ -324,7 +334,7 @@ const RawElementNodeRenderer = (
       )
 
     case "empty":
-      return <div className="stHidden" data-testid="stEmpty" />
+      return <div className="stEmpty" data-testid="stEmpty" />
 
     case "exception":
       return (
@@ -491,6 +501,20 @@ const RawElementNodeRenderer = (
           {...widgetProps}
         />
       )
+
+    case "audioInput": {
+      const audioInputProto = node.element.audioInput as AudioInputProto
+      widgetProps.disabled = widgetProps.disabled || audioInputProto.disabled
+
+      return (
+        <AudioInput
+          key={audioInputProto.id}
+          uploadClient={props.uploadClient}
+          element={audioInputProto}
+          {...widgetProps}
+        ></AudioInput>
+      )
+    }
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
@@ -748,6 +772,10 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
+  // Get the user key - if it was specified - and use it as CSS class name:
+  const elementId = getElementId(node.element)
+  const userKey = getKeyFromId(elementId)
+
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
@@ -755,13 +783,17 @@ const ElementNodeRenderer = (
   return (
     <Maybe enable={enable}>
       <StyledElementContainer
+        className={classNames(
+          "stElementContainer",
+          "element-container",
+          convertKeyToClassName(userKey)
+        )}
+        data-testid="stElementContainer"
         data-stale={isStale}
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.
         isStale={isStale && !isFullScreen}
         width={width}
-        className={"element-container"}
-        data-testid={"element-container"}
         elementType={elementType}
       >
         <ErrorBoundary width={width}>

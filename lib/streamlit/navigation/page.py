@@ -55,21 +55,21 @@ def Page(
     Parameters
     ----------
 
-    page: str, Path, or callable
+    page : str, Path, or callable
         The page source as a ``Callable`` or path to a Python file. If the page
         source is defined by a Python file, the path can be a string or
         ``pathlib.Path`` object, but must be declared relative to the
         entrypoint file. If the page source is defined by a ``Callable``, the
         ``Callable`` can't accept arguments.
 
-    title: str or None
+    title : str or None
         The title of the page. If this is ``None`` (default), the page title
         (in the browser tab) and label (in the navigation menu) will be
         inferred from the filename or callable name in ``page``. For more
         information, see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-labels>`_.
 
-    icon: str or None
+    icon : str or None
         An optional emoji or icon to display next to the page title and label.
         If ``icon`` is ``None`` (default), no icon is displayed next to the
         page label in the navigation menu, and a Streamlit icon is displayed
@@ -88,7 +88,7 @@ def Page(
             <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
             font library.
 
-    url_path: str or None
+    url_path : str or None
         The page's URL pathname, which is the path relative to the app's root
         URL. If this is ``None`` (default), the URL pathname will be inferred
         from the filename or callable name in ``page``. For more information,
@@ -97,8 +97,10 @@ def Page(
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
+        ``url_path`` can't include forward slashes; paths can't include
+        subdirectories.
 
-    default: bool
+    default : bool
         Whether this page is the default page to be shown when the app is
         loaded. If ``default`` is ``False`` (default), the page will have a
         nonempty URL pathname. However, if no default page is passed to
@@ -206,14 +208,24 @@ class StreamlitPage:
         self._page: Path | Callable[[], None] = page
         self._title: str = title or inferred_name.replace("_", " ")
         self._icon: str = icon or inferred_icon
-        if url_path is not None and url_path.strip() == "" and not default:
+
+        if self._title.strip() == "":
             raise StreamlitAPIException(
-                "The URL path cannot be an empty string unless the page is the default page."
+                "The title of the page cannot be empty or consist of underscores/spaces only"
             )
 
         self._url_path: str = inferred_name
         if url_path is not None:
-            self._url_path = url_path.lstrip("/")
+            if url_path.strip() == "" and not default:
+                raise StreamlitAPIException(
+                    "The URL path cannot be an empty string unless the page is the default page."
+                )
+
+            self._url_path = url_path.strip("/")
+            if "/" in self._url_path:
+                raise StreamlitAPIException(
+                    "The URL path cannot contain a nested path (e.g. foo/bar)."
+                )
 
         if self._icon:
             validate_icon_or_emoji(self._icon)
@@ -276,7 +288,7 @@ class StreamlitPage:
         if not ctx:
             return
 
-        with ctx.pages_manager.run_with_active_hash(self._script_hash):
+        with ctx.run_with_active_hash(self._script_hash):
             if callable(self._page):
                 self._page()
                 return

@@ -33,6 +33,7 @@ describe("Form", () => {
       hasSubmitButton: false,
       scriptRunState: ScriptRunState.RUNNING,
       clearOnSubmit: false,
+      enterToSubmit: true,
       widgetMgr: new WidgetStateManager({
         sendRerunBackMsg: jest.fn(),
         formsDataChanged: jest.fn(),
@@ -43,7 +44,9 @@ describe("Form", () => {
   }
   it("renders without crashing", () => {
     render(<Form {...getProps()} />)
-    expect(screen.getByTestId("stForm")).toBeInTheDocument()
+    const formElement = screen.getByTestId("stForm")
+    expect(formElement).toBeInTheDocument()
+    expect(formElement).toHaveClass("stForm")
   })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {

@@ -33,6 +33,20 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         self.assertEqual(c.type, "secondary")
         self.assertEqual(c.disabled, False)
 
+    def test_emoji_icon(self):
+        """Test that it can be called with emoji icon."""
+        st.download_button("the label", icon="⚡", data="juststring")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        self.assertEqual(c.icon, "⚡")
+
+    def test_material_icon(self):
+        """Test that it can be called with material icon."""
+        st.download_button("the label", icon=":material/thumb_up:", data="juststring")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        self.assertEqual(c.icon, ":material/thumb_up:")
+
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
         st.download_button("the label", data="juststring", disabled=True)

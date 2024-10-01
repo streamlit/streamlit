@@ -1,4 +1,15 @@
 [run]
 omit =
-    # Ignore python protobufs
-    streamlit/proto/*_pb2.py
+    streamlit/proto/*
+    streamlit/hello/*
+    streamlit/static/*
+
+[report]
+omit =
+    streamlit/proto/*
+    streamlit/hello/*
+    streamlit/static/*
+exclude_also =
+    if TYPE_CHECKING:
+    def dg\(self\)
+    raise NotImplementedError

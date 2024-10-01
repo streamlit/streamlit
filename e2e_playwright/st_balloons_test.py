@@ -14,6 +14,9 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import check_top_level_class
+
 
 def test_balloons_are_present_on_page(app: Page):
     expect(app.get_by_test_id("stBalloons")).to_have_count(1)
+    check_top_level_class(app, "stBalloons")

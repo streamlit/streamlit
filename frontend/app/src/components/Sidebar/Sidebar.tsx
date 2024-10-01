@@ -36,6 +36,7 @@ import {
 } from "@streamlit/lib"
 
 import {
+  RESIZE_HANDLE_WIDTH,
   StyledCollapseSidebarButton,
   StyledLogo,
   StyledLogoLink,
@@ -63,6 +64,7 @@ export interface SidebarProps {
   onPageChange: (pageName: string, queryString?: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
+  expandSidebarNav: boolean
 }
 
 interface State {
@@ -231,7 +233,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   renderLogo(collapsed: boolean): ReactElement {
-    const { appLogo } = this.props
+    const { appLogo, endpoints } = this.props
+    const { sidebarWidth } = this.state
 
     if (!appLogo) {
       return <StyledNoLogoSpacer data-testid="stLogoSpacer" />
@@ -239,7 +242,19 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const displayImage =
       collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
-    const source = this.props.endpoints.buildMediaURL(displayImage)
+    const source = endpoints.buildMediaURL(displayImage)
+
+    const logo = (
+      <StyledLogo
+        src={source}
+        size={appLogo.size}
+        sidebarWidth={sidebarWidth}
+        alt="Logo"
+        className="stLogo"
+        data-testid="stLogo"
+      />
+    )
+
     if (appLogo.link) {
       return (
         <StyledLogoLink
@@ -248,11 +263,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           rel="noreferrer"
           data-testid="stLogoLink"
         >
-          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+          {logo}
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+    return logo
   }
 
   public render(): ReactNode {
@@ -265,6 +280,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       onPageChange,
       currentPageScriptHash,
       hideSidebarNav,
+      expandSidebarNav,
       navSections,
     } = this.props
 
@@ -278,24 +294,22 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <>
-        {collapsedSidebar && (
-          <StyledSidebarOpenContainer
-            chevronDownshift={chevronDownshift}
-            isCollapsed={collapsedSidebar}
-            data-testid="collapsedControl"
-          >
-            {this.renderLogo(true)}
-            <StyledOpenSidebarButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_NO_PADDING}
-                onClick={this.toggleCollapse}
-              >
-                <Icon content={ChevronRight} size="xl" />
-              </BaseButton>
-            </StyledOpenSidebarButton>
-          </StyledSidebarOpenContainer>
-        )}
+        <StyledSidebarOpenContainer
+          chevronDownshift={chevronDownshift}
+          data-testid="stSidebarCollapsedControl"
+        >
+          {this.renderLogo(true)}
+          <StyledOpenSidebarButton>
+            <BaseButton
+              kind={BaseButtonKind.HEADER_NO_PADDING}
+              onClick={this.toggleCollapse}
+            >
+              <Icon content={ChevronRight} size="xl" />
+            </BaseButton>
+          </StyledOpenSidebarButton>
+        </StyledSidebarOpenContainer>
         <Resizable
+          className="stSidebar"
           data-testid="stSidebar"
           aria-expanded={!collapsedSidebar}
           enable={{
@@ -304,7 +318,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             bottom: false,
             left: false,
           }}
-          handleStyles={{ right: { width: "8px", right: "-6px" } }}
+          handleStyles={{
+            right: {
+              width: RESIZE_HANDLE_WIDTH,
+              right: "-6px",
+            },
+          }}
           handleComponent={{
             right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}
@@ -351,6 +370,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 currentPageScriptHash={currentPageScriptHash}
                 navSections={navSections}
                 hasSidebarElements={hasElements}
+                expandSidebarNav={expandSidebarNav}
                 onPageChange={onPageChange}
               />
             )}

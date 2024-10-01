@@ -125,6 +125,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert not c.app_pages[1].is_default
         assert not c.app_pages[2].is_default
         assert c.position == NavigationProto.Position.SIDEBAR
+        assert not c.expanded
         assert c.sections == ["Section 1", "Section 2"]
 
     def test_navigation_message_with_position(self):
@@ -142,4 +143,23 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert not c.app_pages[1].is_default
         assert not c.app_pages[2].is_default
         assert c.position == NavigationProto.Position.HIDDEN
+        assert not c.expanded
+        assert c.sections == [""]
+
+    def test_navigation_message_with_expanded(self):
+        st.navigation(
+            [st.Page("page1.py"), st.Page("page2.py"), st.Page("page3.py")],
+            expanded=True,
+        )
+
+        c = self.get_message_from_queue().navigation
+        assert len(c.app_pages) == 3
+        assert c.app_pages[0].section_header == ""
+        assert c.app_pages[1].section_header == ""
+        assert c.app_pages[2].section_header == ""
+        assert c.app_pages[0].is_default
+        assert not c.app_pages[1].is_default
+        assert not c.app_pages[2].is_default
+        assert c.position == NavigationProto.Position.SIDEBAR
+        assert c.expanded
         assert c.sections == [""]

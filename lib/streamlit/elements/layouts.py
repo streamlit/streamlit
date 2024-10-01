@@ -19,7 +19,13 @@ from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidColumnGapError,
+    StreamlitInvalidColumnSpecError,
+    StreamlitInvalidVerticalAlignmentError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_icon_or_emoji
@@ -35,7 +41,11 @@ SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
-        self, *, height: int | None = None, border: bool | None = None
+        self,
+        *,
+        height: int | None = None,
+        border: bool | None = None,
+        key: Key | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -49,6 +59,7 @@ class LayoutsMixin:
 
         Parameters
         ----------
+
         height : int or None
             Desired height of the container expressed in pixels. If ``None`` (default)
             the container grows to fit its content. If a fixed height, scrolling is
@@ -65,6 +76,12 @@ class LayoutsMixin:
             Whether to show a border around the container. If ``None`` (default), a
             border is shown if the container is set to a fixed height and not
             shown otherwise.
+
+        key : str or None
+            An optional string to give this container a stable identity.
+
+            Additionally, if ``key`` is provided, it will be used as CSS
+            class name prefixed with ``st-key-``.
 
 
         Examples
@@ -129,6 +146,7 @@ class LayoutsMixin:
             height: 400px
 
         """
+        key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
@@ -142,6 +160,16 @@ class LayoutsMixin:
                 # border as default setting for scrolling
                 # containers.
                 block_proto.vertical.border = True
+
+        if key:
+            # At the moment, the ID is only used for extracting the
+            # key on the frontend and setting it as CSS class.
+            # There are plans to use the ID for other container features
+            # in the future. This might require including more container
+            # parameters in the ID calculation.
+            block_proto.id = compute_and_register_element_id(
+                "container", user_key=key, form_id=None
+            )
 
         return self.dg._block(block_proto)
 
@@ -276,12 +304,7 @@ class LayoutsMixin:
             weights = (1,) * weights
 
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
-            raise StreamlitAPIException(
-                "The input argument to st.columns must be either a "
-                "positive integer or a list of positive numeric weights. "
-                "See [documentation](https://docs.streamlit.io/develop/api-reference/layout/st.columns) "
-                "for more information."
-            )
+            raise StreamlitInvalidColumnSpecError()
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -292,9 +315,8 @@ class LayoutsMixin:
         }
 
         if vertical_alignment not in vertical_alignment_mapping:
-            raise StreamlitAPIException(
-                'The `vertical_alignment` argument to st.columns must be "top", "center", or "bottom". \n'
-                f"The argument passed was {vertical_alignment}."
+            raise StreamlitInvalidVerticalAlignmentError(
+                vertical_alignment=vertical_alignment
             )
 
         def column_gap(gap):
@@ -305,10 +327,7 @@ class LayoutsMixin:
                 if gap_size in valid_sizes:
                     return gap_size
 
-            raise StreamlitAPIException(
-                'The gap argument to st.columns must be "small", "medium", or "large". \n'
-                f"The argument passed was {gap}."
-            )
+            raise StreamlitInvalidColumnGapError(gap=gap)
 
         gap_size = column_gap(gap)
 
@@ -551,6 +570,7 @@ class LayoutsMixin:
         label: str,
         *,
         help: str | None = None,
+        icon: str | None = None,
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> DeltaGenerator:
@@ -592,6 +612,23 @@ class LayoutsMixin:
         help : str
             An optional tooltip that gets displayed when the popover button is
             hovered over.
+
+        icon : str
+            An optional emoji or icon to display next to the button label. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
 
         disabled : bool
             An optional boolean, which disables the popover button if set to
@@ -653,6 +690,8 @@ class LayoutsMixin:
         popover_proto.disabled = disabled
         if help:
             popover_proto.help = str(help)
+        if icon is not None:
+            popover_proto.icon = validate_icon_or_emoji(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True

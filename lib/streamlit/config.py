@@ -91,23 +91,37 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
 
 
 def set_user_option(key: str, value: Any) -> None:
-    """Set config option.
+    """Set a configuration option.
 
-    Currently, only the following config options can be set within the script itself:
-        * client.caching
+    Currently, only ``client`` configuration options can be set within the
+    script itself:
 
-    Calling with any other options will raise StreamlitAPIException.
+        - ``client.showErrorDetails``
+        - ``client.showSidebarNavigation``
+        - ``client.toolbarMode``
 
-    Run `streamlit config show` in the terminal to see all available options.
+    Calling ``st.set_option`` with any other option will raise a
+    ``StreamlitAPIException``. When changing a configuration option in a
+    running app, you may need to trigger a rerun after changing the option to
+    see the effects.
+
+    Run ``streamlit config show`` in a terminal to see all available options.
 
     Parameters
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
+        available options, run ``streamlit config show`` in a terminal.
 
     value
         The new value to assign to this config option.
+
+    Example
+    -------
+
+    >>> import streamlit as st
+    >>>
+    >>> st.set_option("client.showErrorDetails", True)
 
     """
     try:
@@ -124,15 +138,23 @@ def set_user_option(key: str, value: Any) -> None:
 
 
 def get_option(key: str) -> Any:
-    """Return the current value of a given Streamlit config option.
+    """Return the current value of a given Streamlit configuration option.
 
-    Run `streamlit config show` in the terminal to see all available options.
+    Run ``streamlit config show`` in a terminal to see all available options.
 
     Parameters
     ----------
     key : str
         The config option key of the form "section.optionName". To see all
-        available options, run `streamlit config show` on a terminal.
+        available options, run ``streamlit config show`` in a terminal.
+
+    Example
+    -------
+
+    >>> import streamlit as st
+    >>>
+    >>> color = st.get_option("theme.primaryColor")
+
     """
     with _config_lock:
         config_options = get_config_options()
@@ -277,7 +299,7 @@ _create_option(
         the widget's key in `st.session_state`.
 
         If you'd like to turn off this warning, set this to True.
-        """,
+    """,
     default_val=False,
     type_=bool,
 )
@@ -288,7 +310,7 @@ _create_option(
     description="""
         If True, will show a warning when you run a Streamlit-enabled script
         via "python my_script.py".
-        """,
+    """,
     default_val=True,
     type_=bool,
 )
@@ -343,8 +365,9 @@ _create_option(
 
 _create_option(
     "global.minCachedMessageSize",
-    description="""Only cache ForwardMsgs that are greater than or equal to
-        this minimum.""",
+    description="""
+        Only cache ForwardMsgs that are greater than or equal to this minimum.
+    """,
     visibility="hidden",
     default_val=10 * 1e3,
     type_=float,
@@ -352,9 +375,11 @@ _create_option(
 
 _create_option(
     "global.maxCachedMessageAge",
-    description="""Expire cached ForwardMsgs whose age is greater than this
+    description="""
+        Expire cached ForwardMsgs whose age is greater than this
         value. A message's age is defined by how many times its script has
-        finished running since the message has been accessed.""",
+        finished running since the message has been accessed.
+    """,
     visibility="hidden",
     default_val=2,
     type_=int,
@@ -362,9 +387,11 @@ _create_option(
 
 _create_option(
     "global.storeCachedForwardMessagesInMemory",
-    description="""If True, store cached ForwardMsgs in backend memory.
-        This is an internal flag to validate a potential removal of the in-memory
-        forward message cache.""",
+    description="""
+        If True, store cached ForwardMsgs in backend memory. This is an
+        internal flag to validate a potential removal of the in-memory
+        forward message cache.
+    """,
     visibility="hidden",
     default_val=True,
     type_=bool,
@@ -377,9 +404,10 @@ _create_section("logger", "Settings to customize Streamlit log messages.")
 
 @_create_option("logger.level", type_=str)
 def _logger_log_level() -> str:
-    """Level of logging: 'error', 'warning', 'info', or 'debug'.
+    """Level of logging for Streamlit's internal logger: "error", "warning",
+    "info", or "debug".
 
-    Default: 'info'
+    Default: "info"
     """
     if get_option("global.developmentMode"):
         return "debug"
@@ -391,8 +419,8 @@ def _logger_log_level() -> str:
 def _logger_message_format() -> str:
     """String format for logging messages. If logger.datetimeFormat is set,
     logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`. See
-    [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
-    for available attributes.
+    Python's documentation for available attributes:
+    https://docs.python.org/3/library/logging.html#formatter-objects
 
     Default: "%(asctime)s %(message)s"
     """
@@ -412,7 +440,8 @@ _create_option(
         If True and if rich is installed, exception tracebacks will be logged with syntax highlighting and formatting.
         Rich tracebacks are easier to read and show more code than standard Python tracebacks.
 
-        If set to False, the default Python traceback formatting will be used.""",
+        If set to False, the default Python traceback formatting will be used.
+    """,
     default_val=False,
     visibility="hidden",
     type_=bool,
@@ -436,7 +465,8 @@ _create_option(
         will print to the console only. Exceptions will still display in the
         browser with a generic error message. For now, the exception type and
         traceback show in the browser also, but they will be removed in the
-        future.""",
+        future.
+    """,
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -531,8 +561,9 @@ _create_option(
     "runner.enumCoercion",
     description="""
         Adjust how certain 'options' widgets like radio, selectbox, and
-        multiselect coerce Enum members when the Enum class gets
-        re-defined during a script re-run.
+        multiselect coerce Enum members when the Enum class gets re-defined
+        during a script re-run. For more information, check out the docs:
+        https://docs.streamlit.io/develop/concepts/design/custom-classes#enums
 
         Allowed values:
         * "off": Disables Enum coercion.
@@ -550,11 +581,12 @@ _create_section("server", "Settings for the Streamlit server")
 
 _create_option(
     "server.folderWatchBlacklist",
-    description="""List of folders that should not be watched for changes.
+    description="""
+        List of folders that should not be watched for changes.
 
-    Relative paths will be taken as relative to the current working directory.
+        Relative paths will be taken as relative to the current working directory.
 
-    Example: ['/home/user1/env', 'relative/path/to/folder']
+        Example: ['/home/user1/env', 'relative/path/to/folder']
     """,
     default_val=[],
 )
@@ -580,8 +612,9 @@ _create_option(
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize
 def _server_cookie_secret() -> str:
-    """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
-    be set to the same value across all replicas to ensure they all share the same secret.
+    """Symmetric key used to produce signed cookies. If deploying on multiple
+    replicas, this should be set to the same value across all replicas to ensure
+    they all share the same secret.
 
     Default: randomly generated secret key.
     """
@@ -610,7 +643,7 @@ _create_option(
     "server.runOnSave",
     description="""
         Automatically rerun script when the file is modified on disk.
-        """,
+    """,
     default_val=False,
     type_=bool,
 )
@@ -619,7 +652,7 @@ _create_option(
     "server.allowRunOnSave",
     description="""
         Allows users to automatically rerun when app is updated.
-        """,
+    """,
     visibility="hidden",
     default_val=True,
     type_=bool,
@@ -644,7 +677,7 @@ _create_option(
         The port where the server will listen for browser connections.
 
         Don't use port 3000 which is reserved for internal development.
-        """,
+    """,
     default_val=8501,
     type_=int,
 )
@@ -653,12 +686,12 @@ _create_option(
     "server.scriptHealthCheckEnabled",
     visibility="hidden",
     description="""
-    Flag for enabling the script health check endpoint. It's used for checking if
-    a script loads successfully. On success, the endpoint will return a 200
-    HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
+        Flag for enabling the script health check endpoint. It's used for checking if
+        a script loads successfully. On success, the endpoint will return a 200
+        HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
 
-    Note: This is an experimental Streamlit internal API. The API is subject
-    to change anytime so this should be used at your own risk
+        Note: This is an experimental Streamlit internal API. The API is subject
+        to change anytime so this should be used at your own risk
     """,
     default_val=False,
     type_=bool,
@@ -668,7 +701,7 @@ _create_option(
     "server.baseUrlPath",
     description="""
         The base path for the URL where Streamlit should be served from.
-        """,
+    """,
     default_val="",
     type_=str,
 )
@@ -677,10 +710,12 @@ _create_option(
 _create_option(
     "server.enableCORS",
     description="""
-    Enables support for Cross-Origin Resource Sharing (CORS) protection, for added security.
+        Enables support for Cross-Origin Resource Sharing (CORS) protection, for
+        added security.
 
-    Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
-    `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
+        Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is
+        on and `server.enableCORS` is off at the same time, we will prioritize
+        `server.enableXsrfProtection`.
     """,
     default_val=True,
     type_=bool,
@@ -690,11 +725,13 @@ _create_option(
 _create_option(
     "server.enableXsrfProtection",
     description="""
-        Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
+        Enables support for Cross-Site Request Forgery (XSRF) protection, for
+        added security.
 
-        Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
-        `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
-        """,
+        Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is
+        on and `server.enableCORS` is off at the same time, we will prioritize
+        `server.enableXsrfProtection`.
+    """,
     default_val=True,
     type_=bool,
 )
@@ -703,7 +740,7 @@ _create_option(
     "server.maxUploadSize",
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
-        """,
+    """,
     default_val=200,  # If this default is changed, please also update the docstring for `DeltaGenerator.file_uploader`.
     type_=int,
 )
@@ -711,8 +748,9 @@ _create_option(
 _create_option(
     "server.maxMessageSize",
     description="""
-        Max size, in megabytes, of messages that can be sent via the WebSocket connection.
-        """,
+        Max size, in megabytes, of messages that can be sent via the WebSocket
+        connection.
+    """,
     default_val=200,
     type_=int,
 )
@@ -722,7 +760,7 @@ _create_option(
     description="""
         Enable automatically truncating all data structures that get serialized into Arrow (e.g. DataFrames)
         to ensure that the size is under `server.maxMessageSize`.
-        """,
+    """,
     visibility="hidden",
     default_val=False,
     scriptable=True,
@@ -733,7 +771,7 @@ _create_option(
     "server.enableWebsocketCompression",
     description="""
         Enables support for websocket compression.
-        """,
+    """,
     default_val=False,
     type_=bool,
 )
@@ -741,10 +779,22 @@ _create_option(
 _create_option(
     "server.enableStaticServing",
     description="""
-        Enable serving files from a `static` directory in the running app's directory.
-        """,
+        Enable serving files from a `static` directory in the running app's
+        directory.
+    """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "server.disconnectedSessionTTL",
+    description="""
+        TTL in seconds for sessions whose websockets have been disconnected. The server
+        may choose to clean up session state, uploaded files, etc for a given session
+        with no active websocket connection at any point after this time has passed.
+    """,
+    default_val=120,
+    type_=int,
 )
 
 # Config Section: Browser #
@@ -762,7 +812,7 @@ _create_option(
         - Set the correct URL for CORS and XSRF protection purposes.
         - Show the URL on the terminal
         - Open the browser
-        """,
+    """,
     default_val="localhost",
     type_=str,
 )
@@ -772,7 +822,7 @@ _create_option(
     "browser.gatherUsageStats",
     description="""
         Whether to send usage statistics to Streamlit.
-        """,
+    """,
     default_val=True,
     type_=bool,
 )
@@ -834,9 +884,9 @@ _create_section("ui", "Configuration of UI elements displayed in the browser.")
 _create_option(
     "ui.hideTopBar",
     description="""
-    Flag to hide most of the UI elements found at the top of a Streamlit app.
+        Flag to hide most of the UI elements found at the top of a Streamlit app.
 
-    NOTE: This does *not* hide the main menu in the top-right of an app.
+        NOTE: This does *not* hide the main menu in the top-right of an app.
     """,
     default_val=False,
     type_=bool,
@@ -850,10 +900,12 @@ _create_section("mapbox", "Mapbox configuration that is being used by DeckGL.")
 
 _create_option(
     "mapbox.token",
-    description="""Configure Streamlit to use a custom Mapbox
-                token for elements like st.pydeck_chart and st.map.
-                To get a token for yourself, create an account at
-                https://mapbox.com. It's free (for moderate usage levels)!""",
+    description="""
+        Configure Streamlit to use a custom Mapbox
+        token for elements like st.pydeck_chart and st.map.
+        To get a token for yourself, create an account at
+        https://mapbox.com. It's free (for moderate usage levels)!
+    """,
     default_val="",
     sensitive=True,
 )
@@ -870,7 +922,7 @@ _create_option(
         docstrings. When this flag is set to True, Streamlit will instead display
         the root-level docstring in the app, just like any other magic string.
         This is useful for things like notebooks.
-        """,
+    """,
     visibility="hidden",
     default_val=False,
     type_=bool,
@@ -882,7 +934,7 @@ _create_option(
         Make Streamlit's "magic" parser always display the last expression in the
         root file if it has no semicolon at the end. This matches the behavior of
         Jupyter notebooks, for example.
-        """,
+    """,
     visibility="hidden",
     default_val=False,
     type_=bool,
@@ -895,8 +947,10 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 
 _create_option(
     "theme.base",
-    description="""The preset Streamlit theme that your custom theme inherits from.
-    One of "light" or "dark".""",
+    description="""
+        The preset Streamlit theme that your custom theme inherits from.
+        One of "light" or "dark".
+    """,
 )
 
 _create_option(
@@ -922,8 +976,8 @@ _create_option(
 _create_option(
     "theme.font",
     description="""
-      Font family for all text in the app, except code blocks. One of "sans serif",
-      "serif", or "monospace".
+        Font family for all text in the app, except code blocks. One of "sans serif",
+        "serif", or "monospace".
     """,
 )
 
@@ -933,7 +987,12 @@ _create_section("secrets", "Secrets configuration.")
 
 _create_option(
     "secrets.files",
-    description="""List of locations where secrets are searched. Entries can be a path to toml file or directory path where Kubernetes style secrets will be scanned. Order is important, import is first to last, so secrets in later files will take precedence over earlier ones.""",
+    description="""
+        List of locations where secrets are searched. An entry can be a path to a
+        TOML file or directory path where Kubernetes style secrets are saved.
+        Order is important, import is first to last, so secrets in later files
+        will take precedence over earlier ones.
+    """,
     default_val=[
         # NOTE: The order here is important! Project-level secrets should overwrite global
         # secrets.

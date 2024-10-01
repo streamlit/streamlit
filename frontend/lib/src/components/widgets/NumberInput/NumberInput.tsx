@@ -198,6 +198,11 @@ export const NumberInput: React.FC<Props> = ({
   const canDec = canDecrement(value, step, min)
   const canInc = canIncrement(value, step, max)
 
+  const inForm = isInForm({ formId: elementFormId })
+  // Allows form submission on Enter & displays Enter instructions
+  const allowFormEnterToSubmit =
+    widgetMgr.allowFormEnterToSubmit(elementFormId)
+
   // update the step if the props change
   React.useEffect(() => {
     setStep(getStep({ step: element.step, dataType: element.dataType }))
@@ -375,12 +380,20 @@ export const NumberInput: React.FC<Props> = ({
         if (dirty) {
           commitValue({ value, source: { fromUi: true } })
         }
-        if (isInForm({ formId: elementFormId })) {
+        if (allowFormEnterToSubmit) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
     },
-    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
+    [
+      dirty,
+      value,
+      commitValue,
+      widgetMgr,
+      elementFormId,
+      fragmentId,
+      allowFormEnterToSubmit,
+    ]
   )
 
   return (
@@ -448,7 +461,7 @@ export const NumberInput: React.FC<Props> = ({
             },
             Input: {
               props: {
-                "data-testid": "stNumberInput-Input",
+                "data-testid": "stNumberInputField",
                 step: step,
                 min: min,
                 max: max,
@@ -485,8 +498,7 @@ export const NumberInput: React.FC<Props> = ({
         {width > theme.breakpoints.hideNumberInputControls && (
           <StyledInputControls>
             <StyledInputControl
-              className="step-down"
-              data-testid="stNumberInput-StepDown"
+              data-testid="stNumberInputStepDown"
               onClick={decrement}
               disabled={!canDec || disabled}
               tabIndex={-1}
@@ -498,8 +510,7 @@ export const NumberInput: React.FC<Props> = ({
               />
             </StyledInputControl>
             <StyledInputControl
-              className="step-up"
-              data-testid="stNumberInput-StepUp"
+              data-testid="stNumberInputStepUp"
               onClick={increment}
               disabled={!canInc || disabled}
               tabIndex={-1}
@@ -519,7 +530,8 @@ export const NumberInput: React.FC<Props> = ({
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}
-            inForm={isInForm({ formId: element.formId })}
+            inForm={inForm}
+            allowEnterToSubmit={allowFormEnterToSubmit || !inForm}
           />
         </StyledInstructionsContainer>
       )}

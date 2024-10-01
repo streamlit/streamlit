@@ -15,10 +15,12 @@
  */
 
 import React, {
+  MouseEvent,
   ReactElement,
+  ReactNode,
   useCallback,
   useContext,
-  useRef,
+  useEffect,
   useState,
 } from "react"
 
@@ -27,7 +29,11 @@ import groupBy from "lodash/groupBy"
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
 
-import { IAppPage, StreamlitEndpoints, useIsOverflowing } from "@streamlit/lib"
+import {
+  IAppPage,
+  localStorageAvailable,
+  StreamlitEndpoints,
+} from "@streamlit/lib"
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
 import NavSection from "./NavSection"
@@ -46,7 +52,85 @@ export interface Props {
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
+  expandSidebarNav: boolean
   onPageChange: (pageName: string, queryString?: string) => void
+}
+
+// We make the sidebar nav collapsible when there are more than 12 pages.
+const COLLAPSE_THRESHOLD = 12
+// However, we show the first 10 pages when the sidebar is collapsed.
+const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
+
+interface NavLinkProps {
+  pageUrl: string
+  page: IAppPage
+  isActive: boolean
+  onClick: (e: MouseEvent) => void
+}
+
+function NavLink({
+  pageUrl,
+  page,
+  isActive,
+  onClick,
+}: NavLinkProps): ReactElement {
+  const pageName = page.pageName as string
+
+  return (
+    <li>
+      <SidebarNavLink
+        isActive={isActive}
+        pageUrl={pageUrl}
+        icon={page.icon}
+        onClick={onClick}
+      >
+        {pageName}
+      </SidebarNavLink>
+    </li>
+  )
+}
+
+function generateNavSections(
+  navSections: string[],
+  appPages: IAppPage[],
+  needsCollapse: boolean,
+  generateNavLink: (page: IAppPage, index: number) => ReactElement
+): ReactNode[] {
+  const contents: ReactNode[] = []
+  const pagesBySectionHeader = groupBy(
+    appPages,
+    page => page.sectionHeader || ""
+  )
+  let currentPageCount = 0
+  navSections.forEach(header => {
+    const sectionPages = pagesBySectionHeader[header] ?? []
+    let viewablePages = sectionPages
+
+    if (needsCollapse) {
+      if (currentPageCount >= NUM_PAGES_TO_SHOW_WHEN_COLLAPSED) {
+        // We cannot even show the section
+        return
+      } else if (
+        currentPageCount + sectionPages.length >
+        NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+      ) {
+        // We can partially show the section
+        viewablePages = sectionPages.slice(
+          0,
+          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - currentPageCount
+        )
+      }
+    }
+    currentPageCount += viewablePages.length
+
+    contents.push(
+      <NavSection key={header} header={header}>
+        {viewablePages.map(generateNavLink)}
+      </NavSection>
+    )
+  })
+
+  return contents
 }
 
 /** Displays a list of navigable app page links for multi-page apps. */
@@ -54,44 +138,56 @@ const SidebarNav = ({
   endpoints,
   appPages,
   collapseSidebar,
+  expandSidebarNav,
   currentPageScriptHash,
   hasSidebarElements,
   navSections,
   onPageChange,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
-  const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef, expanded)
   const { pageLinkBaseUrl } = useContext(AppContext)
 
+  useEffect(() => {
+    const cachedSidebarNavExpanded =
+      localStorageAvailable() &&
+      window.localStorage.getItem("sidebarNavState") === "expanded"
+
+    if (!expanded && (expandSidebarNav || cachedSidebarNavExpanded)) {
+      setExpanded(true)
+    }
+  }, [expanded, expandSidebarNav])
+
   const handleViewButtonClick = useCallback(() => {
-    setExpanded(!expanded)
+    const nextState = !expanded
+    if (localStorageAvailable()) {
+      if (nextState) {
+        localStorage.setItem("sidebarNavState", "expanded")
+      } else {
+        localStorage.removeItem("sidebarNavState")
+      }
+    }
+    setExpanded(nextState)
   }, [expanded])
 
-  const generateNavLinks = useCallback(
+  const generateNavLink = useCallback(
     (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
-      const pageName = page.pageName as string
-      const tooltipContent = pageName.replace(/_/g, " ")
       const isActive = page.pageScriptHash === currentPageScriptHash
 
       return (
-        <li key={`${pageName}-${index}`}>
-          <SidebarNavLink
-            isActive={isActive}
-            pageUrl={pageUrl}
-            icon={page.icon}
-            onClick={e => {
-              e.preventDefault()
-              onPageChange(page.pageScriptHash as string)
-              if (reactDeviceDetect.isMobile) {
-                collapseSidebar()
-              }
-            }}
-          >
-            {tooltipContent}
-          </SidebarNavLink>
-        </li>
+        <NavLink
+          key={`${page.pageName}-${index}`}
+          pageUrl={pageUrl}
+          page={page}
+          isActive={isActive}
+          onClick={e => {
+            e.preventDefault()
+            onPageChange(page.pageScriptHash as string)
+            if (reactDeviceDetect.isMobile) {
+              collapseSidebar()
+            }
+          }}
+        />
       )
     },
     [
@@ -103,60 +199,44 @@ const SidebarNav = ({
     ]
   )
 
-  let contents = null
-  if (navSections.length > 0) {
-    const pagesBySectionHeader = groupBy(
-      appPages,
-      page => page.sectionHeader || ""
-    )
-    // For MPAv2: renders each NavSection with its respective header
-    contents = navSections.map(header => {
-      return (
-        <NavSection key={header} header={header}>
-          {(pagesBySectionHeader[header] ?? []).map(generateNavLinks)}
-        </NavSection>
-      )
-    })
-  } else {
-    // For MPAv1: single NavSection with all pages displayed
-    contents = appPages.map(generateNavLinks)
-  }
-
-  // We should show the nav items as expanded if
-  // - there are no sidebar elements
-  // - the user has explicitly expanded the sidebar
-  const shouldShowNavItemsAsExpanded = !hasSidebarElements || expanded
-
-  // We should show the "View more" button if
-  // - there are sidebar elements and it produce an overflow
-  // - the user has explicitly expanded the sidebar indicating
-  //   the possibility to collapse it
+  let contents: ReactNode[] = []
+  const totalPages = appPages.length
   const shouldShowViewButton =
-    (hasSidebarElements && isOverflowing) || expanded
+    hasSidebarElements && totalPages > COLLAPSE_THRESHOLD && !expandSidebarNav
+  const needsCollapse = shouldShowViewButton && !expanded
+  if (navSections.length > 0) {
+    // For MPAv2 with headers: renders a NavSection for each header with its respective pages
+    contents = generateNavSections(
+      navSections,
+      appPages,
+      needsCollapse,
+      generateNavLink
+    )
+  } else {
+    const viewablePages = needsCollapse
+      ? appPages.slice(0, NUM_PAGES_TO_SHOW_WHEN_COLLAPSED)
+      : appPages
+    // For MPAv1 / MPAv2 with no section headers, single NavSection with all pages
+    contents = viewablePages.map(generateNavLink)
+  }
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
-      <StyledSidebarNavItems
-        ref={navItemsRef}
-        isExpanded={shouldShowNavItemsAsExpanded}
-        hasSidebarElements={hasSidebarElements}
-        data-testid="stSidebarNavItems"
-      >
+      <StyledSidebarNavItems data-testid="stSidebarNavItems">
         {contents}
       </StyledSidebarNavItems>
-
+      {shouldShowViewButton && (
+        <StyledViewButton
+          onClick={handleViewButtonClick}
+          data-testid="stSidebarNavViewButton"
+        >
+          {expanded
+            ? "View less"
+            : `View ${totalPages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED} more`}
+        </StyledViewButton>
+      )}
       {hasSidebarElements && (
-        <>
-          {shouldShowViewButton && (
-            <StyledViewButton
-              onClick={handleViewButtonClick}
-              data-testid="stSidebarNavViewButton"
-            >
-              {expanded ? "View less" : "View more"}
-            </StyledViewButton>
-          )}
-          <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
-        </>
+        <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
       )}
     </StyledSidebarNavContainer>
   )

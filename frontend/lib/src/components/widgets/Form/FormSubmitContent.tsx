@@ -24,7 +24,7 @@ export function FormSubmitContent(props: Props): ReactElement {
   const style = { width }
 
   return (
-    <StyledFormSubmitContent className="row-widget" style={style}>
+    <StyledFormSubmitContent style={style}>
       <FormSubmitButton {...props} />
     </StyledFormSubmitContent>
   )

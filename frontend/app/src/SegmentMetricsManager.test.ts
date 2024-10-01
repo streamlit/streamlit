@@ -18,8 +18,6 @@
 // @ts-nocheck
 
 import {
-  Delta,
-  Element,
   mockSessionInfo,
   mockSessionInfoProps,
   SessionInfo,
@@ -167,25 +165,5 @@ test("ip address is overwritten", () => {
     context: {
       ip: "0.0.0.0",
     },
-  })
-})
-
-describe("handleDeltaMessage", () => {
-  it("handles componentInstance Delta messages", () => {
-    const mm = getSegmentMetricsManager()
-
-    const delta = Delta.create({
-      newElement: Element.create({
-        componentInstance: {
-          id: "mockId",
-          componentName: "mockComponentName",
-        },
-      }),
-    })
-
-    mm.handleDeltaMessage(delta)
-    expect(mm.getAndResetCustomComponentCounter()).toEqual({
-      mockComponentName: 1,
-    })
   })
 })

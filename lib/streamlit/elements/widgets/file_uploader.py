@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List, Literal, Sequence, Union, cast, overload
 from typing_extensions import TypeAlias
 
 from streamlit import config
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -29,6 +29,7 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
     to_key,
 )
@@ -43,7 +44,6 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 
 if TYPE_CHECKING:
@@ -281,8 +281,7 @@ class FileUploaderMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             A tooltip that gets displayed next to the file uploader.
@@ -317,9 +316,9 @@ class FileUploaderMixin:
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
 
-            The UploadedFile class is a subclass of BytesIO, and therefore
-            it is "file-like". This means you can pass them anywhere where
-            a file is expected.
+            The UploadedFile class is a subclass of BytesIO, and therefore is
+            "file-like". This means you can pass an instance of it anywhere a
+            file is expected.
 
         Examples
         --------
@@ -405,16 +404,14 @@ class FileUploaderMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "file_uploader",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
-            key=key,
             help=help,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if type:
@@ -437,7 +434,7 @@ class FileUploaderMixin:
                     type.append(x)
 
         file_uploader_proto = FileUploaderProto()
-        file_uploader_proto.id = id
+        file_uploader_proto.id = element_id
         file_uploader_proto.label = label
         file_uploader_proto.type[:] = type if type is not None else []
         file_uploader_proto.max_upload_size_mb = config.get_option(
@@ -459,15 +456,14 @@ class FileUploaderMixin:
         # representing the current set of files that this uploader should
         # know about.
         widget_state = register_widget(
-            "file_uploader",
-            file_uploader_proto,
-            user_key=key,
+            file_uploader_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="file_uploader_state_value",
         )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)

@@ -413,7 +413,7 @@ class DateInput extends React.PureComponent<Props, State> {
                       lineHeight: lineHeights.inputWidget,
                     },
                     props: {
-                      "data-testid": "stDateInput-Input",
+                      "data-testid": "stDateInputField",
                     },
                   },
                 },

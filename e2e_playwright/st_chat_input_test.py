@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_loaded
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 
 
 def test_chat_input_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -58,7 +59,7 @@ def test_embedded_app_with_bottom_chat_input(
     page.goto(f"http://localhost:{app_port}/?embed=true")
     wait_for_app_loaded(page, embedded=True)
 
-    app_view_block = page.get_by_test_id("stAppViewBlockContainer")
+    app_view_block = page.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
     expect(app_view_block).to_have_css("padding-bottom", "16px")
     bottom_block = page.get_by_test_id("stBottomBlockContainer")
@@ -68,9 +69,9 @@ def test_embedded_app_with_bottom_chat_input(
     expect(bottom_block).to_have_css("padding-top", "16px")
 
     # There shouldn't be an iframe resizer anchor:
-    expect(page.get_by_test_id("IframeResizerAnchor")).to_be_hidden()
+    expect(page.get_by_test_id("stAppIframeResizerAnchor")).to_be_hidden()
     # The scroll container should be switched to scroll to bottom:
-    expect(page.get_by_test_id("ScrollToBottomContainer")).to_be_attached()
+    expect(page.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
 
     assert_snapshot(
         page.get_by_test_id("stAppViewContainer"),
@@ -80,7 +81,7 @@ def test_embedded_app_with_bottom_chat_input(
 
 def test_app_with_bottom_chat_input(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that an app with bottom chat input renders correctly."""
-    app_view_block = app.get_by_test_id("stAppViewBlockContainer")
+    app_view_block = app.get_by_test_id("stMainBlockContainer")
     # Bottom padding should be 16px (1rem):
     expect(app_view_block).to_have_css("padding-bottom", "16px")
 
@@ -91,9 +92,9 @@ def test_app_with_bottom_chat_input(app: Page, assert_snapshot: ImageCompareFunc
     expect(bottom_block).to_have_css("padding-top", "16px")
 
     # There shouldn't be an iframe resizer anchor:
-    expect(app.get_by_test_id("IframeResizerAnchor")).to_be_hidden()
+    expect(app.get_by_test_id("stAppIframeResizerAnchor")).to_be_hidden()
     # The scroll container should be switched to scroll to bottom:
-    expect(app.get_by_test_id("ScrollToBottomContainer")).to_be_attached()
+    expect(app.get_by_test_id("stAppScrollToBottomContainer")).to_be_attached()
 
     assert_snapshot(app.get_by_test_id("stBottom"), name="st_chat_input-app_bottom")
 
@@ -192,3 +193,13 @@ def test_calls_callback_on_submit(app: Page):
         "Chat input 3 (callback) - value: None",
         use_inner_text=True,
     )
+
+
+def test_check_top_level_class(app: Page):
+    """Check that the top level class is correctly set."""
+    check_top_level_class(app, "stChatInput")
+
+
+def test_custom_css_class_via_key(app: Page):
+    """Test that the element can have a custom css class via the key argument."""
+    expect(get_element_by_key(app, "chat_input_3")).to_be_visible()

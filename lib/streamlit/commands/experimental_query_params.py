@@ -17,16 +17,15 @@ from __future__ import annotations
 import urllib.parse as parse
 from typing import Any
 
-from streamlit import util
-from streamlit.constants import (
-    EMBED_OPTIONS_QUERY_PARAM,
-    EMBED_QUERY_PARAM,
-    EMBED_QUERY_PARAMS_KEYS,
-)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.state.query_params import (
+    EMBED_OPTIONS_QUERY_PARAM,
+    EMBED_QUERY_PARAM,
+    EMBED_QUERY_PARAMS_KEYS,
+)
 
 
 @gather_metrics("experimental_get_query_params")
@@ -61,7 +60,7 @@ def get_query_params() -> dict[str, list[str]]:
         return {}
     ctx.mark_experimental_query_params_used()
     # Return new query params dict, but without embed, embed_options query params
-    return util.exclude_keys_in_dict(
+    return _exclude_keys_in_dict(
         parse.parse_qs(ctx.query_string, keep_blank_values=True),
         keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
     )
@@ -107,6 +106,30 @@ def set_query_params(**query_params: Any) -> None:
     ctx.enqueue(msg)
 
 
+def _exclude_keys_in_dict(
+    d: dict[str, Any], keys_to_exclude: list[str]
+) -> dict[str, Any]:
+    """Returns new object but without keys defined in keys_to_exclude"""
+    return {
+        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
+    }
+
+
+def _extract_key_query_params(
+    query_params: dict[str, list[str]], param_key: str
+) -> set[str]:
+    """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
+    return {
+        item.lower()
+        for sublist in [
+            [value.lower() for value in query_params[key]]
+            for key in query_params.keys()
+            if key.lower() == param_key and query_params.get(key)
+        ]
+        for item in sublist
+    }
+
+
 def _ensure_no_embed_params(
     query_params: dict[str, list[str] | str], query_string: str
 ) -> str:
@@ -114,7 +137,7 @@ def _ensure_no_embed_params(
     also makes sure old param values in query_string are preserved. Returns query_string : str.
     """
     # Get query params dict without embed, embed_options params
-    query_params_without_embed = util.exclude_keys_in_dict(
+    query_params_without_embed = _exclude_keys_in_dict(
         query_params, keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
     )
     if query_params != query_params_without_embed:
@@ -126,12 +149,12 @@ def _ensure_no_embed_params(
     current_embed_params = parse.urlencode(
         {
             EMBED_QUERY_PARAM: list(
-                util.extract_key_query_params(
+                _extract_key_query_params(
                     all_current_params, param_key=EMBED_QUERY_PARAM
                 )
             ),
             EMBED_OPTIONS_QUERY_PARAM: list(
-                util.extract_key_query_params(
+                _extract_key_query_params(
                     all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
                 )
             ),

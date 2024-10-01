@@ -36,19 +36,18 @@ from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.deprecation_util import show_deprecation_warning
-from streamlit.elements.form_utils import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     import matplotlib
@@ -83,7 +82,7 @@ class PlotlySelectionState(TypedDict, total=False):
     """
     The schema for the Plotly chart selection state.
 
-    The selection state is stored in a dictionary-like object that suports both
+    The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
@@ -171,7 +170,7 @@ class PlotlyState(TypedDict, total=False):
     """
     The schema for the Plotly chart event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -180,7 +179,7 @@ class PlotlyState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``PlotlySelectionState`` dictionary
         schema.
@@ -212,7 +211,9 @@ class PlotlyState(TypedDict, total=False):
 
 @dataclass
 class PlotlyChartSelectionSerde:
-    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
+    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart
+    selection state.
+    """
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
         empty_selection_state: PlotlyState = {
@@ -395,8 +396,8 @@ class PlotlyMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
-            internal placeholder for the chart element. Otherwise, this method
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the chart element. Otherwise, this command
             returns a dictionary-like object that supports both key and
             attribute notation. The attributes are described by the
             ``PlotlyState`` dictionary schema.
@@ -442,18 +443,22 @@ class PlotlyMixin:
 
         if "sharing" in kwargs:
             show_deprecation_warning(
-                "The `sharing` parameter has been deprecated and will be removed in a future release. "
-                "Plotly charts will always be rendered using Streamlit's offline mode."
+                "The `sharing` parameter has been deprecated and will be removed "
+                "in a future release. Plotly charts will always be rendered using "
+                "Streamlit's offline mode."
             )
 
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+                f'You set theme="{theme}" while Streamlit charts only support '
+                "theme=”streamlit” or theme=None to fallback to the default "
+                "library theme."
             )
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
             raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+                f"You have passed {on_select} to `on_select`. But only 'ignore', "
+                "'rerun', or a callable is supported."
             )
 
         key = to_key(key)
@@ -498,18 +503,16 @@ class PlotlyMixin:
         # We are computing the widget id for all plotly uses
         # to also allow non-widget Plotly charts to keep their state
         # when the frontend component gets unmounted and remounted.
-        plotly_chart_proto.id = compute_widget_id(
+        plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
-            key=key,
+            form_id=plotly_chart_proto.form_id,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
             selection_mode=selection_mode,
             is_selection_activated=is_selection_activated,
             theme=theme,
-            form_id=plotly_chart_proto.form_id,
             use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_selection_activated:
@@ -521,13 +524,12 @@ class PlotlyMixin:
             serde = PlotlyChartSelectionSerde()
 
             widget_state = register_widget(
-                "plotly_chart",
-                plotly_chart_proto,
-                user_key=key,
+                plotly_chart_proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)

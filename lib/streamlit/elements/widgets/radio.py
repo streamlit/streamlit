@@ -16,10 +16,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.elements.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.options_selector_utils import index_, maybe_coerce_enum
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -27,8 +28,9 @@ from streamlit.elements.lib.policies import (
 from streamlit.elements.lib.utils import (
     Key,
     LabelVisibility,
+    compute_and_register_element_id,
     get_label_visibility_proto_value,
-    maybe_coerce_enum,
+    save_for_app_testing,
     to_key,
 )
 from streamlit.errors import StreamlitAPIException
@@ -42,12 +44,10 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     T,
     check_python_comparable,
 )
-from streamlit.util import index_
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -81,6 +81,44 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T: ...
+
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T | None: ...
+
     @gather_metrics("radio")
     def radio(
         self,
@@ -125,9 +163,10 @@ class RadioMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         options : Iterable
-            Labels for the select options in an Iterable. For example, this can
-            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
-            pandas.Index. For pandas.DataFrame, the first column is used.
+            Labels for the select options in an ``Iterable``. This can be a
+            ``list``, ``set``, or anything supported by ``st.dataframe``. If
+            ``options`` is dataframe-like, the first column will be used. Each
+            label will be cast to ``str`` internally by default.
 
             Labels can include markdown as described in the ``label`` parameter
             and will be cast to str internally by default.
@@ -146,8 +185,7 @@ class RadioMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the radio.
@@ -273,18 +311,16 @@ class RadioMixin:
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
-        id = compute_widget_id(
+        element_id = compute_and_register_element_id(
             "radio",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
-            key=key,
             help=help,
             horizontal=horizontal,
             captions=captions,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:
@@ -312,7 +348,7 @@ class RadioMixin:
             index = None
 
         radio_proto = RadioProto()
-        radio_proto.id = id
+        radio_proto.id = element_id
         radio_proto.label = label
         if index is not None:
             radio_proto.default = index
@@ -333,15 +369,14 @@ class RadioMixin:
         serde = RadioSerde(opt, index)
 
         widget_state = register_widget(
-            "radio",
-            radio_proto,
-            user_key=key,
+            radio_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_value",
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 
@@ -353,7 +388,7 @@ class RadioMixin:
             radio_proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, id, format_func)
+            save_for_app_testing(ctx, element_id, format_func)
         self.dg._enqueue("radio", radio_proto)
         return widget_state.value
 

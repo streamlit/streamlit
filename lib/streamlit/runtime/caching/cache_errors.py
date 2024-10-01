@@ -29,7 +29,7 @@ CACHE_DOCS_URL = "https://docs.streamlit.io/develop/concepts/architecture/cachin
 def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
-        return "`%s()`" % func.__name__
+        return f"`{func.__name__}()`"
     elif hasattr(type(func), "__name__"):
         return f"`{type(func).__name__}`"
     return f"`{type(func)}`"
@@ -105,9 +105,10 @@ class CacheReplayClosureError(StreamlitAPIException):
 
         msg = (
             f"""
-While running {func_name}, a streamlit element is called on some layout block created outside the function.
-This is incompatible with replaying the cached effect of that element, because the
-the referenced block might not exist when the replay happens.
+While running {func_name}, a streamlit element is called on some layout block
+created outside the function. This is incompatible with replaying the cached
+effect of that element, because the the referenced block might not exist when
+the replay happens.
 
 How to fix this:
 * Move the creation of $THING inside {func_name}.
@@ -124,11 +125,14 @@ class UnserializableReturnValueError(MarkdownFormattedException):
         MarkdownFormattedException.__init__(
             self,
             f"""
-            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {get_cached_func_name_md(func)}.
-            `st.cache_data` uses [pickle](https://docs.python.org/3/library/pickle.html) to
-            serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.
-            If you want to cache unserializable objects such as database connections or Tensorflow
-            sessions, use `st.cache_resource` instead (see [our docs]({CACHE_DOCS_URL}) for differences).""",
+            Cannot serialize the return value (of type {get_return_value_type(return_value)})
+            in {get_cached_func_name_md(func)}. `st.cache_data` uses
+            [pickle](https://docs.python.org/3/library/pickle.html) to serialize the
+            function's return value and safely store it in the cache
+            without mutating the original object. Please convert the return value to a
+            pickle-serializable type. If you want to cache unserializable objects such
+            as database connections or Tensorflow sessions, use `st.cache_resource`
+            instead (see [our docs]({CACHE_DOCS_URL}) for differences).""",
         )
 
 
