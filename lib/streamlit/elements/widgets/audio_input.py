@@ -96,7 +96,7 @@ class AudioInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> UploadedFile | None:
-        r"""Display a widget that returns audio recording from the user's microphone.
+        r"""Display a widget that returns an audio recording from the user's microphone.
 
         Parameters
         ----------
@@ -124,14 +124,13 @@ class AudioInputMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             A tooltip that gets displayed next to the audio input.
 
         on_change : callable
-            An optional callback invoked when this audio_input's value
+            An optional callback invoked when this audio input's value
             changes.
 
         args : tuple
@@ -143,6 +142,7 @@ class AudioInputMixin:
         disabled : bool
             An optional boolean, which disables the audio input if set to
             True. Default is False.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -152,9 +152,9 @@ class AudioInputMixin:
         Returns
         -------
         None or UploadedFile
-            The UploadedFile class is a subclass of BytesIO, and therefore
-            it is "file-like". This means you can pass them anywhere where
-            a file is expected.
+            The UploadedFile class is a subclass of BytesIO, and therefore is
+            "file-like". This means you can pass an instance of it anywhere a
+            file is expected. The MIME type for the audio data is ``audio/wav``.
 
         Examples
         --------
@@ -164,6 +164,10 @@ class AudioInputMixin:
         >>>
         >>> if audio_value:
         ...     st.audio(audio_value)
+
+        .. output::
+           https://doc-audio-input.streamlit.app/
+           height: 260px
 
         """
         ctx = get_script_run_ctx()
@@ -226,14 +230,14 @@ class AudioInputMixin:
         serde = AudioInputSerde()
 
         audio_input_state = register_widget(
-            "audio_input",
-            audio_input_proto,
+            audio_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="file_uploader_state_value",
         )
 
         self.dg._enqueue("audio_input", audio_input_proto)

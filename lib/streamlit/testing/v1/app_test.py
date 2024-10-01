@@ -125,8 +125,8 @@ class AppTest:
     .. note::
         ``AppTest`` only supports testing a single page of an app per
         instance. For multipage apps, each page will need to be tested
-        separately. No methods exist to programatically switch pages within
-        ``AppTest``.
+        separately. ``AppTest`` is not yet compatible with multipage apps
+        using ``st.navigation`` and ``st.Page``.
 
     .. |st.testing.v1.AppTest.from_file| replace:: ``st.testing.v1.AppTest.from_file``
     .. _st.testing.v1.AppTest.from_file: #apptestfrom_file

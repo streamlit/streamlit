@@ -19,21 +19,21 @@ import React, { ReactElement } from "react"
 import { ENABLE_PERIPHERALS_DOCS_URL } from "@streamlit/lib/src/urls"
 
 import {
-  StyledNoMicInputContainerDiv,
+  StyledErrorContainerDiv,
+  StyledErrorTextSpan,
   StyledNoMicInputLearnMoreLink,
-  StyledNoMicPermissionsErrorTextSpan,
 } from "./styled-components"
 
 const NoMicPermissions = (): ReactElement => {
   return (
-    <StyledNoMicInputContainerDiv>
-      <StyledNoMicPermissionsErrorTextSpan>
+    <StyledErrorContainerDiv>
+      <StyledErrorTextSpan>
         This app would like to use your microphone.
-      </StyledNoMicPermissionsErrorTextSpan>{" "}
+      </StyledErrorTextSpan>{" "}
       <StyledNoMicInputLearnMoreLink href={ENABLE_PERIPHERALS_DOCS_URL}>
         Learn how to allow access.
       </StyledNoMicInputLearnMoreLink>
-    </StyledNoMicInputContainerDiv>
+    </StyledErrorContainerDiv>
   )
 }
 

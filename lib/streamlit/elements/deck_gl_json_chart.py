@@ -100,18 +100,107 @@ def parse_selection_mode(
     return set(parsed_selection_modes)
 
 
-class LayerSelectionState(TypedDict, total=False):
-    """
-    The schema for the PyDeck Layer Selection State
+class PydeckSelectionState(TypedDict, total=False):
+    r"""
+    The schema for the PyDeck chart selection state.
+
+    The selection state is stored in a dictionary-like object that supports
+    both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
+
+    You must define ``id`` in ``pydeck.Layer`` to ensure statefulness when
+    using selections with ``st.pydeck_chart``.
 
     Attributes
     ----------
     indices : dict[str, list[int]]
-        Dictionary where keys are the layer id and values are lists of indices
-        of selected objects.
+        A dictionary of selected objects by layer. Each key in the dictionary
+        is a layer id, and each value is a list of object indices within that
+        layer.
     objects : dict[str, list[dict[str, Any]]]
-        Dictionary where keys are the layer id and values are lists of metadata
-        objects for the selected items.
+        A dictionary of object attributes by layer. Each key in the dictionary
+        is a layer id, and each value is a list of metadata dictionaries for
+        the selected objects in that layer.
+
+    Examples
+    --------
+    The following example has multi-object selection enabled. The chart
+    displays US state capitals by population (2023 US Census estimate). You
+    can access this `data
+    <https://github.com/streamlit/docs/blob/main/python/api-examples-source/data/capitals.csv>`_
+    from GitHub.
+
+    >>> import streamlit as st
+    >>> import pydeck
+    >>> import pandas as pd
+    >>>
+    >>> capitals = pd.read_csv(
+    ...     "capitals.csv",
+    ...     header=0,
+    ...     names=[
+    ...         "Capital",
+    ...         "State",
+    ...         "Abbreviation",
+    ...         "Latitude",
+    ...         "Longitude",
+    ...         "Population",
+    ...     ],
+    ... )
+    >>> capitals["size"] = capitals.Population / 10
+    >>>
+    >>> point_layer = pydeck.Layer(
+    ...     "ScatterplotLayer",
+    ...     data=capitals,
+    ...     id="capital-cities",
+    ...     get_position=["Longitude", "Latitude"],
+    ...     get_color="[255, 75, 75]",
+    ...     pickable=True,
+    ...     auto_highlight=True,
+    ...     get_radius="size",
+    ... )
+    >>>
+    >>> view_state = pydeck.ViewState(
+    ...     latitude=40, longitude=-117, controller=True, zoom=2.4, pitch=30
+    ... )
+    >>>
+    >>> chart = pydeck.Deck(
+    ...     point_layer,
+    ...     initial_view_state=view_state,
+    ...     tooltip={"text": "{Capital}, {Abbreviation}\nPopulation: {Population}"},
+    ... )
+    >>>
+    >>> event = st.pydeck_chart(chart, on_select="rerun", selection_mode="multi-object")
+    >>>
+    >>> event.selection
+
+    .. output ::
+        https://doc-pydeck-event-state-selections.streamlit.app/
+        height: 700px
+
+    This is an example of the selection state when selecting a single object
+    from a layer with id, ``"captial-cities"``:
+
+    >>> {
+    >>>   "indices":{
+    >>>     "capital-cities":[
+    >>>       2
+    >>>     ]
+    >>>   },
+    >>>   "objects":{
+    >>>     "capital-cities":[
+    >>>       {
+    >>>         "Abbreviation":" AZ"
+    >>>         "Capital":"Phoenix"
+    >>>         "Latitude":33.448457
+    >>>         "Longitude":-112.073844
+    >>>         "Population":1650070
+    >>>         "State":" Arizona"
+    >>>         "size":165007.0
+    >>>       }
+    >>>     ]
+    >>>   }
+    >>> }
+
     """
 
     indices: dict[str, list[int]]
@@ -120,15 +209,25 @@ class LayerSelectionState(TypedDict, total=False):
 
 class PydeckState(TypedDict, total=False):
     """
-    The schema for the PyDeck State
+    The schema for the PyDeck event state.
+
+    The event state is stored in a dictionary-like object that supports both
+    key and attribute notation. Event states cannot be programmatically changed
+    or set through Session State.
+
+    Only selection events are supported at this time.
 
     Attributes
     ----------
-    selection : LayerSelectionState
-        The selection state of the PyDeck layers.
+    selection : dict
+        The state of the ``on_select`` event. This attribute returns a
+        dictionary-like object that supports both key and attribute notation.
+        The attributes are described by the ``PydeckSelectionState``
+        dictionary schema.
+
     """
 
-    selection: LayerSelectionState
+    selection: PydeckSelectionState
 
 
 @dataclass
@@ -166,6 +265,8 @@ class PydeckMixin:
         pydeck_obj: Deck | None = None,
         *,
         use_container_width: bool = False,
+        width: int | None = None,
+        height: int | None = None,
         selection_mode: Literal[
             "single-object"
         ],  # Selection mode will only be activated by on_select param, this is a default value here to make it work with mypy
@@ -179,6 +280,8 @@ class PydeckMixin:
         pydeck_obj: Deck | None = None,
         *,
         use_container_width: bool = False,
+        width: int | None = None,
+        height: int | None = None,
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         key: Key | None = None,
@@ -247,28 +350,30 @@ class PydeckMixin:
             ``None`` (default), Streamlit sets the height of the chart to fit
             its contents according to the plotting library.
         on_select : "ignore" or "rerun" or callable
-            How the chart should respond to user selection events. This controls
-            whether or not the dataframe behaves like an input widget.
+            How the figure should respond to user selection events. This controls
+            whether or not the chart behaves like an input widget.
             ``on_select`` can be one of the following:
 
             - ``"ignore"`` (default): Streamlit will not react to any selection
-              events in the dataframe. The dataframe will not behave like an
+              events in the chart. The figure will not behave like an
               input widget.
-            - ``"rerun"``: Rerun the script when a selection is made.
-            - callable: A Python callable that will be called when a selection
-                is made. The callable will be passed the selection state as a
-                dictionary.
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              data in the chart. In this case, ``st.pydeck_chart`` will return
+              the selection data as a dictionary.
+            - A ``callable``: Streamlit will rerun the app and execute the callable
+              as a callback function before the rest of the app. In this case,
+              ``st.pydeck_chart`` will return the selection data as a
+              dictionary.
 
-            If ``on_select`` is not ``"ignore"``, ensure that the layers given
-            to the ``pydeck_obj`` have stable IDs so that selection state can be
-            maintained across reruns.
+            If ``on_select`` is not ``"ignore"``, all layers must have a
+            declared ``id`` to keep the chart stateful across reruns.
         selection_mode : "single-object" or "multi-object"
-            The types of selections Streamlit should allow. This can be one of
-            the following:
+            The selection mode of the chart. This can be one of the following:
 
             - ``"single-object"`` (default): Only one object can be selected at
               a time.
             - ``"multi-object"``: Multiple objects can be selected at a time.
+
         key : str
             An optional string to use for giving this element a stable
             identity. If ``key`` is ``None`` (default), this element's identity
@@ -277,6 +382,15 @@ class PydeckMixin:
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
             selection state. The selection state is read-only.
+
+        Returns
+        -------
+        element or dict
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the chart element. Otherwise, this method
+            returns a dictionary-like object that supports both key and
+            attribute notation. The attributes are described by the
+            ``PydeckState`` dictionary schema.
 
         Example
         -------
@@ -395,12 +509,12 @@ class PydeckMixin:
             serde = PydeckSelectionSerde()
 
             widget_state = register_widget(
-                "deck_gl_json_chart",
-                pydeck_proto,
+                pydeck_proto.id,
                 ctx=ctx,
                 deserializer=serde.deserialize,
                 on_change_handler=on_select if callable(on_select) else None,
                 serializer=serde.serialize,
+                value_type="string_value",
             )
 
             self.dg._enqueue("deck_gl_json_chart", pydeck_proto)

@@ -14,7 +14,11 @@
 from __future__ import annotations
 
 import time
+from io import StringIO
 from typing import Literal
+
+import pandas as pd
+import pydeck as pdk
 
 import streamlit as st
 from shared.pydeck_utils import get_pydeck_chart
@@ -89,3 +93,57 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+st.divider()
+st.header("Scatterplot")
+
+
+CITY_CSV = """
+"City","State","Lat","Long","Size"
+"Denver","Colorado",39.7391667,-104.984167,"30000"
+"Hartford","Connecticut",41.767,-72.677,"100000"
+"Juneau","Alaska",58.301935,-134.419740,"10000"
+"Little Rock","Arkansas",34.736009,-92.331122,"50000"
+"Phoenix","Arizona",33.448457,-112.073844,"200000"
+"Sacramento","California",38.555605,-121.468926,"150000"
+"""
+
+csv_file_like = StringIO(CITY_CSV)
+
+
+cities = pd.read_csv(
+    csv_file_like,
+    header=0,
+    names=[
+        "City",
+        "State",
+        "Lat",
+        "Long",
+        "Size",
+    ],
+)
+
+
+st.pydeck_chart(
+    pdk.Deck(
+        pdk.Layer(
+            "ScatterplotLayer",
+            data=cities,
+            id="cities",
+            get_position=["Long", "Lat"],
+            get_color="[255, 75, 75, 127]",
+            pickable=True,
+            get_radius="Size",
+        ),
+        initial_view_state=pdk.ViewState(
+            latitude=cities.Lat.mean(),
+            longitude=cities.Long.mean(),
+            controller=True,
+            zoom=3,
+            pitch=50,
+        ),
+        tooltip={"text": "{City}, Size: {Size}"},
+    ),
+    on_select="rerun",
+    selection_mode="single-object",
+)

@@ -179,7 +179,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h1 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.extrabold};
-    color: ${theme.colors.headingColor};
 
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
@@ -192,7 +191,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h2 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     letter-spacing: -0.005em;
 
     // Use rem so we can remove it when first child, knowing that the
@@ -206,7 +204,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h3 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     letter-spacing: -0.005em;
 
     // Use rem so we can remove it when first child, knowing that the
@@ -220,7 +217,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h4 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     padding: 0.75rem 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -229,7 +225,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h5 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
     line-height: 1.2;
@@ -238,7 +233,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   h6 {
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
-    color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
     line-height: 1.2;
