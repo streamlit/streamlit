@@ -202,17 +202,13 @@ export class MetricsManager {
     data: Record<string, unknown>,
     context: Record<string, unknown> = {}
   ): Promise<void> {
-    console.log(
-      "== Test Sending message to Segment & test Fivetran Webhook:",
-      evName,
-      data,
-      this.anonymousId
-    )
+    console.log("== Test Sending message to Segment:", evName, data)
 
     // Send the event to Segment
     analytics.track(evName, data, context)
 
     const eventProto = this.buildEventProto(evName, data)
+    console.log("== Test Sending message to Fivetran Webhook ==", eventProto)
     const eventJson = eventProto.toJSON()
     // Send the event to the metrics URL
     // @ts-expect-error
@@ -343,8 +339,8 @@ export class MetricsManager {
       contextPagePath: window.location.pathname,
       contextPageReferrer: document.referrer,
       contextPageSearch: window.location.search,
-      // @ts-expect-error
       contextLocale:
+        // @ts-expect-error
         window.navigator.userLanguage || window.navigator.language,
       contextUserAgent: window.navigator.userAgent,
     }
