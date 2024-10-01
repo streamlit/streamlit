@@ -17,7 +17,8 @@
 import styled from "@emotion/styled"
 
 export const StyledText = styled.div(({ theme }) => ({
-  whiteSpace: "pre",
+  fontFamily: theme.genericFonts.bodyFont,
   fontSize: theme.fontSizes.sm,
-  overflowX: "auto",
+  whiteSpace: "pre-line",
+  workdbreak: "break-word",
 }))

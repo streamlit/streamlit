@@ -36,6 +36,19 @@ def test_help_tooltip_works(app: Page):
     expect_help_tooltip(app, text_with_help, "This is a help tooltip!")
 
 
+def test_multiline_text(app: Page):
+    """Test that multiline text is displayed correctly."""
+    multiline_text = "Lorem ipsum dolor sit amet, \nconsectetur adipiscing elit, \nsed do eiusmod tempor incididunt ut \nlabore et dolore magna aliqua."
+    text_element = app.get_by_test_id("stText").nth(3)
+    expect(text_element).to_have_text(multiline_text)
+
+
+def test_no_scrollbar_for_long_text(app: Page):
+    """Test that no scrollbar is shown for long text."""
+    text_element = app.get_by_test_id("stText").nth(4)
+    expect(text_element).not_to_have_class("scrollbar")
+
+
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stText")
