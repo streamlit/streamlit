@@ -128,7 +128,8 @@ def set_user_option(key: str, value: Any) -> None:
         opt = _config_options_template[key]
     except KeyError as ke:
         raise StreamlitAPIException(f"Unrecognized config option: {key}") from ke
-    if opt.scriptable:
+    # Allow e2e tests to set any option
+    if opt.scriptable or get_option("global.e2eTest"):
         set_option(key, value)
         return
 
