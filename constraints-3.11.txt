@@ -110,7 +110,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
-uv==0.4.17
+uv==0.4.18
 vega-datasets==0.9.0
 virtualenv==20.26.6
 watchdog==5.0.3
