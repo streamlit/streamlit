@@ -64,7 +64,7 @@ def create_oauth_client(provider: str) -> tuple[TornadoOAuth2App, str]:
     if "scope" not in provider_client_kwargs:
         provider_client_kwargs["scope"] = "openid email profile"
     if "prompt" not in provider_client_kwargs:
-        provider_client_kwargs["prompt"] = "consent"
+        provider_client_kwargs["prompt"] = "select_account"
 
     oauth = TornadoOAuth(config, cache=auth_cache)
     oauth.register(provider)
