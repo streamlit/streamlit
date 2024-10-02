@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useMemo, useState } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
 
-import { useTheme } from "@emotion/react"
-import { SIZE } from "baseui/modal"
-
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 import Modal, {
   ModalBody,
   ModalHeader,
@@ -33,22 +29,6 @@ import { StyledDialogContent } from "./styled-components"
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
-}
-
-function parseWidthConfig(
-  width: BlockProto.Dialog.DialogWidth,
-  theme: EmotionTheme
-): string {
-  if (width === BlockProto.Dialog.DialogWidth.LARGE) {
-    // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
-    // The dialog's total left and right padding is 48px. So the dialog needs a total width of 752px (=704px + 48px).
-    // The used calculation here makes the relation to the app content width more comprehendable than hardcoding.
-    // Note that a Modal has max-width:100%, so it looks good on mobile independent of the calculated size here.
-    const paddingDifferenceDialogAndAppView = theme.spacing.lg // the dialog has 0.5rem more padding left and right => 1rem
-    return `calc(${theme.sizes.contentMaxWidth} + ${paddingDifferenceDialogAndAppView})`
-  }
-
-  return SIZE.default
 }
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
@@ -70,13 +50,6 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     // changed which would lead to the dialog not opening again.
   }, [initialIsOpen, deltaMsgReceivedAt])
 
-  const theme = useTheme()
-  const size: string = useMemo(
-    () =>
-      parseWidthConfig(width ?? BlockProto.Dialog.DialogWidth.SMALL, theme),
-    [width, theme]
-  )
-
   // don't use the Modal's isOpen prop as it feels laggy when using it
   if (!isOpen) {
     return <></>
@@ -87,7 +60,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       isOpen
       closeable={dismissible}
       onClose={() => setIsOpen(false)}
-      size={size}
+      size={width === BlockProto.Dialog.DialogWidth.LARGE ? "full" : "default"}
     >
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>

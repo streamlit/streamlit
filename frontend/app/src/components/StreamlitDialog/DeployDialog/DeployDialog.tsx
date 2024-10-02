@@ -61,8 +61,8 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
     const deployUrl = new URL(DEPLOY_URL)
 
     deployUrl.searchParams.set("repository", gitInfo.repository || "")
-    deployUrl.searchParams.set("branch", gitInfo.branch || "")
-    deployUrl.searchParams.set("mainModule", gitInfo.module || "")
+    deployUrl.searchParams.set("branch", gitInfo.branch ?? "")
+    deployUrl.searchParams.set("mainModule", gitInfo.module ?? "")
     return deployUrl.toString()
   }
   // If not in git repo, direct them to the Streamlit Cloud page.
@@ -81,7 +81,9 @@ export interface DeployDialogProps {
   metricsMgr: SegmentMetricsManager
 }
 
-export function DeployDialog(props: DeployDialogProps): ReactElement {
+export function DeployDialog(
+  props: Readonly<DeployDialogProps>
+): ReactElement {
   // Get latest git info from AppContext:
   const { gitInfo } = useContext(AppContext)
   const { onClose, metricsMgr } = props
@@ -192,8 +194,8 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
             <StyledSubheader>Custom deployment</StyledSubheader>
             <ListElement>For companies</ListElement>
             <ListElement>
-              Deploy on your own hardware or in the cloud, with Docker,
-              Kubernetes, etc
+              Deploy on your hardware or in the cloud, with Docker, Kubernetes,
+              etc
             </ListElement>
             <ListElement>Set up your own authentication</ListElement>
           </StyledBody>
