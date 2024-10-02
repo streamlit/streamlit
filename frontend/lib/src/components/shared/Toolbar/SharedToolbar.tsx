@@ -33,11 +33,7 @@ const ToolbarContext = createContext<{
   setActions: React.Dispatch<React.SetStateAction<ToolbarActionProps[]>>
 } | null>(null)
 
-export const ToolbarRenderer = ({
-  children,
-}: {
-  children: ReactNode
-}): React.ReactElement => {
+export const ToolbarRenderer: FC<PropsWithChildren> = ({ children }) => {
   const [actions, setActions] = useState<ToolbarActionProps[]>([])
 
   return (
