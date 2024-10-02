@@ -20,7 +20,7 @@ from streamlit import runtime
 
 if runtime.exists():
     original_option = st.get_option("secrets.files")
-    st.write("Secret: ", st.secrets["fake"]["FAKE_CONFIG"])
+    st.write("Secret: ", st.secrets["fake"]["FAKE_SECRET"])
 
     # We are hacking here, but we are setting the secrets file to a different file to determine if it works
     TEST_ASSETS_DIR: Final[str] = os.path.join(
@@ -31,16 +31,16 @@ if runtime.exists():
     st.set_option("secrets.files", [alt_secrets_file1])
     st.secrets._secrets = None
 
-    st.write("Alt Secret: ", st.secrets["fake"]["FAKE_CONFIG"])
+    st.write("Alt Secret: ", st.secrets["fake"]["FAKE_SECRET"])
     st.write("Alt Secret From File 2 visible: ", "other-fake" in st.secrets)
 
     st.set_option("secrets.files", [alt_secrets_file1, alt_secrets_file2])
     st.secrets._secrets = None
 
-    st.write("Alt Secret (Multiple): ", st.secrets["fake"]["FAKE_CONFIG"])
+    st.write("Alt Secret (Multiple): ", st.secrets["fake"]["FAKE_SECRET"])
     st.write(
         "Alt Secret From File 2 (Multiple): ",
-        st.secrets["other-fake"]["OTHER_FAKE_CONFIG"],
+        st.secrets["other-fake"]["OTHER_FAKE_SECRET"],
     )
 
     # Reset the secrets file to the original to avoid affecting other tests
