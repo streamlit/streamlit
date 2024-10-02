@@ -234,9 +234,6 @@ class TextArea extends React.PureComponent<Props, State> {
           id={this.id}
           overrides={{
             Input: {
-              props: {
-                "data-testid": "stTextAreaInputElement",
-              },
               style: {
                 lineHeight: theme.lineHeights.inputWidget,
                 height: height ? `${height}px` : "",
