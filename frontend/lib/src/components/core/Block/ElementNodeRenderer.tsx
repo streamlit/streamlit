@@ -86,6 +86,8 @@ import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { getElementId } from "@streamlit/lib/src/util/utils"
+import { ToolbarRenderer } from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
+import { WidgetLabelRenderer } from "@streamlit/lib/src/components/widgets/BaseWidget/SharedWidgetLabel"
 
 import {
   BaseBlockProps,
@@ -806,7 +808,11 @@ const ElementNodeRenderer = (
               />
             }
           >
-            <RawElementNodeRenderer {...props} isStale={isStale} />
+            <WidgetLabelRenderer>
+              <ToolbarRenderer>
+                <RawElementNodeRenderer {...props} isStale={isStale} />
+              </ToolbarRenderer>
+            </WidgetLabelRenderer>
           </Suspense>
         </ErrorBoundary>
       </StyledElementContainer>
