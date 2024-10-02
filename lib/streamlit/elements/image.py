@@ -121,14 +121,6 @@ class ImageMixin:
             Image width. None means use the image width,
             but do not exceed the width of the column.
             Should be set for SVG images, as they have no default image width.
-        use_container_width : bool
-            Whether to override the figure's native width with the width of the
-            parent container. If ``use_container_width`` is ``True``, Streamlit
-            sets the width of the figure to match the width of the parent
-            container. If ``use_container_width`` is ``False`` (default),
-            Streamlit sets the width of the image to its natural width, up to
-            the width of the parent container.
-            Note: if set, `use_container_width` takes precedence over the `width` parameter.
         use_column_width : "auto", "always", "never", or bool
             If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
@@ -155,6 +147,14 @@ class ImageMixin:
             while diagrams should use the PNG format for lossless compression.
             Defaults to "auto" which identifies the compression type based
             on the type and format of the image argument.
+        use_container_width : bool
+            Whether to override the figure's native width with the width of the
+            parent container. If ``use_container_width`` is ``True``, Streamlit
+            sets the width of the figure to match the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the width of the image to its natural width, up to
+            the width of the parent container.
+            Note: if set, `use_container_width` takes precedence over the `width` parameter.
 
         Example
         -------
