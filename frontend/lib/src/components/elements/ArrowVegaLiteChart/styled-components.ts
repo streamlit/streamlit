@@ -20,7 +20,9 @@ import { transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-export const StyledTooltips = (theme: EmotionTheme): CSSObject => ({
+export const StyledVegaLiteChartTooltips = (
+  theme: EmotionTheme
+): CSSObject => ({
   "#vg-tooltip-element": {
     visibility: "hidden",
     position: "fixed",

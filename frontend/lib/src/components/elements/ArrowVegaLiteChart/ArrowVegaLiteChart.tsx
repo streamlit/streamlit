@@ -52,7 +52,7 @@ import {
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import {
   StyledVegaLiteChartContainer,
-  StyledTooltips,
+  StyledVegaLiteChartTooltips,
 } from "./styled-components"
 
 const DEFAULT_DATA_NAME = "source"
@@ -597,7 +597,7 @@ export class ArrowVegaLiteChart extends PureComponent<
     // the tooltip element is drawn outside of this component.
     return (
       <>
-        <Global styles={StyledTooltips} />
+        <Global styles={StyledVegaLiteChartTooltips} />
         <StyledVegaLiteChartContainer
           data-testid="stVegaLiteChart"
           className="stVegaLiteChart"
