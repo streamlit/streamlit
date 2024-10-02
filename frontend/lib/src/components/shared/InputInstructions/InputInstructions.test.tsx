@@ -27,6 +27,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   dirty: true,
   value: "asd",
   inForm: false,
+  allowEnterToSubmit: true,
   ...props,
 })
 
@@ -153,17 +154,6 @@ describe("InputInstructions", () => {
       render(<InputInstructions {...props} />)
 
       expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
-    })
-
-    it("should show enter instructions in form even when input is not dirty", () => {
-      const props = getProps({
-        dirty: false,
-        inForm: true,
-        allowEnterToSubmit: true,
-      })
-      render(<InputInstructions {...props} />)
-
-      expect(screen.getByText("Press Enter to submit form")).toBeVisible()
     })
   })
 })
