@@ -452,10 +452,14 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     def test_st_image_bad_width(self):
         """Test st.image with bad width."""
-        with self.assertRaises(StreamlitAPIException) as ctx:
-            st.image("does/not/exist", width=-1234)
+        st.image(
+            Image.new("RGB", (64, 64), color="red"),
+            use_column_width=False,
+            width=-1234,
+        )
 
-        self.assertTrue("Image width must be positive." in str(ctx.exception))
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image.WidthBehaviour.ORIGINAL)
 
     def test_st_image_use_container_width_default(self):
         """Test st.image without specifying a use_container_width."""
@@ -500,7 +504,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         st.image(img, width=100, use_container_width=False)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.imgs.width, image.WidthBehaviour.MIN_IMAGE_OR_CONTAINER)
+        self.assertEqual(el.imgs.width, 100)
 
     def test_st_image_use_container_width_and_use_column_width(self):
         """Test st.image with use_container_width and use_column_width."""

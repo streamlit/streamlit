@@ -100,7 +100,7 @@ class ImageMixin:
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
         *,
-        use_container_width: bool | None = None,
+        use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -154,7 +154,8 @@ class ImageMixin:
             container. If ``use_container_width`` is ``False`` (default),
             Streamlit sets the width of the image to its natural width, up to
             the width of the parent container.
-            Note: if set, `use_container_width` takes precedence over the `width` parameter.
+            Note: if `use_container_width` is set to `True`, it will take
+            precedence over the `width` parameter
 
         Example
         -------
@@ -167,11 +168,15 @@ class ImageMixin:
 
         """
 
-        if use_container_width is not None and use_column_width is not None:
+        if use_container_width is True and use_column_width is not None:
             raise StreamlitAPIException(
                 "`use_container_width` and `use_column_width` cannot be set at the same time.",
                 "Please utilize `use_container_width` since `use_column_width` is deprecated.",
             )
+
+        image_width: int = (
+            WidthBehaviour.ORIGINAL if (width is None or width <= 0) else width
+        )
 
         if use_column_width is not None:
             show_deprecation_warning(
@@ -180,34 +185,28 @@ class ImageMixin:
             )
 
             if use_column_width == "auto":
-                width = WidthBehaviour.AUTO
+                image_width = WidthBehaviour.AUTO
             elif use_column_width == "always" or use_column_width is True:
-                width = WidthBehaviour.COLUMN
-            elif width is None:
-                width = WidthBehaviour.ORIGINAL
-            elif width <= 0:
-                raise StreamlitAPIException("Image width must be positive.")
+                image_width = WidthBehaviour.COLUMN
+            elif use_column_width == "never" or use_column_width is False:
+                image_width = WidthBehaviour.ORIGINAL
 
         else:
-            # Check for non-existent params first
-            if use_container_width is None and width is None:
-                use_container_width = False
-
             if use_container_width is True:
-                width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
+                image_width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
+            elif image_width is not None and image_width > 0:
+                # Use the given width. It will be capped on the frontend if it
+                # exceeds the container width.
+                pass
             elif use_container_width is False:
-                width = WidthBehaviour.MIN_IMAGE_OR_CONTAINER
-            elif width is None:
-                width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
-            elif width <= 0:
-                raise StreamlitAPIException("Image width must be positive.")
+                image_width = WidthBehaviour.MIN_IMAGE_OR_CONTAINER
 
         image_list_proto = ImageListProto()
         marshall_images(
             self.dg._get_delta_path_str(),
             image,
             caption,
-            width,
+            image_width,
             image_list_proto,
             clamp,
             channels,

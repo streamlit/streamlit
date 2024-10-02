@@ -96,17 +96,8 @@ export function ImageList({
     imgStyle.objectFit = "contain"
   } else {
     imgStyle.width = containerWidth
-
-    if (
-      [
-        WidthBehavior.AutoWidth,
-        WidthBehavior.MinImageOrContainer,
-        WidthBehavior.MaxImageOrContainer,
-      ].includes(protoWidth)
-    ) {
-      // Cap the image width, so it doesn't exceed its parent container width
-      imgStyle.maxWidth = "100%"
-    }
+    // Cap the image width, so it doesn't exceed its parent container width
+    imgStyle.maxWidth = "100%"
   }
 
   return (
