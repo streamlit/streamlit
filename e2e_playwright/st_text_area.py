@@ -14,6 +14,7 @@
 
 import streamlit as st
 from streamlit import runtime
+from streamlit.errors import StreamlitAPIException
 
 v1 = st.text_area("text area 1 (default)")
 st.write("value 1:", v1)
@@ -65,3 +66,12 @@ st.write("value 10:", v10)
 
 v11 = st.text_area("text area 11 (height=250)", "default text", height=250)
 st.write("value 11:", v11)
+
+v12 = st.text_area("text area 12 (height=75)", "default text", height=75)
+st.write("value 12:", v12)
+
+# Error case: height < 68px
+try:
+    st.text_area("text area 13 (height=65)", "default text", height=65)
+except StreamlitAPIException as ex:
+    st.exception(ex)
