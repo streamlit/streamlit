@@ -252,9 +252,7 @@ describe("NumberInput widget", () => {
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
 
     fireEvent.focus(numberInput)
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to submit form"
-    )
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {

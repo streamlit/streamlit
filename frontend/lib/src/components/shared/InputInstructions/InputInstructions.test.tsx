@@ -163,9 +163,7 @@ describe("InputInstructions", () => {
       })
       render(<InputInstructions {...props} />)
 
-      expect(screen.getByTestId("InputInstructions").textContent).toBe(
-        "Press Enter to submit form"
-      )
+      expect(screen.getByText("Press Enter to submit form")).toBeVisible()
     })
   })
 })
