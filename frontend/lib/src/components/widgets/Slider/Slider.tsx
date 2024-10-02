@@ -425,7 +425,7 @@ class Slider extends React.PureComponent<Props, State> {
             },
             InnerTrack: {
               style: ({ $disabled }: StyleProps) => ({
-                height: "4px",
+                height: spacing.twoXS,
                 ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
               }),
             },

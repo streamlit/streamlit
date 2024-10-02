@@ -133,9 +133,9 @@ export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
 export const StyledSpinner = styled(Spinner)(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
-    width: "1.375rem",
-    height: "1.375rem",
-    borderWidth: "3px",
+    width: theme.sizes.spinnerSize,
+    height: theme.sizes.spinnerSize,
+    borderWidth: theme.sizes.spinnerThickness,
     radius: theme.radii.md,
     justifyContents: "center",
     padding: theme.spacing.none,

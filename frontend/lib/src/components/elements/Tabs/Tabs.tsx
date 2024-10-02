@@ -231,7 +231,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                     ...(isOverflowing && isLast
                       ? {
                           // Add minimal required padding to hide the overscroll gradient
-                          paddingRight: "0.6rem",
+                          // This is calculated based on the width of the gradient (spacing.lg)
+                          paddingRight: `calc(${theme.spacing.lg} * 0.6)`,
                         }
                       : {}),
                     ...(!isStale && isStaleTab
