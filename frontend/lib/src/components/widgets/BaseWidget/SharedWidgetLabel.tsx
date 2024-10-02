@@ -14,71 +14,40 @@
  * limitations under the License.
  */
 
-import React, {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import React, { createContext, FC, PropsWithChildren, useRef } from "react"
+
+import ReactDOM from "react-dom"
+
+import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 
 import { WidgetLabel as BaseWidgetLabel, LabelProps } from "./WidgetLabel"
 
 interface LabelContextType {
-  labelProps: LabelProps | null
-  setLabelProps: React.Dispatch<React.SetStateAction<LabelProps | null>>
+  portalRef: React.RefObject<HTMLDivElement>
 }
 
 const WidgetLabelContext = createContext<LabelContextType | null>(null)
 
-export const WidgetLabelRenderer = ({
-  children,
-}: {
-  children: ReactNode
-}): React.ReactElement => {
-  const [labelProps, setLabelProps] = useState<LabelProps | null>(null)
+export const WidgetLabelRenderer: FC<PropsWithChildren> = ({ children }) => {
+  const portalRef = useRef<HTMLDivElement>(null)
 
   return (
-    <WidgetLabelContext.Provider value={{ labelProps, setLabelProps }}>
-      {labelProps && (
-        <BaseWidgetLabel {...labelProps}>
-          {labelProps.children}
-        </BaseWidgetLabel>
-      )}
+    <WidgetLabelContext.Provider value={{ portalRef }}>
+      <div ref={portalRef} />
       {children}
     </WidgetLabelContext.Provider>
   )
 }
 
-export const WidgetLabel = ({
-  label,
-  children,
-  disabled,
-  htmlFor,
-  labelVisibility,
-}: LabelProps): null => {
-  const context = useContext(WidgetLabelContext)
+export const WidgetLabel: FC<LabelProps> = labelProps => {
+  const { portalRef } = useRequiredContext(WidgetLabelContext)
 
-  if (!context) {
-    throw new Error("WidgetLabel must be used within a WidgetLabelRenderer")
+  if (!portalRef.current) {
+    return null
   }
 
-  const { setLabelProps } = context
-
-  useEffect(() => {
-    const newLabelProps = {
-      label,
-      children,
-      disabled,
-      htmlFor,
-      labelVisibility,
-    }
-    setLabelProps(newLabelProps)
-
-    return () => {
-      setLabelProps(null)
-    }
-  }, [label, children, disabled, htmlFor, labelVisibility, setLabelProps])
-
-  return null
+  return ReactDOM.createPortal(
+    <BaseWidgetLabel {...labelProps} />,
+    portalRef.current
+  )
 }

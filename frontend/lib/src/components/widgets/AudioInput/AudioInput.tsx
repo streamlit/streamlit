@@ -19,6 +19,7 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -32,7 +33,10 @@ import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
-import { ToolbarAction } from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
+import {
+  ToolbarAction,
+  useSetToolbarProps,
+} from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -136,6 +140,16 @@ const AudioInput: React.FC<Props> = ({
     useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [isError, setIsError] = useState(false)
+
+  useSetToolbarProps(
+    useMemo(
+      () => ({
+        onExpand: () => console.log("onExpand"),
+        onCollapse: () => console.log("onCollapse"),
+      }),
+      []
+    )
+  )
 
   const widgetId = element.id
   const widgetFormId = element.formId

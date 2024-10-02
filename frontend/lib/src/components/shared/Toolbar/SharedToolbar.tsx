@@ -16,65 +16,99 @@
 
 import React, {
   createContext,
-  ReactNode,
-  useContext,
+  FC,
+  PropsWithChildren,
   useEffect,
-  useState,
+  useRef,
 } from "react"
+
+import ReactDOM from "react-dom"
+
+import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 
 import Toolbar, {
   ToolbarAction as BaseToolbarAction,
   ToolbarActionProps,
+  ToolbarProps,
 } from "./Toolbar"
 import { StyledContentWrapper } from "./styled-components"
 
-const ToolbarContext = createContext<{
-  actions: ToolbarActionProps[]
-  setActions: React.Dispatch<React.SetStateAction<ToolbarActionProps[]>>
-} | null>(null)
+const ToolbarContext = createContext<
+  | [
+      ToolbarProps | null,
+      React.Dispatch<React.SetStateAction<ToolbarProps | null>>
+    ]
+  | null
+>(null)
+ToolbarContext.displayName = "ToolbarContext"
 
-export const ToolbarRenderer: FC<PropsWithChildren> = ({ children }) => {
-  const [actions, setActions] = useState<ToolbarActionProps[]>([])
+export const ToolbarContextProvider: FC<PropsWithChildren> = ({
+  children,
+}) => {
+  const value = React.useState<ToolbarProps | null>(null)
 
   return (
-    <ToolbarContext.Provider value={{ actions, setActions }}>
-      <StyledContentWrapper>
-        <Toolbar target={StyledContentWrapper}>
-          {actions.map((action, index) => (
-            <BaseToolbarAction
-              key={`${action.label}-${index}`}
-              {...action}
-            ></BaseToolbarAction>
-          ))}
-        </Toolbar>
-        {children}
-      </StyledContentWrapper>
-    </ToolbarContext.Provider>
+    <ToolbarContext.Provider value={value}>{children}</ToolbarContext.Provider>
   )
 }
 
-export const ToolbarAction = ({
+export const useSetToolbarProps = (props: ToolbarProps): void => {
+  const [, setProps] = useRequiredContext(ToolbarContext)
+
+  useEffect(() => {
+    setProps(props)
+
+    return () => {
+      setProps(null)
+    }
+  }, [props, setProps])
+}
+
+type ToolbarRendererContextShape = {
+  portalRef: React.RefObject<HTMLDivElement>
+}
+
+const ToolbarRendererContext =
+  createContext<ToolbarRendererContextShape | null>(null)
+ToolbarRendererContext.displayName = "ToolbarRendererContext"
+
+export const ToolbarRenderer: FC<PropsWithChildren> = ({ children }) => {
+  const [toolbarProps] = useRequiredContext(ToolbarContext)
+  const portalRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <ToolbarRendererContext.Provider value={{ portalRef }}>
+      <StyledContentWrapper>
+        {toolbarProps && (
+          <Toolbar target={StyledContentWrapper} {...toolbarProps}>
+            <div ref={portalRef} />
+          </Toolbar>
+        )}
+        {children}
+      </StyledContentWrapper>
+    </ToolbarRendererContext.Provider>
+  )
+}
+
+export const ToolbarAction: FC<ToolbarActionProps> = ({
   label,
   onClick,
   icon,
   show_label,
-}: ToolbarActionProps): null => {
-  const context = useContext(ToolbarContext)
+}) => {
+  const { portalRef } = useRequiredContext(ToolbarRendererContext)
 
-  if (!context) {
-    throw new Error("ToolbarAction must be used within a Toolbar")
+  if (!portalRef.current) {
+    return null
   }
 
-  const { setActions } = context
-
-  useEffect(() => {
-    const newAction = { label, onClick, icon, show_label }
-    setActions(prevActions => [...prevActions, newAction])
-
-    return () => {
-      setActions(prevActions => prevActions.filter(act => act !== newAction))
-    }
-  }, [label, onClick, icon, show_label, setActions])
-
-  return null
+  return ReactDOM.createPortal(
+    <BaseToolbarAction
+      label={label}
+      onClick={onClick}
+      icon={icon}
+      show_label={show_label}
+    />,
+    portalRef.current
+  )
 }
