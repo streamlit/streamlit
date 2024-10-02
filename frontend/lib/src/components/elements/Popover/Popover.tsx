@@ -144,8 +144,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                   color="inherit"
                   aria-hidden="true"
                   size="lg"
-                  margin=""
-                  padding=""
+                  margin={theme.spacing.none}
+                  padding={theme.spacing.none}
                 />
               </StyledPopoverButtonIcon>
             </BaseButton>

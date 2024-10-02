@@ -359,7 +359,10 @@ class Multiselect extends React.PureComponent<Props, State> {
                         paddingLeft: theme.spacing.sm,
                         marginLeft: theme.spacing.none,
                         marginRight: theme.spacing.sm,
-                        height: "28px",
+                        // The tag height is derived from the minElementHeight
+                        // minus a top and bottom padding (2 * spacing.xs)
+                        // to nicely fit into the input field.
+                        height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
                         maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       },
                     },

@@ -35,4 +35,6 @@ export const sizes = {
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
   largestElementHeight: "4.25rem",
+  spinnerSize: "1.375rem",
+  spinnerThickness: "3px",
 }

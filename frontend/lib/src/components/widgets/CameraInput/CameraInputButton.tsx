@@ -54,20 +54,20 @@ function CameraInputButton({
             overrides={{
               Bar: {
                 style: {
-                  borderTopLeftRadius: "0px",
-                  borderTopRightRadius: "0px",
+                  borderTopLeftRadius: 0,
+                  borderTopRightRadius: 0,
                 },
               },
               BarProgress: {
                 style: {
-                  borderTopLeftRadius: "0px",
-                  borderTopRightRadius: "0px",
+                  borderTopLeftRadius: 0,
+                  borderTopRightRadius: 0,
                 },
               },
               BarContainer: {
                 style: {
-                  borderTopLeftRadius: "0px",
-                  borderTopRightRadius: "0px",
+                  borderTopLeftRadius: 0,
+                  borderTopRightRadius: 0,
                 },
               },
             }}
