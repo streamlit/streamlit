@@ -87,67 +87,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     color: ${theme.colors.disabled};
   }
 
-  // VegaLite-specific CSS to style tooltips
-  #vg-tooltip-element {
-    visibility: hidden;
-    position: fixed;
-    font-family: ${theme.genericFonts.bodyFont};
-    color: ${theme.colors.bodyText};
-    border: ${theme.sizes.borderWidth} solid ${theme.colors.borderColor};
-    background-color: ${transparentize(theme.colors.bgColor, 0.05)};
-    font-size: ${theme.fontSizes.sm};
-    box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
-    padding: ${theme.spacing.xs} ${theme.spacing.md};
-    border-radius: ${theme.radii.default};
-    z-index: ${theme.zIndices.vegaTooltips};
-  }
-
-  #vg-tooltip-element.visible {
-    visibility: visible;
-  }
-
-  #vg-tooltip-element h2 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: ${theme.fontSizes.sm};
-  }
-
-  #vg-tooltip-element td {
-    border: none;
-  }
-
-  #vg-tooltip-element table {
-    border-spacing: 0;
-  }
-
-  #vg-tooltip-element table tr {
-    border: none;
-  }
-
-  #vg-tooltip-element table tr td {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding-top: 2px;
-    padding-bottom: 2px;
-  }
-
-  #vg-tooltip-element table tr td.key {
-    color: ${theme.colors.fadedText60};
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: right;
-    max-width: 150px;
-    padding-right: 4px;
-  }
-
-  #vg-tooltip-element table tr td.value {
-    display: block;
-    max-width: 300px;
-    max-height: 7em;
-    text-align: left;
-  }
-
   // Embedded Overflow Management
   body.embedded {
     overflow: hidden;

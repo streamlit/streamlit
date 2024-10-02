@@ -14,7 +14,73 @@
  * limitations under the License.
  */
 
+import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
+
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+
+export const StyledTooltips = (theme: EmotionTheme): CSSObject => ({
+  "#vg-tooltip-element": {
+    visibility: "hidden",
+    position: "fixed",
+    fontFamily: theme.genericFonts.bodyFont,
+    color: theme.colors.bodyText,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    backgroundColor: transparentize(theme.colors.bgColor, 0.05),
+    fontSize: theme.fontSizes.twoSm,
+    boxShadow: "rgb(0 0 0 / 16%) 0px 1px 4px",
+    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+    borderRadius: theme.radii.default,
+    zIndex: theme.zIndices.vegaTooltips,
+
+    "&.visible": {
+      visibility: "visible",
+    },
+
+    h2: {
+      marginTop: theme.spacing.none,
+      marginBottom: theme.spacing.sm,
+      fontSize: theme.fontSizes.sm,
+    },
+
+    td: {
+      border: "none",
+    },
+
+    table: {
+      borderSpacing: 0,
+
+      tr: {
+        border: "none",
+
+        td: {
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          paddingTop: theme.spacing.threeXS,
+          paddingBottom: theme.spacing.threeXS,
+        },
+
+        "td.key": {
+          color: theme.colors.fadedText60,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          textAlign: "right",
+          maxWidth: "150px",
+          paddingRight: theme.spacing.twoXS,
+        },
+
+        "td.value": {
+          display: "block",
+          maxWidth: "300px",
+          maxHeight: "7rem",
+          textAlign: "left",
+        },
+      },
+    },
+  },
+})
 
 interface StyledVegaLiteChartContainerProps {
   useContainerWidth: boolean
@@ -27,6 +93,9 @@ export const StyledVegaLiteChartContainer =
       width: useContainerWidth || isFullScreen ? "100%" : "auto",
       height: isFullScreen ? "100%" : "auto",
       // These styles come from VegaLite Library
+      "#vg-tooltip-element": {
+        backgroundColor: "red !important",
+      },
       "&.vega-embed": {
         "&:hover summary, .vega-embed:focus summary": {
           background: "transparent",
