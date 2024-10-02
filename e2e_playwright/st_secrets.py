@@ -16,7 +16,7 @@ import os
 from typing import Final
 
 import streamlit as st
-from streamlit import runtime
+from streamlit import config, runtime
 
 if runtime.exists():
     original_option = st.get_option("secrets.files")
@@ -28,13 +28,13 @@ if runtime.exists():
     )
     alt_secrets_file1 = os.path.join(TEST_ASSETS_DIR, "alt_secrets.toml")
     alt_secrets_file2 = os.path.join(TEST_ASSETS_DIR, "alt_secrets2.toml")
-    st.set_option("secrets.files", [alt_secrets_file1])
+    config.set_option("secrets.files", [alt_secrets_file1])
     st.secrets._secrets = None
 
     st.write("Alt Secret: ", st.secrets["fake"]["FAKE_SECRET"])
     st.write("Alt Secret From File 2 visible: ", "other-fake" in st.secrets)
 
-    st.set_option("secrets.files", [alt_secrets_file1, alt_secrets_file2])
+    config.set_option("secrets.files", [alt_secrets_file1, alt_secrets_file2])
     st.secrets._secrets = None
 
     st.write("Alt Secret (Multiple): ", st.secrets["fake"]["FAKE_SECRET"])
@@ -44,5 +44,5 @@ if runtime.exists():
     )
 
     # Reset the secrets file to the original to avoid affecting other tests
-    st.set_option("secrets.files", original_option)
+    config.set_option("secrets.files", original_option)
     st.secrets._secrets = None
