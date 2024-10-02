@@ -95,9 +95,6 @@ export const StyledVegaLiteChartContainer =
       width: useContainerWidth || isFullScreen ? "100%" : "auto",
       height: isFullScreen ? "100%" : "auto",
       // These styles come from VegaLite Library
-      "#vg-tooltip-element": {
-        backgroundColor: "red !important",
-      },
       "&.vega-embed": {
         "&:hover summary, .vega-embed:focus summary": {
           background: "transparent",
