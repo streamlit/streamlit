@@ -23,6 +23,7 @@ const sidebarMobile = balloons - 5
 const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
 const tablePortal = fullscreenWrapper + 60
+const vegaTooltips = 1000110
 const cacheSpinner = sidebar + 1
 // Toasts should overlap chatInput container
 const toast = bottom + 1
@@ -42,4 +43,5 @@ export const zIndices = {
   bottom,
   cacheSpinner,
   toast,
+  vegaTooltips,
 }

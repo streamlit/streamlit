@@ -40,7 +40,6 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
 import "@streamlit/lib/src/assets/css/vega-embed.css"
-import "@streamlit/lib/src/assets/css/vega-tooltip.css"
 
 import {
   dataIsAnAppendOfPrev,
