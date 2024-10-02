@@ -70,4 +70,6 @@ describe("useWidgetManagerElementState hook", () => {
     expect(state).toEqual(24)
     expect(widgetMgr.getElementState(elementId, "key")).toEqual(24)
   })
+
+  // TODO: how to add tests to ensure state gets reset on form clear?
 })

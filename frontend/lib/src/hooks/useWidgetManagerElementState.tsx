@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   isNullOrUndefined,
+  isValidFormId,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
@@ -34,13 +35,15 @@ import {
 const useWidgetManagerElementState = <T,>({
   widgetMgr,
   id,
+  formId,
   key,
   defaultValue,
 }: {
   widgetMgr: WidgetStateManager
   id: string
+  formId?: string
   key: string
-  defaultValue?: T
+  defaultValue: T
 }): [T, (value: T) => void] => {
   useEffect(() => {
     const existingValue = widgetMgr.getElementState(id, key)
@@ -60,6 +63,20 @@ const useWidgetManagerElementState = <T,>({
     },
     [widgetMgr, id, key]
   )
+
+  useEffect(() => {
+    if (!isValidFormId(formId)) {
+      return
+    }
+
+    const formClearListener = widgetMgr.addFormClearedListener(formId, () =>
+      setState(defaultValue)
+    )
+
+    return () => {
+      formClearListener.disconnect()
+    }
+  }, [formId, widgetMgr, defaultValue, setState])
 
   return [state, setState]
 }
