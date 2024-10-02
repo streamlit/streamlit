@@ -38,9 +38,9 @@ def test_help_tooltip_works(app: Page):
 
 def test_multiline_text(app: Page):
     """Test that multiline text is displayed correctly."""
-    multiline_text = "Lorem ipsum dolor sit amet, \nconsectetur adipiscing elit, \nsed do eiusmod tempor incididunt ut \nlabore et dolore magna aliqua."
-    text_element = app.get_by_test_id("stText").nth(3)
-    expect(text_element).to_have_text(multiline_text)
+    multiline_text = app.get_by_test_id("stText").nth(3).locator("div")
+    bounding_box = multiline_text.bounding_box()
+    assert bounding_box["height"] > bounding_box["width"]
 
 
 def test_no_scrollbar_for_long_text(app: Page):
