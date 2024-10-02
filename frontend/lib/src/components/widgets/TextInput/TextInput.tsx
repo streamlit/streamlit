@@ -215,12 +215,19 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { dirty, value } = this.state
+    const { dirty, focused, value } = this.state
     const { element, width, disabled, widgetMgr, theme } = this.props
     const { placeholder, formId } = element
+
     // Show "Please enter" instructions if in a form & allowed, or not in form
-    const allowEnterToSubmit =
-      widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
+    const allowEnterToSubmit = isInForm({ formId })
+      ? widgetMgr.allowFormEnterToSubmit(formId)
+      : dirty
+    // widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
+
+    // Hide the "Please enter to apply" text in small widget sizes */}
+    const shouldShowInstructions =
+      focused && width > theme.breakpoints.hideWidgetDetails
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -298,8 +305,7 @@ class TextInput extends React.PureComponent<Props, State> {
             },
           }}
         />
-        {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {this.state.focused && width > theme.breakpoints.hideWidgetDetails && (
+        {shouldShowInstructions && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}

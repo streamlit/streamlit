@@ -196,12 +196,18 @@ class TextArea extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { element, disabled, width, widgetMgr, theme } = this.props
-    const { value, dirty } = this.state
+    const { dirty, focused, value } = this.state
     const style = { width }
     const { height, placeholder, formId } = element
+
     // Show "Please enter" instructions if in a form & allowed, or not in form
-    const allowEnterToSubmit =
-      widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
+    const allowEnterToSubmit = isInForm({ formId })
+      ? widgetMgr.allowFormEnterToSubmit(formId)
+      : dirty
+
+    // Hide the "Please enter to apply" text in small widget sizes
+    const shouldShowInstructions =
+      focused && width > theme.breakpoints.hideWidgetDetails
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -270,8 +276,7 @@ class TextArea extends React.PureComponent<Props, State> {
             },
           }}
         />
-        {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {this.state.focused && width > theme.breakpoints.hideWidgetDetails && (
+        {shouldShowInstructions && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}
