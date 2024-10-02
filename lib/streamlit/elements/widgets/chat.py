@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, Sequence, TypedDict, cast
+from typing import TYPE_CHECKING, Literal, Sequence, cast, overload
 
 from streamlit import runtime
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
@@ -50,9 +50,27 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-class ChatInputValue(TypedDict):
+class ChatInputValue:
     text: str
     files: list[UploadedFile]
+
+    def __init__(self, text: str, files: list[UploadedFile]):
+        self.text = text
+        self.files = files
+
+    @overload
+    def __getitem__(self, item: Literal["text"]) -> str:
+        pass
+
+    @overload
+    def __getitem__(self, item: Literal["files"]) -> list[UploadedFile]:
+        pass
+
+    def __getitem__(self, item: str) -> str | list[UploadedFile]:
+        try:
+            return getattr(self, item)
+        except AttributeError:
+            raise KeyError(f"Invalid key: {item}") from None
 
 
 TYPE_PAIRS = [
