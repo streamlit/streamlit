@@ -19,12 +19,14 @@ import React, {
   FC,
   PropsWithChildren,
   useEffect,
+  useMemo,
   useRef,
 } from "react"
 
 import ReactDOM from "react-dom"
 
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
+import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
 
 import Toolbar, {
   ToolbarAction as BaseToolbarAction,
@@ -62,6 +64,32 @@ export const useSetToolbarProps = (props: ToolbarProps): void => {
       setProps(null)
     }
   }, [props, setProps])
+}
+
+/**
+ * Simple wrapper around `useSetToolbarProps` to set if the element should have
+ * a fullscreen button. Only utilize standalone if you don't need to set any
+ * other toolbar props.
+ *
+ * @param hasFullscreen true (default) if the element should have a fullscreen
+ * button
+ */
+export const useHasFullscreen = (hasFullscreen = true): void => {
+  const { expand, collapse, expanded } = useRequiredContext(
+    WidgetFullscreenContext
+  )
+
+  useSetToolbarProps(
+    useMemo(
+      () => ({
+        onExpand: expand,
+        onCollapse: collapse,
+        isFullScreen: expanded,
+        disableFullscreenMode: !hasFullscreen,
+      }),
+      [collapse, expand, expanded, hasFullscreen]
+    )
+  )
 }
 
 type ToolbarRendererContextShape = {
