@@ -199,11 +199,11 @@ export const NumberInput: React.FC<Props> = ({
   const canInc = canIncrement(value, step, max)
 
   const inForm = isInForm({ formId: elementFormId })
-  // Allows form submission on Enter & displays Enter instructions
+  // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
   const allowEnterToSubmit = inForm
     ? widgetMgr.allowFormEnterToSubmit(elementFormId)
     : dirty
-  // Hide the "Please enter to apply" text in small widget sizes
+  // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     isFocused && width > theme.breakpoints.hideWidgetDetails
 

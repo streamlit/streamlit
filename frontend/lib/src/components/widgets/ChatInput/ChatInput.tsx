@@ -245,7 +245,6 @@ function ChatInput({
               type="chat"
               // Chat Input are not able to be used in forms
               inForm={false}
-              allowEnterToSubmit={true}
             />
           </StyledInputInstructionsContainer>
         )}

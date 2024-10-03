@@ -219,13 +219,12 @@ class TextInput extends React.PureComponent<Props, State> {
     const { element, width, disabled, widgetMgr, theme } = this.props
     const { placeholder, formId } = element
 
-    // Show "Please enter" instructions if in a form & allowed, or not in form
+    // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
     const allowEnterToSubmit = isInForm({ formId })
       ? widgetMgr.allowFormEnterToSubmit(formId)
       : dirty
-    // widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
 
-    // Hide the "Please enter to apply" text in small widget sizes */}
+    // Hide input instructions for small widget sizes.
     const shouldShowInstructions =
       focused && width > theme.breakpoints.hideWidgetDetails
 

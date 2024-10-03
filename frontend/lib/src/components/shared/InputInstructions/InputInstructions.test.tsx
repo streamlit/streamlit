@@ -27,7 +27,6 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   dirty: true,
   value: "asd",
   inForm: false,
-  allowEnterToSubmit: true,
   ...props,
 })
 

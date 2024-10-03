@@ -22,23 +22,23 @@ import { StyledWidgetInstructions } from "@streamlit/lib/src/components/widgets/
 import { StyledMessage } from "./styled-components"
 
 export interface Props {
-  allowEnterToSubmit: boolean
   dirty: boolean
   value: string
   inForm: boolean
   maxLength?: number
   className?: string
   type?: "multiline" | "single" | "chat"
+  allowEnterToSubmit?: boolean
 }
 
 const InputInstructions = ({
-  allowEnterToSubmit,
   dirty,
   value,
   inForm,
   maxLength,
   className,
   type = "single",
+  allowEnterToSubmit = true,
 }: Props): ReactElement => {
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
