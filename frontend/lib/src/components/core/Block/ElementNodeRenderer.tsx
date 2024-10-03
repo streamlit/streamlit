@@ -91,6 +91,7 @@ import {
   ToolbarRenderer,
 } from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
 import { WidgetLabelRenderer } from "@streamlit/lib/src/components/widgets/BaseWidget/SharedWidgetLabel"
+import { WidgetFullscreenWrapper } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper/WidgetFullscreenWrapper"
 
 import {
   BaseBlockProps,
@@ -811,13 +812,15 @@ const ElementNodeRenderer = (
               />
             }
           >
-            <WidgetLabelRenderer>
-              <ToolbarContextProvider>
-                <ToolbarRenderer>
-                  <RawElementNodeRenderer {...props} isStale={isStale} />
-                </ToolbarRenderer>
-              </ToolbarContextProvider>
-            </WidgetLabelRenderer>
+            <WidgetFullscreenWrapper width={width}>
+              <WidgetLabelRenderer>
+                <ToolbarContextProvider>
+                  <ToolbarRenderer>
+                    <RawElementNodeRenderer {...props} isStale={isStale} />
+                  </ToolbarRenderer>
+                </ToolbarContextProvider>
+              </WidgetLabelRenderer>
+            </WidgetFullscreenWrapper>
           </Suspense>
         </ErrorBoundary>
       </StyledElementContainer>

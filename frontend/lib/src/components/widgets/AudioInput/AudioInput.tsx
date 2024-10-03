@@ -141,15 +141,8 @@ const AudioInput: React.FC<Props> = ({
   const [isUploading, setIsUploading] = useState(false)
   const [isError, setIsError] = useState(false)
 
-  useSetToolbarProps(
-    useMemo(
-      () => ({
-        onExpand: () => console.log("onExpand"),
-        onCollapse: () => console.log("onCollapse"),
-      }),
-      []
-    )
-  )
+  // Enable the toolbar
+  useSetToolbarProps(useMemo(() => ({}), []))
 
   const widgetId = element.id
   const widgetFormId = element.formId
