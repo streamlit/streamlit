@@ -99,4 +99,5 @@ message FileUploaderState {
 message ChatInputValue {
   optional string data = 1;
   optional FileUploaderState file_uploader_state = 2;
+
 }
