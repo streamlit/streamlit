@@ -67,4 +67,6 @@ export const StyledToolbar = styled.div(({ theme }) => ({
 
 export const StyledContentWrapper = styled.div(() => ({
   position: "relative",
+  width: "100%",
+  height: "100%",
 }))

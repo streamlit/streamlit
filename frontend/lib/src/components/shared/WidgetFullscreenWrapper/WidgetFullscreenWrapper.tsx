@@ -31,12 +31,12 @@ import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/Wi
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-export type FullscreenWrapper2Props = PropsWithChildren<{
+export type WidgetFullscreenWrapperProps = PropsWithChildren<{
   height?: number
   width: number
 }>
 
-export const WidgetFullscreenWrapper: FC<FullscreenWrapper2Props> = ({
+export const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
   children,
   height,
   width,
