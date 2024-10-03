@@ -425,7 +425,7 @@ class ChatMixin:
 
         ctx = get_script_run_ctx()
         # TODO[kajarenc] Maybe add accept_file and file_type to compute_widget_id
-        element_id: str = compute_and_register_element_id(
+        element_id = compute_and_register_element_id(
             "chat_input",
             user_key=key,
             # chat_input is not allowed to be used in a form.
