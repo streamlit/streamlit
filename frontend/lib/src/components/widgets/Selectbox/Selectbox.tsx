@@ -14,139 +14,108 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { withTheme } from "@emotion/react"
+import React, { FC, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
-import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import {
-  Source,
-  WidgetStateManager,
-} from "@streamlit/lib/src/WidgetStateManager"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import {
+  useBasicWidgetState,
+  ValueWSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
   disabled: boolean
   element: SelectboxProto
   widgetMgr: WidgetStateManager
   width: number
-  theme: EmotionTheme
   fragmentId?: string
 }
 
-interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  value: number | null
+/**
+ * The value specified by the user via the UI. If the user didn't touch this
+ * widget's UI, the default value is used.
+ */
+type SelectboxValue = number | null
+
+const getStateFromWidgetMgr = (
+  widgetMgr: WidgetStateManager,
+  element: SelectboxProto
+): SelectboxValue | undefined => {
+  return widgetMgr.getIntValue(element)
 }
 
-export class Selectbox extends React.PureComponent<Props, State> {
-  private readonly formClearHelper = new FormClearHelper()
-
-  public state: State = {
-    value: this.initialValue,
-  }
-
-  get initialValue(): number | null {
-    // If WidgetStateManager knew a value for this widget, initialize to that.
-    // Otherwise, use the default value from the widget protobuf.
-    const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
-    return storedValue ?? this.props.element.default ?? null
-  }
-
-  public componentDidMount(): void {
-    if (this.props.element.setValue) {
-      this.updateFromProtobuf()
-    } else {
-      this.commitWidgetValue({ fromUi: false })
-    }
-  }
-
-  public componentDidUpdate(): void {
-    this.maybeUpdateFromProtobuf()
-  }
-
-  public componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
-  }
-
-  private maybeUpdateFromProtobuf(): void {
-    const { setValue } = this.props.element
-    if (setValue) {
-      this.updateFromProtobuf()
-    }
-  }
-
-  private updateFromProtobuf(): void {
-    const { value } = this.props.element
-    this.props.element.setValue = false
-    this.setState({ value: value ?? null }, () => {
-      this.commitWidgetValue({ fromUi: false })
-    })
-  }
-
-  /** Commit state.value to the WidgetStateManager. */
-  private commitWidgetValue = (source: Source): void => {
-    const { widgetMgr, element, fragmentId } = this.props
-    widgetMgr.setIntValue(element, this.state.value, source, fragmentId)
-  }
-
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  private onFormCleared = (): void => {
-    this.setState(
-      (_, prevProps) => {
-        return { value: prevProps.element.default ?? null }
-      },
-      () => this.commitWidgetValue({ fromUi: true })
-    )
-  }
-
-  private onChange = (value: number | null): void => {
-    this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
-  }
-
-  public render(): React.ReactNode {
-    const { options, help, label, labelVisibility, formId, placeholder } =
-      this.props.element
-    const { disabled, widgetMgr } = this.props
-    const clearable =
-      isNullOrUndefined(this.props.element.default) && !disabled
-
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
-      widgetMgr,
-      formId,
-      this.onFormCleared
-    )
-
-    return (
-      <UISelectbox
-        label={label}
-        labelVisibility={labelVisibilityProtoValueToEnum(
-          labelVisibility?.value
-        )}
-        options={options}
-        disabled={disabled}
-        width={this.props.width}
-        onChange={this.onChange}
-        value={this.state.value}
-        help={help}
-        placeholder={placeholder}
-        clearable={clearable}
-      />
-    )
-  }
+const getDefaultStateFromProto = (element: SelectboxProto): SelectboxValue => {
+  return element.default ?? null
 }
 
-export default withTheme(Selectbox)
+const getCurrStateFromProto = (element: SelectboxProto): SelectboxValue => {
+  return element.value ?? null
+}
+
+const updateWidgetMgrState = (
+  element: SelectboxProto,
+  widgetMgr: WidgetStateManager,
+  valueWithSource: ValueWSource<SelectboxValue>,
+  fragmentId?: string
+): void => {
+  widgetMgr.setIntValue(
+    element,
+    valueWithSource.value,
+    { fromUi: valueWithSource.fromUi },
+    fragmentId
+  )
+}
+
+const Selectbox: FC<Props> = ({
+  disabled,
+  element,
+  widgetMgr,
+  width,
+  fragmentId,
+}) => {
+  const { options, help, label, labelVisibility, placeholder } = element
+
+  const [value, setValueWSource] = useBasicWidgetState<
+    SelectboxValue,
+    SelectboxProto
+  >({
+    getStateFromWidgetMgr,
+    getDefaultStateFromProto,
+    getCurrStateFromProto,
+    updateWidgetMgrState,
+    element,
+    widgetMgr,
+    fragmentId,
+  })
+
+  const onChange = useCallback(
+    (value: SelectboxValue) => {
+      setValueWSource({ value, fromUi: true })
+    },
+    [setValueWSource]
+  )
+
+  const clearable = isNullOrUndefined(element.default) && !disabled
+
+  return (
+    <UISelectbox
+      label={label}
+      labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
+      options={options}
+      disabled={disabled}
+      width={width}
+      onChange={onChange}
+      value={value}
+      help={help}
+      placeholder={placeholder}
+      clearable={clearable}
+    />
+  )
+}
+
+export default Selectbox
