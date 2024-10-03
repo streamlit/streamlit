@@ -33,7 +33,12 @@ class TextMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
     ) -> DeltaGenerator:
-        """Write fixed-width and preformatted text.
+        """Write text without Markdown or HTML parsing.
+
+        For monospace text, use |st.code|_.
+
+        .. |st.code| replace:: ``st.code``
+        .. _st.code: https://docs.streamlit.io/develop/api-reference/text/st.code
 
         Parameters
         ----------
@@ -47,7 +52,11 @@ class TextMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.text("This is some text.")
+        >>> st.text("This is text/n[and more text](that's not a Markdown link).")
+
+        .. output ::
+            https://doc-text.streamlit.app/
+            height: 220px
 
         """
         text_proto = TextProto()
