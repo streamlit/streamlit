@@ -57,6 +57,11 @@ interface State {
   dirty: boolean
 
   /**
+   * Whether the input is currently focused.
+   */
+  focused: boolean
+
+  /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
@@ -70,6 +75,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   public state: State = {
     dirty: false,
+    focused: false,
     value: this.initialValue,
   }
 
@@ -149,7 +155,11 @@ class TextInput extends React.PureComponent<Props, State> {
     if (this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
     }
+
+    this.setState({ focused: false })
   }
+
+  private onFocus = (): void => this.setState({ focused: true })
 
   private onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -205,12 +215,18 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { dirty, value } = this.state
+    const { dirty, focused, value } = this.state
     const { element, width, disabled, widgetMgr, theme } = this.props
     const { placeholder, formId } = element
-    // Show "Please enter" instructions if in a form & allowed, or not in form
-    const allowEnterToSubmit =
-      widgetMgr.allowFormEnterToSubmit(formId) || !isInForm({ formId })
+
+    // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
+    const allowEnterToSubmit = isInForm({ formId })
+      ? widgetMgr.allowFormEnterToSubmit(formId)
+      : dirty
+
+    // Hide input instructions for small widget sizes.
+    const shouldShowInstructions =
+      focused && width > theme.breakpoints.hideWidgetDetails
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -246,6 +262,7 @@ class TextInput extends React.PureComponent<Props, State> {
           value={value ?? ""}
           placeholder={placeholder}
           onBlur={this.onBlur}
+          onFocus={this.onFocus}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
           aria-label={element.label}
@@ -287,8 +304,7 @@ class TextInput extends React.PureComponent<Props, State> {
             },
           }}
         />
-        {/* Hide the "Please enter to apply" text in small widget sizes */}
-        {width > theme.breakpoints.hideWidgetDetails && (
+        {shouldShowInstructions && (
           <InputInstructions
             dirty={dirty}
             value={value ?? ""}

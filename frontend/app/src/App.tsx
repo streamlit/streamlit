@@ -387,7 +387,7 @@ export class App extends PureComponent<Props, State> {
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
-        this.widgetMgr.setFormsWithUploads(formIds),
+        this.widgetMgr.setFormsWithUploadsInProgress(formIds),
       requestFileURLs: this.requestFileURLs,
     })
 
@@ -855,7 +855,7 @@ export class App extends PureComponent<Props, State> {
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
-      ...browserInfo,
+      browserInfo,
     })
   }
 

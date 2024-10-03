@@ -17,7 +17,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
@@ -118,7 +118,7 @@ describe("ColorPicker widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     jest.spyOn(props.widgetMgr, "setStringValue")
@@ -146,8 +146,10 @@ describe("ColorPicker widget", () => {
       undefined
     )
 
-    // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    await act(async () => {
+      // "Submit" the form
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(colorBlock).toHaveStyle("background-color: #000000")

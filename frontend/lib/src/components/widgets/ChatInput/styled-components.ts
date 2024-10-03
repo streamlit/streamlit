@@ -97,7 +97,7 @@ export const StyledSendIconButtonContainer = styled.div(() => ({
   alignItems: "flex-end",
   height: "100%",
   position: "absolute",
-  right: "0px",
+  right: 0,
   pointerEvents: "none",
 }))
 

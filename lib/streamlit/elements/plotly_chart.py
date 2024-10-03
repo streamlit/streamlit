@@ -82,7 +82,7 @@ class PlotlySelectionState(TypedDict, total=False):
     """
     The schema for the Plotly chart selection state.
 
-    The selection state is stored in a dictionary-like object that suports both
+    The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
@@ -170,7 +170,7 @@ class PlotlyState(TypedDict, total=False):
     """
     The schema for the Plotly chart event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -179,7 +179,7 @@ class PlotlyState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``PlotlySelectionState`` dictionary
         schema.
@@ -396,8 +396,8 @@ class PlotlyMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
-            internal placeholder for the chart element. Otherwise, this method
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the chart element. Otherwise, this command
             returns a dictionary-like object that supports both key and
             attribute notation. The attributes are described by the
             ``PlotlyState`` dictionary schema.
@@ -524,12 +524,12 @@ class PlotlyMixin:
             serde = PlotlyChartSelectionSerde()
 
             widget_state = register_widget(
-                "plotly_chart",
-                plotly_chart_proto,
+                plotly_chart_proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)

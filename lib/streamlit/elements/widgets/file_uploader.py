@@ -281,8 +281,7 @@ class FileUploaderMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             A tooltip that gets displayed next to the file uploader.
@@ -317,9 +316,9 @@ class FileUploaderMixin:
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
 
-            The UploadedFile class is a subclass of BytesIO, and therefore
-            it is "file-like". This means you can pass them anywhere where
-            a file is expected.
+            The UploadedFile class is a subclass of BytesIO, and therefore is
+            "file-like". This means you can pass an instance of it anywhere a
+            file is expected.
 
         Examples
         --------
@@ -457,14 +456,14 @@ class FileUploaderMixin:
         # representing the current set of files that this uploader should
         # know about.
         widget_state = register_widget(
-            "file_uploader",
-            file_uploader_proto,
+            file_uploader_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="file_uploader_state_value",
         )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)

@@ -37,6 +37,12 @@ export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   top: theme.spacing.md,
   zIndex: 1,
 
+  ".mapboxgl-ctrl.mapboxgl-ctrl-group": {
+    // Ensures that the border-radius of the zoom buttons is visible
+    overflow: "hidden",
+    background: theme.colors.bgColor,
+  },
+
   // Update zoom buttons based on the active theme
   "button:not(:disabled)": {
     background: theme.colors.bgColor,
@@ -44,6 +50,14 @@ export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
     // Add a separator between buttons
     "& + button": {
       borderTopColor: theme.colors.secondaryBg,
+    },
+
+    "&.mapboxgl-ctrl-icon:hover": {
+      // Lighten the background color on hover in dark mode (light mode works
+      // fine by default!)
+      backgroundColor: hasLightBackgroundColor(theme)
+        ? ""
+        : theme.colors.darkenedBgMix25,
     },
 
     // On dark backgrounds, invert the color for the + and - symbols

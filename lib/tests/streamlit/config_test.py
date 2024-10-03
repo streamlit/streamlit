@@ -84,13 +84,31 @@ class ConfigTest(unittest.TestCase):
         )
 
         # Test that it works.
-        self.assertEqual(config_option.key, "_test.simpleParam")
-        self.assertEqual(config_option.section, "_test")
-        self.assertEqual(config_option.name, "simpleParam")
-        self.assertEqual(config_option.description, "Simple config option.")
-        self.assertEqual(config_option.where_defined, ConfigOption.DEFAULT_DEFINITION)
-        self.assertEqual(config_option.value, 12345)
-        self.assertEqual(config_option.env_var, "STREAMLIT__TEST_SIMPLE_PARAM")
+        assert config_option.key == "_test.simpleParam"
+        assert config_option.section == "_test"
+        assert config_option.name == "simpleParam"
+        assert config_option.description == "Simple config option."
+        assert config_option.where_defined == ConfigOption.DEFAULT_DEFINITION
+        assert config_option.value == 12345
+        assert config_option.env_var == "STREAMLIT__TEST_SIMPLE_PARAM"
+        assert not config_option.multiple
+
+    def test_multiple_config_option(self):
+        """Test creating a multiple value config option."""
+        config_option = ConfigOption(
+            "_test.simpleParam",
+            description="Simple config option.",
+            default_val=[12345],
+        )
+
+        assert config_option.key == "_test.simpleParam"
+        assert config_option.section == "_test"
+        assert config_option.name == "simpleParam"
+        assert config_option.description == "Simple config option."
+        assert config_option.where_defined == ConfigOption.DEFAULT_DEFINITION
+        assert config_option.value == [12345]
+        assert config_option.env_var == "STREAMLIT__TEST_SIMPLE_PARAM"
+        assert config_option.multiple
 
     def test_complex_config_option(self):
         """Test setting a complex (functional) config option."""
@@ -314,6 +332,20 @@ class ConfigTest(unittest.TestCase):
         )
 
         config._delete_option("_test.testDeleteOption")
+
+    def test_multiple_value_option(self):
+        option = config._create_option(
+            "_test.testMultipleValueOption",
+            description="This option tests multiple values for an option",
+            default_val=["Option 1", "Option 2"],
+        )
+
+        assert option.multiple
+        config.get_config_options(force_reparse=True)
+        assert config.get_option("_test.testMultipleValueOption") == [
+            "Option 1",
+            "Option 2",
+        ]
 
     def test_sections_order(self):
         sections = sorted(

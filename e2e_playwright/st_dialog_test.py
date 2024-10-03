@@ -76,6 +76,10 @@ def open_dialog_with_deprecation_warning(app: Page):
     ).click()
 
 
+def open_dialog_with_chart(app: Page):
+    app.get_by_role("button").filter(has_text="Open Chart Dialog").click()
+
+
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
     app.keyboard.press("Escape")
@@ -378,6 +382,19 @@ def test_experimental_dialog_deprecation_warning(app: Page):
     expect(app.get_by_test_id("stAlert")).to_have_text(
         re.compile("Please replace st.experimental_dialog with st.dialog.\n.*")
     )
+
+
+def test_dialog_with_chart(app: Page):
+    open_dialog_with_chart(app)
+    wait_for_app_run(app)
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    # Check for the chart & tooltip
+    chart = main_dialog.get_by_test_id("stVegaLiteChart")
+    chart.hover(position={"x": 60, "y": 220})
+    tooltip = app.locator("#vg-tooltip-element")
+    expect(tooltip).to_be_visible()
 
 
 def test_check_top_level_class(app: Page):
