@@ -120,9 +120,7 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    expect(screen.getByTestId("stWidgetLabel")).toHaveTextContent(
-      props.element.label
-    )
+    expect(screen.getByText(props.element.label)).toBeVisible()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -214,9 +212,7 @@ describe("NumberInput widget", () => {
     await user.click(numberInput)
     await user.keyboard("{backspace}5")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to apply"
-    )
+    expect(screen.getByText("Press Enter to apply")).toBeVisible()
   })
 
   it("shows Input Instructions if in form that allows submit on enter", async () => {
@@ -231,9 +227,7 @@ describe("NumberInput widget", () => {
     await user.click(numberInput)
     await user.keyboard("{backspace}5")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to submit form"
-    )
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("shows Input Instructions if focused again and in form that allows submit on enter", async () => {
@@ -432,9 +426,7 @@ describe("NumberInput widget", () => {
 
       // Check that the value is updated & state dirty
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(15)
-      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-        "Press Enter to apply"
-      )
+      expect(screen.getByText("Press Enter to apply")).toBeVisible()
     })
 
     it("sets value on Enter", () => {
@@ -642,9 +634,7 @@ describe("NumberInput widget", () => {
       await user.click(numberInput)
       await user.keyboard("20")
 
-      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-        "Press Enter to apply"
-      )
+      expect(screen.getByText("Press Enter to apply")).toBeVisible()
     })
   })
 

@@ -283,9 +283,7 @@ describe("TextArea widget", () => {
     await user.click(textArea)
     await user.keyboard("TEST")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press ⌘+Enter to apply"
-    )
+    expect(screen.getByText("Press ⌘+Enter to apply")).toBeVisible()
   })
 
   it("shows Input Instructions if in form that allows submit on enter", async () => {
@@ -300,9 +298,7 @@ describe("TextArea widget", () => {
     await user.click(textArea)
     await user.keyboard("TEST")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press ⌘+Enter to submit form"
-    )
+    expect(screen.getByText("Press ⌘+Enter to submit form")).toBeVisible()
   })
 
   // For this scenario https://github.com/streamlit/streamlit/issues/7079
