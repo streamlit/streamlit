@@ -76,7 +76,9 @@ describe("InputInstructions", () => {
       })
       render(<InputInstructions {...props} />)
 
-      expect(screen.getByText("Press ⌘+Enter to apply3/3")).toBeVisible()
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
+        "Press ⌘+Enter to apply3/3"
+      )
     })
   })
 
@@ -86,7 +88,9 @@ describe("InputInstructions", () => {
     })
     render(<InputInstructions {...props} />)
 
-    expect(screen.getByText("Press Enter to apply3/3")).toBeVisible()
+    expect(screen.getByTestId("InputInstructions").textContent).toBe(
+      "Press Enter to apply3/3"
+    )
   })
 
   describe("Chat type", () => {
