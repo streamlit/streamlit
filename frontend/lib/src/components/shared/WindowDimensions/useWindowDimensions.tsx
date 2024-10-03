@@ -63,5 +63,10 @@ export const useWindowDimensions = (theme: EmotionTheme): WindowDimensions => {
     }
   }, [updateWindowDimensions])
 
+  useEffect(() => {
+    // Measure once on load, let resize handlers take over from there
+    updateWindowDimensions()
+  }, [updateWindowDimensions])
+
   return windowDimensions
 }
