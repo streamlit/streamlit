@@ -23,10 +23,13 @@ import React, {
   useState,
 } from "react"
 
+import { useTheme } from "@emotion/react"
+
 import { StyledFullScreenFrame } from "@streamlit/lib/src/components/shared/FullScreenWrapper/styled-components"
 import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
 import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export type FullscreenWrapper2Props = PropsWithChildren<{
   height?: number
@@ -38,6 +41,7 @@ export const WidgetFullscreenWrapper: FC<FullscreenWrapper2Props> = ({
   height,
   width,
 }) => {
+  const theme: EmotionTheme = useTheme()
   const [expanded, setExpanded] = useState(false)
   const { fullHeight, fullWidth } = useRequiredContext(WindowDimensionsContext)
 
@@ -85,6 +89,7 @@ export const WidgetFullscreenWrapper: FC<FullscreenWrapper2Props> = ({
       <StyledFullScreenFrame
         isExpanded={expanded}
         data-testid="stFullScreenFrame"
+        theme={theme}
       >
         {children}
       </StyledFullScreenFrame>

@@ -54,16 +54,28 @@ export const ToolbarContextProvider: FC<PropsWithChildren> = ({
   )
 }
 
-export const useSetToolbarProps = (props: ToolbarProps): void => {
+export const useSetToolbarProps = (
+  props: Omit<ToolbarProps, "onExpand" | "onCollapse" | "isFullScreen"> | null
+): void => {
   const [, setProps] = useRequiredContext(ToolbarContext)
+  const {
+    expand: onExpand,
+    collapse: onCollapse,
+    expanded: isFullScreen,
+  } = useRequiredContext(WidgetFullscreenContext)
 
   useEffect(() => {
-    setProps(props)
+    if (!props) {
+      setProps(null)
+      return
+    }
+
+    setProps({ ...props, onExpand, onCollapse, isFullScreen })
 
     return () => {
       setProps(null)
     }
-  }, [props, setProps])
+  }, [isFullScreen, onCollapse, onExpand, props, setProps])
 }
 
 /**
