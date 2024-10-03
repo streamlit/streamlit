@@ -1479,7 +1479,6 @@ export class App extends PureComponent<Props, State> {
     this.setState((prevState: State) => {
       const pageLayouts = prevState.pageLayouts
       pageLayouts[prevState.currentPageScriptHash] = prevState.layout
-      console.log("Backup page layout", prevState.pageLayouts)
       return {
         pageLayouts: pageLayouts,
       }
