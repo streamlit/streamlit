@@ -199,9 +199,13 @@ export const NumberInput: React.FC<Props> = ({
   const canInc = canIncrement(value, step, max)
 
   const inForm = isInForm({ formId: elementFormId })
-  // Allows form submission on Enter & displays Enter instructions
-  const allowFormEnterToSubmit =
-    widgetMgr.allowFormEnterToSubmit(elementFormId)
+  // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(elementFormId)
+    : dirty
+  // Hide input instructions for small widget sizes.
+  const shouldShowInstructions =
+    isFocused && width > theme.breakpoints.hideWidgetDetails
 
   // update the step if the props change
   React.useEffect(() => {
@@ -380,20 +384,12 @@ export const NumberInput: React.FC<Props> = ({
         if (dirty) {
           commitValue({ value, source: { fromUi: true } })
         }
-        if (allowFormEnterToSubmit) {
+        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
           widgetMgr.submitForm(elementFormId, fragmentId)
         }
       }
     },
-    [
-      dirty,
-      value,
-      commitValue,
-      widgetMgr,
-      elementFormId,
-      fragmentId,
-      allowFormEnterToSubmit,
-    ]
+    [dirty, value, commitValue, widgetMgr, elementFormId, fragmentId]
   )
 
   return (
@@ -524,14 +520,13 @@ export const NumberInput: React.FC<Props> = ({
           </StyledInputControls>
         )}
       </StyledInputContainer>
-      {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > theme.breakpoints.hideWidgetDetails && (
+      {shouldShowInstructions && (
         <StyledInstructionsContainer clearable={clearable}>
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}
             inForm={inForm}
-            allowEnterToSubmit={allowFormEnterToSubmit || !inForm}
+            allowEnterToSubmit={allowEnterToSubmit}
           />
         </StyledInstructionsContainer>
       )}
