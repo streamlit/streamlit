@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback, useEffect, useState } from "react"
+import React, { FC, useCallback, useEffect, useMemo, useState } from "react"
 
 import { DeckGL } from "@deck.gl/react/typed"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
@@ -29,12 +29,12 @@ import {
   EmotionTheme,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme"
-import Toolbar, {
-  ToolbarAction,
-} from "@streamlit/lib/src/components/shared/Toolbar"
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { assertNever } from "@streamlit/lib/src/util/assertNever"
+import {
+  ToolbarAction,
+  useSetToolbarProps,
+} from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
 
 import withMapboxToken from "./withMapboxToken"
 import {
@@ -54,20 +54,16 @@ const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const {
-    collapse,
     disabled,
     disableFullscreenMode,
     element,
-    expand,
     fragmentId,
-    height: propsHeight,
-    isFullScreen,
     mapboxToken: propsMapboxToken,
     widgetMgr,
-    width: propsWidth,
   } = props
   const { mapboxToken: elementMapboxToken } = element
   const theme: EmotionTheme = useTheme()
+
   const {
     createTooltip,
     data: selection,
@@ -83,15 +79,22 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   } = useDeckGl({
     element,
     fragmentId,
-    height: propsHeight,
-    isFullScreen,
     isLightTheme: hasLightBackgroundColor(theme),
     theme,
     widgetMgr,
-    width: propsWidth,
   })
 
   const [isInitialized, setIsInitialized] = useState(false)
+
+  useSetToolbarProps(
+    useMemo(
+      () => ({
+        disableFullscreenMode,
+        locked: hasActiveSelection && !disabled ? true : undefined,
+      }),
+      [disableFullscreenMode, disabled, hasActiveSelection]
+    )
+  )
 
   useEffect(() => {
     // HACK: Load layers a little after loading the map, to hack around a bug
@@ -215,22 +218,13 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       width={width}
       height={height}
     >
-      <Toolbar
-        isFullScreen={isFullScreen}
-        disableFullscreenMode={disableFullscreenMode}
-        onExpand={expand}
-        onCollapse={collapse}
-        target={StyledDeckGlChart}
-        locked={hasActiveSelection && !disabled ? true : undefined}
-      >
-        {hasActiveSelection && !disabled && (
-          <ToolbarAction
-            label="Clear selection"
-            onClick={handleClearSelectionClick}
-            icon={Close}
-          />
-        )}
-      </Toolbar>
+      {hasActiveSelection && !disabled && (
+        <ToolbarAction
+          label="Clear selection"
+          onClick={handleClearSelectionClick}
+          icon={Close}
+        />
+      )}
       <DeckGL
         viewState={viewState}
         onViewStateChange={onViewStateChange}
@@ -267,6 +261,4 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   )
 }
 
-export default withMapboxToken("st.pydeck_chart")(
-  withFullScreenWrapper(DeckGlJsonChart, true)
-)
+export default withMapboxToken("st.pydeck_chart")(DeckGlJsonChart)
