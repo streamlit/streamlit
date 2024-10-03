@@ -349,12 +349,15 @@ class ChatMixin:
             (default), there will be no maximum.
 
         accept_file : bool | str
-            AAA
+            Whether the chat input should accept files. ``True`` to accept a single
+            file, ``"multiple"`` to accept multiple files.
 
         disabled : bool
             Whether the chat input should be disabled. Defaults to ``False``.
 
         file_type : str or list[str] or None
+            Array of allowed extensions. ['png', 'jpg']
+            The default is None, which means all extensions are allowed.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
