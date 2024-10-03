@@ -17,5 +17,3 @@ import streamlit as st
 st.write("Page 16 - dynamic layout")
 st.button("wide button", on_click=lambda: st.set_page_config(layout="wide"))
 st.button("centered button", on_click=lambda: st.set_page_config(layout="centered"))
-if st.button("`./mpa_layout.py`"):
-    st.switch_page("./mpa_layout.py")

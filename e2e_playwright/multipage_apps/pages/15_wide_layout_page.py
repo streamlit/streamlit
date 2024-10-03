@@ -16,5 +16,3 @@ import streamlit as st
 
 st.set_page_config(layout="wide")
 st.write("Page 15 - wide")
-if st.button("`./mpa_layout.py`"):
-    st.switch_page("./mpa_layout.py")

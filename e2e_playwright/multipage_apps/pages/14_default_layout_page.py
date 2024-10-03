@@ -15,5 +15,3 @@
 import streamlit as st
 
 st.write("Page 14 - default")
-if st.button("`./mpa_layout.py`"):
-    st.switch_page("./mpa_layout.py")
