@@ -377,7 +377,7 @@ describe("#useDeckGl", () => {
       expect(result.current.hasActiveSelection).toBe(false)
     })
 
-    it("should be true when selection is not empty", async () => {
+    it("should be true when selection is not empty", () => {
       const initialProps = getUseDeckGlProps({
         selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       })
@@ -385,7 +385,7 @@ describe("#useDeckGl", () => {
         initialProps,
       })
 
-      await act(async () => {
+      act(() => {
         result.current.setSelection({
           fromUi: true,
           value: {

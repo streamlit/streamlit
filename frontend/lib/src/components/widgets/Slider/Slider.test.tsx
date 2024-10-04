@@ -174,7 +174,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuemax", `${props.element.max}`)
     })
 
-    it("handles value changes", async () => {
+    it("handles value changes", () => {
       const props = getProps()
 
       render(<Slider {...props} />)
@@ -182,7 +182,7 @@ describe("Slider widget", () => {
 
       const slider = screen.getByRole("slider")
 
-      await act(() => {
+      act(() => {
         triggerChangeEvent(slider, "ArrowRight")
 
         // We need to do this as we are using a debounce when the widget value is set
@@ -199,7 +199,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuenow", "6")
     })
 
-    it("resets its value when form is cleared", async () => {
+    it("resets its value when form is cleared", () => {
       // Create a widget in a clearOnSubmit form
       const props = getProps({ formId: "form" })
       props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -212,7 +212,7 @@ describe("Slider widget", () => {
 
       triggerChangeEvent(slider, "ArrowRight")
 
-      await act(() => {
+      act(() => {
         jest.runAllTimers()
       })
 
@@ -225,7 +225,7 @@ describe("Slider widget", () => {
 
       expect(slider).toHaveAttribute("aria-valuenow", "6")
 
-      await act(() => {
+      act(() => {
         // "Submit" the form
         props.widgetMgr.submitForm("form", undefined)
       })
@@ -349,7 +349,7 @@ describe("Slider widget", () => {
       })
     })
 
-    it("handles value changes", async () => {
+    it("handles value changes", () => {
       const props = getProps({ default: [1, 9] })
 
       render(<Slider {...props} />)
@@ -359,7 +359,7 @@ describe("Slider widget", () => {
 
       triggerChangeEvent(sliders[1], "ArrowRight")
 
-      await act(() => {
+      act(() => {
         // We need to do this as we are using a debounce when the widget value is set
         jest.runAllTimers()
       })
@@ -453,7 +453,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuetext", "orange")
     })
 
-    it("updates aria-valuetext correctly", async () => {
+    it("updates aria-valuetext correctly", () => {
       const originalProps = {
         default: [1],
         min: 0,
@@ -475,7 +475,7 @@ describe("Slider widget", () => {
       const slider = screen.getByRole("slider")
       triggerChangeEvent(slider, "ArrowRight")
 
-      await act(() => {
+      act(() => {
         // We need to do this as we are using a debounce when the widget value is set
         jest.runAllTimers()
       })

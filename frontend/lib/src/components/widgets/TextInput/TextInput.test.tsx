@@ -294,7 +294,7 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", async () => {
+  it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -306,7 +306,7 @@ describe("TextInput widget", () => {
     // Change the widget value
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
-    await act(() => {
+    act(() => {
       // "Submit" the form
       props.widgetMgr.submitForm("form", undefined)
     })

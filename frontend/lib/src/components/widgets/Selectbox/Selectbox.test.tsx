@@ -105,7 +105,7 @@ describe("Selectbox widget", () => {
     expect(screen.getByText("b")).toBeInTheDocument()
   })
 
-  it("resets its value when form is cleared", async () => {
+  it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -124,9 +124,8 @@ describe("Selectbox widget", () => {
       undefined
     )
 
-    // TODO: Check if needed
     // "Submit" the form
-    await act(async () => {
+    act(() => {
       props.widgetMgr.submitForm("form", undefined)
     })
 

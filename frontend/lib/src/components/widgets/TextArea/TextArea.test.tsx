@@ -242,7 +242,7 @@ describe("TextArea widget", () => {
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 
-  it("resets its value when form is cleared", async () => {
+  it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -256,7 +256,7 @@ describe("TextArea widget", () => {
     fireEvent.change(textArea, { target: { value: "TEST" } })
     expect(textArea).toHaveValue("TEST")
 
-    await act(() => {
+    act(() => {
       // "Submit" the form
       props.widgetMgr.submitForm("form", undefined)
     })
