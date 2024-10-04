@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import React, { memo, FC, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import {
-  useBasicWidgetState,
-  ValueWithSource,
-} from "@streamlit/lib/src/useBasicWidgetState"
 import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
+import {
+  useBasicWidgetState,
+  ValueWithSource,
+} from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
   disabled: boolean
@@ -36,15 +36,52 @@ export interface Props {
   fragmentId?: string
 }
 
-export function Selectbox({
+/**
+ * The value specified by the user via the UI. If the user didn't touch this
+ * widget's UI, the default value is used.
+ */
+type SelectboxValue = number | null
+
+const getStateFromWidgetMgr = (
+  widgetMgr: WidgetStateManager,
+  element: SelectboxProto
+): SelectboxValue | undefined => {
+  return widgetMgr.getIntValue(element)
+}
+
+const getDefaultStateFromProto = (element: SelectboxProto): SelectboxValue => {
+  return element.default ?? null
+}
+
+const getCurrStateFromProto = (element: SelectboxProto): SelectboxValue => {
+  return element.value ?? null
+}
+
+const updateWidgetMgrState = (
+  element: SelectboxProto,
+  widgetMgr: WidgetStateManager,
+  valueWithSource: ValueWithSource<SelectboxValue>,
+  fragmentId?: string
+): void => {
+  widgetMgr.setIntValue(
+    element,
+    valueWithSource.value,
+    { fromUi: valueWithSource.fromUi },
+    fragmentId
+  )
+}
+
+const Selectbox: FC<Props> = ({
   disabled,
   element,
   widgetMgr,
   width,
   fragmentId,
-}: Props): ReactElement {
+}) => {
+  const { options, help, label, labelVisibility, placeholder } = element
+
   const [value, setValueWithSource] = useBasicWidgetState<
-    number | null,
+    SelectboxValue,
     SelectboxProto
   >({
     getStateFromWidgetMgr,
@@ -56,15 +93,14 @@ export function Selectbox({
     fragmentId,
   })
 
-  const { options, help, label, labelVisibility, placeholder } = element
-  const clearable = isNullOrUndefined(element.default) && !disabled
-
   const onChange = useCallback(
-    (value: number | null): void => {
+    (value: SelectboxValue) => {
       setValueWithSource({ value, fromUi: true })
     },
     [setValueWithSource]
   )
+
+  const clearable = isNullOrUndefined(element.default) && !disabled
 
   return (
     <UISelectbox
@@ -80,30 +116,6 @@ export function Selectbox({
       clearable={clearable}
     />
   )
-}
-
-function getStateFromWidgetMgr(
-  widgetMgr: WidgetStateManager,
-  element: SelectboxProto
-): number | null {
-  return widgetMgr.getIntValue(element) ?? null
-}
-
-function getDefaultStateFromProto(element: SelectboxProto): number | null {
-  return element.default ?? null
-}
-
-function getCurrStateFromProto(element: SelectboxProto): number | null {
-  return element.value ?? null
-}
-
-function updateWidgetMgrState(
-  element: SelectboxProto,
-  widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<number | null>,
-  fragmentId?: string
-): void {
-  widgetMgr.setIntValue(element, vws.value, { fromUi: vws.fromUi }, fragmentId)
 }
 
 export default memo(Selectbox)

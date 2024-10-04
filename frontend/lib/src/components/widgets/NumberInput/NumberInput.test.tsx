@@ -120,9 +120,7 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    expect(screen.getByTestId("stWidgetLabel")).toHaveTextContent(
-      props.element.label
-    )
+    expect(screen.getByText(props.element.label)).toBeVisible()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -176,7 +174,7 @@ describe("NumberInput widget", () => {
   it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getIntProps({ formId: "form", default: 10 })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
     render(<NumberInput {...props} />)
@@ -214,15 +212,13 @@ describe("NumberInput widget", () => {
     await user.click(numberInput)
     await user.keyboard("{backspace}5")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to apply"
-    )
+    expect(screen.getByText("Press Enter to apply")).toBeVisible()
   })
 
   it("shows Input Instructions if in form that allows submit on enter", async () => {
     const user = userEvent.setup()
     const props = getIntProps({ formId: "form" })
-    jest.spyOn(props.widgetMgr, "allowFormSubmitOnEnter").mockReturnValue(true)
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
 
     render(<NumberInput {...props} />)
     const numberInput = screen.getByTestId("stNumberInputField")
@@ -231,16 +227,33 @@ describe("NumberInput widget", () => {
     await user.click(numberInput)
     await user.keyboard("{backspace}5")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to submit form"
-    )
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+  })
+
+  it("shows Input Instructions if focused again and in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInputField")
+
+    // userEvent necessary to trigger dirty state
+    await user.click(numberInput)
+    await user.keyboard("{backspace}5")
+
+    fireEvent.blur(numberInput)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+
+    fireEvent.focus(numberInput)
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
     const user = userEvent.setup()
     const props = getIntProps({ formId: "form" })
     jest
-      .spyOn(props.widgetMgr, "allowFormSubmitOnEnter")
+      .spyOn(props.widgetMgr, "allowFormEnterToSubmit")
       .mockReturnValue(false)
 
     render(<NumberInput {...props} />)
@@ -413,9 +426,7 @@ describe("NumberInput widget", () => {
 
       // Check that the value is updated & state dirty
       expect(screen.getByTestId("stNumberInputField")).toHaveValue(15)
-      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-        "Press Enter to apply"
-      )
+      expect(screen.getByText("Press Enter to apply")).toBeVisible()
     })
 
     it("sets value on Enter", () => {
@@ -623,9 +634,7 @@ describe("NumberInput widget", () => {
       await user.click(numberInput)
       await user.keyboard("20")
 
-      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-        "Press Enter to apply"
-      )
+      expect(screen.getByText("Press Enter to apply")).toBeVisible()
     })
   })
 

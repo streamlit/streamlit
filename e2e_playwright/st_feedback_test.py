@@ -71,7 +71,9 @@ def test_clicking_on_stars_shows_sentiment_and_take_snapshot(
     assert_snapshot(stars, name="st_feedback-stars")
 
 
-def test_feedback_buttons_are_disabled(app: Page):
+def test_feedback_buttons_are_disabled(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that feedback buttons are disabled when `disabled=True` and that
     they cannot be interacted with."""
 
@@ -86,6 +88,8 @@ def test_feedback_buttons_are_disabled(app: Page):
     )
     text = get_markdown(app, "feedback-disabled: None")
     expect(text).to_be_attached()
+
+    assert_snapshot(stars, name="st_feedback-disabled")
 
 
 def test_feedback_works_in_forms(app: Page):

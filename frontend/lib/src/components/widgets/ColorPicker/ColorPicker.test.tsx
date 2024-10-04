@@ -122,7 +122,7 @@ describe("ColorPicker widget", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     jest.spyOn(props.widgetMgr, "setStringValue")
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     render(<ColorPicker {...props} />)
 
@@ -146,7 +146,8 @@ describe("ColorPicker widget", () => {
       undefined
     )
 
-    await act(() => {
+    // TODO: test if async is needed.
+    await act(async () => {
       // "Submit" the form
       props.widgetMgr.submitForm("form", undefined)
     })

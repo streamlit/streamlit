@@ -267,7 +267,7 @@ function Slider({
 
   const innerTrackStyle = useCallback(
     ({ $disabled }: StyleProps) => ({
-      height: "4px",
+      height: spacing.twoXS,
       ...($disabled ? { background: colors.darkenedBgMix25 } : {}),
     }),
     []

@@ -168,8 +168,7 @@ class TextWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         type : "default" or "password"
             The type of the text input. This can be either "default" (for
@@ -278,16 +277,14 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=value,
             max_chars=max_chars,
-            key=key,
             type=type,
             help=help,
             autocomplete=autocomplete,
             placeholder=str(placeholder),
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         session_state = get_session_state().filtered_state
@@ -333,14 +330,14 @@ class TextWidgetsMixin:
         serde = TextInputSerde(value)
 
         widget_state = register_widget(
-            "text_input",
-            text_input_proto,
+            text_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -439,7 +436,7 @@ class TextWidgetsMixin:
 
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
-            default height is used.
+            default height is used. Height must be at least 68 pixels (4.25rem).
 
         max_chars : int or None
             Maximum number of characters allowed in text area.
@@ -447,8 +444,7 @@ class TextWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the textarea.
@@ -501,6 +497,12 @@ class TextWidgetsMixin:
            height: 300px
 
         """
+        # Specified height must be at least 68 pixels (3 lines of text).
+        if height is not None and height < 68:
+            raise StreamlitAPIException(
+                f"Invalid height {height}px for `st.text_area` - must be at least 68 pixels."
+            )
+
         ctx = get_script_run_ctx()
         return self._text_area(
             label=label,
@@ -550,15 +552,13 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=value,
             height=height,
             max_chars=max_chars,
-            key=key,
             help=help,
             placeholder=str(placeholder),
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         session_state = get_session_state().filtered_state
@@ -590,14 +590,14 @@ class TextWidgetsMixin:
 
         serde = TextAreaSerde(value)
         widget_state = register_widget(
-            "text_area",
-            text_area_proto,
+            text_area_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:

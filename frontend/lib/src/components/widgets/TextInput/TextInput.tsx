@@ -74,6 +74,11 @@ function TextInput({
   const [dirty, setDirty] = useState(false)
 
   /**
+   * Whether the input is currently focused.
+   */
+  const [focused, setFocused] = useState(false)
+
+  /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
@@ -92,15 +97,25 @@ function TextInput({
   const [id] = useState(() => uniqueId("text_input_"))
   const { placeholder, formId } = element
 
-  // Show "Please enter" instructions if in a form & allowed, or not in form
-  const allowSubmitOnEnter =
-    widgetMgr.allowFormSubmitOnEnter(formId) || !isInForm({ formId })
+  // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
+  const allowEnterToSubmit = isInForm({ formId })
+    ? widgetMgr.allowFormEnterToSubmit(formId)
+    : dirty
+
+  // Hide input instructions for small widget sizes.
+  const shouldShowInstructions =
+    focused && width > theme.breakpoints.hideWidgetDetails
 
   const onBlur = useCallback((): void => {
     if (dirty) {
       setValueWithSource({ value: uiValue, fromUi: true })
     }
+    setFocused(false)
   }, [dirty, uiValue])
+
+  const onFocus = useCallback((): void => {
+    setFocused(true)
+  }, [])
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -139,7 +154,7 @@ function TextInput({
         setValueWithSource({ value: uiValue, fromUi: true })
       }
 
-      if (widgetMgr.allowFormSubmitOnEnter(element.formId)) {
+      if (widgetMgr.allowFormEnterToSubmit(element.formId)) {
         widgetMgr.submitForm(element.formId, fragmentId)
       }
     },
@@ -173,6 +188,7 @@ function TextInput({
         value={uiValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}
+        onFocus={onFocus}
         onChange={onChange}
         onKeyPress={onKeyPress}
         aria-label={element.label}
@@ -214,14 +230,13 @@ function TextInput({
           },
         }}
       />
-      {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > theme.breakpoints.hideWidgetDetails && (
+      {shouldShowInstructions && (
         <InputInstructions
           dirty={dirty}
           value={uiValue ?? ""}
           maxLength={element.maxChars}
           inForm={isInForm({ formId: element.formId })}
-          allowSubmitOnEnter={allowSubmitOnEnter}
+          allowEnterToSubmit={allowEnterToSubmit}
         />
       )}
     </StyledTextInput>

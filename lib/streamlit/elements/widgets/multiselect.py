@@ -164,8 +164,7 @@ class MultiSelectMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the multiselect.
@@ -274,15 +273,13 @@ class MultiSelectMixin:
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
+            form_id=form_id,
             label=label,
             options=formatted_options,
             default=default_values,
-            key=key,
             help=help,
             max_selections=max_selections,
             placeholder=placeholder,
-            form_id=form_id,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         proto = MultiSelectProto()
@@ -302,14 +299,14 @@ class MultiSelectMixin:
 
         serde = MultiSelectSerde(indexable_options, default_values)
         widget_state = register_widget(
-            "multiselect",
-            proto,
+            proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_array_value",
         )
 
         _check_max_selections(widget_state.value, max_selections)

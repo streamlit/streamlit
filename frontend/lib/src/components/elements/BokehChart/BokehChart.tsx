@@ -16,7 +16,6 @@
 
 import React, { ReactElement, useCallback, useEffect } from "react"
 
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 // We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
 // Importing these files will cause global Bokeh to be mutated
@@ -59,7 +58,6 @@ export function BokehChart({
 
       // if is not fullscreen and useContainerWidth==false, we should use default values
       if (height) {
-        // fullscreen
         chartWidth = width
         chartHeight = height
       } else if (element.useContainerWidth) {
@@ -129,4 +127,4 @@ export function BokehChart({
   )
 }
 
-export default withFullScreenWrapper(BokehChart)
+export default BokehChart

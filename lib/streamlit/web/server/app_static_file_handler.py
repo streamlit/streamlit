@@ -40,7 +40,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         mimetypes.add_type("image/webp", ".webp")
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> str | None:
-        full_path = os.path.realpath(absolute_path)
+        full_path = os.path.abspath(absolute_path)
 
         ret_val = super().validate_absolute_path(root, absolute_path)
 

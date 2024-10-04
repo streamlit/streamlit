@@ -23,7 +23,7 @@ import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 
-import { Props, Selectbox } from "./Selectbox"
+import Selectbox, { Props } from "./Selectbox"
 
 const getProps = (
   elementProps: Partial<SelectboxProto> = {},
@@ -108,7 +108,7 @@ describe("Selectbox widget", () => {
   it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormClearOnSubmit("form", true)
+    props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
 
@@ -124,8 +124,9 @@ describe("Selectbox widget", () => {
       undefined
     )
 
-    await act(() => {
-      // "Submit" the form
+    // TODO: Check if needed
+    // "Submit" the form
+    await act(async () => {
       props.widgetMgr.submitForm("form", undefined)
     })
 

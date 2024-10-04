@@ -175,6 +175,41 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
+    def test_run_command_with_multiple_secrets_path_single_value(self):
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
+            "streamlit.web.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+            result = self.runner.invoke(
+                cli, ["run", "file_name.py", "--secrets.files=secrets1.toml"]
+            )
+
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
+        assert kwargs["flag_options"]["secrets_files"] == ("secrets1.toml",)
+        assert result.exit_code == 0
+
+    def test_run_command_with_multiple_secrets_path_multiple_value(self):
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
+            "streamlit.web.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+            result = self.runner.invoke(
+                cli,
+                [
+                    "run",
+                    "file_name.py",
+                    "--secrets.files=secrets1.toml",
+                    "--secrets.files=secrets2.toml",
+                ],
+            )
+
+        streamlit.web.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = streamlit.web.bootstrap.load_config_options.call_args
+        assert kwargs["flag_options"]["secrets_files"] == (
+            "secrets1.toml",
+            "secrets2.toml",
+        )
+        assert result.exit_code == 0
+
     @parameterized.expand(["mapbox.token", "server.cookieSecret"])
     def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
         with patch("streamlit.url_util.is_url", return_value=False), patch(

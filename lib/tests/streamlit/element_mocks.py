@@ -34,20 +34,37 @@ _CHART_DATA = pd.DataFrame(
 
 ELEMENT_PRODUCER = Callable[[], Any]
 
+H3_HEX_DATA = [
+    {"hex": "88283082b9fffff", "count": 10},
+    {"hex": "88283082d7fffff", "count": 50},
+    {"hex": "88283082a9fffff", "count": 100},
+]
+df = pd.DataFrame(H3_HEX_DATA)
+
+
 WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # buttons
     ("button", lambda: st.button("Click me")),
     ("download_button", lambda: st.download_button("Download me", b"")),
-    ("camera_input", lambda: st.camera_input("Take a picture")),
-    ("chat_input", lambda: st.chat_input("Chat with me")),
+    (
+        "form_submit_button",
+        # Form submit button doesn't work in the context of the test
+        # since it requires to be wrapped in a form. Therefore,
+        # we are just using a text input as a proxy for the form submit button.
+        lambda: st.text_input("Write me"),
+    ),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
+    # ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
     ("dataframe", lambda: st.dataframe(pd.DataFrame(), on_select="rerun")),
     # other widgets
     ("color_picker", lambda: st.color_picker("Pick a color")),
+    # media manager
+    ("experimental_audio_input", lambda: st.experimental_audio_input("Record me")),
+    ("camera_input", lambda: st.camera_input("Take a picture")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
@@ -60,6 +77,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     # text_widgets
     ("text_area", lambda: st.text_area("Write me")),
     ("text_input", lambda: st.text_input("Write me")),
+    ("chat_input", lambda: st.chat_input("Chat with me")),
     # time_widgets
     ("date_input", lambda: st.date_input("Pick a date")),
     ("time_input", lambda: st.time_input("Pick a time")),
@@ -102,6 +120,38 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     (
         "plotly_chart",
         lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="rerun"),
+    ),
+    (
+        "pydeck_chart",
+        lambda: st.pydeck_chart(
+            pdk.Deck(
+                map_style="mapbox://styles/mapbox/outdoors-v12",
+                initial_view_state=pdk.ViewState(
+                    latitude=37.7749295,
+                    longitude=-122.4194155,
+                    zoom=11,
+                    bearing=0,
+                    pitch=30,
+                ),
+                layers=[
+                    pdk.Layer(
+                        "H3HexagonLayer",
+                        df,
+                        id="MyHexLayer",
+                        pickable=True,
+                        stroked=True,
+                        filled=True,
+                        get_hexagon="hex",
+                        line_width_min_pixels=2,
+                        get_fill_color="[120, count > 50 ? 255 : 0, 255]",
+                    ),
+                ],
+            ),
+            use_container_width=True,
+            key="mocked_pydeck_chart",
+            on_select="rerun",
+            selection_mode="single-object",
+        ),
     ),
 ]
 

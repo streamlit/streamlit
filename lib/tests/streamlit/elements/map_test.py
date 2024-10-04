@@ -346,3 +346,15 @@ class StMapTest(DeltaGeneratorTestCase):
             st.map(df)
 
         self.assertIn("not allowed to contain null values", str(ctx.exception))
+
+    def test_map_with_height(self):
+        """Test st.map with height."""
+        st.map(mock_df, height=500)
+        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        self.assertEqual(c.height, 500)
+
+    def test_map_with_width(self):
+        """Test st.map with width."""
+        st.map(mock_df, width=240)
+        c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        self.assertEqual(c.width, 240)

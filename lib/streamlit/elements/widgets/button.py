@@ -122,9 +122,7 @@ class ButtonMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-
+            based on its content. No two widgets may have the same key.
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
@@ -179,8 +177,8 @@ class ButtonMixin:
             True if the button was clicked on the last run of the app,
             False otherwise.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.button("Reset", type="primary")
@@ -191,6 +189,23 @@ class ButtonMixin:
 
         .. output::
            https://doc-buton.streamlit.app/
+           height: 220px
+
+        Although you can add icons to your buttons through Markdown, the
+        ``icon`` parameter is a convenient and consistent alternative.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, middle, right = st.columns(3)
+        >>> if left.button("Plain button", use_container_width=True):
+        ...     left.markdown("You clicked the plain button.")
+        >>> if middle.button("Emoji button", icon="😃", use_container_width=True):
+        ...     middle.markdown("You clicked the emoji button.")
+        >>> if right.button("Material button", icon=":material/mood:", use_container_width=True):
+        ...     right.markdown("You clicked the Material button.")
+
+        .. output::
+           https://doc-button-icons.streamlit.app/
            height: 220px
 
         """
@@ -287,8 +302,7 @@ class ButtonMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed when the button is
@@ -673,15 +687,15 @@ class ButtonMixin:
         element_id = compute_and_register_element_id(
             "download_button",
             user_key=key,
+            # download_button is not allowed to be used in a form.
+            form_id=None,
             label=label,
             icon=icon,
             file_name=file_name,
             mime=mime,
-            key=key,
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -709,14 +723,14 @@ class ButtonMixin:
         serde = ButtonSerde()
 
         button_state = register_widget(
-            "download_button",
-            download_button_proto,
+            download_button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="trigger_value",
         )
 
         self.dg._enqueue("download_button", download_button_proto)
@@ -853,17 +867,19 @@ class ButtonMixin:
             enable_check_callback_rules=not is_form_submitter,
         )
 
+        # Only the form submitter button needs a form ID at the moment.
+        form_id = current_form_id(self.dg) if is_form_submitter else ""
         element_id = compute_and_register_element_id(
             "button",
             user_key=key,
+            # Only the
+            form_id=form_id,
             label=label,
             icon=icon,
-            key=key,
             help=help,
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -886,7 +902,7 @@ class ButtonMixin:
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
-        button_proto.form_id = current_form_id(self.dg)
+        button_proto.form_id = form_id
         button_proto.type = type
         button_proto.use_container_width = use_container_width
         button_proto.disabled = disabled
@@ -900,14 +916,14 @@ class ButtonMixin:
         serde = ButtonSerde()
 
         button_state = register_widget(
-            "button",
-            button_proto,
+            button_proto.id,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="trigger_value",
         )
 
         if ctx:

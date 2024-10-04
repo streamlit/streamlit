@@ -78,6 +78,11 @@ function TextArea({
   const [dirty, setDirty] = useState(false)
 
   /**
+   * Whether the area is currently focused.
+   */
+  const [focused, setFocused] = useState(false)
+
+  /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
@@ -97,15 +102,25 @@ function TextArea({
   const { height, placeholder, formId } = element
   const style = { width }
 
-  // Show "Please enter" instructions if in a form & allowed, or not in form
-  const allowSubmitOnEnter =
-    widgetMgr.allowFormSubmitOnEnter(formId) || !isInForm({ formId })
+  // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
+  const allowEnterToSubmit = isInForm({ formId })
+    ? widgetMgr.allowFormEnterToSubmit(formId)
+    : dirty
+
+  // Hide input instructions for small widget sizes.
+  const shouldShowInstructions =
+    focused && width > theme.breakpoints.hideWidgetDetails
 
   const onBlur = useCallback((): void => {
     if (dirty) {
       setValueWithSource({ value: uiValue, fromUi: true })
     }
+    setFocused(false)
   }, [dirty, uiValue])
+
+  const onFocus = useCallback((): void => {
+    setFocused(true)
+  }, [])
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
@@ -141,17 +156,18 @@ function TextArea({
       if (isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
         e.preventDefault()
 
-        if (dirty) {
-          setValueWithSource({ value: uiValue, fromUi: true })
-        }
+        setValueWithSource({ value: uiValue, fromUi: true })
 
-        if (widgetMgr.allowFormSubmitOnEnter(element.formId)) {
+        if (widgetMgr.allowFormEnterToSubmit(element.formId)) {
           widgetMgr.submitForm(element.formId, fragmentId)
         }
       }
     },
     [uiValue, element, widgetMgr, fragmentId]
   )
+
+  // Default minHeight is 95px, unless height set lower (can't be < 68px or 4.25rem)
+  const minHeight = height && height < 95 ? `${height}px` : "95px"
 
   return (
     <div className="stTextArea" data-testid="stTextArea" style={style}>
@@ -176,6 +192,7 @@ function TextArea({
         value={uiValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}
+        onFocus={onFocus}
         onChange={onChange}
         onKeyDown={onKeyDown}
         aria-label={element.label}
@@ -186,7 +203,7 @@ function TextArea({
             style: {
               lineHeight: theme.lineHeights.inputWidget,
               height: height ? `${height}px` : "",
-              minHeight: "95px",
+              minHeight,
               resize: "vertical",
               "::placeholder": {
                 opacity: "0.7",
@@ -212,15 +229,14 @@ function TextArea({
           },
         }}
       />
-      {/* Hide the "Please enter to apply" text in small widget sizes */}
-      {width > theme.breakpoints.hideWidgetDetails && (
+      {shouldShowInstructions && (
         <InputInstructions
           dirty={dirty}
           value={uiValue ?? ""}
           maxLength={element.maxChars}
           type={"multiline"}
           inForm={isInForm({ formId })}
-          allowSubmitOnEnter={allowSubmitOnEnter}
+          allowEnterToSubmit={allowEnterToSubmit}
         />
       )}
     </div>

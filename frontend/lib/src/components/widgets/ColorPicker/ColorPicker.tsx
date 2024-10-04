@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import React, { memo, FC, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import BaseColorPicker from "@streamlit/lib/src/components/shared/BaseColorPicker"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
-import BaseColorPicker from "@streamlit/lib/src/components/shared/BaseColorPicker"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   disabled: boolean
@@ -33,15 +33,54 @@ export interface Props {
   fragmentId?: string
 }
 
-function ColorPicker({
-  disabled,
+/**
+ * The value specified by the user via the UI. If the user didn't touch this
+ * widget's UI, the default value is used.
+ */
+type ColorPickerValue = string
+
+const getStateFromWidgetMgr = (
+  widgetMgr: WidgetStateManager,
+  element: ColorPickerProto
+): ColorPickerValue | undefined => {
+  return widgetMgr.getStringValue(element)
+}
+
+const getDefaultStateFromProto = (
+  element: ColorPickerProto
+): ColorPickerValue => {
+  return element.default ?? null
+}
+
+const getCurrStateFromProto = (
+  element: ColorPickerProto
+): ColorPickerValue => {
+  return element.value ?? null
+}
+
+const updateWidgetMgrState = (
+  element: ColorPickerProto,
+  widgetMgr: WidgetStateManager,
+  valueWithSource: ValueWithSource<ColorPickerValue>,
+  fragmentId?: string
+): void => {
+  widgetMgr.setStringValue(
+    element,
+    valueWithSource.value,
+    { fromUi: valueWithSource.fromUi },
+    fragmentId
+  )
+}
+
+const ColorPicker: FC<Props> = ({
   element,
+  disabled,
   widgetMgr,
   width,
   fragmentId,
-}: Props): ReactElement {
+}) => {
   const [value, setValueWithSource] = useBasicWidgetState<
-    string,
+    ColorPickerValue,
     ColorPickerProto
   >({
     getStateFromWidgetMgr,
@@ -53,7 +92,7 @@ function ColorPicker({
     fragmentId,
   })
 
-  const onColorClose = useCallback(
+  const handleColorClose = useCallback(
     (color: string): void => {
       setValueWithSource({ value: color, fromUi: true })
     },
@@ -67,40 +106,11 @@ function ColorPicker({
         element.labelVisibility?.value
       )}
       help={element.help}
-      onChange={onColorClose}
+      onChange={handleColorClose}
       disabled={disabled}
       width={width}
       value={value}
     />
-  )
-}
-
-function getStateFromWidgetMgr(
-  widgetMgr: WidgetStateManager,
-  element: ColorPickerProto
-): string | undefined {
-  return widgetMgr.getStringValue(element)
-}
-
-function getDefaultStateFromProto(element: ColorPickerProto): string {
-  return element.default
-}
-
-function getCurrStateFromProto(element: ColorPickerProto): string {
-  return element.value
-}
-
-function updateWidgetMgrState(
-  element: ColorPickerProto,
-  widgetMgr: WidgetStateManager,
-  vws: ValueWithSource<string>,
-  fragmentId?: string
-): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
   )
 }
 

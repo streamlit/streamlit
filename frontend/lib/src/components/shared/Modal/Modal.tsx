@@ -38,8 +38,13 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { genericFonts, fontSizes, spacing, fontWeights }: EmotionTheme =
-    useTheme()
+  const {
+    genericFonts,
+    fontSizes,
+    spacing,
+    fontWeights,
+    lineHeights,
+  }: EmotionTheme = useTheme()
 
   return (
     <UIModalHeader
@@ -56,7 +61,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         fontSize: fontSizes.xl,
         fontWeight: fontWeights.bold,
         margin: spacing.none,
-        lineHeight: 1.5,
+        lineHeight: lineHeights.modalHeader,
         textTransform: "none",
         display: "flex",
         alignItems: "center",

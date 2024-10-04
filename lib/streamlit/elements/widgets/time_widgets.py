@@ -339,8 +339,7 @@ class TimeWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the input.
@@ -457,13 +456,11 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=parsed_time if isinstance(value, (datetime, time)) else value,
-            key=key,
             help=help,
             step=step,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
         del value
 
@@ -498,14 +495,14 @@ class TimeWidgetsMixin:
 
         serde = TimeInputSerde(parsed_time)
         widget_state = register_widget(
-            "time_input",
-            time_input_proto,
+            time_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_value",
         )
 
         if widget_state.value_changed:
@@ -578,8 +575,7 @@ class TimeWidgetsMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the input.
@@ -732,15 +728,13 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "date_input",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             value=parsed,
             min_value=parsed_min_date,
             max_value=parsed_max_date,
-            key=key,
             help=help,
             format=format,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
@@ -801,14 +795,14 @@ class TimeWidgetsMixin:
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
-            "date_input",
-            date_input_proto,
+            date_input_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="string_array_value",
         )
 
         if widget_state.value_changed:

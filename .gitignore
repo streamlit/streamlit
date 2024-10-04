@@ -71,6 +71,7 @@ coverage/
 # Streamlit
 ########################################################################
 .streamlit/
+!e2e_playwright/.streamlit/
 lib/streamlit/static
 streamlit-storage
 
@@ -108,7 +109,10 @@ frontend/test_results
 frontend/cypress/snapshots/darwin
 frontend/cypress/snapshots/linux/1x
 
+
 ########################################################################
 # VSCode
 ########################################################################
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json

@@ -101,7 +101,7 @@ class VegaLiteState(TypedDict, total=False):
     """
     The schema for the Vega-Lite event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -110,7 +110,7 @@ class VegaLiteState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The name of each Vega-Lite selection parameter becomes an attribute in
         the ``selection`` dictionary. The format of the data within each
@@ -1570,9 +1570,9 @@ class VegaChartsMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns a
+            the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
@@ -1734,9 +1734,9 @@ class VegaChartsMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this method returns a
+            the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
@@ -1894,7 +1894,7 @@ class VegaChartsMixin:
             vega_lite_proto.id = compute_and_register_element_id(
                 "arrow_vega_lite_chart",
                 user_key=key,
-                key=key,
+                form_id=vega_lite_proto.form_id,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
                 # or in a named dataset in vega_lite_proto.datasets
@@ -1905,19 +1905,17 @@ class VegaChartsMixin:
                 theme=theme,
                 use_container_width=use_container_width,
                 selection_mode=parsed_selection_modes,
-                form_id=vega_lite_proto.form_id,
-                page=ctx.active_script_hash if ctx else None,
             )
 
             serde = VegaLiteStateSerde(parsed_selection_modes)
 
             widget_state = register_widget(
-                "vega_lite_chart",
-                vega_lite_proto,
+                vega_lite_proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
 
             self.dg._enqueue(

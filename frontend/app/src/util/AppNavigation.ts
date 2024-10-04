@@ -27,6 +27,7 @@ import {
 } from "@streamlit/lib"
 
 interface AppNavigationState {
+  expandSidebarNav: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
   currentPageScriptHash: string
@@ -228,8 +229,7 @@ export class StrategyV2 {
     const { sections, position, appPages } = navigationMsg
 
     this.appPages = appPages
-    this.hideSidebarNav =
-      position === Navigation.Position.HIDDEN || this.hideSidebarNav === true
+    this.hideSidebarNav = position === Navigation.Position.HIDDEN
 
     const currentPageScriptHash = navigationMsg.pageScriptHash
     const currentPage = appPages.find(
@@ -263,6 +263,7 @@ export class StrategyV2 {
         appPages,
         navSections: sections,
         hideSidebarNav: this.hideSidebarNav,
+        expandSidebarNav: navigationMsg.expanded,
         currentPageScriptHash,
       },
       () => {

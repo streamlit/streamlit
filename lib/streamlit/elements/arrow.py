@@ -78,7 +78,7 @@ class DataframeSelectionState(TypedDict, total=False):
     """
     The schema for the dataframe selection state.
 
-    The selection state is stored in a dictionary-like object that suports both
+    The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states cannot be programmatically
     changed or set through Session State.
 
@@ -136,7 +136,7 @@ class DataframeState(TypedDict, total=False):
     """
     The schema for the dataframe event state.
 
-    The event state is stored in a dictionary-like object that suports both
+    The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states cannot be programmatically
     changed or set through Session State.
 
@@ -145,7 +145,7 @@ class DataframeState(TypedDict, total=False):
     Attributes
     ----------
     selection : dict
-        The state of the ``on_select`` event. This attribure returns a
+        The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
         The attributes are described by the ``DataframeSelectionState``
         dictionary schema.
@@ -295,7 +295,7 @@ class ArrowMixin:
             - ``snowflake.snowpark.dataframe.DataFrame``,
               ``snowflake.snowpark.table.Table``
 
-            If a dataype is not recognized, Streamlit will convert the object
+            If a data type is not recognized, Streamlit will convert the object
             to a ``pandas.DataFrame`` or ``pyarrow.Table`` using a
             ``.to_pandas()`` or ``.to_arrow()`` method, respectively, if
             available.
@@ -304,7 +304,9 @@ class ArrowMixin:
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values and colors. It does not support some of the more exotic
             styling options, like bar charts, hovering, and captions. For
-            these styling options, use column configuration instead.
+            these styling options, use column configuration instead. Text and
+            number formatting from ``column_config`` always takes precedence
+            over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -417,9 +419,9 @@ class ArrowMixin:
         Returns
         -------
         element or dict
-            If ``on_select`` is ``"ignore"`` (default), this method returns an
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element that can be used
-            with the ``.add_rows()`` method. Otherwise, this method returns a
+            with the ``.add_rows()`` method. Otherwise, this command returns a
             dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``DataframeState``
             dictionary schema.
@@ -568,27 +570,25 @@ class ArrowMixin:
             proto.id = compute_and_register_element_id(
                 "dataframe",
                 user_key=key,
+                form_id=proto.form_id,
                 data=proto.data,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
                 column_order=proto.column_order,
                 column_config=proto.columns,
-                key=key,
                 selection_mode=selection_mode,
                 is_selection_activated=is_selection_activated,
-                form_id=proto.form_id,
-                page=ctx.active_script_hash if ctx else None,
             )
 
             serde = DataframeSelectionSerde()
             widget_state = register_widget(
-                "dataframe",
-                proto,
+                proto.id,
                 on_change_handler=on_select if callable(on_select) else None,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
+                value_type="string_value",
             )
             self.dg._enqueue("arrow_data_frame", proto)
             return cast(DataframeState, widget_state.value)

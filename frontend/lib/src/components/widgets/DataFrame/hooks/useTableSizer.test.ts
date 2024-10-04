@@ -16,10 +16,13 @@
 
 import { act, renderHook } from "@testing-library/react-hooks"
 
-import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "@streamlit/lib/src/mocks/arrow"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
-import useTableSizer, { calculateMaxHeight } from "./useTableSizer"
+import useTableSizer, {
+  calculateMaxHeight,
+  MIN_TABLE_WIDTH,
+} from "./useTableSizer"
 
 describe("useTableSizer hook", () => {
   it("applies the configured width", () => {
@@ -34,12 +37,37 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
 
     expect(result.current.resizableSize.width).toEqual(TABLE_WIDTH)
     expect(result.current.maxWidth).toEqual(CONTAINER_WIDTH)
+  })
+
+  it("Uses the minimum table width if container width is -1", () => {
+    // The width of the surrounding containers can be -1 in some edge cases
+    // caused by the resize observer in the Block component.
+    // We test that the dataframe component correctly handles this case
+    // by falling back to the minimum table width instead.
+    // Related to: https://github.com/streamlit/streamlit/issues/7949
+    const CONTAINER_WIDTH = -1
+    const { result } = renderHook(() =>
+      useTableSizer(
+        ArrowProto.create({
+          data: TEN_BY_TEN,
+          useContainerWidth: true,
+        }),
+        10,
+        false,
+        CONTAINER_WIDTH
+      )
+    )
+
+    expect(result.current.resizableSize.width).toEqual(MIN_TABLE_WIDTH)
+    expect(result.current.maxWidth).toEqual(MIN_TABLE_WIDTH)
+    expect(result.current.minWidth).toEqual(MIN_TABLE_WIDTH)
   })
 
   it("adapts to the surrounding container width", () => {
@@ -54,6 +82,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -73,6 +102,7 @@ describe("useTableSizer hook", () => {
           height: TABLE_HEIGHT,
         }),
         NUMBER_OF_ROWS,
+        false,
         700
       )
     )
@@ -81,6 +111,29 @@ describe("useTableSizer hook", () => {
     // +1 rows for header row
     expect(result.current.maxHeight).toEqual(
       calculateMaxHeight(NUMBER_OF_ROWS + 1)
+    )
+  })
+
+  it("correctly includes group row in height calculation", () => {
+    const NUMBER_OF_ROWS = 10
+    const TABLE_HEIGHT = 100
+    const { result } = renderHook(() =>
+      useTableSizer(
+        ArrowProto.create({
+          data: TEN_BY_TEN,
+          useContainerWidth: false,
+          height: TABLE_HEIGHT,
+        }),
+        NUMBER_OF_ROWS,
+        true,
+        700
+      )
+    )
+
+    expect(result.current.resizableSize.height).toEqual(TABLE_HEIGHT)
+    // +1 rows for header row + 1 for group row
+    expect(result.current.maxHeight).toEqual(
+      calculateMaxHeight(NUMBER_OF_ROWS + 2)
     )
   })
 
@@ -96,6 +149,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         10,
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -114,6 +168,7 @@ describe("useTableSizer hook", () => {
           useContainerWidth: false,
         }),
         2, // Unicode table has 2 rows
+        false,
         CONTAINER_WIDTH
       )
     )
@@ -137,6 +192,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         100, // VERY_TALL table has 100 rows
+        false,
         CONTAINER_WIDTH,
         CONTAINER_HEIGHT,
         true
@@ -162,6 +218,7 @@ describe("useTableSizer hook", () => {
           width: TABLE_WIDTH,
         }),
         NUMBER_OF_ROWS,
+        false,
         CONTAINER_WIDTH
       )
     )

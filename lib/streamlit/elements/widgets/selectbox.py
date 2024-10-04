@@ -170,8 +170,7 @@ class SelectboxMixin:
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+            based on its content. No two widgets may have the same key.
 
         help : str
             An optional tooltip that gets displayed next to the selectbox.
@@ -287,14 +286,12 @@ class SelectboxMixin:
         element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
+            form_id=current_form_id(self.dg),
             label=label,
             options=[str(format_func(option)) for option in opt],
             index=index,
-            key=key,
             help=help,
             placeholder=placeholder,
-            form_id=current_form_id(self.dg),
-            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:
@@ -330,14 +327,14 @@ class SelectboxMixin:
         serde = SelectboxSerde(opt, index)
 
         widget_state = register_widget(
-            "selectbox",
-            selectbox_proto,
+            selectbox_proto.id,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
+            value_type="int_value",
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

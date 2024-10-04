@@ -24,7 +24,8 @@ import styled from "@emotion/styled"
 */
 export const StyledPre = styled.pre(({ theme }) => ({
   margin: 0,
-  paddingRight: "2.75rem",
+  // Add padding to the right to account for the copy button
+  paddingRight: theme.iconSizes.threeXL,
   color: theme.colors.bodyText,
   borderRadius: theme.radii.default,
 

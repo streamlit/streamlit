@@ -61,7 +61,12 @@ def _build_duplicate_form_message(user_key: str | None = None) -> str:
 class FormMixin:
     @gather_metrics("form")
     def form(
-        self, key: str, clear_on_submit: bool = False, *, border: bool = True
+        self,
+        key: str,
+        clear_on_submit: bool = False,
+        *,
+        enter_to_submit: bool = True,
+        border: bool = True,
     ) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
@@ -93,6 +98,21 @@ class FormMixin:
             values after the user presses the Submit button. Defaults to False.
             (Note that Custom Components are unaffected by this flag, and
             will not be reset to their defaults on form submission.)
+        enter_to_submit : bool
+            Whether to submit the form when a user presses Enter while
+            interacting with a widget inside the form.
+
+            If this is ``True`` (default), pressing Enter while interacting
+            with a form widget is equivalent to clicking the first
+            ``st.form_submit_button`` in the form.
+
+            If this is ``False``, the user must click an
+            ``st.form_submit_button`` to submit the form.
+
+            If the first ``st.form_submit_button`` in the form is disabled,
+            the form will override submission behavior with
+            ``enter_to_submit=False``.
+
         border : bool
             Whether to show a border around the form. Defaults to True.
 
@@ -159,6 +179,7 @@ class FormMixin:
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
         block_proto.form.clear_on_submit = clear_on_submit
+        block_proto.form.enter_to_submit = enter_to_submit
         block_proto.form.border = border
         block_dg = self.dg._block(block_proto)
 
@@ -184,13 +205,13 @@ class FormMixin:
         """Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
-        sent to Streamlit in a batch.
+        sent from the user's browser to your Streamlit server in a batch.
 
-        Every form must have a form_submit_button. A form_submit_button
-        cannot exist outside a form.
+        Every form must have at least one ``st.form_submit_button``. An
+        ``st.form_submit_button`` cannot exist outside of a form.
 
-        For more information about forms, check out our
-        `blog post <https://blog.streamlit.io/introducing-submit-button-and-forms/>`_.
+        For more information about forms, check out our `docs
+        <https://docs.streamlit.io/develop/concepts/architecture/forms>`_.
 
         Parameters
         ----------
@@ -227,8 +248,14 @@ class FormMixin:
               <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
               font library.
         disabled : bool
-            An optional boolean, which disables the button if set to True. The
-            default is False.
+            Whether to disable the button. If this is ``False`` (default), the
+            user can interact with the button. If this is ``True``, the button
+            is grayed-out and can't be clicked.
+
+            If the first ``st.form_submit_button`` in the form is disabled,
+            the form will override submission behavior with
+            ``enter_to_submit=False``.
+
         use_container_width : bool
             Whether to expand the button's width to fill its parent container.
             If ``use_container_width`` is ``False`` (default), Streamlit sizes

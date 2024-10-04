@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import TypeAlias
 
+from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -57,6 +58,7 @@ def navigation(
     pages: list[StreamlitPage] | dict[SectionHeader, list[StreamlitPage]],
     *,
     position: Literal["sidebar", "hidden"] = "sidebar",
+    expanded: bool = False,
 ) -> StreamlitPage:
     """
     Configure the available pages in a multipage app.
@@ -81,7 +83,7 @@ def navigation(
 
     Parameters
     ----------
-    pages: list[StreamlitPage] or dict[str, list[StreamlitPage]]
+    pages : list[StreamlitPage] or dict[str, list[StreamlitPage]]
         The available pages for the app.
 
         To create labeled sections or page groupings within the navigation
@@ -94,13 +96,24 @@ def navigation(
 
         Use ``st.Page`` to create ``StreamlitPage`` objects.
 
-    position: "sidebar" or "hidden"
+    position : "sidebar" or "hidden"
         The position of the navigation menu. If ``position`` is ``"sidebar"``
         (default), the navigation widget appears at the top of the sidebar. If
         ``position`` is ``"hidden"``, the navigation widget is not displayed.
 
         If there is only one page in ``pages``, the navigation will be hidden
         for any value of ``position``.
+
+    expanded : bool
+        Whether the navigation menu should be expanded. If this is ``False``
+        (default), the navigation menu will be collapsed and will include a
+        button to view more options when there are too many pages to display.
+        If this is ``True``, the navigation menu will always be expanded; no
+        button to collapse the menu will be displayed.
+
+        If ``st.navigation`` changes from ``expanded=True`` to
+        ``expanded=False`` on a rerun, the menu will stay expanded and a
+        collapse button will be displayed.
 
     Returns
     -------
@@ -213,8 +226,12 @@ def navigation(
     msg = ForwardMsg()
     if position == "hidden":
         msg.navigation.position = NavigationProto.Position.HIDDEN
+    elif config.get_option("client.showSidebarNavigation") is False:
+        msg.navigation.position = NavigationProto.Position.HIDDEN
     else:
         msg.navigation.position = NavigationProto.Position.SIDEBAR
+
+    msg.navigation.expanded = expanded
     msg.navigation.sections[:] = nav_sections.keys()
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
