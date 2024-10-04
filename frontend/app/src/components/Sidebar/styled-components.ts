@@ -37,12 +37,20 @@ const conditionalCustomColor = (
 
   return customTextColor ? customThemeColor : defaultThemeColor
 }
-
+ 
 export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
   sidebarWidth: string
 }
+
+export const DisabledIcon = styled.div(({ theme }) => ({
+  color: theme.colors.fadedText40,
+  cursor: "not-allowed",
+  "&:hover": {
+    color: theme.colors.danger,
+  },
+}));
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, adjustTop, sidebarWidth }) => {
