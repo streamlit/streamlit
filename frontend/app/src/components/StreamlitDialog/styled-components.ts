@@ -20,17 +20,6 @@ import { ChevronLeft } from "react-feather"
 
 import { Small } from "@streamlit/lib"
 
-export const StyledRerunHeader = styled.div(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
-}))
-
-export const StyledCommandLine = styled.textarea(({ theme }) => ({
-  width: theme.sizes.full,
-  fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.sm,
-  height: "6rem",
-}))
-
 export const StyledShortcutLabel = styled.span(() => ({
   "&::first-letter": {
     textDecoration: "underline",
@@ -85,13 +74,13 @@ export const StyledLabel = styled.label(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledSmall = styled(Small)(() => ({
+export const StyledSmall = styled(Small)(({ theme }) => ({
   display: "block",
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
   marginTop: 0,
-  lineHeight: 1.5,
+  lineHeight: theme.lineHeights.table,
 }))
 
 export const StyledHr = styled.hr(({ theme }) => ({
@@ -141,9 +130,9 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
   },
 }))
 
-export const StyledDeployErrorContent = styled.div(() => ({
+export const StyledDeployErrorContent = styled.div(({ theme }) => ({
   "& > ul": {
-    paddingLeft: "1.4rem",
+    paddingLeft: theme.spacing.twoXL,
   },
 }))
 
