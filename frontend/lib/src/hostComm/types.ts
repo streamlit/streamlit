@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { IAppPage, ICustomThemeConfig } from "@streamlit/lib/src/proto"
+import {
+  IAppPage,
+  ICustomThemeConfig,
+  MetricsEvent,
+} from "@streamlit/lib/src/proto"
 import { ExportedTheme } from "@streamlit/lib/src/theme"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 import { LibConfig } from "@streamlit/lib/src/components/core/LibContext"
@@ -187,6 +191,10 @@ export type IGuestToHostMessage =
     }
   | {
       type: "WEBSOCKET_CONNECTED"
+    }
+  | {
+      type: "METRICS_EVENT"
+      data: MetricsEvent
     }
 
 export type VersionedMessage<Message> = {

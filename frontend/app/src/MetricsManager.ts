@@ -20,7 +20,6 @@ import { v4 as uuidv4 } from "uuid"
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
   MetricsEvent,
-  PageProfileEvent,
   DeployedAppMetadata,
   getCookie,
   setCookie,
@@ -174,8 +173,6 @@ export class MetricsManager {
     // for all of them.
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
-    } else if (this.metricsUrl === "postMessage") {
-      this.postMessageEvent(evName, data)
     } else if (this.metricsUrl) {
       this.track(evName, data, {
         context: {
@@ -202,14 +199,16 @@ export class MetricsManager {
     context: Record<string, unknown> = {}
   ): Promise<void> {
     console.log("== Test Sending to Segment:", evName, data)
-
     // Send the event to Segment
     analytics.track(evName, data, context)
 
-    const eventProto = this.buildEventProto(evName, data)
-    console.log("== Test Sending to Fivetran Webhook ==", evName, eventProto)
-    const eventJson = eventProto.toJSON()
+    // Send the event via postMessage (TESTING ONLY)
+    const eventJson = this.buildEventProto(evName, data).toJSON()
+    console.log("== Test Sending to Host:", evName, eventJson)
+    this.sendMessageToHost({ type: "METRICS_EVENT", data: eventJson })
+
     // Send the event to the metrics URL
+    console.log("== Test Sending to Fivetran Webhook ==", evName, eventJson)
     // @ts-expect-error
     const request = new Request(this.metricsUrl, {
       method: "POST",
@@ -219,24 +218,19 @@ export class MetricsManager {
       body: JSON.stringify(eventJson),
     })
     const response = await fetch(request)
-    console.log("Response Status:", response.status)
+    console.log("Response Status:", this.metricsUrl, response.status)
   }
 
-  private postMessageEvent(
-    evName: string,
-    data: Record<string, unknown>
-  ): void {
-    const eventProto = this.buildEventProto(evName, data)
-    const eventJson = eventProto.toJSON()
-    // Trigger message to the host
-    console.log("== Test Sending message to host ==")
-    console.log(eventJson)
-  }
+  // private postMessageEvent(
+  //   eventJson: Record<string, unknown>
+  // ): void {
+  //   // Send metrics events to host
+  //   this.sendMessageToHost({ type: "METRICS_EVENT", data: eventJson })
+  // }
 
   private buildEventProto(
     evName: string,
-    data: Record<string, unknown>,
-    overrides: Record<string, unknown> = {}
+    data: Record<string, unknown>
   ): MetricsEvent {
     const eventProto = new MetricsEvent({
       event: evName,
@@ -279,7 +273,7 @@ export class MetricsManager {
       throw new Error(`Failed to fetch metrics config: ${response.status}`)
     } else {
       const data = await response.json()
-      const metricsUrl = data["url"]
+      const metricsUrl = data.url
       if (metricsUrl) {
         this.metricsUrl = metricsUrl
         if (localStorageAvailable()) {
