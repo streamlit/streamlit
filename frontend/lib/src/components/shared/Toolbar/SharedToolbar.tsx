@@ -18,7 +18,6 @@ import React, {
   createContext,
   FC,
   PropsWithChildren,
-  useEffect,
   useMemo,
   useRef,
 } from "react"
@@ -54,56 +53,6 @@ export const ToolbarContextProvider: FC<PropsWithChildren> = ({
   )
 }
 
-export const useSetToolbarProps = (
-  props: Omit<ToolbarProps, "onExpand" | "onCollapse" | "isFullScreen"> | null
-): void => {
-  const [, setProps] = useRequiredContext(ToolbarContext)
-  const {
-    expand: onExpand,
-    collapse: onCollapse,
-    expanded: isFullScreen,
-  } = useRequiredContext(WidgetFullscreenContext)
-
-  useEffect(() => {
-    if (!props) {
-      setProps(null)
-      return
-    }
-
-    setProps({ ...props, onExpand, onCollapse, isFullScreen })
-
-    return () => {
-      setProps(null)
-    }
-  }, [isFullScreen, onCollapse, onExpand, props, setProps])
-}
-
-/**
- * Simple wrapper around `useSetToolbarProps` to set if the element should have
- * a fullscreen button. Only utilize standalone if you don't need to set any
- * other toolbar props.
- *
- * @param hasFullscreen true (default) if the element should have a fullscreen
- * button
- */
-export const useHasFullscreen = (hasFullscreen = true): void => {
-  const { expand, collapse, expanded } = useRequiredContext(
-    WidgetFullscreenContext
-  )
-
-  useSetToolbarProps(
-    useMemo(
-      () => ({
-        onExpand: expand,
-        onCollapse: collapse,
-        isFullScreen: expanded,
-        disableFullscreenMode: !hasFullscreen,
-      }),
-      [collapse, expand, expanded, hasFullscreen]
-    )
-  )
-}
-
 type ToolbarRendererContextShape = {
   portalRef: React.RefObject<HTMLDivElement>
 }
@@ -112,21 +61,46 @@ const ToolbarRendererContext =
   createContext<ToolbarRendererContextShape | null>(null)
 ToolbarRendererContext.displayName = "ToolbarRendererContext"
 
-export const ToolbarRenderer: FC<PropsWithChildren> = ({ children }) => {
-  const [toolbarProps] = useRequiredContext(ToolbarContext)
+export const ToolbarRendererContextProvider: FC<PropsWithChildren> = ({
+  children,
+}) => {
   const portalRef = useRef<HTMLDivElement>(null)
 
+  const value = useMemo(() => ({ portalRef }), [portalRef])
+
   return (
-    <ToolbarRendererContext.Provider value={{ portalRef }}>
-      <StyledContentWrapper>
-        {toolbarProps && (
-          <Toolbar target={StyledContentWrapper} {...toolbarProps}>
-            <div ref={portalRef} />
-          </Toolbar>
-        )}
-        {children}
-      </StyledContentWrapper>
+    <ToolbarRendererContext.Provider value={value}>
+      {children}
     </ToolbarRendererContext.Provider>
+  )
+}
+
+export const ToolbarOutlet: FC<
+  PropsWithChildren<
+    Pick<ToolbarProps, "disableFullscreenMode" | "locked" | "target">
+  >
+> = ({ children, disableFullscreenMode, locked, target }) => {
+  const { portalRef } = useRequiredContext(ToolbarRendererContext)
+  const {
+    collapse: onCollapse,
+    expand: onExpand,
+    expanded: isFullScreen,
+  } = useRequiredContext(WidgetFullscreenContext)
+
+  return (
+    <StyledContentWrapper>
+      <Toolbar
+        disableFullscreenMode={disableFullscreenMode}
+        isFullScreen={isFullScreen}
+        locked={locked}
+        onCollapse={onCollapse}
+        onExpand={onExpand}
+        target={target ?? StyledContentWrapper}
+      >
+        <div ref={portalRef} />
+        {children}
+      </Toolbar>
+    </StyledContentWrapper>
   )
 }
 

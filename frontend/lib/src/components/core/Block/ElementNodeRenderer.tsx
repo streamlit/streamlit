@@ -86,10 +86,7 @@ import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { getElementId } from "@streamlit/lib/src/util/utils"
-import {
-  ToolbarContextProvider,
-  ToolbarRenderer,
-} from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
+import { ToolbarRendererContextProvider } from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
 import { WidgetLabelRenderer } from "@streamlit/lib/src/components/widgets/BaseWidget/SharedWidgetLabel"
 import { WidgetFullscreenWrapper } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper/WidgetFullscreenWrapper"
 
@@ -814,11 +811,9 @@ const ElementNodeRenderer = (
           >
             <WidgetFullscreenWrapper width={width}>
               <WidgetLabelRenderer>
-                <ToolbarContextProvider>
-                  <ToolbarRenderer>
-                    <RawElementNodeRenderer {...props} isStale={isStale} />
-                  </ToolbarRenderer>
-                </ToolbarContextProvider>
+                <ToolbarRendererContextProvider>
+                  <RawElementNodeRenderer {...props} isStale={isStale} />
+                </ToolbarRendererContextProvider>
               </WidgetLabelRenderer>
             </WidgetFullscreenWrapper>
           </Suspense>

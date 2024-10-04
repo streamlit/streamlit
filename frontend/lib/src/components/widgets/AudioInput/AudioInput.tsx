@@ -19,7 +19,6 @@ import React, {
   ReactElement,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react"
 
@@ -35,7 +34,7 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
 import {
   ToolbarAction,
-  useSetToolbarProps,
+  ToolbarOutlet,
 } from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
 import {
   isNullOrUndefined,
@@ -140,9 +139,6 @@ const AudioInput: React.FC<Props> = ({
     useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [isError, setIsError] = useState(false)
-
-  // Enable the toolbar
-  useSetToolbarProps(useMemo(() => ({}), []))
 
   const widgetId = element.id
   const widgetFormId = element.formId
@@ -418,14 +414,16 @@ const AudioInput: React.FC<Props> = ({
 
   return (
     <>
-      {deleteFileUrl && (
-        <ToolbarAction
-          label="Clear recording"
-          icon={Delete}
-          onClick={() => handleClear({ updateWidgetManager: true })}
-          data-testid="stAudioInputClearRecordingButton"
-        />
-      )}
+      <ToolbarOutlet>
+        {deleteFileUrl && (
+          <ToolbarAction
+            label="Clear recording"
+            icon={Delete}
+            onClick={() => handleClear({ updateWidgetManager: true })}
+            data-testid="stAudioInputClearRecordingButton"
+          />
+        )}
+      </ToolbarOutlet>
       <WidgetLabel
         label={element.label}
         disabled={isDisabled}

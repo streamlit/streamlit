@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react"
+import React, { FC, useCallback, useEffect, useState } from "react"
 
 import { DeckGL } from "@deck.gl/react"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
@@ -33,7 +33,7 @@ import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/prot
 import { assertNever } from "@streamlit/lib/src/util/assertNever"
 import {
   ToolbarAction,
-  useSetToolbarProps,
+  ToolbarOutlet,
 } from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
 
 import withMapboxToken from "./withMapboxToken"
@@ -85,16 +85,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   })
 
   const [isInitialized, setIsInitialized] = useState(false)
-
-  useSetToolbarProps(
-    useMemo(
-      () => ({
-        disableFullscreenMode,
-        locked: hasActiveSelection && !disabled ? true : undefined,
-      }),
-      [disableFullscreenMode, disabled, hasActiveSelection]
-    )
-  )
 
   useEffect(() => {
     // HACK: Load layers a little after loading the map, to hack around a bug
@@ -218,13 +208,19 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       width={width}
       height={height}
     >
-      {hasActiveSelection && !disabled && (
-        <ToolbarAction
-          label="Clear selection"
-          onClick={handleClearSelectionClick}
-          icon={Close}
-        />
-      )}
+      <ToolbarOutlet
+        disableFullscreenMode={disableFullscreenMode}
+        target={StyledDeckGlChart}
+        locked={hasActiveSelection && !disabled ? true : undefined}
+      >
+        {hasActiveSelection && !disabled && (
+          <ToolbarAction
+            label="Clear selection"
+            onClick={handleClearSelectionClick}
+            icon={Close}
+          />
+        )}
+      </ToolbarOutlet>
       <DeckGL
         viewState={viewState}
         onViewStateChange={onViewStateChange}
