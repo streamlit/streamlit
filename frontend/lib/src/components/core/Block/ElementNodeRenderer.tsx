@@ -95,7 +95,10 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-import { StyledElementContainer } from "./styled-components"
+import {
+  StyledElementContainer,
+  StyledElementWrapper,
+} from "./styled-components"
 
 // Lazy-load elements.
 const Audio = React.lazy(
@@ -783,13 +786,11 @@ const ElementNodeRenderer = (
 
   return (
     <Maybe enable={enable}>
-      <StyledElementContainer
+      <StyledElementWrapper
         className={classNames(
-          "stElementContainer",
           "element-container",
           convertKeyToClassName(userKey)
         )}
-        data-testid="stElementContainer"
         data-stale={isStale}
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.
@@ -808,11 +809,16 @@ const ElementNodeRenderer = (
             }
           >
             <ElementProvider width={width}>
-              <RawElementNodeRenderer {...props} isStale={isStale} />
+              <StyledElementContainer
+                className={classNames("stElementContainer")}
+                data-testid="stElementContainer"
+              >
+                <RawElementNodeRenderer {...props} isStale={isStale} />
+              </StyledElementContainer>
             </ElementProvider>
           </Suspense>
         </ErrorBoundary>
-      </StyledElementContainer>
+      </StyledElementWrapper>
     </Maybe>
   )
 }

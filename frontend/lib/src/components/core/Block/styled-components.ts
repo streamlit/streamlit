@@ -52,14 +52,19 @@ export const StyledHorizontalBlock = styled.div<StyledHorizontalBlockProps>(
   }
 )
 
-export interface StyledElementContainerProps {
+export const StyledElementContainer = styled.div({
+  width: "100%",
+  height: "100%",
+})
+
+export interface StyledElementWrapperProps {
   isStale: boolean
   width: number
   elementType: string
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow"]
-export const StyledElementContainer = styled.div<StyledElementContainerProps>(
+export const StyledElementWrapper = styled.div<StyledElementWrapperProps>(
   ({ theme, isStale, width, elementType }) => ({
     width,
     // Allows to have absolutely-positioned nodes inside app elements, like
