@@ -172,19 +172,14 @@ function Slider({
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
   useEffect(() => {
-    if (value !== uiValue) {
-      setUiValue(value)
-    }
-    // Don't include `uiValue` in the deps below or the slider will become
-    // jittery.
-    /* eslint-disable react-hooks/exhaustive-deps */
+    setUiValue(value)
   }, [value])
 
   const debouncedSetValueWithSource = useCallback(
     debounce(DEBOUNCE_TIME_MS, (value: number[]): void => {
       setValueWithSource({ value, fromUi: true })
-    }),
-    [setValueWithSource]
+    }) as (value: number[]) => void,
+    []
   )
 
   const handleChange = useCallback(
@@ -192,7 +187,7 @@ function Slider({
       setUiValue(value)
       debouncedSetValueWithSource(value)
     },
-    [setValueWithSource]
+    [debouncedSetValueWithSource]
   )
 
   const renderTickBar = useCallback((): ReactElement => {
@@ -217,49 +212,49 @@ function Slider({
   }, [])
 
   const renderThumb = useCallback(
-    /* eslint-disable react/display-name */
-    React.forwardRef<HTMLDivElement, StyleProps>(
-      (props: StyleProps, ref): ReactElement => {
-        const { $thumbIndex } = props
-        const thumbIndex = $thumbIndex || 0
-        thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
-        thumbValueRefs[thumbIndex] ||= React.createRef<HTMLDivElement>()
+    React.forwardRef<HTMLDivElement, StyleProps>(function renderThumb(
+      props: StyleProps,
+      ref
+    ): ReactElement {
+      const { $thumbIndex } = props
+      const thumbIndex = $thumbIndex || 0
+      thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
+      thumbValueRefs[thumbIndex] ||= React.createRef<HTMLDivElement>()
 
-        const passThrough = pick(props, [
-          "role",
-          "style",
-          "aria-valuemax",
-          "aria-valuemin",
-          "aria-valuenow",
-          "tabIndex",
-          "onKeyUp",
-          "onKeyDown",
-          "onMouseEnter",
-          "onMouseLeave",
-          "draggable",
-        ])
+      const passThrough = pick(props, [
+        "role",
+        "style",
+        "aria-valuemax",
+        "aria-valuemin",
+        "aria-valuenow",
+        "tabIndex",
+        "onKeyUp",
+        "onKeyDown",
+        "onMouseEnter",
+        "onMouseLeave",
+        "draggable",
+      ])
 
-        const formattedValue = formattedValueArr[thumbIndex]
+      const formattedValue = formattedValueArr[thumbIndex]
 
-        return (
-          <StyledThumb
-            {...passThrough}
+      return (
+        <StyledThumb
+          {...passThrough}
+          disabled={props.$disabled === true}
+          ref={thumbRefs[thumbIndex]}
+          aria-valuetext={formattedValue}
+          aria-label={thumbAriaLabel}
+        >
+          <StyledThumbValue
+            data-testid="stSliderThumbValue"
             disabled={props.$disabled === true}
-            ref={thumbRefs[thumbIndex]}
-            aria-valuetext={formattedValue}
-            aria-label={thumbAriaLabel}
+            ref={thumbValueRefs[thumbIndex]}
           >
-            <StyledThumbValue
-              data-testid="stSliderThumbValue"
-              disabled={props.$disabled === true}
-              ref={thumbValueRefs[thumbIndex]}
-            >
-              {formattedValue}
-            </StyledThumbValue>
-          </StyledThumb>
-        )
-      }
-    ),
+            {formattedValue}
+          </StyledThumbValue>
+        </StyledThumb>
+      )
+    }),
     // Only run this on first render, to avoid losing the focus state.
     /* eslint-disable react-hooks/exhaustive-deps */
     []
@@ -423,20 +418,22 @@ function alignValueOnThumb(
   thumb: HTMLDivElement | null,
   thumbValue: HTMLDivElement | null
 ): void {
-  if (slider && thumb && thumbValue) {
-    const sliderPosition = slider.getBoundingClientRect()
-    const thumbPosition = thumb.getBoundingClientRect()
-    const thumbValuePosition = thumbValue.getBoundingClientRect()
-
-    const thumbMidpoint = thumbPosition.left + thumbPosition.width / 2
-    const thumbValueOverflowsLeft =
-      thumbMidpoint - thumbValuePosition.width / 2 < sliderPosition.left
-    const thumbValueOverflowsRight =
-      thumbMidpoint + thumbValuePosition.width / 2 > sliderPosition.right
-
-    thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
-    thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
+  if (!slider || !thumb || !thumbValue) {
+    return
   }
+
+  const sliderPosition = slider.getBoundingClientRect()
+  const thumbPosition = thumb.getBoundingClientRect()
+  const thumbValuePosition = thumbValue.getBoundingClientRect()
+
+  const thumbMidpoint = thumbPosition.left + thumbPosition.width / 2
+  const thumbValueOverflowsLeft =
+    thumbMidpoint - thumbValuePosition.width / 2 < sliderPosition.left
+  const thumbValueOverflowsRight =
+    thumbMidpoint + thumbValuePosition.width / 2 > sliderPosition.right
+
+  thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
+  thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
 }
 
 export default memo(Slider)

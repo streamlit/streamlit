@@ -71,6 +71,7 @@ function Checkbox({
     (e: React.ChangeEvent<HTMLInputElement>): void => {
       setValueWithSource({ value: e.target.checked, fromUi: true })
     },
+    // ESLint complains if we remove this unnecessary dep.
     [setValueWithSource]
   )
 
