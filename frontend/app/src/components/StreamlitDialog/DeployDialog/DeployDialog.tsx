@@ -146,7 +146,7 @@ export function DeployDialog(
     <Modal onClose={onClose}>
       <StyledCardContainer>
         <Card>
-          <StyledBody>
+          <StyledBody style={{ flexGrow: 1 }}>
             <img
               src={StreamlitLogo}
               alt={"Streamlit Logo"}
@@ -185,7 +185,7 @@ export function DeployDialog(
           </StyledAction>
         </Card>
         <Card>
-          <StyledBody>
+          <StyledBody style={{ flexGrow: 1 }}>
             <img
               src={Rocket}
               alt={"Rocket"}
@@ -194,8 +194,8 @@ export function DeployDialog(
             <StyledSubheader>Custom deployment</StyledSubheader>
             <ListElement>For companies</ListElement>
             <ListElement>
-              Deploy on your hardware or in the cloud, with Docker, Kubernetes,
-              etc
+              Deploy on your own hardware or in the cloud, with Docker,
+              Kubernetes, etc
             </ListElement>
             <ListElement>Set up your own authentication</ListElement>
           </StyledBody>
