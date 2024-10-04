@@ -354,7 +354,7 @@ export const StyledSegmentsButton = styled(
     "&:last-child": {
       borderTopRightRadius: theme.radii.default,
       borderBottomRightRadius: theme.radii.default,
-      marginRight: "0", // Reset margin for the last child
+      marginRight: theme.spacing.none, // Reset margin for the last child
     },
     "&:hover": {
       zIndex: 100, // Make sure overlapped borders are visible
