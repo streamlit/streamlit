@@ -345,6 +345,7 @@ export const StyledSegmentsButton = styled(
     borderRadius: theme.radii.none,
     flex: "1 0 fit-content",
     maxWidth: "100%",
+    marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
 
     "&:first-child": {
       borderTopLeftRadius: theme.radii.default,
@@ -353,6 +354,10 @@ export const StyledSegmentsButton = styled(
     "&:last-child": {
       borderTopRightRadius: theme.radii.default,
       borderBottomRightRadius: theme.radii.default,
+      marginRight: "0", // Reset margin for the last child
+    },
+    "&:hover": {
+      zIndex: 100, // Make sure overlapped borders are visible
     },
   }
 })
@@ -364,10 +369,9 @@ export const StyledSegmentsButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
+    zIndex: 100,
     "&:hover": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
     },
   }
 })

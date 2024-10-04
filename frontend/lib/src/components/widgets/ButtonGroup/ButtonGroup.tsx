@@ -167,15 +167,51 @@ function getButtonKindAndSize(
   return buttonKind
 }
 
-function getButtonGroupColumnGap(
+// function getButtonGroupColumnGap(
+//   style: ButtonGroupProto.Style,
+//   theme: EmotionTheme
+// ): string {
+//   return style === ButtonGroupProto.Style.BORDERLESS
+//     ? theme.spacing.threeXS
+//     : style === ButtonGroupProto.Style.PILLS
+//     ? theme.spacing.twoXS
+//     : theme.spacing.none
+// }
+
+function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
   theme: EmotionTheme
-): string {
-  return style === ButtonGroupProto.Style.BORDERLESS
-    ? theme.spacing.threeXS
-    : style === ButtonGroupProto.Style.PILLS
-    ? theme.spacing.twoXS
-    : theme.spacing.none
+): Record<string, any> {
+  const baseStyle = { flexWrap: "wrap", maxWidth: "fit-content" }
+
+  switch (style) {
+    case ButtonGroupProto.Style.BORDERLESS:
+      return {
+        ...baseStyle,
+        columnGap: theme.spacing.threeXS,
+        rowGap: theme.spacing.threeXS,
+      }
+    case ButtonGroupProto.Style.PILLS:
+      return {
+        ...baseStyle,
+        columnGap: theme.spacing.twoXS,
+        rowGap: theme.spacing.twoXS,
+      }
+    case ButtonGroupProto.Style.SEGMENTS:
+      return {
+        ...baseStyle,
+        columnGap: theme.spacing.none,
+        rowGap: theme.spacing.twoXS,
+        // Adding an empty pseudo-element after the last button in the group.
+        // This will make buttons only as big as needed without stretching to the whole container width (aka let them 'hug' to the side)
+        "::after": {
+          content: "''",
+          flex: 10000,
+        },
+      }
+    default:
+      return baseStyle
+  }
 }
 
 function createOptionChild(
@@ -303,10 +339,11 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [clickMode, options, selectionVisualization, style, value]
   )
 
-  const rowGap =
-    style === ButtonGroupProto.Style.BORDERLESS
-      ? theme.spacing.threeXS
-      : theme.spacing.twoXS
+  // const rowGap =
+  //   style === ButtonGroupProto.Style.BORDERLESS
+  //     ? theme.spacing.threeXS
+  //     : theme.spacing.twoXS
+
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
       <WidgetLabel
@@ -334,16 +371,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         }
         overrides={{
           Root: {
-            style: {
-              flexWrap: "wrap",
-              columnGap: getButtonGroupColumnGap(style, theme),
-              rowGap: rowGap,
-              maxWidth: "fit-content",
-              "::after": {
-                content: "''",
-                flex: 10000,
-              },
-            },
+            style: getButtonGroupOverridesStyle(style, theme),
           },
         }}
       >
