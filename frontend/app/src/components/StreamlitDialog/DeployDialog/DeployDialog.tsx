@@ -60,7 +60,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
     // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
     const deployUrl = new URL(DEPLOY_URL)
 
-    deployUrl.searchParams.set("repository", gitInfo.repository || "")
+    deployUrl.searchParams.set("repository", gitInfo.repository ?? "")
     deployUrl.searchParams.set("branch", gitInfo.branch ?? "")
     deployUrl.searchParams.set("mainModule", gitInfo.module ?? "")
     return deployUrl.toString()
