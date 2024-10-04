@@ -15,7 +15,7 @@ cryptography==43.0.1
 cycler==0.12.1
 distlib==0.3.8
 docutils==0.21.2
-emoji==2.13.2
+emoji==2.14.0
 exceptiongroup==1.2.2
 execnet==2.1.1
 filelock==3.16.1
@@ -47,7 +47,7 @@ more-itertools==10.5.0
 mypy==1.10.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
-narwhals==1.9.0
+narwhals==1.9.1
 nh3==0.2.18
 nodeenv==1.9.1
 numpy==1.26.4
@@ -86,7 +86,7 @@ requests==2.32.3
 requests-mock==1.12.1
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
-rich==13.9.1
+rich==13.9.2
 rpds-py==0.20.0
 ruff==0.5.7
 seaborn==0.13.2
