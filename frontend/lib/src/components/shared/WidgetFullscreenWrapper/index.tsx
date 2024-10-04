@@ -26,3 +26,4 @@ export type WidgetFullscreenContextShape = {
 
 export const WidgetFullscreenContext =
   createContext<WidgetFullscreenContextShape | null>(null)
+WidgetFullscreenContext.displayName = "WidgetFullscreenContext"

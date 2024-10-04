@@ -23,3 +23,4 @@ export type WindowDimensionsShape = {
 
 export const WindowDimensionsContext =
   createContext<WindowDimensionsShape | null>(null)
+WindowDimensionsContext.displayName = "WindowDimensionsContext"

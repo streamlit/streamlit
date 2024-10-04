@@ -14,18 +14,27 @@
  * limitations under the License.
  */
 
-import JSON5 from "json5"
-import { act } from "@testing-library/react"
-import { renderHook } from "@testing-library/react-hooks"
-import { PickingInfo } from "@deck.gl/core"
+import React, { FC } from "react"
 
+import JSON5 from "json5"
+import { act, screen } from "@testing-library/react"
+import { PickingInfo } from "@deck.gl/core/typed"
+import userEvent from "@testing-library/user-event"
+
+import {
+  renderHookWithContext,
+  renderWithContext,
+} from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
+import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import "@testing-library/jest-dom"
 
 import type { DeckGLProps } from "./types"
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
+import { DeckGlJsonChart } from "./DeckGlJsonChart"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -77,10 +86,7 @@ const getProps = (
       json: JSON.stringify(json),
       ...elementProps,
     }),
-    width: 0,
     mapboxToken: "mapboxToken",
-    height: undefined,
-    isFullScreen: false,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
@@ -100,6 +106,17 @@ const getUseDeckGlProps = (
   }
 }
 
+describe("DeckGlJsonChart element", () => {
+  it("renders without crashing", () => {
+    const props = getProps()
+
+    renderWithContext(<DeckGlJsonChart {...props} />)
+
+    const deckGlJsonChart = screen.getByTestId("stDeckGlJsonChart")
+    expect(deckGlJsonChart).toBeVisible()
+  })
+})
+
 describe("#useDeckGl", () => {
   it("should merge client and server changes in viewState", () => {
     const initialProps = getUseDeckGlProps()
@@ -107,7 +124,7 @@ describe("#useDeckGl", () => {
     const {
       result: { current },
       rerender,
-    } = renderHook(props => useDeckGl(props), {
+    } = renderHookWithContext(props => useDeckGl(props), {
       initialProps,
     })
 
@@ -126,7 +143,7 @@ describe("#useDeckGl", () => {
     it("should return null if info is null", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(),
       })
 
@@ -136,7 +153,7 @@ describe("#useDeckGl", () => {
     it("should return null if info.object is undefined", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(),
       })
 
@@ -146,7 +163,7 @@ describe("#useDeckGl", () => {
     it("should return null if element.tooltip is undefined", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps({ tooltip: undefined }),
       })
 
@@ -156,7 +173,7 @@ describe("#useDeckGl", () => {
     it("should interpolate the html with the correct object", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps({
           tooltip: JSON.stringify({
             html: "<b>Elevation Value:</b> {elevationValue}",
@@ -178,7 +195,7 @@ describe("#useDeckGl", () => {
     it("should interpolate the html from object with a properties field", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps({
           tooltip: JSON.stringify({
             html: "<b>Elevation Value:</b> {elevationValue}",
@@ -200,7 +217,7 @@ describe("#useDeckGl", () => {
     it("should return the tooltip unchanged when object does have an expected schema", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps({
           tooltip: JSON.stringify({
             html: "<b>Elevation Value:</b> {elevationValue}",
@@ -222,7 +239,7 @@ describe("#useDeckGl", () => {
     it("should interpolate the html with the an empty string", () => {
       const {
         result: { current },
-      } = renderHook(props => useDeckGl(props), {
+      } = renderHookWithContext(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps({ tooltip: "" }),
       })
 
@@ -259,10 +276,6 @@ describe("#useDeckGl", () => {
         newProps: getUseDeckGlProps(undefined, { zoom: 19 }),
       },
       {
-        description: "should call JSON5.parse when FullScreen state changes",
-        newProps: { isFullScreen: true },
-      },
-      {
         description: "should call JSON5.parse when theme state changes",
         newProps: { isLightTheme: true },
       },
@@ -270,7 +283,7 @@ describe("#useDeckGl", () => {
 
     it.each(testCases)("$description", ({ newProps }) => {
       const initialProps = getUseDeckGlProps()
-      const { rerender } = renderHook(props => useDeckGl(props), {
+      const { rerender } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
 
@@ -280,12 +293,29 @@ describe("#useDeckGl", () => {
 
       expect(JSON5.parse).toHaveBeenCalledTimes(2)
     })
+
+    it("should call JSON5.parse when isFullScreen changes", async () => {
+      const MyComponent: FC<UseDeckGlProps> = props => {
+        useDeckGl(props)
+        const { expand } = useRequiredContext(WidgetFullscreenContext)
+
+        return <button onClick={expand}>Expand</button>
+      }
+
+      renderWithContext(<MyComponent {...getUseDeckGlProps()} />)
+
+      expect(JSON5.parse).toHaveBeenCalledTimes(1)
+
+      await userEvent.click(screen.getByText("Expand"))
+
+      expect(JSON5.parse).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe("selectionMode", () => {
     it("should be undefined when allSelectionModes is empty", () => {
       const initialProps = getUseDeckGlProps({ selectionMode: [] })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.selectionMode).toBeUndefined()
@@ -295,7 +325,7 @@ describe("#useDeckGl", () => {
       const initialProps = getUseDeckGlProps({
         selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.selectionMode).toBe(
@@ -307,7 +337,7 @@ describe("#useDeckGl", () => {
       const initialProps = getUseDeckGlProps({
         selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
       })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.selectionMode).toBe(
@@ -322,7 +352,7 @@ describe("#useDeckGl", () => {
           DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT,
         ],
       })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.selectionMode).toBe(
@@ -336,7 +366,7 @@ describe("#useDeckGl", () => {
       const initialProps = getUseDeckGlProps({
         selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.isSelectionModeActivated).toBe(true)
@@ -344,7 +374,7 @@ describe("#useDeckGl", () => {
 
     it("should not activate selection mode when selectionMode is undefined", () => {
       const initialProps = getUseDeckGlProps({ selectionMode: [] })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.isSelectionModeActivated).toBe(false)
@@ -356,7 +386,7 @@ describe("#useDeckGl", () => {
       const initialProps = getUseDeckGlProps({
         selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       })
-      const { result } = renderHook(props => useDeckGl(props), {
+      const { result } = renderHookWithContext(props => useDeckGl(props), {
         initialProps,
       })
       expect(result.current.hasActiveSelection).toBe(false)
@@ -366,9 +396,12 @@ describe("#useDeckGl", () => {
       const initialProps = getUseDeckGlProps({
         selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       })
-      const { result, rerender } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
+      const { result, rerender } = renderHookWithContext(
+        props => useDeckGl(props),
+        {
+          initialProps,
+        }
+      )
 
       await act(async () => {
         result.current.setSelection({

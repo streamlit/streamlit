@@ -27,6 +27,7 @@ interface LabelContextType {
 }
 
 const WidgetLabelContext = createContext<LabelContextType | null>(null)
+WidgetLabelContext.displayName = "WidgetLabelContext"
 
 export const WidgetLabelRenderer: FC<PropsWithChildren> = ({ children }) => {
   const portalRef = useRef<HTMLDivElement>(null)
