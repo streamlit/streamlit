@@ -30,8 +30,7 @@ import {
   SessionInfo,
 } from "@streamlit/lib"
 
-const DEFAULT_METRICS_CONFIG =
-  "https://webhooks.fivetran.com/webhooks/69b8ff71-3e5c-4073-a9ef-c4b49e411b25"
+const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -202,13 +201,13 @@ export class MetricsManager {
     data: Record<string, unknown>,
     context: Record<string, unknown> = {}
   ): Promise<void> {
-    console.log("== Test Sending message to Segment:", evName, data)
+    console.log("== Test Sending to Segment:", evName, data)
 
     // Send the event to Segment
     analytics.track(evName, data, context)
 
     const eventProto = this.buildEventProto(evName, data)
-    console.log("== Test Sending message to Fivetran Webhook ==", eventProto)
+    console.log("== Test Sending to Fivetran Webhook ==", evName, eventProto)
     const eventJson = eventProto.toJSON()
     // Send the event to the metrics URL
     // @ts-expect-error
@@ -275,22 +274,19 @@ export class MetricsManager {
       }
     }
 
-    this.metricsUrl = DEFAULT_METRICS_CONFIG
-
-    // // Add this back in when we have a metrics config to fetch
-    // const response = await fetch(DEFAULT_METRICS_CONFIG)
-    // if (!response.ok) {
-    //   throw new Error(`Failed to fetch metrics config: ${response.status}`)
-    // } else {
-    //   const jsonResponse = await response.json()
-    //   const metricsUrl = jsonResponse["mapbox-localhost"]
-    //   if (metricsUrl) {
-    //     this.metricsUrl = metricsUrl
-    //     if (localStorageAvailable()) {
-    //       localStorage.setItem("stMetricsConfig", metricsUrl)
-    //     }
-    //   }
-    // }
+    const response = await fetch(DEFAULT_METRICS_CONFIG)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metrics config: ${response.status}`)
+    } else {
+      const data = await response.json()
+      const metricsUrl = data["url"]
+      if (metricsUrl) {
+        this.metricsUrl = metricsUrl
+        if (localStorageAvailable()) {
+          localStorage.setItem("stMetricsConfig", metricsUrl)
+        }
+      }
+    }
   }
 
   /**

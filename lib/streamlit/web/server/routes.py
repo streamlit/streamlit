@@ -14,9 +14,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Final, Sequence
 
+import requests
 import tornado.web
 
 from streamlit import config, file_util
@@ -215,9 +217,10 @@ class HostConfigHandler(_SpecialRequestHandler):
         # Make a copy of the allowedOrigins list, since we might modify it later:
         self._allowed_origins = _DEFAULT_ALLOWED_MESSAGE_ORIGINS.copy()
 
-        # response = requests.get("https://data.streamlit.io/tokens.json", timeout=5).text
-        # self._metrics_url = json.loads(response)["mapbox-localhost"]
-        self._metrics_url = "https://webhooks.fivetran.com/webhooks/69b8ff71-3e5c-4073-a9ef-c4b49e411b25"
+        response = requests.get(
+            "https://data.streamlit.io/metrics.json", timeout=5
+        ).text
+        self._metrics_url = json.loads(response)["url"]
 
         if (
             config.get_option("global.developmentMode")
