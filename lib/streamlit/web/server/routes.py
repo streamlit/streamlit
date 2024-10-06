@@ -17,9 +17,10 @@ from __future__ import annotations
 import os
 from typing import Final, Sequence
 
+import requests
 import tornado.web
 
-from streamlit import config, file_util
+from streamlit import cli_util, config, file_util
 from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
@@ -222,6 +223,16 @@ class HostConfigHandler(_SpecialRequestHandler):
             # Allow messages from localhost in dev mode for testing of host <-> guest communication
             self._allowed_origins.append("http://localhost")
 
+        # Fetch the metrics URL
+        try:
+            response_json = requests.get(
+                "https://data.streamlit.io/metrics.json", timeout=2
+            ).json()
+            self._metrics_url = response_json["url"]
+        except Exception:
+            cli_util.print_to_cli("Failed to fetch metrics URL", fg="red")
+            self._metrics_url = ""
+
     async def get(self) -> None:
         self.write(
             {
@@ -230,6 +241,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 # Default host configuration settings.
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
+                "metricsUrl": self._metrics_url,
             }
         )
         self.set_status(200)
