@@ -20,9 +20,13 @@ import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
   DeployedAppMetadata,
   IS_DEV_ENV,
+  localStorageAvailable,
   logAlways,
   SessionInfo,
 } from "@streamlit/lib"
+
+// Default metrics config fetched when none provided by host config endpoint
+export const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -51,6 +55,11 @@ export class MetricsManager {
    * Whether to send metrics to the server.
    */
   private actuallySendMetrics = false
+
+  /**
+   * The URL to which metrics are sent.
+   */
+  private metricsUrl: string | undefined = undefined
 
   /**
    * Queue of metrics events that were enqueued before this MetricsManager was
@@ -90,7 +99,7 @@ export class MetricsManager {
   }
 
   public enqueue(evName: string, evData: Record<string, any> = {}): void {
-    if (!this.initialized || !this.sessionInfo.isSet) {
+    if (!this.initialized || !this.sessionInfo.isSet || !this.metricsUrl) {
       this.pendingEvents.push([evName, evData])
       return
     }
@@ -113,6 +122,43 @@ export class MetricsManager {
     this.appHash = appHash
   }
 
+  // Set metrics url if sent by the host_config, otherwise fallback to retrieving the default
+  public setMetricsConfig = (metricsUrl = ""): void => {
+    // Don't send metrics if explicitly set to "off"
+    if (metricsUrl === "off") return
+
+    if (metricsUrl) {
+      this.metricsUrl = metricsUrl
+    } else {
+      this.requestDefaultMetricsConfig()
+    }
+  }
+
+  // Fallback - Checks if cached in localStorage, otherwise fetches the config from a default URL
+  private async requestDefaultMetricsConfig(): Promise<any> {
+    if (localStorageAvailable()) {
+      const cachedConfig = localStorage.getItem("stMetricsConfig")
+      if (cachedConfig) {
+        this.metricsUrl = cachedConfig
+        return
+      }
+    }
+
+    const response = await fetch(DEFAULT_METRICS_CONFIG)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metrics config: ${response.status}`)
+    } else {
+      const data = await response.json()
+      const metricsUrl = data.url
+      if (metricsUrl) {
+        this.metricsUrl = metricsUrl
+        if (localStorageAvailable()) {
+          localStorage.setItem("stMetricsConfig", metricsUrl)
+        }
+      }
+    }
+  }
+
   // The schema of metrics events (including key names and value types) should
   // only be changed when requested by the data team. This is why `reportHash`
   // retains its old name.
@@ -133,7 +179,7 @@ export class MetricsManager {
     // for all of them.
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
-    } else {
+    } else if (this.metricsUrl) {
       this.track(evName, data, {
         context: {
           // Segment automatically attaches the IP address. But we don't use, process,

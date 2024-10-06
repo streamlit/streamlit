@@ -427,6 +427,7 @@ export class App extends PureComponent<Props, State> {
           enableCustomParentMessages,
           mapboxToken,
           enforceDownloadInNewTab,
+          metricsUrl,
         } = response
 
         const appConfig: AppConfig = {
@@ -440,6 +441,8 @@ export class App extends PureComponent<Props, State> {
           enforceDownloadInNewTab,
         }
 
+        // Set the metrics configuration:
+        this.metricsMgr.setMetricsConfig(metricsUrl)
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:

@@ -23,17 +23,35 @@ import {
   SessionInfo,
 } from "@streamlit/lib"
 
-import { MetricsManager } from "./MetricsManager"
+import { DEFAULT_METRICS_CONFIG, MetricsManager } from "./MetricsManager"
 
-const getMetricsManager = (sessionInfo?: SessionInfo): MetricsManager => {
+const getMetricsManager = (
+  sessionInfo?: SessionInfo,
+  metricsConfig: string = DEFAULT_METRICS_CONFIG,
+  mockRequestDefaultMetricsConfig = true
+): MetricsManager => {
   const mm = new MetricsManager(sessionInfo || mockSessionInfo())
+  if (mockRequestDefaultMetricsConfig) {
+    mm.requestDefaultMetricsConfig = jest.fn()
+  }
+  mm.setMetricsConfig(metricsConfig)
   mm.track = jest.fn()
   mm.identify = jest.fn()
   return mm
 }
 
+// Mock fetch for our metrics config request
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () =>
+      Promise.resolve({ url: "https://data.streamlit.io/metrics.json" }),
+  })
+)
+
 afterEach(() => {
   window.analytics = undefined
+  window.localStorage.clear()
 })
 
 test("does not track while uninitialized", () => {
@@ -44,6 +62,24 @@ test("does not track while uninitialized", () => {
   mm.enqueue("ev3", { data3: 13 })
 
   expect(mm.track.mock.calls.length).toBe(0)
+})
+
+describe("setMetricsConfig", () => {
+  test("does not track when metrics config set to off", () => {
+    const mm = getMetricsManager(undefined, "off")
+
+    mm.enqueue("ev1", { data1: 11 })
+    mm.enqueue("ev2", { data2: 12 })
+    mm.enqueue("ev3", { data3: 13 })
+
+    expect(mm.track.mock.calls.length).toBe(0)
+  })
+
+  test("attempts to fetch default metrics config when none received", () => {
+    const mm = getMetricsManager(undefined, "")
+
+    expect(mm.requestDefaultMetricsConfig.mock.calls.length).toBe(1)
+  })
 })
 
 test("does not track when initialized with gatherUsageStats=false", () => {
