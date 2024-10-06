@@ -2451,6 +2451,7 @@ describe("App", () => {
           disableFullscreenMode: false,
           enableCustomParentMessages: false,
           mapboxToken: "",
+          metricsUrl: "test.streamlit.io",
           ...options,
         })
       })

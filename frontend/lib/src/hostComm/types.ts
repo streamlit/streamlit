@@ -221,9 +221,16 @@ export type AppConfig = {
   enableCustomParentMessages?: boolean
 }
 
+export type MetricsConfig = {
+  /**
+   * URL to send metrics data to.
+   */
+  metricsUrl?: string
+}
+
 /**
  * The response structure of the `_stcore/host-config` endpoint.
  * This combines streamlit-lib specific configuration options with
  * streamlit-app specific options (e.g. allowed message origins).
  */
-export type IHostConfigResponse = LibConfig & AppConfig
+export type IHostConfigResponse = LibConfig & AppConfig & MetricsConfig
