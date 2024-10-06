@@ -65,7 +65,7 @@ import {
   SessionEvent,
   SessionStatus,
 } from "@streamlit/lib/src/proto"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import {
@@ -175,20 +175,18 @@ jest.mock("@streamlit/lib/src/WidgetStateManager", () => {
   }
 })
 
-jest.mock("@streamlit/app/src/SegmentMetricsManager", () => {
-  const actualModule = jest.requireActual(
-    "@streamlit/app/src/SegmentMetricsManager"
-  )
+jest.mock("@streamlit/app/src/MetricsManager", () => {
+  const actualModule = jest.requireActual("@streamlit/app/src/MetricsManager")
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    const metricsMgr = new actualModule.SegmentMetricsManager(...props)
+    const metricsMgr = new actualModule.MetricsManager(...props)
     jest.spyOn(metricsMgr, "enqueue")
     return metricsMgr
   })
 
   return {
     ...actualModule,
-    SegmentMetricsManager: MockedClass,
+    MetricsManager: MockedClass,
   }
 })
 
@@ -486,9 +484,7 @@ describe("App", () => {
   it("sends updateReport to our metrics manager", () => {
     renderApp(getProps())
 
-    const metricsManager = getStoredValue<SegmentMetricsManager>(
-      SegmentMetricsManager
-    )
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
     sendForwardMessage("newSession", NEW_SESSION_JSON)
 
