@@ -89,7 +89,7 @@ class StreamlitTest(unittest.TestCase):
     def test_get_option(self):
         """Test streamlit.get_option."""
         # This is set in lib/tests/conftest.py to False
-        self.assertEqual(False, st.get_option("browser.gatherUsageStats"))
+        self.assertFalse(st.get_option("browser.gatherUsageStats"))
 
     def test_matplotlib_uses_agg(self):
         """Test that Streamlit uses the 'Agg' backend for matplotlib."""
