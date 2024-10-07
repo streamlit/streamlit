@@ -65,7 +65,7 @@ export const StyledVegaLiteChartTooltips = (
         },
 
         "td.key": {
-          // This should use a max of 40% of the available the width (- padding):
+          // This should use a max of 40% of the available width (- padding):
           maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.4)`,
           textAlign: "right",
           color: theme.colors.fadedText60,
@@ -74,7 +74,7 @@ export const StyledVegaLiteChartTooltips = (
         },
 
         "td.value": {
-          // This should use a max of 60% of the available the width (- padding):
+          // This should use a max of 60% of the available width (- padding):
           maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.6)`,
           textAlign: "left",
           // We are limiting the height of the value to a max of 5 lines via
