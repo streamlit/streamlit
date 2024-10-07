@@ -65,11 +65,15 @@ const useWidgetManagerElementState = <T,>({
   )
 
   const element = useMemo(() => ({ formId }), [formId])
+  const onFormCleared = useCallback(
+    () => setState(defaultValue),
+    [defaultValue, setState]
+  )
 
   useFormClearHelper({
     element,
     widgetMgr,
-    onFormCleared: () => setState(defaultValue),
+    onFormCleared,
   })
 
   return [state, setState]
