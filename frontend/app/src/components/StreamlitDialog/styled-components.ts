@@ -80,7 +80,7 @@ export const StyledSmall = styled(Small)(({ theme }) => ({
   paddingTop: 0,
   marginBottom: 0,
   marginTop: 0,
-  lineHeight: theme.lineHeights.table,
+  lineHeight: theme.lineHeights.small,
 }))
 
 export const StyledHr = styled.hr(({ theme }) => ({
