@@ -1020,6 +1020,7 @@ export class App extends PureComponent<Props, State> {
       appHash,
       pageLayouts,
       currentPageScriptHash: prevPageScriptHash,
+      autoReruns,
     } = this.state
     const {
       scriptRunId,
@@ -1032,7 +1033,7 @@ export class App extends PureComponent<Props, State> {
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
-      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+      autoReruns.forEach((value: NodeJS.Timer) => {
         clearInterval(value)
       })
       this.setState({ autoReruns: [] })
@@ -1460,7 +1461,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    const { elements, mainScriptHash } = this.state
+    const { elements, mainScriptHash, autoReruns } = this.state
+
+    // We are about to change the page, so clear all auto reruns
+    autoReruns.forEach((value: NodeJS.Timer) => {
+      clearInterval(value)
+    })
+    this.setState({ autoReruns: [] })
 
     // We want to keep widget states for widgets that are still active
     // from the common script
