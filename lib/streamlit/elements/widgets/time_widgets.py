@@ -66,6 +66,7 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[
     date, Tuple[()], Tuple[date], Tuple[date, date], None
 ]
+DateTupleReturn: TypeAlias = Union[Tuple[()], Tuple[date], Tuple[date, date], None]
 
 DEFAULT_STEP_MINUTES: Final = 15
 ALLOWED_DATE_FORMATS: Final = re.compile(
@@ -512,6 +513,47 @@ class TimeWidgetsMixin:
 
         self.dg._enqueue("time_input", time_input_proto)
         return widget_state.value
+
+    @overload
+    def date_input(
+        self,
+        label: str,
+        value: SingleDateValue
+        | Literal["today", "default_value_today"]
+        | None = "default_value_today",
+        min_value: SingleDateValue = None,
+        max_value: SingleDateValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> date | None: ...
+
+    @overload
+    def date_input(
+        self,
+        label: str,
+        value: tuple[SingleDateValue, SingleDateValue]
+        | tuple[()]
+        | Literal["today", "default_value_today"]
+        | None = "default_value_today",
+        min_value: SingleDateValue = None,
+        max_value: SingleDateValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> DateTupleReturn: ...
 
     @gather_metrics("date_input")
     def date_input(
