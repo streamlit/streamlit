@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
@@ -61,6 +62,8 @@ ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
+# @see Image.proto
+# @see WidthBehavior on the frontend
 class WidthBehaviour(IntEnum):
     """
     Special values that are recognized by the frontend and allow us to change the
@@ -70,6 +73,8 @@ class WidthBehaviour(IntEnum):
     ORIGINAL = -1
     COLUMN = -2
     AUTO = -3
+    MIN_IMAGE_OR_CONTAINER = -4
+    MAX_IMAGE_OR_CONTAINER = -5
 
 
 WidthBehaviour.ORIGINAL.__doc__ = """Display the image at its original width"""
@@ -94,6 +99,8 @@ class ImageMixin:
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
+        *,
+        use_container_width: bool = False,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -120,6 +127,9 @@ class ImageMixin:
             If "always" or True, set the image's width to the column width.
             If "never" or False, set the image's width to its natural size.
             Note: if set, `use_column_width` takes precedence over the `width` parameter.
+        .. deprecated::
+            The `use_column_width` parameter has been deprecated and will be removed in a future release.
+            Please utilize the `use_container_width` parameter instead.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
@@ -137,6 +147,15 @@ class ImageMixin:
             while diagrams should use the PNG format for lossless compression.
             Defaults to "auto" which identifies the compression type based
             on the type and format of the image argument.
+        use_container_width : bool
+            Whether to override the figure's native width with the width of the
+            parent container. If ``use_container_width`` is ``True``, Streamlit
+            sets the width of the figure to match the width of the parent
+            container. If ``use_container_width`` is ``False`` (default),
+            Streamlit sets the width of the image to its natural width, up to
+            the width of the parent container.
+            Note: if `use_container_width` is set to `True`, it will take
+            precedence over the `width` parameter
 
         Example
         -------
@@ -149,21 +168,45 @@ class ImageMixin:
 
         """
 
-        if use_column_width == "auto" or (use_column_width is None and width is None):
-            width = WidthBehaviour.AUTO
-        elif use_column_width == "always" or use_column_width is True:
-            width = WidthBehaviour.COLUMN
-        elif width is None:
-            width = WidthBehaviour.ORIGINAL
-        elif width <= 0:
-            raise StreamlitAPIException("Image width must be positive.")
+        if use_container_width is True and use_column_width is not None:
+            raise StreamlitAPIException(
+                "`use_container_width` and `use_column_width` cannot be set at the same time.",
+                "Please utilize `use_container_width` since `use_column_width` is deprecated.",
+            )
+
+        image_width: int = (
+            WidthBehaviour.ORIGINAL if (width is None or width <= 0) else width
+        )
+
+        if use_column_width is not None:
+            show_deprecation_warning(
+                "The `use_column_width` parameter has been deprecated and will be removed "
+                "in a future release. Please utilize the `use_container_width` parameter instead."
+            )
+
+            if use_column_width == "auto":
+                image_width = WidthBehaviour.AUTO
+            elif use_column_width == "always" or use_column_width is True:
+                image_width = WidthBehaviour.COLUMN
+            elif use_column_width == "never" or use_column_width is False:
+                image_width = WidthBehaviour.ORIGINAL
+
+        else:
+            if use_container_width is True:
+                image_width = WidthBehaviour.MAX_IMAGE_OR_CONTAINER
+            elif image_width is not None and image_width > 0:
+                # Use the given width. It will be capped on the frontend if it
+                # exceeds the container width.
+                pass
+            elif use_container_width is False:
+                image_width = WidthBehaviour.MIN_IMAGE_OR_CONTAINER
 
         image_list_proto = ImageListProto()
         marshall_images(
             self.dg._get_delta_path_str(),
             image,
             caption,
-            width,
+            image_width,
             image_list_proto,
             clamp,
             channels,
