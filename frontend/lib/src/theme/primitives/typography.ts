@@ -59,8 +59,6 @@ export const lineHeights = {
   tight: 1.25,
   inputWidget: 1.4,
   small: 1.5,
-  modalHeader: 1.5,
-  alert: 1.5,
   base: 1.6,
   menuItem: 2,
 }

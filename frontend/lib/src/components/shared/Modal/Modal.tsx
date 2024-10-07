@@ -62,7 +62,7 @@ function ModalHeader({ children }: Readonly<ModalHeaderProps>): ReactElement {
         fontSize: fontSizes.xl,
         fontWeight: fontWeights.bold,
         margin: spacing.none,
-        lineHeight: lineHeights.modalHeader,
+        lineHeight: lineHeights.small,
         textTransform: "none",
         display: "flex",
         alignItems: "center",
