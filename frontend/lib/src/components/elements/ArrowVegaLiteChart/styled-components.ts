@@ -32,6 +32,7 @@ export const StyledVegaLiteChartTooltips = (
     backgroundColor: transparentize(theme.colors.bgColor, 0.05),
     fontSize: theme.fontSizes.twoSm,
     boxShadow: "rgb(0 0 0 / 16%) 0px 1px 4px",
+    maxWidth: theme.sizes.maxChartTooltipWidth,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.radii.default,
     zIndex: theme.zIndices.vegaTooltips,
@@ -64,20 +65,23 @@ export const StyledVegaLiteChartTooltips = (
         },
 
         "td.key": {
+          // This should use a max of 40% of the available the width (- padding):
+          maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.4)`,
+          textAlign: "right",
           color: theme.colors.fadedText60,
           whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          textAlign: "right",
-          maxWidth: "150px",
           paddingRight: theme.spacing.twoXS,
         },
 
         "td.value": {
-          display: "block",
-          maxWidth: "300px",
-          maxHeight: "7rem",
+          // This should use a max of 60% of the available the width (- padding):
+          maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.6)`,
           textAlign: "left",
+          display: "-webkit-box",
+          WebkitLineClamp: "5",
+          WebkitBoxOrient: "vertical",
+          lineClamp: "5",
+          wordWrap: "break-word",
         },
       },
     },

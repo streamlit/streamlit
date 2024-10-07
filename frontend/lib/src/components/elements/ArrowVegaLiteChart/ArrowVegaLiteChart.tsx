@@ -592,7 +592,7 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw this.state.error
     }
 
-    // Create the container Vega draws inside.
+    // Create the container inside which Vega draws its content.
     // To style the Vega tooltip, we need to apply global styles since
     // the tooltip element is drawn outside of this component.
     return (
