@@ -16,7 +16,7 @@
 
 import React, { PureComponent } from "react"
 
-import { withTheme } from "@emotion/react"
+import { Global, withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { SignalValue } from "vega"
@@ -40,7 +40,6 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
 import "@streamlit/lib/src/assets/css/vega-embed.css"
-import "@streamlit/lib/src/assets/css/vega-tooltip.css"
 
 import {
   dataIsAnAppendOfPrev,
@@ -51,7 +50,10 @@ import {
   VegaLiteChartElement,
 } from "./arrowUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
-import { StyledVegaLiteChartContainer } from "./styled-components"
+import {
+  StyledVegaLiteChartContainer,
+  StyledVegaLiteChartTooltips,
+} from "./styled-components"
 
 const DEFAULT_DATA_NAME = "source"
 
@@ -590,17 +592,22 @@ export class ArrowVegaLiteChart extends PureComponent<
       throw this.state.error
     }
 
+    // Create the container inside which Vega draws its content.
+    // To style the Vega tooltip, we need to apply global styles since
+    // the tooltip element is drawn outside of this component.
     return (
-      // Create the container Vega draws inside.
-      <StyledVegaLiteChartContainer
-        data-testid="stVegaLiteChart"
-        className="stVegaLiteChart"
-        useContainerWidth={this.props.element.useContainerWidth}
-        isFullScreen={this.props.isFullScreen}
-        ref={c => {
-          this.element = c
-        }}
-      />
+      <>
+        <Global styles={StyledVegaLiteChartTooltips} />
+        <StyledVegaLiteChartContainer
+          data-testid="stVegaLiteChart"
+          className="stVegaLiteChart"
+          useContainerWidth={this.props.element.useContainerWidth}
+          isFullScreen={this.props.isFullScreen}
+          ref={c => {
+            this.element = c
+          }}
+        />
+      </>
     )
   }
 }

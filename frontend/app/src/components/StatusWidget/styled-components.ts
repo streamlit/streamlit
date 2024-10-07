@@ -50,7 +50,7 @@ export const StyledConnectionStatusLabel =
       "opacity 500ms 0ms, clip 500ms 0ms, max-width 500ms 0ms, margin 500ms 0ms, visibility 0ms 500ms",
     opacity: isMinimized ? 0 : 1,
     visibility: isMinimized ? "hidden" : "visible",
-    lineHeight: 1,
+    lineHeight: theme.lineHeights.none,
   }))
 
 /*

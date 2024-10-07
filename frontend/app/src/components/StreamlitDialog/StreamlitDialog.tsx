@@ -43,9 +43,7 @@ import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 import {
   StyledAboutInfo,
   StyledAboutLink,
-  StyledCommandLine,
   StyledDeployErrorContent,
-  StyledRerunHeader,
 } from "./styled-components"
 
 export type PlainEventHandler = () => void
@@ -65,7 +63,6 @@ interface ThemeCreatorProps extends ThemeCreatorDialogProps {
 export type DialogProps =
   | AboutProps
   | ClearCacheProps
-  | RerunScriptProps
   | SettingsProps
   | ScriptChangedProps
   | ScriptCompileErrorProps
@@ -77,7 +74,6 @@ export type DialogProps =
 export enum DialogType {
   ABOUT = "about",
   CLEAR_CACHE = "clearCache",
-  RERUN_SCRIPT = "rerunScript",
   SETTINGS = "settings",
   SCRIPT_CHANGED = "scriptChanged",
   SCRIPT_COMPILE_ERROR = "scriptCompileError",
@@ -93,8 +89,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return aboutDialog(dialogProps)
     case DialogType.CLEAR_CACHE:
       return clearCacheDialog(dialogProps)
-    case DialogType.RERUN_SCRIPT:
-      return rerunScriptDialog(dialogProps)
     case DialogType.SETTINGS:
       return settingsDialog(dialogProps)
     case DialogType.SCRIPT_CHANGED:
@@ -242,65 +236,6 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
           </ModalFooter>
         </Modal>
       </div>
-    </HotKeys>
-  )
-}
-
-interface RerunScriptProps {
-  type: DialogType.RERUN_SCRIPT
-
-  /** Callback to get the script's command line */
-  getCommandLine: () => string | string[]
-
-  /** Callback to set the script's command line */
-  setCommandLine: (value: string) => void
-
-  /** Callback to rerun the script */
-  rerunCallback: () => void
-
-  /** Callback to close the dialog */
-  onClose: PlainEventHandler
-
-  /** Callback to run the default action */
-  defaultAction: () => void
-}
-
-/**
- * Dialog shown when the user wants to rerun a script.
- */
-function rerunScriptDialog(props: RerunScriptProps): ReactElement {
-  const keyHandlers = {
-    enter: () => props.defaultAction(),
-  }
-
-  // Not sure exactly why attach is necessary on the HotKeys
-  // component here but it's not working without it
-  return (
-    <HotKeys handlers={keyHandlers} attach={window}>
-      <Modal isOpen onClose={props.onClose}>
-        <ModalBody>
-          <StyledRerunHeader>Command line:</StyledRerunHeader>
-          <div>
-            <StyledCommandLine
-              autoFocus
-              className="command-line"
-              value={props.getCommandLine()}
-              onChange={event => props.setCommandLine(event.target.value)}
-            />
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <ModalButton kind={BaseButtonKind.TERTIARY} onClick={props.onClose}>
-            Cancel
-          </ModalButton>
-          <ModalButton
-            kind={BaseButtonKind.SECONDARY}
-            onClick={() => props.rerunCallback()}
-          >
-            Rerun
-          </ModalButton>
-        </ModalFooter>
-      </Modal>
     </HotKeys>
   )
 }

@@ -30,18 +30,7 @@ function DeployModal(
 ): ReactElement {
   const { children, onClose } = props
   return (
-    <Modal
-      isOpen={true}
-      closeable={true}
-      onClose={onClose}
-      overrides={{
-        Dialog: {
-          style: {
-            width: "860px",
-          },
-        },
-      }}
-    >
+    <Modal isOpen={true} closeable={true} onClose={onClose} size="full">
       <ModalHeader>Deploy this app</ModalHeader>
       <ModalBody>{children}</ModalBody>
     </Modal>
