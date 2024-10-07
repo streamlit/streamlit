@@ -37,7 +37,7 @@ def test_help_tooltip_works(app: Page):
 
 
 def test_multiline_text(app: Page):
-    """Test that multiline text is displayed correctly."""
+    """Test that multi-line text is displayed correctly."""
     multiline_text = app.get_by_test_id("stText").nth(3)
     expect(multiline_text).to_contain_text("\n")
 
@@ -49,9 +49,16 @@ def test_multiline_text(app: Page):
     assert bounding_box["height"] > bounding_box["width"]
 
 
+def test_singleline_text_with_escape_char(app: Page):
+    """Test that single-line text with escape char is displayed correctly."""
+    singleline_text = app.get_by_test_id("stText").nth(4)
+    expect(singleline_text).to_contain_text("\\n")
+    expect(singleline_text).not_to_contain_text(repr("\n"))
+
+
 def test_no_scrollbar_for_long_text(app: Page):
     """Test that no scrollbar is shown for long text."""
-    text_element = app.get_by_test_id("stText").nth(4)
+    text_element = app.get_by_test_id("stText").nth(5)
     expect(text_element).not_to_have_class("scrollbar")
 
 
