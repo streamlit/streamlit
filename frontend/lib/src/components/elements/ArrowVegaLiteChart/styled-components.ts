@@ -77,6 +77,9 @@ export const StyledVegaLiteChartTooltips = (
           // This should use a max of 60% of the available the width (- padding):
           maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.6)`,
           textAlign: "left",
+          // We are limiting the height of the value to a max of 5 lines via
+          // the a webkit property that is supported by all major browsers:
+          // https://caniuse.com/?search=-webkit-line-clamp
           display: "-webkit-box",
           WebkitLineClamp: "5",
           WebkitBoxOrient: "vertical",
