@@ -27,7 +27,7 @@ import {
   lightTheme,
   mockSessionInfo,
 } from "@streamlit/lib"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 
 import { Props, SettingsDialog } from "./SettingsDialog"
 
@@ -53,7 +53,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   developerMode: true,
   animateModal: true,
   openThemeCreator: jest.fn(),
-  metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
+  metricsMgr: new MetricsManager(mockSessionInfo()),
   ...extend,
 })
 

@@ -41,7 +41,7 @@ export interface CustomComponentCounter {
   [name: string]: number
 }
 
-export class SegmentMetricsManager {
+export class MetricsManager {
   /** The app's SessionInfo instance. */
   private readonly sessionInfo: SessionInfo
 
