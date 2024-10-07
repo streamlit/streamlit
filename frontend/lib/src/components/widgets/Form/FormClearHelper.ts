@@ -83,7 +83,7 @@ export class FormClearHelper {
 }
 
 interface FormElementProtoInterface {
-  formId: string
+  formId: string | undefined
 }
 
 interface FormClearHelperArgs {

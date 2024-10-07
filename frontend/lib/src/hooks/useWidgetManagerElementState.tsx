@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { useFormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   isNullOrUndefined,
-  isValidFormId,
   notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
@@ -64,19 +64,13 @@ const useWidgetManagerElementState = <T,>({
     [widgetMgr, id, key]
   )
 
-  useEffect(() => {
-    if (!isValidFormId(formId)) {
-      return
-    }
+  const element = useMemo(() => ({ formId }), [formId])
 
-    const formClearListener = widgetMgr.addFormClearedListener(formId, () =>
-      setState(defaultValue)
-    )
-
-    return () => {
-      formClearListener.disconnect()
-    }
-  }, [formId, widgetMgr, defaultValue, setState])
+  useFormClearHelper({
+    element,
+    widgetMgr,
+    onFormCleared: () => setState(defaultValue),
+  })
 
   return [state, setState]
 }
