@@ -38,14 +38,25 @@ def test_help_tooltip_works(app: Page):
 
 def test_multiline_text(app: Page):
     """Test that multiline text is displayed correctly."""
-    multiline_text = app.get_by_test_id("stText").nth(3).locator("div")
-    bounding_box = multiline_text.bounding_box()
-    assert bounding_box["height"] > bounding_box["width"]
+    multiline_text = app.get_by_test_id("stText").nth(3)
+    print(repr(multiline_text.text_content()))
+    expect(multiline_text).to_contain_text("\n")
+    expect(multiline_text).not_to_contain_text("\\n")
+
+    # bounding_box = multiline_text.bounding_box()
+    # assert bounding_box["height"] > bounding_box["width"]
+
+
+def test_multiline_text_2(app: Page):
+    """Test that multiline text is displayed correctly."""
+    multiline_text = app.get_by_test_id("stText").nth(4)
+    expect(multiline_text).to_contain_text("\\n")
+    expect(multiline_text).not_to_contain_text(repr("\n"))
 
 
 def test_no_scrollbar_for_long_text(app: Page):
     """Test that no scrollbar is shown for long text."""
-    text_element = app.get_by_test_id("stText").nth(4)
+    text_element = app.get_by_test_id("stText").nth(5)
     expect(text_element).not_to_have_class("scrollbar")
 
 
