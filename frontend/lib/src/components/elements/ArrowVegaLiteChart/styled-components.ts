@@ -19,7 +19,18 @@ import styled from "@emotion/styled"
 interface StyledVegaLiteChartContainerProps {
   useContainerWidth: boolean
   isFullScreen: boolean
+  height?: number
 }
+
+export const StyledVegaLiteChartWrapper =
+  styled.div<StyledVegaLiteChartContainerProps>(
+    ({ useContainerWidth, isFullScreen, height }) => ({
+      // width: useContainerWidth || isFullScreen ? "100%" : "auto",
+      height: height || isFullScreen ? "100%" : "auto",
+      position: "relative",
+      display: "inline-block",
+    })
+  )
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(

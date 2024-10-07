@@ -38,6 +38,7 @@ import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import Toolbar from "@streamlit/lib/src/components/shared/Toolbar"
 
 import "@streamlit/lib/src/assets/css/vega-embed.css"
 import "@streamlit/lib/src/assets/css/vega-tooltip.css"
@@ -51,7 +52,10 @@ import {
   VegaLiteChartElement,
 } from "./arrowUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
-import { StyledVegaLiteChartContainer } from "./styled-components"
+import {
+  StyledVegaLiteChartContainer,
+  StyledVegaLiteChartWrapper,
+} from "./styled-components"
 
 const DEFAULT_DATA_NAME = "source"
 
@@ -83,8 +87,11 @@ interface Props {
 }
 
 export interface PropsWithFullScreen extends Props {
-  height?: number
   isFullScreen: boolean
+  height?: number
+  expand?: () => void
+  collapse?: () => void
+  disableFullscreenMode?: boolean
 }
 
 interface State {
@@ -591,18 +598,30 @@ export class ArrowVegaLiteChart extends PureComponent<
     }
 
     return (
-      // Create the container Vega draws inside.
-      <StyledVegaLiteChartContainer
-        data-testid="stVegaLiteChart"
-        className="stVegaLiteChart"
+      <StyledVegaLiteChartWrapper
         useContainerWidth={this.props.element.useContainerWidth}
         isFullScreen={this.props.isFullScreen}
-        ref={c => {
-          this.element = c
-        }}
-      />
+        height={this.props.height}
+      >
+        <Toolbar
+          isFullScreen={this.props.isFullScreen}
+          disableFullscreenMode={this.props.disableFullscreenMode}
+          onExpand={this.props.expand}
+          onCollapse={this.props.collapse}
+          target={StyledVegaLiteChartWrapper}
+        />
+        <StyledVegaLiteChartContainer
+          data-testid="stVegaLiteChart"
+          className="stVegaLiteChart"
+          useContainerWidth={this.props.element.useContainerWidth}
+          isFullScreen={this.props.isFullScreen}
+          ref={c => {
+            this.element = c
+          }}
+        ></StyledVegaLiteChartContainer>
+      </StyledVegaLiteChartWrapper>
     )
   }
 }
 
-export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart))
+export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart, true))
