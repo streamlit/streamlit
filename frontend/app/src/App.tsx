@@ -1464,6 +1464,9 @@ export class App extends PureComponent<Props, State> {
     const { elements, mainScriptHash, autoReruns } = this.state
 
     // We are about to change the page, so clear all auto reruns
+    // This also happens in handleNewSession, but it might be too late compared
+    // to small interval values, which might trigger a rerun before the new
+    // session message is processed
     autoReruns.forEach((value: NodeJS.Timer) => {
       clearInterval(value)
     })
