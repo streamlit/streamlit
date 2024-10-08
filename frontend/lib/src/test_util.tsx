@@ -15,14 +15,13 @@
  */
 
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { FC, PropsWithChildren, ReactElement } from "react"
+import React, { ReactElement } from "react"
 
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
-import { renderHook, RenderHookOptions } from "@testing-library/react-hooks"
 
 /* eslint-enable */
 import ThemeProvider from "./components/core/ThemeProvider"
@@ -30,29 +29,6 @@ import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
-import { ElementProvider } from "./components/shared/ElementProvider"
-
-/**
- * It is recommended to utilize `renderWithContext` or `renderHookWithContext`
- * instead of leveraging this directly.
- *
- * This is a test harness that wraps any React Element in our necessary context
- * providers to make testing simple.
- */
-export const ElementHarness: FC<PropsWithChildren> = ({ children }) => {
-  return (
-    <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>
-        <ElementProvider
-          // 500 is an arbitrary value for the width, as it's not used in the tests
-          width={500}
-        >
-          {children}
-        </ElementProvider>
-      </WindowDimensionsProvider>
-    </ThemeProvider>
-  )
-}
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
@@ -72,31 +48,6 @@ export function render(
     // TODO: Remove this to have RTL run on React 18
     // react-18-upgrade
     legacyRoot: true,
-  })
-}
-
-export function renderWithContext(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, "queries" | "wrapper">
-): RenderResult {
-  return reactTestingLibraryRender(ui, {
-    wrapper: ElementHarness,
-    ...options,
-    // TODO: Remove this to have RTL run on React 18
-    // react-18-upgrade
-    legacyRoot: true,
-  })
-}
-
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function renderHookWithContext<Props, Result>(
-  hook: (props: Props) => Result,
-  options: Omit<RenderHookOptions<Props>, "wrapper"> | undefined
-) {
-  return renderHook(hook, {
-    // @ts-expect-error This works, TS is being weird about it
-    wrapper: ElementHarness,
-    ...options,
   })
 }
 

@@ -31,10 +31,11 @@ import {
 } from "@streamlit/lib/src/theme"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { assertNever } from "@streamlit/lib/src/util/assertNever"
-import {
+import Toolbar, {
   ToolbarAction,
-  ToolbarOutlet,
-} from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
+} from "@streamlit/lib/src/components/shared/Toolbar"
+import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
+import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
 
 import withMapboxToken from "./withMapboxToken"
 import {
@@ -63,6 +64,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   } = props
   const { mapboxToken: elementMapboxToken } = element
   const theme: EmotionTheme = useTheme()
+  const {
+    expanded: isFullScreen,
+    expand,
+    collapse,
+  } = useRequiredContext(WidgetFullscreenContext)
 
   const {
     createTooltip,
@@ -208,8 +214,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       width={width}
       height={height}
     >
-      <ToolbarOutlet
+      <Toolbar
+        isFullScreen={isFullScreen}
         disableFullscreenMode={disableFullscreenMode}
+        onExpand={expand}
+        onCollapse={collapse}
         target={StyledDeckGlChart}
         locked={hasActiveSelection && !disabled ? true : undefined}
       >
@@ -220,7 +229,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             icon={Close}
           />
         )}
-      </ToolbarOutlet>
+      </Toolbar>
       <DeckGL
         viewState={viewState}
         onViewStateChange={onViewStateChange}

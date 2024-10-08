@@ -32,10 +32,9 @@ import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { AudioInput as AudioInputProto } from "@streamlit/lib/src/proto"
-import {
+import Toolbar, {
   ToolbarAction,
-  ToolbarOutlet,
-} from "@streamlit/lib/src/components/shared/Toolbar/SharedToolbar"
+} from "@streamlit/lib/src/components/shared/Toolbar"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -45,7 +44,7 @@ import { blend } from "@streamlit/lib/src/theme/utils"
 import { uploadFiles } from "@streamlit/lib/src/util/uploadFiles"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget/SharedWidgetLabel"
+import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
 
@@ -413,17 +412,10 @@ const AudioInput: React.FC<Props> = ({
   const isDisabled = disabled || hasNoMicPermissions
 
   return (
-    <>
-      <ToolbarOutlet>
-        {deleteFileUrl && (
-          <ToolbarAction
-            label="Clear recording"
-            icon={Delete}
-            onClick={() => handleClear({ updateWidgetManager: true })}
-            data-testid="stAudioInputClearRecordingButton"
-          />
-        )}
-      </ToolbarOutlet>
+    <StyledAudioInputContainerDiv
+      className="stAudioInput"
+      data-testid="stAudioInput"
+    >
       <WidgetLabel
         label={element.label}
         disabled={isDisabled}
@@ -437,45 +429,54 @@ const AudioInput: React.FC<Props> = ({
           </StyledWidgetLabelHelp>
         )}
       </WidgetLabel>
-      <StyledAudioInputContainerDiv
-        className="stAudioInput"
-        data-testid="stAudioInput"
-      >
-        <StyledWaveformContainerDiv>
-          <AudioInputActionButtons
-            isRecording={isRecording}
-            isPlaying={isPlaying}
-            isUploading={isUploading}
-            isError={isError}
-            recordingUrlExists={Boolean(recordingUrl)}
-            startRecording={startRecording}
-            stopRecording={stopRecording}
-            onClickPlayPause={onClickPlayPause}
-            onClear={() => {
-              handleClear({ updateWidgetManager: false })
-              setIsError(false)
-            }}
-            disabled={isDisabled}
-          />
-          <StyledWaveformInnerDiv>
-            {isError && <AudioInputErrorState />}
-            {showPlaceholder && <Placeholder />}
-            {hasNoMicPermissions && <NoMicPermissions />}
-            <StyledWaveSurferDiv
-              data-testid="stAudioInputWaveSurfer"
-              ref={waveSurferRef}
-              show={!showNoMicPermissionsOrPlaceholderOrError}
+      <StyledWaveformContainerDiv>
+        <Toolbar
+          isFullScreen={false}
+          disableFullscreenMode={true}
+          target={StyledWaveformContainerDiv}
+        >
+          {deleteFileUrl && (
+            <ToolbarAction
+              label="Clear recording"
+              icon={Delete}
+              onClick={() => handleClear({ updateWidgetManager: true })}
+              data-testid="stAudioInputClearRecordingButton"
             />
-          </StyledWaveformInnerDiv>
-          <StyledWaveformTimeCode
-            isPlayingOrRecording={isPlayingOrRecording}
-            data-testid="stAudioInputWaveformTimeCode"
-          >
-            {shouldUpdatePlaybackTime ? progressTime : recordingTime}
-          </StyledWaveformTimeCode>
-        </StyledWaveformContainerDiv>
-      </StyledAudioInputContainerDiv>
-    </>
+          )}
+        </Toolbar>
+        <AudioInputActionButtons
+          isRecording={isRecording}
+          isPlaying={isPlaying}
+          isUploading={isUploading}
+          isError={isError}
+          recordingUrlExists={Boolean(recordingUrl)}
+          startRecording={startRecording}
+          stopRecording={stopRecording}
+          onClickPlayPause={onClickPlayPause}
+          onClear={() => {
+            handleClear({ updateWidgetManager: false })
+            setIsError(false)
+          }}
+          disabled={isDisabled}
+        />
+        <StyledWaveformInnerDiv>
+          {isError && <AudioInputErrorState />}
+          {showPlaceholder && <Placeholder />}
+          {hasNoMicPermissions && <NoMicPermissions />}
+          <StyledWaveSurferDiv
+            data-testid="stAudioInputWaveSurfer"
+            ref={waveSurferRef}
+            show={!showNoMicPermissionsOrPlaceholderOrError}
+          />
+        </StyledWaveformInnerDiv>
+        <StyledWaveformTimeCode
+          isPlayingOrRecording={isPlayingOrRecording}
+          data-testid="stAudioInputWaveformTimeCode"
+        >
+          {shouldUpdatePlaybackTime ? progressTime : recordingTime}
+        </StyledWaveformTimeCode>
+      </StyledWaveformContainerDiv>
+    </StyledAudioInputContainerDiv>
   )
 }
 

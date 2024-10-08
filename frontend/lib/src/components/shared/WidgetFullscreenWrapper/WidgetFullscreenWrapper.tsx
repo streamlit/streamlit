@@ -36,7 +36,7 @@ export type WidgetFullscreenWrapperProps = PropsWithChildren<{
   width: number
 }>
 
-export const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
+const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
   children,
   height,
   width,
@@ -96,3 +96,5 @@ export const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
     </WidgetFullscreenContext.Provider>
   )
 }
+
+export default WidgetFullscreenWrapper

@@ -86,7 +86,6 @@ import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { getElementId } from "@streamlit/lib/src/util/utils"
-import { ElementProvider } from "@streamlit/lib/src/components/shared/ElementProvider"
 
 import {
   BaseBlockProps,
@@ -95,10 +94,7 @@ import {
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
-import {
-  StyledElementContainer,
-  StyledElementWrapper,
-} from "./styled-components"
+import { StyledElementContainer } from "./styled-components"
 
 // Lazy-load elements.
 const Audio = React.lazy(
@@ -230,6 +226,12 @@ const StreamlitSyntaxHighlighter = React.lazy(
       "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
     )
 )
+const WidgetFullscreenWrapper = React.lazy(
+  () =>
+    import(
+      "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper/WidgetFullscreenWrapper"
+    )
+)
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
@@ -323,10 +325,12 @@ const RawElementNodeRenderer = (
 
     case "deckGlJsonChart":
       return (
-        <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...widgetProps}
-        />
+        <WidgetFullscreenWrapper width={widgetProps.width}>
+          <DeckGlJsonChart
+            element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+            {...widgetProps}
+          />
+        </WidgetFullscreenWrapper>
       )
 
     case "docString":
@@ -786,11 +790,12 @@ const ElementNodeRenderer = (
 
   return (
     <Maybe enable={enable}>
-      <StyledElementWrapper
+      <StyledElementContainer
         className={classNames(
           "element-container",
           convertKeyToClassName(userKey)
         )}
+        data-testid="stElementContainer"
         data-stale={isStale}
         // Applying stale opacity in fullscreen mode
         // causes the fullscreen overlay to be transparent.
@@ -808,17 +813,10 @@ const ElementNodeRenderer = (
               />
             }
           >
-            <ElementProvider width={width}>
-              <StyledElementContainer
-                className={classNames("stElementContainer")}
-                data-testid="stElementContainer"
-              >
-                <RawElementNodeRenderer {...props} isStale={isStale} />
-              </StyledElementContainer>
-            </ElementProvider>
+            <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>
-      </StyledElementWrapper>
+      </StyledElementContainer>
     </Maybe>
   )
 }

@@ -24,7 +24,7 @@ import userEvent from "@testing-library/user-event"
 import {
   renderHookWithContext,
   renderWithContext,
-} from "@streamlit/lib/src/test_util"
+} from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper/testUtils"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"

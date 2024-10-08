@@ -17,13 +17,13 @@
 import { Context, useContext } from "react"
 
 export const useRequiredContext = <R,>(context: Context<R | null>): R => {
-  const x = useContext(context)
+  const foundContext = useContext(context)
 
-  if (x === null || x === undefined) {
+  if (foundContext === null || foundContext === undefined) {
     throw new Error(
       `useRequiredContext: ${context.displayName ?? "context"} not found`
     )
   }
 
-  return x
+  return foundContext
 }
