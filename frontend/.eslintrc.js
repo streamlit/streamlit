@@ -204,8 +204,8 @@ module.exports = {
   },
   overrides: [
     {
-      // allow hardcoded styles in our test files
-      files: ["**/*.test.ts", "**/*.test.tsx"]
+      // allow hardcoded styles in our test files and in the theme definitions
+      files: ["**/*.test.ts", "**/*.test.tsx", "lib/src/theme/**/*"],
       rules: {
         "streamlit-custom/no-hardcoded-theme-values": ["off"],
       },

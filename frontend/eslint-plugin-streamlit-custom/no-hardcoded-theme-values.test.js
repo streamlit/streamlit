@@ -69,6 +69,10 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       name: "vh, vw, % units after numbers are allowed",
       code: "var a = { color: theme.colors.primary, maxHeight: '100vh', width: '42vw', maxWidth: '99%' };",
     },
+    {
+      name: "'small-caps' is allowed, which is used by fonts",
+      code: "var a = { fontVariant: 'small-caps' };",
+    },
   ],
   invalid: [
     {
@@ -94,6 +98,11 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
     {
       name: "percentages in non-numbers are disallowed",
       code: "var a = { color: theme.colors.primary, lineHeight: 'sneaky-non-number%' };",
+      errors: 1,
+    },
+    {
+      name: "hardcoded fonts are not allowed",
+      code: "var a = { font: 'Helvetica, Calibri, Roboto, \"Open Sans\", Arial, sans-serif' };",
       errors: 1,
     },
   ],

@@ -31,13 +31,14 @@ module.exports = {
     // instead of checking for each property individually based on what they allow (e.g. only check 'background-color' for 'transparent'), since
     // we do not need more fine granular matching.
     const cssPropertiesToCheck =
-      /^(.*color|width|height|margin.*|padding.*|lineHeight|border.*|.*radius)$/i
+      /^(.*color|width|height|margin.*|padding.*|lineHeight|border.*|.*radius|font.*)$/i
 
     // Match and highlight as errors all values that either do not contain the word 'theme' or are not a CSS built-in value.
     // We also allow the value 0 because we use it extensively in our codebase.
     // Also allow %, vh, vw units because they are relative and relative values are okay from our theming perspective.
+    // The value 'small-caps' is also allowed to be used in font-variants.
     const allowedValuesRegex =
-      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|fit-content|collapse|0|[0-9]+(%|vh|vw))( !important)?('|")?$).*$/i
+      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|fit-content|collapse|0|[0-9]+(%|vh|vw)|small-caps)( !important)?('|")?$).*$/i
 
     return {
       ObjectExpression(node) {
