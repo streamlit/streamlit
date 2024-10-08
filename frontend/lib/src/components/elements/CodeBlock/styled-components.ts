@@ -92,12 +92,12 @@ export const StyledPre = styled.pre(({ theme }) => ({
 
   ".token.function, .token.class-name, .token.selector": {
     color: theme.colors.blue70,
-    fontWeight: "bold",
+    fontWeight: theme.fontWeights.extrabold,
   },
 
   ".token.important": {
     color: theme.colors.red70,
-    fontWeight: "bold",
+    fontWeight: theme.fontWeights.extrabold,
   },
 
   ".token.comment": {

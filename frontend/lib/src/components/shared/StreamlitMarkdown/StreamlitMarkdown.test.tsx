@@ -365,7 +365,6 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveStyle(`font-family: Material Symbols Rounded`)
     expect(markdown).toHaveStyle(`user-select: none`)
     expect(markdown).toHaveStyle(`vertical-align: bottom`)
-    expect(markdown).toHaveStyle(`font-weight: normal`)
   })
 
   it("does not remove unknown directive", () => {

@@ -18,12 +18,14 @@ export const fonts: { [key: string]: string } = {
   sansSerif: '"Source Sans Pro", sans-serif',
   monospace: '"Source Code Pro", monospace',
   serif: '"Source Serif Pro", serif',
+  materialIcons: "Material Symbols Rounded",
 }
 
 export const genericFonts = {
   bodyFont: fonts.sansSerif,
   codeFont: fonts.monospace,
   headingFont: fonts.sansSerif,
+  iconFont: fonts.materialIcons,
 }
 
 // Same as in variables.scss
@@ -61,13 +63,4 @@ export const lineHeights = {
   small: 1.5,
   base: 1.6,
   menuItem: 2,
-}
-
-export const letterSpacings = {
-  tighter: "-0.05em",
-  tight: "-0.025em",
-  normal: "0",
-  wide: "0.025em",
-  wider: "0.05em",
-  widest: "0.1em",
 }

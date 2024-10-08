@@ -60,7 +60,7 @@ function Tooltip({
   onMouseEnterDelay,
 }: TooltipProps): ReactElement {
   const theme: EmotionTheme = useTheme()
-  const { colors, fontSizes, radii } = theme
+  const { colors, fontSizes, radii, fontWeights } = theme
 
   return (
     <StatefulTooltip
@@ -106,7 +106,7 @@ function Tooltip({
               : colors.secondaryBg,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
-            fontWeight: "normal",
+            fontWeight: fontWeights.normal,
 
             // See the long comment about `borderRadius`. The same applies here
             // to `padding`.

@@ -43,7 +43,7 @@ export const StyledSkeleton = styled.div(({ theme }) => ({
 
 export const TitleSkeleton = styled.div(({ theme }) => ({
   height: theme.fontSizes.fourXL,
-  width: "17rem", // Picked because it looks good.
+  width: `calc(${theme.sizes.contentMaxWidth} * 0.37)`, // Picked because it looks good.
   maxWidth: "75%", // Picked because it looks good.
   background:
     theme.colors.skeletonBackgroundColor || theme.colors.darkenedBgMix15,
