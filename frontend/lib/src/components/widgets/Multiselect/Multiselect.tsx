@@ -320,10 +320,10 @@ const Multiselect: FC<Props> = props => {
                       borderTopRightRadius: theme.radii.md,
                       borderBottomRightRadius: theme.radii.md,
                       borderBottomLeftRadius: theme.radii.md,
-                      fontSize: theme.fontSizes.sm,
+                      fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
                       marginLeft: theme.spacing.none,
-                      marginRight: theme.spacing.sm,
+                      marginRight: theme.spacing.md,
                       // The tag height is derived from the minElementHeight
                       // minus a top and bottom padding (2 * spacing.xs)
                       // to nicely fit into the input field.
@@ -341,16 +341,11 @@ const Multiselect: FC<Props> = props => {
                       overrides: {
                         Svg: {
                           style: {
-                            width: `calc(${theme.iconSizes.sm} - ${theme.spacing.threeXS})`,
-                            height: `calc(${theme.iconSizes.sm} - ${theme.spacing.threeXS})`,
+                            width: `0.625em`,
+                            height: `0.625em`,
                           },
                         },
                       },
-                    },
-                  },
-                  Text: {
-                    style: {
-                      fontSize: theme.fontSizes.md,
                     },
                   },
                 },
