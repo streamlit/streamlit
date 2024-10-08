@@ -341,8 +341,8 @@ const Multiselect: FC<Props> = props => {
                       overrides: {
                         Svg: {
                           style: {
-                            width: "10px",
-                            height: "10px",
+                            width: `calc(${theme.iconSizes.sm} - ${theme.spacing.threeXS})`,
+                            height: `calc(${theme.iconSizes.sm} - ${theme.spacing.threeXS})`,
                           },
                         },
                       },
