@@ -71,7 +71,12 @@ SyntaxError: invalid syntax
         # Create a StreamlitAPIException.
         err = None
         try:
-            st.image("http://not_an_image.png", width=-1)
+            st.image(
+                "http://not_an_image.png",
+                width=-1,
+                use_column_width=True,
+                use_container_width=True,
+            )
         except StreamlitAPIException as e:
             err = e
         self.assertIsNotNone(err)

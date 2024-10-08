@@ -146,6 +146,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   layout: PageConfig.Layout
+  pageLayouts: Record<string, PageConfig.Layout>
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
@@ -276,6 +277,7 @@ export class App extends PureComponent<Props, State> {
         runOnSave: false,
       },
       layout: PageConfig.Layout.CENTERED,
+      pageLayouts: {},
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
@@ -1014,7 +1016,11 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
+    const {
+      appHash,
+      pageLayouts,
+      currentPageScriptHash: prevPageScriptHash,
+    } = this.state
     const {
       scriptRunId,
       name: scriptName,
@@ -1080,6 +1086,20 @@ export class App extends PureComponent<Props, State> {
         mainScriptHash
       )
     }
+
+    // Use previously saved layout if exists, otherwise default to CENTERED
+    // Pages using set_page_config(layout=...) will be overriding these values
+    this.setState((prevState: State) => {
+      const newLayout =
+        pageLayouts[newPageScriptHash] ?? PageConfig.Layout.CENTERED
+      return {
+        layout: newLayout,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: newLayout === PageConfig.Layout.WIDE,
+        },
+      }
+    })
   }
 
   /**
@@ -1454,6 +1474,15 @@ export class App extends PureComponent<Props, State> {
         .map(element => getElementId(element))
         .filter(notUndefined)
     )
+
+    // Save current page layout before rerun
+    this.setState((prevState: State) => {
+      const pageLayouts = prevState.pageLayouts
+      pageLayouts[prevState.currentPageScriptHash] = prevState.layout
+      return {
+        pageLayouts: pageLayouts,
+      }
+    })
 
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),

@@ -22,6 +22,9 @@ const bottom = sidebar - 1
 const sidebarMobile = balloons - 5
 const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
+// Vega tooltips should be shown even when used
+// in dialogs or in fullscreen mode
+const vegaTooltips = fullscreenWrapper + 10
 const tablePortal = fullscreenWrapper + 60
 const cacheSpinner = sidebar + 1
 // Toasts should overlap chatInput container
@@ -42,4 +45,5 @@ export const zIndices = {
   bottom,
   cacheSpinner,
   toast,
+  vegaTooltips,
 }

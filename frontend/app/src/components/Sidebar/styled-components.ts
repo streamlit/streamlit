@@ -374,7 +374,7 @@ export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
     fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
     color,
-    lineHeight: theme.lineHeights.table,
+    lineHeight: theme.lineHeights.small,
     paddingRight: theme.spacing.sm,
     marginLeft: theme.spacing.twoXL,
     marginRight: theme.spacing.twoXL,
