@@ -96,6 +96,7 @@ const AudioInput: React.FC<Props> = ({
     widgetMgr,
     id: element.id,
     key: "deleteFileUrl",
+    defaultValue: null,
   })
   const [recordPlugin, setRecordPlugin] = useState<RecordPlugin | null>(null)
   // to eventually show the user the available audio devices
@@ -113,6 +114,7 @@ const AudioInput: React.FC<Props> = ({
     widgetMgr,
     id: element.id,
     key: "recordingUrl",
+    defaultValue: null,
   })
   const [, setRerender] = useState(0)
   const forceRerender = (): void => {
@@ -124,6 +126,7 @@ const AudioInput: React.FC<Props> = ({
     useWidgetManagerElementState<string>({
       widgetMgr,
       id: element.id,
+      formId: element.formId,
       key: "recordingTime",
       defaultValue: STARTING_TIME_STRING,
     })
