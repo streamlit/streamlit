@@ -22,7 +22,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.112.4
+hypothesis==6.112.5
 identify==2.6.1
 idna==3.10
 importlib_metadata==8.5.0
@@ -37,7 +37,7 @@ jsonschema-specifications==2023.12.1
 keyring==25.4.1
 kiwisolver==1.4.7
 markdown-it-py==3.0.0
-MarkupSafe==2.1.5
+MarkupSafe==3.0.0
 matplotlib==3.9.2
 mdurl==0.1.2
 more-itertools==10.5.0
@@ -110,7 +110,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
-uv==0.4.18
+uv==0.4.19
 vega-datasets==0.9.0
 virtualenv==20.26.6
 watchdog==5.0.3
