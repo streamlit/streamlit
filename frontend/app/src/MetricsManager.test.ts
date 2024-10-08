@@ -51,7 +51,6 @@ global.fetch = jest.fn(() =>
 
 afterEach(() => {
   window.analytics = undefined
-  window.localStorage.clear()
 })
 
 test("does not track while uninitialized", () => {
@@ -75,10 +74,22 @@ describe("setMetricsConfig", () => {
     expect(mm.track.mock.calls.length).toBe(0)
   })
 
-  test("attempts to fetch default metrics config when none received", () => {
+  test("calls requestDefaultMetricsConfig when none received", () => {
     const mm = getMetricsManager(undefined, "")
 
     expect(mm.requestDefaultMetricsConfig.mock.calls.length).toBe(1)
+  })
+
+  test("attempts fetch when no metrics config received", () => {
+    // eslint-disable-next-line no-proto
+    const getItemSpy = jest.spyOn(window.localStorage.__proto__, "getItem")
+    const mm = getMetricsManager(undefined, "", false)
+
+    // Checks for cached config first
+    expect(getItemSpy).toBeCalledWith("stMetricsConfig")
+    // Fetches if no cached config
+    expect(fetch.mock.calls.length).toBe(1)
+    expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
   })
 })
 
