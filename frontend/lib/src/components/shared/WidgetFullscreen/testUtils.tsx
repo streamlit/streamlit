@@ -17,15 +17,11 @@
 import React, { FC, PropsWithChildren, ReactElement } from "react"
 
 /* eslint-disable import/no-extraneous-dependencies */
-import {
-  render as reactTestingLibraryRender,
-  RenderOptions,
-  RenderResult,
-} from "@testing-library/react"
+import { RenderOptions, RenderResult } from "@testing-library/react"
 import { renderHook, RenderHookOptions } from "@testing-library/react-hooks"
 
 import WidgetFullscreenWrapper from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenWrapper"
-import { TestAppWrapper } from "@streamlit/lib/src/test_util"
+import { render, TestAppWrapper } from "@streamlit/lib/src/test_util"
 
 /**
  * Reusable test harness for rendering components in a fullscreen context.
@@ -35,12 +31,8 @@ import { TestAppWrapper } from "@streamlit/lib/src/test_util"
 const FullscreenHarness: FC<PropsWithChildren> = ({ children }) => {
   return (
     <TestAppWrapper>
-      <WidgetFullscreenWrapper
-        // 500 is an arbitrary value for the width, as it's not used in the tests
-        width={500}
-      >
-        {children}
-      </WidgetFullscreenWrapper>
+      {/* 500 is an arbitrary value for the width, as it's not actually used in the tests */}
+      <WidgetFullscreenWrapper width={500}>{children}</WidgetFullscreenWrapper>
     </TestAppWrapper>
   )
 }
@@ -49,13 +41,7 @@ export function renderWithContext(
   ui: ReactElement,
   options?: Omit<RenderOptions, "queries" | "wrapper">
 ): RenderResult {
-  return reactTestingLibraryRender(ui, {
-    wrapper: FullscreenHarness,
-    ...options,
-    // TODO: Remove this to have RTL run on React 18
-    // react-18-upgrade
-    legacyRoot: true,
-  })
+  return render(ui, { wrapper: FullscreenHarness, ...options })
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -64,8 +50,8 @@ export function renderHookWithContext<Props, Result>(
   options: Omit<RenderHookOptions<Props>, "wrapper"> | undefined
 ) {
   return renderHook(hook, {
-    // @ts-expect-error This works, TS is being weird about it
-    wrapper: FullscreenHarness,
+    // @ts-expect-error This works but TS is being weird about it
+    wrapper: WidgetFullscreenTestWrapper,
     ...options,
   })
 }
