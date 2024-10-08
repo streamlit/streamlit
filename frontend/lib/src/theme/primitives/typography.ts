@@ -18,12 +18,14 @@ export const fonts: { [key: string]: string } = {
   sansSerif: '"Source Sans Pro", sans-serif',
   monospace: '"Source Code Pro", monospace',
   serif: '"Source Serif Pro", serif',
+  materialIcons: "Material Symbols Rounded",
 }
 
 export const genericFonts = {
   bodyFont: fonts.sansSerif,
   codeFont: fonts.monospace,
   headingFont: fonts.sansSerif,
+  iconFont: fonts.materialIcons,
 }
 
 // Same as in variables.scss
