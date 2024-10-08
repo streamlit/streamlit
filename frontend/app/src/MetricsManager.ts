@@ -15,15 +15,19 @@
  */
 
 import pick from "lodash/pick"
+import { v4 as uuidv4 } from "uuid"
 
 import { initializeSegment } from "@streamlit/app/src/vendor/Segment"
 import {
   DeployedAppMetadata,
+  getCookie,
   IS_DEV_ENV,
   localStorageAvailable,
   logAlways,
   logError,
+  MetricsEvent,
   SessionInfo,
+  setCookie,
 } from "@streamlit/lib"
 
 // Default metrics config fetched when none provided by host config endpoint
@@ -58,6 +62,11 @@ export class MetricsManager {
   private actuallySendMetrics = false
 
   /**
+   * The anonymous ID of the user.
+   */
+  private anonymousId = ""
+
+  /**
    * The URL to which metrics are sent.
    */
   private metricsUrl: string | undefined = undefined
@@ -82,6 +91,7 @@ export class MetricsManager {
     this.sessionInfo = sessionInfo
   }
 
+  // Initialize the metrics manager, called from handleNewSession
   public initialize({
     gatherUsageStats,
   }: {
@@ -89,6 +99,7 @@ export class MetricsManager {
   }): void {
     this.initialized = true
     this.actuallySendMetrics = gatherUsageStats
+    this.anonymousId = this.getAnonymousId()
 
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
@@ -99,23 +110,12 @@ export class MetricsManager {
     logAlways("Gather usage stats: ", this.actuallySendMetrics)
   }
 
-  public enqueue(evName: string, evData: Record<string, any> = {}): void {
-    if (!this.initialized || !this.sessionInfo.isSet || !this.metricsUrl) {
-      this.pendingEvents.push([evName, evData])
-      return
-    }
-
-    if (!this.actuallySendMetrics) {
-      return
-    }
-
-    if (this.pendingEvents.length) {
-      this.sendPendingEvents()
-    }
-    this.send(evName, evData)
+  // Sets the metadata for the app - called from handleNewSession
+  public setMetadata(metadata: DeployedAppMetadata): void {
+    this.metadata = metadata
   }
 
-  // App hash gets set when updateReport happens.
+  // App hash gets set when updateReport happens - also called from handleNewSession
   // This means that it will be attached to most, but not all, metrics events.
   // The viewReport and createReport events are sent before updateReport happens,
   // so they will not include the appHash.
@@ -162,6 +162,29 @@ export class MetricsManager {
     }
   }
 
+  public enqueue(evName: string, evData: Record<string, any> = {}): void {
+    if (!this.initialized || !this.sessionInfo.isSet || !this.metricsUrl) {
+      this.pendingEvents.push([evName, evData])
+      return
+    }
+
+    if (!this.actuallySendMetrics) {
+      return
+    }
+
+    if (this.pendingEvents.length) {
+      this.sendPendingEvents()
+    }
+    this.send(evName, evData)
+  }
+
+  private sendPendingEvents(): void {
+    this.pendingEvents.forEach(([evName, evData]) => {
+      this.send(evName, evData)
+    })
+    this.pendingEvents = []
+  }
+
   // The schema of metrics events (including key names and value types) should
   // only be changed when requested by the data team. This is why `reportHash`
   // retains its old name.
@@ -194,20 +217,54 @@ export class MetricsManager {
     }
   }
 
-  private sendPendingEvents(): void {
-    this.pendingEvents.forEach(([evName, evData]) => {
-      this.send(evName, evData)
-    })
-    this.pendingEvents = []
-  }
-
   // eslint-disable-next-line class-methods-use-this
-  private track(
+  private async track(
     evName: string,
     data: Record<string, unknown>,
     context: Record<string, unknown>
-  ): void {
+  ): Promise<void> {
+    // Send the event to Segment
+    // TODO: (mgbarnes) Remove Segment once feature fully implemented
     analytics.track(evName, data, context)
+
+    // Send the event to the metrics URL
+    const eventJson = this.buildEventProto(evName, data).toJSON()
+
+    // @ts-expect-error - send func calls track & checks metricsUrl defined
+    const request = new Request(this.metricsUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(eventJson),
+    })
+    await fetch(request)
+  }
+
+  private buildEventProto(
+    evName: string,
+    data: Record<string, unknown>
+  ): MetricsEvent {
+    const eventProto = new MetricsEvent({
+      event: evName,
+      anonymousId: this.anonymousId,
+      ...this.getContextData(),
+      dev: IS_DEV_ENV,
+      isHello: this.sessionInfo.isHello,
+      ...this.getInstallationData(),
+      reportHash: this.appHash,
+      source: "browser",
+      streamlitVersion: this.sessionInfo.current.streamlitVersion,
+      ...this.getHostTrackingData(),
+    })
+
+    if (evName === "menuClick") {
+      eventProto.label = data.label as string
+    } else if (evName === "pageProfile") {
+      return new MetricsEvent({ ...eventProto, ...data })
+    }
+
+    return eventProto
   }
 
   // Get the installation IDs from the session
@@ -217,8 +274,19 @@ export class MetricsManager {
     }
   }
 
-  public setMetadata(metadata: DeployedAppMetadata): void {
-    this.metadata = metadata
+  // Get context data for events
+  private getContextData(): Record<string, unknown> {
+    return {
+      contextPageUrl: window.location.href,
+      contextPageTitle: document.title,
+      contextPagePath: window.location.pathname,
+      contextPageReferrer: document.referrer,
+      contextPageSearch: window.location.search,
+      contextLocale:
+        // @ts-expect-error
+        window.navigator.userLanguage || window.navigator.language,
+      contextUserAgent: window.navigator.userAgent,
+    }
   }
 
   // Use the tracking data injected by the host of the app if included.
@@ -234,5 +302,42 @@ export class MetricsManager {
       ])
     }
     return {}
+  }
+
+  /**
+   * Get/Create user's anonymous ID
+   * Checks if existing in cookie or localStorage, otherwise generates
+   * a new UUID and stores it in both.
+   */
+  private getAnonymousId(): string {
+    const isLocalStoreAvailable = localStorageAvailable()
+    const anonymousIdCookie = getCookie("ajs_anonymous_id")
+    const anonymousIdLocalStorage = isLocalStoreAvailable
+      ? localStorage.getItem("ajs_anonymous_id")
+      : null
+
+    const expiration = new Date()
+    expiration.setFullYear(new Date().getFullYear() + 1)
+
+    if (anonymousIdCookie) {
+      this.anonymousId = anonymousIdCookie
+
+      if (isLocalStoreAvailable) {
+        localStorage.setItem("ajs_anonymous_id", anonymousIdCookie)
+      }
+    } else if (anonymousIdLocalStorage) {
+      this.anonymousId = anonymousIdLocalStorage
+
+      setCookie("ajs_anonymous_id", anonymousIdLocalStorage, expiration)
+    } else {
+      this.anonymousId = uuidv4()
+
+      setCookie("ajs_anonymous_id", this.anonymousId, expiration)
+      if (isLocalStoreAvailable) {
+        localStorage.setItem("ajs_anonymous_id", this.anonymousId)
+      }
+    }
+
+    return this.anonymousId
   }
 }
