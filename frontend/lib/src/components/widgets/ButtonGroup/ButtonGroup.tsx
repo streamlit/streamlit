@@ -339,11 +339,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     [clickMode, options, selectionVisualization, style, value]
   )
 
-  // const rowGap =
-  //   style === ButtonGroupProto.Style.BORDERLESS
-  //     ? theme.spacing.threeXS
-  //     : theme.spacing.twoXS
-
   return (
     <div className="stButtonGroup" data-testid="stButtonGroup">
       <WidgetLabel
