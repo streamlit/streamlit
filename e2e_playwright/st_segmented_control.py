@@ -56,7 +56,7 @@ with st.echo(code_location="below"):
             "📝 Text",
             "This is a very long text 📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝📝, yes, long long long long text",
         ],
-        key="segments",
+        key="segmented_control",
         selection_mode="multiple",
         default=default,
         help="You can choose multiple options",
@@ -107,9 +107,9 @@ with st.echo(code_location="below"):
     st.segmented_control(
         "Emotions",
         ["Joy", "Sadness", "Anger", "Disgust"],
-        key="segments_on_change",
+        key="segmented_control_on_change",
         on_change=lambda: st.write(
-            f"on_change selection: {st.session_state.segments_on_change}"
+            f"on_change selection: {st.session_state.segmented_control_on_change}"
         ),
     )
 
@@ -119,7 +119,7 @@ with st.echo(code_location="below"):
     selection = st.segmented_control(
         "Emotions",
         ["Joy", "Sadness", "Anger", "Disgust"],
-        key="segments_disabled",
+        key="segmented_control_disabled",
         disabled=True,
     )
     st.write("segmented-control-disabled:", str(selection))
@@ -131,14 +131,14 @@ with st.echo(code_location="below"):
         selection = st.segmented_control(
             "Emotions",
             ["Joy", "Sadness", "Anger", "Disgust"],
-            key="segments_in_form",
+            key="segmented_control_in_form",
             selection_mode="multiple",
         )
         st.form_submit_button("Submit")
     st.write(
         "segmented-control-in-form:",
-        str(st.session_state.segments_in_form)
-        if "segments_in_form" in st.session_state
+        str(st.session_state.segmented_control_in_form)
+        if "segmented_control_in_form" in st.session_state
         else None,
     )
 
@@ -151,7 +151,7 @@ with st.echo(code_location="below"):
         selection = st.segmented_control(
             "Emotions",
             ["Joy", "Sadness", "Anger", "Disgust"],
-            key="segments_in_fragment",
+            key="segmented_control_in_fragment",
         )
         st.write("segmented-control-in-fragment:", str(selection))
 
@@ -168,7 +168,9 @@ with st.echo(code_location="below"):
             st.write("Another element")
 
     selection = st.segmented_control(
-        "Emotions", ["Joy", "Sadness", "Anger", "Disgust"], key="segments_after_sleep"
+        "Emotions",
+        ["Joy", "Sadness", "Anger", "Disgust"],
+        key="segmented_control_after_sleep",
     )
     st.write("segmented-control-after-sleep:", str(selection))
 
