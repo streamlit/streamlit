@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useCallback } from "react"
+import React, { FC, memo, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -25,7 +25,7 @@ import {
 } from "@streamlit/lib/src/util/utils"
 import {
   useBasicWidgetState,
-  ValueWSource,
+  ValueWithSource,
 } from "@streamlit/lib/src/useBasicWidgetState"
 
 export interface Props {
@@ -60,7 +60,7 @@ const getCurrStateFromProto = (element: SelectboxProto): SelectboxValue => {
 const updateWidgetMgrState = (
   element: SelectboxProto,
   widgetMgr: WidgetStateManager,
-  valueWithSource: ValueWSource<SelectboxValue>,
+  valueWithSource: ValueWithSource<SelectboxValue>,
   fragmentId?: string
 ): void => {
   widgetMgr.setIntValue(
@@ -80,7 +80,7 @@ const Selectbox: FC<Props> = ({
 }) => {
   const { options, help, label, labelVisibility, placeholder } = element
 
-  const [value, setValueWSource] = useBasicWidgetState<
+  const [value, setValueWithSource] = useBasicWidgetState<
     SelectboxValue,
     SelectboxProto
   >({
@@ -95,9 +95,9 @@ const Selectbox: FC<Props> = ({
 
   const onChange = useCallback(
     (value: SelectboxValue) => {
-      setValueWSource({ value, fromUi: true })
+      setValueWithSource({ value, fromUi: true })
     },
-    [setValueWSource]
+    [setValueWithSource]
   )
 
   const clearable = isNullOrUndefined(element.default) && !disabled
@@ -118,4 +118,4 @@ const Selectbox: FC<Props> = ({
   )
 }
 
-export default Selectbox
+export default memo(Selectbox)

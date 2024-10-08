@@ -17,7 +17,7 @@
 import React from "react"
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { act, fireEvent, screen } from "@testing-library/react"
 import TimezoneMock from "timezone-mock"
 
 import {
@@ -26,7 +26,6 @@ import {
 } from "@streamlit/lib/src/proto"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import Slider, { Props } from "./Slider"
 
@@ -51,7 +50,6 @@ const getProps = (
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
-  theme: mockTheme.emotion,
   ...props,
 })
 
@@ -183,9 +181,13 @@ describe("Slider widget", () => {
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
       const slider = screen.getByRole("slider")
-      triggerChangeEvent(slider, "ArrowRight")
-      // We need to do this as we are using a debounce when the widget value is set
-      jest.runAllTimers()
+
+      await act(() => {
+        triggerChangeEvent(slider, "ArrowRight")
+
+        // We need to do this as we are using a debounce when the widget value is set
+        jest.runAllTimers()
+      })
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -207,9 +209,12 @@ describe("Slider widget", () => {
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
       const slider = screen.getByRole("slider")
+
       triggerChangeEvent(slider, "ArrowRight")
 
-      jest.runAllTimers()
+      await act(() => {
+        jest.runAllTimers()
+      })
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
         props.element,
@@ -220,8 +225,10 @@ describe("Slider widget", () => {
 
       expect(slider).toHaveAttribute("aria-valuenow", "6")
 
-      // "Submit" the form
-      props.widgetMgr.submitForm("form", undefined)
+      await act(() => {
+        // "Submit" the form
+        props.widgetMgr.submitForm("form", undefined)
+      })
 
       // Our widget should be reset, and the widgetMgr should be updated
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
@@ -349,10 +356,13 @@ describe("Slider widget", () => {
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
       const sliders = screen.getAllByRole("slider")
+
       triggerChangeEvent(sliders[1], "ArrowRight")
 
-      // We need to do this as we are using a debounce when the widget value is set
-      jest.runAllTimers()
+      await act(() => {
+        // We need to do this as we are using a debounce when the widget value is set
+        jest.runAllTimers()
+      })
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -443,7 +453,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuetext", "orange")
     })
 
-    it("updates aria-valuetext correctly", () => {
+    it("updates aria-valuetext correctly", async () => {
       const originalProps = {
         default: [1],
         min: 0,
@@ -464,6 +474,11 @@ describe("Slider widget", () => {
 
       const slider = screen.getByRole("slider")
       triggerChangeEvent(slider, "ArrowRight")
+
+      await act(() => {
+        // We need to do this as we are using a debounce when the widget value is set
+        jest.runAllTimers()
+      })
 
       expect(slider).toHaveAttribute("aria-valuetext", "yellow")
     })

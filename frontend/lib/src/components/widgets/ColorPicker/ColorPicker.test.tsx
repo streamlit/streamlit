@@ -146,6 +146,7 @@ describe("ColorPicker widget", () => {
       undefined
     )
 
+    // TODO: test if async is needed.
     await act(async () => {
       // "Submit" the form
       props.widgetMgr.submitForm("form", undefined)

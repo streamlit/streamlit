@@ -17,7 +17,7 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { act, fireEvent, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -26,7 +26,6 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextInput as TextInputProto,
 } from "@streamlit/lib/src/proto"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import TextInput, { Props } from "./TextInput"
 
@@ -43,7 +42,6 @@ const getProps = (
   }),
   width: 300,
   disabled: false,
-  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -296,7 +294,7 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -308,8 +306,10 @@ describe("TextInput widget", () => {
     // Change the widget value
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
-    // "Submit" the form
-    props.widgetMgr.submitForm("form", undefined)
+    await act(() => {
+      // "Submit" the form
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textInput).toHaveValue(props.element.default)

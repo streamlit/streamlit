@@ -124,6 +124,7 @@ describe("Selectbox widget", () => {
       undefined
     )
 
+    // TODO: Check if needed
     // "Submit" the form
     await act(async () => {
       props.widgetMgr.submitForm("form", undefined)
