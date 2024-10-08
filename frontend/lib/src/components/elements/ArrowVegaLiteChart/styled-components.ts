@@ -130,7 +130,10 @@ export const StyledVegaLiteChartContainer =
           paddingBottom: theme.spacing.sm,
           paddingTop: theme.spacing.sm,
           zIndex: theme.zIndices.popupMenu,
-          top: theme.spacing.threeXL,
+          // Position under the menu button. The size of the menu button
+          // iconSizes.md + padding (2 * spacing.xs)
+          //+ some additional spacing (spacing.xs)
+          top: `calc(${theme.iconSizes.md} + 2 * ${theme.spacing.xs} + ${theme.spacing.xs})`,
           right: 0,
           // Customize menu UI to look like the Streamlit menu:
           backgroundColor: theme.colors.bgColor,
