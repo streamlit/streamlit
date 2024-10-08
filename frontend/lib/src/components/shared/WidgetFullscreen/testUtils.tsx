@@ -18,10 +18,16 @@ import React, { FC, PropsWithChildren, ReactElement } from "react"
 
 /* eslint-disable import/no-extraneous-dependencies */
 import { RenderOptions, RenderResult } from "@testing-library/react"
-import { renderHook, RenderHookOptions } from "@testing-library/react-hooks"
+import {
+  renderHook as reactTestingLibraryRenderHook,
+  RenderHookOptions,
+} from "@testing-library/react-hooks"
 
 import WidgetFullscreenWrapper from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenWrapper"
-import { render, TestAppWrapper } from "@streamlit/lib/src/test_util"
+import {
+  TestAppWrapper,
+  render as testUtilRender,
+} from "@streamlit/lib/src/test_util"
 
 /**
  * Reusable test harness for rendering components in a fullscreen context.
@@ -37,19 +43,19 @@ const FullscreenHarness: FC<PropsWithChildren> = ({ children }) => {
   )
 }
 
-export function renderWithContext(
+export function render(
   ui: ReactElement,
   options?: Omit<RenderOptions, "queries" | "wrapper">
 ): RenderResult {
-  return render(ui, { wrapper: FullscreenHarness, ...options })
+  return testUtilRender(ui, { wrapper: FullscreenHarness, ...options })
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function renderHookWithContext<Props, Result>(
+export function renderHook<Props, Result>(
   hook: (props: Props) => Result,
   options: Omit<RenderHookOptions<Props>, "wrapper"> | undefined
 ) {
-  return renderHook(hook, {
+  return reactTestingLibraryRenderHook(hook, {
     // @ts-expect-error This works but TS is being weird about it
     wrapper: WidgetFullscreenTestWrapper,
     ...options,
