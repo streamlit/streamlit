@@ -787,6 +787,7 @@ const ElementNodeRenderer = (
     <Maybe enable={enable}>
       <StyledElementContainer
         className={classNames(
+          "stElementContainer",
           "element-container",
           convertKeyToClassName(userKey)
         )}
