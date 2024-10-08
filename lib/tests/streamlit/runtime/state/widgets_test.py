@@ -554,7 +554,9 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
                 disabled=False,
                 default=[],
                 click_mode=0,
-                style="": st.segments("some_label", options, disabled=disabled),
+                style="": st.segmented_control(
+                    "some_label", options, disabled=disabled
+                ),
                 "button_group",
             ),
             (st.multiselect, "multiselect"),
