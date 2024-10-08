@@ -136,7 +136,9 @@ export class MetricsManager {
 
   // Fallback - Checks if cached in localStorage, otherwise fetches the config from a default URL
   private async requestDefaultMetricsConfig(): Promise<any> {
-    if (localStorageAvailable()) {
+    const isLocalStoreAvailable = localStorageAvailable()
+
+    if (isLocalStoreAvailable) {
       const cachedConfig = localStorage.getItem("stMetricsConfig")
       if (cachedConfig) {
         this.metricsUrl = cachedConfig
@@ -152,7 +154,7 @@ export class MetricsManager {
       const metricsUrl = data.url
       if (metricsUrl) {
         this.metricsUrl = metricsUrl
-        if (localStorageAvailable()) {
+        if (isLocalStoreAvailable) {
           localStorage.setItem("stMetricsConfig", metricsUrl)
         }
       }
