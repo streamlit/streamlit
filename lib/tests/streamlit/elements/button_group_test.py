@@ -214,7 +214,7 @@ def get_command_matrix(
         (_interal_button_group, "bar", ("c", "d")),
     ]
 
-    The pills and _internal_button_group are wrapped in a lambda to pass default
+    The pills, segmented_control, and _internal_button_group are wrapped in a lambda to pass default
     arguments that are not shared between them.
     """
     matrix = []

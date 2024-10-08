@@ -463,7 +463,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["single", "multiple"] = "single",
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
-        style: Literal["pills", "segmented_control"] = "pills",
+        style: Literal["pills", "segmented_control"] = "segmented_control",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -536,10 +536,8 @@ class ButtonGroupMixin:
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
         style: Literal[
-            "borderless",
-            "pills",
-            "segmented_control",
-        ] = "pills",
+            "borderless", "pills", "segmented_control"
+        ] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
