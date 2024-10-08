@@ -65,6 +65,6 @@ def test_chart_menu_styling(themed_app: Page, assert_snapshot: ImageCompareFunct
     """Check that the chart menu styling is correct."""
     chart = themed_app.get_by_test_id("stVegaLiteChart").first
     chart.locator("summary").click()
-    chart_menu = chart.locator("vega-actions")
+    chart_menu = chart.locator(".vega-actions")
     expect(chart_menu).to_be_visible()
     assert_snapshot(chart_menu, name="st_altair_chart-menu_styling")
