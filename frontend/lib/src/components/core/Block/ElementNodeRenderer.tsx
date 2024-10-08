@@ -66,6 +66,7 @@ import {
   Video as VideoProto,
 } from "@streamlit/lib/src/proto"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
+import WidgetFullscreenWrapper from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 // Load (non-lazy) elements.
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
@@ -224,12 +225,6 @@ const StreamlitSyntaxHighlighter = React.lazy(
   () =>
     import(
       "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
-    )
-)
-const WidgetFullscreenWrapper = React.lazy(
-  () =>
-    import(
-      "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper/WidgetFullscreenWrapper"
     )
 )
 

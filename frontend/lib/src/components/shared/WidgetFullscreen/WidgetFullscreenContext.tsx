@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-export type WidgetFullscreenContextShape = {
+type WidgetFullscreenContextShape = {
   width: number
   height: number | undefined
   expanded: boolean

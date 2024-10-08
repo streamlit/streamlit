@@ -26,12 +26,12 @@ import React, {
 import { useTheme } from "@emotion/react"
 
 import { StyledFullScreenFrame } from "@streamlit/lib/src/components/shared/FullScreenWrapper/styled-components"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
+import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
 import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-export type WidgetFullscreenWrapperProps = PropsWithChildren<{
+type WidgetFullscreenWrapperProps = PropsWithChildren<{
   height?: number
   width: number
 }>

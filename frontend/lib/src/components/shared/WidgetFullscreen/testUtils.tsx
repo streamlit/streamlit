@@ -24,23 +24,24 @@ import {
 } from "@testing-library/react"
 import { renderHook, RenderHookOptions } from "@testing-library/react-hooks"
 
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
-import { WindowDimensionsProvider } from "@streamlit/lib/src/components/shared/WindowDimensions/Provider"
-import WidgetFullscreenWrapper from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper/WidgetFullscreenWrapper"
+import WidgetFullscreenWrapper from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenWrapper"
+import { TestAppWrapper } from "@streamlit/lib/src/test_util"
 
-const ElementHarness: FC<PropsWithChildren> = ({ children }) => {
+/**
+ * Reusable test harness for rendering components in a fullscreen context.
+ * Prefer to utilize `renderWithContext` and `renderHookWithContext` instead of
+ * using this directly.
+ */
+const FullscreenHarness: FC<PropsWithChildren> = ({ children }) => {
   return (
-    <ThemeProvider theme={mockTheme.emotion}>
-      <WindowDimensionsProvider>
-        <WidgetFullscreenWrapper
-          // 500 is an arbitrary value for the width, as it's not used in the tests
-          width={500}
-        >
-          {children}
-        </WidgetFullscreenWrapper>
-      </WindowDimensionsProvider>
-    </ThemeProvider>
+    <TestAppWrapper>
+      <WidgetFullscreenWrapper
+        // 500 is an arbitrary value for the width, as it's not used in the tests
+        width={500}
+      >
+        {children}
+      </WidgetFullscreenWrapper>
+    </TestAppWrapper>
   )
 }
 
@@ -49,7 +50,7 @@ export function renderWithContext(
   options?: Omit<RenderOptions, "queries" | "wrapper">
 ): RenderResult {
   return reactTestingLibraryRender(ui, {
-    wrapper: ElementHarness,
+    wrapper: FullscreenHarness,
     ...options,
     // TODO: Remove this to have RTL run on React 18
     // react-18-upgrade
@@ -64,7 +65,7 @@ export function renderHookWithContext<Props, Result>(
 ) {
   return renderHook(hook, {
     // @ts-expect-error This works, TS is being weird about it
-    wrapper: ElementHarness,
+    wrapper: FullscreenHarness,
     ...options,
   })
 }

@@ -35,7 +35,7 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
+import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
 
 import withMapboxToken from "./withMapboxToken"
 import {

@@ -15,7 +15,7 @@
  */
 
 /* eslint-disable import/no-extraneous-dependencies */
-import React, { ReactElement } from "react"
+import React, { FC, PropsWithChildren, ReactElement } from "react"
 
 import {
   render as reactTestingLibraryRender,
@@ -30,6 +30,14 @@ import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
 
+export const TestAppWrapper: FC<PropsWithChildren> = ({ children }) => {
+  return (
+    <ThemeProvider theme={mockTheme.emotion}>
+      <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
+    </ThemeProvider>
+  )
+}
+
 /**
  * Use react-testing-library to render a ReactElement. The element will be
  * wrapped in our ThemeProvider.
@@ -39,11 +47,7 @@ export function render(
   options?: Omit<RenderOptions, "queries">
 ): RenderResult {
   return reactTestingLibraryRender(ui, {
-    wrapper: ({ children }) => (
-      <ThemeProvider theme={mockTheme.emotion}>
-        <WindowDimensionsProvider>{children}</WindowDimensionsProvider>
-      </ThemeProvider>
-    ),
+    wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
     ...options,
     // TODO: Remove this to have RTL run on React 18
     // react-18-upgrade

@@ -31,7 +31,7 @@ import {
 } from "@streamlit/lib/src/useBasicWidgetState"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreenWrapper"
+import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
 
 import type {
   DeckGlElementState,
