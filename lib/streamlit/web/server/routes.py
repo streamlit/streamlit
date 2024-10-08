@@ -228,10 +228,10 @@ class HostConfigHandler(_SpecialRequestHandler):
             response_json = requests.get(
                 "https://data.streamlit.io/metrics.json", timeout=2
             ).json()
-            self._metrics_url = response_json["url"]
+            self._metrics_url = response_json.get("url", "")
         except Exception:
-            cli_util.print_to_cli("Failed to fetch metrics URL", fg="red")
             self._metrics_url = ""
+            cli_util.print_to_cli("Failed to fetch metrics URL", fg="red")
 
     async def get(self) -> None:
         self.write(

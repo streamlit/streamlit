@@ -125,9 +125,9 @@ export class MetricsManager {
   // Set metrics url if sent by the host_config, otherwise fallback to retrieving the default
   public setMetricsConfig = (metricsUrl = ""): void => {
     // Don't send metrics if explicitly set to "off"
-    if (metricsUrl === "off") return
-
-    if (metricsUrl) {
+    if (metricsUrl === "off") {
+      return
+    } else if (metricsUrl) {
       this.metricsUrl = metricsUrl
     } else {
       this.requestDefaultMetricsConfig()
@@ -151,12 +151,9 @@ export class MetricsManager {
       throw new Error(`Failed to fetch metrics config: ${response.status}`)
     } else {
       const data = await response.json()
-      const metricsUrl = data.url
-      if (metricsUrl) {
-        this.metricsUrl = metricsUrl
-        if (isLocalStoreAvailable) {
-          localStorage.setItem("stMetricsConfig", metricsUrl)
-        }
+      this.metricsUrl = data.url ?? undefined
+      if (isLocalStoreAvailable && this.metricsUrl) {
+        localStorage.setItem("stMetricsConfig", this.metricsUrl)
       }
     }
   }

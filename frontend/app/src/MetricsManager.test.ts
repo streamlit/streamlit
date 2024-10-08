@@ -83,7 +83,7 @@ describe("setMetricsConfig", () => {
   test("attempts fetch when no metrics config received", () => {
     // eslint-disable-next-line no-proto
     const getItemSpy = jest.spyOn(window.localStorage.__proto__, "getItem")
-    const mm = getMetricsManager(undefined, "", false)
+    getMetricsManager(undefined, "", false)
 
     // Checks for cached config first
     expect(getItemSpy).toBeCalledWith("stMetricsConfig")
