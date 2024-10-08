@@ -48,13 +48,6 @@ export const StyledTableCellHeader = styled.th(({ theme }) => ({
   ...styleCellFunction(theme),
 
   color: theme.colors.fadedText60,
-
-  "@media print": {
-    // Firefox prints a double blurred table header. Normal font weight fixes it
-    "@-moz-document url-prefix()": {
-      fontWeight: "normal",
-    },
-  },
 }))
 
 export const StyledEmptyTableCell = styled(StyledTableCell)(({ theme }) => ({
