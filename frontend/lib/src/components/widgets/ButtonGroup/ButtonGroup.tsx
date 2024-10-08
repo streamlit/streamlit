@@ -104,7 +104,7 @@ export function getContentElement(
       ? BaseButtonKind.PILLS
       : style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonKind.BORDERLESS_ICON
-      : BaseButtonKind.SEGMENTS
+      : BaseButtonKind.SEGMENTED_CONTROL
   const size =
     style === ButtonGroupProto.Style.BORDERLESS
       ? BaseButtonSize.XSMALL
@@ -197,7 +197,7 @@ function getButtonGroupOverridesStyle(
         columnGap: theme.spacing.twoXS,
         rowGap: theme.spacing.twoXS,
       }
-    case ButtonGroupProto.Style.SEGMENTS:
+    case ButtonGroupProto.Style.SEGMENTED_CONTROL:
       return {
         ...baseStyle,
         columnGap: theme.spacing.none,

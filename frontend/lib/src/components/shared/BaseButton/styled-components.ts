@@ -37,8 +37,8 @@ export enum BaseButtonKind {
   ELEMENT_TOOLBAR = "elementToolbar",
   PILLS = "pills",
   PILLS_ACTIVE = "pillsActive",
-  SEGMENTS = "segments",
-  SEGMENTS_ACTIVE = "segmentsActive",
+  SEGMENTED_CONTROL = "segmented_control",
+  SEGMENTED_CONTROL_ACTIVE = "segmentedControlActive",
 }
 
 export enum BaseButtonSize {
@@ -337,7 +337,7 @@ export const StyledPillsButtonActive = styled(
   }
 })
 
-export const StyledSegmentsButton = styled(
+export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
@@ -362,8 +362,8 @@ export const StyledSegmentsButton = styled(
   }
 })
 
-export const StyledSegmentsButtonActive = styled(
-  StyledSegmentsButton
+export const StyledSegmentedControlButtonActive = styled(
+  StyledSegmentedControlButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     backgroundColor: transparentize(theme.colors.primary, 0.9),

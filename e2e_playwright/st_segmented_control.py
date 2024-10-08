@@ -19,30 +19,30 @@ import streamlit as st
 with st.sidebar:
     st.markdown(
         """
-        - [Multi Select - Segments](#multi-select-segments)
-        - [Single Select - Segments](#single-select-segments)
-        - [Icon-only button group - Segments](#icon-only-button-group-segments)
-        - [on_change callback - Segments](#on-change-callback-segments)
-        - [Disabled - Segments](#disabled-segments)
-        - [Segments in form](#segments-in-form)
-        - [Segments in fragment](#segments-in-fragment)
-        - [Unmounted - Segments](#unmounted-segments)
+        - [Multi Select - Segmented Control](#multi-select-segmented-control)
+        - [Single Select - Segmented Control](#single-select-segmented-control)
+        - [Icon-only button group - Segmented Control](#icon-only-button-group-segmented-control)
+        - [on_change callback - Segmented Control](#on-change-callback-segmented-control)
+        - [Disabled - Segmented Control](#disabled-segmented-control)
+        - [Segmented Control in form](#segmented-control-in-form)
+        - [Segmented Control in fragment](#segmented-control-in-fragment)
+        - [Unmounted - Segmented Control](#unmounted-segmented-control)
         """
     )
 
-st.header("Multi Select - Segments", anchor="multi-select-segments")
+st.header("Multi Select - Segmented Control", anchor="multi-select-segmented-control")
 with st.echo(code_location="below"):
     if st.checkbox("Set default values", value=False):
-        st.session_state.default_segments_options = [
+        st.session_state.default_segmented_control_options = [
             "Foobar",
             "🧰 General widgets",
         ]
     else:
-        st.session_state.default_segments_options = []
+        st.session_state.default_segmented_control_options = []
 
-    default = st.session_state.default_segments_options
+    default = st.session_state.default_segmented_control_options
 
-    selection = st.segments(
+    selection = st.segmented_control(
         "select some options",
         [
             ":material/star: Hello there!",
@@ -65,9 +65,9 @@ with st.echo(code_location="below"):
     st.write(f"Multi selection: {selection}")
 
 
-st.header("Single Select - Segments", anchor="single-select-segments")
+st.header("Single Select - Segmented Control", anchor="single-select-segmented-control")
 with st.echo(code_location="below"):
-    selection = st.segments(
+    selection = st.segmented_control(
         "select an option",
         [
             ":material/star: Hello there!",
@@ -85,9 +85,12 @@ option_to_icon_map = {
     3: ":material/zoom_out_map:",
 }
 
-st.header("Icon-only button group - Segments", anchor="icon-only-button-group-segments")
+st.header(
+    "Icon-only button group - Segmented Control",
+    anchor="icon-only-button-group-segmented-control",
+)
 with st.echo(code_location="below"):
-    selection = st.segments(
+    selection = st.segmented_control(
         "select an icon",
         options=[0, 1, 2, 3],
         format_func=lambda option: option_to_icon_map[option],
@@ -96,9 +99,12 @@ with st.echo(code_location="below"):
     st.write(f"Single icon selection: {selection}")
 
 
-st.header("on_change callback - Segments", anchor="on-change-callback-segments")
+st.header(
+    "on_change callback - Segmented Control",
+    anchor="on-change-callback-segmented-control",
+)
 with st.echo(code_location="below"):
-    st.segments(
+    st.segmented_control(
         "Emotions",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segments_on_change",
@@ -108,21 +114,21 @@ with st.echo(code_location="below"):
     )
 
 
-st.header("Disabled - Segments", anchor="disabled-segments")
+st.header("Disabled - Segmented Control", anchor="disabled-segmented-control")
 with st.echo(code_location="below"):
-    selection = st.segments(
+    selection = st.segmented_control(
         "Emotions",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segments_disabled",
         disabled=True,
     )
-    st.write("segments-disabled:", str(selection))
+    st.write("segmented-control-disabled:", str(selection))
 
 
-st.header("Segments in form", anchor="segments-in-form")
+st.header("Segmented Control in form", anchor="segmented-control-in-form")
 with st.echo(code_location="below"):
     with st.form(key="my_form", clear_on_submit=True):
-        selection = st.segments(
+        selection = st.segmented_control(
             "Emotions",
             ["Joy", "Sadness", "Anger", "Disgust"],
             key="segments_in_form",
@@ -130,29 +136,29 @@ with st.echo(code_location="below"):
         )
         st.form_submit_button("Submit")
     st.write(
-        "segments-in-form:",
+        "segmented-control-in-form:",
         str(st.session_state.segments_in_form)
         if "segments_in_form" in st.session_state
         else None,
     )
 
 
-st.header("Segments in fragment", anchor="segments-in-fragment")
+st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment")
 with st.echo(code_location="below"):
 
     @st.experimental_fragment()
     def test_fragment():
-        selection = st.segments(
+        selection = st.segmented_control(
             "Emotions",
             ["Joy", "Sadness", "Anger", "Disgust"],
             key="segments_in_fragment",
         )
-        st.write("segments-in-fragment:", str(selection))
+        st.write("segmented-control-in-fragment:", str(selection))
 
     test_fragment()
 
 
-st.header("Unmounted - Segments", anchor="unmounted-segments")
+st.header("Unmounted - Segmented Control", anchor="unmounted-segmented-control")
 with st.echo(code_location="below"):
     if st.button("Create some elements to unmount component"):
         for _ in range(2):
@@ -161,10 +167,10 @@ with st.echo(code_location="below"):
             time.sleep(1)
             st.write("Another element")
 
-    selection = st.segments(
+    selection = st.segmented_control(
         "Emotions", ["Joy", "Sadness", "Anger", "Disgust"], key="segments_after_sleep"
     )
-    st.write("segments-after-sleep:", str(selection))
+    st.write("segmented-control-after-sleep:", str(selection))
 
 
 if "runs" not in st.session_state:

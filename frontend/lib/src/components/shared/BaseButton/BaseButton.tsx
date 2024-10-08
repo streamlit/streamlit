@@ -34,8 +34,8 @@ import {
   StyledPrimaryFormSubmitButton,
   StyledSecondaryButton,
   StyledSecondaryFormSubmitButton,
-  StyledSegmentsButton,
-  StyledSegmentsButtonActive,
+  StyledSegmentedControlButton,
+  StyledSegmentedControlButtonActive,
   StyledTertiaryButton,
 } from "./styled-components"
 
@@ -57,10 +57,10 @@ function BaseButton(props: Readonly<BaseButtonPropsT>): ReactElement {
     ComponentType = StyledPillsButton
   } else if (kind === BaseButtonKind.PILLS_ACTIVE) {
     ComponentType = StyledPillsButtonActive
-  } else if (kind === BaseButtonKind.SEGMENTS) {
-    ComponentType = StyledSegmentsButton
-  } else if (kind === BaseButtonKind.SEGMENTS_ACTIVE) {
-    ComponentType = StyledSegmentsButtonActive
+  } else if (kind === BaseButtonKind.SEGMENTED_CONTROL) {
+    ComponentType = StyledSegmentedControlButton
+  } else if (kind === BaseButtonKind.SEGMENTED_CONTROL_ACTIVE) {
+    ComponentType = StyledSegmentedControlButtonActive
   } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
   } else if (kind === BaseButtonKind.BORDERLESS_ICON_ACTIVE) {

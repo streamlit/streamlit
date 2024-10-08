@@ -196,7 +196,7 @@ def _build_proto(
     selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
         ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
     ),
-    style: Literal["segments", "pills", "borderless"] = "segments",
+    style: Literal["borderless", "pills", "segmented_control"] = "pills",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
@@ -420,8 +420,8 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
         )
 
-    @gather_metrics("segments")
-    def segments(
+    @gather_metrics("segmented_control")
+    def segmented_control(
         self,
         label: str,
         options: OptionSequence[V],
@@ -445,7 +445,7 @@ class ButtonGroupMixin:
             format_func=format_func,
             key=key,
             help=help,
-            style="segments",
+            style="segmented_control",
             on_change=on_change,
             args=args,
             kwargs=kwargs,
@@ -463,7 +463,7 @@ class ButtonGroupMixin:
         selection_mode: Literal["single", "multiple"] = "single",
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
-        style: Literal["segments", "pills"] = "segments",
+        style: Literal["pills", "segmented_control"] = "pills",
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -535,7 +535,11 @@ class ButtonGroupMixin:
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
         disabled: bool = False,
-        style: Literal["segments", "pills", "borderless"] = "segments",
+        style: Literal[
+            "borderless",
+            "pills",
+            "segmented_control",
+        ] = "pills",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
@@ -571,9 +575,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in ["segments", "pills", "borderless"]:
+        if style not in ["borderless", "pills", "segmented_control"]:
             raise StreamlitAPIException(
-                "The style argument must be one of ['segments', 'pills', 'borderless']. "
+                "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
                 f"The argument passed was '{style}'."
             )
 
