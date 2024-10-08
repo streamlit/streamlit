@@ -85,7 +85,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: theme.zIndices.cacheSpinner,
     },
 
-    [`:has(> .stPageLink))`]: {
+    ":has(> .stPageLink)": {
       marginTop: `-${theme.spacing.xs}`,
       marginBottom: `-${theme.spacing.xs}`,
     },
