@@ -208,8 +208,8 @@ def get_command_matrix(
     [
         (st.pills, "foo", ("a", "b")),
         (st.pills, "bar", ("c", "d")),
-        (st.segments, "foo", ("a", "b")),
-        (st.segments, "bar", ("c", "d")),
+        (st.segmented_control, "foo", ("a", "b")),
+        (st.segmented_control, "bar", ("c", "d")),
         (_interal_button_group, "foo", ("a", "b")),
         (_interal_button_group, "bar", ("c", "d")),
     ]
@@ -223,7 +223,7 @@ def get_command_matrix(
         lambda *args, **kwargs: ButtonGroupMixin._pills(
             st._main, "label", *args, **kwargs
         ),
-        lambda *args, **kwargs: st.segments("label", *args, **kwargs),
+        lambda *args, **kwargs: st.segmented_control("label", *args, **kwargs),
         lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
             st._main, *args, **kwargs
         ),
@@ -275,7 +275,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 None,
                 ["a", "b", "c"],
                 "content",
-                ButtonGroupProto.Style.SEGMENTS,
+                ButtonGroupProto.Style.SEGMENTED_CONTROL,
                 False,
             ),
         ]
@@ -775,6 +775,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 st._main, ["a", "b", "c"], style="foo"
             )
         assert (
-            "The style argument must be one of ['segments', 'pills', 'borderless']. "
+            "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
             "The argument passed was 'foo'." == str(exception.value)
         )
