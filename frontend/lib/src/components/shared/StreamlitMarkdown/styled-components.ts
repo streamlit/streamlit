@@ -71,8 +71,8 @@ export const StyledStreamlitMarkdown =
         },
 
         li: {
-          margin: "0.2em 0 0.2em 1.2em",
-          padding: "0 0 0 0.6em",
+          margin: `${theme.spacing.twoXS} 0 ${theme.spacing.twoXS} ${theme.spacing.xl}`,
+          padding: `0 0 0 ${theme.spacing.sm}`,
           fontSize: theme.fontSizes.md,
         },
 
@@ -86,7 +86,7 @@ export const StyledStreamlitMarkdown =
         },
 
         "th, td": {
-          padding: "6px 13px",
+          padding: `${theme.spacing.threeXS} ${theme.spacing.md}`,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         },
 
