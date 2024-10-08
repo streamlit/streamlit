@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This rule will disallow hardcoded theme values in styled-components / in all object expressions.
+ * This includues:
+ * - <div style={{ backgroundColor: 'red', width: '100px' }} />
+ * - styled.div`background-color: red; width: 100px;`
+ * - const foo = styled.div(() => { backgroundColor: 'red', width: '100px' })
+ */
 module.exports = {
   meta: {
     name: "no-hardcoded-theme-values",
@@ -31,7 +38,7 @@ module.exports = {
     // instead of checking for each property individually based on what they allow (e.g. only check 'background-color' for 'transparent'), since
     // we do not need more fine granular matching.
     const cssPropertiesToCheck =
-      /^(.*color|width|height|margin.*|padding.*|lineHeight|border.*|.*radius|font.*)$/i
+      /^(.*color|width|height|margin.*|padding.*|lineHeight|line-height|border.*|.*radius|font.*|zIndex|z-index)$/i
 
     // Match and highlight as errors all values that either do not contain the word 'theme' or are not a CSS built-in value.
     // We also allow the value 0 because we use it extensively in our codebase.
@@ -60,6 +67,46 @@ module.exports = {
               message:
                 "Hardcoded theme values are not allowed. All values must start with 'theme' or be a CSS built-in value such as 'none'.",
             })
+          }
+        })
+      },
+      TaggedTemplateExpression(node) {
+        // we only check templateExpressions in combination of the styled object,
+        // e.g. styled.div`color: theme.colors.primary;`
+        if (
+          !node.tag.object ||
+          node.tag.object.name !== "styled" ||
+          !node.quasi
+        ) {
+          return
+        }
+        node.quasi.quasis.map(quasi => {
+          if (quasi.type !== "TemplateElement") {
+            return
+          }
+
+          const styleProperties = quasi.value.raw.split(";")
+          for (const styleProperty of styleProperties) {
+            const [property, value] = styleProperty.split(":")
+            if (!property || !value) {
+              continue
+            }
+            const trimmedProperty = property.trim()
+            const trimmedValue = value.trim()
+            if (
+              cssPropertiesToCheck.test(trimmedProperty) &&
+              allowedValuesRegex.test(trimmedValue) &&
+              // when a function is passed, e.g. "width: ${({ theme }) => theme }px",
+              // the trimmedValue is empty with the current parsing. We skip this for now to not
+              // overcomplicate the parsing.
+              trimmedValue !== ""
+            ) {
+              context.report({
+                node: quasi,
+                message:
+                  "Hardcoded theme values are not allowed in template strings. All values must start with 'theme' or be a CSS built-in value such as 'none'. In general, please use the styled-object notation anyways.",
+              })
+            }
           }
         })
       },

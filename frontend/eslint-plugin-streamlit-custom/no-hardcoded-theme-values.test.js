@@ -17,13 +17,23 @@
 const { RuleTester } = require("eslint")
 const noHardcodedThemeValues = require("./no-hardcoded-theme-values")
 
-const ruleTester = new RuleTester({})
+const ruleTester = new RuleTester({
+  parserOptions: {
+    // its the same we have defined in our .eslintrc.js. For some reason,
+    // we have to specify it again, otherwise the template string tests fail.
+    ecmaVersion: 2018,
+  },
+})
 
 ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
   valid: [
     {
       name: "theme value is allowed",
       code: "var a = { color: theme.colors.primary };",
+    },
+    {
+      name: "zIndex is checked",
+      code: "var a = { zIndex: theme.someZIndex };",
     },
     {
       name: "built-in values are allowed: 'auto'",
@@ -73,6 +83,10 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       name: "'small-caps' is allowed, which is used by fonts",
       code: "var a = { fontVariant: 'small-caps' };",
     },
+    {
+      name: "template strings with valid values are allowed",
+      code: "var MyComponent = styled.div`color: theme.colors.primary; line-height: theme.lineHeights.body;`",
+    },
   ],
   invalid: [
     {
@@ -96,6 +110,11 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       errors: 1,
     },
     {
+      name: "zIndex is not allowed to have a number",
+      code: "var a = { zIndex: 100 };",
+      errors: 1,
+    },
+    {
       name: "percentages in non-numbers are disallowed",
       code: "var a = { color: theme.colors.primary, lineHeight: 'sneaky-non-number%' };",
       errors: 1,
@@ -103,6 +122,15 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
     {
       name: "hardcoded fonts are not allowed",
       code: "var a = { font: 'Helvetica, Calibri, Roboto, \"Open Sans\", Arial, sans-serif' };",
+      errors: 1,
+    },
+    {
+      name: "template strings with valid values are allowed",
+      code: `var MyComponent = styled.div\`
+        color: 1px;
+        line-height: theme.lineHeights.body;
+        \`
+      `,
       errors: 1,
     },
   ],
