@@ -34,7 +34,7 @@ jaraco.functools==4.1.0
 jeepney==0.8.0
 Jinja2==3.1.4
 jsonschema==4.23.0
-jsonschema-specifications==2023.12.1
+jsonschema-specifications==2024.10.1
 keyring==25.4.1
 kiwisolver==1.4.7
 markdown-it-py==3.0.0
