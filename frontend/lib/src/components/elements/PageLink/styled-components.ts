@@ -16,10 +16,10 @@
 
 import styled from "@emotion/styled"
 
-export const StyledNavLinkContainer = styled.div(() => ({
+export const StyledNavLinkContainer = styled.div({
   display: "flex",
   flexDirection: "column",
-}))
+})
 
 export interface StyledNavLinkProps {
   disabled: boolean

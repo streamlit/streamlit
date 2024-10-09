@@ -16,8 +16,8 @@
 
 import styled from "@emotion/styled"
 
-export const StyledParticles = styled.div(() => ({
+export const StyledParticles = styled.div({
   "@media print": {
     display: "none",
   },
-}))
+})

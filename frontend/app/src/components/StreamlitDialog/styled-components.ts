@@ -20,11 +20,11 @@ import { ChevronLeft } from "react-feather"
 
 import { Small } from "@streamlit/lib"
 
-export const StyledShortcutLabel = styled.span(() => ({
+export const StyledShortcutLabel = styled.span({
   "&::first-letter": {
     textDecoration: "underline",
   },
-}))
+})
 
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
