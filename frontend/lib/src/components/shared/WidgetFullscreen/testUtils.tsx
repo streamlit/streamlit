@@ -57,7 +57,7 @@ export function renderHook<Props, Result>(
 ) {
   return reactTestingLibraryRenderHook(hook, {
     // @ts-expect-error This works but TS is being weird about it
-    wrapper: WidgetFullscreenTestWrapper,
+    wrapper: FullscreenHarness,
     ...options,
   })
 }
