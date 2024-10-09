@@ -231,7 +231,7 @@ function ChatInput({
                 paddingBottom: theme.spacing.sm,
                 paddingTop: theme.spacing.sm,
                 // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
-                // and some additional margin (spacing.sm) chosen to match the previous selected style.
+                // and some additional margin between the icon and the text (spacing.sm).
                 paddingRight: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
               },
             },
