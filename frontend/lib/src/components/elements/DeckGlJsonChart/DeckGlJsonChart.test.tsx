@@ -18,7 +18,7 @@ import React, { FC } from "react"
 
 import JSON5 from "json5"
 import { act, screen } from "@testing-library/react"
-import { PickingInfo } from "@deck.gl/core/typed"
+import { PickingInfo } from "@deck.gl/core"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -34,7 +34,6 @@ import "@testing-library/jest-dom"
 
 import type { DeckGLProps } from "./types"
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
-import { DeckGlJsonChart } from "./DeckGlJsonChart"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -105,17 +104,6 @@ const getUseDeckGlProps = (
     theme: mockTheme.emotion,
   }
 }
-
-describe("DeckGlJsonChart element", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-
-    render(<DeckGlJsonChart {...props} />)
-
-    const deckGlJsonChart = screen.getByTestId("stDeckGlJsonChart")
-    expect(deckGlJsonChart).toBeVisible()
-  })
-})
 
 describe("#useDeckGl", () => {
   it("should merge client and server changes in viewState", () => {
