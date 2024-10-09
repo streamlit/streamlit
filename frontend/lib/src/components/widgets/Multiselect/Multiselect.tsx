@@ -342,8 +342,8 @@ const Multiselect: FC<Props> = props => {
                         Svg: {
                           style: {
                             // The action icon should be around 0.625% of the parent font size.
-                            width: `0.625em`,
-                            height: `0.625em`,
+                            width: "0.625em",
+                            height: "0.625em",
                           },
                         },
                       },
