@@ -166,7 +166,11 @@ jest.mock("@streamlit/lib/src/WidgetStateManager", () => {
   )
 
   const MockedClass = jest.fn().mockImplementation((...props) => {
-    return new actualModule.WidgetStateManager(...props)
+    const widgetStateManager = new actualModule.WidgetStateManager(...props)
+
+    jest.spyOn(widgetStateManager, "sendUpdateWidgetsMessage")
+
+    return widgetStateManager
   })
 
   return {
@@ -347,7 +351,12 @@ function sendForwardMessage(
 }
 
 function openCacheModal(): void {
-  fireEvent.keyPress(screen.getByTestId("stApp"), {
+  fireEvent.keyDown(document.body, {
+    key: "c",
+    which: 67,
+  })
+
+  fireEvent.keyUp(document.body, {
     key: "c",
     which: 67,
   })
@@ -493,6 +502,23 @@ describe("App", () => {
     sendForwardMessage("newSession", NEW_SESSION_JSON)
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
+  })
+
+  it("reruns when the user presses 'r'", () => {
+    renderApp(getProps())
+
+    getMockConnectionManager(true)
+
+    const widgetStateManager =
+      getStoredValue<WidgetStateManager>(WidgetStateManager)
+    expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(document.body, {
+      key: "r",
+      which: 82,
+    })
+
+    expect(widgetStateManager.sendUpdateWidgetsMessage).toHaveBeenCalled()
   })
 
   describe("App.handleNewSession", () => {
