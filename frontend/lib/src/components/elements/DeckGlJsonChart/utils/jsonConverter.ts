@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { colorBins, colorCategories, colorContinuous } from "@deck.gl/carto"
+import {
+  CARTO_LAYERS,
+  colorBins,
+  colorCategories,
+  colorContinuous,
+} from "@deck.gl/carto"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as geoLayers from "@deck.gl/geo-layers"
@@ -27,6 +32,7 @@ const configuration = {
     ...aggregationLayers,
     ...geoLayers,
     ...meshLayers,
+    ...CARTO_LAYERS,
   },
   functions: {
     colorBins,
