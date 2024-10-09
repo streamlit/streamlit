@@ -25,7 +25,7 @@ import React, {
 import { useTheme } from "@emotion/react"
 import WaveSurfer from "wavesurfer.js"
 import RecordPlugin from "wavesurfer.js/dist/plugins/record"
-import { Delete } from "@emotion-icons/material-outlined"
+import { Delete, Download } from "@emotion-icons/material-outlined"
 import isEqual from "lodash/isEqual"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -70,6 +70,7 @@ import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
 import convertAudioToWav from "./convertAudioToWav"
 import AudioInputErrorState from "./AudioInputErrorState"
+import downloadRecording from "./downloadRecording"
 
 export interface Props {
   element: AudioInputProto
@@ -435,12 +436,18 @@ const AudioInput: React.FC<Props> = ({
           disableFullscreenMode={true}
           target={StyledWaveformContainerDiv}
         >
+          {recordingUrl && (
+            <ToolbarAction
+              label="Download recording"
+              icon={Download}
+              onClick={() => downloadRecording(recordingUrl)}
+            />
+          )}
           {deleteFileUrl && (
             <ToolbarAction
               label="Clear recording"
               icon={Delete}
               onClick={() => handleClear({ updateWidgetManager: true })}
-              data-testid="stAudioInputClearRecordingButton"
             />
           )}
         </Toolbar>

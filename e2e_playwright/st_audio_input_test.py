@@ -53,6 +53,7 @@ def ensure_waveform_rendered(audio_input: Locator):
 
     audio_input.hover()
     expect(audio_input.get_by_role("button", name="Clear recording")).to_be_visible()
+    expect(audio_input.get_by_role("button", name="Download recording")).to_be_visible()
 
 
 def test_audio_input_renders(app: Page):
