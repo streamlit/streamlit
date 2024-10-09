@@ -238,7 +238,10 @@ const TextArea: FC<Props> = ({
               lineHeight: theme.lineHeights.inputWidget,
               height: height
                 ? `${height}px`
-                : theme.sizes.textAreaDefaultHeight,
+                : // The default height should perfectly fit 3 lines of text.
+                  // We calculate that based on the line height and font size, and the inner padding
+                  // of the text area (spacing.lg).
+                  `calc(3 * (${theme.lineHeights.inputWidget} * ${theme.fontSizes.md}) + 2 * ${theme.spacing.lg})`,
               minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",
               "::placeholder": {

@@ -38,5 +38,4 @@ export const sizes = {
   largestElementHeight: "4.25rem",
   spinnerSize: "1.375rem",
   spinnerThickness: "3px",
-  textAreaDefaultHeight: "95px",
 }
