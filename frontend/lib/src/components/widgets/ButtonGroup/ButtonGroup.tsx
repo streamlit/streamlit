@@ -162,6 +162,7 @@ function getButtonKindAndSize(
 ): BaseButtonKind {
   if (isVisuallySelected) {
     buttonKind = `${buttonKind}Active` as BaseButtonKind
+    console.log(buttonKind)
   }
 
   return buttonKind

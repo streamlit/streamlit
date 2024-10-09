@@ -33,55 +33,54 @@ def get_button_group(app: Page, index: int) -> Locator:
 
 
 def get_segment_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile("stBaseButton-segments(Active)?")).filter(
-        has_text=text
-    )
+    return locator.get_by_test_id(
+        re.compile("stBaseButton-segmented_control(Active)?")
+    ).filter(has_text=text)
 
 
-def test_click_multiple_segments_and_take_snapshot(
+def test_click_multiple_segmented_control_button_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test multiselect segments and take a screenshot.
+    """Test multi-select segmented control and take a screenshot.
 
-    Click on same segments multiple times to test unselect.
+    Click on the same button multiple times to test unselect.
     """
 
-    segments = get_button_group(themed_app, 0)
-    get_segment_button(segments, "Foobar").click()
+    segmented_control = get_button_group(themed_app, 0)
+    get_segment_button(segmented_control, "Foobar").click()
     wait_for_app_run(themed_app)
 
     # click on second element to test multiselect
-    get_segment_button(segments, "📊 Charts").click()
+    get_segment_button(segmented_control, "📊 Charts").click()
     wait_for_app_run(themed_app)
     expect_markdown(themed_app, "Multi selection: ['Foobar', '📊 Charts']")
 
     # click on same element to test unselect
-    get_segment_button(segments, "📊 Charts").click()
+    get_segment_button(segmented_control, "📊 Charts").click()
     wait_for_app_run(themed_app)
     expect_markdown(themed_app, "Multi selection: ['Foobar']")
 
-    # click on same element and take screenshot of multiple selected segments
-    get_segment_button(segments, "📊 Charts").click()
+    # click on same element and take screenshot of multiple selected segmented control buttons
+    get_segment_button(segmented_control, "📊 Charts").click()
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
     expect_markdown(themed_app, "Multi selection: ['Foobar', '📊 Charts']")
 
-    assert_snapshot(segments, name="st_segments-multiselect")
+    assert_snapshot(segmented_control, name="st_segmented_control-multiselect")
 
 
 def test_click_single_segment_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test single select segment and take a screenshot.
+    """Test single select segmented control and take a screenshot.
 
     Click on same element to test unselect.
     Click on two different elements to validate single select.
     """
 
-    segments = get_button_group(themed_app, 1)
-
-    get_segment_button(segments, "Foobar").click()
+    segmented_control = get_button_group(themed_app, 1)
+    get_segment_button(segmented_control, "Foobar").click()
     text = get_markdown(themed_app, "Single selection: Foobar")
     expect(text).to_be_visible()
 
@@ -92,30 +91,30 @@ def test_click_single_segment_and_take_snapshot(
     expect(text).to_be_visible()
 
     # test unselect in single-select mode
-    get_segment_button(segments, "Foobar").click()
+    get_segment_button(segmented_control, "Foobar").click()
     text = get_markdown(themed_app, "Single selection: None")
     expect(text).to_be_visible()
 
-    assert_snapshot(segments, name="st_segments-singleselect")
+    assert_snapshot(segmented_control, name="st_segmented_control-singleselect")
 
 
 def test_click_single_icon_segment_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test icon only segments (via format_func) and take a screenshot.
+    """Test icon only segmented control (via format_func) and take a screenshot.
 
     Click on same element to test unselect.
     Click on two different elements to validate single select.
     """
-    segments = get_button_group(themed_app, 2)
+    segmented_control = get_button_group(themed_app, 2)
 
     # the icon's span element has the respective text
     # (e.g. :material/zoom_out_map: -> zoom_out_map)
-    get_segment_button(segments, "zoom_out_map").click()
+    get_segment_button(segmented_control, "zoom_out_map").click()
     text = get_markdown(themed_app, "Single icon selection: 3")
     expect(text).to_be_visible()
 
-    get_segment_button(segments, "zoom_in").click()
+    get_segment_button(segmented_control, "zoom_in").click()
     text = get_markdown(themed_app, "Single icon selection: 1")
     expect(text).to_be_visible()
 
@@ -126,11 +125,13 @@ def test_click_single_icon_segment_and_take_snapshot(
     expect(text).to_be_visible()
 
     # test unselect in single-select mode
-    get_segment_button(segments, "zoom_in").click()
+    get_segment_button(segmented_control, "zoom_in").click()
     text = get_markdown(themed_app, "Single icon selection: None")
     expect(text).to_be_visible()
 
-    assert_snapshot(segments, name="st_segments-singleselect_icon_only")
+    assert_snapshot(
+        segmented_control, name="st_segmented_control-singleselect_icon_only"
+    )
 
 
 def test_pass_default_selections(app: Page):
@@ -150,53 +151,53 @@ def test_pass_default_selections(app: Page):
 
 
 def test_selection_via_on_change_callback(app: Page):
-    """Test that the on_change callback is triggered when a segment butoon is clicked."""
-    segments = get_button_group(app, 3)
-    get_segment_button(segments, "Sadness").click()
+    """Test that the on_change callback is triggered when a segmented control butoon is clicked."""
+    segmented_control = get_button_group(app, 3)
+    get_segment_button(segmented_control, "Sadness").click()
     wait_for_app_run(app)
     expect_markdown(app, "on_change selection: Sadness")
 
 
-def test_segments_are_disabled(app: Page):
-    segments = get_button_group(app, 4)
-    for segment in segments.locator("button").all():
-        expect(segment).to_have_js_property("disabled", True)
-    selected_segment = get_segment_button(segments, "Sadness")
-    selected_segment.click(force=True)
+def test_segmented_control_are_disabled(app: Page):
+    segmented_control = get_button_group(app, 4)
+    for button in segmented_control.locator("button").all():
+        expect(button).to_have_js_property("disabled", True)
+    selected_button = get_segment_button(segmented_control, "Sadness")
+    selected_button.click(force=True)
     wait_for_app_run(app)
-    expect(selected_segment).not_to_have_css(
+    expect(selected_button).not_to_have_css(
         "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )
-    expect_markdown(app, "segments-disabled: None")
+    expect_markdown(app, "segmented-control-disabled: None")
 
 
-def test_segments_work_in_forms(app: Page):
-    expect_markdown(app, "segments-in-form: []")
-    segments = get_button_group(app, 5)
-    get_segment_button(segments, "Sadness").click()
+def test_segmented_control_work_in_forms(app: Page):
+    expect_markdown(app, "segmented-control-in-form: []")
+    segmented_control = get_button_group(app, 5)
+    get_segment_button(segmented_control, "Sadness").click()
     click_form_button(app, "Submit")
     wait_for_app_run(app)
-    expect_markdown(app, "segments-in-form: ['Sadness']")
+    expect_markdown(app, "segmented-control-in-form: ['Sadness']")
 
 
-def test_segments_work_with_fragments(app: Page):
-    expect_markdown(app, "segments-in-fragment: None")
-    segments = get_button_group(app, 6)
-    get_segment_button(segments, "Sadness").click()
+def test_segmented_control_work_with_fragments(app: Page):
+    expect_markdown(app, "segmented-control-in-fragment: None")
+    segmented_control = get_button_group(app, 6)
+    get_segment_button(segmented_control, "Sadness").click()
     wait_for_app_run(app)
-    expect_markdown(app, "segments-in-fragment: Sadness")
+    expect_markdown(app, "segmented-control-in-fragment: Sadness")
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
-def test_segments_remount_keep_value(app: Page):
-    expect_markdown(app, "segments-after-sleep: None")
-    segments = get_button_group(app, 7)
-    selected_segment = get_segment_button(segments, "Sadness")
-    selected_segment.click()
+def test_segmented_control_remount_keep_value(app: Page):
+    expect_markdown(app, "segmented-control-after-sleep: None")
+    segmented_control = get_button_group(app, 7)
+    selected_button = get_segment_button(segmented_control, "Sadness")
+    selected_button.click()
     wait_for_app_run(app)
-    expect_markdown(app, "segments-after-sleep: Sadness")
+    expect_markdown(app, "segmented-control-after-sleep: Sadness")
     click_button(app, "Create some elements to unmount component")
-    expect_markdown(app, "segments-after-sleep: Sadness")
+    expect_markdown(app, "segmented-control-after-sleep: Sadness")
 
 
 def test_check_top_level_class(app: Page):
@@ -206,4 +207,4 @@ def test_check_top_level_class(app: Page):
 
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
-    expect(get_element_by_key(app, "segments")).to_be_visible()
+    expect(get_element_by_key(app, "segmented_control")).to_be_visible()

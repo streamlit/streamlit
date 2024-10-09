@@ -38,7 +38,7 @@ export enum BaseButtonKind {
   PILLS = "pills",
   PILLS_ACTIVE = "pillsActive",
   SEGMENTED_CONTROL = "segmented_control",
-  SEGMENTED_CONTROL_ACTIVE = "segmentedControlActive",
+  SEGMENTED_CONTROL_ACTIVE = "segmented_controlActive",
 }
 
 export enum BaseButtonSize {
