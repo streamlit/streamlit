@@ -179,7 +179,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timer[]
+  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
 }
 
@@ -1079,7 +1079,9 @@ export class App extends PureComponent<Props, State> {
       gatherUsageStats: config.gatherUsageStats,
     })
 
-    this.handleSessionStatusChanged(initialize.sessionStatus)
+    // Protobuf typing cannot handle complex types, so we need to cast to what
+    // we know it should be
+    this.handleSessionStatusChanged(initialize.sessionStatus as SessionStatus)
   }
 
   /**
@@ -1376,7 +1378,7 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
       clearInterval(value)
     })
     this.setState({ autoReruns: [] })

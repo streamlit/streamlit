@@ -83,7 +83,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     endpoints: mockEndpointProp,
     elements: AppRoot.empty(FAKE_SCRIPT_HASH, true),
     sendMessageToHost: jest.fn(),
-    sessionInfo: sessionInfo,
+    sessionInfo,
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     widgetMgr: new WidgetStateManager({
@@ -91,7 +91,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       formsDataChanged: jest.fn(),
     }),
     uploadClient: new FileUploadClient({
-      sessionInfo: sessionInfo,
+      sessionInfo,
       endpoints: mockEndpointProp,
       formsWithPendingRequestsChanged: () => {},
       requestFileURLs: jest.fn(),
