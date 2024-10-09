@@ -17,6 +17,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import React, { ReactElement } from "react"
 
+import { Vector } from "apache-arrow"
 import {
   render as reactTestingLibraryRender,
   RenderOptions,
@@ -28,6 +29,7 @@ import ThemeProvider from "./components/core/ThemeProvider"
 import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
+import { isNullOrUndefined } from "./util/utils"
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
@@ -95,4 +97,16 @@ export const customRenderLibContext = (
       </ThemeProvider>
     ),
   })
+}
+
+export function arrayFromVector(vector: any): any {
+  if (Array.isArray(vector)) {
+    return vector.map(arrayFromVector)
+  }
+
+  if (vector instanceof Vector) {
+    return Array.from(vector)
+  }
+
+  return vector
 }
