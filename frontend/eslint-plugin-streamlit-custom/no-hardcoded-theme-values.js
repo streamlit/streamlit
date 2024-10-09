@@ -42,10 +42,11 @@ module.exports = {
 
     // Match and highlight as errors all values that either do not contain the word 'theme' or are not a CSS built-in value.
     // We also allow the value 0 because we use it extensively in our codebase.
-    // Also allow %, vh, vw units because they are relative and relative values are okay from our theming perspective.
-    // The value 'small-caps' is also allowed to be used in font-variants.
+    // Also allow %, em, vh, vw units after a number because they are relative and relative values are okay from our theming perspective. We don't allow 'rem'
+    // though because its less fine-granular than 'em' and we use(d) it heavily to hardcode any kinds of values in our codebase.
+    // The following font-related values are allowed: 'small-caps', 'italic', 'normal'.
     const allowedValuesRegex =
-      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|fit-content|collapse|0|[0-9]+(%|vh|vw)|small-caps)( !important)?('|")?$).*$/i
+      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|unset|fit-content|collapse|0|[0-9]+(%|em|vh|vw)|small-caps|italic)( !important)?('|")?$).*$/i
 
     return {
       ObjectExpression(node) {
