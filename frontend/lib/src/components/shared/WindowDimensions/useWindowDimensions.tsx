@@ -36,10 +36,7 @@ export const useWindowDimensions = (theme: EmotionTheme): WindowDimensions => {
     fullHeight: 0,
   })
 
-  const getWindowDimensions = useCallback((): {
-    fullWidth: number
-    fullHeight: number
-  } => {
+  const getWindowDimensions = useCallback((): WindowDimensions => {
     const padding = convertScssRemValueToPixels(theme.spacing.md)
     const paddingTop = convertScssRemValueToPixels(
       theme.sizes.fullScreenHeaderHeight
