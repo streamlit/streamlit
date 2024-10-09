@@ -320,7 +320,7 @@ const Multiselect: FC<Props> = props => {
                       borderTopRightRadius: theme.radii.md,
                       borderBottomRightRadius: theme.radii.md,
                       borderBottomLeftRadius: theme.radii.md,
-                      fontSize: theme.fontSizes.sm,
+                      fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
                       marginLeft: theme.spacing.none,
                       marginRight: theme.spacing.sm,
@@ -341,16 +341,12 @@ const Multiselect: FC<Props> = props => {
                       overrides: {
                         Svg: {
                           style: {
-                            width: "10px",
-                            height: "10px",
+                            // The action icon should be around 0.625% of the parent font size.
+                            width: "0.625em",
+                            height: "0.625em",
                           },
                         },
                       },
-                    },
-                  },
-                  Text: {
-                    style: {
-                      fontSize: theme.fontSizes.md,
                     },
                   },
                 },

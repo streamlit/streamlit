@@ -117,7 +117,7 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   position: "absolute",
   top: theme.spacing.lg,
   right: theme.spacing.lg,
-  zIndex: 1,
+  zIndex: theme.zIndices.priority,
   color: theme.colors.fadedText40,
   mixBlendMode: "difference",
   opacity: 0.6,

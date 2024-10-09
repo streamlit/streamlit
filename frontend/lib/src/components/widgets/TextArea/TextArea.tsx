@@ -203,9 +203,6 @@ const TextArea: FC<Props> = ({
   const shouldShowInstructions =
     focused && width > theme.breakpoints.hideWidgetDetails
 
-  // Default minHeight is 95px, unless height set lower (can't be < 68px or 4.25rem)
-  const minHeight = height && height < 95 ? `${height}px` : "95px"
-
   return (
     <div className="stTextArea" data-testid="stTextArea" style={style}>
       <WidgetLabel
@@ -239,8 +236,10 @@ const TextArea: FC<Props> = ({
           Input: {
             style: {
               lineHeight: theme.lineHeights.inputWidget,
+
+              // The default height of the text area is calculated to perfectly fit 3 lines of text.
               height: height ? `${height}px` : "",
-              minHeight,
+              minHeight: theme.sizes.largestElementHeight,
               resize: "vertical",
               "::placeholder": {
                 opacity: "0.7",

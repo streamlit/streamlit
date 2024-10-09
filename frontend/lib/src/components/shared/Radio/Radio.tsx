@@ -160,6 +160,11 @@ function Radio({
                 style: ({ $checked }: { $checked: boolean }) => ({
                   width: theme.sizes.checkbox,
                   height: theme.sizes.checkbox,
+                  // The margin top is needed to align the radio buttons
+                  // with the text label baseline.
+                  // The text label has a line-height of 1.6
+                  // making the font height around 1.6rem
+                  // while the radio icon has a height of 1rem.
                   marginTop: "0.35rem",
                   marginRight: theme.spacing.none,
                   marginLeft: theme.spacing.none,
