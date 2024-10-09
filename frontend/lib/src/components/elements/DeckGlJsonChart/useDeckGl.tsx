@@ -336,15 +336,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     return jsonConverter.convert(copy)
   }, [
     data.selection.indices,
-    height,
-    isFullScreen,
     isLightTheme,
     isSelectionModeActivated,
     parsedPydeckJson,
-    shouldUseContainerWidth,
     theme.colors.gray20,
     theme.colors.primary,
-    width,
   ])
 
   useEffect(() => {
