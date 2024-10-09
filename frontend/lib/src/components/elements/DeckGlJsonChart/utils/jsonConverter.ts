@@ -14,17 +14,12 @@
  * limitations under the License.
  */
 
-import {
-  CartoLayer,
-  colorBins,
-  colorCategories,
-  colorContinuous,
-} from "@deck.gl/carto/typed"
-import * as layers from "@deck.gl/layers/typed"
-import { JSONConverter } from "@deck.gl/json/typed"
-import * as geoLayers from "@deck.gl/geo-layers/typed"
-import * as aggregationLayers from "@deck.gl/aggregation-layers/typed"
-import * as meshLayers from "@deck.gl/mesh-layers/typed"
+import { colorBins, colorCategories, colorContinuous } from "@deck.gl/carto"
+import * as layers from "@deck.gl/layers"
+import { JSONConverter } from "@deck.gl/json"
+import * as geoLayers from "@deck.gl/geo-layers"
+import * as aggregationLayers from "@deck.gl/aggregation-layers"
+import * as meshLayers from "@deck.gl/mesh-layers"
 
 const configuration = {
   classes: {
@@ -32,7 +27,6 @@ const configuration = {
     ...aggregationLayers,
     ...geoLayers,
     ...meshLayers,
-    CartoLayer,
   },
   functions: {
     colorBins,

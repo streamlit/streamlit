@@ -19,7 +19,7 @@ import React from "react"
 import JSON5 from "json5"
 import { act, screen } from "@testing-library/react"
 import { renderHook } from "@testing-library/react-hooks"
-import { PickingInfo } from "@deck.gl/core/typed"
+import { PickingInfo } from "@deck.gl/core"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"

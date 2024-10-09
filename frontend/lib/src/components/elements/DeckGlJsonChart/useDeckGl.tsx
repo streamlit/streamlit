@@ -17,10 +17,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import JSON5 from "json5"
-import { PickingInfo } from "@deck.gl/core/typed"
+import { PickingInfo, ViewStateChangeParameters } from "@deck.gl/core"
 import isEqual from "lodash/isEqual"
-import { ViewStateChangeParameters } from "@deck.gl/core/typed/controllers/controller"
-import { TooltipContent } from "@deck.gl/core/typed/lib/tooltip"
+import { TooltipContent } from "@deck.gl/core/dist/lib/tooltip"
 import { parseToRgba } from "color2k"
 
 import { useStWidthHeight } from "@streamlit/lib/src/hooks/useStWidthHeight"
@@ -232,18 +231,6 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       copy.mapStyle = `mapbox://styles/mapbox/${
         isLightTheme ? "light" : "dark"
       }-v9`
-    }
-
-    // Set width and height based on the fullscreen state
-    if (isFullScreen) {
-      Object.assign(copy.initialViewState, { width, height })
-    } else {
-      if (!copy.initialViewState.height) {
-        copy.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
-      }
-      if (shouldUseContainerWidth) {
-        copy.initialViewState.width = width
-      }
     }
 
     if (copy.layers) {
