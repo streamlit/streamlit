@@ -84,6 +84,8 @@ def test_click_single_segment_and_take_snapshot(
     text = get_markdown(themed_app, "Single selection: Foobar")
     expect(text).to_be_visible()
 
+    assert_snapshot(segmented_control, name="st_segmented_control-singleselect")
+
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
@@ -94,8 +96,6 @@ def test_click_single_segment_and_take_snapshot(
     get_segment_button(segmented_control, "Foobar").click()
     text = get_markdown(themed_app, "Single selection: None")
     expect(text).to_be_visible()
-
-    assert_snapshot(segmented_control, name="st_segmented_control-singleselect")
 
 
 def test_click_single_icon_segment_and_take_snapshot(
@@ -118,6 +118,10 @@ def test_click_single_icon_segment_and_take_snapshot(
     text = get_markdown(themed_app, "Single icon selection: 1")
     expect(text).to_be_visible()
 
+    assert_snapshot(
+        segmented_control, name="st_segmented_control-singleselect_icon_only"
+    )
+
     # take away hover focus of button
     themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     wait_for_app_run(themed_app)
@@ -128,10 +132,6 @@ def test_click_single_icon_segment_and_take_snapshot(
     get_segment_button(segmented_control, "zoom_in").click()
     text = get_markdown(themed_app, "Single icon selection: None")
     expect(text).to_be_visible()
-
-    assert_snapshot(
-        segmented_control, name="st_segmented_control-singleselect_icon_only"
-    )
 
 
 def test_pass_default_selections(app: Page):
