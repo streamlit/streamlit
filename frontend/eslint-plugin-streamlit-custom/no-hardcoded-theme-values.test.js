@@ -80,6 +80,10 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       code: "var a = { color: theme.colors.primary, height: '1em', maxHeight: '100vh', width: '42vw', maxWidth: '99%' };",
     },
     {
+      name: "negative and decimal numbers with valid units are allowed",
+      code: "var a = { color: theme.colors.primary, height: '1.0em', maxHeight: '0.09vh', width: '-4.2vw' };",
+    },
+    {
       name: "'small-caps' is allowed, which is used by fonts",
       code: "var a = { fontVariant: 'small-caps' };",
     },
