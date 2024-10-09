@@ -138,6 +138,27 @@ def test_audio_input_label_visibility_snapshot(
 
 
 @pytest.mark.only_browser("chromium")
+def test_audio_input_file_download(app: Page):
+    """Test that the audio input file can be downloaded."""
+    app.context.grant_permissions(["microphone"])
+
+    audio_input = app.get_by_test_id("stAudioInput").nth(1)
+    audio_input.get_by_role("button", name="Record").click()
+    app.wait_for_timeout(1500)
+
+    stop_recording(audio_input, app)
+
+    with app.expect_download() as download_info:
+        download_button = audio_input.get_by_role("button", name="Download recording")
+        download_button.click()
+
+    download = download_info.value
+    file_name = download.suggested_filename
+
+    assert file_name == "recording.wav"
+
+
+@pytest.mark.only_browser("chromium")
 def test_audio_input_callback(app: Page):
     """Test that the callback is triggered when audio input changes."""
     # Initial state before any interaction

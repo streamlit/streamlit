@@ -47,6 +47,7 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { usePrevious } from "@streamlit/lib/src/util/Hooks"
 import useWidgetManagerElementState from "@streamlit/lib/src/hooks/useWidgetManagerElementState"
+import useDownloadUrl from "@streamlit/lib/src/hooks/useDownloadUrl"
 
 import {
   StyledAudioInputContainerDiv,
@@ -70,7 +71,6 @@ import formatTime from "./formatTime"
 import AudioInputActionButtons from "./AudioInputActionButtons"
 import convertAudioToWav from "./convertAudioToWav"
 import AudioInputErrorState from "./AudioInputErrorState"
-import downloadRecording from "./downloadRecording"
 
 export interface Props {
   element: AudioInputProto
@@ -400,6 +400,8 @@ const AudioInput: React.FC<Props> = ({
       ),
     })
   }, [recordPlugin, wavesurfer, theme])
+
+  const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
   const isRecording = Boolean(recordPlugin?.isRecording())
   const isPlaying = Boolean(wavesurfer?.isPlaying())
