@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-type WidgetFullscreenContextShape = {
+type ElementFullscreenContextShape = {
   width: number
   height: number | undefined
   expanded: boolean
@@ -24,6 +24,6 @@ type WidgetFullscreenContextShape = {
   collapse: () => void
 }
 
-export const WidgetFullscreenContext =
-  createContext<WidgetFullscreenContextShape | null>(null)
-WidgetFullscreenContext.displayName = "WidgetFullscreenContext"
+export const ElementFullscreenContext =
+  createContext<ElementFullscreenContextShape | null>(null)
+ElementFullscreenContext.displayName = "ElementFullscreenContext"

@@ -31,7 +31,7 @@ import {
 } from "@streamlit/lib/src/useBasicWidgetState"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
+import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
 
 import type {
   DeckGlElementState,
@@ -159,7 +159,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     height: propsHeight,
     width: propsWidth,
     expanded: propsIsFullScreen,
-  } = useRequiredContext(WidgetFullscreenContext)
+  } = useRequiredContext(ElementFullscreenContext)
 
   const { element, fragmentId, isLightTheme, theme, widgetMgr } = props
   const {

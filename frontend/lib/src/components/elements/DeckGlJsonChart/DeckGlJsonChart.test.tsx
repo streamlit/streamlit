@@ -24,11 +24,11 @@ import userEvent from "@testing-library/user-event"
 import {
   render,
   renderHook,
-} from "@streamlit/lib/src/components/shared/WidgetFullscreen/testUtils"
+} from "@streamlit/lib/src/components/shared/ElementFullscreen/testUtils"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
+import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import "@testing-library/jest-dom"
 
@@ -297,7 +297,7 @@ describe("#useDeckGl", () => {
     it("should call JSON5.parse when isFullScreen changes", async () => {
       const MyComponent: FC<UseDeckGlProps> = props => {
         useDeckGl(props)
-        const { expand } = useRequiredContext(WidgetFullscreenContext)
+        const { expand } = useRequiredContext(ElementFullscreenContext)
 
         return <button onClick={expand}>Expand</button>
       }

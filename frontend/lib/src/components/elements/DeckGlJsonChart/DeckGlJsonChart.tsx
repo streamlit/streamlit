@@ -35,7 +35,7 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
+import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
 
 import withMapboxToken from "./withMapboxToken"
 import {
@@ -68,7 +68,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     expanded: isFullScreen,
     expand,
     collapse,
-  } = useRequiredContext(WidgetFullscreenContext)
+  } = useRequiredContext(ElementFullscreenContext)
 
   const {
     createTooltip,

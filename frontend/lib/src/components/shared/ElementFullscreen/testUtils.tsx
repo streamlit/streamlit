@@ -23,7 +23,7 @@ import {
   RenderHookOptions,
 } from "@testing-library/react-hooks"
 
-import WidgetFullscreenWrapper from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenWrapper"
+import ElementFullscreenWrapper from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 import {
   TestAppWrapper,
   render as testUtilRender,
@@ -38,7 +38,9 @@ const FullscreenHarness: FC<PropsWithChildren> = ({ children }) => {
   return (
     <TestAppWrapper>
       {/* 500 is an arbitrary value for the width, as it's not actually used in the tests */}
-      <WidgetFullscreenWrapper width={500}>{children}</WidgetFullscreenWrapper>
+      <ElementFullscreenWrapper width={500}>
+        {children}
+      </ElementFullscreenWrapper>
     </TestAppWrapper>
   )
 }

@@ -26,17 +26,17 @@ import React, {
 import { useTheme } from "@emotion/react"
 
 import { StyledFullScreenFrame } from "@streamlit/lib/src/components/shared/FullScreenWrapper/styled-components"
-import { WidgetFullscreenContext } from "@streamlit/lib/src/components/shared/WidgetFullscreen/WidgetFullscreenContext"
+import { ElementFullscreenContext } from "@streamlit/lib/src/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
 import { useRequiredContext } from "@streamlit/lib/src/hooks/useRequiredContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-type WidgetFullscreenWrapperProps = PropsWithChildren<{
+type ElementFullscreenWrapperProps = PropsWithChildren<{
   height?: number
   width: number
 }>
 
-const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
+const ElementFullscreenWrapper: FC<ElementFullscreenWrapperProps> = ({
   children,
   height,
   width,
@@ -85,7 +85,7 @@ const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
   }, [expanded, fullHeight, fullWidth, height, width, zoomIn, zoomOut])
 
   return (
-    <WidgetFullscreenContext.Provider value={fullscreenContextValue}>
+    <ElementFullscreenContext.Provider value={fullscreenContextValue}>
       <StyledFullScreenFrame
         isExpanded={expanded}
         data-testid="stFullScreenFrame"
@@ -93,8 +93,8 @@ const WidgetFullscreenWrapper: FC<WidgetFullscreenWrapperProps> = ({
       >
         {children}
       </StyledFullScreenFrame>
-    </WidgetFullscreenContext.Provider>
+    </ElementFullscreenContext.Provider>
   )
 }
 
-export default WidgetFullscreenWrapper
+export default ElementFullscreenWrapper
