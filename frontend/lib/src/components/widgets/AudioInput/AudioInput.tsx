@@ -442,7 +442,7 @@ const AudioInput: React.FC<Props> = ({
             <ToolbarAction
               label="Download recording"
               icon={Download}
-              onClick={() => downloadRecording(recordingUrl)}
+              onClick={() => downloadRecording()}
             />
           )}
           {deleteFileUrl && (
