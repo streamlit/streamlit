@@ -17,6 +17,7 @@
 import React, { useCallback } from "react"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import createDownloadLinkElement from "@streamlit/lib/src/util/createDownloadLinkElement"
 
 const useDownloadUrl = (
   url: string | null,
@@ -29,15 +30,13 @@ const useDownloadUrl = (
   const downloadUrl = useCallback(() => {
     if (!url) return
 
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    if (enforceDownloadInNewTab) {
-      link.setAttribute("target", "_blank")
-    } else {
-      link.setAttribute("target", "_self")
-    }
-    link.setAttribute("download", filename)
+    const link = createDownloadLinkElement({
+      enforceDownloadInNewTab,
+      url,
+      filename,
+    })
 
+    link.style.display = "none"
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
