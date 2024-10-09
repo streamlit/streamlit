@@ -131,8 +131,6 @@ function useDataExporter(
   numRows: number,
   enforceDownloadInNewTab: boolean
 ): DataExporterReturn {
-  const downloadUrl
-
   const exportToCsv = React.useCallback(async () => {
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
     const suggestedName = `${timestamp}_export.csv`
