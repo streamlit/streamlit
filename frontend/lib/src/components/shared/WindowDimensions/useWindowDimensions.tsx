@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { useTheme } from "@emotion/react"
 
 import { WindowDimensions } from "."
 
@@ -27,7 +27,8 @@ const convertScssRemValueToPixels = (scssValue: string): number => {
   )
 }
 
-export const useWindowDimensions = (theme: EmotionTheme): WindowDimensions => {
+export const useWindowDimensions = (): WindowDimensions => {
+  const theme = useTheme()
   const [windowDimensions, setWindowDimensions] = useState<WindowDimensions>({
     fullWidth: 0,
     fullHeight: 0,

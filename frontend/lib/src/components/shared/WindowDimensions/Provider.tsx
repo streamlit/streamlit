@@ -16,11 +16,8 @@
 
 import React, { FC, PropsWithChildren, useContext } from "react"
 
-import { useTheme } from "@emotion/react"
-
 import { useWindowDimensions } from "@streamlit/lib/src/components/shared/WindowDimensions/useWindowDimensions"
 import { WindowDimensionsContext } from "@streamlit/lib/src/components/shared/WindowDimensions"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 /**
  * Registers the current window dimensions in the context. A runtime error will
@@ -30,8 +27,7 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 export const WindowDimensionsProvider: FC<PropsWithChildren> = ({
   children,
 }) => {
-  const theme: EmotionTheme = useTheme()
-  const dimensions = useWindowDimensions(theme)
+  const dimensions = useWindowDimensions()
 
   const existingDimensions = useContext(WindowDimensionsContext)
 
