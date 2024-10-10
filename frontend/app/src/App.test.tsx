@@ -2828,6 +2828,59 @@ describe("App", () => {
       })
     })
 
+    it("clears fragment auto rerun intervals when page changes", async () => {
+      prepareHostCommunicationManager()
+
+      // autoRerun uses setInterval under-the-hood, so use fake timers
+      jest.useFakeTimers()
+      sendForwardMessage("autoRerun", {
+        interval: 1, // in seconds
+        fragmentId: "fragmentId",
+      })
+
+      // advance timer X times to trigger the interval-function
+      const times = 3
+      for (let i = 0; i < times; i++) {
+        jest.advanceTimersByTime(1000) // in milliseconds
+      }
+
+      const connectionManager = getMockConnectionManager()
+      expect(connectionManager.sendMessage).toBeCalledTimes(times)
+      // ensure that all calls came from the autoRerun by checking the fragment id
+      for (let i = 0; i < times; i++) {
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[i][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            isAutoRerun: true,
+            fragmentId: "fragmentId",
+          })
+        )
+      }
+
+      // trigger a page change. we use a post message instead
+      // of triggering a pange change via a newSession message,
+      // because a new session also clears the autoRerun intervals
+      fireWindowPostMessage({
+        type: "REQUEST_PAGE_CHANGE",
+        pageScriptHash: "hash1",
+      })
+
+      for (let i = 0; i < times; i++) {
+        jest.advanceTimersByTime(1000) // in milliseconds
+      }
+
+      // make sure that no new messages were sent after switching the page
+      // despite advancing the timer. We could check whether clearInterval
+      // was called, but this check is more observing the behavior than checking
+      // the exact interals.
+      const oldCallCountPlusPageChangeRequest = times + 1
+      expect(connectionManager.sendMessage).toBeCalledTimes(
+        oldCallCountPlusPageChangeRequest
+      )
+    })
+
     it("shows hostMenuItems", async () => {
       // We need this to use the Main Menu Button
       // eslint-disable-next-line testing-library/render-result-naming-convention
