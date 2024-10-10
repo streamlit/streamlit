@@ -43,7 +43,7 @@ else:
 default = st.session_state.default_segmented_control_options
 
 selection = st.segmented_control(
-    "select some options",
+    "Select some options",
     [
         ":material/star: Hello there!",
         "Foobar",
@@ -66,7 +66,7 @@ st.write(f"Multi selection: {selection}")
 
 st.header("Single Select - Segmented Control", anchor="single-select-segmented-control")
 selection = st.segmented_control(
-    "select an option",
+    "Select an option",
     [
         ":material/star: Hello there!",
         "Foobar",
@@ -103,7 +103,7 @@ st.header(
     anchor="on-change-callback-segmented-control",
 )
 st.segmented_control(
-    "Emotions",
+    "Select an emotion:",
     ["Joy", "Sadness", "Anger", "Disgust"],
     key="segmented_control_on_change",
     on_change=lambda: st.write(
@@ -112,12 +112,16 @@ st.segmented_control(
 )
 
 
-st.header("Disabled - Segmented Control", anchor="disabled-segmented-control")
+st.header(
+    "Disabled - Segmented Control (label collapsed)",
+    anchor="disabled-segmented-control",
+)
 selection = st.segmented_control(
-    "Emotions",
+    "Select an emotion:",
     ["Joy", "Sadness", "Anger", "Disgust"],
     key="segmented_control_disabled",
     disabled=True,
+    label_visibility="collapsed",
 )
 st.write("segmented-control-disabled:", str(selection))
 
@@ -125,7 +129,7 @@ st.write("segmented-control-disabled:", str(selection))
 st.header("Segmented Control in form", anchor="segmented-control-in-form")
 with st.form(key="my_form", clear_on_submit=True):
     selection = st.segmented_control(
-        "Emotions",
+        "Select an emotion:",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segmented_control_in_form",
         selection_mode="multiple",
@@ -145,7 +149,7 @@ st.header("Segmented Control in fragment", anchor="segmented-control-in-fragment
 @st.experimental_fragment()
 def test_fragment():
     selection = st.segmented_control(
-        "Emotions",
+        "Select an emotion:",
         ["Joy", "Sadness", "Anger", "Disgust"],
         key="segmented_control_in_fragment",
     )
@@ -164,7 +168,7 @@ if st.button("Create some elements to unmount component"):
         st.write("Another element")
 
 selection = st.segmented_control(
-    "Emotions",
+    "Select an emotion:",
     ["Joy", "Sadness", "Anger", "Disgust"],
     key="segmented_control_after_sleep",
 )

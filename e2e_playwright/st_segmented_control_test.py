@@ -22,6 +22,7 @@ from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     click_form_button,
+    expect_help_tooltip,
     expect_markdown,
     get_element_by_key,
     get_markdown,
@@ -163,9 +164,10 @@ def test_selection_via_on_change_callback(app: Page):
     get_segment_button(segmented_control, "Sadness").click()
     wait_for_app_run(app)
     expect_markdown(app, "on_change selection: Sadness")
+    expect(segmented_control).to_contain_text("Select an emotion:")
 
 
-def test_segmented_control_are_disabled(app: Page):
+def test_segmented_control_are_disabled_and_label_collapsed(app: Page):
     segmented_control = get_button_group(app, "segmented_control_disabled")
     for button in segmented_control.locator("button").all():
         expect(button).to_have_js_property("disabled", True)
@@ -176,6 +178,7 @@ def test_segmented_control_are_disabled(app: Page):
         "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
     )
     expect_markdown(app, "segmented-control-disabled: None")
+    expect(segmented_control).not_to_contain_text("Select an emotion:")
 
 
 def test_segmented_control_work_in_forms(app: Page):
@@ -215,3 +218,11 @@ def test_check_top_level_class(app: Page):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "segmented_control")).to_be_visible()
+
+
+def test_help_tooltip(app: Page):
+    expect_help_tooltip(
+        app,
+        get_button_group(app, "segmented_control_multi_selection"),
+        "You can choose multiple options",
+    )
