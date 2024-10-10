@@ -211,76 +211,161 @@ def connection_factory(
 ):
     """Create a new connection to a data store or API, or return an existing one.
 
-    Config options, credentials, secrets, etc. for connections are taken from various
-    sources:
+    Configuration options, credentials, and secrets for connections are
+    combined from the following sources:
 
+    - The kwargs passed to this command.
+    - The app's ``secrets.toml`` files.
     - Any connection-specific configuration files.
-    - An app's ``secrets.toml`` files.
-    - The kwargs passed to this function.
+
+    The connection returned from ``st.connection`` is internally cached with
+    ``st.cache_resource`` and is therefore shared between sessions.
 
     Parameters
     ----------
     name : str
-        The connection name used for secrets lookup in ``[connections.<name>]``.
-        Type will be inferred from passing ``"sql"``, ``"snowflake"``, or ``"snowpark"``.
+        The connection name used for secrets lookup in ``secrets.toml``.
+        Streamlit uses secrets under ``[connections.<name>]`` for the
+        connection. ``type`` will be inferred if ``name`` is one of the
+        following: ``"snowflake"``, ``"snowpark"``, or ``"sql"``.
+
     type : str, connection class, or None
-        The type of connection to create. It can be a keyword (``"sql"``, ``"snowflake"``,
-        or ``"snowpark"``), a path to an importable class, or an imported class reference.
-        All classes must extend ``st.connections.BaseConnection`` and implement the
-        ``_connect()`` method. If the type kwarg is None, a ``type`` field must be set in
-        the connection's section in ``secrets.toml``.
+        The type of connection to create. This can be one of the following:
+
+        - ``None`` (default): Streamlit will infer the connection type from
+          ``name``. If the type is not inferrable from ``name``, the type must
+          be specified in ``secrets.toml`` instead.
+        - ``"snowflake"``: Streamlit will initialize a connection with
+          |SnowflakeConnection|_.
+        - ``"snowpark"``: Streamlit will initialize a connection with
+          |SnowparkConnection|_. This is deprecated.
+        - ``"sql"``: Streamlit will initialize a connection with
+          |SQLConnection|_.
+        - A string path to an importable class: This must be a dot-separated
+          module path ending in the importable class. Streamlit will import the
+          class and initialize a connection with it. The class must extend
+          ``st.connections.BaseConnection``.
+        - An imported class reference: Streamlit will initialize a connection
+          with the referenced class, which must extend
+          ``st.connections.BaseConnection``.
+
+        .. |SnowflakeConnection| replace:: ``SnowflakeConnection``
+        .. _SnowflakeConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.snowflakeconnection
+        .. |SnowparkConnection| replace:: ``SnowparkConnection``
+        .. _SnowparkConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.snowparkconnection
+        .. |SQLConnection| replace:: ``SQLConnection``
+        .. _SQLConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.sqlconnection
+
     max_entries : int or None
-        The maximum number of connections to keep in the cache, or None
-        for an unbounded cache. (When a new entry is added to a full cache,
-        the oldest cached entry will be removed.) The default is None.
+        The maximum number of connections to keep in the cache.
+        If this is ``None`` (default), the cache is unbounded. Otherwise, when
+        a new entry is added to a full cache, the oldest cached entry is
+        removed.
     ttl : float, timedelta, or None
-        The maximum number of seconds to keep results in the cache, or
-        None if cached results should not expire. The default is None.
+        The maximum number of seconds to keep results in the cache.
+        If this is ``None`` (default), cached results do not expire with time.
     **kwargs : any
-        Additional connection specific kwargs that are passed to the Connection's
-        ``_connect()`` method. Learn more from the specific Connection's documentation.
+        Connection-specific kwargs that are passed to the connection's
+        ``_connect()`` method in addition to the kwargs read from
+        ``secrets.toml``. If the same kwarg is passed to ``st.connection`` and
+        included in ``secrets.toml``, the kwarg in ``st.connection`` takes
+        precedence. To learn more, see the specific connection's documentation.
 
     Returns
     -------
-    Connection object
-        An initialized Connection object of the specified type.
+    Subclass of BaseConnection
+        An initialized connection object of the specified ``type``.
 
     Examples
     --------
+
+    **Example 1**
+
     The easiest way to create a first-party (SQL, Snowflake, or Snowpark) connection is
     to use their default names and define corresponding sections in your ``secrets.toml``
-    file.
+    file. The following example creates a ``"sql"``-type connection.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.sql]
+    >>> dialect = "xxx"
+    >>> host = "xxx"
+    >>> username = "xxx"
+    >>> password = "xxx"
+
+    Your app code:
 
     >>> import streamlit as st
-    >>> conn = st.connection("sql")  # [connections.sql] section in secrets.toml.
+    >>> conn = st.connection("sql")
 
-    Creating a SQLConnection with a custom name requires you to explicitly specify the
-    type. If type is not passed as a kwarg, it must be set in the appropriate section of
-    ``secrets.toml``.
+    **Example 2**
+
+    Creating a connection with a custom name requires you to explicitly
+    specify the type. If ``type`` is not passed as a keyword argument, it must
+    be set in the appropriate section of ``secrets.toml``. The following
+    example creates two ``"sql"``-type connections, each with their own
+    custom name. The first defines ``type`` in the ``st.connection`` command;
+    the second defines ``type`` in ``secrets.toml``.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.first_connection]
+    >>> dialect = "xxx"
+    >>> host = "xxx"
+    >>> username = "xxx"
+    >>> password = "xxx"
+    >>>
+    >>> [connections.second_connection]
+    >>> type = "sql"
+    >>> dialect = "yyy"
+    >>> host = "yyy"
+    >>> username = "yyy"
+    >>> password = "yyy"
+
+    Your app code:
 
     >>> import streamlit as st
-    >>> conn1 = st.connection(
-    ...     "my_sql_connection", type="sql"
-    ... )  # Config section defined in [connections.my_sql_connection].
-    >>> conn2 = st.connection(
-    ...     "my_other_sql_connection"
-    ... )  # type must be set in [connections.my_other_sql_connection].
+    >>> conn1 = st.connection("first_connection", type="sql")
+    >>> conn2 = st.connection("second_connection")
 
-    Passing the full module path to the connection class that you want to use can be
-    useful, especially when working with a custom connection:
+    **Example 3**
+
+    Passing the full module path to the connection class that you want to use
+    can be useful, especially when working with a custom connection. Although
+    this is not the typical way to create first party connections, the
+    following example creates the same type of connection as one with
+    ``type="sql"``. Note that ``type`` is a string path.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.my_sql_connection]
+    >>> url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
+
+    Your app code:
 
     >>> import streamlit as st
     >>> conn = st.connection(
     ...     "my_sql_connection", type="streamlit.connections.SQLConnection"
     ... )
 
-    Finally, you can pass the connection class to use directly to this function. Doing
-    so allows static type checking tools such as ``mypy`` to infer the exact return
-    type of ``st.connection``.
+    **Example 4**
+
+    You can pass the connection class to use directly to this function. Doing
+    so allows static type checking tools such as ``mypy`` to infer the exact
+    return type of ``st.connection``. The following example creates the same
+    connection as in Example 3.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.my_sql_connection]
+    >>> url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
+
+    Your app code:
 
     >>> import streamlit as st
     >>> from streamlit.connections import SQLConnection
     >>> conn = st.connection("my_sql_connection", type=SQLConnection)
+
     """
     USE_ENV_PREFIX = "env:"
 

@@ -40,14 +40,106 @@ if TYPE_CHECKING:
 
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
-    """A connection to Snowflake using the Snowflake Python Connector. Initialize using
-    ``st.connection("<name>", type="snowflake")``.
+    """A connection to Snowflake using the Snowflake Connector for Python.
 
-    SnowflakeConnection supports direct SQL querying using ``.query("...")``, access to
-    the underlying Snowflake Python Connector object with ``.raw_connection``, and other
-    convenience functions. See the methods below for more information.
-    SnowflakeConnections should always be created using ``st.connection()``, **not**
-    initialized directly.
+    Initialize this connection object using ``st.connection("snowflake")`` or
+    ``st.connection("<name>", type="snowflake")``. Connection parameters for a
+    SnowflakeConnection can be specified using ``secrets.toml`` and/or
+    ``**kwargs``. Connection parameters are passed to
+    |snowflake.connector.connect()|.
+
+    When an app is running in Streamlit in Snowflake,
+    ``st.connection("snowflake")`` connects automatically using the app owner's
+    role without further configuration. ``**kwargs`` will be ignored in this
+    case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
+    for local development.
+
+    SnowflakeConnection supports direct SQL querying with ``.query()``, access
+    to the underlying Snowflake Connector object with ``.raw_connection``, and
+    other convenience functions. For more information, see the class methods.
+
+    .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
+    .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
+
+    .. Tip::
+        `snowflake-snowpark-python <https://pypi.org/project/snowflake-snowpark-python/>`_
+        must be installed in your environment to use this connection. You can
+        install Snowflake extras along with Streamlit:
+
+        >>> pip install streamlit[snowflake]
+
+    .. Important::
+        Account identifiers must be of the form ``<orgname>-<account_name>``
+        where ``<orgname>`` is the name of your Snowflake organization and
+        ``<account_name>`` is the unique name of your account within your
+        organization. This is not the dot-separated identifier used in SQL
+        queries. For more information, see `Account identifiers
+        <https://docs.snowflake.com/en/user-guide/admin-account-identifier>`_.
+
+    Examples
+    --------
+
+    **Example 1**
+
+    You can configure ``st.connection("snowflake")`` using Streamlit's
+    `Secrets management <https://docs.streamlit.io/develop/concepts/connections/secrets-management>`_.
+    For example, if you have MFA enabled on your account, you can connect using
+    `key-pair authentication <https://docs.snowflake.com/en/user-guide/key-pair-auth>`_.
+
+    ``.streamlit/secrets.toml``:
+
+    >>> [connections.snowflake]
+    >>> account = "xxx-xxx"
+    >>> user = "xxx"
+    >>> private_key_file = "/xxx/xxx/xxx.p8"
+    >>> role = "xxx"
+    >>> warehouse = "xxx"
+    >>> database = "xxx"
+    >>> schema = "xxx"
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>> conn = st.connection("snowflake")
+    >>> df = conn.query("SELECT * FROM my_table")
+
+    **Example 2**
+
+    You can configure your Snowflake connection with keyword arguments (with or
+    without ``secrets.toml``). For example, if your Snowflake account supports
+    SSO, you can set up a quick local connection for development using `browser-based SSO
+    <https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-use#how-browser-based-sso-works>`_.
+
+    >>> import streamlit as st
+    >>> conn = st.connection(
+    ...     "snowflake", account="xxx-xxx", user="xxx", authenticator="externalbrowser"
+    ... )
+    >>> df = conn.query("SELECT * FROM my_table")
+
+    **Example 3**
+
+    Snowflake's Python driver also supports a `connection configuration file
+    <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#label-python-connection-toml>`_,
+    ``connections.toml``. For example, if you already have a Snowflake
+    connection configured for Snowflake's Python driver, just pass the
+    connection name to Streamlit.
+
+    ``~/.snowflake/connections.toml``:
+
+    >>> [my_connection]
+    >>> account = "xxx-xxx"
+    >>> user = "xxx"
+    >>> password = "xxx"
+    >>> warehouse = "xxx"
+    >>> database = "xxx"
+    >>> schema = "xxx"
+
+    Your app code:
+
+    >>> import streamlit as st
+    >>> conn = st.connection("my_connection", type="snowflake")
+    >>> df = conn.query("SELECT * FROM my_table")
+
     """
 
     def _connect(self, **kwargs) -> InternalSnowflakeConnection:
@@ -130,28 +222,36 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
-        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
+        identical to that of using ``@st.cache_data``) as well as simple error
+        handling/retries.
 
         .. note::
-            Queries that are run without a specified ttl are cached indefinitely.
+            Queries that are run without a specified ``ttl`` are cached
+            indefinitely.
 
         Parameters
         ----------
         sql : str
             The read-only SQL query to execute.
         ttl : float, int, timedelta or None
-            The maximum number of seconds to keep results in the cache, or
-            None if cached results should not expire. The default is None.
+            The maximum number of seconds to keep results in the cache. If this
+            is ``None`` (default), cached results do not expire with time.
         show_spinner : boolean or string
-            Enable the spinner. The default is to show a spinner when there is a
-            "cache miss" and the cached resource is being created. If a string, the value
-            of the show_spinner param will be used for the spinner text.
+            Whether to enable the spinner. When a cached query is executed, no
+            spinner is displayed because the result is immediately available.
+            When a new query is executed, the default is to show a spinner with
+            the message "Running ``snowflake.query(...)``."
+
+            If this is ``False``, no spinner displays while executing the
+            query. If this is a string, the string will be used as the message
+            for the spinner.
         params : list, tuple, dict or None
-            List of parameters to pass to the execute method. This connector supports
-            binding data to a SQL statement using qmark bindings. For more information
-            and examples, see the `Snowflake Python Connector documentation
+            List of parameters to pass to the Snowflake Connector for Python
+            ``Cursor.execute()`` method. This connector supports binding data
+            to a SQL statement using qmark bindings. For more information and
+            examples, see the `Snowflake Connector for Python documentation
             <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#using-qmark-or-numeric-binding>`_.
-            Default is None.
+            This defaults to ``None``.
 
         Returns
         -------
@@ -232,20 +332,48 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         chunk_size: int | None = None,
         **kwargs,
     ) -> tuple[bool, int, int]:
-        """Call snowflake.connector.pandas_tools.write_pandas with this connection.
+        """Call ``snowflake.connector.pandas_tools.write_pandas()`` with this connection.
 
         This convenience method is simply a thin wrapper around the ``write_pandas``
         function of the same name from ``snowflake.connector.pandas_tools``. For more
-        information, see the `Snowflake Python Connector documentation
+        information, see the `Snowflake Connector for Python documentation
         <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#write_pandas>`_.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            The ``pandas.DataFrame`` object containing the data to be copied
+            into the table.
+        table_name: str
+            Name of the table where the data should be copied to.
+        database: str
+            Name of the database containing the table. By default, the function
+            writes to the database that is currently in use in the session.
+
+            .. Note::
+                If you specify this parameter, you must also specify the schema
+                parameter.
+
+        schema: str
+            Name of the schema containing the table. By default, the function
+            writes to the table in the schema that is currently in use in the
+            session.
+        chunk_size: int
+            Number of elements to insert at a time. By default, the function
+            inserts all elements at once in one chunk.
+        **kwargs: Any
+            Additional keyword arguments for
+            ``snowflake.connector.pandas_tools.write_pandas()``.
 
         Returns
         -------
         tuple[bool, int, int]
             A tuple containing three values:
-                1. A bool that is True if the write was successful.
-                2. An int giving the number of chunks of data that were copied.
-                3. An int giving the number of rows that were inserted.
+
+            1. A boolean value that is ``True`` if the write was successful.
+            2. An integer giving the number of chunks of data that were copied.
+            3. An integer giving the number of rows that were inserted.
+
         """
         from snowflake.connector.pandas_tools import write_pandas  # type:ignore[import]
 
@@ -262,27 +390,52 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         return (success, nchunks, nrows)
 
     def cursor(self) -> SnowflakeCursor:
-        """Return a PEP 249-compliant cursor object.
+        """Create a new cursor object from this connection.
 
-        For more information, see the `Snowflake Python Connector documentation
+        Snowflake Connector cursors implement the Python Database API v2.0
+        specification (PEP-249). For more information, see the
+        `Snowflake Connector for Python documentation
         <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#object-cursor>`_.
+
+        Returns
+        -------
+        snowflake.connector.cursor.SnowflakeCursor
+            A cursor object for the connection.
+
         """
         return self._instance.cursor()
 
     @property
     def raw_connection(self) -> InternalSnowflakeConnection:
-        """Access the underlying Snowflake Python connector object.
+        """Access the underlying connection object from the Snowflake\
+        Connector for Python.
 
-        Information on how to use the Snowflake Python Connector can be found in the
-        `Snowflake Python Connector documentation <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example>`_.
+        For information on how to use the Snowflake Connector for Python, see
+        the `Snowflake Connector for Python documentation
+        <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example>`_.
+
+        Returns
+        -------
+        snowflake.connector.connection.SnowflakeConnection
+            The connection object.
+
         """
         return self._instance
 
     def session(self) -> Session:
         """Create a new Snowpark Session from this connection.
 
-        Information on how to use Snowpark sessions can be found in the `Snowpark documentation
-        <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
+        For information on how to use Snowpark sessions, see the
+        `Snowpark developer guide
+        <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_
+        and `Snowpark API Reference
+        <https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/session>`_.
+
+        Returns
+        -------
+        snowflake.snowpark.Session
+            A new Snowpark Session for this connection.
+
         """
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
         from snowflake.snowpark.session import Session  # type:ignore[import]

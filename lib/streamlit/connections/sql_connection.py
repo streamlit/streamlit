@@ -52,27 +52,53 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
 class SQLConnection(BaseConnection["Engine"]):
-    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.connection("<name>", type="sql")``.
+    """A connection to a SQL database using a SQLAlchemy Engine.
 
-    SQLConnection provides the ``query()`` convenience method, which can be used to
-    run simple read-only queries with both caching and simple error handling/retries.
-    More complex DB interactions can be performed by using the ``.session`` property
-    to receive a regular SQLAlchemy Session.
+    Initialize this connection object using ``st.connection("sql")`` or
+    ``st.connection("<name>", type="sql")``. Connection parameters for a
+    SQLConnection can be specified using ``secrets.toml`` and/or ``**kwargs``.
+    Possible connection parameters include:
 
-    SQLConnections should always be created using ``st.connection()``, **not**
-    initialized directly. Connection parameters for a SQLConnection can be specified
-    using either ``st.secrets`` or ``**kwargs``. Some frequently used parameters include:
+    - ``url`` or keyword arguments for |sqlalchemy.engine.make_url()|_.
+    - Keyword arguments for |sqlalchemy.engine.URL.create()|_, except
+      ``drivername``. Use ``dialect`` and ``driver`` instead of ``drivername``.
+    - Keyword arguments for |sqlalchemy.create_engine()|_, including custom
+      ``connect()`` arguments used by your specific ``dialect`` or ``driver``.
+    - ``autocommit``. If this is ``False`` (default), the connection operates
+      in manual commit (transactional) mode. If this is ``True``, the
+      connection operates in autocommit (non-transactional) mode.
 
-    - **url** or arguments for `sqlalchemy.engine.URL.create()
-      <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
-      Most commonly it includes a dialect, host, database, username and password.
+    If ``url`` exists as a connection parameter, Streamlit will pass all connection
+    parameters to ``sqlalchemy.engine.make_url()`` to create an instance of
+    ``sqlalchemy.engine.URL``. Otherwise, Streamlit requires (at a minimum)
+    ``dialect``, ``username``, and ``host``. Streamlit will use ``dialect`` and
+    ``driver`` (if defined) to derive ``drivername``, then pass the relevant
+    connection parameters to ``sqlalchemy.engine.URL.create()``.
 
-    - **create_engine_kwargs** can be passed via ``st.secrets``, such as for
-      `snowflake-sqlalchemy <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_
-      or `Google BigQuery <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_.
-      These can also be passed directly as ``**kwargs`` to connection().
+    In addition to the default keyword arguments for ``sqlalchemy.create_engine()``,
+    your dialect may accept additional keyword arguments. For example, if you
+    use ``dialect="snowflake"`` with `Snowflake SQLAlchemy
+    <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_,
+    you can pass ``private_key`` to use key pair authentication. If you use
+    ``dialect="bigquery"`` with `Google BigQuery
+    <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_,
+    you can pass ``location``.
 
-    - **autocommit=True** to run with isolation level ``AUTOCOMMIT``. Default is False.
+    SQLConnection provides the ``query()`` convenience method, which can be
+    used to run simple read-only queries with both caching and simple error
+    handling/retries. More complex database interactions can be performed by
+    using the ``.session`` property to receive a regular SQLAlchemy Session.
+
+    .. Important::
+        `sqlalchemy <https://pypi.org/project/SQLAlchemy/>`_ must be installed
+        in your environment to use this connection.
+
+    .. |sqlalchemy.engine.URL.create()| replace:: ``sqlalchemy.engine.URL.create()``
+    .. _sqlalchemy.engine.URL.create(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create
+    .. |sqlalchemy.engine.make_url()| replace:: ``sqlalchemy.engine.make_url()``
+    .. _sqlalchemy.engine.make_url(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.make_url
+    .. |sqlalchemy.create_engine()| replace:: ``sqlalchemy.create_engine()``
+    .. _sqlalchemy.create_engine(): https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine
 
     Example
     -------
