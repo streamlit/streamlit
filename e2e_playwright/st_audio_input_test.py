@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import Locator, Page, Route, expect
+from playwright.sync_api import IframedPage, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -137,9 +137,7 @@ def test_audio_input_label_visibility_snapshot(
     )
 
 
-@pytest.mark.only_browser("chromium")
-def test_audio_input_file_download(app: Page):
-    """Test that the audio input file can be downloaded."""
+def _test_download_audio_file(app: Page):
     app.context.grant_permissions(["microphone"])
 
     audio_input = app.get_by_test_id("stAudioInput").nth(1)
@@ -156,6 +154,18 @@ def test_audio_input_file_download(app: Page):
     file_name = download.suggested_filename
 
     assert file_name == "recording.wav"
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_file_download(app: Page):
+    """Test that the audio input file can be downloaded."""
+    _test_download_audio_file(app)
+
+
+@pytest.mark.only_browser("chromium")
+def test_audio_input_file_download_in_iframe(iframed_app: IframedPage):
+    """Test that the audio input file can be downloaded within an iframe."""
+    _test_download_audio_file(iframed_app)
 
 
 @pytest.mark.only_browser("chromium")
