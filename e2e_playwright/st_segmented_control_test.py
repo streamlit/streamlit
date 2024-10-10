@@ -28,8 +28,9 @@ from e2e_playwright.shared.app_utils import (
 )
 
 
-def get_button_group(app: Page, index: int) -> Locator:
-    return app.get_by_test_id("stButtonGroup").nth(index)
+def get_button_group(app: Page, key: str) -> Locator:
+    class_name = ".st-key-" + key
+    return app.locator(class_name).get_by_test_id("stButtonGroup").first
 
 
 def get_segment_button(locator: Locator, text: str) -> Locator:
@@ -46,7 +47,9 @@ def test_click_multiple_segmented_control_button_and_take_snapshot(
     Click on the same button multiple times to test unselect.
     """
 
-    segmented_control = get_button_group(themed_app, 0)
+    segmented_control = get_button_group(
+        themed_app, "segmented_control_multi_selection"
+    )
     get_segment_button(segmented_control, "Foobar").click()
     wait_for_app_run(themed_app)
 
@@ -79,7 +82,9 @@ def test_click_single_segment_and_take_snapshot(
     Click on two different elements to validate single select.
     """
 
-    segmented_control = get_button_group(themed_app, 1)
+    segmented_control = get_button_group(
+        themed_app, "segmented_control_single_selection"
+    )
     get_segment_button(segmented_control, "Foobar").click()
     text = get_markdown(themed_app, "Single selection: Foobar")
     expect(text).to_be_visible()
@@ -106,7 +111,9 @@ def test_click_single_icon_segment_and_take_snapshot(
     Click on same element to test unselect.
     Click on two different elements to validate single select.
     """
-    segmented_control = get_button_group(themed_app, 2)
+    segmented_control = get_button_group(
+        themed_app, "segmented_control_single_icon_selection"
+    )
 
     # the icon's span element has the respective text
     # (e.g. :material/zoom_out_map: -> zoom_out_map)
@@ -152,14 +159,14 @@ def test_pass_default_selections(app: Page):
 
 def test_selection_via_on_change_callback(app: Page):
     """Test that the on_change callback is triggered when a segmented control butoon is clicked."""
-    segmented_control = get_button_group(app, 3)
+    segmented_control = get_button_group(app, "segmented_control_on_change")
     get_segment_button(segmented_control, "Sadness").click()
     wait_for_app_run(app)
     expect_markdown(app, "on_change selection: Sadness")
 
 
 def test_segmented_control_are_disabled(app: Page):
-    segmented_control = get_button_group(app, 4)
+    segmented_control = get_button_group(app, "segmented_control_disabled")
     for button in segmented_control.locator("button").all():
         expect(button).to_have_js_property("disabled", True)
     selected_button = get_segment_button(segmented_control, "Sadness")
@@ -173,7 +180,7 @@ def test_segmented_control_are_disabled(app: Page):
 
 def test_segmented_control_work_in_forms(app: Page):
     expect_markdown(app, "segmented-control-in-form: []")
-    segmented_control = get_button_group(app, 5)
+    segmented_control = get_button_group(app, "segmented_control_in_form")
     get_segment_button(segmented_control, "Sadness").click()
     click_form_button(app, "Submit")
     wait_for_app_run(app)
@@ -182,7 +189,7 @@ def test_segmented_control_work_in_forms(app: Page):
 
 def test_segmented_control_work_with_fragments(app: Page):
     expect_markdown(app, "segmented-control-in-fragment: None")
-    segmented_control = get_button_group(app, 6)
+    segmented_control = get_button_group(app, "segmented_control_in_fragment")
     get_segment_button(segmented_control, "Sadness").click()
     wait_for_app_run(app)
     expect_markdown(app, "segmented-control-in-fragment: Sadness")
@@ -191,7 +198,7 @@ def test_segmented_control_work_with_fragments(app: Page):
 
 def test_segmented_control_remount_keep_value(app: Page):
     expect_markdown(app, "segmented-control-after-sleep: None")
-    segmented_control = get_button_group(app, 7)
+    segmented_control = get_button_group(app, "segmented_control_after_sleep")
     selected_button = get_segment_button(segmented_control, "Sadness")
     selected_button.click()
     wait_for_app_run(app)
