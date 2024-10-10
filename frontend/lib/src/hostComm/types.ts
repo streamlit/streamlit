@@ -223,9 +223,11 @@ export type AppConfig = {
 
 export type MetricsConfig = {
   /**
-   * URL to send metrics data to.
+   * URL to send metrics data to via POST request.
+   * Setting to "postMessage" sends metrics events via postMessage to host.
+   * Setting to "off" disables metrics collection.
    */
-  metricsUrl?: string
+  metricsUrl?: string | "postMessage" | "off"
 }
 
 /**
