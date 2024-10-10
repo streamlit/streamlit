@@ -30,8 +30,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_button_group(app: Page, key: str) -> Locator:
-    class_name = ".st-key-" + key
-    return app.locator(class_name).get_by_test_id("stButtonGroup").first
+    return get_element_by_key(key).get_by_test_id("stButtonGroup").first
 
 
 def get_segment_button(locator: Locator, text: str) -> Locator:
@@ -217,7 +216,7 @@ def test_check_top_level_class(app: Page):
 
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
-    expect(get_element_by_key(app, "segmented_control")).to_be_visible()
+    expect(get_element_by_key(app, "segmented_control_multi_selection")).to_be_visible()
 
 
 def test_help_tooltip(app: Page):
