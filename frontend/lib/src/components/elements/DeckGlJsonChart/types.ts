@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { DeckProps } from "@deck.gl/core/typed"
+import type { DeckProps } from "@deck.gl/core"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"

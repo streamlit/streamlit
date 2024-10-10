@@ -29,7 +29,7 @@ st.subheader("Page Navigation:")
 st.logo(logo, link="https://www.example.com", icon_image=small_logo)
 
 
-colA, colB = st.columns(2)
+colA, colB = st.container(key="page_link_container").columns(2)
 
 with colA:
     st.page_link("mpa_configure_sidebar.py", label="Home", icon="🏠")

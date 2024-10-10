@@ -54,11 +54,11 @@ export const StyledWaveformTimeCode = styled.span<{
   fontSize: theme.fontSizes.sm,
 }))
 
-export const StyledErrorContainerDiv = styled.div(() => ({
+export const StyledErrorContainerDiv = styled.div({
   width: "100%",
   textAlign: "center",
   overflow: "hidden",
-}))
+})
 
 export const StyledErrorTextSpan = styled.span(({ theme }) => ({
   color: theme.colors.bodyText,
