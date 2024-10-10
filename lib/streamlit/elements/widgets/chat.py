@@ -68,7 +68,7 @@ class ChatInputValue:
 
     def __getitem__(self, item: str) -> str | list[UploadedFile]:
         try:
-            return getattr(self, item)
+            return getattr(self, item)  # type: ignore[no-any-return]
         except AttributeError:
             raise KeyError(f"Invalid key: {item}") from None
 
@@ -490,7 +490,7 @@ class ChatMixin:
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
 
         serde = ChatInputSerde(accept_files=bool(accept_file))
-        widget_state = register_widget(
+        widget_state = register_widget(  # type: ignore[misc]
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,

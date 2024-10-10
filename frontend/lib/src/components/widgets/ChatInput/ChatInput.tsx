@@ -524,110 +524,114 @@ function ChatInput({
       : false
 
   return (
-    <StyledChatInputContainer
-      className="stChatInput"
-      data-testid="stChatInput"
-      width={width}
-    >
-      <div style={{ position: "absolute", bottom: "100%" }}>
-        {files.length > 0 && (
-          <UploadedFiles
-            items={[...files]}
-            pageSize={3}
-            onDelete={deleteFile}
-            resetOnAdd
-          />
-        )}
-      </div>
-      <StyledChatInput>
-        {element.acceptFile !== "false" ? (
-          <>
-            <div {...getRootProps()}>
-              <input {...getInputProps()} />
-              <BaseButton
-                kind={BaseButtonKind.BORDERLESS_ICON}
-                onClick={() => {}}
-                disabled={disabled}
-              >
-                <Icon content={AttachFile} size="base" color="inherit" />
-              </BaseButton>
-            </div>
-            <StyledVerticalDivider />
-          </>
-        ) : null}
-        <UITextArea
-          inputRef={chatInputRef}
-          value={value}
-          placeholder={placeholder}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          aria-label={placeholder}
-          disabled={disabled}
-          rows={1}
-          overrides={{
-            Root: {
-              style: {
-                minHeight: theme.sizes.minElementHeight,
-                outline: "none",
-                backgroundColor: theme.colors.transparent,
-                ...getTextAreaBorderStyle(),
-              },
-            },
-            InputContainer: {
-              style: {
-                backgroundColor: theme.colors.transparent,
-              },
-            },
-            Input: {
-              props: {
-                "data-testid": "stChatInputTextArea",
-              },
-              style: {
-                lineHeight: theme.lineHeights.inputWidget,
-                backgroundColor: theme.colors.transparent,
-                "::placeholder": {
-                  color: placeholderColor,
-                },
-                height: isInputExtended
-                  ? `${scrollHeight + ROUNDING_OFFSET}px`
-                  : "auto",
-                maxHeight: maxHeight ? `${maxHeight}px` : "none",
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingLeft: theme.spacing.sm,
-                paddingBottom: theme.spacing.sm,
-                paddingTop: theme.spacing.sm,
-                // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
-                // and some additional margin between the icon and the text (spacing.sm).
-                paddingRight: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
-              },
-            },
+    <>
+      {files.length > 0 && (
+        <UploadedFiles
+          items={[...files]}
+          pageSize={1}
+          onDelete={deleteFile}
+          resetOnAdd
+          style={{
+            paddingLeft: 0,
+            paddingRight: 0,
           }}
         />
-        {/* Hide the character limit in small widget sizes */}
-        {width > theme.breakpoints.hideWidgetDetails && (
-          <StyledInputInstructionsContainer>
-            <InputInstructions
-              dirty={dirty}
-              value={value}
-              maxLength={maxChars}
-              type="chat"
-              // Chat Input are not able to be used in forms
-              inForm={false}
-            />
-          </StyledInputInstructionsContainer>
-        )}
-        <StyledSendIconButtonContainer>
-          <StyledSendIconButton
-            onClick={handleSubmit}
-            disabled={!dirty || disabled}
-            extended={isInputExtended}
-            data-testid="stChatInputSubmitButton"
-          >
-            <Icon content={Send} size="xl" color="inherit" />
-          </StyledSendIconButton>
-        </StyledSendIconButtonContainer>
-      </StyledChatInput>
-    </StyledChatInputContainer>
+      )}
+      <StyledChatInputContainer
+        className="stChatInput"
+        data-testid="stChatInput"
+        width={width}
+      >
+        <StyledChatInput>
+          {element.acceptFile !== "false" ? (
+            <>
+              <div {...getRootProps()}>
+                <input {...getInputProps()} />
+                <BaseButton
+                  kind={BaseButtonKind.BORDERLESS_ICON}
+                  onClick={() => {}}
+                  disabled={disabled}
+                >
+                  <Icon content={AttachFile} size="base" color="inherit" />
+                </BaseButton>
+              </div>
+              <StyledVerticalDivider />
+            </>
+          ) : null}
+          <UITextArea
+            inputRef={chatInputRef}
+            value={value}
+            placeholder={placeholder}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            aria-label={placeholder}
+            disabled={disabled}
+            rows={1}
+            overrides={{
+              Root: {
+                style: {
+                  minHeight: theme.sizes.minElementHeight,
+                  outline: "none",
+                  backgroundColor: theme.colors.transparent,
+                  ...getTextAreaBorderStyle(),
+                },
+              },
+              InputContainer: {
+                style: {
+                  backgroundColor: theme.colors.transparent,
+                },
+              },
+              Input: {
+                props: {
+                  "data-testid": "stChatInputTextArea",
+                },
+                style: {
+                  lineHeight: theme.lineHeights.inputWidget,
+                  backgroundColor: theme.colors.transparent,
+                  "::placeholder": {
+                    color: placeholderColor,
+                  },
+                  height: isInputExtended
+                    ? `${scrollHeight + ROUNDING_OFFSET}px`
+                    : "auto",
+                  maxHeight: maxHeight ? `${maxHeight}px` : "none",
+                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                  paddingLeft: theme.spacing.sm,
+                  paddingBottom: theme.spacing.sm,
+                  paddingTop: theme.spacing.sm,
+                  // Calculate the right padding to account for the send icon (iconSizes.xl + 2 * spacing.sm)
+                  // and some additional margin between the icon and the text (spacing.sm).
+                  paddingRight: `calc(${theme.iconSizes.xl} + 2 * ${theme.spacing.sm} + ${theme.spacing.sm})`,
+                },
+              },
+            }}
+          />
+          {/* Hide the character limit in small widget sizes */}
+          {width > theme.breakpoints.hideWidgetDetails && (
+            <StyledInputInstructionsContainer>
+              <InputInstructions
+                dirty={dirty}
+                value={value}
+                maxLength={maxChars}
+                type="chat"
+                // Chat Input are not able to be used in forms
+                inForm={false}
+              />
+            </StyledInputInstructionsContainer>
+          )}
+          <StyledSendIconButtonContainer>
+            <StyledSendIconButton
+              onClick={handleSubmit}
+              disabled={!dirty || disabled}
+              extended={isInputExtended}
+              data-testid="stChatInputSubmitButton"
+            >
+              <Icon content={Send} size="xl" color="inherit" />
+            </StyledSendIconButton>
+          </StyledSendIconButtonContainer>
+        </StyledChatInput>
+      </StyledChatInputContainer>
+    </>
   )
 }
 
