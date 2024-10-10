@@ -381,7 +381,6 @@ class DateInput extends React.PureComponent<Props, State> {
                       borderRightWidth: theme.sizes.borderWidth,
                       borderTopWidth: theme.sizes.borderWidth,
                       borderBottomWidth: theme.sizes.borderWidth,
-                      // paddingRight: 0,
                     },
                   },
                   ClearIcon: {
