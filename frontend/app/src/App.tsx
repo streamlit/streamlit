@@ -17,7 +17,7 @@
 import React, { PureComponent, ReactNode } from "react"
 
 import moment from "moment"
-import { HotKeys, KeyMap } from "react-hotkeys"
+import Hotkeys from "react-hot-keys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 import without from "lodash/without"
@@ -84,7 +84,6 @@ import {
   ParentMessage,
   PerformanceEvents,
   PresetThemeName,
-  RERUN_PROMPT_MODAL_DIALOG,
   ScriptRunState,
   SessionEvent,
   SessionInfo,
@@ -146,6 +145,7 @@ interface State {
   userSettings: UserSettings
   dialog?: DialogProps | null
   layout: PageConfig.Layout
+  pageLayouts: Record<string, PageConfig.Layout>
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
@@ -276,6 +276,7 @@ export class App extends PureComponent<Props, State> {
         runOnSave: false,
       },
       layout: PageConfig.Layout.CENTERED,
+      pageLayouts: {},
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
@@ -407,29 +408,6 @@ export class App extends PureComponent<Props, State> {
       disconnectWebsocket: this.debugDisconnectWebsocket,
       shutdownRuntime: this.debugShutdownRuntime,
     }
-  }
-
-  /**
-   * Global keyboard shortcuts.
-   */
-  keyMap: KeyMap = {
-    RERUN: "r",
-    CLEAR_CACHE: "c",
-    // We use key up for stop recording to ensure the esc key doesn't trigger
-    // other actions (like exiting modals)
-    STOP_RECORDING: { sequence: "esc", action: "keyup" },
-  }
-
-  keyHandlers = {
-    RERUN: () => {
-      this.rerunScript()
-    },
-    CLEAR_CACHE: () => {
-      if (showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)) {
-        this.openClearCacheDialog()
-      }
-    },
-    STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
   initializeConnectionManager(): void {
@@ -933,17 +911,6 @@ export class App extends PureComponent<Props, State> {
         onClose: () => {},
       }
       this.openDialog(newDialog)
-    } else if (
-      RERUN_PROMPT_MODAL_DIALOG &&
-      sessionEvent.type === "scriptChangedOnDisk"
-    ) {
-      const newDialog: DialogProps = {
-        type: DialogType.SCRIPT_CHANGED,
-        onRerun: this.rerunScript,
-        onClose: () => {},
-        allowRunOnSave: this.state.allowRunOnSave,
-      }
-      this.openDialog(newDialog)
     }
   }
 
@@ -1014,7 +981,11 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
+    const {
+      appHash,
+      pageLayouts,
+      currentPageScriptHash: prevPageScriptHash,
+    } = this.state
     const {
       scriptRunId,
       name: scriptName,
@@ -1026,10 +997,7 @@ export class App extends PureComponent<Props, State> {
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
-      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
-        clearInterval(value)
-      })
-      this.setState({ autoReruns: [] })
+      this.cleanupAutoReruns()
 
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
@@ -1080,6 +1048,20 @@ export class App extends PureComponent<Props, State> {
         mainScriptHash
       )
     }
+
+    // Use previously saved layout if exists, otherwise default to CENTERED
+    // Pages using set_page_config(layout=...) will be overriding these values
+    this.setState((prevState: State) => {
+      const newLayout =
+        pageLayouts[newPageScriptHash] ?? PageConfig.Layout.CENTERED
+      return {
+        layout: newLayout,
+        userSettings: {
+          ...prevState.userSettings,
+          wideMode: newLayout === PageConfig.Layout.WIDE,
+        },
+      }
+    })
   }
 
   /**
@@ -1389,6 +1371,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Clear all auto reruns that were registered. This should be called whenever
+   * the content of the auto rerun function might not be valid anymore and could
+   * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
+   */
+  cleanupAutoReruns = (): void => {
+    this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+      clearInterval(value)
+    })
+    this.setState({ autoReruns: [] })
+  }
+
+  /**
    * Reruns the script.
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
@@ -1442,6 +1436,12 @@ export class App extends PureComponent<Props, State> {
   onPageChange = (pageScriptHash: string): void => {
     const { elements, mainScriptHash } = this.state
 
+    // We are about to change the page, so clear all auto reruns
+    // This also happens in handleNewSession, but it might be too late compared
+    // to small interval values, which might trigger a rerun before the new
+    // session message is processed
+    this.cleanupAutoReruns()
+
     // We want to keep widget states for widgets that are still active
     // from the common script
     const nextPageElements = this.appNavigation.clearPageElements(
@@ -1454,6 +1454,15 @@ export class App extends PureComponent<Props, State> {
         .map(element => getElementId(element))
         .filter(notUndefined)
     )
+
+    // Save current page layout before rerun
+    this.setState((prevState: State) => {
+      const pageLayouts = prevState.pageLayouts
+      pageLayouts[prevState.currentPageScriptHash] = prevState.layout
+      return {
+        pageLayouts: pageLayouts,
+      }
+    })
 
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
@@ -1813,6 +1822,29 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleKeyDown = (keyName: string): void => {
+    switch (keyName) {
+      case "c":
+        // CLEAR CACHE
+        if (
+          showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)
+        ) {
+          this.openClearCacheDialog()
+        }
+        break
+      case "r":
+        // RERUN
+        this.rerunScript()
+        break
+    }
+  }
+
+  handleKeyUp = (keyName: string): void => {
+    if (keyName === "esc") {
+      this.props.screenCast.stopRecording()
+    }
+  }
+
   render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -1864,10 +1896,6 @@ export class App extends PureComponent<Props, State> {
     const widgetsDisabled =
       inputsDisabled || connectionState !== ConnectionState.CONNECTED
 
-    // Attach and focused props provide a way to handle Global Hot Keys
-    // https://github.com/greena13/react-hotkeys/issues/41
-    // attach: DOM element the keyboard listeners should attach to
-    // focused: A way to force focus behaviour
     return (
       <AppContext.Provider
         value={{
@@ -1901,11 +1929,10 @@ export class App extends PureComponent<Props, State> {
             fragmentIdsThisRun: this.state.fragmentIdsThisRun,
           }}
         >
-          <HotKeys
-            keyMap={this.keyMap}
-            handlers={this.keyHandlers}
-            attach={window}
-            focused={true}
+          <Hotkeys
+            keyName="r,c,esc"
+            onKeyDown={this.handleKeyDown}
+            onKeyUp={this.handleKeyUp}
           >
             <StyledApp
               className={outerDivClass}
@@ -1985,7 +2012,7 @@ export class App extends PureComponent<Props, State> {
               />
               {renderedDialog}
             </StyledApp>
-          </HotKeys>
+          </Hotkeys>
         </LibContext.Provider>
       </AppContext.Provider>
     )

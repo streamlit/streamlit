@@ -40,11 +40,3 @@ export const FETCH_PARAMS: RequestInit = {
   credentials: "same-origin",
   mode: "cors",
 }
-
-/**
- * Feature flag for https://github.com/streamlit/streamlit/issues/678.
- * If this is true, we show a modal dialog to prompt the user to rerun
- * when their script changes. If false, we show a less intrusive UI in
- * StatusWidget.
- */
-export const RERUN_PROMPT_MODAL_DIALOG = false

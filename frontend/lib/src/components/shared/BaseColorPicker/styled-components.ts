@@ -53,6 +53,7 @@ export const StyledColorPreview = styled.div<StyledColorPreviewProps>(
     pointerEvents: disabled ? "none" : "auto",
     boxShadow: "none",
     lineHeight: theme.lineHeights.base,
+    gap: theme.spacing.md,
     "&:focus": {
       outline: "none",
     },
@@ -75,7 +76,6 @@ export const StyledColorBlock = styled.div<StyledColorBlockProps>(
     opacity: disabled ? "0.4" : "",
     backgroundColor,
     borderStyle: "solid",
-    padding: "2px 0.8rem",
     cursor: "pointer",
     lineHeight: theme.lineHeights.base,
     "&:focus": {
@@ -84,9 +84,7 @@ export const StyledColorBlock = styled.div<StyledColorBlockProps>(
   })
 )
 
-export const StyledColorValue = styled.div(() => ({
+export const StyledColorValue = styled.div({
   display: "flex",
   alignItems: "center",
-  padding: "0 0.8rem",
-  width: "95px",
-}))
+})

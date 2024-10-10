@@ -16,12 +16,12 @@
 
 import React, { FC, useCallback, useEffect, useState } from "react"
 
-import { DeckGL } from "@deck.gl/react/typed"
+import { DeckGL } from "@deck.gl/react"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
-import { LayersList, PickingInfo } from "@deck.gl/core/typed"
+import { LayersList, PickingInfo } from "@deck.gl/core"
 import { useTheme } from "@emotion/react"
 import { Close } from "@emotion-icons/material-outlined"
 

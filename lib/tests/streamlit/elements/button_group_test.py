@@ -218,9 +218,7 @@ def get_command_matrix(
     matrix = []
 
     commands: list[Callable[..., Any]] = [
-        lambda *args, **kwargs: ButtonGroupMixin._pills(
-            st._main, "label", *args, **kwargs
-        ),
+        lambda *args, **kwargs: st.pills("label", *args, **kwargs),
         lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
             st._main, *args, **kwargs
         ),
@@ -254,9 +252,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 False,
             ),
             (
-                lambda *args, **kwargs: ButtonGroupMixin._pills(
-                    st._main, *args, **kwargs
-                ),
+                st.pills,
                 ("label", ["a", "b", "c"]),
                 {"help": "Test help param"},
                 ["a", "b", "c"],
@@ -327,13 +323,8 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.feedback, ("thumbs",)),
-            (ButtonGroupMixin._pills, (st._main, "label", ["a", "b", "c"])),
-            (
-                ButtonGroupMixin._pills,
-                (st._main, "label", ["a", "b", "c"]),
-                {"default": "b"},
-                "b",
-            ),
+            (st.pills, ("label", ["a", "b", "c"])),
+            (st.pills, ("label", ["a", "b", "c"]), {"default": "b"}, "b"),
             (
                 lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
                     st._main, *args, **kwargs
@@ -343,8 +334,8 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 "b",
             ),
             (
-                ButtonGroupMixin._pills,
-                (st._main, "label", ["a", "b", "c"]),
+                st.pills,
+                ("label", ["a", "b", "c"]),
                 {"default": "b", "selection_mode": "multiple"},
                 ["b"],
             ),
@@ -373,7 +364,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.feedback, ("thumbs",)),
-            (ButtonGroupMixin._pills, (st._main, "label", ["a", "b", "c"])),
+            (st.pills, ("label", ["a", "b", "c"])),
         ]
     )
     def test_disabled(self, command: Callable, command_args: tuple[Any, ...]):
@@ -593,7 +584,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (st.feedback, ("thumbs",)),
-            (ButtonGroupMixin._pills, (st._main, "label", ["a", "b", "c"])),
+            (st.pills, ("label", ["a", "b", "c"])),
         ]
     )
     def test_on_change_is_registered(

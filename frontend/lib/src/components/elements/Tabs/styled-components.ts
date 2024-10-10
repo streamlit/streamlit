@@ -30,7 +30,7 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
           "::after": {
             content: `" "`,
             position: "absolute",
-            zIndex: 1,
+            zIndex: theme.zIndices.priority,
             top: 0,
             right: 0,
             pointerEvents: "none",

@@ -570,6 +570,12 @@ export function getGray90(theme: EmotionTheme): string {
     : theme.colors.gray10
 }
 
+export function getBlue80(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blue80
+    : theme.colors.blue40
+}
+
 function getBlueArrayAsc(theme: EmotionTheme): string[] {
   const { colors } = theme
   return [

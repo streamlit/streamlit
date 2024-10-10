@@ -71,6 +71,9 @@ export const StyledStreamlitMarkdown =
         },
 
         li: {
+          // TODO(lukasmasuch): We might want to refactor
+          // these settings to use our spacing props instead.
+          // But this would require some styling changes.
           margin: "0.2em 0 0.2em 1.2em",
           padding: "0 0 0 0.6em",
           fontSize: theme.fontSizes.md,
@@ -86,7 +89,7 @@ export const StyledStreamlitMarkdown =
         },
 
         "th, td": {
-          padding: "6px 13px",
+          padding: `${theme.spacing.xs} ${theme.spacing.md}`,
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         },
 

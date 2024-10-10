@@ -172,7 +172,7 @@ red_bgr_img = np.array(red_image)[..., ["BGR".index(s) for s in "RGB"]]
 st.image(red_bgr_img, caption="BGR channel (red).", channels="BGR", width=100)
 st.image(red_bgr_img, caption="RGB channel (blue).", channels="RGB", width=100)
 
-st.header("use_column_width parameter")
+st.header("use_column_width parameter (deprecated)")
 
 col1, col2, col3, col4 = st.columns(4)
 col1.image(img)  # 100 px
@@ -194,3 +194,35 @@ st.image(
     ],
     caption=[f"Image list {i}" for i in range(3)],
 )
+
+st.header("use_container_width parameter")
+
+
+col5, col6, col7, col8 = st.columns(4)
+
+
+# Full container width, since use_container_width is explicitly set to True
+col5.image(img, use_container_width=True, width=50)
+# Full container width
+col5.image(img, use_container_width=True)
+# Full container width, since 1000 would overflow the container
+col5.image(
+    img800,
+    width=1000,
+)
+
+# Full container width, since 800 would overflow the container
+col6.image(img800)
+# Full container width, since 800 would overflow the container
+col6.image(img800, use_container_width=True)
+# Full container width, since 800 would overflow the container
+col6.image(img800, use_container_width=False)
+
+
+col7.image(img)  # 100 px
+# 100 px since that is the width of the image, and it does not exceed the container width
+col7.image(img, use_container_width=False)
+# 50 px since the width parameter is given
+col7.image(img, width=50)
+# 50 px since the width parameter is given, and use_container_width is not True
+col7.image(img, use_container_width=False, width=50)

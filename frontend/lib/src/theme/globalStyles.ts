@@ -87,30 +87,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     color: ${theme.colors.disabled};
   }
 
-  // VegaLite-specific CSS to style tooltips
-  #vg-tooltip-element {
-    font-family: ${theme.genericFonts.bodyFont};
-    color: ${theme.colors.bodyText};
-    border: ${theme.sizes.borderWidth} solid ${theme.colors.borderColor};
-    background-color: ${transparentize(theme.colors.bgColor, 0.05)};
-    font-size: ${theme.fontSizes.sm};
-    box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
-    padding: ${theme.spacing.xs} ${theme.spacing.md};
-    border-radius: ${theme.radii.default};
-    z-index: ${theme.zIndices.fullscreenWrapper};
-  }
-
-  #vg-tooltip-element td {
-    border: none;
-  }
-
-  #vg-tooltip-element table tr td.key {
-    color: ${theme.colors.fadedText60};
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   // Embedded Overflow Management
   body.embedded {
     overflow: hidden;

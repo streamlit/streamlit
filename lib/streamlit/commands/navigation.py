@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import TypeAlias
 
+from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -224,6 +225,8 @@ def navigation(
 
     msg = ForwardMsg()
     if position == "hidden":
+        msg.navigation.position = NavigationProto.Position.HIDDEN
+    elif config.get_option("client.showSidebarNavigation") is False:
         msg.navigation.position = NavigationProto.Position.HIDDEN
     else:
         msg.navigation.position = NavigationProto.Position.SIDEBAR

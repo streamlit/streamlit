@@ -435,13 +435,13 @@ export function RenderedMarkdown({
               ariaLabel: iconName + " icon",
               style: {
                 display: "inline-block",
-                fontFamily: "Material Symbols Rounded",
+                fontFamily: theme.genericFonts.iconFont,
+                fontWeight: theme.fontWeights.normal,
                 // Disable selection for copying it as text.
                 // Allowing this leads to copying the underlying icon name,
                 // which can be confusing / unexpected.
                 userSelect: "none",
                 verticalAlign: "bottom",
-                fontWeight: "normal",
                 whiteSpace: "nowrap",
                 wordWrap: "normal",
               },

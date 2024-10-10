@@ -258,6 +258,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
 
+    fireEvent.focus(textInput)
     expect(
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
@@ -281,6 +282,7 @@ describe("TextInput widget", () => {
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
 
+    fireEvent.focus(textInput)
     expect(await screen.findByText("Press Enter to apply")).toBeInTheDocument()
 
     // Check that the last call was in componentDidMount.
@@ -331,9 +333,7 @@ describe("TextInput widget", () => {
     await user.click(textInput)
     await user.keyboard("TEST")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to apply"
-    )
+    expect(screen.getByText("Press Enter to apply")).toBeVisible()
   })
 
   it("shows Input Instructions if in form that allows submit on enter", async () => {
@@ -348,9 +348,28 @@ describe("TextInput widget", () => {
     await user.click(textInput)
     await user.keyboard("TEST")
 
-    expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
-      "Press Enter to submit form"
-    )
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
+  })
+
+  // For this scenario https://github.com/streamlit/streamlit/issues/7079
+  it("shows Input Instructions if focused again in form that allows submit on enter", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.click(textInput)
+    await user.keyboard("TEST")
+
+    // Remove focus
+    fireEvent.blur(textInput)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+
+    // Then focus again
+    fireEvent.focus(textInput)
+    expect(screen.getByText("Press Enter to submit form")).toBeVisible()
   })
 
   it("hides Input Instructions if in form that doesn't allow submit on enter", async () => {
@@ -373,12 +392,22 @@ describe("TextInput widget", () => {
   it("hides Please enter to apply text when width is smaller than 180px", () => {
     const props = getProps({}, { width: 100 })
     render(<TextInput {...props} />)
+
+    // Focus on input
+    const textInput = screen.getByRole("textbox")
+    fireEvent.focus(textInput)
+
     expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", () => {
     const props = getProps({}, { width: 190 })
     render(<TextInput {...props} />)
+
+    // Focus on input
+    const textInput = screen.getByRole("textbox")
+    fireEvent.focus(textInput)
+
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 

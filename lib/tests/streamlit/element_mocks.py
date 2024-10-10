@@ -55,7 +55,7 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ),
     # checkboxes
     ("checkbox", lambda: st.checkbox("Check me")),
-    # ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
+    ("pills", lambda: st.pills("Some pills", ["a", "b", "c"])),
     ("toggle", lambda: st.toggle("Toggle me")),
     # arrows
     ("data_editor", lambda: st.data_editor(pd.DataFrame())),
@@ -67,13 +67,13 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("camera_input", lambda: st.camera_input("Take a picture")),
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
+    ("feedback", lambda: st.feedback()),
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
     ("number_input", lambda: st.number_input("Enter a number")),
     ("radio", lambda: st.radio("Choose me", ["a", "b", "c"])),
     ("slider", lambda: st.slider("Slide me")),
     ("selectbox", lambda: st.selectbox("Select me", ["a", "b", "c"])),
     ("select_slider", lambda: st.select_slider("Select me", ["a", "b", "c"])),
-    ("feedback", lambda: st.feedback()),
     # text_widgets
     ("text_area", lambda: st.text_area("Write me")),
     ("text_input", lambda: st.text_input("Write me")),
