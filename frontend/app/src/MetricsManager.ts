@@ -22,6 +22,7 @@ import {
   IS_DEV_ENV,
   localStorageAvailable,
   logAlways,
+  logError,
   SessionInfo,
 } from "@streamlit/lib"
 
@@ -146,9 +147,12 @@ export class MetricsManager {
       }
     }
 
-    const response = await fetch(DEFAULT_METRICS_CONFIG)
+    const response = await fetch(DEFAULT_METRICS_CONFIG, {
+      signal: AbortSignal.timeout(5000),
+    })
     if (!response.ok) {
-      throw new Error(`Failed to fetch metrics config: ${response.status}`)
+      this.metricsUrl = undefined
+      logError("Failed to fetch metrics config: ", response.status)
     } else {
       const data = await response.json()
       this.metricsUrl = data.url ?? undefined

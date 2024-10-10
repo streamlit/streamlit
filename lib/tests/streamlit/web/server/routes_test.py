@@ -19,7 +19,6 @@ import os
 import tempfile
 from unittest.mock import MagicMock
 
-import requests
 import tornado.httpserver
 import tornado.testing
 import tornado.web
@@ -248,10 +247,6 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     @patch_config_options({"global.developmentMode": False})
     def test_allowed_message_origins(self):
-        metrics_response = requests.get(
-            "https://data.streamlit.io/metrics.json", timeout=2
-        ).json()
-        metrics_url = metrics_response["url"]
         response = self.fetch("/_stcore/host-config")
         response_body = json.loads(response.body)
         self.assertEqual(200, response.code)
@@ -262,7 +257,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 # Default host configuration settings:
                 "enableCustomParentMessages": False,
                 "enforceDownloadInNewTab": False,
-                "metricsUrl": metrics_url,
+                "metricsUrl": "",
             },
             response_body,
         )
