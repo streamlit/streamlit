@@ -91,6 +91,10 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       name: "template strings with valid values are allowed",
       code: "var MyComponent = styled.div`color: theme.colors.primary; line-height: theme.lineHeights.body;`",
     },
+    {
+      name: "multiple numbers are allowed to account for shorthand assignment",
+      code: "var a = { margin: '10em 0 30em 40em' };",
+    },
   ],
   invalid: [
     {

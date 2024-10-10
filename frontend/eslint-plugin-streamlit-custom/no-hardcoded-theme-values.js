@@ -45,8 +45,9 @@ module.exports = {
     // Also allow %, em, vh, vw units after a number because they are relative and relative values are okay from our theming perspective. We don't allow 'rem'
     // though because its less fine-granular than 'em' and we use(d) it heavily to hardcode any kinds of values in our codebase.
     // The following font-related values are allowed: 'small-caps', 'italic', 'normal', 'liga'.
+    // The part '(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+' allows for non-zero digits with a unit or 0, or a combination of both separated by whitespaces.
     const allowedValuesRegex =
-      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|unset|fit-content|collapse|0|(-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|small-caps|italic|normal|liga)( !important)?('|")?$).*$/i
+      /^(?!.*theme)(?!('|")?(transparent|solid|initial|none|inherit|auto|unset|fit-content|collapse|0|(((-)?[0-9]+(\.[0-9]+)?(%|em|vh|vw)|0)\s?)+|small-caps|italic|normal|liga)( !important)?('|")?$).*$/i
 
     return {
       ObjectExpression(node) {
