@@ -20,6 +20,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { zIndices } from "src/theme/primitives"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
@@ -357,7 +358,7 @@ export const StyledSegmentedControlButton = styled(
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
     "&:hover": {
-      zIndex: 100, // Make sure overlapped borders are visible
+      zIndex: theme.zIndices.sidebar, // Make sure overlapped borders are visible
     },
   }
 })
@@ -369,7 +370,7 @@ export const StyledSegmentedControlButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
-    zIndex: 100,
+    zIndex: theme.zIndices.sidebar,
     "&:hover": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },

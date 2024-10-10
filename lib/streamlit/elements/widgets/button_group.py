@@ -403,7 +403,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ):
+    ) -> list[V] | V | None:
         return self._internal_button_group(
             options,
             label=label,
@@ -436,7 +436,7 @@ class ButtonGroupMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ):
+    ) -> list[V] | V | None:
         return self._internal_button_group(
             options,
             label=label,

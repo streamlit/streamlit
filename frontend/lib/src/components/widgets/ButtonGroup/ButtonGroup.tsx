@@ -162,22 +162,10 @@ function getButtonKindAndSize(
 ): BaseButtonKind {
   if (isVisuallySelected) {
     buttonKind = `${buttonKind}Active` as BaseButtonKind
-    console.log(buttonKind)
   }
 
   return buttonKind
 }
-
-// function getButtonGroupColumnGap(
-//   style: ButtonGroupProto.Style,
-//   theme: EmotionTheme
-// ): string {
-//   return style === ButtonGroupProto.Style.BORDERLESS
-//     ? theme.spacing.threeXS
-//     : style === ButtonGroupProto.Style.PILLS
-//     ? theme.spacing.twoXS
-//     : theme.spacing.none
-// }
 
 function getButtonGroupOverridesStyle(
   style: ButtonGroupProto.Style,
