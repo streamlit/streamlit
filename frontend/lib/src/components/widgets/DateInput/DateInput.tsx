@@ -381,6 +381,7 @@ class DateInput extends React.PureComponent<Props, State> {
                       borderRightWidth: theme.sizes.borderWidth,
                       borderTopWidth: theme.sizes.borderWidth,
                       borderBottomWidth: theme.sizes.borderWidth,
+                      // paddingRight: 0,
                     },
                   },
                   ClearIcon: {
@@ -394,7 +395,7 @@ class DateInput extends React.PureComponent<Props, State> {
                             // The width property only enlarges its bounding box, so it's easier to click.
                             transform: "scale(1.41)",
                             width: theme.spacing.twoXL,
-                            marginRight: "-8px",
+                            marginRight: `calc(-${theme.spacing.sm})`,
                             ":hover": {
                               fill: theme.colors.bodyText,
                             },
