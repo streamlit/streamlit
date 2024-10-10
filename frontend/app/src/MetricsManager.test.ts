@@ -49,6 +49,11 @@ global.fetch = jest.fn(() =>
   })
 )
 
+// Mock AbortSignal, otherwise TypeError timeout is not a function
+global.AbortSignal = {
+  timeout: jest.fn(),
+}
+
 afterEach(() => {
   window.analytics = undefined
 })
