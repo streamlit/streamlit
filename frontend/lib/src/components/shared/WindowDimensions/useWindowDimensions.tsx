@@ -18,7 +18,10 @@ import { useCallback, useEffect, useState } from "react"
 
 import { useTheme } from "@emotion/react"
 
-import { WindowDimensions } from "."
+export type WindowDimensions = {
+  fullWidth: number
+  fullHeight: number
+}
 
 const convertScssRemValueToPixels = (scssValue: string): number => {
   const remValue = parseFloat(scssValue)

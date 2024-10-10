@@ -16,10 +16,7 @@
 
 import { createContext } from "react"
 
-export type WindowDimensions = {
-  fullWidth: number
-  fullHeight: number
-}
+import { WindowDimensions } from "./useWindowDimensions"
 
 export const WindowDimensionsContext = createContext<WindowDimensions | null>(
   null
