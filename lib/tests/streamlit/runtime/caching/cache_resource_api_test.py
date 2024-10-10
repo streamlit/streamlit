@@ -218,6 +218,10 @@ If you think this is actually a Streamlit bug, please
         example_instance.foo.clear(1)
         assert example_instance.foo(1) == 2
 
+        # Try the same with a keyword argument:
+        example_instance.foo.clear(y=1)
+        assert example_instance.foo(1) == 3
+
     def test_cached_class_method_clear(self):
         self.x = 0
 
