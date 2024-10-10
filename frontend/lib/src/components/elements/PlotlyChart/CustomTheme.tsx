@@ -126,7 +126,7 @@ export function applyStreamlitThemeTemplateLayout(
       rangeselector: {
         bgcolor: colors.bgColor,
         bordercolor: getGray30(theme),
-        borderwidth: 1,
+        borderwidth: theme.spacing.fourXSPx,
         x: 0,
       },
     },

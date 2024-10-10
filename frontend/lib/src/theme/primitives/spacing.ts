@@ -32,6 +32,7 @@ export const spacing = {
   threeXL: "2rem",
   fourXL: "4rem",
   nonePx: 0,
+  fourXSPx: 1,
   threeXSPx: 2,
   twoXSPx: 4,
   xsPx: 6,
