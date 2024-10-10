@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import pytest
-from playwright.sync_api import Locator, Page, Route, expect
+from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
 from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -137,8 +139,8 @@ def test_audio_input_label_visibility_snapshot(
     )
 
 
-def _test_download_audio_file(app: Page):
-    audio_input = app.get_by_test_id("stAudioInput").nth(1)
+def _test_download_audio_file(app: Page, locator: FrameLocator | Locator):
+    audio_input = locator.get_by_test_id("stAudioInput").nth(1)
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
 
@@ -159,13 +161,17 @@ def test_audio_input_file_download(app: Page):
     """Test that the audio input file can be downloaded."""
     app.context.grant_permissions(["microphone"])
 
-    _test_download_audio_file(app)
+    _test_download_audio_file(app, app.locator("body"))
 
 
 @pytest.mark.only_browser("chromium")
 def test_audio_input_file_download_in_iframe(iframed_app: IframedPage):
     """Test that the audio input file can be downloaded within an iframe."""
-    _test_download_audio_file(iframed_app)
+
+    page: Page = iframed_app.page
+    frame_locator: FrameLocator = iframed_app.open_app(None)
+
+    _test_download_audio_file(page, frame_locator)
 
 
 @pytest.mark.only_browser("chromium")
