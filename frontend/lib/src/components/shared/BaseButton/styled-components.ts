@@ -358,7 +358,7 @@ export const StyledSegmentedControlButton = styled(
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
     "&:hover": {
-      zIndex: theme.zIndices.sidebar, // Make sure overlapped borders are visible
+      zIndex: theme.zIndices.priority, // Make sure overlapped borders are visible
     },
   }
 })
@@ -370,7 +370,7 @@ export const StyledSegmentedControlButtonActive = styled(
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
-    zIndex: theme.zIndices.sidebar,
+    zIndex: theme.zIndices.priority,
     "&:hover": {
       backgroundColor: transparentize(theme.colors.primary, 0.8),
     },
