@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { useTheme } from "@emotion/react"
+
 import { convertScssRemValueToPixels } from "@streamlit/lib/src/util/utils"
 
 export type WindowDimensions = {
