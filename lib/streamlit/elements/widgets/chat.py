@@ -245,6 +245,7 @@ class ChatMixin:
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        default: str | None = None,
     ) -> str | None:
         """Display a chat input widget.
 
@@ -266,6 +267,10 @@ class ChatMixin:
 
         disabled : bool
             Whether the chat input should be disabled. Defaults to ``False``.
+
+        default : str | None
+            The default value of the chat input. If ``None`` (default), the chat
+            input will be empty.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
@@ -314,8 +319,6 @@ class ChatMixin:
             https://doc-chat-input-inline.streamlit.app/
             height: 350px
         """
-        # We default to an empty string here and disallow user choice intentionally
-        default = ""
         key = to_key(key)
 
         check_widget_policies(
@@ -334,6 +337,10 @@ class ChatMixin:
             form_id=None,
             placeholder=placeholder,
             max_chars=max_chars,
+            # default is intentionally not set to since
+            # we want to allow changing it without
+            # changing the widget identity and thereby
+            # resetting the state.
         )
 
         # It doesn't make sense to create a chat input inside a form.
@@ -366,7 +373,8 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
-        chat_input_proto.default = default
+        if default is not None:
+            chat_input_proto.default = default
 
         serde = ChatInputSerde()
         widget_state = register_widget(

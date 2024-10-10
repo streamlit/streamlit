@@ -31,6 +31,7 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   StyledChatInput,
@@ -79,7 +80,17 @@ function ChatInput({
   // True if the user-specified state.value has not yet been synced to the WidgetStateManager.
   const [dirty, setDirty] = useState(false)
   // The value specified by the user via the UI. If the user didn't touch this widget's UI, the default value is used.
-  const [value, setValue] = useState(element.default)
+  const [value, setValue] = useState(element.default ?? "")
+
+  // Whenever the default value changes, we update the value of the chat input
+  // to this value.
+  useEffect(() => {
+    if (notNullOrUndefined(element.default)) {
+      setValue(element.default)
+      setDirty(true)
+    }
+  }, [element.default])
+
   // The value of the height of the textarea. It depends on a variety of factors including the default height, and autogrowing
   const [scrollHeight, setScrollHeight] = useState(0)
   const chatInputRef = useRef<HTMLTextAreaElement>(null)

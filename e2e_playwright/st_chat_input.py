@@ -15,10 +15,15 @@
 import streamlit as st
 from streamlit import runtime
 
-v1 = st.container().chat_input("Chat input 1 (inline)")
+default = "Foo"
+if st.button("Change default value"):
+    default = "New default value"
+
+v1 = st.container().chat_input("Chat input 1 (inline)", default=default)
 st.write("Chat input 1 (inline) - value:", v1)
 
 col1, _ = st.columns(2)
+
 
 v2 = col1.chat_input("Chat input 2 (in column, disabled)", disabled=True)
 st.write("Chat input 2 (in column, disabled) - value:", v2)

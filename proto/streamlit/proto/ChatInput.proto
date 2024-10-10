@@ -26,7 +26,7 @@ message ChatInput {
   bool disabled = 4;
   string value = 5;
   bool set_value = 6;
-  string default = 7;
+  optional string default = 7;
 
   // DEPRECATED: position property is deprecated and unused.
   enum Position {
