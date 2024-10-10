@@ -138,8 +138,6 @@ def test_audio_input_label_visibility_snapshot(
 
 
 def _test_download_audio_file(app: Page):
-    app.context.grant_permissions(["microphone"])
-
     audio_input = app.get_by_test_id("stAudioInput").nth(1)
     audio_input.get_by_role("button", name="Record").click()
     app.wait_for_timeout(1500)
@@ -159,6 +157,8 @@ def _test_download_audio_file(app: Page):
 @pytest.mark.only_browser("chromium")
 def test_audio_input_file_download(app: Page):
     """Test that the audio input file can be downloaded."""
+    app.context.grant_permissions(["microphone"])
+
     _test_download_audio_file(app)
 
 
