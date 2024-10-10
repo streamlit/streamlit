@@ -20,7 +20,6 @@ import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import { zIndices } from "src/theme/primitives"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
