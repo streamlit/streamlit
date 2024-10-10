@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import pytest
-from playwright.sync_api import IframedPage, Locator, Page, Route, expect
+from playwright.sync_api import Locator, Page, Route, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import IframedPage, ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
