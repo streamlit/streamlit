@@ -17,17 +17,11 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { useTheme } from "@emotion/react"
+import { convertScssRemValueToPixels } from "@streamlit/lib/src/util/utils"
 
 export type WindowDimensions = {
   fullWidth: number
   fullHeight: number
-}
-
-const convertScssRemValueToPixels = (scssValue: string): number => {
-  const remValue = parseFloat(scssValue)
-  return (
-    remValue * parseFloat(getComputedStyle(document.documentElement).fontSize)
-  )
 }
 
 export const useWindowDimensions = (): WindowDimensions => {
