@@ -389,12 +389,8 @@ class DateInput extends React.PureComponent<Props, State> {
                         Svg: {
                           style: {
                             color: theme.colors.darkGray,
-                            // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
-                            // Let's use a scale transform effect to make it bigger.
-                            // The width property only enlarges its bounding box, so it's easier to click.
-                            transform: "scale(1.41)",
-                            width: theme.spacing.twoXL,
-                            marginRight: "-8px",
+                            height: "1.25em",
+                            width: "1.25em",
                             ":hover": {
                               fill: theme.colors.bodyText,
                             },

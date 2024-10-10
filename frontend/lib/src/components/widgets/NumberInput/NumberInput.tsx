@@ -441,12 +441,8 @@ export const NumberInput: React.FC<Props> = ({
                   Svg: {
                     style: {
                       color: theme.colors.darkGray,
-                      // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
-                      // Let's use a scale transform effect to make it bigger.
-                      // The width property only enlarges its bounding box, so it's easier to click.
-                      transform: "scale(1.4)",
-                      width: theme.spacing.twoXL,
-                      marginRight: "-1.25em",
+                      height: "1.25em",
+                      width: "1.25em",
                       ":hover": {
                         fill: theme.colors.bodyText,
                       },
@@ -486,6 +482,7 @@ export const NumberInput: React.FC<Props> = ({
                 borderRightWidth: 0,
                 borderTopWidth: 0,
                 borderBottomWidth: 0,
+                paddingRight: 0,
               }),
             },
           }}
