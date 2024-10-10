@@ -198,6 +198,6 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledMainMenuContainer = styled.span(() => ({
+export const StyledMainMenuContainer = styled.span({
   lineHeight: "initial",
-}))
+})
