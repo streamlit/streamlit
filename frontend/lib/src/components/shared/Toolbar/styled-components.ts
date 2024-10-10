@@ -64,9 +64,3 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   width: "fit-content",
   zIndex: theme.zIndices.sidebar + 1,
 }))
-
-export const StyledContentWrapper = styled.div(() => ({
-  position: "relative",
-  width: "100%",
-  height: "100%",
-}))
