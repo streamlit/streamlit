@@ -59,3 +59,12 @@ def test_chart_tooltip_styling(app: Page, assert_snapshot: ImageCompareFunction)
     expect(tooltip).to_be_visible()
 
     assert_snapshot(tooltip, name="st_altair_chart-tooltip_styling")
+
+
+def test_chart_menu_styling(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Check that the chart menu styling is correct."""
+    chart = themed_app.get_by_test_id("stVegaLiteChart").first
+    chart.locator("summary").click()
+    chart_menu = chart.locator(".vega-actions")
+    expect(chart_menu).to_be_visible()
+    assert_snapshot(chart_menu, name="st_altair_chart-menu_styling")

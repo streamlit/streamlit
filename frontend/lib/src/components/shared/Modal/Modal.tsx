@@ -185,7 +185,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
     DialogContainer: {
       style: {
         alignItems: "start",
-        paddingTop: "3rem",
+        paddingTop: spacing.threeXL,
       },
     },
     Dialog: {

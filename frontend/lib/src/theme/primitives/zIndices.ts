@@ -34,6 +34,9 @@ export const zIndices = {
   hide: -1,
   auto: "auto",
   base: 0,
+  // this is used if we want to ensure that an element
+  // is shown above the parent elements.
+  priority: 1,
   sidebar,
   menuButton,
   balloons,

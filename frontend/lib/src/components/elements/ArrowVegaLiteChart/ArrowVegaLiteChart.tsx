@@ -39,8 +39,6 @@ import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
-import "@streamlit/lib/src/assets/css/vega-embed.css"
-
 import {
   dataIsAnAppendOfPrev,
   getDataArray,

@@ -47,11 +47,11 @@ export const StyledPre = styled.pre(({ theme }) => ({
   },
 
   ".token.comment, .token.prolog, .token.doctype, .token.cdata": {
-    color: "slategray",
+    color: theme.colors.gray70,
   },
 
   ".token.punctuation": {
-    color: "#999",
+    color: theme.colors.gray70,
   },
 
   ".namespace": {
@@ -92,12 +92,12 @@ export const StyledPre = styled.pre(({ theme }) => ({
 
   ".token.function, .token.class-name, .token.selector": {
     color: theme.colors.blue70,
-    fontWeight: "bold",
+    fontWeight: theme.fontWeights.extrabold,
   },
 
   ".token.important": {
     color: theme.colors.red70,
-    fontWeight: "bold",
+    fontWeight: theme.fontWeights.extrabold,
   },
 
   ".token.comment": {

@@ -36,7 +36,7 @@ const getProps = (
   connectionState: ConnectionState.CONNECTED,
   sessionEventDispatcher: new SessionEventDispatcher(),
   scriptRunState: ScriptRunState.RUNNING,
-  rerunScript: () => {},
+  rerunScript: jest.fn(),
   stopScript: () => {},
   allowRunOnSave: true,
   theme: mockTheme.emotion,
@@ -227,6 +227,38 @@ describe("StatusWidget element", () => {
     expect(buttons).toHaveLength(1)
 
     expect(buttons[0]).toHaveTextContent("Rerun")
+  })
+
+  it("calls always run on save", () => {
+    const sessionEventDispatcher = new SessionEventDispatcher()
+    const rerunScript = jest.fn()
+
+    render(
+      <StatusWidget
+        {...getProps({
+          rerunScript,
+          sessionEventDispatcher,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+        })}
+      />
+    )
+
+    sessionEventDispatcher.handleSessionEventMsg(
+      new SessionEvent({
+        scriptChangedOnDisk: true,
+        scriptWasManuallyStopped: null,
+        scriptCompilationException: null,
+      })
+    )
+    // Verify the Always rerun is visible
+    expect(screen.getByText("Always rerun")).toBeInTheDocument()
+
+    fireEvent.keyDown(document.body, {
+      key: "a",
+      which: 65,
+    })
+
+    expect(rerunScript).toHaveBeenCalledWith(true)
   })
 })
 

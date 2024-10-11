@@ -16,9 +16,9 @@
 
 import styled from "@emotion/styled"
 
-export const StyledScreenCastWarningDialog = styled.div(() => ({
+export const StyledScreenCastWarningDialog = styled.div({
   display: "flex",
-}))
+})
 
 export const StyledUnsupportedScreenCastIcon = styled.div(({ theme }) => ({
   display: "flex",
