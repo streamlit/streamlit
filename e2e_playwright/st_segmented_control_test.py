@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_button_group(app: Page, key: str) -> Locator:
-    return get_element_by_key(key).get_by_test_id("stButtonGroup").first
+    return get_element_by_key(app, key).get_by_test_id("stButtonGroup").first
 
 
 def get_segment_button(locator: Locator, text: str) -> Locator:
