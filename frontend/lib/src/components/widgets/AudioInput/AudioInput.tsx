@@ -36,6 +36,7 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 import {
+  convertScssRemValueToPixels,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
@@ -260,8 +261,7 @@ const AudioInput: React.FC<Props> = ({
         : theme.colors.primary,
       progressColor: theme.colors.bodyText,
       height:
-        parseFloat(getComputedStyle(document.documentElement).fontSize) *
-          parseFloat(theme.sizes.largestElementHeight.replace("rem", "")) -
+        convertScssRemValueToPixels(theme.sizes.largestElementHeight) -
         2 * WAVEFORM_PADDING,
       barWidth: BAR_WIDTH,
       barGap: BAR_GAP,
