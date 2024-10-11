@@ -29,7 +29,6 @@ import ThemeProvider from "./components/core/ThemeProvider"
 import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
-import { isNullOrUndefined } from "./util/utils"
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
